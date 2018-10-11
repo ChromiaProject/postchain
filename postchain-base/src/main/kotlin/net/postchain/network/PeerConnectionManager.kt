@@ -5,6 +5,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.toHex
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.Shutdownable
+import net.postchain.network.ref.netty.NettyActivePeerConnection
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.concurrent.thread
@@ -81,7 +82,7 @@ class PeerConnectionManager<PacketType>(
     init {
         encoderThread = thread(name = "encoderLoop") { encoderLoop() }
 
-        val registerConn = { info: IdentPacketInfo, conn: PeerConnection ->
+        val registerConn = { info: IdentPacketInfo, conn: AbstractPeerConnection ->
 
             val bh = blockchains[ByteArrayKey(info.blockchainRID)]
             if (bh != null) {

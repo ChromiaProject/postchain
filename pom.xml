@@ -30,6 +30,7 @@
         <junitparams.version>1.1.1</junitparams.version>
         <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
+        <netty.version>4.1.30.Final</netty.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
@@ -149,6 +150,11 @@
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-devtools</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
