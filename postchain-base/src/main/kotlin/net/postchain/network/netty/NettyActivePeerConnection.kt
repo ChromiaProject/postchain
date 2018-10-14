@@ -21,12 +21,14 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
                                 val packetHandler: (ByteArray) -> Unit): NettyPeerConnection() {
 
 
+    val group = NioEventLoopGroup()
+
     override fun handlePacket(pkt: ByteArray) {
         packetHandler(pkt)
     }
 
     override fun stop() {
-    //    group.shutdownGracefully().sync()
+        group.shutdownGracefully().sync()
     }
 
     companion object : KLogging()
@@ -38,7 +40,6 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
     }
 
     private fun createClient(peerInfo: PeerInfo) {
-        val group = NioEventLoopGroup()
         try {
             val clientBootstrap = Bootstrap()
             clientBootstrap.group(group)
@@ -56,9 +57,7 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
             channelFuture.channel().closeFuture().sync()
         } catch (e: Exception) {
             logger.error(e.toString())
-         }finally {
-            group.shutdownGracefully().sync()
-        }
+         }
     }
 
     inner class ClientHandler(val packetConverter: IdentPacketConverter,
@@ -68,15 +67,15 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
         override fun channelActive(channelHandlerContext: ChannelHandlerContext) {
             synchronized(sentIdentPacket) {
                 if(!sentIdentPacket) {
-                    val identPacket = String(packetConverter.makeIdentPacket(peerInfo.pubKey)).toByteArray()
+                    val identPacket = packetConverter.makeIdentPacket(peerInfo.pubKey)
                     writeOnePacket(channelHandlerContext,
                             identPacket)
                     sentIdentPacket = true
                 }
             }
-//            thread(name = "active-peer-write") {
-//                writePacketsWhilePossible(channelHandlerContext)
-//            }
+            thread(name = "active-peer-write") {
+                writePacketsWhilePossible(channelHandlerContext)
+            }
         }
         override fun exceptionCaught(channelHandlerContext: ChannelHandlerContext, cause: Throwable) {
             channelHandlerContext.close()

@@ -64,7 +64,7 @@ class NettyTest {
 
         }
 
-        val activeConnection = ActivePeerConnection(peerInfo, packetConverter, this::clientPacketHandler)
+        val activeConnection = NettyActivePeerConnection(peerInfo, packetConverter, this::clientPacketHandler)
 
         activeConnection.start()
         clientMessages.forEach {

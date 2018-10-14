@@ -23,6 +23,13 @@ class NettyPassivePeerConnection (
         val registerConn: (info: IdentPacketInfo, NettyPeerConnection) -> (ByteArray) -> Unit
 ) : NettyPeerConnection() {
 
+    val group = NioEventLoopGroup()
+
+    override fun stop() {
+        group.shutdownGracefully().sync()
+    }
+
+
     lateinit var packetHandler: (ByteArray) -> Unit
 
     override fun handlePacket(pkt: ByteArray) {
@@ -34,7 +41,6 @@ class NettyPassivePeerConnection (
     }
 
     private fun createServer() {
-        val group = NioEventLoopGroup()
 
         try {
             val serverBootstrap = ServerBootstrap()
@@ -54,9 +60,8 @@ class NettyPassivePeerConnection (
             channelFuture.channel().closeFuture().sync()
         } catch (e: Exception) {
             logger.error(e.toString())
-        } finally {
-            group.shutdownGracefully().sync()
         }
+
     }
 
     inner class ServerHandler(val peerConnection: NettyPeerConnection): ChannelInboundHandlerAdapter() {
@@ -76,8 +81,8 @@ class NettyPassivePeerConnection (
                     }
                 }
             } else {
-//                val bytes = readOnePacket(msg)
-//                handlePacket(bytes)
+                val bytes = readOnePacket(msg)
+                handlePacket(bytes)
             }
         }
         override fun channelReadComplete(ctx: ChannelHandlerContext) {
