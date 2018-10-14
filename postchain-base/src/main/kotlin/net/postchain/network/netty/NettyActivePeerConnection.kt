@@ -62,17 +62,10 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
 
     inner class ClientHandler(val packetConverter: IdentPacketConverter,
                         val peerInfo: PeerInfo): SimpleChannelInboundHandler<Any>() {
-        @Volatile
-        private var sentIdentPacket = false
+
         override fun channelActive(channelHandlerContext: ChannelHandlerContext) {
-            synchronized(sentIdentPacket) {
-                if(!sentIdentPacket) {
-                    val identPacket = packetConverter.makeIdentPacket(peerInfo.pubKey)
-                    writeOnePacket(channelHandlerContext,
-                            identPacket)
-                    sentIdentPacket = true
-                }
-            }
+            val identPacket = packetConverter.makeIdentPacket(peerInfo.pubKey)
+            writeOnePacket(channelHandlerContext, identPacket)
             thread(name = "active-peer-write") {
                 writePacketsWhilePossible(channelHandlerContext)
             }

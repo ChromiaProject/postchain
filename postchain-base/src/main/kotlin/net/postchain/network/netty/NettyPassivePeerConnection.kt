@@ -37,6 +37,7 @@ class NettyPassivePeerConnection (
     }
 
     init {
+
         Thread({createServer()}).start()
     }
 
@@ -77,7 +78,17 @@ class NettyPassivePeerConnection (
                         identified = true
                     }
                     thread(name = "PassiveWriteLoop-PeerId") {
-                        writePacketsWhilePossible(ctx)
+                     //   writePacketsWhilePossible(ctx)
+                        try {
+                            while (keepGoing) {
+                                val bytes = outboundPackets.take()
+                                if (keepGoing) {
+                                    writeOnePacket(ctx, bytes)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            logger.error(e.toString())
+                        }
                     }
                 }
             } else {
