@@ -54,7 +54,7 @@ class PeerConnectionManager<PacketType>(
     }
 
     fun connectPeer(peer: PeerInfo, packetConverter: IdentPacketConverter, packetHandler: (ByteArray) -> Unit): AbstractPeerConnection {
-        val conn = NettyActivePeerConnection(peer,
+        val conn = ActivePeerConnection(peer,
                 packetConverter,
                 packetHandler
         )

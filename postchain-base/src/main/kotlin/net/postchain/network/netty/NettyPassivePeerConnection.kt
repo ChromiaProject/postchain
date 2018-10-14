@@ -6,11 +6,11 @@ import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
-import io.netty.handler.codec.DelimiterBasedFrameDecoder
-import io.netty.handler.codec.Delimiters
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import net.postchain.base.PeerInfo
 import net.postchain.network.IdentPacketConverter
 import net.postchain.network.IdentPacketInfo
+import net.postchain.network.MAX_PAYLOAD_SIZE
 import java.net.InetSocketAddress
 import kotlin.concurrent.thread
 
@@ -41,12 +41,12 @@ class NettyPassivePeerConnection (
             serverBootstrap.group(group)
             serverBootstrap.channel(NioServerSocketChannel::class.java)
             serverBootstrap.localAddress(InetSocketAddress(peerInfo.host, peerInfo.port))
-         //   LengthFieldBasedFrameDecoder()
             val that = this
             serverBootstrap.childHandler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(socketChannel: SocketChannel) {
                     socketChannel.pipeline()
-                           // .addLast(DelimiterBasedFrameDecoder(8192, *Delimiters.lineDelimiter()))
+                            .addLast(LengthFieldBasedFrameDecoder(MAX_PAYLOAD_SIZE, 0, packetSizeLength, 0, 0))
+                            //.addLast(DelimiterBasedFrameDecoder(MAX_PAYLOAD_SIZE, *Delimiters.lineDelimiter()))
                             .addLast(ServerHandler(that))
                 }
             })
@@ -75,9 +75,10 @@ class NettyPassivePeerConnection (
                         writePacketsWhilePossible(ctx)
                     }
                 }
+            } else {
+//                val bytes = readOnePacket(msg)
+//                handlePacket(bytes)
             }
-            val bytes = readOnePacket(msg)
-            handlePacket(bytes)
         }
         override fun channelReadComplete(ctx: ChannelHandlerContext) {
             ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)

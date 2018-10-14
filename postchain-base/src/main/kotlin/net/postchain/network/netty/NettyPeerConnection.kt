@@ -7,6 +7,8 @@ import io.netty.util.CharsetUtil
 import mu.KLogging
 import net.postchain.network.AbstractPeerConnection
 import net.postchain.network.MAX_QUEUED_PACKETS
+import java.lang.RuntimeException
+import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
 
 abstract class NettyPeerConnection : AbstractPeerConnection {
@@ -14,34 +16,26 @@ abstract class NettyPeerConnection : AbstractPeerConnection {
     protected var keepGoing: Boolean = true
     protected val outboundPackets = LinkedBlockingQueue<ByteArray>(MAX_QUEUED_PACKETS)
 
+    protected val packetSizeLength = 4
+
     companion object : KLogging()
 
     abstract fun handlePacket(pkt: ByteArray)
 
     protected fun readOnePacket(msg: Any): ByteArray {
         val inBuffer = msg as ByteBuf
-        val bytes = ByteArray(inBuffer.readableBytes())
-        inBuffer.readBytes(bytes)
-        return bytes //String(bytes).toByteArray(CharsetUtil.UTF_8)
-    }
+        val packetSizeHolder = ByteArray(packetSizeLength)
+        inBuffer.readBytes(packetSizeHolder)
+        val packetSize = ByteBuffer.wrap(packetSizeHolder).getInt()
 
-    protected fun readPacketsWhilePossible(msg: Any) {
-        try {
-            while (keepGoing) {
-                val bytes = readOnePacket(msg)
-                if (bytes.size == 0) {
-                    continue
-                }
-                handlePacket(bytes)
-            }
-        } catch (e: Exception) {
-            //outboundPackets.put(byteArrayOf())
-            logger.error(e.toString())
-        }
+        val bytes = ByteArray(packetSize)
+        inBuffer.readBytes(bytes)
+        return bytes
     }
 
     protected fun writeOnePacket(dataStream: ChannelHandlerContext, bytes: ByteArray) {
-        dataStream.writeAndFlush(Unpooled.copiedBuffer(bytes))
+        val packetSizeBytes = ByteBuffer.allocate(packetSizeLength).putInt(bytes.size).array()
+        dataStream.writeAndFlush(Unpooled.copiedBuffer(packetSizeBytes + bytes))
     }
 
     protected fun writePacketsWhilePossible(dataStream: ChannelHandlerContext) {
@@ -50,7 +44,6 @@ abstract class NettyPeerConnection : AbstractPeerConnection {
                 val bytes = outboundPackets.take()
                 if (keepGoing) {
                     writeOnePacket(dataStream, bytes)
-                    Thread.sleep(1_000)
                 }
             }
         } catch (e: Exception) {

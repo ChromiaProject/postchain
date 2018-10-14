@@ -5,9 +5,11 @@ import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.network.IdentPacketConverter
+import net.postchain.network.MAX_PAYLOAD_SIZE
 import java.net.InetSocketAddress
 import kotlin.concurrent.thread
 
@@ -44,7 +46,10 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
             clientBootstrap.remoteAddress(InetSocketAddress(peerInfo.host, peerInfo.port))
             clientBootstrap.handler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(socketChannel: SocketChannel) {
-                    socketChannel.pipeline().addLast(ClientHandler(packetConverter, peerInfo))
+                    socketChannel.pipeline()
+                            .addLast(LengthFieldBasedFrameDecoder(MAX_PAYLOAD_SIZE, 0, packetSizeLength, 0, 0))
+                            //.addLast(DelimiterBasedFrameDecoder(MAX_PAYLOAD_SIZE, Unpooled.copiedBuffer(delimiter.toByteArray())))
+                            .addLast(ClientHandler(packetConverter, peerInfo))
                 }
             })
             val channelFuture = clientBootstrap.connect().sync()
@@ -63,13 +68,15 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
         override fun channelActive(channelHandlerContext: ChannelHandlerContext) {
             synchronized(sentIdentPacket) {
                 if(!sentIdentPacket) {
-                    writeOnePacket(channelHandlerContext, packetConverter.makeIdentPacket(peerInfo.pubKey))
+                    val identPacket = String(packetConverter.makeIdentPacket(peerInfo.pubKey)).toByteArray()
+                    writeOnePacket(channelHandlerContext,
+                            identPacket)
                     sentIdentPacket = true
                 }
             }
-            thread(name = "active-peer-write") {
-                writePacketsWhilePossible(channelHandlerContext)
-            }
+//            thread(name = "active-peer-write") {
+//                writePacketsWhilePossible(channelHandlerContext)
+//            }
         }
         override fun exceptionCaught(channelHandlerContext: ChannelHandlerContext, cause: Throwable) {
             channelHandlerContext.close()

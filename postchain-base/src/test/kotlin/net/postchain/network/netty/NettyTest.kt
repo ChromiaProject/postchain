@@ -64,11 +64,11 @@ class NettyTest {
 
         }
 
-        val activeConnection = NettyActivePeerConnection(peerInfo, packetConverter, this::clientPacketHandler)
+        val activeConnection = ActivePeerConnection(peerInfo, packetConverter, this::clientPacketHandler)
 
         activeConnection.start()
         clientMessages.forEach {
-            activeConnection.sendPacket(it.toByteArray())
+            activeConnection.sendPacket((it ).toByteArray())
         }
         while(!serverMessages.equals(receivedServerMessages) && !clientMessages.equals(receivedClientMessages)) {
             Thread.sleep(1_000)
