@@ -9,6 +9,7 @@ import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.network.IdentPacketConverter
 import java.net.InetSocketAddress
+import kotlin.concurrent.thread
 
 /**
  * ruslan.klymenko@zorallabs.com 04.10.18
@@ -17,14 +18,13 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
                                 val packetConverter: IdentPacketConverter,
                                 val packetHandler: (ByteArray) -> Unit): NettyPeerConnection() {
 
-    val group = NioEventLoopGroup()
 
     override fun handlePacket(pkt: ByteArray) {
         packetHandler(pkt)
     }
 
     override fun stop() {
-        group.shutdownGracefully().sync()
+    //    group.shutdownGracefully().sync()
     }
 
     companion object : KLogging()
@@ -51,6 +51,8 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
             channelFuture.channel().closeFuture().sync()
         } catch (e: Exception) {
             logger.error(e.toString())
+         }finally {
+            group.shutdownGracefully().sync()
         }
     }
 
@@ -65,14 +67,16 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
                     sentIdentPacket = true
                 }
             }
-            writePacketsWhilePossible(channelHandlerContext)
-          //  channelHandlerContext.flush()
+            thread(name = "active-peer-write") {
+                writePacketsWhilePossible(channelHandlerContext)
+            }
         }
         override fun exceptionCaught(channelHandlerContext: ChannelHandlerContext, cause: Throwable) {
             channelHandlerContext.close()
         }
         override fun channelRead0(channelHandlerContext: ChannelHandlerContext, o: Any) {
-            readPacketsWhilePossible(o)
+            val bytes = readOnePacket(o)
+            handlePacket(bytes)
         }
     }
 }

@@ -3,6 +3,7 @@ package net.postchain.network.ref.netty
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
+import io.netty.util.CharsetUtil
 import mu.KLogging
 import net.postchain.network.AbstractPeerConnection
 import net.postchain.network.MAX_QUEUED_PACKETS
@@ -11,7 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue
 abstract class NettyPeerConnection : AbstractPeerConnection {
     @Volatile
     protected var keepGoing: Boolean = true
-    private val outboundPackets = LinkedBlockingQueue<ByteArray>(MAX_QUEUED_PACKETS)
+    protected val outboundPackets = LinkedBlockingQueue<ByteArray>(MAX_QUEUED_PACKETS)
 
     companion object : KLogging()
 
@@ -21,7 +22,7 @@ abstract class NettyPeerConnection : AbstractPeerConnection {
         val inBuffer = msg as ByteBuf
         val bytes = ByteArray(inBuffer.readableBytes())
         inBuffer.readBytes(bytes)
-        return bytes
+        return bytes //String(bytes).toByteArray(CharsetUtil.UTF_8)
     }
 
     protected fun readPacketsWhilePossible(msg: Any) {
@@ -49,6 +50,7 @@ abstract class NettyPeerConnection : AbstractPeerConnection {
                 val bytes = outboundPackets.take()
                 if (keepGoing) {
                     writeOnePacket(dataStream, bytes)
+                    Thread.sleep(1_000)
                 }
             }
         } catch (e: Exception) {
