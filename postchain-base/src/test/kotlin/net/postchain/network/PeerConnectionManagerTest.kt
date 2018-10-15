@@ -14,7 +14,7 @@ class PeerConnectionManagerTest {
     val activeMessage = "active activeMessage from connection manager"
     val passiveMessage = "passive activeMessage from connection manager"
 
-    var activeHandlerMessage = ""
+    var blockchain2PacketHandler = ""
     var passiveHandlerMessage= ""
 
     inner class PacketConverterTest: PacketConverter<ByteArray> {
@@ -60,16 +60,14 @@ class PeerConnectionManagerTest {
 
         val connectionManager = PeerConnectionManager(peerInfo, packetConverter)
         connectionManager.registerBlockchain(connectionPublicKey.toByteArray(), object: BlockchainDataHandler {
-            private fun packetHandler(bytes: ByteArray) {
-                println("Blockchain 1 handler: " + String(bytes))
-            }
+            private fun packetHandler(bytes: ByteArray) { }
             override fun getPacketHandler(peerPubKey: ByteArray) = this::packetHandler
 
         })
         val connectionManager2 = PeerConnectionManager(peerInfo2, packetConverter)
         connectionManager2.registerBlockchain(connectionPublicKey2.toByteArray(), object: BlockchainDataHandler {
             private fun packetHandler(bytes: ByteArray) {
-                activeHandlerMessage = String(bytes)
+                blockchain2PacketHandler = String(bytes)
             }
             override fun getPacketHandler(peerPubKey: ByteArray) = this::packetHandler
 
@@ -80,16 +78,15 @@ class PeerConnectionManagerTest {
         connectionManager.connectPeer(peerInfo2, packetConverter, this::peer2packetHandler)
 
         Assert.assertFalse(passiveHandlerMessage == activeMessage)
-        Assert.assertFalse(activeHandlerMessage == passiveMessage)
+        Assert.assertFalse(blockchain2PacketHandler == passiveMessage)
 
-        connectionManager.sendPacket(OutboundPacket(activeMessage.toByteArray(), listOf(ByteArrayKey(peerInfo2.pubKey), ByteArrayKey(peerInfo.pubKey))))
+        connectionManager.sendPacket(OutboundPacket(activeMessage.toByteArray(), listOf(ByteArrayKey(peerInfo2.pubKey))))
+        Thread.sleep(1_000)
 
         connectionManager2.sendPacket(OutboundPacket(passiveMessage.toByteArray(), listOf(ByteArrayKey(peerInfo2.pubKey), ByteArrayKey(peerInfo.pubKey))))
+        Thread.sleep(1_000)
 
-        Thread.sleep(3_000)
-        println(activeHandlerMessage)
-        println(passiveHandlerMessage)
-        Assert.assertTrue(activeHandlerMessage == activeMessage)
+        Assert.assertTrue(blockchain2PacketHandler == activeMessage)
         Assert.assertTrue(passiveHandlerMessage == passiveMessage)
     }
 }
