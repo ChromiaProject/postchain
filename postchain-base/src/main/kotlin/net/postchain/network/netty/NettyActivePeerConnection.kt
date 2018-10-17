@@ -66,9 +66,7 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
         override fun channelActive(channelHandlerContext: ChannelHandlerContext) {
             val identPacket = packetConverter.makeIdentPacket(peerInfo.pubKey)
             writeOnePacket(channelHandlerContext, identPacket)
-            thread(name = "active-peer-write") {
-                writePacketsWhilePossible(channelHandlerContext)
-            }
+            ctx = channelHandlerContext
         }
         override fun exceptionCaught(channelHandlerContext: ChannelHandlerContext, cause: Throwable) {
             channelHandlerContext.close()

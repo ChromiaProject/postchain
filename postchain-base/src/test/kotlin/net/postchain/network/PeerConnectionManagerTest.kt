@@ -60,7 +60,7 @@ class PeerConnectionManagerTest {
 
         val connectionManager = PeerConnectionManager(peerInfo, packetConverter)
         connectionManager.registerBlockchain(connectionPublicKey.toByteArray(), object: BlockchainDataHandler {
-            private fun packetHandler(bytes: ByteArray) { }
+            private fun packetHandler(bytes: ByteArray) {}
             override fun getPacketHandler(peerPubKey: ByteArray) = this::packetHandler
 
         })
@@ -84,7 +84,7 @@ class PeerConnectionManagerTest {
         Thread.sleep(1_000)
 
         connectionManager2.sendPacket(OutboundPacket(passiveMessage.toByteArray(), listOf(ByteArrayKey(peerInfo2.pubKey), ByteArrayKey(peerInfo.pubKey))))
-        Thread.sleep(1_000)
+        Thread.sleep(2_000)
 
         Assert.assertTrue(blockchain2PacketHandler == activeMessage)
         Assert.assertTrue(passiveHandlerMessage == passiveMessage)
