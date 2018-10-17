@@ -11,7 +11,6 @@ import net.postchain.base.PeerInfo
 import net.postchain.network.IdentPacketConverter
 import net.postchain.network.MAX_PAYLOAD_SIZE
 import java.net.InetSocketAddress
-import kotlin.concurrent.thread
 
 /**
  * ruslan.klymenko@zorallabs.com 04.10.18
@@ -66,9 +65,7 @@ class NettyActivePeerConnection(val peerInfo: PeerInfo,
         override fun channelActive(channelHandlerContext: ChannelHandlerContext) {
             val identPacket = packetConverter.makeIdentPacket(peerInfo.pubKey)
             writeOnePacket(channelHandlerContext, identPacket)
-            thread(name = "active-peer-write") {
-                writePacketsWhilePossible(channelHandlerContext)
-            }
+            handlerContext = channelHandlerContext
         }
         override fun exceptionCaught(channelHandlerContext: ChannelHandlerContext, cause: Throwable) {
             channelHandlerContext.close()

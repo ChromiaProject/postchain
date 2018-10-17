@@ -3,18 +3,14 @@ package net.postchain.network.ref.netty
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
-import io.netty.util.CharsetUtil
 import mu.KLogging
 import net.postchain.network.AbstractPeerConnection
-import net.postchain.network.MAX_QUEUED_PACKETS
-import java.lang.RuntimeException
 import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
 
 abstract class NettyPeerConnection : AbstractPeerConnection {
-    @Volatile
-    protected var keepGoing: Boolean = true
-    protected val outboundPackets = LinkedBlockingQueue<ByteArray>(MAX_QUEUED_PACKETS)
+
+    protected var handlerContext: ChannelHandlerContext? = null
 
     protected val packetSizeLength = 4
 
@@ -38,30 +34,17 @@ abstract class NettyPeerConnection : AbstractPeerConnection {
         dataStream.writeAndFlush(Unpooled.copiedBuffer(packetSizeBytes + bytes))
     }
 
-    protected fun writePacketsWhilePossible(dataStream: ChannelHandlerContext) {
-        try {
-            while (keepGoing) {
-                val bytes = outboundPackets.take()
-                if (keepGoing) {
-                    writeOnePacket(dataStream, bytes)
-                }
-            }
-        } catch (e: Exception) {
-            logger.error(e.toString())
-        }
-    }
-
-    @Synchronized
     override fun stop() {
-        keepGoing = false
-        outboundPackets.put(byteArrayOf())
+        // todo
     }
 
+    val packetBuffer = LinkedBlockingQueue<ByteArray>()
     override fun sendPacket(b: ByteArray) {
-        if (!keepGoing) return
-        if (outboundPackets.size >= MAX_QUEUED_PACKETS) {
-            outboundPackets.poll()
+        if(handlerContext == null) {
+            packetBuffer.add(b)
+        } else {
+            while(!packetBuffer.isEmpty()) writeOnePacket(handlerContext!!, packetBuffer.poll())
+            writeOnePacket(handlerContext!!, b)
         }
-        outboundPackets.put(b)
     }
 }

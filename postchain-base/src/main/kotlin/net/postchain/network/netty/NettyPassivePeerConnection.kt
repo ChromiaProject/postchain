@@ -12,7 +12,6 @@ import net.postchain.network.IdentPacketConverter
 import net.postchain.network.IdentPacketInfo
 import net.postchain.network.MAX_PAYLOAD_SIZE
 import java.net.InetSocketAddress
-import kotlin.concurrent.thread
 
 /**
  * ruslan.klymenko@zorallabs.com 04.10.18
@@ -75,20 +74,8 @@ class NettyPassivePeerConnection (
                     if (!identified) {
                         val info = packetConverter.parseIdentPacket(readOnePacket(msg))
                         packetHandler = registerConn(info, peerConnection)
+                        handlerContext = ctx
                         identified = true
-                    }
-                    thread(name = "PassiveWriteLoop-PeerId") {
-                     //   writePacketsWhilePossible(ctx)
-                        try {
-                            while (keepGoing) {
-                                val bytes = outboundPackets.take()
-                                if (keepGoing) {
-                                    writeOnePacket(ctx, bytes)
-                                }
-                            }
-                        } catch (e: Exception) {
-                            logger.error(e.toString())
-                        }
                     }
                 }
             } else {
