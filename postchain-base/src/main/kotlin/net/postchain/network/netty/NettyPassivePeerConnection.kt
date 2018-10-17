@@ -69,26 +69,14 @@ class NettyPassivePeerConnection (
 
         @Volatile
         private var identified = false
-        override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
+        override fun channelRead(context: ChannelHandlerContext, msg: Any) {
             if(!identified) {
                 synchronized(identified) {
                     if (!identified) {
                         val info = packetConverter.parseIdentPacket(readOnePacket(msg))
                         packetHandler = registerConn(info, peerConnection)
+                        ctx = context
                         identified = true
-                    }
-                    thread(name = "PassiveWriteLoop-PeerId") {
-                     //   writePacketsWhilePossible(ctx)
-                        try {
-                            while (keepGoing) {
-                                val bytes = outboundPackets.take()
-                                if (keepGoing) {
-                                    writeOnePacket(ctx, bytes)
-                                }
-                            }
-                        } catch (e: Exception) {
-                            logger.error(e.toString())
-                        }
                     }
                 }
             } else {
