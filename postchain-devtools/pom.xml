@@ -71,10 +71,10 @@
         </dependency>
 
     </dependencies>
-
+<!--
     <build>
         <plugins>
-            <plugin>
+           <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>${maven.shade.plugin.version}</version>
@@ -96,6 +96,6 @@
                 </executions>
             </plugin>
         </plugins>
-    </build>
+    </build> -->
 
 </project>
