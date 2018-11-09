@@ -9,6 +9,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import java.lang.RuntimeException
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class NettyConnectorTest {
@@ -114,13 +115,13 @@ class NettyConnectorTest {
         val serverReceivedMessages = mutableListOf<String>()
         val serverReceivedErrors = mutableListOf<String>()
         val peerInfo = PeerInfo("localhost", 9083, publicKey, "wrongKey".toByteArray())
-        val connector = NettyConnector(peerInfo, ConnectorEventsImpl(serverReceivedMessages, serverReceivedErrors), identPacketConverter, cryptoSystem)
+        val connector = NettyConnector(peerInfo, ConnectorEventsImpl(serverReceivedMessages, serverReceivedErrors), identPacketConverter, cryptoSystem, true)
 
 
         val clientReceivedMessages = mutableListOf<String>()
         val clientReceivedErrors = mutableListOf<String>()
         val peerInfo2 = PeerInfo("localhost", 9084, publicKey2, privateKey2)
-        val connector2 = NettyConnector(peerInfo2, ConnectorEventsImpl(clientReceivedMessages, clientReceivedErrors), identPacketConverter, cryptoSystem)
+        val connector2 = NettyConnector(peerInfo2, ConnectorEventsImpl(clientReceivedMessages, clientReceivedErrors), identPacketConverter, cryptoSystem, true)
 
         val xPeerConnectionDescriptor = XPeerConnectionDescriptor(ByteArrayKey("peerId2".toByteArray()), ByteArrayKey("blockchainId2".toByteArray()))
 
@@ -266,8 +267,8 @@ class NettyConnectorTest {
     fun testNettyPerformance() {
         val identPacketConverter = IdentPacketConverterImpl()
 
-        val serverReceivedMessages = mutableListOf<String>()
-        val serverReceivedErrors = mutableListOf<String>()
+        val serverReceivedMessages = Collections.synchronizedList(mutableListOf<String>())
+        val serverReceivedErrors = Collections.synchronizedList(mutableListOf<String>())
         val peerInfo = PeerInfo("localhost", 9091, publicKey, privateKey)
         val connector = NettyConnector(peerInfo, ConnectorEventsImpl(serverReceivedMessages, serverReceivedErrors), identPacketConverter, cryptoSystem)
 
@@ -284,13 +285,14 @@ class NettyConnectorTest {
         Thread.sleep(2_000)
 
         val requestAmount = 100_000
-        val expectedServerReceivedMessages = (1 .. requestAmount).map { message }
+        val expectedServerReceivedMessages = Collections.synchronizedList((1 .. requestAmount).map { message })
         val expectedClientReceivedMessages = expectedServerReceivedMessages
         (1 .. requestAmount).forEach {
             connections.forEach {
                 it.sendPacket { message.toByteArray() }
             }
         }
+        Thread.sleep(5_000)
         Awaitility.await()
                 .atMost(10, TimeUnit.SECONDS)
                 .untilAsserted {
