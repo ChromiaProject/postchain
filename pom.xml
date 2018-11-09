@@ -187,8 +187,8 @@
                             <includes>
                                 <include>**/*Test.java</include>
                                 <include>**/*Nightly.java</include>
-                                
-                                <!--<include>**/FullEbftTestNightly.java</include>-->
+
+                                <!--<include>**/DefaultXConnectionManagerTest.java</include>-->
                             </includes>
                         </configuration>
                     </plugin>
