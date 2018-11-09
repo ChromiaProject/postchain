@@ -19,14 +19,15 @@ import net.postchain.network.x.XPeerConnectionDescriptor
 class NettyConnector(private val myPeerInfo: PeerInfo,
                      private val eventReceiver: XConnectorEvents,
                      private val identPacketConverter: IdentPacketConverter,
-                     private val cryptoSystem: CryptoSystem): XConnector {
+                     private val cryptoSystem: CryptoSystem,
+                     private val encryptionEnabled: Boolean = false): XConnector {
 
     val serverEventLoopGroup: EventLoopGroup
     val clientEventLoopGroup: EventLoopGroup
     val serverChannel: Class<ServerSocketChannel>
     val clientChannel: Class<SocketChannel>
     init {
-        if(System.getProperty("os.name").toLowerCase().contains("linux")) {
+        if(System.getProperty("os.name").toLowerCase().contains("dlinux")) {
             serverEventLoopGroup = EpollEventLoopGroup()
             clientEventLoopGroup = EpollEventLoopGroup()
             serverChannel = EpollServerSocketChannel::class.java as Class<ServerSocketChannel>
@@ -37,11 +38,11 @@ class NettyConnector(private val myPeerInfo: PeerInfo,
             serverChannel = NioServerSocketChannel::class.java as Class<ServerSocketChannel>
             clientChannel = NioSocketChannel::class.java as Class<SocketChannel>
         }
-        NettyPassivePeerConnection(myPeerInfo, identPacketConverter, eventReceiver, serverChannel, serverEventLoopGroup, cryptoSystem)
+        NettyPassivePeerConnection(myPeerInfo, identPacketConverter, eventReceiver, serverChannel, serverEventLoopGroup, cryptoSystem, encryptionEnabled)
     }
 
     override fun connectPeer(descriptor: XPeerConnectionDescriptor, peerInfo: PeerInfo) {
-        NettyActivePeerConnection(peerInfo, descriptor, identPacketConverter, eventReceiver, clientChannel, clientEventLoopGroup, cryptoSystem)
+        NettyActivePeerConnection(peerInfo, descriptor, identPacketConverter, eventReceiver, clientChannel, clientEventLoopGroup, cryptoSystem, encryptionEnabled)
     }
 
     override fun shutdown() {

@@ -150,7 +150,7 @@ class DefaultXCommunicationManagerIT2 {
         }
     }
 
-    @Test
+   // @Test
     fun threePeers_SendsPackets_Successfully() {
         val connectorFactory = NettyConnectorFactory()
         val peerInfos = arrayOf(peerInfo1, peerInfo2, peerInfo3)
