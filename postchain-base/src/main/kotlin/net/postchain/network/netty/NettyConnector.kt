@@ -20,7 +20,7 @@ class NettyConnector(private val myPeerInfo: PeerInfo,
                      private val eventReceiver: XConnectorEvents,
                      private val identPacketConverter: IdentPacketConverter,
                      private val cryptoSystem: CryptoSystem,
-                     private val enabledEncryption: Boolean = true): XConnector {
+                     private val enabledEncryption: Boolean = false): XConnector {
 
     val serverEventLoopGroup: EventLoopGroup
     val clientEventLoopGroup: EventLoopGroup
