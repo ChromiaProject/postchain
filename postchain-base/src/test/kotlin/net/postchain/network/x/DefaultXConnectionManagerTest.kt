@@ -19,9 +19,10 @@ import kotlin.test.assertTrue
 
 class DefaultXConnectionManagerTest {
 
-    private val cryptoSystem = SECP256K1CryptoSystem()
     private val blockchainRid = byteArrayOf(0x01)
     private val defaultConnectorFactory = DefaultXConnectorFactory()
+
+    private val cryptoSystem = SECP256K1CryptoSystem()
 
     private lateinit var peerInfo1: PeerInfo
     private lateinit var peerConnectionDescriptor1: XPeerConnectionDescriptor
@@ -101,7 +102,7 @@ class DefaultXConnectionManagerTest {
             on { connectPeer(any(), any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
         }
         val connectorFactory: XConnectorFactory = mock {
-            on { createConnector(any(), any(), any(), cryptoSystem) } doReturn connector
+            on { createConnector(any(), any(), any(), any()) } doReturn connector
         }
         val communicationConfig: PeerCommConfiguration = mock {
             on { blockchainRID } doReturn blockchainRid
@@ -156,7 +157,7 @@ class DefaultXConnectionManagerTest {
             on { connectPeer(any(), any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
         }
         val connectorFactory: XConnectorFactory = mock {
-            on { createConnector(any(), any(), any(), cryptoSystem) } doReturn connector
+            on { createConnector(any(), any(), any(), any()) } doReturn connector
         }
         val communicationConfig: PeerCommConfiguration = mock {
             on { blockchainRID } doReturn blockchainRid
@@ -188,7 +189,7 @@ class DefaultXConnectionManagerTest {
             on { connectPeer(any(), any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
         }
         val connectorFactory: XConnectorFactory = mock {
-            on { createConnector(any(), any(), any(), cryptoSystem) } doReturn connector
+            on { createConnector(any(), any(), any(), any()) } doReturn connector
         }
         val communicationConfig: PeerCommConfiguration = mock {
             on { blockchainRID } doReturn blockchainRid
@@ -249,7 +250,7 @@ class DefaultXConnectionManagerTest {
             on { connectPeer(any(), any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
         }
         val connectorFactory: XConnectorFactory = mock {
-            on { createConnector(any(), any(), any(), cryptoSystem) } doReturn connector
+            on { createConnector(any(), any(), any(), any()) } doReturn connector
         }
         val communicationConfig: PeerCommConfiguration = mock {
             on { blockchainRID } doReturn blockchainRid
@@ -321,7 +322,7 @@ class DefaultXConnectionManagerTest {
             on { connectPeer(any(), any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
         }
         val connectorFactory: XConnectorFactory = mock {
-            on { createConnector(any(), any(), any(), cryptoSystem) } doReturn connector
+            on { createConnector(any(), any(), any(), any()) } doReturn connector
         }
         val communicationConfig: PeerCommConfiguration = mock {
             on { blockchainRID } doReturn blockchainRid
@@ -368,7 +369,7 @@ class DefaultXConnectionManagerTest {
             on { connectPeer(any(), any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
         }
         val connectorFactory: XConnectorFactory = mock {
-            on { createConnector(any(), any(), any(), cryptoSystem) } doReturn connector
+            on { createConnector(any(), any(), any(), any()) } doReturn connector
         }
         val communicationConfig: PeerCommConfiguration = mock {
             on { blockchainRID } doReturn blockchainRid

@@ -21,7 +21,6 @@ import org.apache.commons.configuration2.Configuration
 
 class EBFTSynchronizationInfrastructure(val config: Configuration) : SynchronizationInfrastructure {
 
-    private val cryptoSystem = SECP256K1CryptoSystem()
     private val connectionManagers = mutableListOf<XConnectionManager>()
     @Deprecated("See XCommunicationManager")
     private val connectionManagersDeprecated = mutableListOf<PeerConnectionManager<*>>()
@@ -55,7 +54,7 @@ class EBFTSynchronizationInfrastructure(val config: Configuration) : Synchroniza
                 NettyConnectorFactory(),
                 communicationConfig.peerInfo[communicationConfig.myIndex],
                 packetConverter,
-                cryptoSystem
+                SECP256K1CryptoSystem()
         ).also { connectionManagers.add(it) }
 
         return DefaultXCommunicationManager(
