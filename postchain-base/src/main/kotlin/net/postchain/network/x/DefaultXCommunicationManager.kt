@@ -40,12 +40,13 @@ class DefaultXCommunicationManager<PacketType>(
     }
 
     override fun sendPacket(packet: PacketType, recipients: Set<Int>) {
-        assert(recipients.size == 1)
-        val peerIdx = recipients.first()
-        connectionManager.sendPacket(
-                { packetConverter.encodePacket(packet) },
-                chainID,
-                config.peerInfo[peerIdx].pubKey.byteArrayKeyOf())
+        recipients.forEach { peerIdx ->
+            connectionManager.sendPacket(
+                    { packetConverter.encodePacket(packet) },
+                    chainID,
+                    config.peerInfo[peerIdx].pubKey.byteArrayKeyOf())
+        }
+
     }
 
     override fun broadcastPacket(packet: PacketType) {

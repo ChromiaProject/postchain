@@ -27,7 +27,7 @@ class NettyConnector(private val myPeerInfo: PeerInfo,
     val serverChannel: Class<ServerSocketChannel>
     val clientChannel: Class<SocketChannel>
     init {
-        if(System.getProperty("os.name").toLowerCase().contains("dlinux")) {
+        if(System.getProperty("os.name").toLowerCase().contains("linux")) {
             serverEventLoopGroup = EpollEventLoopGroup()
             clientEventLoopGroup = EpollEventLoopGroup()
             serverChannel = EpollServerSocketChannel::class.java as Class<ServerSocketChannel>
