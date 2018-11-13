@@ -17,7 +17,8 @@ import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import java.net.InetSocketAddress
 
-class NettyActivePeerConnection(private val peerInfo: PeerInfo,
+class NettyActivePeerConnection(private val remotePeerInfo: PeerInfo,
+                                private val myPeerInfo: PeerInfo,
                                 private val descriptor: XPeerConnectionDescriptor,
                                 private val identPacketConverter: IdentPacketConverter,
                                 private val eventReceiver: XConnectorEvents,
@@ -31,7 +32,7 @@ class NettyActivePeerConnection(private val peerInfo: PeerInfo,
             val clientBootstrap = Bootstrap()
             clientBootstrap.group(group)
             clientBootstrap.channel(channelClass)
-            clientBootstrap.remoteAddress(InetSocketAddress(peerInfo.host, peerInfo.port))
+            clientBootstrap.remoteAddress(InetSocketAddress(remotePeerInfo.host, remotePeerInfo.port))
             clientBootstrap.handler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(socketChannel: SocketChannel) {
                     socketChannel.pipeline()
@@ -81,9 +82,10 @@ class NettyActivePeerConnection(private val peerInfo: PeerInfo,
 
         override fun channelActive(channelHandlerContext: ChannelHandlerContext) {
             ctx = channelHandlerContext
-            val identPacket = identPacketConverter.makeIdentPacket(createIdentPacketBytes(descriptor, ephemeralPubKey))
-            accept(eventReceiver.onPeerConnected(descriptor, this)!!)
+            generateSessionKey(remotePeerInfo.pubKey)
+            val identPacket = identPacketConverter.makeIdentPacket(createIdentPacketBytes(descriptor, ephemeralPubKey, myPeerInfo.pubKey))
             sendIdentPacket({ identPacket })
+            accept(eventReceiver.onPeerConnected(descriptor, this)!!)
         }
 
 
@@ -93,27 +95,12 @@ class NettyActivePeerConnection(private val peerInfo: PeerInfo,
         }
         fun readPacket(msg: Any) = NettyIO.readPacket(msg)
 
-        @Volatile
-        private var receivedPassivePublicKey = false
         override fun channelRead0(channelHandlerContext: ChannelHandlerContext, o: Any) {
-            if(!receivedPassivePublicKey) {
-                synchronized(receivedPassivePublicKey) {
-                    if (!receivedPassivePublicKey) {
-                        val remotePubKey = readPacket(o)
-                        generateSessionKey(remotePubKey)
-                        receivedPassivePublicKey = true
-                    } else {
-                        handleInput(o)
-                    }
-                }
-            } else {
-                handleInput(o)
-            }
-
+            handleInput(o)
         }
 
         private fun generateSessionKey(remotePubKey: ByteArray) {
-            val ecdh1 = secp256k1_ecdh(peerInfo.privateKey!!, remotePubKey)
+            val ecdh1 = secp256k1_ecdh(myPeerInfo.privateKey!!, remotePubKey)
             val ecdh2 = secp256k1_ecdh(ephemeralKey, remotePubKey)
             val digest = cryptoSystem.digest(ecdh1 + ecdh2)
             sessionKey = digest

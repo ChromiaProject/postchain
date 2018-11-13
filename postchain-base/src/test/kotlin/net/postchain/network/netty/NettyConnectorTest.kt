@@ -109,6 +109,43 @@ class NettyConnectorTest {
     }
 
     @Test
+    fun testNettyConnectorPositiveEncrypted() {
+
+        val identPacketConverter = IdentPacketConverterImpl()
+
+        val serverReceivedMessages = mutableListOf<String>()
+        val serverReceivedErrors = mutableListOf<String>()
+        val peerInfo = PeerInfo("localhost", 9081, publicKey, privateKey)
+        val connector = NettyConnector(peerInfo, ConnectorEventsImpl(serverReceivedMessages, serverReceivedErrors), identPacketConverter, cryptoSystem, true)
+
+
+        val clientReceivedMessages = mutableListOf<String>()
+        val clientReceivedErrors = mutableListOf<String>()
+        val peerInfo2 = PeerInfo("localhost", 9082, publicKey2, privateKey2)
+        val connector2 = NettyConnector(peerInfo2, ConnectorEventsImpl(clientReceivedMessages, clientReceivedErrors), identPacketConverter, cryptoSystem, true)
+
+        val xPeerConnectionDescriptor = XPeerConnectionDescriptor(ByteArrayKey("peerId2".toByteArray()), ByteArrayKey("blockchainId2".toByteArray()))
+
+        connector2.connectPeer(xPeerConnectionDescriptor, peerInfo)
+
+        Thread.sleep(2_000)
+        connections.forEach {
+            it.sendPacket { message.toByteArray() }
+        }
+        Awaitility.await()
+                .atMost(10, TimeUnit.SECONDS)
+                .untilAsserted {
+                    Assert.assertEquals(listOf(message), serverReceivedMessages)
+                    Assert.assertEquals(listOf(message), clientReceivedMessages)
+
+                    Assert.assertTrue(serverReceivedErrors.isEmpty())
+                    Assert.assertTrue(clientReceivedErrors.isEmpty())
+                }
+        connector.shutdown()
+        connector2.shutdown()
+    }
+
+    @Test
     fun testNettyConnectorWrongKey() {
         val identPacketConverter = IdentPacketConverterImpl()
 
@@ -134,7 +171,7 @@ class NettyConnectorTest {
         Awaitility.await()
                 .atMost(10, TimeUnit.SECONDS)
                 .untilAsserted {
-                    Assert.assertTrue(serverReceivedErrors.size == 1)
+                    Assert.assertTrue(serverReceivedErrors.isNotEmpty())
                 }
         connector.shutdown()
         connector2.shutdown()
@@ -254,10 +291,12 @@ class NettyConnectorTest {
         val xPeerConnectionDescriptor = XPeerConnectionDescriptor(peerId, ByteArrayKey("blockchainId".toByteArray()))
 
         connector.connectPeer(xPeerConnectionDescriptor, peerInfo)
+
+        Thread.sleep(3_000)
         Awaitility.await()
                 .atMost(10, TimeUnit.SECONDS)
                 .untilAsserted {
-                    Assert.assertTrue(serverReceivedErrors.size == 1)
+                    Assert.assertFalse(serverReceivedErrors.isEmpty())
                 }
         connector.shutdown()
     }

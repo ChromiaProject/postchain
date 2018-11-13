@@ -42,15 +42,17 @@ abstract class NettyIO(protected val group: EventLoopGroup,
             if (lastStart < bytes.size - 1) {
                 result.add(bytes.sliceArray(lastStart..bytes.size - 1))
             }
-            return IdentPacketInfo(result[0], result[1], result[2])
+            return IdentPacketInfo(result[0], result[1], ephemeralRemoteNodePubKey = result[2], remoteNodePubKey = result[3])
         }
 
-        fun createIdentPacketBytes(descriptor: XPeerConnectionDescriptor, ephemeralPubKey: ByteArray) =
+        fun createIdentPacketBytes(descriptor: XPeerConnectionDescriptor, ephemeralPubKey: ByteArray, pubKey: ByteArray) =
                 descriptor.peerID.byteArray +
                         identPacketDelimiter +
                         descriptor.blockchainRID.byteArray +
                         identPacketDelimiter +
-                        ephemeralPubKey!!
+                        ephemeralPubKey +
+                        identPacketDelimiter +
+                        pubKey
     }
 
     init {

@@ -97,7 +97,6 @@ class NettyPassivePeerConnection(private val peerInfo: PeerInfo,
                         ctx = context
                         connectionDescriptor = getConnectionDescriptor(msg)
                         accept(eventReceiver.onPeerConnected(connectionDescriptor!!, this)!!)
-                        sendIdentPacket { peerInfo.pubKey }
                         receivedPassivePublicKey = true
                     } else {
                         readAndHandleInput(msg)
@@ -113,12 +112,12 @@ class NettyPassivePeerConnection(private val peerInfo: PeerInfo,
             val packet = readPacket(msg)
             val info = identPacketConverter.parseIdentPacket(packet)
             generateSessionKey(info)
-            return XPeerConnectionDescriptor(ByteArrayKey(info.peerID), ByteArrayKey(info.blockchainRID), info.sessionKey!!)
+            return XPeerConnectionDescriptor(ByteArrayKey(info.peerID), ByteArrayKey(info.blockchainRID), info.remoteNodePubKey!!)
         }
 
         private fun generateSessionKey(info: IdentPacketInfo) {
-            val ecdh1 = secp256k1_ecdh(peerInfo.privateKey!!, peerInfo!!.pubKey!!)
-            val ecdh2 = secp256k1_ecdh(peerInfo.privateKey!!, info.sessionKey!!)
+            val ecdh1 = secp256k1_ecdh(peerInfo.privateKey!!, info!!.remoteNodePubKey!!)
+            val ecdh2 = secp256k1_ecdh(peerInfo.privateKey!!, info.ephemeralRemoteNodePubKey!!)
             val digest = cryptoSystem.digest(ecdh1 + ecdh2)
             sessionKey = digest
         }
