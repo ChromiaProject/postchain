@@ -29,7 +29,8 @@ class ActivePeerConnection(
                 awaitConnection.await()
                 val socket1 = socket ?: throw Exception("No connection")
                 val stream = DataOutputStream(socket1.getOutputStream())
-                writeOnePacket(stream, packetConverter.makeIdentPacket(peer.pubKey)) // write Ident packet
+                // todo: not woring now. will be removed soon
+                //writeOnePacket(stream, packetConverter.makeIdentPacket(peer.pubKey)) // write Ident packet
                 val err = writePacketsWhilePossible(stream)
                 if (err != null) {
                     logger.debug(" sending packet to  failed: ${err.message}")

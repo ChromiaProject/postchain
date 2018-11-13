@@ -1,5 +1,6 @@
 package net.postchain.network.x
 
+import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
 import net.postchain.base.PeerInfo
@@ -43,7 +44,7 @@ class DefaultXCommunicationManagerIT {
 
         // Given
         val packetConverter1: PacketConverter<Int> = mock {
-            on { makeIdentPacket(peerInfo2.pubKey) } doReturn identPacket2
+            on { makeIdentPacket(any(), any(), any()) } doReturn identPacket2
             on { parseIdentPacket(identPacket1) } doReturn IdentPacketInfo(peerInfo1.pubKey, blockchainRid)
 
             on { encodePacket(2) } doReturn byteArrayOf(0x02)
@@ -55,7 +56,7 @@ class DefaultXCommunicationManagerIT {
         }
 
         val packetConverter2: PacketConverter<Int> = mock {
-            on { makeIdentPacket(peerInfo1.pubKey) } doReturn identPacket1
+            on { makeIdentPacket(any(), any(), any()) } doReturn identPacket1
             on { parseIdentPacket(identPacket2) } doReturn IdentPacketInfo(peerInfo2.pubKey, blockchainRid)
 
             onGeneric { decodePacket(peerInfo2.pubKey, byteArrayOf(0x02)) } doReturn 2

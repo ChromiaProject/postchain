@@ -83,7 +83,7 @@ class NettyActivePeerConnection(private val remotePeerInfo: PeerInfo,
         override fun channelActive(channelHandlerContext: ChannelHandlerContext) {
             ctx = channelHandlerContext
             generateSessionKey(remotePeerInfo.pubKey)
-            val identPacket = identPacketConverter.makeIdentPacket(createIdentPacketBytes(descriptor, ephemeralPubKey, myPeerInfo.pubKey))
+            val identPacket = identPacketConverter.makeIdentPacket(descriptor, ephemeralPubKey, myPeerInfo.pubKey)
             sendIdentPacket({ identPacket })
             accept(eventReceiver.onPeerConnected(descriptor, this)!!)
         }
