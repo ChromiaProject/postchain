@@ -2,7 +2,7 @@ package net.postchain.network.netty
 
 import net.postchain.base.*
 import net.postchain.core.ByteArrayKey
-import net.postchain.network.IdentPacketConverter
+import net.postchain.ebft.EbftPacketConverter
 import net.postchain.network.x.*
 import org.awaitility.Awaitility
 import org.junit.Assert
@@ -62,19 +62,10 @@ class NettyConnectorTest {
         }
     }
 
-    inner class IdentPacketConverterImpl: IdentPacketConverter {
-        override fun makeIdentPacket(forPeer: PeerID): ByteArray {
-            return forPeer
-        }
-
-        override fun parseIdentPacket(bytes: ByteArray) = NettyIO.parseIdentPacket(bytes)
-
-    }
-
     @Test
     fun testNettyConnectorPositive() {
 
-        val identPacketConverter = IdentPacketConverterImpl()
+        val identPacketConverter = EbftPacketConverter()
 
         val serverReceivedMessages = mutableListOf<String>()
         val serverReceivedErrors = mutableListOf<String>()
@@ -111,7 +102,7 @@ class NettyConnectorTest {
     @Test
     fun testNettyConnectorPositiveEncrypted() {
 
-        val identPacketConverter = IdentPacketConverterImpl()
+        val identPacketConverter = EbftPacketConverter()
 
         val serverReceivedMessages = mutableListOf<String>()
         val serverReceivedErrors = mutableListOf<String>()
@@ -147,7 +138,7 @@ class NettyConnectorTest {
 
     @Test
     fun testNettyConnectorWrongKey() {
-        val identPacketConverter = IdentPacketConverterImpl()
+        val identPacketConverter = EbftPacketConverter()
 
         val serverReceivedMessages = mutableListOf<String>()
         val serverReceivedErrors = mutableListOf<String>()
@@ -179,7 +170,7 @@ class NettyConnectorTest {
 
     @Test
     fun testNettyConnectorMultiplePositive() {
-        val identPacketConverter = IdentPacketConverterImpl()
+        val identPacketConverter = EbftPacketConverter()
 
         val peer1ReceivedMessages = mutableListOf<String>()
         val peer1ReceivedErrors = mutableListOf<String>()
@@ -244,7 +235,7 @@ class NettyConnectorTest {
 
     @Test
     fun testNettyConnectorClosedConnection() {
-        val identPacketConverter = IdentPacketConverterImpl()
+        val identPacketConverter = EbftPacketConverter()
 
         val serverReceivedMessages = mutableListOf<String>()
         val serverReceivedErrors = mutableListOf<String>()
@@ -283,7 +274,7 @@ class NettyConnectorTest {
         val serverReceivedErrors = mutableListOf<String>()
         val xConnectorEvents = ServerConnectorEventsImplException(serverReceivedMessages, serverReceivedErrors)
 
-        val identPacketConverter = IdentPacketConverterImpl()
+        val identPacketConverter = EbftPacketConverter()
 
         val connector = NettyConnector(peerInfo, xConnectorEvents, identPacketConverter, cryptoSystem)
 
@@ -304,7 +295,7 @@ class NettyConnectorTest {
 
     @Test
     fun testNettyPerformance() {
-        val identPacketConverter = IdentPacketConverterImpl()
+        val identPacketConverter = EbftPacketConverter()
 
         val serverReceivedMessages = Collections.synchronizedList(mutableListOf<String>())
         val serverReceivedErrors = Collections.synchronizedList(mutableListOf<String>())

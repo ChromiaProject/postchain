@@ -9,6 +9,6 @@ object EbftPeerManagerFactory {
     fun createConnectionManager(config: PeerCommConfiguration): PeerConnectionManager<EbftMessage> {
         return PeerConnectionManager(
                 config.peerInfo[config.myIndex],
-                EbftPacketConverter(config))
+                EbftPacketConverter())
     }
 }

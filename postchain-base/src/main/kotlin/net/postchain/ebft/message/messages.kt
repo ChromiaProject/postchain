@@ -47,7 +47,6 @@ sealed class EbftMessage {
                 net.postchain.ebft.messages.Message.transactionChosen -> Transaction(message.transaction.data)
                 else -> throw ProgrammerMistake("Message type ${message.choiceID} is not handeled")
             }
-
         }
     }
 

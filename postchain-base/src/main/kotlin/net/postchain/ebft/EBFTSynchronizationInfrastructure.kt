@@ -48,7 +48,7 @@ class EBFTSynchronizationInfrastructure(val config: Configuration) : Synchroniza
                 SECP256K1CryptoSystem(),
                 privKey())
 
-        val packetConverter = EbftPacketConverter(communicationConfig)
+        val packetConverter = EbftPacketConverter()
 
         val connectionManager = DefaultXConnectionManager(
                 NettyConnectorFactory(),
