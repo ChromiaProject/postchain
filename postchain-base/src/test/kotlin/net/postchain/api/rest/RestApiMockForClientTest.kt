@@ -10,7 +10,10 @@ import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
+import net.postchain.base.BaseBlockQueries
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.data.BaseExplorerQuery
+import net.postchain.base.data.TypeOfSystemQuery
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.ProgrammerMistake
@@ -93,5 +96,12 @@ class RestApiMockForClientManual {
                 else -> throw ProgrammerMistake("unexpected error")
             })
         }
+
+//        fun querySystem(st: String, query: BaseExplorerQuery): QueryResult {
+//            return QueryResult(when (query.component) {
+//                TypeOfSystemQuery.block -> """{"msg": "hello"}"""
+//                else -> throw ProgrammerMistake("unexpected error")
+//            })
+//        }
     }
 }

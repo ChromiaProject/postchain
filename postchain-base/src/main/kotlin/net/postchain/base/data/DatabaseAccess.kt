@@ -3,6 +3,7 @@
 package net.postchain.base.data
 
 import net.postchain.base.BaseBlockHeader
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
 import org.apache.commons.dbutils.QueryRunner
@@ -30,6 +31,7 @@ interface DatabaseAccess {
     fun getLastBlockTimestamp(ctx: EContext): Long
     fun getTxRIDsAtHeight(ctx: EContext, height: Long): Array<ByteArray>
     fun getBlockInfo(ctx: EContext, txRID: ByteArray): BlockInfo
+    fun getBlockInfoExplorer(ctx: EContext, blockchainRID: String, queryParams: BaseExplorerQuery): List<BaseBlockExplorerResponse>
     fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray
     fun getBlockTxRIDs(ctx: EContext, blockIid: Long): List<ByteArray>
     fun getBlockTxHashes(ctx: EContext, blokcIid: Long): List<ByteArray>
@@ -151,6 +153,64 @@ class SQLDatabaseAccess : DatabaseAccess {
         val witness = block[0].get("block_witness") as ByteArray
         return DatabaseAccess.BlockInfo(blockIid, blockHeader, witness)
     }
+
+    override fun getBlockInfoExplorer(ctx: EContext, blockchainRID: String, queryParams: BaseExplorerQuery): List<BaseBlockExplorerResponse> {
+        val paramList = mutableListOf<Any>()
+        var query = """
+                        SELECT
+                            b.block_rid,
+                            b.block_height,
+                            b.block_header_data,
+                            b.block_witness,
+                            b.timestamp
+                        FROM blocks as b
+                            JOIN blockchains as bc ON (b.chain_id = bc.chain_id)
+                        WHERE
+                            bc.blockchain_rid = ?
+        """
+        paramList.add(blockchainRID.hexStringToByteArray())
+
+        if(queryParams.from != null){
+            query += " AND b.timestamp > ?"
+            paramList.add(queryParams.from)
+        }
+
+        if(queryParams.to != null) {
+            query += " AND b.timestamp < ?"
+            paramList.add(queryParams.to)
+        }
+
+//        TODO: not prio
+//        if(queryParams.publicKey != null) {
+//            query += " AND b.witness" ?? How do I do this?
+//        }
+
+        query += " LIMIT 100"
+
+        val block = queryRunner.query(ctx.conn,
+                query,
+                mapListHandler,
+                *paramList.toTypedArray()
+        )
+
+        if(block.size < 1) throw UserMistake("No block satisfies the query")
+
+        val resBlocks = mutableListOf<BaseBlockExplorerResponse>()
+        block.forEach {
+            val blockchainRID = (paramList[0] as ByteArray).toHex()
+            // QUESTION: should I convert to HEX here? Or is better to have a function in BaseBlockExplorerJson? DatabaseAccess' duties are not converting stuff...
+            val blockRID = (it.get("block_rid") as ByteArray).toHex()
+            val blockHeight = it.get("block_height") as Long
+            val blockHeader = (it.get("block_header_data") as ByteArray).toHex()
+            val blockWitness = (it.get("block_witness") as ByteArray).toHex()
+            val timestamp = it.get("timestamp") as Long
+            val blockInfo = BaseBlockExplorerResponse(blockchainRID, blockRID, blockHeight, blockHeader, blockWitness,timestamp)
+            resBlocks.add(blockInfo)
+        }
+
+        return resBlocks
+    }
+
 
     override fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray {
         return queryRunner.query(ctx.conn,

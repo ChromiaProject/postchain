@@ -13,6 +13,7 @@ import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_HASH_HEX
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
+import net.postchain.base.data.BaseExplorerQuery
 import net.postchain.common.TimeLog
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.UserMistake
@@ -145,12 +146,34 @@ class RestApi(private val listenPort: Int, private val basePath: String) : Model
                 }
             }, gson::toJson)
 
+            http.post("/query/system/$PARAM_BLOCKCHAIN_RID") { request, _ ->
+                logger.debug("Query: Request body: ${request}")
+                val blockchainRID = request.params("blockchainrid")!!
+                val query = toSystemQuery(request.body())
+                var res = "{}"
+                if(model(request) is PostchainModel) {
+                    val postchainModel = model(request) as PostchainModel
+                    res = postchainModel.querySystem(blockchainRID, query).json
+                } else {
+                    throw UserMistake("Only general Postchain can return system information")
+                }
+                res
+            }
+
             http.post("/query/$PARAM_BLOCKCHAIN_RID") { request, _ ->
                 handleQuery(request)
             }
         }
 
         http.awaitInitialization()
+    }
+
+    private fun toSystemQuery(json: String): BaseExplorerQuery {
+        try {
+            return gson.fromJson<BaseExplorerQuery>(json, BaseExplorerQuery::class.java)
+        } catch (e: Exception) {
+            throw UserMistake("Could not parse json", e)
+        }
     }
 
     private fun toTransaction(req: Request): ApiTx {
@@ -183,8 +206,9 @@ class RestApi(private val listenPort: Int, private val basePath: String) : Model
         return gson.toJson(ErrorBody(error.message ?: "Unknown error"))
     }
 
+
     private fun handleQuery(request: Request): String {
-        logger.debug("Request body: ${request.body()}")
+        logger.debug("Query: Request body: ${request.body()}")
         return model(request)
                 .query(Query(request.body()))
                 .json

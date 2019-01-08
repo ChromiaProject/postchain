@@ -68,6 +68,8 @@ class BaseBlockStore : BlockStore {
         return db.getBlockHeader(ctx, blockRID)
     }
 
+
+
     // This implementation does not actually *stream* data from the database connection.
     // It is buffered in an ArrayList by ArrayListHandler() which is unfortunate.
     // Eventually, we may change this implementation to actually deliver a true
@@ -109,6 +111,11 @@ class BaseBlockStore : BlockStore {
     override fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean {
         return db.isTransactionConfirmed(ctx, txRID)
     }
+
+    override fun getBlockInfoExplorer(ctx: EContext, blockchainRID: String, queryParams: BaseExplorerQuery): List<BaseBlockExplorerResponse> {
+        return db.getBlockInfoExplorer(ctx, blockchainRID, queryParams)
+    }
+
 
     fun initialize(ctx: EContext, blockchainRID: ByteArray) {
         db.checkBlockchainRID(ctx, blockchainRID)

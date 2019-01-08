@@ -3,6 +3,9 @@
 package net.postchain.base
 
 import mu.KLogging
+import net.postchain.base.data.BaseBlockExplorerResponse
+import net.postchain.base.data.BaseBlockStore
+import net.postchain.base.data.BaseExplorerQuery
 import net.postchain.core.*
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
@@ -28,8 +31,8 @@ class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witnes
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
 open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfiguration,
-                       private val storage: Storage, private val blockStore: BlockStore,
-                       private val chainId: Long, private val mySubjectId: ByteArray) : BlockQueries {
+                            private val storage: Storage, private val blockStore: BaseBlockStore,
+                            private val chainId: Long, private val mySubjectId: ByteArray) : BlockQueries {
     companion object : KLogging()
 
     /**
@@ -105,9 +108,21 @@ open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfi
         }
     }
 
+    // Question: Not in the interface because I only need it in Base right?
+    fun querySystem(blockchainRID: String, query: BaseExplorerQuery): Promise<List<BaseBlockExplorerResponse>, Exception> {
+        return runOp {
+            println(query)
+
+            val block = blockStore.getBlockInfoExplorer(it, blockchainRID, query)
+            println(block)
+            block
+        }
+    }
+
     override fun query(query: String): Promise<String, Exception> {
         return Promise.ofFail(UserMistake("Queries are not supported"))
     }
+
 
     fun getConfirmationProof(txRID: ByteArray): Promise<ConfirmationProof?, Exception> {
         return runOp {

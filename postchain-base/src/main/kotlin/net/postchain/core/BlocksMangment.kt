@@ -1,5 +1,7 @@
 package net.postchain.core
 
+import net.postchain.base.data.BaseBlockExplorerResponse
+import net.postchain.base.data.BaseExplorerQuery
 import nl.komponents.kovenant.Promise
 
 interface BlockWitnessBuilder {
@@ -23,6 +25,8 @@ interface BlockStore {
     fun getLastBlockTimestamp(ctx: EContext): Long
     //    fun getBlockData(ctx: EContext, blockRID: ByteArray): BlockData
     fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray
+    // Queries for explorer
+    fun getBlockInfoExplorer(ctx: EContext, blockchainRID: String, queryParams: BaseExplorerQuery): List<BaseBlockExplorerResponse>
 
     fun getBlockHeader(ctx: EContext, blockRID: ByteArray): ByteArray
 

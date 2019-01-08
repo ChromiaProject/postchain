@@ -3,11 +3,14 @@
 package net.postchain.api.rest.controller
 
 import mu.KLogging
+import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.data.BaseExplorerQuery
+import net.postchain.base.data.TypeOfSystemQuery
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.TransactionFactory
@@ -23,6 +26,7 @@ open class PostchainModel(
 ) : Model {
 
     companion object : KLogging()
+    private val gson = JsonFactory.makeJson()
 
     override fun postTransaction(tx: ApiTx) {
         var nonce = TimeLog.startSumConc("PostchainModel.postTransaction().decodeTransaction")
@@ -63,5 +67,14 @@ open class PostchainModel(
 
     override fun query(query: Query): QueryResult {
         return QueryResult(blockQueries.query(query.json).get())
+    }
+
+    // Question Is this fine? Not in interface and only in PostchainModel
+    fun querySystem(blockchainRID: String, query: BaseExplorerQuery): QueryResult {
+        if(query.component == null) { throw UserMistake("No component in the body query")}
+        return when(query.component) {
+            TypeOfSystemQuery.block -> QueryResult(gson.toJson(blockQueries.querySystem(blockchainRID, query).get()))
+            TypeOfSystemQuery.transaction -> QueryResult(gson.toJson(blockQueries.querySystem(blockchainRID, query).get())) // TODO Make transaction query part
+        }
     }
 }
