@@ -1,6 +1,7 @@
 FROM java:8
 WORKDIR /
 ADD postchain-base/target/postchain-base-2.4.2-jar-with-dependencies.jar postchain-base-2.4.2-jar-with-dependencies.jar
+ADD postchain-base/src/main/resources/config/common.properties common.properties
 ADD postchain-base/src/main/resources/config/config.0.properties config.0.properties
 ADD postchain-base/src/main/resources/blockchain-config/configration1.xml configration1.xml
 RUN /bin/sh
