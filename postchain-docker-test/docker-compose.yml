@@ -1,0 +1,50 @@
+version: '3'
+services:
+  postgres:
+    image: chromaway/postgres:2.4.0-beta
+    restart: always
+    ports:
+    - 5432:5432
+    volumes:
+    - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postchain
+    networks:
+      static-network:
+        ipv4_address: 172.21.128.0
+  postchain1:
+    build:
+      context: .
+      dockerfile: ./dockerfile0
+    networks:
+      static-network:
+        ipv4_address: 172.21.128.1
+  postchain2:
+    build:
+      context: .
+      dockerfile: ./dockerfile1
+    networks:
+      static-network:
+        ipv4_address: 172.21.128.2
+  postchain3:
+    build:
+      context: .
+      dockerfile: ./dockerfile2
+    networks:
+      static-network:
+        ipv4_address: 172.21.128.3
+  postchain4:
+    build:
+      context: .
+      dockerfile: ./dockerfile3
+    networks:
+      static-network:
+        ipv4_address: 172.21.128.4
+volumes:
+  pgdata:
+
+networks:
+  static-network:
+    ipam:
+      config:
+      - subnet: 172.21.0.0/16
