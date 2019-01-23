@@ -13,26 +13,49 @@ services:
       static-network:
         ipv4_address: 172.20.128.0
   postchain1:
-    build: .
+    build:
+      context: .
+      dockerfile: ./dockerfile
+      args:
+      - $nodeId=0
     ports:
     - "8080:8080"
     networks:
       static-network:
         ipv4_address: 172.20.128.1
   postchain2:
-    build: .
+    build:
+      context: .
+      dockerfile: ./dockerfile
+      args:
+      - $nodeId=1
     ports:
     - "8081:8081"
     networks:
       static-network:
         ipv4_address: 172.20.128.2
   postchain3:
-    build: .
+    build:
+      context: .
+      dockerfile: ./dockerfile
+      args:
+      - $nodeId=2
     ports:
     - "8082:8082"
     networks:
       static-network:
         ipv4_address: 172.20.128.3
+  postchain4:
+    build:
+      context: .
+      dockerfile: ./dockerfile
+      args:
+      - $nodeId=3
+    ports:
+    - "8083:8083"
+    networks:
+      static-network:
+        ipv4_address: 172.20.128.4
 volumes:
   pgdata:
 
