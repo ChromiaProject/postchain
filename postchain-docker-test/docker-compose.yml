@@ -13,6 +13,7 @@ services:
       static-network:
         ipv4_address: 172.21.128.0
   postchain1:
+    restart: always
     build:
       context: .
       dockerfile: ./dockerfile0
@@ -20,6 +21,7 @@ services:
       static-network:
         ipv4_address: 172.21.128.1
   postchain2:
+    restart: always
     build:
       context: .
       dockerfile: ./dockerfile1
@@ -27,6 +29,7 @@ services:
       static-network:
         ipv4_address: 172.21.128.2
   postchain3:
+    restart: always
     build:
       context: .
       dockerfile: ./dockerfile2
@@ -34,6 +37,7 @@ services:
       static-network:
         ipv4_address: 172.21.128.3
   postchain4:
+    restart: always
     build:
       context: .
       dockerfile: ./dockerfile3
