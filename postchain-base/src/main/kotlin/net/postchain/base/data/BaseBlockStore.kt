@@ -5,6 +5,7 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.merkle.Hash
+import net.postchain.common.toHex
 import net.postchain.core.*
 
 /**
@@ -21,14 +22,18 @@ class BaseBlockStore : BlockStore {
     /**
      * Get initial block data, i.e. data necessary for building the next block
      *
+     * We write the block skeleton (since we want the block_iid) and the blocks we are depending on
+     *  (since no point in waiting) to DB at this point.
+     *
      * @param ctx Connection context
      * @returns Initial block data
      */
-    override fun beginBlock(ctx: EContext, blockHeightDependencies: Array<Hash?>?): InitialBlockData {
+    override fun beginBlock(ctx: EContext, blockchainDependencies: BlockchainDependencies): InitialBlockData {
         val db = DatabaseAccess.of(ctx)
         if (ctx.chainID < 0) {
             throw UserMistake("ChainId must be >=0, got ${ctx.chainID}")
         }
+
         val prevHeight = getLastBlockHeight(ctx)
         val prevTimestamp = getLastBlockTimestamp(ctx)
         val blockchainRID: ByteArray = db.getBlockchainRID(ctx)
@@ -40,7 +45,17 @@ class BaseBlockStore : BlockStore {
         }
 
         val blockIid = db.insertBlock(ctx, prevHeight + 1)
-        return InitialBlockData(blockchainRID, blockIid, ctx.chainID, prevBlockRID, prevHeight + 1, prevTimestamp, blockHeightDependencies)
+        addBlockchainDependencies(ctx, blockIid, blockchainDependencies)
+
+        return InitialBlockData(
+                blockchainRID,
+                blockIid,
+                ctx.chainID,
+                prevBlockRID,
+                prevHeight + 1,
+                prevTimestamp,
+                blockchainDependencies.extractBlockHeightDependencyArray()
+        )
     }
 
     override fun addTransaction(bctx: BlockEContext, tx: Transaction): TxEContext {
@@ -96,6 +111,49 @@ class BaseBlockStore : BlockStore {
 
     override fun getBlockHeightInfo(ctx: EContext, blockchainRID: ByteArray): Pair<Long, Hash>? {
         return DatabaseAccess.of(ctx).getBlockHeightInfo(ctx, blockchainRID)
+    }
+
+    /**
+     * @return all dependencies belonging to the last/previous block of this chain
+     */
+    override fun getLastBlockDependencies(ctx: EContext): BlockchainDependencies {
+        val db = DatabaseAccess.of(ctx)
+        val lastBlock = db.getLastBlockRid(ctx, ctx.chainID)
+        return if (lastBlock == null) {
+            BlockchainDependencies(listOf()) // This might be our first block
+        } else {
+            db.getDependencyBlockHeights(ctx, lastBlock)
+        }
+    }
+
+
+    /**
+     * Writes the dependencies from [ourBlockIid] to [blockDeps] to the DB.
+     *
+     * Note: We are assuming that checks has been done and data is correct.
+     *
+     * @param ctx holds the current chain id
+     * @param ourBlockIid the new block IID we are going to build
+     * @param blockDeps holds the dependencies we are to write to DB
+     */
+    override fun addBlockchainDependencies(ctx: EContext, ourBlockIid: Long, blockDeps: BlockchainDependencies) {
+        val db = DatabaseAccess.of(ctx)
+
+        for (newDep in blockDeps.all()) {
+            val depChainId: Long  = newDep.blockchainRelatedInfo.chainId!!
+            val depBlockRid  = newDep.heightDependency!!.lastBlockRid
+            if (logger.isDebugEnabled) {
+                logger.debug { "Writing dependency for our block id: $ourBlockIid to dep block RID: ${depBlockRid.toHex()} " +
+                        "(dep chain id: $depChainId of height: ${newDep.heightDependency!!.height})" }
+            }
+            db.addBlockDependency(ctx, ourBlockIid, depBlockRid)
+            /*
+            } else {
+                throw ProgrammerMistake("We are not allowed to decrease dependency (${ctx.chainID} -> $depChainId) block height from $oldHeight to $newBlockHeight ")
+            }
+            */
+        }
+
     }
 
     override fun getLastBlockTimestamp(ctx: EContext): Long {

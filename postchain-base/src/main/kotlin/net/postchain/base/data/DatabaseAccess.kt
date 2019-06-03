@@ -3,7 +3,7 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.base.BaseBlockHeader
+import net.postchain.base.*
 import net.postchain.common.toHex
 import net.postchain.core.*
 import org.apache.commons.dbutils.QueryRunner
@@ -44,6 +44,8 @@ interface DatabaseAccess {
     fun findConfiguration(context: EContext, height: Long): Long?
     fun getConfigurationData(context: EContext, height: Long): ByteArray?
     fun addConfigurationData(context: EContext, height: Long, data: ByteArray)
+    fun getDependencyBlockHeights(context: EContext, ownBlockRid: ByteArray): BlockchainDependencies
+    fun addBlockDependency(context: EContext, ourBlockIid: Long, depBlockRid: ByteArray)
 
     companion object {
         fun of(ctx: EContext): DatabaseAccess {
@@ -274,6 +276,9 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             // PeerInfos
             queryRunner.update(connection, sqlCommands.createTablePeerInfos)
 
+            // BC dependencies
+            queryRunner.update(connection, sqlCommands.createTableBlockDependencies)
+
             queryRunner.update(connection, """CREATE INDEX transactions_block_iid_idx ON transactions(block_iid)""")
             queryRunner.update(connection, """CREATE INDEX blocks_chain_id_timestamp ON blocks(chain_id, timestamp)""")
             //queryRunner.update(connection, """CREATE INDEX configurations_chain_id_to_height ON configurations(chain_id, height)""")
@@ -326,6 +331,66 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun addConfigurationData(context: EContext, height: Long, data: ByteArray) {
         queryRunner.update(context.conn, sqlCommands.insertConfiguration, context.chainID, height, data)
+    }
+
+    /*
+    override fun getDependencyBlockHeight(context: EContext, depChainId: Long):Long? {
+        return queryRunner.query(context.conn,
+                " SELECT dep_b.height " +
+                        " FROM blockchain_dependencies bcd, blocks our_b, blocks dep_b " +
+                        " WHERE our_b.chain_id = ? " +
+                        " AND de"
+                        " AND our_b.block_iid = bcd.our_block_iid " +
+                        " AND bcd.dep_block_iid = dep_b.block_iid",
+                nullableLongRes, context.chainID, depChainId)
+    }
+     */
+
+    /**
+     * Finds all dependencies for the given block RID
+     *
+     * @param context
+     * @param ownBlockRid is the block for which we wish to find dependencies (probably this is the latest block)
+     * @return All block height of the dependent blockchains, or empty list if nothing found.
+     */
+    override fun getDependencyBlockHeights(context: EContext, ownBlockRid: ByteArray): BlockchainDependencies {
+        val res = queryRunner.query(context.conn,
+                "SELECT b.chain_id, bc.blockchain_rid, b.block_rid, b.block_height" +
+                " FROM block_dependencies bcd, blocks b, blocks our_b, blockchains bc " +
+                " WHERE bcd.our_block_iid = our_b.block_iid " +
+                " AND our_b.block_rid = ? " +
+                " AND bcd.dep_block_iid = b.block_iid " +
+                " AND b.chain_id = bc.chain_id ",
+                        mapListHandler, ownBlockRid)
+
+        //val retList = mutableListOf<Pair<Long, Long>>()
+        val bcDependencies = mutableListOf<BlockchainDependency>()
+        for (row in res) {
+            val depChainId = row["chain_id"] as Long
+            val depBlockchainRid = row["blockchain_rid"] as ByteArray
+            val depBlockRid = row["block_rid"] as ByteArray
+            val height = row["height"] as Long
+
+            val info = BlockchainRelatedInfo(depBlockchainRid, null, depChainId)
+            val heightDep = HeightDependency(depBlockRid, height)
+            bcDependencies.add(BlockchainDependency(info, heightDep))
+        }
+        return BlockchainDependencies(bcDependencies)
+    }
+
+
+    /**
+     * Note: This will fail with "ERROR:  null value in column "dep_block_iid" violates not-null constraint"
+     *       if the block we refer to doesn't exist.
+     *
+     * @param ourBlockIid is from where the dependency originates (id of our new block)
+     * @param depBlockRid is the block to which we depend.
+     */
+    override fun addBlockDependency(context: EContext, ourBlockIid: Long, depBlockRid: ByteArray) {
+        queryRunner.update(context.conn,
+                "INSERT INTO block_dependencies (our_block_iid, dep_block_iid) VALUES(?, " +
+                        "(SELECT block_iid FROM blocks WHERE block_rid = ?))",
+               ourBlockIid, depBlockRid)
     }
 
     fun tableExists(connection: Connection, tableName_: String): Boolean {

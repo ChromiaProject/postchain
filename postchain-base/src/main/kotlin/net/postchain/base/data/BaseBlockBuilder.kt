@@ -135,6 +135,10 @@ open class BaseBlockBuilder(
     }
 
     /**
+     * There are two cases:
+     * 1. We get a block from a peer, and thus must check that it is correct depending on our previous block dependencies.
+     * 2. We are build the block ourselves, and thus trust previous deps are ok
+     *
      * @param partialBlockHeader if this is given, we should get the dependency information from the header, else
      *                           we should get the heights from the DB.
      * @return all dependencies to other blockchains and their heights this block needs.
@@ -147,40 +151,97 @@ open class BaseBlockBuilder(
         }
     }
 
+
+    /**
+     * Find the blockchain dependencies for the block we are building right now, using the block header we got from the peer.
+     *
+     * @param previousDependencies are the dependencies from the previous/last block of this chain
+     * @param partialBlockHeader is the header we have been sent
+     * @return the blockchain dependencies for the block we are building right now
+     */
     private fun buildBlockchainDependenciesFromHeader(partialBlockHeader: BlockHeader): BlockchainDependencies {
         return if (blockchainRelatedInfoDependencyList.size > 0) {
-
             val baseBH = partialBlockHeader as BaseBlockHeader
             val givenDependencies = baseBH.blockHeightDependencyArray
-            if (givenDependencies.size == blockchainRelatedInfoDependencyList.size) {
+            if (givenDependencies.size != blockchainRelatedInfoDependencyList.size) {
+                throw BadDataMistake(BadDataType.BAD_CONFIGURATION,
+                        "The given block header has ${givenDependencies.size} dependencies but our configuration" +
+                                " requires ${blockchainRelatedInfoDependencyList.size} ")
+            } else {
+                // Get the dependencies from previous block
+                val previousDependencies = store.getLastBlockDependencies(bctx)
 
                 val resList = mutableListOf<BlockchainDependency>()
                 var i = 0
-                for (bcInfo in blockchainRelatedInfoDependencyList) {
-                    val blockRid = givenDependencies[i]
-                    val dep = if (blockRid != null) {
-                        val dbHeight = store.getBlockHeightFromAnyBlockchain(bctx, blockRid, bcInfo.chainId!!)
-                        if (dbHeight != null) {
-                            BlockchainDependency(bcInfo, HeightDependency(blockRid, dbHeight))
-                        } else {
-                            // Ok to bang out if we are behind in blocks. Discussed this with Alex (2019-03-29)
-                            throw BadDataMistake(BadDataType.MISSING_DEPENDENCY,
-                                    "We are not ready to accept the block since block dependency (RID: ${blockRid.toHex()}) is missing. ")
-                        }
-                    } else {
-                        BlockchainDependency(bcInfo, null) // No blocks required -> allowed
-                    }
+                for (configBcInfo in blockchainRelatedInfoDependencyList) {
+                    val prevDep = previousDependencies.getFromChainId(configBcInfo.chainId!!)
+                    val dep = findHeightForGivenDependency(configBcInfo, givenDependencies[i], prevDep)
                     resList.add(dep)
                     i++
                 }
                 BlockchainDependencies(resList)
-            } else {
-                throw BadDataMistake(BadDataType.BAD_CONFIGURATION,
-                        "The given block header has ${givenDependencies.size} dependencies our configuration requires ${blockchainRelatedInfoDependencyList.size} ")
             }
         } else {
             BlockchainDependencies(listOf()) // No dependencies
         }
+    }
+
+    /**
+     * Find the height for the given dependency
+     *
+     * (Since dependencies is tricky it get's broken we spend some time code on proper error messages here)
+     *
+     * @param configurationBcInfo is the dependency we get from the configuration
+     * @param givenBlockRid is the dependency info we get from the header
+     * @param prevDependency is the dependency of the previous block regarding this chain
+     * @return a proper [BlockchainDependency] instance with the correct height in it.
+     */
+    private fun findHeightForGivenDependency(configurationBcInfo: BlockchainRelatedInfo, givenBlockRid: Hash?, prevDependency: BlockchainDependency?): BlockchainDependency {
+        return if (prevDependency == null || prevDependency.heightDependency == null) {
+            // ---- No height for the previous block's dependency ----
+            if (givenBlockRid == null) {
+                logger.debug { "Dep chainId: ${configurationBcInfo.chainId}. Last block had height -1 for this dep, and " +
+                        "the header needs height -1 for this dep. Don't do any more checks" }
+                BlockchainDependency(configurationBcInfo, null)
+            } else {
+                val dbHeight = validatePrevHeightExists(givenBlockRid, configurationBcInfo)
+                buildBlockchainDependencyWithHeight(configurationBcInfo, -1L, dbHeight, givenBlockRid)
+            }
+        } else {
+            // ---- We have a height for previous block's dependency, so we have to check it ----
+            val previousHeight = prevDependency.heightDependency!!.height!!
+
+            if (givenBlockRid == null) {
+                throw BadDataMistake(BadDataType.GIVEN_DEPENDENCY_HEIGHT_TOO_LOW,
+                        "Block we received must include a dependency for blockchain $configurationBcInfo " +
+                                ", since last block had this dependency of height: $previousHeight ")
+            } else {
+                val dbHeight = validatePrevHeightExists(givenBlockRid, configurationBcInfo)
+                if(dbHeight < previousHeight) {
+                    throw BadDataMistake(BadDataType.GIVEN_DEPENDENCY_HEIGHT_TOO_LOW,
+                        "Block we received includes a dependency for blockchain: $configurationBcInfo " +
+                                ", with height $dbHeight, but the dependency of last block had height: $previousHeight for this dependency.")
+                } else {
+                    buildBlockchainDependencyWithHeight(configurationBcInfo, previousHeight, dbHeight, givenBlockRid)
+                }
+            }
+        }
+    }
+
+    private fun validatePrevHeightExists(givenBlockRid: Hash, configurationBcInfo: BlockchainRelatedInfo): Long {
+        val dbHeight = store.getBlockHeightFromAnyBlockchain(bctx, givenBlockRid, configurationBcInfo.chainId!!)
+        return dbHeight ?:
+            // Ok to bang out if we are behind in blocks. Discussed this with Alex (2019-03-29)
+            throw BadDataMistake(BadDataType.MISSING_DEPENDENCY,
+                    "We are not ready to accept the block since block dependency (RID: ${givenBlockRid.toHex()}) " +
+                            " for BC: $configurationBcInfo is missing. ")
+    }
+
+    private fun buildBlockchainDependencyWithHeight(configurationBcInfo: BlockchainRelatedInfo, previousHeight: Long,
+                                                    dbHeight: Long, givenBlockRid: Hash): BlockchainDependency {
+        logger.debug { "Dep chainId: ${configurationBcInfo.chainId}. Last block had height $previousHeight for this dep, " +
+                "and the header needs height $dbHeight for this dep (which we have in DB). All is well" }
+        return BlockchainDependency(configurationBcInfo, HeightDependency(givenBlockRid, dbHeight))
     }
 
     private fun buildBlockchainDependenciesFromDb(): BlockchainDependencies {

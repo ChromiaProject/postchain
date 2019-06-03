@@ -1,5 +1,6 @@
 package net.postchain.core
 
+import net.postchain.base.BlockchainDependencies
 import net.postchain.base.merkle.Hash
 import net.postchain.gtv.Gtv
 import nl.komponents.kovenant.Promise
@@ -15,7 +16,7 @@ interface MultiSigBlockWitnessBuilder : BlockWitnessBuilder {
 }
 
 interface BlockStore {
-    fun beginBlock(ctx: EContext, blockHeightDependencies: Array<Hash?>?): InitialBlockData
+    fun beginBlock(ctx: EContext, blockchainDependencies: BlockchainDependencies): InitialBlockData
     fun addTransaction(bctx: BlockEContext, tx: Transaction): TxEContext
     fun finalizeBlock(bctx: BlockEContext, bh: BlockHeader)
     fun commitBlock(bctx: BlockEContext, w: BlockWitness?)
@@ -25,6 +26,8 @@ interface BlockStore {
     fun getBlockRID(ctx: EContext, height: Long): ByteArray? // returns null if height is out of range
     fun getLastBlockHeight(ctx: EContext): Long // height of the last block, first block has height 0
     fun getBlockHeightInfo(ctx: EContext, blockchainRID: ByteArray): Pair<Long, Hash>?
+    fun getLastBlockDependencies(ctx: EContext): BlockchainDependencies
+    fun addBlockchainDependencies(ctx: EContext, ourBlockIid: Long, blockDeps: BlockchainDependencies)
     fun getLastBlockTimestamp(ctx: EContext): Long
     //    fun getBlockData(ctx: EContext, blockRID: ByteArray): BlockData
     fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray

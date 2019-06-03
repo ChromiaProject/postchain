@@ -3,6 +3,7 @@
 package net.postchain.base.data
 
 import net.postchain.base.BaseEContext
+import net.postchain.base.BlockchainDependencies
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.EContext
 import net.postchain.core.UserMistake
@@ -33,7 +34,7 @@ class BaseBlockStoreTest {
         expect(db.insertBlock(ctx, 0)).andReturn(17)
         expect(db.getLastBlockTimestamp(ctx)).andReturn(1509606236)
         replay(db)
-        val initialBlockData = sut.beginBlock(ctx, null)
+        val initialBlockData = sut.beginBlock(ctx, BlockchainDependencies(listOf()))
         assertArrayEquals(blockchainRID, initialBlockData.prevBlockRID)
     }
 
@@ -46,7 +47,7 @@ class BaseBlockStoreTest {
         expect(db.insertBlock(ctx, 1)).andReturn(17)
         expect(db.getLastBlockTimestamp(ctx)).andReturn(1509606236)
         replay(db)
-        val initialBlockData = sut.beginBlock(ctx, null)
+        val initialBlockData = sut.beginBlock(ctx, BlockchainDependencies(listOf()))
         assertArrayEquals(anotherRID, initialBlockData.prevBlockRID)
     }
 
@@ -56,6 +57,6 @@ class BaseBlockStoreTest {
         expect(db.getBlockchainRID(ctx)).andReturn(null)
         expect(db.getLastBlockTimestamp(ctx)).andReturn(1509606236)
         replay(db)
-        sut.beginBlock(ctx, null)
+        sut.beginBlock(ctx, BlockchainDependencies(listOf()))
     }
 }

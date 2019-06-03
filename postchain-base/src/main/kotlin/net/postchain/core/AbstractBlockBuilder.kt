@@ -52,7 +52,7 @@ abstract class AbstractBlockBuilder(
             ProgrammerMistake("This builder has already been used once (you must create a new builder instance)")
         }
         blockchainDependencies = buildBlockchainDependencies(partialBlockHeader)
-        initialBlockData = store.beginBlock(ectx, blockchainDependencies!!.extractBlockHeightDependencyArray())
+        initialBlockData = store.beginBlock(ectx, blockchainDependencies!!)
         bctx = BaseBlockEContext(
                 ectx,
                 initialBlockData.blockIID,

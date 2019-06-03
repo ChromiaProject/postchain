@@ -46,6 +46,12 @@ object SAPHanaSQLCommands : SQLCommands {
 
     override val createTableGtxModuleVersion: String = "CREATE TABLE gtx_module_version (module_name VARCHAR(1000) PRIMARY KEY, version BIGINT NOT NULL)"
 
+    override val createTableBlockDependencies = "CREATE TABLE block_dependencies (" +
+            "  our_block_iid BIGINT NOT NULL REFERENCES blocks(block_iid) " + // What block (and thus BC) we depend from"
+            ", dep_block_iid BIGINT NOT NULL REFERENCES blocks(block_iid) " +  // What block (and thus BC) we depend to
+            ", PRIMARY KEY(our_block_iid, dep_block_iid)" +
+            ")"
+
     override val insertBlocks: String = "INSERT INTO blocks (chain_id, block_height) VALUES (?, ?) "
 
     override val insertTransactions: String = "INSERT INTO transactions (chain_id, tx_rid, tx_data, tx_hash, block_iid) " +

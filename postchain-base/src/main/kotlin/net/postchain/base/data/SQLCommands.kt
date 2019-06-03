@@ -11,6 +11,7 @@ interface SQLCommands {
     val insertTransactions: String
     val insertConfiguration: String
     val createTableGtxModuleVersion: String
+    val createTableBlockDependencies: String
 
     fun isSavepointSupported(): Boolean
     fun dropSchemaCascade(schema: String): String
