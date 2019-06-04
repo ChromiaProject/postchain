@@ -14,7 +14,12 @@ import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.Assert
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
+/**
+ * A base class for tests where you want to run exactly 2 chains on each node.
+ * (even with this simplification it gets a bit messy)
+ */
 open class MultiNodeDoubleChainBlockTestHelper: IntegrationTest()  {
 
     private val gtxTestModule =  GTXTestModule()
@@ -105,6 +110,11 @@ open class MultiNodeDoubleChainBlockTestHelper: IntegrationTest()  {
     }
 
 
+    /**
+     * Will assert common things, like:
+     *
+     * 1.
+     */
     fun runXNodesAssertions(
             blocksCount: Int,
             txPerBlock: Int,
@@ -121,18 +131,18 @@ open class MultiNodeDoubleChainBlockTestHelper: IntegrationTest()  {
 
                 val queries = node.blockQueries(chain)
 
-                // Asserting best height equals to 1
+                // Asserting best height == (block count -1)
                 Assert.assertEquals(expectedHeight, queries.getBestHeight().get())
 
                 for (height in 0..expectedHeight) {
-                    logger.info { "Verifying height $height" }
+                    logger.info { "Verifying height: $height" }
 
                     // Asserting uniqueness of block at height
-                    val blockRids = queries.getBlockRids(height).get()
-                    assertNotNull(blockRids)
+                    val blockRid = queries.getBlockRids(height).get()
+                    assertNotNull(blockRid)
 
                     // Asserting txs count
-                    val txs = queries.getBlockTransactionRids(blockRids!!).get()
+                    val txs = queries.getBlockTransactionRids(blockRid!!).get()
                     Assert.assertEquals(txPerBlock, txs.size)
 
                     // Asserting txs content
@@ -145,6 +155,50 @@ open class MultiNodeDoubleChainBlockTestHelper: IntegrationTest()  {
                         logger.debug("Real TX RID: ${realTxRid.toHex()}")
                         Assert.assertArrayEquals(expectedTxRid, realTxRid)
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * Here we verify that the dependencies are written correctly into the BLOCK_DEPENDENCIES table.
+     *
+     * @param blocksCount is number of blocks created
+     * @param dependentChainList is a list of all chains that has dependencies (depends on some other chain)
+     */
+    fun runXNodesDependencyAssertions(
+            blocksCount: Int,
+            dependentChainList: List<Long>
+    ) {
+        logger.debug("---Dep Assertions -------------------------------------------------")
+        // Assertions
+        val expectedHeight = (blocksCount - 1).toLong()
+        nodes.forEachIndexed { nodeId, node ->
+            dependentChainList.forEach { chain ->
+                logger.info { "Dep Assertions: node: $nodeId, chain: $chain, expectedHeight: $expectedHeight" }
+
+                val queries = node.blockQueries(chain)
+
+                for (height in 1..expectedHeight) { // We don't care about height = 0
+
+                    val blockRid = queries.getBlockRids(height).get()
+                    logger.info { "Verifying deps for height: $height (deps for block RID: ${blockRid!!.toHex()} )" }
+
+                    // Asserting dependencies exist in DB
+                    val deps = queries.getBlockDependencies(blockRid!!).get()
+                    Assert.assertTrue(deps.all().size > 0) // Since we only look at chains with deps and blocks higher than 1.
+
+                    // Check that the block we depend on is of correct height
+                    for (dep in deps.all()) {
+                        logger.debug { "Checking dependency $dep is of height $height" }
+                        Assert.assertEquals(dep.heightDependency!!.height, height)
+                    }
+
+                    // Asserting
+
+
+
+
                 }
             }
         }

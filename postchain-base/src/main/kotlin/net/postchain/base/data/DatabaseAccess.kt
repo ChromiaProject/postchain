@@ -140,7 +140,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun getLastBlockRid(ctx: EContext, chainId: Long): ByteArray? {
         return queryRunner.query(ctx.conn,
-                "SELECT block_height FROM blocks WHERE chain_id = ? ORDER BY block_height DESC LIMIT 1",
+                "SELECT block_rid FROM blocks WHERE chain_id = ? ORDER BY block_height DESC LIMIT 1",
                 nullableByteArrayRes, chainId)
     }
 
@@ -355,29 +355,64 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
      */
     override fun getDependencyBlockHeights(context: EContext, ownBlockRid: ByteArray): BlockchainDependencies {
         val res = queryRunner.query(context.conn,
-                "SELECT b.chain_id, bc.blockchain_rid, b.block_rid, b.block_height" +
+                "SELECT b.chain_id, bc.blockchain_rid, b.block_rid, b.block_height, " + // our_b.block_iid as our_block_iid, b.block_iid" +
                 " FROM block_dependencies bcd, blocks b, blocks our_b, blockchains bc " +
                 " WHERE bcd.our_block_iid = our_b.block_iid " +
                 " AND our_b.block_rid = ? " +
+                " AND our_b.chain_id = ? " +
                 " AND bcd.dep_block_iid = b.block_iid " +
                 " AND b.chain_id = bc.chain_id ",
-                        mapListHandler, ownBlockRid)
+                        mapListHandler, ownBlockRid, context.chainID)
 
-        //val retList = mutableListOf<Pair<Long, Long>>()
         val bcDependencies = mutableListOf<BlockchainDependency>()
         for (row in res) {
             val depChainId = row["chain_id"] as Long
             val depBlockchainRid = row["blockchain_rid"] as ByteArray
             val depBlockRid = row["block_rid"] as ByteArray
-            val height = row["height"] as Long
+            val height = row["block_height"] as Long
 
             val info = BlockchainRelatedInfo(depBlockchainRid, null, depChainId)
             val heightDep = HeightDependency(depBlockRid, height)
             bcDependencies.add(BlockchainDependency(info, heightDep))
         }
+        //debugDeps(context)
         return BlockchainDependencies(bcDependencies)
     }
 
+    /*
+    // Olle used this function to dump all dependencies with some interesting data added (RIDs, chain_ids, etc)
+    // (Used to debug the code)
+    private fun debugDeps(context: EContext) {
+        val res = queryRunner.query(context.conn,
+                  "SELECT our_b.chain_id as our_chain_id, b.chain_id," +
+                          " bcd.our_block_iid, bcd.dep_block_iid, bc.blockchain_rid, " +
+                          " our_b.block_rid as our_block_rid, b.block_rid, "+
+                          " our_b.block_height as our_height, b.block_height" +
+                " FROM block_dependencies bcd, blocks b, blocks our_b, blockchains bc " +
+                " WHERE bcd.our_block_iid = our_b.block_iid " +
+                " AND bcd.dep_block_iid = b.block_iid " +
+                " AND b.chain_id = bc.chain_id ",
+                mapListHandler)
+
+        for (row in res) {
+            val ourChainId = row["our_chain_id"] as Long
+            val depChainId = row["chain_id"] as Long
+            val depBlockchainRid = row["blockchain_rid"] as ByteArray
+            val depBlockRid = row["block_rid"] as ByteArray
+            val ourBlockRid = row["our_block_rid"] as ByteArray
+            val ourHeight = row["our_height"] as Long
+            val height = row["block_height"] as Long
+            val ourBIid = row["our_block_iid"] as Long
+            val depBIid = row["dep_block_iid"] as Long
+            // Print everything
+            System.out.println("Dep: ourChainId: $ourChainId, depChainId: $depChainId," +
+            " ourHeight: $ourHeight, height: $height, " +
+            " ourBlockIid: $ourBIid, depBlockIid: $depBIid, " +
+            "(depBCRid: ${depBlockchainRid.toHex()}, ourBlockRid: ${ourBlockRid.toHex()}, depBlockRid: ${depBlockRid.toHex()}). ")
+
+        }
+    }
+    */
 
     /**
      * Note: This will fail with "ERROR:  null value in column "dep_block_iid" violates not-null constraint"

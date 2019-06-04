@@ -27,6 +27,7 @@ interface BlockStore {
     fun getLastBlockHeight(ctx: EContext): Long // height of the last block, first block has height 0
     fun getBlockHeightInfo(ctx: EContext, blockchainRID: ByteArray): Pair<Long, Hash>?
     fun getLastBlockDependencies(ctx: EContext): BlockchainDependencies
+    fun getBlockDependenciesForBlock(ctx: EContext, blockRid: ByteArray): BlockchainDependencies
     fun addBlockchainDependencies(ctx: EContext, ourBlockIid: Long, blockDeps: BlockchainDependencies)
     fun getLastBlockTimestamp(ctx: EContext): Long
     //    fun getBlockData(ctx: EContext, blockRID: ByteArray): BlockData
@@ -51,6 +52,7 @@ interface BlockQueries {
     fun getBlockRids(height: Long): Promise<ByteArray?, Exception>
     fun getBlockAtHeight(height: Long): Promise<BlockDataWithWitness, Exception>
     fun getBlockHeader(blockRID: ByteArray): Promise<BlockHeader, Exception>
+    fun getBlockDependencies(blockRID: ByteArray): Promise<BlockchainDependencies, Exception>
 
     fun getBlockTransactionRids(blockRID: ByteArray): Promise<List<ByteArray>, Exception>
     fun getTransaction(txRID: ByteArray): Promise<Transaction?, Exception>

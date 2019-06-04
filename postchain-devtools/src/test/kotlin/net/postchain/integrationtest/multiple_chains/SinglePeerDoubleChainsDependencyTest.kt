@@ -60,11 +60,12 @@ class SinglePeerDoubleChainsDependencyTest: MultiNodeDoubleChainBlockTestHelper(
     }
 
     /**
-     * One BC depend on another BC.
+     * One BC depend on another BC. Build 2 blocks on both chains.
      */
     @Test
     fun testHappyDependency() {
         val chainList = listOf(1L, 2L)
+        val depChainList = listOf(2L) // These are the chains with a dependency to another chain
 
         runXNodes(
                 1,
@@ -80,6 +81,34 @@ class SinglePeerDoubleChainsDependencyTest: MultiNodeDoubleChainBlockTestHelper(
 
         val txList = runXNodesWithYTxPerBlock( 2, 10, chainList)
         runXNodesAssertions( 2, 10, chainList, txList)
+        runXNodesDependencyAssertions(2, depChainList)
+    }
+
+
+    /**
+     * One BC depend on another BC, where we build 4 blocks on both chains.
+     */
+    @Test
+    fun testHappyDependencyWithOldDepsOfHeight4() {
+        val chainList = listOf(1L, 2L)
+        val depChainList = listOf(2L) // These are the chains with a dependency to another chain
+
+        runXNodes(
+                1,
+                chainList,
+                arrayOf(
+                        "classpath:/net/postchain/multiple_chains/dependent_bcs/single_peer/node0bc2dep.properties"
+                ),
+                arrayOf(
+                        "/net/postchain/multiple_chains/dependent_bcs/single_peer/blockchain_config_1.xml",
+                        "/net/postchain/multiple_chains/dependent_bcs/single_peer/blockchain_config_2_depends_on_1.xml"
+                )
+        )
+
+
+        val txList = runXNodesWithYTxPerBlock( 4, 10, chainList)
+        runXNodesAssertions( 4, 10, chainList, txList)
+        runXNodesDependencyAssertions(4, depChainList)
 
     }
 

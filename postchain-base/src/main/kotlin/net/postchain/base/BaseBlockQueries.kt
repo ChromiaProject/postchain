@@ -133,6 +133,12 @@ open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfi
         }
     }
 
+    override fun getBlockDependencies(blockRID: ByteArray): Promise<BlockchainDependencies, Exception> {
+        return runOp {
+            blockStore.getBlockDependenciesForBlock(it, blockRID)
+        }
+    }
+
     /**
      * Retrieve the full block at a specified height by first retrieving the wanted block RID and then
      * getting each element of that block that will allow us to build the full block.

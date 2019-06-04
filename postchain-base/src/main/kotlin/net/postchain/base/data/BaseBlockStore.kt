@@ -126,6 +126,13 @@ class BaseBlockStore : BlockStore {
         }
     }
 
+    /**
+     * @return all dependencies belonging to the given block (of the CHAIN WE ARE IN, see ctx)
+     */
+    override fun getBlockDependenciesForBlock(ctx: EContext, blockRid: ByteArray): BlockchainDependencies {
+        return DatabaseAccess.of(ctx).getDependencyBlockHeights(ctx, blockRid)
+    }
+
 
     /**
      * Writes the dependencies from [ourBlockIid] to [blockDeps] to the DB.
