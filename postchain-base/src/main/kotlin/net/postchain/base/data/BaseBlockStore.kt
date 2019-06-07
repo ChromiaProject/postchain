@@ -154,11 +154,6 @@ class BaseBlockStore : BlockStore {
                         "(dep chain id: $depChainId of height: ${newDep.heightDependency!!.height})" }
             }
             db.addBlockDependency(ctx, ourBlockIid, depBlockRid)
-            /*
-            } else {
-                throw ProgrammerMistake("We are not allowed to decrease dependency (${ctx.chainID} -> $depChainId) block height from $oldHeight to $newBlockHeight ")
-            }
-            */
         }
 
     }

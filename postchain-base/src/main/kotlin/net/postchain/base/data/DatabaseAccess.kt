@@ -333,19 +333,6 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         queryRunner.update(context.conn, sqlCommands.insertConfiguration, context.chainID, height, data)
     }
 
-    /*
-    override fun getDependencyBlockHeight(context: EContext, depChainId: Long):Long? {
-        return queryRunner.query(context.conn,
-                " SELECT dep_b.height " +
-                        " FROM blockchain_dependencies bcd, blocks our_b, blocks dep_b " +
-                        " WHERE our_b.chain_id = ? " +
-                        " AND de"
-                        " AND our_b.block_iid = bcd.our_block_iid " +
-                        " AND bcd.dep_block_iid = dep_b.block_iid",
-                nullableLongRes, context.chainID, depChainId)
-    }
-     */
-
     /**
      * Finds all dependencies for the given block RID
      *
@@ -355,7 +342,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
      */
     override fun getDependencyBlockHeights(context: EContext, ownBlockRid: ByteArray): BlockchainDependencies {
         val res = queryRunner.query(context.conn,
-                "SELECT b.chain_id, bc.blockchain_rid, b.block_rid, b.block_height, " + // our_b.block_iid as our_block_iid, b.block_iid" +
+                "SELECT b.chain_id, bc.blockchain_rid, b.block_rid, b.block_height " + // our_b.block_iid as our_block_iid, b.block_iid" +
                 " FROM block_dependencies bcd, blocks b, blocks our_b, blockchains bc " +
                 " WHERE bcd.our_block_iid = our_b.block_iid " +
                 " AND our_b.block_rid = ? " +

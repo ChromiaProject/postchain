@@ -188,16 +188,18 @@ open class IntegrationTest {
     ): PostchainTestNode {
 
         val nodeConfigProvider = createNodeConfig(nodeIndex, nodeCount, nodeConfigFilename)
-        require(nodeConfigProvider.getConfiguration().activeChainIds.size <= blockchainConfigFilenames.size) {
-            "The nodes config must have the same number of active chains as the number of specified BC config files."
+
+        // Removing empty configurations
+        val activeChains= nodeConfigProvider.getConfiguration().activeChainIds.filter(String::isNotEmpty)
+
+        require(activeChains.size <= blockchainConfigFilenames.size) {
+            "The nodes config must have the same number of active chains (= $activeChains) as the number of specified BC config files (= ${blockchainConfigFilenames.size})."
         }
 
         val node = PostchainTestNode(nodeConfigProvider, preWipeDatabase)
                 .also { nodes.add(it) }
 
-        nodeConfigProvider.getConfiguration().activeChainIds
-                .filter(String::isNotEmpty)
-                .forEachIndexed { i, chainId ->
+        activeChains.forEachIndexed { i, chainId ->
                     val blockchainRid = blockchainRids[chainId.toLong()]!!.hexStringToByteArray()
                     val filename = blockchainConfigFilenames[i]
                     val blockchainConfig = readBlockchainConfig(filename)

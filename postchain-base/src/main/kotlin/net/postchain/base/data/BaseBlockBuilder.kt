@@ -169,7 +169,7 @@ open class BaseBlockBuilder(
                                 " requires ${blockchainRelatedInfoDependencyList.size} ")
             } else {
                 // Get the dependencies from previous block
-                val previousDependencies = store.getLastBlockDependencies(bctx)
+                val previousDependencies = store.getLastBlockDependencies(ectx)
 
                 val resList = mutableListOf<BlockchainDependency>()
                 var i = 0

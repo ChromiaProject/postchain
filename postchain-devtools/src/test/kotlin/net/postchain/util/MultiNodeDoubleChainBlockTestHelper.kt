@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
+import net.postchain.core.BlockQueries
 import net.postchain.devtools.IntegrationTest
 import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
@@ -71,28 +72,35 @@ open class MultiNodeDoubleChainBlockTestHelper: IntegrationTest()  {
             blocksCount: Int,
             txPerBlock: Int,
             chainList: List<Long>
-    ): List<GTXTransaction> {
+    ): TxCache {
 
         // Enqueueing txs
         logger.debug("---Enqueueing txs --------------------------------------------")
-        val retList = mutableListOf<GTXTransaction>()
+        val cache = TxCache()
         var txId = 0
+
+        // counters
+
+        // Creates all the transactions in all the blocks
         for (block in 0 until blocksCount) {
-            (0 until txPerBlock).forEach { _ ->
+
+            // Creates all TXs of the blocks of a specific height
+            for (txIndex in 0 until txPerBlock) {
                 val currentTxId = txId++
                 logger.debug("+++++++++++++++++++++++++++++++++++++++++++")
                 logger.debug("++++ block: $block, txId: $txId +++++++")
                 logger.debug("+++++++++++++++++++++++++++++++++++++++++++")
-                nodes.forEach { node ->
+                nodes.forEachIndexed {  nodeIndex, node ->
                     chainList.forEach { chain ->
-                        logger.debug("++++ block: $block, txId: $txId, node: $node, chain: $chain")
+                        logger.debug("++++ block: $block, txId: $txId, node: $nodeIndex, chain: $chain")
                         val tx = TestOneOpGtxTransaction(factoryMap[chain]!!, currentTxId).getGTXTransaction()
-                        retList.add(tx)
+                        cache.add(nodeIndex, chain.toInt(), block, txIndex, tx)
                         node.transactionQueue(chain).enqueue(tx)
                     }
                 }
             }
 
+            // Tell the nodes to build all these blocks
             nodes.indices.forEach { nodeId ->
                 chainList.forEach { chain ->
                     logger.debug("-------------------------------------------")
@@ -106,28 +114,28 @@ open class MultiNodeDoubleChainBlockTestHelper: IntegrationTest()  {
                 }
             }
         }
-        return retList
+        return cache
     }
 
 
     /**
      * Will assert common things, like:
      *
-     * 1.
+     * - chains have correct height
+     * - blocks have correct TXs
      */
     fun runXNodesAssertions(
             blocksCount: Int,
             txPerBlock: Int,
             chainList: List<Long>,
-            txList: List<GTXTransaction>
+            cache: TxCache
     ) {
         logger.debug("---Assertions -------------------------------------------------")
-        val txCache = TxCache(txList)
         // Assertions
         val expectedHeight = (blocksCount - 1).toLong()
-        nodes.forEachIndexed { nodeId, node ->
+        nodes.forEachIndexed { nodeIndex, node ->
             chainList.forEach { chain ->
-                logger.info { "Assertions: node: $nodeId, chain: $chain, expectedHeight: $expectedHeight" }
+                logger.info { "Assertions: node: $nodeIndex, chain: $chain, expectedHeight: $expectedHeight" }
 
                 val queries = node.blockQueries(chain)
 
@@ -135,28 +143,32 @@ open class MultiNodeDoubleChainBlockTestHelper: IntegrationTest()  {
                 Assert.assertEquals(expectedHeight, queries.getBestHeight().get())
 
                 for (height in 0..expectedHeight) {
-                    logger.info { "Verifying height: $height" }
-
-                    // Asserting uniqueness of block at height
-                    val blockRid = queries.getBlockRids(height).get()
-                    assertNotNull(blockRid)
-
-                    // Asserting txs count
-                    val txs = queries.getBlockTransactionRids(blockRid!!).get()
-                    Assert.assertEquals(txPerBlock, txs.size)
-
-                    // Asserting txs content
-                    for (tx in 0 until txPerBlock) {
-                        val txPos = height.toInt() * txPerBlock + tx
-                        val expectedTxRid = txCache.getCachedTxRid(chain.toInt(), chainList.size, height.toInt(), txPerBlock, tx)
-
-                        //val expectedTx = TestTransaction(height.toInt() * txPerBlock + tx)
-                        val realTxRid = txs[tx]
-                        logger.debug("Real TX RID: ${realTxRid.toHex()}")
-                        Assert.assertArrayEquals(expectedTxRid, realTxRid)
-                    }
+                    verifyBlock(nodeIndex, chain, height, queries, txPerBlock, cache)
                 }
             }
+        }
+    }
+
+    /**
+     * Verify that a block on node = [nodeIndex] , chain = [chain] with height = [height] has the correct TXs.
+     */
+    private fun verifyBlock(nodeIndex: Int, chain: Long, height: Long, queries: BlockQueries, txPerBlock: Int, cache: TxCache) {
+        logger.info { "Verifying height: $height" }
+
+        // Asserting uniqueness of block at height
+        val blockRid = queries.getBlockRids(height).get()
+        assertNotNull(blockRid)
+
+        // Asserting txs count
+        val txs = queries.getBlockTransactionRids(blockRid!!).get()
+        Assert.assertEquals(txPerBlock, txs.size)
+
+        // Asserting txs content
+        for (txIndex in 0 until txPerBlock) {
+            val expectedTxRid = cache.getCachedTxRid(nodeIndex, chain.toInt(), height.toInt(), txIndex)
+            val realTxRid = txs[txIndex]
+            logger.debug("Real TX RID: ${realTxRid.toHex()} ")
+            Assert.assertArrayEquals(expectedTxRid, realTxRid)
         }
     }
 
@@ -193,11 +205,6 @@ open class MultiNodeDoubleChainBlockTestHelper: IntegrationTest()  {
                         logger.debug { "Checking dependency $dep is of height $height" }
                         Assert.assertEquals(dep.heightDependency!!.height, height)
                     }
-
-                    // Asserting
-
-
-
 
                 }
             }
