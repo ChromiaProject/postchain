@@ -68,4 +68,35 @@ class SQLModuleIntegrationTest : IntegrationTest() {
         println(result)
     }
 
+    @Test
+    fun testQueryWithMultipleParams() {
+        val node = createNode(0, "/net/postchain/gtx/blockchain_config.xml")
+        enqueueTx(node, makeTx(0, "k", "v"), 0)
+        buildBlockAndCommit(node)
+        verifyBlockchainTransactions(node)
+
+        val gson = make_gtx_gson()
+        val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
+        var result = blockQueries.query("""{type: 'test_get_value', q_key: 'k', q_value : 'v'}""").get()
+        var gtxResult = gson.fromJson<GTXValue>(result, GTXValue::class.java)
+        assertEquals(1, gtxResult.getSize())
+    }
+
+    @Test
+    fun testQuerySupportNullableValue() {
+        val node = createNode(0, "/net/postchain/gtx/blockchain_config.xml")
+
+        enqueueTx(node, makeTx(0, "k", "v"), 0)
+        buildBlockAndCommit(node)
+        verifyBlockchainTransactions(node)
+
+        val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
+        var result = blockQueries.query("""{type: 'test_null_value'}""").get()
+        val gson = make_gtx_gson()
+        var gtxResult = gson.fromJson<GTXValue>(result, GTXValue::class.java)
+
+        val hit0 = gtxResult.get(0).asDict()
+        assertNotNull(hit0.get("val"))
+        assertEquals(GTXNull, hit0.get("val"))
+    }
 }
