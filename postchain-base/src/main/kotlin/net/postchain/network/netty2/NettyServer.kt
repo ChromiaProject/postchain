@@ -17,6 +17,7 @@ class NettyServer : Shutdownable {
     private lateinit var bindFuture: ChannelFuture
     private lateinit var createChannelHandler: () -> ChannelHandler
     private lateinit var eventLoopGroup: EventLoopGroup
+    private lateinit var workerLoopGroup: EventLoopGroup
 
     fun setChannelHandler(handlerFactory: () -> ChannelHandler) {
         this.createChannelHandler = handlerFactory
@@ -24,9 +25,10 @@ class NettyServer : Shutdownable {
 
     fun run(port: Int) {
         eventLoopGroup = NioEventLoopGroup(1)
+        workerLoopGroup = NioEventLoopGroup(1)
 
         server = ServerBootstrap()
-                .group(eventLoopGroup)
+                .group(eventLoopGroup, workerLoopGroup)
                 .channel(NioServerSocketChannel::class.java)
 //                .option(ChannelOption.SO_BACKLOG, 10)
 //                .handler(LoggingHandler(LogLevel.INFO))
@@ -46,10 +48,8 @@ class NettyServer : Shutdownable {
     }
 
     override fun shutdown() {
-//        bindFuture.channel().close().sync()
-//        bindFuture.channel().closeFuture().sync()
-        // TODO: [et]: Fix this, make it .sync() again
-        eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS)//.sync()
-        //.syncUninterruptibly()
+        arrayOf(eventLoopGroup, workerLoopGroup)
+                .map { it.shutdownGracefully() }
+                .map { it.awaitUninterruptibly(1, TimeUnit.SECONDS) }
     }
 }
