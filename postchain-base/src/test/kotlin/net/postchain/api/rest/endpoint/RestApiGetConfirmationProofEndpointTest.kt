@@ -1,6 +1,7 @@
 package net.postchain.api.rest.endpoint
 
 import io.restassured.RestAssured.given
+import net.postchain.api.rest.controller.HttpServer
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.TxRID
@@ -39,7 +40,7 @@ class RestApiGetConfirmationProofEndpointTest {
     @Before
     fun setup() {
         model = createMock(Model::class.java)
-        restApi = RestApi(0, basePath)
+        restApi = RestApi(0, basePath, httpServer = HttpServer())
         restApi.attachModel(blockchainRID, model)
     }
 

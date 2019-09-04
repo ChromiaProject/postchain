@@ -36,12 +36,13 @@ class RestApi(
         private val listenPort: Int,
         private val basePath: String,
         private val sslCertificate: String? = null,
-        private val sslCertificatePassword: String? = null
+        private val sslCertificatePassword: String? = null,
+        private val httpServer: HttpServer
 ) : Modellable {
 
     companion object : KLogging()
 
-    private val http = Service.ignite()!!
+    private val http = httpServer.http
     private val gson = JsonFactory.makeJson()
     private val models = mutableMapOf<String, Model>()
 
@@ -103,22 +104,8 @@ class RestApi(
 
     private fun buildRouter(http: Service) {
 
-        http.port(listenPort)
-        if (sslCertificate != null) {
-            http.secure(sslCertificate, sslCertificatePassword, null, null)
-        }
-        http.before { req, res ->
-            res.header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-            res.header(ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
-            //res.header("Access-Control-Allow-Headers", "")
-            res.type("application/json")
-
-            // This is to provide compatibility with old postchain-client code
-            req.pathInfo()
-                    .takeIf { it.endsWith("/") }
-                    ?.also { res.redirect(it.dropLast(1)) }
-        }
-
+        httpServer.initialize(listenPort, sslCertificate, sslCertificatePassword)
+        
         http.path(basePath) {
 
             http.options("/*") { request, response ->

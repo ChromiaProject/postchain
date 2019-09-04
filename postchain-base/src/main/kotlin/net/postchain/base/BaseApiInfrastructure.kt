@@ -1,5 +1,6 @@
 package net.postchain.base
 
+import net.postchain.api.rest.controller.HttpServer
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.common.toHex
@@ -11,6 +12,8 @@ import net.postchain.ebft.worker.AbstractBlockchainProcess
 
 class BaseApiInfrastructure(nodeConfigProvider: NodeConfigurationProvider) : ApiInfrastructure {
 
+    val httpServer = HttpServer()
+
     val restApi: RestApi? = with(nodeConfigProvider.getConfiguration()) {
         if (restApiPort != -1) {
             if (restApiSsl) {
@@ -18,11 +21,13 @@ class BaseApiInfrastructure(nodeConfigProvider: NodeConfigurationProvider) : Api
                         restApiPort,
                         restApiBasePath,
                         restApiSslCertificate,
-                        restApiSslCertificatePassword)
+                        restApiSslCertificatePassword,
+                        httpServer)
             } else {
                 RestApi(
                         restApiPort,
-                        restApiBasePath)
+                        restApiBasePath,
+                        httpServer = httpServer)
             }
         } else {
             null

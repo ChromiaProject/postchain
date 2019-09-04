@@ -3,6 +3,7 @@ package net.postchain.api.rest
 import com.google.gson.JsonParser
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.BlockHeight
+import net.postchain.api.rest.controller.HttpServer
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.json.JsonFactory
@@ -32,7 +33,7 @@ class RestApiModelTest {
     @Before
     fun setup() {
         model = createMock(Model::class.java)
-        restApi = RestApi(0, basePath)
+        restApi = RestApi(0, basePath, httpServer = HttpServer())
 //        restApi.attachModel(blockchainRID, model)
     }
 
