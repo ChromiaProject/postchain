@@ -8,7 +8,6 @@ import com.google.gson.JsonElement
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
-import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_ORIGIN
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQUEST_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQUEST_METHOD
 import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_BLOCKCHAIN_RID
@@ -47,7 +46,6 @@ class RestApi(
     private val models = mutableMapOf<String, Model>()
 
     init {
-        buildErrorHandler(http)
         buildRouter(http)
         logger.info { "Rest API listening on port ${actualPort()}" }
         logger.info { "Rest API attached on $basePath/" }
@@ -67,39 +65,6 @@ class RestApi(
 
     fun actualPort(): Int {
         return http.port()
-    }
-
-    private fun buildErrorHandler(http: Service) {
-        http.exception(NotFoundError::class.java) { error, _, response ->
-            logger.error("NotFoundError:", error)
-            response.status(404)
-            response.body(error(error))
-        }
-
-        http.exception(BadFormatError::class.java) { error, _, response ->
-            logger.error("BadFormatError:", error)
-            response.status(400)
-            response.body(error(error))
-        }
-
-        http.exception(UserMistake::class.java) { error, _, response ->
-            logger.error("UserMistake:", error)
-            response.status(400)
-            response.body(error(error))
-        }
-
-        http.exception(OverloadedException::class.java) { error, _, response ->
-            response.status(503) // Service unavailable
-            response.body(error(error))
-        }
-
-        http.exception(Exception::class.java) { error, _, response ->
-            logger.error("Exception:", error)
-            response.status(500)
-            response.body(error(error))
-        }
-
-        http.notFound { _, _ -> error(UserMistake("Not found")) }
     }
 
     private fun buildRouter(http: Service) {
@@ -211,10 +176,6 @@ class RestApi(
         } catch (e: Exception) {
             throw UserMistake("Could not parse json", e)
         }
-    }
-
-    private fun error(error: Exception): String {
-        return gson.toJson(ErrorBody(error.message ?: "Unknown error"))
     }
 
     private fun handleQuery(request: Request): String {
