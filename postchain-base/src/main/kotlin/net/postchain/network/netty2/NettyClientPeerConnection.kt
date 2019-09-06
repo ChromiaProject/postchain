@@ -58,7 +58,9 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun sendPacket(packet: LazyPacket) {
-        context.writeAndFlush(Transport.wrapMessage(packet()))
+        if(context.channel().isWritable){
+            context.writeAndFlush(Transport.wrapMessage(packet()))
+        }
     }
 
     override fun close() {
