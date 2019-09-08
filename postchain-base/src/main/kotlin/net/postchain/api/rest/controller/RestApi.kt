@@ -237,10 +237,7 @@ class RestApi(
     }
 
     fun stop() {
-        http.stop()
-        // Ugly hack to workaround that there is no blocking stop.
-        // Test cases won't work correctly without it
-        Thread.sleep(100)
+        http.path(basePath) {}
     }
 
     private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any? {
