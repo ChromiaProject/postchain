@@ -46,6 +46,7 @@ class RestApi(
     private val models = mutableMapOf<String, Model>()
 
     init {
+        httpServer.buildErrorHandler()
         buildRouter(http)
         logger.info { "Rest API listening on port ${actualPort()}" }
         logger.info { "Rest API attached on $basePath/" }
