@@ -8,10 +8,12 @@ import spark.Service
 open class HttpServer {
 
     val http = Service.ignite()!!
-    private var initilized = false
-    private val gson = JsonFactory.makeJson()
-    companion object : KLogging()
+    companion object {
+        private var initilized = false
+        val logger = KLogging().logger
+    }
 
+    private val gson = JsonFactory.makeJson()
 
     fun buildErrorHandler() {
         http.exception(NotFoundError::class.java) { error, _, response ->
@@ -48,6 +50,7 @@ open class HttpServer {
 
     fun initialize(listenPort: Int, sslCertificate: String? = null, sslCertificatePassword: String? = null) {
         if (!initilized) {
+            println("Initialize....")
             http.port(listenPort)
             if (sslCertificate != null) {
                 http.secure(sslCertificate, sslCertificatePassword, null, null)
@@ -63,8 +66,17 @@ open class HttpServer {
                         .takeIf { it.endsWith("/") }
                         ?.also { res.redirect(it.dropLast(1)) }
             }
+            initilized = true
         }
-        initilized = true
+
+    }
+
+    fun stop() {
+        http.stop()
+        // Ugly hack to workaround that there is no blocking stop.
+        // Test cases won't work correctly without it
+        Thread.sleep(100)
+        initilized = false
     }
 
     private fun error(error: Exception): String {
