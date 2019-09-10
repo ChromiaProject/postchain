@@ -50,7 +50,7 @@ open class HttpServer {
 
     fun initialize(listenPort: Int, sslCertificate: String? = null, sslCertificatePassword: String? = null) {
         if (!initilized) {
-            println("Initialize....")
+            logger.info ("HttpServer is being initialized....")
             http.port(listenPort)
             if (sslCertificate != null) {
                 http.secure(sslCertificate, sslCertificatePassword, null, null)
@@ -72,11 +72,15 @@ open class HttpServer {
     }
 
     fun stop() {
-        http.stop()
-        // Ugly hack to workaround that there is no blocking stop.
-        // Test cases won't work correctly without it
-        Thread.sleep(100)
-        initilized = false
+        try {
+            http.stop()
+            // Ugly hack to workaround that there is no blocking stop.
+            // Test cases won't work correctly without it
+            Thread.sleep(100)
+        } finally {
+            initilized = false
+        }
+
     }
 
     private fun error(error: Exception): String {
