@@ -53,7 +53,7 @@ class BaseApiInfrastructure(nodeConfigProvider: NodeConfigurationProvider) : Api
     }
 
     override fun shutdown() {
-        restApi?.stop()
+        httpServer.stop()
     }
 
     private fun blockchainRID(process: BlockchainProcess): String {

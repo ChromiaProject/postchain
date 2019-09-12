@@ -54,6 +54,7 @@ class RestApi(
 
     override fun attachModel(blockchainRID: String, model: Model) {
         models[blockchainRID.toUpperCase()] = model
+        httpServer.removeStoppedNodePaths(basePath)
     }
 
     override fun detachModel(blockchainRID: String) {
@@ -139,6 +140,7 @@ class RestApi(
             http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", "application/json") { request, _ ->
                 handleNodeStatusQueries(request)
             }
+
         }
 
         http.awaitInitialization()
@@ -237,7 +239,7 @@ class RestApi(
     }
 
     fun stop() {
-        http.path(basePath) {}
+        httpServer.addStoppedNodePaths(basePath)
     }
 
     private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any? {

@@ -13,6 +13,8 @@ open class HttpServer {
         val logger = KLogging().logger
     }
 
+    private val stoppedNodePaths = mutableSetOf<String>()
+
     private val gson = JsonFactory.makeJson()
 
     fun buildErrorHandler() {
@@ -61,6 +63,12 @@ open class HttpServer {
                 //res.header("Access-Control-Allow-Headers", "")
                 res.type("application/json")
 
+                for (path in stoppedNodePaths) {
+                    if (req.pathInfo().startsWith(path)) {
+                        throw NotFoundError("Not found path: $path")
+                    }
+                }
+
                 // This is to provide compatibility with old postchain-client code
                 req.pathInfo()
                         .takeIf { it.endsWith("/") }
@@ -79,8 +87,19 @@ open class HttpServer {
             Thread.sleep(100)
         } finally {
             initilized = false
+            stoppedNodePaths.clear()
         }
 
+    }
+
+    @Synchronized
+    fun addStoppedNodePaths(path : String) {
+        stoppedNodePaths.add(path)
+    }
+
+    @Synchronized
+    fun removeStoppedNodePaths(path : String) {
+        stoppedNodePaths.remove(path)
     }
 
     private fun error(error: Exception): String {
