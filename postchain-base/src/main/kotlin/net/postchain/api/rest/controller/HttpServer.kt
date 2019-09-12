@@ -8,10 +8,8 @@ import spark.Service
 open class HttpServer {
 
     val http = Service.ignite()!!
-    companion object {
-        private var initilized = false
-        val logger = KLogging().logger
-    }
+    private var initilized = false
+    companion object : KLogging()
 
     private val stoppedNodePaths = mutableSetOf<String>()
 
