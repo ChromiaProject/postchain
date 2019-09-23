@@ -2,8 +2,8 @@
 
 package net.postchain
 
+import mu.KLogging
 import net.postchain.base.BaseTestInfrastructureFactory
-import net.postchain.config.blockchain.BlockchainConfigurationProviderFactory
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
@@ -18,6 +18,7 @@ import net.postchain.ebft.BaseEBFTInfrastructureFactory
  * process manager.
  */
 open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider) : Shutdownable {
+    companion object: KLogging()
 
     val processManager: BlockchainProcessManager
     protected val blockchainInfrastructure: BlockchainInfrastructure
@@ -44,11 +45,17 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider) : Shutdo
     }
 
     private fun buildInfrastructureFactory(nodeConfigProvider: NodeConfigurationProvider): InfrastructureFactory {
-        val infrastructureIdentifier = nodeConfigProvider.getConfiguration().infrastructure
-        val factoryClass = when (infrastructureIdentifier) {
+        val factoryClass = when (val infrastructureIdentifier = nodeConfigProvider.getConfiguration().infrastructure) {
             BaseEbft.secondName.toLowerCase() -> BaseEBFTInfrastructureFactory::class.java
             BaseTest.secondName.toLowerCase() -> BaseTestInfrastructureFactory::class.java
-            else -> Class.forName(infrastructureIdentifier)
+            else -> {
+                try {
+                    Class.forName(infrastructureIdentifier)
+                } catch (e: ClassNotFoundException) {
+                    logger.warn("Could not find infrastructure <$infrastructureIdentifier>, falling back to base/ebft")
+                    BaseEBFTInfrastructureFactory::class.java
+                }
+            }
         }
         return factoryClass.newInstance() as InfrastructureFactory
     }
