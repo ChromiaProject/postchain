@@ -44,12 +44,12 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider) : Shutdo
     }
 
     private fun buildInfrastructureFactory(nodeConfigProvider: NodeConfigurationProvider): InfrastructureFactory {
-        val factoryClass = when (nodeConfigProvider.getConfiguration().infrastructure.toLowerCase()) {
+        val infrastructureIdentifier = nodeConfigProvider.getConfiguration().infrastructure
+        val factoryClass = when (infrastructureIdentifier) {
             BaseEbft.secondName.toLowerCase() -> BaseEBFTInfrastructureFactory::class.java
             BaseTest.secondName.toLowerCase() -> BaseTestInfrastructureFactory::class.java
-            else -> BaseEBFTInfrastructureFactory::class.java
+            else -> Class.forName(infrastructureIdentifier)
         }
-
-        return factoryClass.newInstance()
+        return factoryClass.newInstance() as InfrastructureFactory
     }
 }

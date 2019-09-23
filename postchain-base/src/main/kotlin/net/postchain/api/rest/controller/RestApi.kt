@@ -27,6 +27,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import spark.Request
 import spark.Service
+import spark.route.HttpMethod
 
 /**
  * Contains information on the rest API, such as network parameters and available queries
@@ -54,7 +55,6 @@ class RestApi(
 
     override fun attachModel(blockchainRID: String, model: Model) {
         models[blockchainRID.toUpperCase()] = model
-        httpServer.removeStoppedNodePaths(basePath)
     }
 
     override fun detachModel(blockchainRID: String) {
@@ -239,7 +239,10 @@ class RestApi(
     }
 
     fun stop() {
-        httpServer.addStoppedNodePaths(basePath)
+        http.routes.remove("$basePath/query/$PARAM_BLOCKCHAIN_RID", "post")
+
+        //TODO
+        // Need to remove the rest of routes as well once spark support to access Routes object.
     }
 
     private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any? {
