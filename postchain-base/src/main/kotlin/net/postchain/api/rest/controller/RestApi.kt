@@ -28,6 +28,7 @@ import net.postchain.gtv.GtvFactory
 import spark.Request
 import spark.Service
 import spark.route.HttpMethod
+import spark.route.Routes
 
 /**
  * Contains information on the rest API, such as network parameters and available queries
@@ -239,10 +240,18 @@ class RestApi(
     }
 
     fun stop() {
-        http.routes.remove("$basePath/query/$PARAM_BLOCKCHAIN_RID", "post")
+        val routes = getAccssibleRoutes(http)
+        routes.remove("$basePath/query/$PARAM_BLOCKCHAIN_RID", "post")
 
         //TODO
         // Need to remove the rest of routes as well once spark support to access Routes object.
+    }
+
+    private fun getAccssibleRoutes(http: Service): Routes {
+        val clazz = http::class.java
+        val routesField= clazz.getDeclaredField("routes")
+        routesField.isAccessible = true
+        return routesField.get(http) as Routes
     }
 
     private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any? {
