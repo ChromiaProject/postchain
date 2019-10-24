@@ -1,70 +1,82 @@
 package net.postchain.api.rest.controller
 
+import io.ktor.application.ApplicationCallPipeline
+import io.ktor.application.call
+import io.ktor.application.install
+import io.ktor.features.StatusPages
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.request.uri
+import io.ktor.response.respondRedirect
+import io.ktor.response.respondText
+import io.ktor.server.engine.ApplicationEngine
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
 import mu.KLogging
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.core.UserMistake
+import java.util.concurrent.TimeUnit
+
 //import spark.Service
 
 open class HttpServer {
-
-    //val http = Service.ignite()!!
+ //val http = Service.ignite()!!
+    lateinit var http: ApplicationEngine
     private var initilized = false
     companion object : KLogging()
 
 
     private val gson = JsonFactory.makeJson()
 
-    fun buildErrorHandler() {
-//        http.exception(NotFoundError::class.java) { error, _, response ->
-//            logger.error("NotFoundError:", error)
-//            response.status(404)
-//            response.body(error(error))
-//        }
-//
-//        http.exception(BadFormatError::class.java) { error, _, response ->
-//            logger.error("BadFormatError:", error)
-//            response.status(400)
-//            response.body(error(error))
-//        }
-//
-//        http.exception(UserMistake::class.java) { error, _, response ->
-//            logger.error("UserMistake:", error)
-//            response.status(400)
-//            response.body(error(error))
-//        }
-//
-//        http.exception(OverloadedException::class.java) { error, _, response ->
-//            response.status(503) // Service unavailable
-//            response.body(error(error))
-//        }
-//
-//        http.exception(Exception::class.java) { error, _, response ->
-//            logger.error("Exception:", error)
-//            response.status(500)
-//            response.body(error(error))
-//        }
-//
-//        http.notFound { _, _ -> error(UserMistake("Not found")) }
-    }
-
     fun initialize(listenPort: Int, sslCertificate: String? = null, sslCertificatePassword: String? = null) {
         if (!initilized) {
             logger.info ("HttpServer is being initialized....")
+
+            http = embeddedServer(Netty, port = listenPort){
+                install(StatusPages) {
+                    exception<NotFoundError> { cause ->
+                        logger.error("NotFoundError:", cause.message)
+                        call.respondText(cause.message ?: "",
+                                ContentType.Text.Plain, HttpStatusCode.NotFound){}
+                    }
+                    exception<BadFormatError> { cause ->
+                        logger.error("BadFormatError:", cause.message)
+                        call.respondText(cause.message ?: "",
+                                ContentType.Text.Plain, HttpStatusCode.BadRequest){}
+                    }
+                    exception<UserMistake> { cause ->
+                        logger.error("UserMistake:", cause.message)
+                        call.respondText(cause.message ?: "",
+                                ContentType.Text.Plain, HttpStatusCode.BadRequest){}
+                    }
+                    exception<OverloadedException> { cause ->
+                        logger.error("OverloadedException:", cause.message)
+                        call.respondText(cause.message ?: "",
+                                ContentType.Text.Plain, HttpStatusCode.ServiceUnavailable){}
+                    }
+                    exception<Exception> { cause ->
+                        logger.error("Exception:", cause.message)
+                        call.respondText(cause.message ?: "",
+                                ContentType.Text.Plain, HttpStatusCode.InternalServerError){}
+                    }
+                }
+                intercept(ApplicationCallPipeline.Call) {
+                    call.response.headers.append(HttpHelper.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                    call.response.headers.append(HttpHelper.ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
+                    call.response.headers.append(HttpHelper.CONTENT_TYPE, "application/json")
+                    if(call.request.uri.endsWith("/")) {
+                        call.respondRedirect(call.request.uri.dropLast(1))
+                    }
+                }
+            }
+            http.start(wait = true)
+
+            // todo: certificate!!!
 //            http.port(listenPort)
 //            if (sslCertificate != null) {
 //                http.secure(sslCertificate, sslCertificatePassword, null, null)
 //            }
-//            http.before { req, res ->
-//                res.header(HttpHelper.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-//                res.header(HttpHelper.ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
-//                //res.header("Access-Control-Allow-Headers", "")
-//                res.type("application/json")
-//
-//                // This is to provide compatibility with old postchain-client code
-//                req.pathInfo()
-//                        .takeIf { it.endsWith("/") }
-//                        ?.also { res.redirect(it.dropLast(1)) }
-//            }
+
             initilized = true
         }
 
@@ -72,10 +84,10 @@ open class HttpServer {
 
     fun stop() {
         try {
-            //http.stop()
-            // Ugly hack to workaround that there is no blocking stop.
+            http.stop(5, 5, TimeUnit.SECONDS)
+               // Ugly hack to workaround that there is no blocking stop.
             // Test cases won't work correctly without it
-            Thread.sleep(100)
+            Thread.sleep(5000)
         } finally {
             initilized = false
         }

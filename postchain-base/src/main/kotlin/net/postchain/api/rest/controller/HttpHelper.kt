@@ -9,6 +9,8 @@ class HttpHelper {
         const val ACCESS_CONTROL_REQUEST_HEADERS = "Access-Control-Request-Headers"
         const val ACCESS_CONTROL_ALLOW_HEADERS = "Access-Control-Allow-Headers"
 
+        const val CONTENT_TYPE = "Content-Type"
+
         const val PARAM_HASH_HEX = ":hashHex"
         const val SUBQUERY = ":subQuery"
         const val PARAM_BLOCKCHAIN_RID = ":blockchainRID"
