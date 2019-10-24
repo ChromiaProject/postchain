@@ -93,10 +93,16 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.sparkjava</groupId>-->
+<!--            <artifactId>spark-core</artifactId>-->
+<!--            <version>${spark-core.version}</version>-->
+<!--        </dependency>-->
+
         <dependency>
-            <groupId>com.sparkjava</groupId>
-            <artifactId>spark-core</artifactId>
-            <version>${spark-core.version}</version>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-server-netty</artifactId>
+            <version>1.2.4</version>
         </dependency>
 
         <dependency>
