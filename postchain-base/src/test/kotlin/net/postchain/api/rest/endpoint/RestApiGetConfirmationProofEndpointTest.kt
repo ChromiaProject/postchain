@@ -40,7 +40,7 @@ class RestApiGetConfirmationProofEndpointTest {
     @Before
     fun setup() {
         model = createMock(Model::class.java)
-        restApi = RestApi(0, basePath, httpServer = HttpServer())
+        restApi = RestApi(basePath, httpServer = HttpServer(0))
         restApi.attachModel(blockchainRID, model)
     }
 

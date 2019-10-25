@@ -12,22 +12,19 @@ import net.postchain.ebft.worker.AbstractBlockchainProcess
 
 class BaseApiInfrastructure(nodeConfigProvider: NodeConfigurationProvider) : ApiInfrastructure {
 
-    val httpServer = HttpServer()
+    lateinit var httpServer: HttpServer
 
     val restApi: RestApi? = with(nodeConfigProvider.getConfiguration()) {
+        httpServer = HttpServer(restApiPort, restApiSslCertificate, restApiSslCertificatePassword)
         if (restApiPort != -1) {
             if (restApiSsl) {
                 RestApi(
-                        restApiPort,
                         restApiBasePath,
-                        restApiSslCertificate,
-                        restApiSslCertificatePassword,
                         httpServer)
             } else {
                 RestApi(
-                        restApiPort,
                         restApiBasePath,
-                        httpServer = httpServer)
+                        httpServer)
             }
         } else {
             null
@@ -53,7 +50,7 @@ class BaseApiInfrastructure(nodeConfigProvider: NodeConfigurationProvider) : Api
     }
 
     override fun shutdown() {
-        httpServer.stop()
+        httpServer?.stop()
     }
 
     private fun blockchainRID(process: BlockchainProcess): String {

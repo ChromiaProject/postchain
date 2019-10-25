@@ -19,12 +19,17 @@ import java.util.concurrent.TimeUnit
 
 //import spark.Service
 
-open class HttpServer {
+open class HttpServer(private val listenPort: Int,
+                      private val sslCertificate: String? = null,
+                      private val sslCertificatePassword: String? = null) {
  //val http = Service.ignite()!!
     lateinit var http: ApplicationEngine
     private var initilized = false
     companion object : KLogging()
 
+    init {
+        initialize(listenPort, sslCertificate, sslCertificatePassword)
+    }
 
     private val gson = JsonFactory.makeJson()
 
@@ -63,13 +68,13 @@ open class HttpServer {
                 intercept(ApplicationCallPipeline.Call) {
                     call.response.headers.append(HttpHelper.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
                     call.response.headers.append(HttpHelper.ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
-                    call.response.headers.append(HttpHelper.CONTENT_TYPE, "application/json")
+                   // call.response.headers.append(HttpHelper.CONTENT_TYPE, "application/json")
                     if(call.request.uri.endsWith("/")) {
                         call.respondRedirect(call.request.uri.dropLast(1))
                     }
                 }
             }
-            http.start(wait = true)
+            http.start()
 
             // todo: certificate!!!
 //            http.port(listenPort)

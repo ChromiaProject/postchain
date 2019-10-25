@@ -5,6 +5,16 @@ package net.postchain.api.rest.controller
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+import io.ktor.application.call
+import io.ktor.http.ContentType
+import io.ktor.request.receiveText
+import io.ktor.response.respondText
+import io.ktor.routing.get
+import io.ktor.routing.options
+import io.ktor.routing.post
+import io.ktor.routing.routing
+import io.ktor.server.engine.ApplicationEngine
+import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
@@ -25,31 +35,23 @@ import net.postchain.common.toHex
 import net.postchain.core.UserMistake
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
-//import spark.Request
-//import spark.Service
-//import spark.route.HttpMethod
-//import spark.route.Routes
 
 /**
  * Contains information on the rest API, such as network parameters and available queries
  */
 class RestApi(
-        private val listenPort: Int,
         private val basePath: String,
-        private val sslCertificate: String? = null,
-        private val sslCertificatePassword: String? = null,
         private val httpServer: HttpServer
 ) : Modellable {
 
     companion object : KLogging()
 
-  //  private val http = httpServer.http
+    private val http = httpServer.http
     private val gson = JsonFactory.makeJson()
     private val models = mutableMapOf<String, Model>()
 
     init {
-       // httpServer.buildErrorHandler()
-       // buildRouter(http)
+        buildRouter()
         logger.info { "Rest API listening on port ${actualPort()}" }
         logger.info { "Rest API attached on $basePath/" }
     }
@@ -71,89 +73,77 @@ class RestApi(
     }
 
     private fun buildRouter(){
-    //http: Service
-            // ) {
+        http.application.routing {  }.options(basePath + "/*") {
+            call.request.headers[ACCESS_CONTROL_REQUEST_HEADERS]?.let {
+                call.response.headers.append(ACCESS_CONTROL_ALLOW_HEADERS, it)
+            }
+            call.request.headers[ACCESS_CONTROL_REQUEST_METHOD]?.let {
+                call.response.headers.append(ACCESS_CONTROL_ALLOW_METHODS, it)
+            }
+            call.respondText("OK")
+        }
+        http.application.routing {  }.post(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}") {
+            val n = TimeLog.startSumConc("RestApi.buildRouter().postTx")
+            val body = call.receiveText()
+            logger.debug("Request body: ${body}")
+            val tx = toTransaction(body)
+            if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
+                throw UserMistake("Invalid tx format. Expected {\"tx\": <hexString>}")
+            }
+            model(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "").postTransaction(tx)
+            TimeLog.end("RestApi.buildRouter().postTx", n)
+            call.respondText("{}")
+        }
+        http.application.routing {  }.get(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/{$PARAM_HASH_HEX}") {
+            runTxActionOnModel(call.parameters[PARAM_HASH_HEX] ?: "", call.parameters[PARAM_BLOCKCHAIN_RID] ?: "") { model, txRID ->
+                launch {
+                    call.respondText(gson.toJson(model.getTransaction(txRID)), io.ktor.http.ContentType.Application.Json)
+                }
+            }
+        }
+        http.application.routing {  }.get(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/{$PARAM_HASH_HEX}/confirmationProof") {
+            runTxActionOnModel(call.parameters[PARAM_HASH_HEX] ?: "", call.parameters[PARAM_BLOCKCHAIN_RID] ?: "") { model, txRID ->
+                launch {
+                    call.respondText(gson.toJson(model.getConfirmationProof(txRID)), io.ktor.http.ContentType.Application.Json)
+                }
 
-        //httpServer.initialize(listenPort, sslCertificate, sslCertificatePassword)
-        
-//        http.path(basePath) {
-//
-//            http.options("/*") { request, response ->
-//                request.headers(ACCESS_CONTROL_REQUEST_HEADERS)?.let {
-//                    response.header(ACCESS_CONTROL_ALLOW_HEADERS, it)
-//                }
-//                request.headers(ACCESS_CONTROL_REQUEST_METHOD)?.let {
-//                    response.header(ACCESS_CONTROL_ALLOW_METHODS, it)
-//                }
-//
-//                "OK"
-//            }
-//            http.post("/tx/$PARAM_BLOCKCHAIN_RID") { request, _ ->
-//                val n = TimeLog.startSumConc("RestApi.buildRouter().postTx")
-//                logger.debug("Request body: ${request.body()}")
-//                val tx = toTransaction(request)
-//                if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
-//                    throw UserMistake("Invalid tx format. Expected {\"tx\": <hexString>}")
-//                }
-//                model(request).postTransaction(tx)
-//                TimeLog.end("RestApi.buildRouter().postTx", n)
-//                "{}"
-//            }
-//            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", { request, _ ->
-//                runTxActionOnModel(request) { model, txRID ->
-//                    model.getTransaction(txRID)
-//                }
-//            }, gson::toJson)
-//
-//            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/confirmationProof", { request, _ ->
-//                runTxActionOnModel(request) { model, txRID ->
-//                    model.getConfirmationProof(txRID)
-//                }
-//            }, gson::toJson)
-//
-//            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/status", { request, _ ->
-//                runTxActionOnModel(request) { model, txRID ->
-//                    model.getStatus(txRID)
-//                }
-//            }, gson::toJson)
-//
-//            http.get("/query/$PARAM_BLOCKCHAIN_RID/blocks/latest/$PARAM_UP_TO/limit/$PARAM_LIMIT", { request, _ ->
-//                val model = model(request)
-//                try {
-//                    val upTo = request.params(PARAM_UP_TO).toLong()
-//                    val limit = request.params(PARAM_LIMIT).toInt()
-//                    model.getLatestBlocksUpTo(upTo, limit)
-//                } catch (e: NumberFormatException) {
-//                    throw BadFormatError("Format is not correct (Long, Int)")
-//                }
-//            }, gson::toJson)
-//
-//            http.post("/query/$PARAM_BLOCKCHAIN_RID") { request, _ ->
-//                handleQuery(request)
-//            }
-//
-//            http.post("/batch_query/$PARAM_BLOCKCHAIN_RID") { request, _ ->
-//                handleQueries(request)
-//            }
-//
-//            http.post("/query_gtx/$PARAM_BLOCKCHAIN_RID") { request, _ ->
-//                handleGTXQueries(request)
-//            }
-//
-//            http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", "application/json") { request, _ ->
-//                handleNodeStatusQueries(request)
-//            }
-//
-//        }
-//
-//        http.awaitInitialization()
+            }
+        }
+        http.application.routing {  }.get(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/{$PARAM_HASH_HEX}/status") {
+            runTxActionOnModel(call.parameters[PARAM_HASH_HEX] ?: "", call.parameters[PARAM_BLOCKCHAIN_RID] ?: "") { model, txRID ->
+                launch {
+                    call.respondText(gson.toJson(model.getStatus(txRID)), io.ktor.http.ContentType.Application.Json)
+                }
+
+            }
+        }
+        http.application.routing {  }.get(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/blocks/latest/{$PARAM_UP_TO}/limit/{$PARAM_LIMIT}") {
+            val model = model(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "")
+            try {
+                val upTo = call.parameters[PARAM_UP_TO]!!.toLong()
+                val limit = call.parameters[PARAM_LIMIT]!!.toInt()
+                call.respondText(gson.toJson(model.getLatestBlocksUpTo(upTo, limit)), io.ktor.http.ContentType.Application.Json)
+            } catch (e: NumberFormatException) {
+                throw BadFormatError("Format is not correct (Long, Int)")
+            }
+        }
+        http.application.routing {  }.post(basePath + "/query/{$PARAM_BLOCKCHAIN_RID}") {
+            call.respondText(handleQuery(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "", call.receiveText()))
+        }
+        http.application.routing {  }.post(basePath + "/batch_query/{$PARAM_BLOCKCHAIN_RID}") {
+            call.respondText(handleQueries(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "", call.receiveText()))
+        }
+        http.application.routing {  }.post(basePath + "/query_gtx/{$PARAM_BLOCKCHAIN_RID}") {
+            call.respondText(handleGTXQueries(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "", call.receiveText()))
+        }
+        http.application.routing {  }.post(basePath + "/node/{$PARAM_BLOCKCHAIN_RID}/{$SUBQUERY}") {
+            call.respondText(handleNodeStatusQueries(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "", call.parameters[SUBQUERY] ?: "", call.receiveText()))
+        }
     }
 
-    private fun toTransaction(//req: Request
-             ): ApiTx {
+    private fun toTransaction(requestBody: String): ApiTx {
         try {
-            return gson.fromJson<ApiTx>(//req.body()
-                    "" , ApiTx::class.java)
+            return gson.fromJson<ApiTx>(requestBody , ApiTx::class.java)
         } catch (e: Exception) {
             throw UserMistake("Could not parse json", e)
         }
@@ -186,71 +176,59 @@ class RestApi(
         }
     }
 
-    private fun handleQuery(//request: Request
-            //
-            ): String {
-       // logger.debug("Request body: ${request.body()}")
-            return ""
-//        model(request)
-//                .query(Query(request.body()))
-//                .json
+    private fun handleQuery(paramBlockchainRID: String, requestBody: String): String {
+        logger.debug("Request body: ${requestBody}")
+        return model(paramBlockchainRID)
+                .query(Query(requestBody))
+                .json
     }
 
-    private fun handleQueries(//request: Request
-            //
-             ): String {
-//        logger.debug("Request body: ")
-//
-//        val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
-//
-//        var response: MutableList<String> = mutableListOf()
-//
-//        queriesArray.forEach {
-//            var query = gson.toJson(it)
-//            response.add(model(request).query(Query(query)).json)
-//        }
-//
-//        return gson.toJson(response)
-        return ""
+    private fun handleQueries(paramBlockchainRID: String, requestBody: String): String {
+        logger.debug("Request body: ${requestBody}")
+
+        val queriesArray: JsonArray = parseMultipleQueriesRequest(requestBody)
+
+        var response: MutableList<String> = mutableListOf()
+
+        queriesArray.forEach {
+            var query = gson.toJson(it)
+            response.add(model(paramBlockchainRID).query(Query(query)).json)
+        }
+
+        return gson.toJson(response)
     }
 
-    private fun handleGTXQueries(): String {
-//        logger.debug("Request body: ${request.body()}")
-//        var response: MutableList<String> = mutableListOf<String>()
-//        val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
-//
-//        queriesArray.forEach {
-//            val hexQuery = it.asString
-//            val gtxQuery = GtvFactory.decodeGtv(hexQuery.hexStringToByteArray())
-//            response.add(GtvEncoder.encodeGtv(model(request).query(gtxQuery)).toHex())
-//        }
-//
-//        return gson.toJson(response)
-        return ""
+    private fun handleGTXQueries(paramBlockchainRID: String, requestBody: String): String {
+        logger.debug("Request body: ${requestBody}")
+        var response: MutableList<String> = mutableListOf<String>()
+        val queriesArray: JsonArray = parseMultipleQueriesRequest(requestBody)
+
+        queriesArray.forEach {
+            val hexQuery = it.asString
+            val gtxQuery = GtvFactory.decodeGtv(hexQuery.hexStringToByteArray())
+            response.add(GtvEncoder.encodeGtv(model(paramBlockchainRID).query(gtxQuery)).toHex())
+        }
+
+        return gson.toJson(response)
     }
 
-    private fun handleNodeStatusQueries(): String {
-//        logger.debug("Request body: ${request.body()}")
-//        return model(request).nodeQuery(request.params(SUBQUERY))
-        return ""
+    private fun handleNodeStatusQueries(paramBlockchainRID: String, paramSubquery: String,  requestBody: String): String {
+        logger.debug("Request body: ${requestBody}")
+        return model(paramBlockchainRID).nodeQuery(paramSubquery)
     }
 
-    private fun checkTxHashHex(): String {
-//        val hashHex = request.params(PARAM_HASH_HEX)
-//        if (!hashHex.matches(Regex("[0-9a-fA-F]{64}"))) {
-//            throw BadFormatError("Invalid hashHex. Expected 64 hex digits [0-9a-fA-F]")
-//        }
-//        return hashHex
-        return ""
+    private fun checkTxHashHex(hashHex: String): String {
+        if (!hashHex.matches(Regex("[0-9a-fA-F]{64}"))) {
+            throw BadFormatError("Invalid hashHex. Expected 64 hex digits [0-9a-fA-F]")
+        }
+        return hashHex
     }
 
-    private fun checkBlockchainRID(): String {
-//        val blockchainRID = request.params(PARAM_BLOCKCHAIN_RID)
-//        if (!blockchainRID.matches(Regex("[0-9a-fA-F]{64}"))) {
-//            throw BadFormatError("Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]")
-//        }
-//        return blockchainRID
-        return ""
+    private fun checkBlockchainRID(paramBlockchainRID: String): String {
+        if (!paramBlockchainRID.matches(Regex("[0-9a-fA-F]{64}"))) {
+            throw BadFormatError("Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]")
+        }
+        return paramBlockchainRID
     }
 
     fun stop() {
@@ -268,21 +246,21 @@ class RestApi(
 //        return routesField.get(http) as Routes
 //    }
 //
-//    private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any? {
-//        val model = model(request)
-//        val txHashHex = checkTxHashHex(request)
-//        return txAction(model, toTxRID(txHashHex))
-//                ?: throw NotFoundError("Can't find tx with hash $txHashHex")
-//    }
+    private fun runTxActionOnModel(paramHashHex: String, paramBlockchainRID: String, txAction: (Model, TxRID) -> Any?): Any? {
+        val model = model(paramBlockchainRID)
+        val txHashHex = checkTxHashHex(paramHashHex)
+        return txAction(model, toTxRID(txHashHex))
+                ?: throw NotFoundError("Can't find tx with hash $txHashHex")
+    }
 
-    private fun model(): Model {
-        val blockchainRID = ""//= checkBlockchainRID(request)
+    private fun model(paramBlockchainRID: String): Model {
+        val blockchainRID = checkBlockchainRID(paramBlockchainRID)
         return models[blockchainRID.toUpperCase()]
                 ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
     }
 
-    private fun parseMultipleQueriesRequest(): JsonArray {
-        val element: JsonElement = gson.fromJson("", JsonElement::class.java)
+    private fun parseMultipleQueriesRequest(requestBody: String): JsonArray {
+        val element: JsonElement = gson.fromJson(requestBody, JsonElement::class.java)
         val jsonObject = element.asJsonObject
         return jsonObject.get("queries").asJsonArray
     }
