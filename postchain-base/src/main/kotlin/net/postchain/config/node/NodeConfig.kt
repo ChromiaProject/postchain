@@ -75,7 +75,8 @@ open class NodeConfig(private val appConfig: AppConfig) {
     val restApiSslCertificatePassword: String
         get() = config.getString("api.ssl_certificate.password", "")
 
-
+    val restApiSslCertificateAlias: String
+        get() = config.getString("api.ssl_certificate.alias", "")
     /**
      * Peers
      */

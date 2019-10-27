@@ -6,11 +6,9 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import io.ktor.application.call
-import io.ktor.http.ContentType
 import io.ktor.request.receiveText
 import io.ktor.response.respondText
 import io.ktor.routing.*
-import io.ktor.server.engine.ApplicationEngine
 import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
@@ -262,7 +260,7 @@ class RestApi(
             }
         }
     }
-    
+
     private fun runTxActionOnModel(paramHashHex: String, paramBlockchainRID: String, txAction: (Model, TxRID) -> Any?): Any? {
         val model = model(paramBlockchainRID)
         val txHashHex = checkTxHashHex(paramHashHex)

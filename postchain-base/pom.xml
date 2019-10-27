@@ -104,7 +104,11 @@
             <artifactId>ktor-server-netty</artifactId>
             <version>1.2.4</version>
         </dependency>
-
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-network-tls</artifactId>
+            <version>1.2.4</version>
+        </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>

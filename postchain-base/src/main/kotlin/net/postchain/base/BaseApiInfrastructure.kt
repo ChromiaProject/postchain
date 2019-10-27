@@ -15,7 +15,7 @@ class BaseApiInfrastructure(nodeConfigProvider: NodeConfigurationProvider) : Api
     lateinit var httpServer: HttpServer
 
     val restApi: RestApi? = with(nodeConfigProvider.getConfiguration()) {
-        httpServer = HttpServer(restApiPort, restApiSslCertificate, restApiSslCertificatePassword)
+        httpServer = HttpServer(restApiPort, restApiSslCertificate, restApiSslCertificatePassword, restApiSslCertificateAlias)
         if (restApiPort != -1) {
             if (restApiSsl) {
                 RestApi(
