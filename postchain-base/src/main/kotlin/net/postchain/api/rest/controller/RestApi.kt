@@ -9,10 +9,7 @@ import io.ktor.application.call
 import io.ktor.http.ContentType
 import io.ktor.request.receiveText
 import io.ktor.response.respondText
-import io.ktor.routing.get
-import io.ktor.routing.options
-import io.ktor.routing.post
-import io.ktor.routing.routing
+import io.ktor.routing.*
 import io.ktor.server.engine.ApplicationEngine
 import kotlinx.coroutines.launch
 import mu.KLogging
@@ -35,6 +32,7 @@ import net.postchain.common.toHex
 import net.postchain.core.UserMistake
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import java.lang.NullPointerException
 
 /**
  * Contains information on the rest API, such as network parameters and available queries
@@ -71,6 +69,16 @@ class RestApi(
     fun actualPort(): Int {
         return 1
     }
+
+    private val blockchainRoutesList = listOf(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}",
+            basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/{$PARAM_HASH_HEX}",
+            basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/{$PARAM_HASH_HEX}/confirmationProof",
+            basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/{$PARAM_HASH_HEX}/status",
+            basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/blocks/latest/{$PARAM_UP_TO}/limit/{$PARAM_LIMIT}",
+            basePath + "/query/{$PARAM_BLOCKCHAIN_RID}",
+            basePath + "/batch_query/{$PARAM_BLOCKCHAIN_RID}",
+            basePath + "/query_gtx/{$PARAM_BLOCKCHAIN_RID}",
+            basePath + "/node/{$PARAM_BLOCKCHAIN_RID}/{$SUBQUERY}")
 
     private fun buildRouter(){
         http.application.routing {  }.options(basePath + "/*") {
@@ -232,20 +240,29 @@ class RestApi(
     }
 
     fun stop() {
-        //val routes = getAccssibleRoutes(http)
-       // routes.remove("$basePath/query/$PARAM_BLOCKCHAIN_RID", "post")
-
-        //TODO
-        // Need to remove the rest of routes as well once spark support to access Routes object.
+        blockchainRoutesList.forEach {
+            removeEndpoint(it, http.application.routing {  }.children as java.util.List<Route>)
+        }
     }
 
-//    private fun getAccssibleRoutes(http: Service): Routes {
-//        val clazz = http::class.java
-//        val routesField= clazz.getDeclaredField("routes")
-//        routesField.isAccessible = true
-//        return routesField.get(http) as Routes
-//    }
-//
+    private fun removeEndpoint(path: String, startPosition: java.util.List<Route>) {
+        val forRemovement = path.split("/")
+        var startPosition = startPosition
+        var path = ""
+        forRemovement.forEachIndexed {
+            indx, it ->
+            path += "/" + it
+            val foundPos = startPosition.find { it.toString() == path }
+            if(foundPos == null)
+                throw NullPointerException("There's no such path to remove")
+            if(indx == forRemovement.size - 1) {
+                startPosition.remove(foundPos)
+            } else {
+                startPosition = foundPos.children as java.util.List<Route>
+            }
+        }
+    }
+    
     private fun runTxActionOnModel(paramHashHex: String, paramBlockchainRID: String, txAction: (Model, TxRID) -> Any?): Any? {
         val model = model(paramBlockchainRID)
         val txHashHex = checkTxHashHex(paramHashHex)
