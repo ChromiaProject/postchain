@@ -19,7 +19,7 @@ import java.security.KeyStore
 import java.util.concurrent.TimeUnit
 
 
-open class HttpServer(private val listenPort: Int,
+open class HttpServer(val listenPort: Int,
                       private val sslCertificate: String? = null,
                       private val sslCertificatePassword: String? = null,
                       private val restApiSslCertificateAlias: String? = null) {

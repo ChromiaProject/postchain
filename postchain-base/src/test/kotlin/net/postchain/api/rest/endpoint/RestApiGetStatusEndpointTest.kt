@@ -29,7 +29,8 @@ class RestApiGetStatusEndpointTest {
     @Before
     fun setup() {
         model = createMock(Model::class.java)
-        restApi = RestApi(basePath, httpServer = HttpServer(0))
+        val port = (8080..65534).random()
+        restApi = RestApi(basePath, httpServer = HttpServer(port))
         restApi.attachModel(blockchainRID, model)
     }
 

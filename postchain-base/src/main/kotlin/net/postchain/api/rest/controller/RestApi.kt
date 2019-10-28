@@ -65,7 +65,7 @@ class RestApi(
     }
 
     fun actualPort(): Int {
-        return 1
+        return httpServer.listenPort
     }
 
     private val blockchainRoutesList = listOf(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}",
@@ -238,9 +238,10 @@ class RestApi(
     }
 
     fun stop() {
-        blockchainRoutesList.forEach {
-            removeEndpoint(it, http.application.routing {  }.children as java.util.List<Route>)
-        }
+        (http.application.routing {  }.children as java.util.List<Route>).clear()
+//        blockchainRoutesList.forEach {
+//            removeEndpoint(it, http.application.routing {  }.children as java.util.List<Route>)
+//        }
     }
 
     private fun removeEndpoint(path: String, startPosition: java.util.List<Route>) {
