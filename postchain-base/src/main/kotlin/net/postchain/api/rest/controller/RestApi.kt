@@ -103,7 +103,10 @@ class RestApi(
         http.application.routing {  }.get(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/{$PARAM_HASH_HEX}") {
             runTxActionOnModel(call.parameters[PARAM_HASH_HEX] ?: "", call.parameters[PARAM_BLOCKCHAIN_RID] ?: "") { model, txRID ->
                 launch {
-                    call.respondText(gson.toJson(model.getTransaction(txRID)), io.ktor.http.ContentType.Application.Json)
+                    val transaction = model.getTransaction(txRID)
+                    if(transaction == null)
+                        throw NotFoundError("There's no transaction with txRID=${txRID}")
+                    call.respondText(gson.toJson(transaction), io.ktor.http.ContentType.Application.Json)
                 }
             }
         }
@@ -142,8 +145,11 @@ class RestApi(
         http.application.routing {  }.post(basePath + "/query_gtx/{$PARAM_BLOCKCHAIN_RID}") {
             call.respondText(handleGTXQueries(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "", call.receiveText()))
         }
-        http.application.routing {  }.post(basePath + "/node/{$PARAM_BLOCKCHAIN_RID}/{$SUBQUERY}") {
-            call.respondText(handleNodeStatusQueries(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "", call.parameters[SUBQUERY] ?: "", call.receiveText()))
+        http.application.routing {  }.get(basePath + "/node/{$PARAM_BLOCKCHAIN_RID}/{$SUBQUERY}") {
+            val status = handleNodeStatusQueries(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "", call.parameters[SUBQUERY] ?: "", call.receiveText())
+            if(status == null)
+                throw NotFoundError("Not found")
+            call.respondText(status)
         }
     }
 

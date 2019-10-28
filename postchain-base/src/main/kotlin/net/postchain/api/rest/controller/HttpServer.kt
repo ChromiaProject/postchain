@@ -19,6 +19,7 @@ import java.security.KeyStore
 import java.util.concurrent.TimeUnit
 
 
+class ErrorDto(val error: String)
 open class HttpServer(val listenPort: Int,
                       private val sslCertificate: String? = null,
                       private val sslCertificatePassword: String? = null,
@@ -43,27 +44,27 @@ open class HttpServer(val listenPort: Int,
                     install(StatusPages) {
                         exception<NotFoundError> { cause ->
                             logger.error("NotFoundError:", cause.message)
-                            call.respondText(cause.message ?: "",
+                            call.respondText(gson.toJson(ErrorDto(cause.message ?: "")),
                                     ContentType.Text.Plain, HttpStatusCode.NotFound){}
                         }
                         exception<BadFormatError> { cause ->
                             logger.error("BadFormatError:", cause.message)
-                            call.respondText(cause.message ?: "",
+                            call.respondText(gson.toJson(ErrorDto(cause.message ?: "")),
                                     ContentType.Text.Plain, HttpStatusCode.BadRequest){}
                         }
                         exception<UserMistake> { cause ->
                             logger.error("UserMistake:", cause.message)
-                            call.respondText(cause.message ?: "",
+                            call.respondText(gson.toJson(ErrorDto(cause.message ?: "")),
                                     ContentType.Text.Plain, HttpStatusCode.BadRequest){}
                         }
                         exception<OverloadedException> { cause ->
                             logger.error("OverloadedException:", cause.message)
-                            call.respondText(cause.message ?: "",
+                            call.respondText(gson.toJson(ErrorDto(cause.message ?: "")),
                                     ContentType.Text.Plain, HttpStatusCode.ServiceUnavailable){}
                         }
                         exception<Exception> { cause ->
                             logger.error("Exception:", cause.message)
-                            call.respondText(cause.message ?: "",
+                            call.respondText(gson.toJson(ErrorDto(cause.message ?: "")),
                                     ContentType.Text.Plain, HttpStatusCode.InternalServerError){}
                         }
                     }
