@@ -9,25 +9,31 @@ import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.AbstractBlockchainProcess
+import java.net.BindException
 
-class BaseApiInfrastructure(nodeConfigProvider: NodeConfigurationProvider) : ApiInfrastructure {
+class BaseApiInfrastructure(val nodeConfigProvider: NodeConfigurationProvider) : ApiInfrastructure {
 
-    lateinit var httpServer: HttpServer
+    var httpServer: HttpServer? = null
 
-    val restApi: RestApi? = with(nodeConfigProvider.getConfiguration()) {
-        httpServer = HttpServer(restApiPort, restApiSslCertificate, restApiSslCertificatePassword, restApiSslCertificateAlias)
-        if (restApiPort != -1) {
-            if (restApiSsl) {
-                RestApi(
-                        restApiBasePath,
-                        httpServer)
+    val restApi: RestApi? = initRestApi()
+
+    private fun initRestApi(): RestApi? {
+        return with(nodeConfigProvider.getConfiguration()) {
+            if (restApiPort != -1) {
+                if (restApiSsl) {
+                    httpServer = net.postchain.api.rest.controller.HttpServer(restApiPort, restApiSslCertificate, restApiSslCertificatePassword, restApiSslCertificateAlias)
+                    net.postchain.api.rest.controller.RestApi(
+                            restApiBasePath,
+                            httpServer!!)
+                } else {
+                    httpServer = net.postchain.api.rest.controller.HttpServer(listenPort = restApiPort)
+                    net.postchain.api.rest.controller.RestApi(
+                            restApiBasePath,
+                            httpServer!!)
+                }
             } else {
-                RestApi(
-                        restApiBasePath,
-                        httpServer)
+                null
             }
-        } else {
-            null
         }
     }
 

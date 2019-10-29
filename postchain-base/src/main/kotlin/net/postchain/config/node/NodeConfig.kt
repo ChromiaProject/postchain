@@ -63,8 +63,7 @@ open class NodeConfig(private val appConfig: AppConfig) {
     val restApiBasePath: String
         get() = config.getString("api.basepath", "")
 
-    val restApiPort: Int
-        get() = config.getInt("api.port", 7740)
+    var restApiPort = config.getInt("api.port", 7740)
 
     val restApiSsl: Boolean
         get() = config.getBoolean("api.enable_ssl", false)
