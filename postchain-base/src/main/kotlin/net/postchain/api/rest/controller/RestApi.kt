@@ -5,11 +5,14 @@ package net.postchain.api.rest.controller
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.request.receiveText
 import io.ktor.response.respondText
 import io.ktor.routing.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.newFixedThreadPoolContext
+import kotlinx.coroutines.withContext
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
@@ -41,6 +44,8 @@ class RestApi(
 ) : Modellable {
 
     companion object : KLogging()
+
+    private val compute = newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "compute")
 
     private val http = httpServer.http
     private val gson = JsonFactory.makeJson()
@@ -89,16 +94,7 @@ class RestApi(
             call.respondText("OK")
         }
         http.application.routing {  }.post(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}") {
-            val n = TimeLog.startSumConc("RestApi.buildRouter().postTx")
-            val body = call.receiveText()
-            logger.debug("Request body: ${body}")
-            val tx = toTransaction(body)
-            if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
-                throw UserMistake("Invalid tx format. Expected {\"tx\": <hexString>}")
-            }
-            model(call.parameters[PARAM_BLOCKCHAIN_RID] ?: "").postTransaction(tx)
-            TimeLog.end("RestApi.buildRouter().postTx", n)
-            call.respondText("{}")
+            call.postTransaction()
         }
         http.application.routing {  }.get(basePath + "/tx/{$PARAM_BLOCKCHAIN_RID}/{$PARAM_HASH_HEX}") {
             runTxActionOnModel(call.parameters[PARAM_HASH_HEX] ?: "", call.parameters[PARAM_BLOCKCHAIN_RID] ?: "") { model, txRID ->
@@ -150,6 +146,20 @@ class RestApi(
             if(status == null)
                 throw NotFoundError("Not found")
             call.respondText(status)
+        }
+    }
+    private suspend fun ApplicationCall.postTransaction() {
+        withContext(compute) {
+            val n = TimeLog.startSumConc("RestApi.buildRouter().postTx")
+            val body = receiveText()
+            logger.debug("Request body: ${body}")
+            val tx = toTransaction(body)
+            if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
+                throw UserMistake("Invalid tx format. Expected {\"tx\": <hexString>}")
+            }
+            model(parameters[PARAM_BLOCKCHAIN_RID] ?: "").postTransaction(tx)
+            TimeLog.end("RestApi.buildRouter().postTx", n)
+            respondText("{}")
         }
     }
 
