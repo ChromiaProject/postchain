@@ -6,7 +6,8 @@ pipelines:
         caches:
           - maven
         script:
-          - mvn -B -P ci clean install
+          - mvn --settings settings.xml clean deploy -DskipTests -Diam-user-access-key-id=AKIA5Z4BLV23UVYKWTVB -Diam-user-secret-key=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
+
         services: 
           - postgres
 definitions: 
