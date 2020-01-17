@@ -60,11 +60,11 @@ object PostgreSQLCommands : SQLCommands {
     override fun isSavepointSupported(): Boolean = true
 
     override fun dropSchemaCascade(schema: String): String {
-        return "DROP SCHEMA IF EXISTS ${schema} CASCADE"
+        return "DROP SCHEMA IF EXISTS $schema CASCADE"
     }
 
     override fun createSchema(schema: String): String {
-        return "CREATE SCHEMA IF NOT EXISTS ${schema}"
+        return "CREATE SCHEMA IF NOT EXISTS $schema"
     }
 
     override fun setCurrentSchema(schema: String): String {

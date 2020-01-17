@@ -38,7 +38,7 @@ interface DatabaseAccess {
     fun getBlockInfo(ctx: EContext, txRID: ByteArray): BlockInfo
     fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray
     fun getBlockTxRIDs(ctx: EContext, blockIid: Long): List<ByteArray>
-    fun getBlockTxHashes(ctx: EContext, blokcIid: Long): List<ByteArray>
+    fun getBlockTxHashes(ctx: EContext, blockIid: Long): List<ByteArray>
     fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray?
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getBlocks(ctx: EContext, blockHeight: Long, asc: Boolean, limit: Int): List<BlockInfoExt>
@@ -166,15 +166,19 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                          ORDER BY b.block_height DESC LIMIT 1
                          """, mapListHandler, bcRid.data)
 
-        return if (res.size == 0) {
-            null // This is allowed, it (usually) means we don't have any blocks yet
-        } else if (res.size == 1) {
-            val r = res[0]
-            val height = r["block_height"] as Long
-            val blockRid = r["block_rid"] as ByteArray
-            Pair(height, blockRid)
-        } else {
-            throw ProgrammerMistake("Incorrect query getBlockHeightInfo got many lines (${res.size})")
+        return when (res.size) {
+            0 -> {
+                null // This is allowed, it (usually) means we don't have any blocks yet
+            }
+            1 -> {
+                val r = res[0]
+                val height = r["block_height"] as Long
+                val blockRid = r["block_rid"] as ByteArray
+                Pair(height, blockRid)
+            }
+            else -> {
+                throw ProgrammerMistake("Incorrect query getBlockHeightInfo got many lines (${res.size})")
+            }
         }
     }
 
@@ -311,11 +315,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                 nullableByteArrayRes,
                 ctx.chainID)
 
-        logger.debug("chainId = ${ctx.chainID} = BC RID ${if (rid == null) {
-            "null"
-        } else {
-            rid.toHex()
-        }}")
+        logger.debug("chainId = ${ctx.chainID} = BC RID ${rid?.toHex() ?: "null"}")
         if (rid == null) {
             logger.info("Blockchain RID: ${blockchainRID.toHex()} doesn't exist in DB, so we add it.")
             queryRunner.update(
@@ -332,8 +332,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
-    override fun getBlocks(context: EContext, blockHeight: Long, asc: Boolean, limit: Int): List<DatabaseAccess.BlockInfoExt> {
-        val blocksInfo = queryRunner.query(context.conn,
+    override fun getBlocks(ctx: EContext, blockHeight: Long, asc: Boolean, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+        val blocksInfo = queryRunner.query(ctx.conn,
                 "SELECT block_rid, block_height, block_header_data, block_witness, timestamp " +
                         "FROM blocks WHERE block_height ${if (asc) ">" else "<"} ? " +
                         "ORDER BY timestamp ${if (asc) "ASC" else "DESC"} " +
@@ -343,12 +343,12 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                 limit)
 
         return blocksInfo.map { blockInfo ->
-            val blockRid = blockInfo.get("block_rid") as ByteArray
-            val heightOfBlock = blockInfo.get("block_height") as Long
-            val blockHeader = blockInfo.get("block_header_data") as ByteArray
-            val blockWitness = blockInfo.get("block_witness") as ByteArray
-            val timestamp = blockInfo.get("timestamp") as Long
-            DatabaseAccess.BlockInfoExt(blockRid, heightOfBlock, blockHeader, blockWitness, timestamp)
+            val blockRid = blockInfo["block_rid"] as ByteArray
+            val blockHeight = blockInfo["block_height"] as Long
+            val blockHeader = blockInfo["block_header_data"] as ByteArray
+            val blockWitness = blockInfo["block_witness"] as ByteArray
+            val timestamp = blockInfo["timestamp"] as Long
+            DatabaseAccess.BlockInfoExt(blockRid, blockHeight, blockHeader, blockWitness, timestamp)
         }
     }
 

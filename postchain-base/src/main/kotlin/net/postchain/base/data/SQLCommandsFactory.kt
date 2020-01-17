@@ -4,8 +4,8 @@ package net.postchain.base.data
 
 object SQLCommandsFactory {
 
-    private val POSTGRE_DRIVER_CLASS = "org.postgresql.Driver"
-    private val SAP_HANA_DRIVER_CLASS = "com.sap.db.jdbc.Driver"
+    private const val POSTGRE_DRIVER_CLASS = "org.postgresql.Driver"
+    private const val SAP_HANA_DRIVER_CLASS = "com.sap.db.jdbc.Driver"
 
     fun getSQLCommands(driverClassName: String): SQLCommands {
         return when (driverClassName) {
