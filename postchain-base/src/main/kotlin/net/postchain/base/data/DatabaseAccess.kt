@@ -5,8 +5,11 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BlockchainRid
+import net.postchain.base.gtv.RowData
 import net.postchain.common.toHex
 import net.postchain.core.*
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvString
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
 import java.sql.Connection
@@ -45,6 +48,10 @@ interface DatabaseAccess {
 
     // Blockchain configurations
     fun findConfigurationHeightForBlock(context: EContext, height: Long): Long?
+
+    // Get data to build snapshot
+    fun getTxsInRange(context: EContext, limit: Int, offset: Long): List<RowData>
+    fun getBlocksInRange(context: EContext, limit: Int, offset: Long): List<RowData>
 
     fun getConfigurationData(context: EContext, height: Long): ByteArray?
     fun addConfigurationData(context: EContext, height: Long, data: ByteArray)
@@ -358,6 +365,38 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                         "ORDER BY height DESC LIMIT 1",
                 nullableLongRes, context.chainID, height)
     }
+
+    override fun getTxsInRange(context: EContext, limit: Int, offset: Long): List<RowData> {
+        var rows = queryRunner.query(context.conn,
+                """SELECT * FROM (
+                    SELECT row_number() OVER (ORDER BY chain_iid) AS row_id, tx_iid FROM transactions) x 
+                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, offset+1, offset+limit)
+
+        return rows.map { row ->
+            val rowId = row["row_id"] as Long
+            val txIid = row["tx_iid"] as Long
+            RowData(GtvInteger(rowId), GtvString("transactions"), TxData(txIid).toGtv())
+        }
+    }
+
+    override fun getBlocksInRange(context: EContext, limit: Int, offset: Long): List<RowData> {
+        var rows = queryRunner.query(context.conn,
+                """SELECT * FROM (
+                    SELECT row_number() OVER (ORDER BY chain_iid) AS row_id, block_iid, block_rid, block_height, block_header_data, block_witness, timestamp FROM blocks) x  
+                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, offset+1, offset+limit)
+
+        return rows.map { row ->
+            val rowId = row["row_id"] as Long
+            val blockIid = row["block_iid"] as Long
+//            val blockRid = row["block_rid"] as ByteArray
+//            val blockHeight = row["block_height"] as Long
+            val blockHeader = row["block_header_data"] as ByteArray
+            val blockWitness = row["block_witness"] as ByteArray
+//            val timestamp = row["timestamp"] as Long
+            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockHeader, blockWitness).toGtv())
+        }
+    }
+
 
     override fun getConfigurationData(context: EContext, height: Long): ByteArray? {
         return queryRunner.query(context.conn,

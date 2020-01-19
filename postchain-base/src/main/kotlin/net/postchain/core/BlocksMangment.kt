@@ -3,6 +3,7 @@
 package net.postchain.core
 
 import net.postchain.base.BlockchainRid
+import net.postchain.base.gtv.RowData
 import net.postchain.base.merkle.Hash
 import net.postchain.gtv.Gtv
 import nl.komponents.kovenant.Promise
@@ -41,6 +42,8 @@ interface BlockStore {
 
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getConfirmationProofMaterial(ctx: EContext, txRID: ByteArray): Any
+
+    fun getChunkData(ctx: EContext, limit: Int, offset: Long): List<RowData>
 }
 
 /**

@@ -7,6 +7,7 @@ import net.postchain.base.Storage
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
+import net.postchain.core.BlockData
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
