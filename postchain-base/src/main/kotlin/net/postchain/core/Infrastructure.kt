@@ -7,11 +7,17 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.debug.SnapshotProcessName
 
 interface SynchronizationInfrastructure : Shutdownable {
 
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
+            engine: BlockchainEngine
+    ): BlockchainProcess
+
+    fun makeSnapshotProcess(
+            processName: SnapshotProcessName,
             engine: BlockchainEngine
     ): BlockchainProcess
 

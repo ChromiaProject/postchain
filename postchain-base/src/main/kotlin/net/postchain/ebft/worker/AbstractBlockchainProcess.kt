@@ -36,7 +36,7 @@ abstract class AbstractBlockchainProcess : BlockchainProcess {
 
     /**
      * Create and run the [updateLoop] thread
-     * @param syncManager the syncronization manager
+     * @param syncManager the synchronization manager
      */
     protected fun startUpdateLoop(syncManager: SyncManager) {
         updateLoop = thread(name = "updateLoop-$processName") {

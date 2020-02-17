@@ -48,6 +48,10 @@ open class BaseBlockEContext(
     }
 }
 
+open class BaseSnaphotEContext(
+        val ectx: EContext
+): EContext by ectx
+
 open class BaseTxEContext(
         val bectx: BlockEContext,
         override val txIID: Long

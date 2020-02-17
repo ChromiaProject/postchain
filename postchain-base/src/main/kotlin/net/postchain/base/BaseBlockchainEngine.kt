@@ -4,6 +4,7 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.base.data.BaseManagedBlockBuilder
+import net.postchain.base.data.BaseManagedSnapshotBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
@@ -28,6 +29,7 @@ open class BaseBlockchainEngine(
     companion object : KLogging()
 
     private lateinit var strategy: BlockBuildingStrategy
+    private lateinit var strategySnapshot: SnapshotBuildingStrategy
     private lateinit var blockQueries: BlockQueries
     private var initialized = false
     private var closed = false
@@ -48,6 +50,7 @@ open class BaseBlockchainEngine(
         // database is initialized
         blockQueries = blockchainConfiguration.makeBlockQueries(storage)
         strategy = blockchainConfiguration.getBlockBuildingStrategy(blockQueries, transactionQueue)
+        strategySnapshot = blockchainConfiguration.getSnapshotBuildingStrategy(blockQueries)
         initialized = true
         logger.debug("$processName: Initialize DB - end")
     }
@@ -66,6 +69,10 @@ open class BaseBlockchainEngine(
 
     override fun getBlockBuildingStrategy(): BlockBuildingStrategy {
         return strategy
+    }
+
+    override fun getSnapshotBuildingStrategy(): SnapshotBuildingStrategy {
+        return strategySnapshot
     }
 
     override fun getConfiguration(): BlockchainConfiguration {
@@ -91,6 +98,13 @@ open class BaseBlockchainEngine(
                         closed = true
                     }
                 })
+    }
+
+    private fun makeSnapshotBuilder(): ManagedSnapshotBuilder {
+        if (closed) throw ProgrammerMistake("Engine is already closed")
+        val eContext = storage.openReadConnection(chainID)
+
+        return BaseManagedSnapshotBuilder(eContext, storage, blockchainConfiguration.makeSnapshotBuilder(eContext))
     }
 
     override fun addBlock(block: BlockDataWithWitness) {
@@ -216,6 +230,14 @@ open class BaseBlockchainEngine(
         }
 
         return blockBuilder
+    }
+
+    override fun buildSnapshot(): ManagedSnapshotBuilder {
+        val snapshotBuilder = makeSnapshotBuilder()
+        snapshotBuilder.begin()
+        snapshotBuilder.buildSnapshot()
+
+        return snapshotBuilder
     }
 
     private fun prettyBlockHeader(

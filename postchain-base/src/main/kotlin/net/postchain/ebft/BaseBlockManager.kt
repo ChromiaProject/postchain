@@ -10,12 +10,12 @@ import nl.komponents.kovenant.Promise
 import java.util.*
 
 /**
- * Manages intents and acts as a wrapper for [blockDatabase] and [statusManager]
+ * Manages intents and acts as a wrapper for [blockDB] and [statusManager]
  */
-class BaseBlockManager(
-        val blockDB: BlockDatabase,
-        val statusManager: StatusManager,
-        val blockStrategy: BlockBuildingStrategy
+open class BaseBlockManager(
+        private val blockDB: BlockDatabase,
+        private val statusManager: StatusManager,
+        private val blockStrategy: BlockBuildingStrategy
 ) : BlockManager {
 
     @Volatile

@@ -8,6 +8,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.debug.SnapshotProcessName
 
 class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
     override fun getEngine(): BlockchainEngine {
@@ -24,6 +25,10 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine): BlockchainProcess {
         return TestBlockchainProcess(engine)
+    }
+
+    override fun makeSnapshotProcess(processName: SnapshotProcessName, engine: BlockchainEngine): BlockchainProcess {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     override fun shutdown() {}

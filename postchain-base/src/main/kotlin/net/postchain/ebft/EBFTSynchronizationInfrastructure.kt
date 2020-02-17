@@ -11,11 +11,8 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.*
 import net.postchain.debug.DiagnosticProperty.BLOCKCHAIN
-import net.postchain.debug.DpNodeType
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.message.Message
 import net.postchain.ebft.worker.ReadOnlyWorker
 import net.postchain.ebft.worker.ValidatorWorker
@@ -25,6 +22,7 @@ import net.postchain.network.x.DefaultXCommunicationManager
 import net.postchain.network.x.DefaultXConnectionManager
 import net.postchain.network.x.XConnectionManager
 import net.postchain.network.x.XPeerID
+import net.postchain.snapshot.worker.SnapshotWorker
 
 class EBFTSynchronizationInfrastructure(
         val nodeConfigProvider: NodeConfigurationProvider,
@@ -71,6 +69,10 @@ class EBFTSynchronizationInfrastructure(
                     engine,
                     buildXCommunicationManager(processName, blockchainConfig, true))
         }
+    }
+
+    override fun makeSnapshotProcess(processName: SnapshotProcessName, engine: BlockchainEngine): BlockchainProcess {
+        return SnapshotWorker(processName, engine)
     }
 
     @Deprecated("POS-90")

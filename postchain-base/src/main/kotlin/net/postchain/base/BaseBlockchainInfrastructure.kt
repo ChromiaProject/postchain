@@ -9,6 +9,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.debug.SnapshotProcessName
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
@@ -88,6 +89,10 @@ class BaseBlockchainInfrastructure(
     override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine): BlockchainProcess {
         return synchronizationInfrastructure.makeBlockchainProcess(processName, engine)
                 .also(apiInfrastructure::connectProcess)
+    }
+
+    override fun makeSnapshotProcess(processName: SnapshotProcessName, engine: BlockchainEngine): BlockchainProcess {
+        return synchronizationInfrastructure.makeSnapshotProcess(processName, engine)
     }
 
     override fun makeStorage(): Storage {

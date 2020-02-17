@@ -34,6 +34,11 @@ class BaseBlockchainConfigurationData(
         return stratDict?.get("name")?.asString() ?: ""
     }
 
+    fun getSnapshotBuildingStrategyName(): String {
+        val stratDict = data["snapshotstrategy"]
+        return stratDict?.get("name")?.asString() ?: ""
+    }
+
     fun getHistoricBRID(): BlockchainRid? {
         val bytes = data["historic_brid"]?.asByteArray()
         return if (bytes != null)
@@ -55,6 +60,16 @@ class BaseBlockchainConfigurationData(
     fun getMaxBlockTransactions(): Long {
         val stratDict = data["blockstrategy"]
         return stratDict?.get("maxblocktransactions")?.asInteger() ?: 100
+    }
+
+    fun getSnapshotBuildingStrategy(): Gtv? {
+        return data["snapshotstrategy"]
+    }
+
+    // default is 2014
+    fun getChunkSize() : Int {
+        val stratDict = data["snapshotstrategy"]
+        return stratDict?.get("chunksize")?.asInteger()?.toInt() ?: 1024
     }
 
     fun getDependenciesAsList(): List<BlockchainRelatedInfo> {

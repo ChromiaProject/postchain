@@ -488,7 +488,7 @@ class BaseStatusManager(
         }
 
         // We should make sure we have enough nodes who can participate in building a block.
-        // (If we are in [Perpared] state we ignore this check, it has been done before we got here)
+        // (If we are in [Prepared] state we ignore this check, it has been done before we got here)
         if (myStatus.state != NodeState.Prepared) {
             when (potentiallyDoSynch()) {
                 FlowStatus.Break -> return false
