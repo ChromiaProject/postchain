@@ -4,14 +4,16 @@ package net.postchain.gtv
 
 import net.postchain.base.merkle.proof.MerkleHashSummary
 import net.postchain.core.UserMistake
+import java.io.Serializable
 import java.math.BigInteger
 
 /**
  * Just a base class for all GTVs.
  */
-abstract class AbstractGtv : Gtv {
+abstract class AbstractGtv : Gtv, Serializable {
 
     // This a locally cached object. If it's null it will be calculated.
+    @Transient
     private var cachedMerkleHashSummary: MerkleHashSummary? = null
 
     override operator fun get(index: Int): Gtv {

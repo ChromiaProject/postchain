@@ -96,7 +96,7 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
     }
 
     override fun getSnapshotBuildingStrategy(blockQueries: BlockQueries): SnapshotBuildingStrategy {
-        val strategyClassName = configData.getBlockBuildingStrategyName()
+        val strategyClassName = configData.getSnapshotBuildingStrategyName()
         if (strategyClassName == "") {
             return BaseSnapshotBuildingStrategy(configData, blockQueries)
         }

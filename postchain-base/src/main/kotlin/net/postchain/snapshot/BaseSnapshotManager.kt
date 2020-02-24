@@ -54,6 +54,7 @@ open class BaseSnapshotManager(
         if (!strategy.shouldBuildSnapshot()) {
             return
         }
+        BaseSnapshotManager.logger.debug("It's time to build a snapshot.")
         runDBOp({
             snapshotDB.buildSnapshot()
         }, {

@@ -16,8 +16,8 @@ const val eltsPerNode = 1 shl bitsPerLevel
 const val bitsPerKey = 16
 const val levelsInChunk = 4 // chunk will take this many bottom levels of the tree
 
-val cryptoSystem = SECP256K1CryptoSystem()
-private val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+var cryptoSystem = SECP256K1CryptoSystem()
+var merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
 
 sealed class TreeElement(val prefix: Prefix): Serializable {
     abstract fun hash(): String
@@ -32,7 +32,7 @@ typealias Prefix = Key
 typealias Content = RowData
 
 // reference to a tree can be either literal element or its hash
-class TreeRef(val element: TreeElement?, val hash: String?)
+class TreeRef(val element: TreeElement?, val hash: String?): Serializable
 
 fun refFromElement(element: TreeElement?): TreeRef = TreeRef(element, null)
 fun refFromHash(hash: String): TreeRef = TreeRef(null, hash)

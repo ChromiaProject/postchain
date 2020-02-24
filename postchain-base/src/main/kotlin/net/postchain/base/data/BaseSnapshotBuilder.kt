@@ -26,7 +26,7 @@ class BaseSnapshotBuilder(
 
             // Serialize tree chunk object into file with name is root hash of the tree chunk
             if (data != null) {
-                printTree(data)
+//                printTree(data)
                 ObjectOutputStream(FileOutputStream(data.hash())).use { it.writeObject(data) }
             }
 

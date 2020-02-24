@@ -12,7 +12,10 @@ class BaseSnapshotBuildingStrategy(
     private val epoch = strategyData?.get("epoch")?.asInteger() ?: 1024
 
     override fun shouldBuildSnapshot(): Boolean {
-        val height = blockQueries.getBestHeight().get() + 1
-        return height % epoch == 0L
+        val height = blockQueries.getBestHeight().get()
+        if (height == -1L) {
+            return false
+        }
+        return (height+1) % epoch == 0L
     }
 }

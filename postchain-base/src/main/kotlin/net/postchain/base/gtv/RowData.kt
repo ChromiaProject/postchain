@@ -5,10 +5,14 @@ import net.postchain.base.merkle.Hash
 import net.postchain.common.toHex
 import net.postchain.gtv.*
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import java.io.Serializable
 
-data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvArray): Comparable<RowData> {
-    val cryptoSystem = SECP256K1CryptoSystem()
-    private val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvArray): Comparable<RowData>, Serializable {
+    @Transient
+    private var cryptoSystem = SECP256K1CryptoSystem()
+
+    @Transient
+    private var merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
 
     fun toGtv(): GtvArray {
         return GtvFactory.gtv(id, tableName, data)
