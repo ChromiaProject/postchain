@@ -72,6 +72,12 @@ class BaseBlockchainConfigurationData(
         return stratDict?.get("chunksize")?.asInteger()?.toInt() ?: 1024
     }
 
+    // default is snapshot
+    fun getSnapshotFolder() : String {
+        val stratDict = data["snapshotstrategy"]
+        return stratDict?.get("folder")?.asString() ?: "snapshot"
+    }
+
     fun getDependenciesAsList(): List<BlockchainRelatedInfo> {
         val dep = data["dependencies"]
         return if (dep != null) {

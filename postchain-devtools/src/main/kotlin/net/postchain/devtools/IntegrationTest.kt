@@ -59,8 +59,8 @@ open class IntegrationTest {
     // PeerInfos must be shared between all nodes because
     // a listening node will update the PeerInfo port after
     // ServerSocket is created.
-    private var peerInfos: Array<PeerInfo>? = null
-    private var expectedSuccessRids = mutableMapOf<Long, MutableList<ByteArray>>()
+    protected open var peerInfos: Array<PeerInfo>? = null
+    protected var expectedSuccessRids = mutableMapOf<Long, MutableList<ByteArray>>()
 
     companion object : KLogging() {
         const val BASE_PORT = 9870

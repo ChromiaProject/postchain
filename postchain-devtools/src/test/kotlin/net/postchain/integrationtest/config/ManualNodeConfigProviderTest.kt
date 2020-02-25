@@ -34,7 +34,7 @@ import java.time.Instant
 @Ignore
 class ManualNodeConfigProviderTest : IntegrationTest() {
 
-    private val peerInfos = arrayOf(
+    override var peerInfos: Array<PeerInfo>? = arrayOf(
             PeerInfo(
                     "127.0.0.1", 9870,
                     "03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070".hexStringToByteArray()),
@@ -122,7 +122,7 @@ class ManualNodeConfigProviderTest : IntegrationTest() {
         SimpleDatabaseConnector(appConfig)
                 .withWriteConnection { connection ->
                     AppConfigDbLayer(appConfig, connection) // Init DB layer
-                    peerInfos.forEach { peerInfo ->
+                    peerInfos!!.forEach { peerInfo ->
                         insertPeerInfo(connection, peerInfo)
                     }
                 }

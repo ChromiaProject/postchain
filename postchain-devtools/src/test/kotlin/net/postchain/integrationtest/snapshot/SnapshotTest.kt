@@ -1,5 +1,6 @@
 package net.postchain.integrationtest.snapshot
 
+import mu.KLogging
 import net.postchain.devtools.IntegrationTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.testinfra.TestTransaction
@@ -7,11 +8,35 @@ import net.postchain.integrationtest.assertChainStarted
 import net.postchain.integrationtest.enqueueTxsAndAwaitBuiltBlock
 import org.awaitility.Awaitility
 import org.awaitility.Duration
+import org.junit.After
 import org.junit.Test
+import java.io.File
+import java.nio.file.Paths
 
 open class SnapshotTest: IntegrationTest() {
 
+    private var snapshotFolder: String = "snapshot"
+
+    companion object : KLogging()
+
     protected fun tx(id: Int): TestTransaction = TestTransaction(id)
+
+    @After
+    override fun tearDown() {
+        logger.debug("Integration test -- TEARDOWN")
+        nodes.forEach { it.shutdown() }
+        nodes.clear()
+        nodesNames.clear()
+        logger.debug("Closed nodes")
+        peerInfos = null
+        expectedSuccessRids = mutableMapOf()
+        configOverrides.clear()
+        val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator + snapshotFolder
+        val file = File(path)
+        file.deleteRecursively()
+        logger.debug("Deleted snapshot folder")
+        System.gc()
+    }
 
     @Test
     fun snapshotBuilding_SingleNode() {
@@ -39,6 +64,7 @@ open class SnapshotTest: IntegrationTest() {
 
     @Test
     fun snapshotBuilding_MultipleNodes() {
+        snapshotFolder = "postchain"
         val nodesCount = 3
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
         val nodeConfigsFilenames = arrayOf(

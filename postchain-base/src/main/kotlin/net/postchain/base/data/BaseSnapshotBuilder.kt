@@ -1,13 +1,16 @@
 package net.postchain.base.data
 
 import net.postchain.core.*
+import java.io.File
 import java.io.FileOutputStream
 import java.io.ObjectOutputStream
+import java.nio.file.Paths
 
 class BaseSnapshotBuilder(
         ectx: EContext,
         private val store: BlockStore,
-        private val chunkSize : Int = 1024
+        private val chunkSize : Int = 1024,
+        private val snapshotFolder: String = "snapshot"
 ): AbstractSnapshotBuilder(ectx) {
 
     override fun buildSnapshot(): Tree {
@@ -27,7 +30,11 @@ class BaseSnapshotBuilder(
             // Serialize tree chunk object into file with name is root hash of the tree chunk
             if (data != null) {
 //                printTree(data)
-                ObjectOutputStream(FileOutputStream(data.hash())).use { it.writeObject(data) }
+                val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator + snapshotFolder + File.separator + data.hash()
+                val file = File(path)
+                file.parentFile.mkdirs()
+                file.createNewFile()
+                ObjectOutputStream(FileOutputStream(file)).use { it.writeObject(data) }
             }
 
             listOfChunk = listOfChunk.plus(data)

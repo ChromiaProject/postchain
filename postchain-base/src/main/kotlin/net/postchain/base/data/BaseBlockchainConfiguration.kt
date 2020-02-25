@@ -47,7 +47,7 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
     }
 
     override fun makeSnapshotBuilder(ctx: EContext): SnapshotBuilder {
-        return BaseSnapshotBuilder(ctx, blockStore, configData.getChunkSize())
+        return BaseSnapshotBuilder(ctx, blockStore, configData.getChunkSize(), configData.getSnapshotFolder())
     }
 
     /**

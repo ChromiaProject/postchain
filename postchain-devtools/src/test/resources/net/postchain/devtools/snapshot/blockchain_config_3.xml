@@ -20,6 +20,9 @@
             <entry key="epoch">
                 <int>3</int>
             </entry>
+            <entry key="folder">
+                <string>postchain</string>
+            </entry>
             <entry key="name">
                 <string>net.postchain.base.BaseSnapshotBuildingStrategy</string>
             </entry>
