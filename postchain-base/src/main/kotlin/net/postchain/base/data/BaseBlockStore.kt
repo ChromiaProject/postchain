@@ -141,10 +141,15 @@ class BaseBlockStore : BlockStore {
     // TODO: [HaDV] Need to query data table from meta data as well as rellr app also
     override fun getChunkData(ctx: EContext, limit: Int, offset: Long): List<RowData> {
         val db = DatabaseAccess.of(ctx)
-//        val txs = db.getTxsInRange(ctx, limit, offset)
-        val blocks = db.getBlocksInRange(ctx, limit, offset)
-
-        return listOf<RowData>().plus(blocks).sorted()
+        val data = mutableListOf<RowData>()
+        val txs = db.getTxsInRange(ctx, limit, offset)
+        data.addAll(txs)
+        if (data.size < limit) {
+            val original = db.getTxsCount(ctx)
+            val blocks = db.getBlocksInRange(ctx, limit-data.size, offset+data.size, original)
+            data.addAll(blocks)
+        }
+        return data.sorted()
     }
 
     override fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray? {

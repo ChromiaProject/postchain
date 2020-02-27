@@ -50,8 +50,9 @@ interface DatabaseAccess {
     fun findConfigurationHeightForBlock(context: EContext, height: Long): Long?
 
     // Get data to build snapshot
-    fun getTxsInRange(context: EContext, limit: Int, offset: Long): List<RowData>
-    fun getBlocksInRange(context: EContext, limit: Int, offset: Long): List<RowData>
+    fun getTxsInRange(context: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getTxsCount(context: EContext): Long
+    fun getBlocksInRange(context: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
 
     fun getConfigurationData(context: EContext, height: Long): ByteArray?
     fun addConfigurationData(context: EContext, height: Long, data: ByteArray)
@@ -366,11 +367,11 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                 nullableLongRes, context.chainID, height)
     }
 
-    override fun getTxsInRange(context: EContext, limit: Int, offset: Long): List<RowData> {
+    override fun getTxsInRange(context: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
         var rows = queryRunner.query(context.conn,
                 """SELECT * FROM (
-                    SELECT row_number() OVER (ORDER BY chain_iid) AS row_id, tx_iid FROM transactions) x 
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, offset+1, offset+limit)
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, tx_iid FROM transactions) x 
+                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
@@ -379,11 +380,15 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
-    override fun getBlocksInRange(context: EContext, limit: Int, offset: Long): List<RowData> {
+    override fun getTxsCount(context: EContext): Long {
+        return queryRunner.query(context.conn, "SELECT count(*) FROM transactions", longRes)
+    }
+
+    override fun getBlocksInRange(context: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
         var rows = queryRunner.query(context.conn,
                 """SELECT * FROM (
-                    SELECT row_number() OVER (ORDER BY chain_iid) AS row_id, block_iid, block_rid, block_height, block_header_data, block_witness, timestamp FROM blocks) x  
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, offset+1, offset+limit)
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, block_iid, block_rid, block_height, block_header_data, block_witness, timestamp FROM blocks) x  
+                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
