@@ -145,9 +145,23 @@ class BaseBlockStore : BlockStore {
         val txs = db.getTxsInRange(ctx, limit, offset)
         data.addAll(txs)
         if (data.size < limit) {
-            val original = db.getTxsCount(ctx)
+            var original = db.getTxsCount(ctx)
             val blocks = db.getBlocksInRange(ctx, limit-data.size, offset+data.size, original)
             data.addAll(blocks)
+            original += db.getBlocksCount(ctx)
+
+            var tables = getTables(ctx)
+            while (data.size < limit && tables.isNotEmpty()) {
+                val tableName = tables.first()
+                val rows = db.getDataInRange(ctx, tableName, limit-data.size, offset+data.size, original)
+                if (rows.isEmpty()) {
+                    tables = tables.drop(1)
+                    continue
+                }
+                data.addAll(rows)
+                tables = tables.drop(1)
+                original += db.getRowCount(ctx, tableName)
+            }
         }
         return data.sorted()
     }
@@ -178,5 +192,18 @@ class BaseBlockStore : BlockStore {
                 dep.chainId = chainId
             }
         }
+    }
+
+    // Get rellr app tables
+    private fun getTables(ctx: EContext): List<String> {
+        val preDefined = mutableListOf("meta", "blockchains", "blocks", "transactions", "configurations", "peerinfos")
+        var tables = DatabaseAccess.of(ctx).getTables(ctx)
+        var rellAppTables = mutableListOf<String>()
+        tables.forEach {
+            if (!preDefined.contains(it)) {
+                rellAppTables.add(it)
+            }
+        }
+        return rellAppTables
     }
 }

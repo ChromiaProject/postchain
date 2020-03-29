@@ -8,8 +8,7 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.gtv.RowData
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.gtv.GtvInteger
-import net.postchain.gtv.GtvString
+import net.postchain.gtv.*
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
 import java.sql.Connection
@@ -53,6 +52,11 @@ interface DatabaseAccess {
     fun getTxsInRange(context: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
     fun getTxsCount(context: EContext): Long
     fun getBlocksInRange(context: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getBlocksCount(context: EContext): Long
+    fun getTables(context: EContext): List<String>
+    // Query data for rellr app
+    fun getDataInRange(context: EContext, tableName: String, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getRowCount(context: EContext, tableName: String): Long
 
     fun getConfigurationData(context: EContext, height: Long): ByteArray?
     fun addConfigurationData(context: EContext, height: Long, data: ByteArray)
@@ -367,6 +371,12 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                 nullableLongRes, context.chainID, height)
     }
 
+    override fun getTables(context: EContext): List<String> {
+        return queryRunner.query(context.conn,
+                """SELECT table_name FROM information_schema.tables WHERE table_schema = ? ORDER BY table_name""",
+                ColumnListHandler(), context.conn.schema)
+    }
+
     override fun getTxsInRange(context: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
         var rows = queryRunner.query(context.conn,
                 """SELECT * FROM (
@@ -402,6 +412,45 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
+    override fun getBlocksCount(context: EContext): Long {
+        return queryRunner.query(context.conn, "SELECT count(*) FROM blocks", longRes)
+    }
+
+    override fun getDataInRange(context: EContext, tableName: String, limit: Int, offset: Long, original: Long): List<RowData> {
+        val cols = getTableColumns(context, tableName)
+
+        var query = "SELECT * FROM (SELECT (row_number() OVER (ORDER BY 1) + ?) AS row_id"
+        cols.forEach { query += ", ${it.name}" }
+
+        query += " FROM $tableName) x WHERE row_id BETWEEN ? AND ?"
+
+        var rows = queryRunner.query(context.conn, query, mapListHandler, original, offset+1, offset+limit)
+        return rows.map { row ->
+            val rowId = row["row_id"] as Long
+            val data = mutableMapOf<String, Gtv>()
+            cols.forEach {
+                data[it.name] = when (it.type) {
+                    "bigint" -> {
+                        GtvInteger(row[it.name] as Long)
+                    }
+                    "bytea" -> {
+                        GtvByteArray(row[it.name] as ByteArray)
+                    }
+                    "text" -> {
+                        GtvString(row[it.name] as String)
+                    }
+                    else -> {
+                        GtvNull
+                    }
+                }
+            }
+            RowData(GtvInteger(rowId), GtvString(tableName), GtvFactory.gtv(GtvDictionary.build(data)))
+        }
+    }
+
+    override fun getRowCount(context: EContext, tableName: String): Long {
+        return queryRunner.query(context.conn, "SELECT count(*) FROM $tableName", longRes)
+    }
 
     override fun getConfigurationData(context: EContext, height: Long): ByteArray? {
         return queryRunner.query(context.conn,
@@ -432,5 +481,22 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
         return false
     }
+
+    private fun getTableColumns(context: EContext, tableName: String): List<Column> {
+        var rows = queryRunner.query(context.conn,
+                """SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = ? AND table_name = ?""",
+                mapListHandler, context.conn.schema, tableName)
+
+        return rows.map { row ->
+            val name = row["column_name"] as String
+            val type = row["data_type"] as String
+
+            Column(name, type)
+        }
+    }
+
+}
+
+data class Column(val name: String, val type: String) {
 
 }

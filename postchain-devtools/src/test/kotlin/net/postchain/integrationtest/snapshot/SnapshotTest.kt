@@ -1,9 +1,14 @@
 package net.postchain.integrationtest.snapshot
 
 import mu.KLogging
+import net.postchain.base.BlockchainRid
 import net.postchain.devtools.IntegrationTest
+import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.testinfra.TestTransaction
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtx.GTXDataBuilder
 import net.postchain.integrationtest.assertChainStarted
 import net.postchain.integrationtest.enqueueTxsAndAwaitBuiltBlock
 import org.awaitility.Awaitility
@@ -19,7 +24,24 @@ open class SnapshotTest: IntegrationTest() {
 
     companion object : KLogging()
 
+    private fun strategy(node: PostchainTestNode): OnDemandBlockBuildingStrategy {
+        return node
+                .getBlockchainInstance()
+                .getEngine()
+                .getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
+    }
+
     protected fun tx(id: Int): TestTransaction = TestTransaction(id)
+
+    private fun makeTx(ownerIdx: Int, key: Long, value: String, bcRid: BlockchainRid): ByteArray {
+        val owner = KeyPairHelper.pubKey(ownerIdx)
+        return GTXDataBuilder(bcRid, arrayOf(owner), net.postchain.devtools.gtx.myCS).run {
+            addOperation("gtx_test", arrayOf(GtvFactory.gtv(key), GtvFactory.gtv(value)))
+            finish()
+            sign(net.postchain.devtools.gtx.myCS.buildSigMaker(owner, KeyPairHelper.privKey(ownerIdx)))
+            serialize()
+        }
+    }
 
     @After
     override fun tearDown() {
@@ -60,6 +82,35 @@ open class SnapshotTest: IntegrationTest() {
 
         // Building a blocks up to height 100 to trigger snapshot building worker to run several times
         nodes[0].enqueueTxsAndAwaitBuiltBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 100, tx(0), tx(1))
+    }
+
+    @Test
+    fun snapshotBuilding_SingleNode_WithRellApp() {
+        val nodesCount = 1
+        configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
+
+        // Creating a node
+        val node = createSingleNode(0, nodesCount, "classpath:/net/postchain/snapshot/node0.properties", "/net/postchain/devtools/snapshot/blockchain_config_2.xml")
+        val bcRid = node.getBlockchainRid(1L)!!
+
+        // Asserting chain 1 is started for all nodes
+        Awaitility.await().atMost(Duration.TEN_SECONDS)
+                .untilAsserted {
+                    nodes.forEach { it.assertChainStarted() }
+                }
+
+        val engine = node.getBlockchainInstance().getEngine()
+        val txFactory = engine.getConfiguration().getTransactionFactory()
+        val queue = engine.getTransactionQueue()
+        val txs = (1..10).map { makeTx(0, 1L, "snapshot$it", bcRid) }
+        txs.forEach {
+            queue.enqueue(txFactory.decodeTransaction(it))
+        }
+        strategy(node).buildBlocksUpTo(10L)
+        strategy(node).awaitCommitted(10)
+
+        // Building a blocks up to height 100 to trigger snapshot building worker to run several times
+        node.enqueueTxsAndAwaitBuiltBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 100, tx(0), tx(1))
     }
 
     @Test

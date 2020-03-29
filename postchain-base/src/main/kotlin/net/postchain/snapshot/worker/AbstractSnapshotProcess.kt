@@ -5,9 +5,7 @@ import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.SnapshotProcessName
 import net.postchain.ebft.syncmanager.SnapshotSyncManager
-import net.postchain.ebft.syncmanager.SyncManagerBase
 import net.postchain.snapshot.BaseSnapshotDatabase
-import net.postchain.snapshot.SnapshotManager
 import kotlin.concurrent.thread
 
 abstract class AbstractSnapshotProcess: BlockchainProcess {
