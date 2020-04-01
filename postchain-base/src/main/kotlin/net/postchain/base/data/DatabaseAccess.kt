@@ -417,10 +417,10 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     }
 
     override fun getDataInRange(context: EContext, tableName: String, limit: Int, offset: Long, original: Long): List<RowData> {
-        val cols = getTableColumns(context, tableName)
-
+        val cols = getTableDefinition(context, tableName)
+        val defs = cols.map { it.toGtv() }.toTypedArray()
         var query = "SELECT * FROM (SELECT (row_number() OVER (ORDER BY 1) + ?) AS row_id"
-        cols.forEach { query += ", ${it.name}" }
+        cols.forEach { query += ", ${it.columnName}" }
 
         query += " FROM $tableName) x WHERE row_id BETWEEN ? AND ?"
 
@@ -428,16 +428,17 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         return rows.map { row ->
             val rowId = row["row_id"] as Long
             val data = mutableMapOf<String, Gtv>()
+            data["definition"] = GtvArray(defs)
             cols.forEach {
-                data[it.name] = when (it.type) {
+                data[it.columnName] = when (it.dataType) {
                     "bigint" -> {
-                        GtvInteger(row[it.name] as Long)
+                        GtvInteger(row[it.columnName] as Long)
                     }
                     "bytea" -> {
-                        GtvByteArray(row[it.name] as ByteArray)
+                        GtvByteArray(row[it.columnName] as ByteArray)
                     }
                     "text" -> {
-                        GtvString(row[it.name] as String)
+                        GtvString(row[it.columnName] as String)
                     }
                     else -> {
                         GtvNull
@@ -482,21 +483,18 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         return false
     }
 
-    private fun getTableColumns(context: EContext, tableName: String): List<Column> {
+    private fun getTableDefinition(context: EContext, tableName: String): List<TableDefinition> {
         var rows = queryRunner.query(context.conn,
-                """SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = ? AND table_name = ?""",
+                """SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema = ? AND table_name = ?""",
                 mapListHandler, context.conn.schema, tableName)
 
         return rows.map { row ->
             val name = row["column_name"] as String
             val type = row["data_type"] as String
-
-            Column(name, type)
+            val nullable = row["is_nullable"] as String == "YES"
+            val default = row["column_default"] as String?
+            TableDefinition(name, type, nullable, default)
         }
     }
-
-}
-
-data class Column(val name: String, val type: String) {
 
 }
