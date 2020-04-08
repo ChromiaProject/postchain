@@ -138,30 +138,30 @@ class BaseBlockStore : BlockStore {
         )
     }
 
-    // TODO: [HaDV] Need to query data table from meta data as well as rellr app also
     override fun getChunkData(ctx: EContext, limit: Int, offset: Long): List<RowData> {
         val db = DatabaseAccess.of(ctx)
         val data = mutableListOf<RowData>()
-        val txs = db.getTxsInRange(ctx, limit, offset)
-        data.addAll(txs)
-        if (data.size < limit) {
-            var original = db.getTxsCount(ctx)
-            val blocks = db.getBlocksInRange(ctx, limit-data.size, offset+data.size, original)
-            data.addAll(blocks)
-            original += db.getBlocksCount(ctx)
-
-            var tables = getTables(ctx)
-            while (data.size < limit && tables.isNotEmpty()) {
-                val tableName = tables.first()
-                val rows = db.getDataInRange(ctx, tableName, limit-data.size, offset+data.size, original)
-                if (rows.isEmpty()) {
-                    tables = tables.drop(1)
-                    continue
-                }
-                data.addAll(rows)
+        var original = 0L
+        var tables = getTables(ctx)
+        while (data.size < limit && tables.isNotEmpty()) {
+            val tableName = tables.first()
+            val rows = when(tableName) {
+                "meta" -> db.getMetaInRange(ctx, limit-data.size, offset+data.size, original)
+                "blockchains" -> db.getBlockchainsInRange(ctx, limit-data.size, offset+data.size, original)
+                "blocks" -> db.getBlocksInRange(ctx, limit-data.size, offset+data.size, original)
+                "transactions" -> db.getTxsInRange(ctx, limit-data.size, offset+data.size, original)
+                "configurations" -> db.getConfigurationsInRange(ctx, limit-data.size, offset+data.size, original)
+                "peerinfos" -> db.getPeerInfosInRange(ctx, limit-data.size, offset+data.size, original)
+                else -> db.getDataInRange(ctx, tableName, limit-data.size, offset+data.size, original)
+            }
+            if (rows.isEmpty()) {
                 tables = tables.drop(1)
                 original += db.getRowCount(ctx, tableName)
+                continue
             }
+            data.addAll(rows)
+            tables = tables.drop(1)
+            original += db.getRowCount(ctx, tableName)
         }
         return data.sorted()
     }
@@ -194,16 +194,16 @@ class BaseBlockStore : BlockStore {
         }
     }
 
-    // Get rellr app tables
+    // Get list of tables
     private fun getTables(ctx: EContext): List<String> {
-        val preDefined = mutableListOf("meta", "blockchains", "blocks", "transactions", "configurations", "peerinfos")
-        var tables = DatabaseAccess.of(ctx).getTables(ctx)
-        var rellAppTables = mutableListOf<String>()
-        tables.forEach {
-            if (!preDefined.contains(it)) {
-                rellAppTables.add(it)
-            }
-        }
-        return rellAppTables
+//        val preDefined = mutableListOf("meta", "blockchains", "blocks", "transactions", "configurations", "peerinfos")
+        return DatabaseAccess.of(ctx).getTables(ctx)
+//        var rellAppTables = mutableListOf<String>()
+//        tables.forEach {
+//            if (!preDefined.contains(it)) {
+//                rellAppTables.add(it)
+//            }
+//        }
+//        return rellAppTables
     }
 }

@@ -49,17 +49,20 @@ interface DatabaseAccess {
     fun findConfigurationHeightForBlock(context: EContext, height: Long): Long?
 
     // Get data to build snapshot
-    fun getTxsInRange(context: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
-    fun getTxsCount(context: EContext): Long
-    fun getBlocksInRange(context: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
-    fun getBlocksCount(context: EContext): Long
-    fun getTables(context: EContext): List<String>
+    fun getBlockchainsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getConfigurationsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getMetaInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getPeerInfosInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getTxsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getTables(ctx: EContext): List<String>
     // Query data for rellr app
-    fun getDataInRange(context: EContext, tableName: String, limit: Int, offset: Long, original: Long = 0): List<RowData>
-    fun getRowCount(context: EContext, tableName: String): Long
+    fun getDataInRange(ctx: EContext, tableName: String, limit: Int, offset: Long, original: Long = 0): List<RowData>
 
-    fun getConfigurationData(context: EContext, height: Long): ByteArray?
-    fun addConfigurationData(context: EContext, height: Long, data: ByteArray)
+    fun getRowCount(ctx: EContext, tableName: String): Long
+
+    fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
+    fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 
     companion object {
         fun of(ctx: EContext): DatabaseAccess {
@@ -364,21 +367,84 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
-    override fun findConfigurationHeightForBlock(context: EContext, height: Long): Long? {
-        return queryRunner.query(context.conn,
+    override fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long? {
+        return queryRunner.query(ctx.conn,
                 "SELECT height FROM configurations WHERE chain_iid= ? AND height <= ? " +
                         "ORDER BY height DESC LIMIT 1",
-                nullableLongRes, context.chainID, height)
+                nullableLongRes, ctx.chainID, height)
     }
 
-    override fun getTables(context: EContext): List<String> {
-        return queryRunner.query(context.conn,
-                """SELECT table_name FROM information_schema.tables WHERE table_schema = ? ORDER BY table_name""",
-                ColumnListHandler(), context.conn.schema)
+    override fun getBlockchainsInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
+        var rows = queryRunner.query(ctx.conn,
+                """SELECT * FROM (
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, blockchain_rid FROM blockchains) x  
+                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+
+        return rows.map { row ->
+            val rowId = row["row_id"] as Long
+            val chainIid = row["chain_iid"] as Long
+            val blockchainRid = row["blockchain_rid"] as ByteArray
+
+            RowData(GtvInteger(rowId), GtvString("blockchains"), BlockchainData(chainIid, blockchainRid).toGtv())
+        }
     }
 
-    override fun getTxsInRange(context: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
-        var rows = queryRunner.query(context.conn,
+    override fun getConfigurationsInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
+        var rows = queryRunner.query(ctx.conn,
+                """SELECT * FROM (
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, height, configuration_data FROM configurations) x  
+                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+
+        return rows.map { row ->
+            val rowId = row["row_id"] as Long
+            val chainIid = row["chain_iid"] as Long
+            val height = row["height"] as Long
+            val data = row["configuration_data"] as ByteArray
+
+            RowData(GtvInteger(rowId), GtvString("configurations"), ConfigurationData(chainIid, height, data).toGtv())
+        }
+    }
+
+    override fun getMetaInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
+        var rows = queryRunner.query(ctx.conn,
+                """SELECT * FROM (
+                    SELECT (row_number() OVER (ORDER BY 1) + ?) AS row_id, key, value FROM meta) x  
+                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+
+        return rows.map { row ->
+            val rowId = row["row_id"] as Long
+            val key = row["key"] as String
+            val value = row["value"] as String?
+
+            RowData(GtvInteger(rowId), GtvString("meta"), MetaData(key, value).toGtv())
+        }
+    }
+
+    override fun getPeerInfosInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
+        var rows = queryRunner.query(ctx.conn,
+                """SELECT * FROM (
+                    SELECT (row_number() OVER (ORDER BY 1) + ?) AS row_id, $TABLE_PEERINFOS_FIELD_HOST, $TABLE_PEERINFOS_FIELD_PORT, $TABLE_PEERINFOS_FIELD_PUBKEY, $TABLE_PEERINFOS_FIELD_TIMESTAMP FROM $TABLE_PEERINFOS) x  
+                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+
+        return rows.map { row ->
+            val rowId = row["row_id"] as Long
+            val host = row["$TABLE_PEERINFOS_FIELD_HOST"] as String
+            val port = row["$TABLE_PEERINFOS_FIELD_PORT"] as Int
+            val pubkey = row["$TABLE_PEERINFOS_FIELD_PUBKEY"] as String
+            val timestamp = row["$TABLE_PEERINFOS_FIELD_TIMESTAMP"] as Long
+
+            RowData(GtvInteger(rowId), GtvString(TABLE_PEERINFOS), PeerInfo(host, port, pubkey, timestamp).toGtv())
+        }
+    }
+
+    override fun getTables(ctx: EContext): List<String> {
+        return queryRunner.query(ctx.conn,
+                """SELECT table_name FROM information_schema.tables WHERE table_schema = ?""",
+                ColumnListHandler(), ctx.conn.schema)
+    }
+
+    override fun getTxsInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
+        var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
                     SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, tx_iid FROM transactions) x 
                     WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
@@ -390,12 +456,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
-    override fun getTxsCount(context: EContext): Long {
-        return queryRunner.query(context.conn, "SELECT count(*) FROM transactions", longRes)
-    }
-
-    override fun getBlocksInRange(context: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
-        var rows = queryRunner.query(context.conn,
+    override fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
+        var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
                     SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, block_iid, block_rid, block_height, block_header_data, block_witness, timestamp FROM blocks) x  
                     WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
@@ -403,28 +465,24 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         return rows.map { row ->
             val rowId = row["row_id"] as Long
             val blockIid = row["block_iid"] as Long
-//            val blockRid = row["block_rid"] as ByteArray
-//            val blockHeight = row["block_height"] as Long
+            val blockRid = row["block_rid"] as ByteArray
+            val blockHeight = row["block_height"] as Long
             val blockHeader = row["block_header_data"] as ByteArray
             val blockWitness = row["block_witness"] as ByteArray
-//            val timestamp = row["timestamp"] as Long
-            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockHeader, blockWitness).toGtv())
+            val timestamp = row["timestamp"] as Long
+            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockRid, blockHeight, blockHeader, blockWitness, timestamp).toGtv())
         }
     }
 
-    override fun getBlocksCount(context: EContext): Long {
-        return queryRunner.query(context.conn, "SELECT count(*) FROM blocks", longRes)
-    }
-
-    override fun getDataInRange(context: EContext, tableName: String, limit: Int, offset: Long, original: Long): List<RowData> {
-        val cols = getTableDefinition(context, tableName)
+    override fun getDataInRange(ctx: EContext, tableName: String, limit: Int, offset: Long, original: Long): List<RowData> {
+        val cols = getTableDefinition(ctx, tableName)
         val defs = cols.map { it.toGtv() }.toTypedArray()
         var query = "SELECT * FROM (SELECT (row_number() OVER (ORDER BY 1) + ?) AS row_id"
         cols.forEach { query += ", ${it.columnName}" }
 
         query += " FROM $tableName) x WHERE row_id BETWEEN ? AND ?"
 
-        var rows = queryRunner.query(context.conn, query, mapListHandler, original, offset+1, offset+limit)
+        val rows = queryRunner.query(ctx.conn, query, mapListHandler, original, offset+1, offset+limit)
         return rows.map { row ->
             val rowId = row["row_id"] as Long
             val data = mutableMapOf<String, Gtv>()
@@ -433,6 +491,9 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                 data[it.columnName] = when (it.dataType) {
                     "bigint" -> {
                         GtvInteger(row[it.columnName] as Long)
+                    }
+                    "integer" -> {
+                        GtvInteger((row[it.columnName] as Int).toLong())
                     }
                     "bytea" -> {
                         GtvByteArray(row[it.columnName] as ByteArray)
@@ -449,18 +510,18 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
-    override fun getRowCount(context: EContext, tableName: String): Long {
-        return queryRunner.query(context.conn, "SELECT count(*) FROM $tableName", longRes)
+    override fun getRowCount(ctx: EContext, tableName: String): Long {
+        return queryRunner.query(ctx.conn, "SELECT count(*) FROM $tableName", longRes)
     }
 
-    override fun getConfigurationData(context: EContext, height: Long): ByteArray? {
-        return queryRunner.query(context.conn,
+    override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {
+        return queryRunner.query(ctx.conn,
                 "SELECT configuration_data FROM configurations WHERE chain_iid= ? AND height = ?",
-                nullableByteArrayRes, context.chainID, height)
+                nullableByteArrayRes, ctx.chainID, height)
     }
 
-    override fun addConfigurationData(context: EContext, height: Long, data: ByteArray) {
-        queryRunner.update(context.conn, sqlCommands.insertConfiguration, context.chainID, height, data)
+    override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
+        queryRunner.update(ctx.conn, sqlCommands.insertConfiguration, ctx.chainID, height, data)
     }
 
     fun tableExists(connection: Connection, tableName_: String): Boolean {

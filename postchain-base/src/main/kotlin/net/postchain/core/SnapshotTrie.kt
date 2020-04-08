@@ -331,11 +331,11 @@ fun main() {
 
     var rows = listOf(
             RowData(GtvInteger(18 ), GtvString("transactions"), TxData(18L).toGtv()),
-            RowData(GtvInteger(3  ), GtvString("blocks"), BlockData(3L, "h3".toByteArray(), "w3".toByteArray()).toGtv()),
-            RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "h1".toByteArray(), "w1".toByteArray()).toGtv()),
+            RowData(GtvInteger(3  ), GtvString("blocks"), BlockData(3L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
+            RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b1".toByteArray(), 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
             RowData(GtvInteger(342), GtvString("transactions"), TxData(342L).toGtv()),
-            RowData(GtvInteger(17 ), GtvString("blocks"), BlockData(17L, "h17".toByteArray(), "w17".toByteArray()).toGtv()),
-            RowData(GtvInteger(15 ), GtvString("blocks"), BlockData(15L, "h15".toByteArray(), "w15".toByteArray()).toGtv()),
+            RowData(GtvInteger(17 ), GtvString("blocks"), BlockData(17L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
+            RowData(GtvInteger(15 ), GtvString("blocks"), BlockData(15L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
             RowData(GtvInteger(22 ), GtvString("transactions"), TxData(22L).toGtv()),
             RowData(GtvInteger(86 ), GtvString("transactions"), TxData(86L).toGtv())
     )
