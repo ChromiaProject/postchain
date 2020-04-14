@@ -42,6 +42,4 @@ data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvAr
         private val COMPARATOR =
                 Comparator.comparingLong<RowData> { it.id.asInteger() }
     }
-
-
 }

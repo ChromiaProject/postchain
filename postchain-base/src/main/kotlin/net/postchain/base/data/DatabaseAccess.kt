@@ -446,13 +446,18 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     override fun getTxsInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
-                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, tx_iid FROM transactions) x 
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, tx_iid, chain_iid, tx_rid, tx_data, tx_hash, block_iid FROM transactions) x 
                     WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
             val txIid = row["tx_iid"] as Long
-            RowData(GtvInteger(rowId), GtvString("transactions"), TxData(txIid).toGtv())
+            val chainIid = row["chain_iid"] as Long
+            val txRid = row["tx_rid"] as ByteArray
+            val txData = row["tx_data"] as ByteArray
+            val txHash = row["tx_hash"] as ByteArray
+            val blockIid = row["block_iid"] as Long
+            RowData(GtvInteger(rowId), GtvString("transactions"), TxData(txIid, chainIid, txRid, txData, txHash, blockIid).toGtv())
         }
     }
 
