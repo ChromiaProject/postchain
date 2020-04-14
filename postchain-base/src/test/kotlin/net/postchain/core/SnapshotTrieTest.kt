@@ -1,6 +1,7 @@
 package net.postchain.core
 
 import net.postchain.base.data.BlockData
+import net.postchain.base.data.TableDefinition
 import net.postchain.base.data.TxData
 import net.postchain.base.gtv.RowData
 import net.postchain.gtv.*
@@ -29,6 +30,17 @@ class SnapshotTrieTest {
     }
 
     private fun data(): List<RowData> {
+        val cols = listOf(
+                TableDefinition("name", "text", false, null),
+                TableDefinition("age", "integer", true, null),
+                TableDefinition("city", "integer", false, "Paris")
+        )
+        val defs = cols.map { it.toGtv() }.toTypedArray()
+        val data = mutableMapOf<String, Gtv>()
+        data["definition"] = GtvArray(defs)
+        data["name"] = GtvString("ChromaWay")
+        data["age"] = GtvInteger(20L)
+        data["city"] = GtvString("Stockholm")
         return listOf(
                 RowData(GtvInteger(18 ), GtvString("transactions"), TxData(18L, 1L, "t18".toByteArray(), "t18".toByteArray(), "t18".toByteArray(), 1L).toGtv()),
                 RowData(GtvInteger(3  ), GtvString("blocks"), BlockData(3L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
@@ -37,7 +49,8 @@ class SnapshotTrieTest {
                 RowData(GtvInteger(17 ), GtvString("blocks"), BlockData(17L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(15 ), GtvString("blocks"), BlockData(15L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(22 ), GtvString("transactions"), TxData(22L,  1L, "t22".toByteArray(), "t22".toByteArray(), "t22".toByteArray(), 15L).toGtv()),
-                RowData(GtvInteger(86 ), GtvString("transactions"), TxData(86L,1L, "t86".toByteArray(), "t86".toByteArray(), "t86".toByteArray(), 12L).toGtv())
+                RowData(GtvInteger(86 ), GtvString("transactions"), TxData(86L,1L, "t86".toByteArray(), "t86".toByteArray(), "t86".toByteArray(), 12L).toGtv()),
+                RowData(GtvInteger(23 ), GtvString("users"), GtvFactory.gtv(GtvDictionary.build(data)))
         )
     }
 
