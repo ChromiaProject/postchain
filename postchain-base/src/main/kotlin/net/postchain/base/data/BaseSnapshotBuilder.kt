@@ -34,7 +34,11 @@ class BaseSnapshotBuilder(
                 val file = File(path)
                 file.parentFile.mkdirs()
                 file.createNewFile()
-                ObjectOutputStream(FileOutputStream(file)).use { it.writeObject(data) }
+                ObjectOutputStream(FileOutputStream(file)).use {
+                    it.writeObject(data)
+                    it.flush()
+                    it.close()
+                }
             }
 
             listOfChunk = listOfChunk.plus(data)

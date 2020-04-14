@@ -30,6 +30,13 @@ data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvAr
         return COMPARATOR.compare(this, other)
     }
 
+    // To initialize transient variables when reading object from file
+    private fun readResolve(): Any {
+        this.cryptoSystem = SECP256K1CryptoSystem()
+        this.merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        return this
+    }
+
     companion object {
         fun fromGtv(gtv: GtvArray): RowData {
             return RowData(

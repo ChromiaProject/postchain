@@ -1,8 +1,6 @@
 package net.postchain.core
 
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.data.BlockData
-import net.postchain.base.data.TxData
 import net.postchain.base.gtv.RowData
 import net.postchain.common.toHex
 import net.postchain.gtv.*
@@ -308,57 +306,4 @@ fun printTree(node: Tree, prefix: String = "") {
             }
         }
     }
-}
-
-fun sameTree(t1: Tree, t2: Tree): Boolean {
-    fun haveSameElms(n1: TNode, n2: TNode): Boolean {
-        for (i in n1.elms.indices) {
-            if (n1.elms[i] == null) return n2.elms[i] == null
-            else if (!sameTree(n1.elms[i]!!.element!!, n2.elms[i]!!.element!!)) return false
-        }
-        return true
-    }
-
-    return when (t1) {
-        null -> (t2 == null)
-        is TLeaf -> (t2 is TLeaf) && (t1.prefix == t2.prefix) && (t1.content == t2.content)
-        is TNode -> (t2 is TNode) && (t1.prefix == t2.prefix)
-                &&  haveSameElms(t1, t2)
-    }
-}
-
-fun main() {
-
-    var rows = listOf(
-            RowData(GtvInteger(18 ), GtvString("transactions"), TxData(18L).toGtv()),
-            RowData(GtvInteger(3  ), GtvString("blocks"), BlockData(3L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
-            RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b1".toByteArray(), 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
-            RowData(GtvInteger(342), GtvString("transactions"), TxData(342L).toGtv()),
-            RowData(GtvInteger(17 ), GtvString("blocks"), BlockData(17L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
-            RowData(GtvInteger(15 ), GtvString("blocks"), BlockData(15L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
-            RowData(GtvInteger(22 ), GtvString("transactions"), TxData(22L).toGtv()),
-            RowData(GtvInteger(86 ), GtvString("transactions"), TxData(86L).toGtv())
-    )
-    rows = rows.sorted()
-
-    // Verify row data serialization  & deserialization
-    val b = GtvEncoder.encodeGtv(rows[0].toGtv())
-    val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray)
-    require(row == rows[0])
-
-    val leafs = rows.map { row ->
-        TLeaf(longToKey(row.id.asInteger()), row)
-    }
-    for (l in leafs) printTree(l)
-
-    val t1 = mergeTrees(leafs)
-
-    // if the size of input data equal to a chunk size then t2 will be the chunk root
-    val t2 =  buildChunked(
-            SimpleChunkAccess( leafs )
-    )
-
-    printTree(t1)
-    require(sameTree(t1, t2))
-    require(t1?.hash() == t2?.hash())
 }
