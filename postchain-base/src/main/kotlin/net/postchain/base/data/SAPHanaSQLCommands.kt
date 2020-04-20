@@ -47,6 +47,8 @@ object SAPHanaSQLCommands : SQLCommands {
     override val createTableMeta: String = "CREATE TABLE meta (key VARCHAR(255) PRIMARY KEY, value VARCHAR(1000))"
 
     override val createTableGtxModuleVersion: String = "CREATE TABLE gtx_module_version (module_name VARCHAR(1000) PRIMARY KEY, version BIGINT NOT NULL)"
+    override val createDescribeTableFunction: String
+        get() = TODO("Not yet implemented")
 
     override val insertBlocks: String = "INSERT INTO blocks (chain_iid, block_height) VALUES (?, ?) "
 

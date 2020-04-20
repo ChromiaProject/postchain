@@ -58,8 +58,8 @@ interface DatabaseAccess {
     fun getTables(ctx: EContext): List<String>
     // Query data for rellr app
     fun getDataInRange(ctx: EContext, tableName: String, limit: Int, offset: Long, original: Long = 0): List<RowData>
-
     fun getRowCount(ctx: EContext, tableName: String): Long
+    fun getTableDDL(ctx: EContext, tableName: String): String
 
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
@@ -312,6 +312,9 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             queryRunner.update(connection, """CREATE INDEX transactions_block_iid_idx ON transactions(block_iid)""")
             queryRunner.update(connection, """CREATE INDEX blocks_chain_iid_timestamp ON blocks(chain_iid, timestamp)""")
             //queryRunner.update(connection, """CREATE INDEX configurations_chain_iid_to_height ON configurations(chain_iid, height)""")
+
+            // Create function to get the rellr app tables' ddl
+            queryRunner.update(connection, sqlCommands.createDescribeTableFunction)
         }
     }
 
@@ -480,6 +483,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     }
 
     override fun getDataInRange(ctx: EContext, tableName: String, limit: Int, offset: Long, original: Long): List<RowData> {
+        val ddl = getTableDDL(ctx, tableName)
         val cols = getTableDefinition(ctx, tableName)
         val defs = cols.map { it.toGtv() }.toTypedArray()
         var query = "SELECT * FROM (SELECT (row_number() OVER (ORDER BY 1) + ?) AS row_id"
@@ -492,6 +496,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val rowId = row["row_id"] as Long
             val data = mutableMapOf<String, Gtv>()
             data["definition"] = GtvArray(defs)
+            data["ddl"] = GtvString(ddl)
             cols.forEach {
                 data[it.columnName] = when (it.dataType) {
                     "bigint" -> {
@@ -517,6 +522,10 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun getRowCount(ctx: EContext, tableName: String): Long {
         return queryRunner.query(ctx.conn, "SELECT count(*) FROM $tableName", longRes)
+    }
+
+    override fun getTableDDL(ctx: EContext, tableName: String): String {
+        return queryRunner.query(ctx.conn, "SELECT * FROM public.describe_table('${ctx.conn.schema}', '$tableName')", stringRes)
     }
 
     override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {
