@@ -166,6 +166,44 @@ fun mergeTrees (trees: List<TreeElement>): Tree {
     )
 }
 
+fun mergeHashTrees (trees: List<TreeElement>): Tree {
+    if (trees.isEmpty()) return null
+    if (trees.size == 1) return trees[0]
+    val commonPrefixLength = findCommonPrefixLength(trees)
+
+    // since we have at least 2 elements to merge, we will build a node
+
+    // we have a bin of elements for every element in a node
+    val eltBins = Array<MutableList<TreeElement>>(eltsPerNode) { mutableListOf()}
+
+    for (tree in trees) {
+        if (tree is TNode && tree.prefix.size == commonPrefixLength) {
+            // a node at the level of commonPrefixLenght must be merged, i.e. its elts are emitted into bins
+            for (i in 0 until eltsPerNode) {
+                val elt = tree.elms[i]
+                if (elt != null) {
+                    eltBins[i].add(elt.element!!)
+                }
+            }
+        } else {
+            // we need to 'chop' the common prefix out of prefix
+            // also we need to remove the slice we are currently at
+            require(tree.prefix.size > commonPrefixLength) // this could be violated if we have leafs with same key
+            val eltIndex = keySliceToInt(tree.prefix[commonPrefixLength])
+            eltBins[eltIndex].add( tree.cloneWithNewPrefix(tree.prefix.drop(commonPrefixLength + 1)))
+        }
+    }
+    return TNode(
+            trees[0].prefix.take(commonPrefixLength),
+            eltBins.map {
+                val e = mergeHashTrees(it)
+                if (e != null)
+                    refFromHash(e.hash())
+                else null
+            }
+    )
+}
+
 
 fun sameKeySlice(s1: KeySlice, s2: KeySlice): Boolean {
     return s1 == s2
@@ -300,7 +338,12 @@ fun printTree(node: Tree, prefix: String = "") {
             val elt = node.elms[idx]
             val nextPrefix = "$prefix ${byteToBitString(idx.toByte())} "
             if (elt != null) {
-                printTree(elt.element!!, nextPrefix)
+                if (elt.element == null) {
+                    println(elt.hash)
+                } else {
+                    printTree(elt.element, nextPrefix)
+                }
+
             } else {
                 println("$nextPrefix#")
             }

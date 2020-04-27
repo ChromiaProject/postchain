@@ -41,7 +41,8 @@ class BaseSnapshotBuilder(
                 }
             }
 
-            listOfChunk = listOfChunk.plus(data)
+            // convert raw data snapshot tree into hash snapshot tree to reduce snapshot size
+            listOfChunk = listOfChunk.plus(mergeHashTrees(listOf(data as TreeElement)))
             if (rows.size < chunkSize) {
                 break
             }
@@ -50,10 +51,8 @@ class BaseSnapshotBuilder(
         }
         finalized = true
 
-        // TODO: Should return snapshot root tree with hash ref only, then we can get the root hash of the snapshot tree
-        // Using mergeTrees for full list of the chunk tree to make snapshot root still face problem here.
-        // Need to figure out the solution to reduce the usage of memory.
-        val root = mergeTrees(listOfChunk as List<TreeElement>)
+        // only need to return hash snapshot tree
+        val root = mergeHashTrees(listOfChunk as List<TreeElement>)
         snapshotData = root
         return root
     }
