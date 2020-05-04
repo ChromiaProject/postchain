@@ -17,6 +17,8 @@ object SAPHanaSQLCommands : SQLCommands {
             "  timestamp BIGINT," +
             "  UNIQUE (chain_iid, block_rid)," +
             "  UNIQUE (chain_iid, block_height))"
+    override val createTableSnapshots: String
+        get() = TODO("Not yet implemented")
 
     override val createTableBlockChains: String = "CREATE TABLE blockchains " +
             " (chain_iid BIGINT, blockchain_rid VARBINARY(1000) NOT NULL)"
@@ -51,6 +53,9 @@ object SAPHanaSQLCommands : SQLCommands {
         get() = TODO("Not yet implemented")
 
     override val insertBlocks: String = "INSERT INTO blocks (chain_iid, block_height) VALUES (?, ?) "
+
+    override val insertSnapshots: String
+        get() = TODO("Not yet implemented")
 
     override val insertTransactions: String = "INSERT INTO transactions (chain_iid, tx_rid, tx_data, tx_hash, block_iid) " +
             "VALUES (?, ?, ?, ?, ?) "

@@ -42,7 +42,7 @@ class StorageBuilder {
             val writeDataSource = createBasicDataSource(appConfig).apply {
                 maxWaitMillis = 0
                 defaultAutoCommit = false
-                maxTotal = 1
+                maxTotal = 2
             }
 
             createTablesIfNotExists(writeDataSource, db)

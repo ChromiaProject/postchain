@@ -114,12 +114,12 @@ class BaseBlockWitnessBuilder(val cryptoSystem: CryptoSystem,
      * @throws UserMistake If subject attempts to add more than one signature
      */
     override fun applySignature(s: Signature) {
-        if (!subjects.any({ s.subjectID.contentEquals(it) })) {
+        if (!subjects.any { s.subjectID.contentEquals(it) }) {
             throw UserMistake("Unexpected subject ${s.subjectID.toHex()} of signature")
         }
 
         // Do not add two signatures from the same subject!
-        if (signatures.any({ it.subjectID.contentEquals(s.subjectID) })) {
+        if (signatures.any { it.subjectID.contentEquals(s.subjectID) }) {
             return
         }
         if (!cryptoSystem.verifyDigest(blockHeader.blockRID, s)) {

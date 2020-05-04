@@ -18,6 +18,10 @@ abstract class AbstractSnapshotBuilder(
         bctx = BaseSnaphotEContext(ectx)
     }
 
+    override fun commit() {
+        TODO("Not yet implemented")
+    }
+
     override fun getSnapshotTree(): TreeElement {
         return snapshotData ?: throw ProgrammerMistake("Snapshot is not finalized yet")
     }

@@ -59,8 +59,6 @@ open class BaseSnapshotManager(
             snapshotDB.buildSnapshot()
         }, {
             snapshot = it
-            // TODO: Need to implement code to insert snapshot tree hash root to blockchain db
-            printTree(it)
         })
     }
 }

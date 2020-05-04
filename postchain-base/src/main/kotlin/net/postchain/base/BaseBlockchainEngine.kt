@@ -102,7 +102,7 @@ open class BaseBlockchainEngine(
 
     private fun makeSnapshotBuilder(): ManagedSnapshotBuilder {
         if (closed) throw ProgrammerMistake("Engine is already closed")
-        val eContext = storage.openReadConnection(chainID)
+        val eContext = storage.openWriteConnection(chainID)
 
         return BaseManagedSnapshotBuilder(eContext, storage, blockchainConfiguration.makeSnapshotBuilder(eContext))
     }
@@ -236,7 +236,7 @@ open class BaseBlockchainEngine(
         val snapshotBuilder = makeSnapshotBuilder()
         snapshotBuilder.begin()
         snapshotBuilder.buildSnapshot()
-
+        snapshotBuilder.commit()
         return snapshotBuilder
     }
 

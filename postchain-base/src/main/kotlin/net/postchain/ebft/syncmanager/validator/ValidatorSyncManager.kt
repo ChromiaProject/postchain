@@ -22,6 +22,7 @@ import net.postchain.network.CommunicationManager
 import net.postchain.network.x.XPeerID
 import nl.komponents.kovenant.task
 import java.util.*
+import kotlin.math.floor
 
 /**
  * The ValidatorSyncManager handles communications with our peers.
@@ -240,7 +241,7 @@ class ValidatorSyncManager(
         }
         if (matchingIndexes.isEmpty()) return null
         if (matchingIndexes.size == 1) return matchingIndexes[0]
-        return matchingIndexes[Math.floor(Math.random() * matchingIndexes.size).toInt()]
+        return matchingIndexes[floor(Math.random() * matchingIndexes.size).toInt()]
     }
 
     /**
@@ -262,7 +263,7 @@ class ValidatorSyncManager(
      */
     private fun fetchCommitSignatures(blockRID: ByteArray, nodes: Array<Int>) {
         val message = GetBlockSignature(blockRID)
-        logger.debug("$processName: Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}")
+        logger.debug("$processName: Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${nodes.contentToString()}")
         nodes.forEach {
             communicationManager.sendPacket(message, validatorAtIndex(it))
         }

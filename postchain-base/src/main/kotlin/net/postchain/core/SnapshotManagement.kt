@@ -5,6 +5,7 @@ interface SnapshotBuilder {
     fun begin()
     fun buildSnapshot(): Tree
     fun getSnapshotTree(): TreeElement
+    fun commit()
 }
 
 interface ManagedSnapshotBuilder: SnapshotBuilder {

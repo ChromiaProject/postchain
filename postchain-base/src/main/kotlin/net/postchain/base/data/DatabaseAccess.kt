@@ -23,6 +23,7 @@ interface DatabaseAccess {
 
     fun getBlockchainRID(ctx: EContext): BlockchainRid?
     fun insertBlock(ctx: EContext, height: Long): Long
+    fun insertSnapshot(ctx: EContext, rootHash: ByteArray, height: Long): Long
     fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long
     fun finalizeBlock(ctx: BlockEContext, header: BlockHeader)
 
@@ -97,6 +98,11 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     override fun insertBlock(ctx: EContext, height: Long): Long {
         queryRunner.update(ctx.conn, sqlCommands.insertBlocks, ctx.chainID, height)
         return queryRunner.query(ctx.conn, "SELECT block_iid FROM blocks WHERE chain_iid = ? and block_height = ?", longRes, ctx.chainID, height)
+    }
+
+    override fun insertSnapshot(ctx: EContext, rootHash: ByteArray, height: Long): Long {
+        queryRunner.update(ctx.conn, sqlCommands.insertSnapshots, rootHash, height, ctx.nodeID)
+        return queryRunner.query(ctx.conn, "SELECT snapshot_iid FROM snapshots WHERE root_hash = ? and block_height = ? and node_id = ?", longRes, rootHash, height, ctx.nodeID)
     }
 
     override fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long {
@@ -298,6 +304,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             // we must throw an error. If these tables exists but meta did not exist,
             // there is some serious problem that needs manual work
             queryRunner.update(connection, sqlCommands.createTableBlockChains)
+
+            queryRunner.update(connection, sqlCommands.createTableSnapshots)
 
             queryRunner.update(connection, sqlCommands.createTableBlocks)
 

@@ -6,7 +6,7 @@ import java.io.FileOutputStream
 import java.io.ObjectOutputStream
 import java.nio.file.Paths
 
-class BaseSnapshotBuilder(
+open class BaseSnapshotBuilder(
         ectx: EContext,
         private val store: BlockStore,
         private val chunkSize : Int = 1024,
@@ -53,7 +53,10 @@ class BaseSnapshotBuilder(
 
         // only need to return hash snapshot tree
         val root = mergeHashTrees(listOfChunk as List<TreeElement>)
+        val height = store.getLastBlockHeight(ectx)
+        store.commitSnapshot(ectx, root!!.hash().toByteArray(), height)
         snapshotData = root
+
         return root
     }
 }

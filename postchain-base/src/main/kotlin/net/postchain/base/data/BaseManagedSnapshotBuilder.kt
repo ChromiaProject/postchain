@@ -28,11 +28,15 @@ class BaseManagedSnapshotBuilder(
     override fun rollback() {
         if (closed) throw ProgrammerMistake("Already closed")
         closed = true
-        storage.closeReadConnection(eContext)
+        storage.closeWriteConnection(eContext, false)
     }
 
     override fun begin() {
         return runOp { snapshotBuilder.begin() }
+    }
+
+    override fun commit() {
+        storage.closeWriteConnection(eContext, true)
     }
 
     override fun buildSnapshot(): Tree {
