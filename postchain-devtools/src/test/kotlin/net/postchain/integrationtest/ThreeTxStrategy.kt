@@ -25,6 +25,10 @@ class ThreeTxStrategy(
         return txQueue.getTransactionQueueSize() >= 3
     }
 
+    override fun shouldBuildSnapshot(): Boolean {
+        return false
+    }
+
     override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean {
         return false
     }

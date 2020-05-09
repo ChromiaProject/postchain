@@ -27,6 +27,7 @@ class BaseBlockBuilderValidationTest {
     val myBlockchainRid = BlockchainRid("bcRid".toByteArray())
     val empty32Bytes = ByteArray(32, { 0 })
     val rootHash =    "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
+    val snapshotRootHash =    "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
     val badRootHash = "46AF9064F12FFFFFFFFFFFFFF04ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
     val subjects = arrayOf("test".toByteArray())
     val sigMaker = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
@@ -41,7 +42,7 @@ class BaseBlockBuilderValidationTest {
     fun validateBlockHeader_valid() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid,2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, snapshotRootHash, timestamp)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
@@ -54,7 +55,7 @@ class BaseBlockBuilderValidationTest {
     fun validateBlockHeader_invalidMonotoneTimestamp() {
         val timestamp = 1L
         val blockData = InitialBlockData(myBlockchainRid,2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, snapshotRootHash, timestamp)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
@@ -68,7 +69,7 @@ class BaseBlockBuilderValidationTest {
     fun validateBlockHeader_invalidMonotoneTimestampEquals() {
         val timestamp = 10L
         val blockData = InitialBlockData(myBlockchainRid,2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, snapshotRootHash, timestamp)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
@@ -82,7 +83,7 @@ class BaseBlockBuilderValidationTest {
     fun validateBlokcHeader_invalidRootHash() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid,2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, badRootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, badRootHash, snapshotRootHash, timestamp)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 

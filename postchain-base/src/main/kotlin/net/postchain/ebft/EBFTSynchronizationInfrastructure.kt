@@ -22,7 +22,6 @@ import net.postchain.network.x.DefaultXCommunicationManager
 import net.postchain.network.x.DefaultXConnectionManager
 import net.postchain.network.x.XConnectionManager
 import net.postchain.network.x.XPeerID
-import net.postchain.snapshot.worker.SnapshotWorker
 
 class EBFTSynchronizationInfrastructure(
         val nodeConfigProvider: NodeConfigurationProvider,
@@ -69,10 +68,6 @@ class EBFTSynchronizationInfrastructure(
                     engine,
                     buildXCommunicationManager(processName, blockchainConfig, true))
         }
-    }
-
-    override fun makeSnapshotProcess(processName: SnapshotProcessName, engine: BlockchainEngine): BlockchainProcess {
-        return SnapshotWorker(processName, engine)
     }
 
     @Deprecated("POS-90")

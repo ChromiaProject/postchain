@@ -145,13 +145,12 @@ class BlockchainDependencies(
      * blockchain we depend on should have at least a genesis block.
      */
     private fun getHeight(dep: BlockchainDependency): Long {
-        if (dep.heightDependency != null) {
+        return if (dep.heightDependency != null) {
             logger.debug("Have height for dependency: $dep")
-            return dep.heightDependency.height ?:
-               throw ProgrammerMistake("If last block RID exists for dependency: $dep we must know height at this stage")
+            dep.heightDependency.height ?: throw ProgrammerMistake("If last block RID exists for dependency: $dep we must know height at this stage")
         } else {
             logger.warn("No height known for dependency $dep, so assuming height = $NO_BLOCKS_YET. (This is ok if we are running a test)")
-            return NO_BLOCKS_YET
+            NO_BLOCKS_YET
         }
 
     }
@@ -160,7 +159,7 @@ class BlockchainDependencies(
         return if (isEmpty()) {
             null
         } else {
-            internalArray.map { it ->
+            internalArray.map {
                 if (it.heightDependency != null) {
                     it.heightDependency.lastBlockRid
                 } else {

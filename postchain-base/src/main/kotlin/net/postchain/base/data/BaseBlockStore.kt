@@ -58,12 +58,6 @@ class BaseBlockStore : BlockStore {
         DatabaseAccess.of(bctx).commitBlock(bctx, w)
     }
 
-    override fun commitSnapshot(ctx: EContext, rootHash: ByteArray, height: Long) {
-        val db = DatabaseAccess.of(ctx)
-        val snapshotIid = db.insertSnapshot(ctx, rootHash, height)
-        println(snapshotIid)
-    }
-
     override fun getBlockHeightFromOwnBlockchain(ctx: EContext, blockRID: ByteArray): Long? {
         return DatabaseAccess.of(ctx).getBlockHeight(ctx, blockRID, ctx.chainID)
     }
@@ -144,7 +138,7 @@ class BaseBlockStore : BlockStore {
         )
     }
 
-    override fun getChunkData(ctx: EContext, limit: Int, offset: Long): List<RowData> {
+    override fun getChunkData(ctx: EContext, limit: Int, offset: Long, height: Long): List<RowData> {
         val db = DatabaseAccess.of(ctx)
         val data = mutableListOf<RowData>()
         var original = 0L
@@ -154,9 +148,9 @@ class BaseBlockStore : BlockStore {
             val rows = when(tableName) {
                 "meta" -> db.getMetaInRange(ctx, limit-data.size, offset+data.size, original)
                 "blockchains" -> db.getBlockchainsInRange(ctx, limit-data.size, offset+data.size, original)
-                "blocks" -> db.getBlocksInRange(ctx, limit-data.size, offset+data.size, original)
-                "transactions" -> db.getTxsInRange(ctx, limit-data.size, offset+data.size, original)
-                "configurations" -> db.getConfigurationsInRange(ctx, limit-data.size, offset+data.size, original)
+                "blocks" -> db.getBlocksInRange(ctx, limit-data.size, offset+data.size, original, height)
+                "transactions" -> db.getTxsInRange(ctx, limit-data.size, offset+data.size, original, height)
+                "configurations" -> db.getConfigurationsInRange(ctx, limit-data.size, offset+data.size, original, height)
                 "peerinfos" -> db.getPeerInfosInRange(ctx, limit-data.size, offset+data.size, original)
                 else -> db.getDataInRange(ctx, tableName, limit-data.size, offset+data.size, original)
             }

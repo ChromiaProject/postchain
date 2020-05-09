@@ -69,7 +69,7 @@ class BaseBlockWitness(val _rawData: ByteArray, val _signatures: Array<Signature
  * Will collect signatures and release a BlockWitness instance when a threshold number is reached.
  *
  * @property blockHeader The header of the block to which [signatures] applies
- * @property subjects Public keys elligable for signing a block
+ * @property subjects Public keys eligible for signing a block
  * @property threshold Minimum amount of signatures necessary for witness to be valid
  */
 class BaseBlockWitnessBuilder(val cryptoSystem: CryptoSystem,

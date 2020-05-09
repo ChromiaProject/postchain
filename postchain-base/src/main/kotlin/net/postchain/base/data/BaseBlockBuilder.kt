@@ -9,10 +9,14 @@ import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import java.io.File
+import java.io.FileOutputStream
+import java.io.ObjectOutputStream
 import java.lang.Long.max
-import java.util.*
+import java.nio.file.Paths
 
 /**
  * BaseBlockBuilder is used to aid in building blocks, including construction and validation of block header and witness
@@ -28,15 +32,17 @@ import java.util.*
 open class BaseBlockBuilder(
         blockchainRID: BlockchainRid,
         val cryptoSystem: CryptoSystem,
-        eContext: EContext,
+        val eContext: EContext,
         store: BlockStore,
         txFactory: TransactionFactory,
-        val subjects: Array<ByteArray>,
-        val blockSigMaker: SigMaker,
-        val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
-        val usingHistoricBRID: Boolean,
-        val maxBlockSize : Long = 20*1024*1024, // 20mb
-        val maxBlockTransactions : Long = 100
+        private val subjects: Array<ByteArray>,
+        private val blockSigMaker: SigMaker,
+        private val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
+        private val usingHistoricBRID: Boolean,
+        private val maxBlockSize : Long = 20*1024*1024, // 20mb
+        private val maxBlockTransactions : Long = 100,
+        private val chunkSize : Int = 1024,
+        private val snapshotFolder: String = "snapshot"
 ): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory) {
 
     companion object : KLogging()
@@ -50,12 +56,65 @@ open class BaseBlockBuilder(
      *
      * @return The Merkle tree root hash
      */
-    fun computeMerkleRootHash(): ByteArray {
+    private fun computeMerkleRootHash(): ByteArray {
         val digests = rawTransactions.map { txFactory.decodeTransaction(it).getHash() }
 
         val gtvArr = gtv(digests.map { gtv(it) })
 
         return gtvArr.merkleHash(calc)
+    }
+
+    /**
+     * Computes the root hash for the Merkle tree of snapshot at the block
+     *
+     * @return The Merkle tree root hash of snapshot
+     */
+    private fun computeSnapshotMerkleRootHash(withSnapshot: Boolean = false): ByteArray {
+        // break circuit to return empty merkle hash
+        if (!withSnapshot) {
+            val gtvArr = gtv(GtvNull)
+            return gtvArr.merkleHash(calc)
+        }
+        // build snapshot tree
+        var idx = 0L
+        var offset = 0L
+        var listOfChunk = listOf<TreeElement?>()
+        while (true) {
+            var rows = store.getChunkData(ectx, chunkSize, offset, initialBlockData.height)
+            if (rows.isEmpty()) {
+                break
+            }
+            val leafs = rows.map { row ->
+                TLeaf(longToKey(row.id.asInteger()), row)
+            }
+            val data = buildChunked(SimpleChunkAccess(leafs))
+
+            // Serialize tree chunk object into file with name is root hash of the tree chunk
+            if (data != null) {
+                val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator + snapshotFolder + File.separator + ectx.chainID + File.separator + data.hash()
+                val file = File(path)
+                file.parentFile.mkdirs()
+                file.createNewFile()
+                ObjectOutputStream(FileOutputStream(file)).use {
+                    it.writeObject(data)
+                    it.flush()
+                    it.close()
+                }
+            }
+
+            // convert raw data snapshot tree into hash snapshot tree to reduce snapshot size
+            listOfChunk = listOfChunk.plus(mergeHashTrees(listOf(data as TreeElement)))
+            if (rows.size < chunkSize) {
+                break
+            }
+            idx++
+            offset = idx * chunkSize
+        }
+
+        // only need to return hash snapshot tree
+        val root = mergeHashTrees(listOfChunk as List<TreeElement>)
+
+        return root!!.hash().toByteArray()
     }
 
     override fun begin(partialBlockHeader: BlockHeader?) {
@@ -70,11 +129,12 @@ open class BaseBlockBuilder(
      *
      * @return Block header
      */
-    override fun makeBlockHeader(): BlockHeader {
+    override fun makeBlockHeader(withSnapshot: Boolean): BlockHeader {
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp)
+        val snapshotRootHash = computeSnapshotMerkleRootHash(withSnapshot)
+        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, snapshotRootHash, timestamp)
     }
 
     /**
@@ -87,10 +147,12 @@ open class BaseBlockBuilder(
      *
      * @param blockHeader The block header to validate
      */
-    override fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
+    override fun validateBlockHeader(blockHeader: BlockHeader, withSnapshot: Boolean): ValidationResult {
         val header = blockHeader as BaseBlockHeader
 
         val computedMerkleRoot = computeMerkleRootHash()
+        val computedSnapshotMerkleRoot = computeSnapshotMerkleRootHash(withSnapshot)
+
         return when {
             !header.prevBlockRID.contentEquals(initialBlockData.prevBlockRID) ->
                 ValidationResult(false, "header.prevBlockRID != initialBlockData.prevBlockRID," +
@@ -106,8 +168,12 @@ open class BaseBlockBuilder(
             !header.checkIfAllBlockchainDependenciesArePresent(blockchainRelatedInfoDependencyList) ->
                 ValidationResult(false, "checkIfAllBlockchainDependenciesArePresent() is false")
 
-            !Arrays.equals(header.blockHeaderRec.getMerkleRootHash(), computedMerkleRoot) -> // Do this last since most expensive check!
+            !header.blockHeaderRec.getMerkleRootHash().contentEquals(computedMerkleRoot) -> // Do this last since most expensive check!
                 ValidationResult(false, "header.blockHeaderRec.rootHash != computeRootHash()")
+
+            //TODO: [HaDV] Need to check why the local and remote hash of snapshot tree are difference
+//            !header.blockHeaderRec.getSnapshotMerkleRootHash().contentEquals(computedSnapshotMerkleRoot) ->
+//                ValidationResult(false, "header.blockHeaderRec.snapshotRootHash != computeSnapshotRootHash(), remote: ${header.blockHeaderRec.getSnapshotMerkleRootHash().toHex()}, local:${computedSnapshotMerkleRoot.toHex()}")
 
             else -> ValidationResult(true)
         }
@@ -123,7 +189,7 @@ open class BaseBlockBuilder(
      *  @throws ProgrammerMistake Invalid BlockWitness implementation
      */
     override fun validateWitness(blockWitness: BlockWitness): Boolean {
-        if (!(blockWitness is MultiSigBlockWitness)) {
+        if (blockWitness !is MultiSigBlockWitness) {
             throw ProgrammerMistake("Invalid BlockWitness impelmentation.")
         }
         val witnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, _blockData!!.header, subjects, getBFTRequiredSignatureCount(subjects.size))
@@ -147,15 +213,14 @@ open class BaseBlockBuilder(
     }
 
     private fun buildBlockchainDependenciesFromHeader(partialBlockHeader: BlockHeader): BlockchainDependencies {
-        return if (blockchainRelatedInfoDependencyList.size > 0) {
+        return if (blockchainRelatedInfoDependencyList.isNotEmpty()) {
 
             val baseBH = partialBlockHeader as BaseBlockHeader
             val givenDependencies = baseBH.blockHeightDependencyArray
             if (givenDependencies.size == blockchainRelatedInfoDependencyList.size) {
 
                 val resList = mutableListOf<BlockchainDependency>()
-                var i = 0
-                for (bcInfo in blockchainRelatedInfoDependencyList) {
+                for ((i, bcInfo) in blockchainRelatedInfoDependencyList.withIndex()) {
                     val blockRid = givenDependencies[i]
                     val dep = if (blockRid != null) {
                         val dbHeight = store.getBlockHeightFromAnyBlockchain(bctx, blockRid, bcInfo.chainId!!)
@@ -170,7 +235,6 @@ open class BaseBlockBuilder(
                         BlockchainDependency(bcInfo, null) // No blocks required -> allowed
                     }
                     resList.add(dep)
-                    i++
                 }
                 BlockchainDependencies(resList)
             } else {
@@ -215,7 +279,7 @@ open class BaseBlockBuilder(
 
     override fun appendTransaction(tx: Transaction) {
         super.appendTransaction(tx)
-        blockSize = transactions.map { t -> t.getRawData().size.toLong() }.sum()
+        blockSize = transactions.map { it.getRawData().size.toLong() }.sum()
         if (blockSize >= maxBlockSize) {
             throw UserMistake("block size exceeds max block size $maxBlockSize bytes")
         } else if (transactions.size >= maxBlockTransactions) {

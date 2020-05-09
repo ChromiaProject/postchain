@@ -29,9 +29,9 @@ abstract class AbstractBlockBuilder(
         ) : BlockBuilder {
 
     // functions which need to be implemented in a concrete BlockBuilder:
-    abstract fun makeBlockHeader(): BlockHeader
+    abstract fun makeBlockHeader(withSnapshot: Boolean = false): BlockHeader
 
-    abstract fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult
+    abstract fun validateBlockHeader(blockHeader: BlockHeader, withSnapshot: Boolean = false): ValidationResult
     abstract fun validateWitness(blockWitness: BlockWitness): Boolean
     abstract fun buildBlockchainDependencies(partialBlockHeader: BlockHeader?): BlockchainDependencies
     // fun getBlockWitnessBuilder(): BlockWitnessBuilder?;
@@ -102,8 +102,8 @@ abstract class AbstractBlockBuilder(
     /**
      * By finalizing the block we won't allow any more transactions to be added, and the block RID and timestamp are set
      */
-    override fun finalizeBlock(): BlockHeader {
-        val blockHeader = makeBlockHeader()
+    override fun finalizeBlock(withSnapshot: Boolean): BlockHeader {
+        val blockHeader = makeBlockHeader(withSnapshot)
         store.finalizeBlock(bctx, blockHeader)
         _blockData = BlockData(blockHeader, rawTransactions)
         finalized = true
@@ -116,8 +116,8 @@ abstract class AbstractBlockBuilder(
      * @param blockHeader Block header to finalize and validate
      * @throws UserMistake Happens if validation of the block header fails
      */
-    override fun finalizeAndValidate(blockHeader: BlockHeader) {
-        validateBlockHeader(blockHeader).run {
+    override fun finalizeAndValidate(blockHeader: BlockHeader, withSnapshot: Boolean) {
+        validateBlockHeader(blockHeader, withSnapshot).run {
             if (result) {
                 store.finalizeBlock(bctx, blockHeader)
                 _blockData = BlockData(blockHeader, rawTransactions)

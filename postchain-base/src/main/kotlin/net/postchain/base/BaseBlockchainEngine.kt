@@ -4,7 +4,6 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.base.data.BaseManagedBlockBuilder
-import net.postchain.base.data.BaseManagedSnapshotBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
@@ -29,7 +28,6 @@ open class BaseBlockchainEngine(
     companion object : KLogging()
 
     private lateinit var strategy: BlockBuildingStrategy
-    private lateinit var strategySnapshot: SnapshotBuildingStrategy
     private lateinit var blockQueries: BlockQueries
     private var initialized = false
     private var closed = false
@@ -50,7 +48,6 @@ open class BaseBlockchainEngine(
         // database is initialized
         blockQueries = blockchainConfiguration.makeBlockQueries(storage)
         strategy = blockchainConfiguration.getBlockBuildingStrategy(blockQueries, transactionQueue)
-        strategySnapshot = blockchainConfiguration.getSnapshotBuildingStrategy(blockQueries)
         initialized = true
         logger.debug("$processName: Initialize DB - end")
     }
@@ -69,10 +66,6 @@ open class BaseBlockchainEngine(
 
     override fun getBlockBuildingStrategy(): BlockBuildingStrategy {
         return strategy
-    }
-
-    override fun getSnapshotBuildingStrategy(): SnapshotBuildingStrategy {
-        return strategySnapshot
     }
 
     override fun getConfiguration(): BlockchainConfiguration {
@@ -98,13 +91,6 @@ open class BaseBlockchainEngine(
                         closed = true
                     }
                 })
-    }
-
-    private fun makeSnapshotBuilder(): ManagedSnapshotBuilder {
-        if (closed) throw ProgrammerMistake("Engine is already closed")
-        val eContext = storage.openWriteConnection(chainID)
-
-        return BaseManagedSnapshotBuilder(eContext, storage, blockchainConfiguration.makeSnapshotBuilder(eContext))
     }
 
     override fun addBlock(block: BlockDataWithWitness) {
@@ -158,7 +144,7 @@ open class BaseBlockchainEngine(
         decodedTxs.forEach(blockBuilder::appendTransaction)
         val netEnd = System.nanoTime()
 
-        blockBuilder.finalizeAndValidate(block.header)
+        blockBuilder.finalizeAndValidate(block.header, strategy.shouldBuildSnapshot())
         val grossEnd = System.nanoTime()
 
         if (LOG_STATS) {
@@ -216,7 +202,7 @@ open class BaseBlockchainEngine(
         TimeLog.end("BaseBlockchainEngine.buildBlock().appendtransactions")
 
         val netEnd = System.nanoTime()
-        val blockHeader = blockBuilder.finalizeBlock()
+        val blockHeader = blockBuilder.finalizeBlock(strategy.shouldBuildSnapshot())
         val grossEnd = System.nanoTime()
 
         TimeLog.end("BaseBlockchainEngine.buildBlock().buildBlock")
@@ -230,14 +216,6 @@ open class BaseBlockchainEngine(
         }
 
         return blockBuilder
-    }
-
-    override fun buildSnapshot(): ManagedSnapshotBuilder {
-        val snapshotBuilder = makeSnapshotBuilder()
-        snapshotBuilder.begin()
-        snapshotBuilder.buildSnapshot()
-        snapshotBuilder.commit()
-        return snapshotBuilder
     }
 
     private fun prettyBlockHeader(
@@ -262,6 +240,7 @@ open class BaseBlockchainEngine(
                 ", accepted txs: $acceptedTxs" +
                 ", rejected txs: $rejectedTxs" +
                 ", root-hash: ${blockHeaderData.getMerkleRootHash().toHex()}" +
+                ", snapshot-root-hash: ${blockHeaderData.getSnapshotMerkleRootHash().toHex()}" +
                 ", block-rid: ${blockHeader.blockRID.toHex()}" +
                 ", prev-block-rid: ${blockHeader.prevBlockRID.toHex()}"
     }

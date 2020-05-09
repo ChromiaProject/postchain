@@ -94,12 +94,12 @@ class BaseManagedBlockBuilder(
         return exception
     }
 
-    override fun finalizeBlock(): BlockHeader {
-        return runOp { blockBuilder.finalizeBlock() }
+    override fun finalizeBlock(withSnapshot: Boolean): BlockHeader {
+        return runOp { blockBuilder.finalizeBlock(withSnapshot) }
     }
 
-    override fun finalizeAndValidate(blockHeader: BlockHeader) {
-        runOp { blockBuilder.finalizeAndValidate(blockHeader) }
+    override fun finalizeAndValidate(blockHeader: BlockHeader, withSnapshot: Boolean) {
+        runOp { blockBuilder.finalizeAndValidate(blockHeader, withSnapshot) }
     }
 
     override fun getBlockData(): BlockData {

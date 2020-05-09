@@ -16,9 +16,10 @@ class BaseBlockBuildingStrategy(val configData: BaseBlockchainConfigurationData,
     private val maxBlockTime = strategyData?.get("maxblocktime")?.asInteger() ?: 30000
     private val blockDelay = strategyData?.get("blockdelay")?.asInteger() ?: 100
     private val maxBlockTransactions = strategyData?.get("maxblocktransactions")?.asInteger() ?: 100
+    private val epoch = strategyData?.get("epoch")?.asInteger() ?: 1024
+    private var height: Long = blockQueries.getBestHeight().get()
 
     init {
-        val height = blockQueries.getBestHeight().get()
         lastBlockTime = if (height == -1L) {
             System.currentTimeMillis()
         } else {
@@ -61,6 +62,13 @@ class BaseBlockBuildingStrategy(val configData: BaseBlockchainConfigurationData,
             return false
         }
         return false
+    }
+
+    override fun shouldBuildSnapshot(): Boolean {
+        if (height == -1L) {
+            return false
+        }
+        return (height+1) % epoch == 0L
     }
 
 }

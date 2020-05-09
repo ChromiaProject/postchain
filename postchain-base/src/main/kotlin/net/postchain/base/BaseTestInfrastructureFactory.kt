@@ -8,7 +8,6 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.debug.SnapshotProcessName
 
 class TestBlockchainProcess(private val _engine: BlockchainEngine) : BlockchainProcess {
     override fun getEngine(): BlockchainEngine {
@@ -24,10 +23,6 @@ class TestBlockchainProcess(private val _engine: BlockchainEngine) : BlockchainP
 class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine): BlockchainProcess {
-        return TestBlockchainProcess(engine)
-    }
-
-    override fun makeSnapshotProcess(processName: SnapshotProcessName, engine: BlockchainEngine): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }
 

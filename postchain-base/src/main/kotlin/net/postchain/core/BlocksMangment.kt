@@ -23,7 +23,6 @@ interface BlockStore {
     fun addTransaction(bctx: BlockEContext, tx: Transaction): TxEContext
     fun finalizeBlock(bctx: BlockEContext, bh: BlockHeader)
     fun commitBlock(bctx: BlockEContext, w: BlockWitness?)
-    fun commitSnapshot(ctx: EContext, rootHash: ByteArray, height: Long)
     fun getBlockHeightFromOwnBlockchain(ctx: EContext, blockRID: ByteArray): Long? // returns null if not found
     fun getBlockHeightFromAnyBlockchain(ctx: EContext, blockRID: ByteArray, chainId: Long): Long? // returns null if not found
     fun getChainId(ctx: EContext, blockchainRID: BlockchainRid): Long? // returns null if not found
@@ -44,7 +43,7 @@ interface BlockStore {
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getConfirmationProofMaterial(ctx: EContext, txRID: ByteArray): Any
 
-    fun getChunkData(ctx: EContext, limit: Int, offset: Long): List<RowData>
+    fun getChunkData(ctx: EContext, limit: Int, offset: Long, height: Long): List<RowData>
 }
 
 /**
@@ -82,8 +81,8 @@ interface BlockQueries {
 interface BlockBuilder {
     fun begin(partialBlockHeader: BlockHeader?)
     fun appendTransaction(tx: Transaction)
-    fun finalizeBlock(): BlockHeader
-    fun finalizeAndValidate(blockHeader: BlockHeader)
+    fun finalizeBlock(withSnapshot: Boolean = false): BlockHeader
+    fun finalizeAndValidate(blockHeader: BlockHeader, withSnapshot: Boolean = false)
     fun getBlockData(): BlockData
     fun getBlockWitnessBuilder(): BlockWitnessBuilder?
     fun commit(blockWitness: BlockWitness?)
@@ -102,6 +101,7 @@ interface ManagedBlockBuilder : BlockBuilder {
  */
 interface BlockBuildingStrategy {
     fun shouldBuildBlock(): Boolean
+    fun shouldBuildSnapshot(): Boolean
     fun blockCommitted(blockData: BlockData)
     fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean
 }

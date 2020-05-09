@@ -23,24 +23,23 @@ import net.postchain.gtv.merkleHash
  * @property rawData DER encoded data including the previous blocks RID ([prevBlockRID]) and [timestamp]
  * @property cryptoSystem An implementation of the various cryptographic primitives to use
  * @property timestamp  Specifies the time that a block was created as the number
- *                      of milliseconds since midnight Januray 1st 1970 UTC
+ *                      of milliseconds since midnight January 1st 1970 UTC
  */
 class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem: CryptoSystem) : BlockHeader {
     override val prevBlockRID: ByteArray
     override val blockRID: ByteArray
     val blockHeightDependencyArray: Array<Hash?>
     val timestamp: Long get() = blockHeaderRec.getTimestamp()
-    val blockHeaderRec: BlockHeaderData
+    val blockHeaderRec: BlockHeaderData = BlockHeaderDataFactory.buildFromBinary(rawData)
 
     init {
-        blockHeaderRec = BlockHeaderDataFactory.buildFromBinary(rawData)
         prevBlockRID = blockHeaderRec.getPreviousBlockRid()
-        blockRID = blockHeaderRec.toGtv().merkleHash(  GtvMerkleHashCalculator(cryptoSystem) )
+        blockRID = blockHeaderRec.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         blockHeightDependencyArray = blockHeaderRec.getBlockHeightDependencyArray()
     }
 
     /**
-     * @param depMap contains the Chain IDs we depend on
+     * @param depRequired contains the Chain IDs we depend on
      * @return true if there are the same number of elements in the block header as in the configuration
      *          (it's lame, but it's the best we can do, since we allow "null")
      */
@@ -55,11 +54,12 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
          * @param cryptoSystem Cryptographic utilities
          * @param iBlockData Initial block data including previous block identifier, timestamp and height
          * @param rootHash Merkle tree root hash
+         * @param snapshotRootHash snapshot's merkle tree root hash
          * @param timestamp timestamp
          * @return Serialized block header
          */
-        @JvmStatic fun make(cryptoSystem: CryptoSystem, iBlockData: InitialBlockData, rootHash: ByteArray, timestamp: Long): BaseBlockHeader {
-            val gtvBhd = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, rootHash, timestamp)
+        @JvmStatic fun make(cryptoSystem: CryptoSystem, iBlockData: InitialBlockData, rootHash: ByteArray, snapshotRootHash: ByteArray, timestamp: Long): BaseBlockHeader {
+            val gtvBhd = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, rootHash, snapshotRootHash, timestamp)
 
             val raw = GtvEncoder.encodeGtv(gtvBhd.toGtv())
             return BaseBlockHeader(raw, cryptoSystem)

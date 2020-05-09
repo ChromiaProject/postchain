@@ -4,6 +4,8 @@ package net.postchain.base
 
 import net.postchain.core.ProgrammerMistake
 import java.util.*
+import kotlin.math.ceil
+import kotlin.math.log10
 
 val internalNodePrefix = byteArrayOf(0)
 val leafPrefix = byteArrayOf(1)
@@ -17,12 +19,12 @@ class MerklePathItem(val side: Side, val hash: ByteArray)
 typealias MerklePath = ArrayList<MerklePathItem>
 
 fun log2ceil(value: Int): Int {
-    return Math.ceil(Math.log10(value.toDouble()) / Math.log10(2.toDouble())).toInt()
+    return ceil(log10(value.toDouble()) / log10(2.toDouble())).toInt()
 }
 
 fun computeMerkleRootHash(cryptoSystem: CryptoSystem, hashes: Array<ByteArray>, depth: Int = 0,
                           leafDepth: Int = log2ceil(hashes.size)): ByteArray {
-    if (hashes.size == 0) {
+    if (hashes.isEmpty()) {
         return ByteArray(32) // Just zeros
     }
 
@@ -77,7 +79,7 @@ fun internalMerklePath(cryptoSystem: CryptoSystem, hashes: Array<ByteArray>, tar
  *               {side: <0|1>, hash: <hash buffer depth 1>}]}
  */
 fun merklePath(cryptoSystem: CryptoSystem, hashes: Array<ByteArray>, target: ByteArray): MerklePath {
-    if (hashes.size == 0) {
+    if (hashes.isEmpty()) {
         throw ProgrammerMistake("Cannot make merkle path from empty transaction set")
     }
     val index = hashes.indexOfFirst { target.contentEquals(it) }
@@ -86,8 +88,7 @@ fun merklePath(cryptoSystem: CryptoSystem, hashes: Array<ByteArray>, target: Byt
     }
 
     val leafDepth = log2ceil(hashes.size)
-    val path = internalMerklePath(cryptoSystem, hashes, index, 0, leafDepth)
-    return path
+    return internalMerklePath(cryptoSystem, hashes, index, 0, leafDepth)
 }
 
 fun validateMerklePath(cryptoSystem: CryptoSystem, path: MerklePath, target: ByteArray, merkleRoot: ByteArray): Boolean {

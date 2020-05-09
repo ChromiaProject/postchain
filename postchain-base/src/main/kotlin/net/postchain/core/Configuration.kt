@@ -19,11 +19,9 @@ interface BlockchainConfiguration {
     fun decodeWitness(rawWitness: ByteArray): BlockWitness
     fun getTransactionFactory(): TransactionFactory
     fun makeBlockBuilder(ctx: EContext): BlockBuilder
-    fun makeSnapshotBuilder(ctx: EContext): SnapshotBuilder
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun initializeDB(ctx: EContext)
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
-    fun getSnapshotBuildingStrategy(blockQueries: BlockQueries): SnapshotBuildingStrategy
 }
 
 interface ConfigurationDataStore {

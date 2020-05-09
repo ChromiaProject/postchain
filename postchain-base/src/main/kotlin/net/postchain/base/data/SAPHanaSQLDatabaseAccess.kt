@@ -63,11 +63,11 @@ class SAPHanaSQLDatabaseAccess(sqlCommands: SQLCommands) : SQLDatabaseAccess(sql
         } ?: byteArrayOf()
     }
 
-    override fun getConfigurationData(context: EContext, height: Long): ByteArray? {
+    override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {
         return executeByteArrayQuery(
-                context,
+                ctx,
                 "SELECT configuration_data FROM configurations WHERE chain_iid = ? AND height = ?") {
-            it.setLong(1, context.chainID)
+            it.setLong(1, ctx.chainID)
             it.setLong(2, height)
         }
     }

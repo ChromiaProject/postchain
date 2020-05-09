@@ -26,7 +26,7 @@ class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witnes
  * @param blockchainConfiguration Configuration data for the blockchain
  * @param storage Connection manager
  * @param blockStore Blockchain storage facilitator
- * @param chainID Blockchain identifier
+ * @param chainId Blockchain identifier
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
 open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfiguration,
@@ -53,13 +53,12 @@ open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfi
     }
 
     override fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception> {
-        return runOp({ ctx ->
+        return runOp { ctx ->
             val witnessData = blockStore.getWitnessData(ctx, blockRID)
             val witness = blockchainConfiguration.decodeWitness(witnessData) as MultiSigBlockWitness
             val signature = witness.getSignatures().find { it.subjectID.contentEquals(mySubjectId) }
-            signature ?:
-                    throw UserMistake("Trying to get a signature from a node that doesn't have one")
-        })
+            signature ?: throw UserMistake("Trying to get a signature from a node that doesn't have one")
+        }
     }
 
     override fun getBestHeight(): Promise<Long, Exception> {
@@ -77,10 +76,8 @@ open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfi
     override fun getBlockTransactionRids(blockRID: ByteArray): Promise<List<ByteArray>, Exception> {
         return runOp {
             val height = blockStore.getBlockHeightFromOwnBlockchain(it, blockRID)
-            if (height == null) {
-                //Shouldn't this be UserMistake?
-                throw ProgrammerMistake("BlockRID does not exist")
-            }
+                    ?: //Shouldn't this be UserMistake?
+                    throw ProgrammerMistake("BlockRID does not exist")
             blockStore.getTxRIDsAtHeight(it, height).toList()
         }
     }

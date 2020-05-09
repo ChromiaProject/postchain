@@ -43,11 +43,9 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
                 bcRelatedInfosDependencyList,
                 effectiveBlockchainRID != blockchainRID,
                 configData.getMaxBlockSize(),
-                configData.getMaxBlockTransactions())
-    }
-
-    override fun makeSnapshotBuilder(ctx: EContext): SnapshotBuilder {
-        return BaseSnapshotBuilder(ctx, blockStore, configData.getChunkSize(), configData.getSnapshotFolder())
+                configData.getMaxBlockTransactions(),
+                configData.getChunkSize(),
+                configData.getSnapshotFolder())
     }
 
     /**
@@ -93,20 +91,6 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
                 TransactionQueue::class.java)
 
         return ctor.newInstance(configData, this, blockQueries, txQueue) as BlockBuildingStrategy
-    }
-
-    override fun getSnapshotBuildingStrategy(blockQueries: BlockQueries): SnapshotBuildingStrategy {
-        val strategyClassName = configData.getSnapshotBuildingStrategyName()
-        if (strategyClassName == "") {
-            return BaseSnapshotBuildingStrategy(configData, blockQueries)
-        }
-        val strategyClass = Class.forName(strategyClassName)
-
-        val ctor = strategyClass.getConstructor(
-                BaseBlockchainConfigurationData::class.java,
-                BlockQueries::class.java)
-
-        return ctor.newInstance(configData, blockQueries) as SnapshotBuildingStrategy
     }
 }
 

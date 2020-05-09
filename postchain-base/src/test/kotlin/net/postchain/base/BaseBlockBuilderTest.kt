@@ -23,6 +23,7 @@ class BaseBlockBuilderTest {
     val ctx = BaseEContext(mock(Connection::class.java), 2L, 0, db)
     val bctx = BaseBlockEContext(ctx, 1, 10, mapOf())
     val myMerkleRootHash = "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
+    val mySnapshotMerkleRootHash = "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
     val myBlockchainRid = BlockchainRid("bcRid".toByteArray())
     val dummy = ByteArray(32, { 0 })
     val subjects = arrayOf("test".toByteArray())
@@ -33,7 +34,7 @@ class BaseBlockBuilderTest {
     fun invalidMonotoneTimestamp() {
         val timestamp = 1L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, mySnapshotMerkleRootHash, timestamp)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
         assert(!bbb.validateBlockHeader(header).result)
@@ -43,7 +44,7 @@ class BaseBlockBuilderTest {
     fun invalidMonotoneTimestampEquals() {
         val timestamp = 10L
         val blockData = InitialBlockData(myBlockchainRid,2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, mySnapshotMerkleRootHash, timestamp)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
         assert(!bbb.validateBlockHeader(header).result)
@@ -53,7 +54,7 @@ class BaseBlockBuilderTest {
     fun validMonotoneTimestamp() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid,2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, mySnapshotMerkleRootHash, timestamp)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
         assert(bbb.validateBlockHeader(header).result)

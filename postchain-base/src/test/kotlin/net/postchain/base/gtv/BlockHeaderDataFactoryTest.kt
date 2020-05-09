@@ -19,6 +19,8 @@ class BlockHeaderDataFactoryTest {
 
     val dummyRootHash = "aoeu".toByteArray()
 
+    val dummySnapshotRootHash = "aoeu".toByteArray()
+
     val dummyBlockRid = "z".toByteArray()
 
     @Test
@@ -28,7 +30,7 @@ class BlockHeaderDataFactoryTest {
         depArr[2] = dummyBlockRid
         val iBlockData = buildInitData(depArr)
         val timestamp = 12L
-        val blockHeaderData = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, dummyRootHash, timestamp)
+        val blockHeaderData = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, dummyRootHash, dummySnapshotRootHash, timestamp)
 
         val gtvDep = blockHeaderData.gtvDependencies
         assertEquals(GtvType.ARRAY, gtvDep.type)
@@ -48,8 +50,9 @@ class BlockHeaderDataFactoryTest {
 
         val iBlockData = buildInitData(null)
         val rootHash = "aoeu".toByteArray()
+        val snapshotRootHash = "aoeu".toByteArray()
         val timestamp = 12L
-        val blockHeaderData = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, rootHash, timestamp)
+        val blockHeaderData = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, rootHash, snapshotRootHash, timestamp)
 
         assertEquals(blockHeaderData.gtvDependencies, GtvNull)
     }

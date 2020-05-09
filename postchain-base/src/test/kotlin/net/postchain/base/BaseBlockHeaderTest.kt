@@ -55,10 +55,11 @@ class BaseBlockHeaderTest {
 
     private fun createHeader(blockchainRid: BlockchainRid, blockIID: Long, chainId: Long, prevBlockRid: ByteArray, height: Long): BlockHeader {
         val rootHash = ByteArray(32, {0})
+        val snapshotRootHash = ByteArray(32, {0})
         val timestamp = 10000L + height
         val dependencies = createBlockchainDependencies()
         val blockData = InitialBlockData(blockchainRid, blockIID, chainId, prevBlockRid, height, timestamp, dependencies)
-        return BaseBlockHeader.make(SECP256K1CryptoSystem(), blockData, rootHash, timestamp)
+        return BaseBlockHeader.make(SECP256K1CryptoSystem(), blockData, rootHash, snapshotRootHash, timestamp)
     }
 
     private fun createBlockchainDependencies(): Array<Hash?>? {

@@ -36,7 +36,6 @@ interface BlockDatabase {
     fun loadUnfinishedBlock(block: BlockData): Promise<Signature, Exception> // returns block signature if successful
     fun commitBlock(signatures: Array<Signature?>): Promise<Unit, Exception>
     fun buildBlock(): Promise<Pair<BlockData, Signature>, Exception>
-
     fun verifyBlockSignature(s: Signature): Boolean
     fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception>
     fun getBlockAtHeight(height: Long): Promise<BlockDataWithWitness, Exception>

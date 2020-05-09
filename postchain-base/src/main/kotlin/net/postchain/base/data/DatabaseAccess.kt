@@ -23,7 +23,6 @@ interface DatabaseAccess {
 
     fun getBlockchainRID(ctx: EContext): BlockchainRid?
     fun insertBlock(ctx: EContext, height: Long): Long
-    fun insertSnapshot(ctx: EContext, rootHash: ByteArray, height: Long): Long
     fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long
     fun finalizeBlock(ctx: BlockEContext, header: BlockHeader)
 
@@ -47,15 +46,15 @@ interface DatabaseAccess {
     fun getBlocks(ctx: EContext, blockHeight: Long, asc: Boolean, limit: Int): List<BlockInfoExt>
 
     // Blockchain configurations
-    fun findConfigurationHeightForBlock(context: EContext, height: Long): Long?
+    fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
 
     // Get data to build snapshot
     fun getBlockchainsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
-    fun getConfigurationsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getConfigurationsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0, height: Long): List<RowData>
     fun getMetaInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
     fun getPeerInfosInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
-    fun getTxsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
-    fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getTxsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0, height: Long): List<RowData>
+    fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0, height: Long): List<RowData>
     fun getTables(ctx: EContext): List<String>
     // Query data for rellr app
     fun getDataInRange(ctx: EContext, tableName: String, limit: Int, offset: Long, original: Long = 0): List<RowData>
@@ -98,11 +97,6 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     override fun insertBlock(ctx: EContext, height: Long): Long {
         queryRunner.update(ctx.conn, sqlCommands.insertBlocks, ctx.chainID, height)
         return queryRunner.query(ctx.conn, "SELECT block_iid FROM blocks WHERE chain_iid = ? and block_height = ?", longRes, ctx.chainID, height)
-    }
-
-    override fun insertSnapshot(ctx: EContext, rootHash: ByteArray, height: Long): Long {
-        queryRunner.update(ctx.conn, sqlCommands.insertSnapshots, rootHash, height, ctx.nodeID)
-        return queryRunner.query(ctx.conn, "SELECT snapshot_iid FROM snapshots WHERE root_hash = ? and block_height = ? and node_id = ?", longRes, rootHash, height, ctx.nodeID)
     }
 
     override fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long {
@@ -305,8 +299,6 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             // there is some serious problem that needs manual work
             queryRunner.update(connection, sqlCommands.createTableBlockChains)
 
-            queryRunner.update(connection, sqlCommands.createTableSnapshots)
-
             queryRunner.update(connection, sqlCommands.createTableBlocks)
 
             queryRunner.update(connection, sqlCommands.createTableTransactions)
@@ -370,11 +362,11 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
         return blocksInfo.map { blockInfo ->
             val blockRid = blockInfo["block_rid"] as ByteArray
-            val blockHeight = blockInfo["block_height"] as Long
+            val height = blockInfo["block_height"] as Long
             val blockHeader = blockInfo["block_header_data"] as ByteArray
             val blockWitness = blockInfo["block_witness"] as ByteArray
             val timestamp = blockInfo["timestamp"] as Long
-            DatabaseAccess.BlockInfoExt(blockRid, blockHeight, blockHeader, blockWitness, timestamp)
+            DatabaseAccess.BlockInfoExt(blockRid, height, blockHeader, blockWitness, timestamp)
         }
     }
 
@@ -400,19 +392,19 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
-    override fun getConfigurationsInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
+    override fun getConfigurationsInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
                     SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, height, configuration_data FROM configurations) x  
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid = ? AND height < ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID, height)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
             val chainIid = row["chain_iid"] as Long
-            val height = row["height"] as Long
+            val blockHeight = row["height"] as Long
             val data = row["configuration_data"] as ByteArray
 
-            RowData(GtvInteger(rowId), GtvString("configurations"), ConfigurationData(chainIid, height, data).toGtv())
+            RowData(GtvInteger(rowId), GtvString("configurations"), ConfigurationData(chainIid, blockHeight, data).toGtv())
         }
     }
 
@@ -454,11 +446,11 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                 ColumnListHandler(), ctx.conn.schema)
     }
 
-    override fun getTxsInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
+    override fun getTxsInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
                     SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, tx_iid, chain_iid, tx_rid, tx_data, tx_hash, block_iid FROM transactions) x 
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid = ? AND block_iid IN (SELECT block_iid FROM blocks WHERE block_height < ?)""", mapListHandler, original, offset+1, offset+limit, ctx.chainID, height)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
@@ -472,21 +464,22 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
-    override fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
+    override fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
-                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, block_iid, block_rid, block_height, block_header_data, block_witness, timestamp FROM blocks) x  
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, block_iid, block_rid, chain_iid, block_height, block_header_data, block_witness, timestamp FROM blocks) x  
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid = ? AND block_height < ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID, height)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
             val blockIid = row["block_iid"] as Long
             val blockRid = row["block_rid"] as ByteArray
+            val chainIid = row["chain_iid"] as Long
             val blockHeight = row["block_height"] as Long
             val blockHeader = row["block_header_data"] as ByteArray
             val blockWitness = row["block_witness"] as ByteArray
             val timestamp = row["timestamp"] as Long
-            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockRid, blockHeight, blockHeader, blockWitness, timestamp).toGtv())
+            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockRid, chainIid, blockHeight, blockHeader, blockWitness, timestamp).toGtv())
         }
     }
 
@@ -538,7 +531,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {
         return queryRunner.query(ctx.conn,
-                "SELECT configuration_data FROM configurations WHERE chain_iid= ? AND height = ?",
+                "SELECT configuration_data FROM configurations WHERE chain_iid = ? AND height = ?",
                 nullableByteArrayRes, ctx.chainID, height)
     }
 

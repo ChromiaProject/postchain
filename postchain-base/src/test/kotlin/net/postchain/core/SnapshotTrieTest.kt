@@ -43,11 +43,11 @@ class SnapshotTrieTest {
         data["city"] = GtvString("Stockholm")
         return listOf(
                 RowData(GtvInteger(18 ), GtvString("transactions"), TxData(18L, 1L, "t18".toByteArray(), "t18".toByteArray(), "t18".toByteArray(), 1L).toGtv()),
-                RowData(GtvInteger(3  ), GtvString("blocks"), BlockData(3L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b1".toByteArray(), 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(3  ), GtvString("blocks"), BlockData(3L, "b3".toByteArray(), 1L, 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b1".toByteArray(), 1L, 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(342), GtvString("transactions"), TxData(342L, 1L, "t342".toByteArray(), "t342".toByteArray(), "t342".toByteArray(), 3L).toGtv()),
-                RowData(GtvInteger(17 ), GtvString("blocks"), BlockData(17L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(15 ), GtvString("blocks"), BlockData(15L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(17 ), GtvString("blocks"), BlockData(17L, "b17".toByteArray(), 1L, 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(15 ), GtvString("blocks"), BlockData(15L, "b15".toByteArray(), 1L, 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(22 ), GtvString("transactions"), TxData(22L,  1L, "t22".toByteArray(), "t22".toByteArray(), "t22".toByteArray(), 15L).toGtv()),
                 RowData(GtvInteger(86 ), GtvString("transactions"), TxData(86L,1L, "t86".toByteArray(), "t86".toByteArray(), "t86".toByteArray(), 12L).toGtv()),
                 RowData(GtvInteger(23 ), GtvString("users"), GtvFactory.gtv(GtvDictionary.build(data)))
@@ -63,8 +63,8 @@ class SnapshotTrieTest {
         val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray)
         require(row == rows[0])
 
-        val leafs = rows.map { row ->
-            TLeaf(longToKey(row.id.asInteger()), row)
+        val leafs = rows.map { r ->
+            TLeaf(longToKey(r.id.asInteger()), r)
         }
         for (l in leafs) printTree(l)
 
@@ -81,19 +81,19 @@ class SnapshotTrieTest {
     fun testBuildChunk() {
         val data = listOf(
                 RowData(GtvInteger(5 ), GtvString("transactions"), TxData(5L, 1L, "t18".toByteArray(), "t18".toByteArray(), "t18".toByteArray(), 1L).toGtv()),
-                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 1L, 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(6), GtvString("transactions"), TxData(6L, 1L, "t342".toByteArray(), "t342".toByteArray(), "t342".toByteArray(), 3L).toGtv()),
-                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 1L, 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 1L, 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(7 ), GtvString("transactions"), TxData(7L,  1L, "t22".toByteArray(), "t22".toByteArray(), "t22".toByteArray(), 15L).toGtv()),
                 RowData(GtvInteger(8 ), GtvString("transactions"), TxData(8L,1L, "t86".toByteArray(), "t86".toByteArray(), "t86".toByteArray(), 12L).toGtv())
         )
         val blocks = listOf(
-                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv())
+                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 1L, 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 1L, 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 1L, 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv())
         )
 
         val txs = listOf(
@@ -110,8 +110,8 @@ class SnapshotTrieTest {
         val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray)
         require(row == rows[0])
 
-        val leafs = rows.map { row ->
-            TLeaf(longToKey(row.id.asInteger()), row)
+        val leafs = rows.map { r ->
+            TLeaf(longToKey(r.id.asInteger()), r)
         }
         for (l in leafs) printTree(l)
         val t1 = mergeTrees(leafs)
@@ -140,19 +140,19 @@ class SnapshotTrieTest {
     fun testHashMerge() {
         val data =         listOf(
                 RowData(GtvInteger(5 ), GtvString("transactions"), TxData(5L, 1L, "t18".toByteArray(), "t18".toByteArray(), "t18".toByteArray(), 1L).toGtv()),
-                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 1L, 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(6), GtvString("transactions"), TxData(6L, 1L, "t342".toByteArray(), "t342".toByteArray(), "t342".toByteArray(), 3L).toGtv()),
-                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 1L, 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 1L, 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(7 ), GtvString("transactions"), TxData(7L,  1L, "t22".toByteArray(), "t22".toByteArray(), "t22".toByteArray(), 15L).toGtv()),
                 RowData(GtvInteger(8 ), GtvString("transactions"), TxData(8L,1L, "t86".toByteArray(), "t86".toByteArray(), "t86".toByteArray(), 12L).toGtv())
         )
         val blocks = listOf(
-                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv())
+                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 1L, 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 1L, 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 1L, 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv())
         )
 
         val txs = listOf(
@@ -169,8 +169,8 @@ class SnapshotTrieTest {
         val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray)
         require(row == rows[0])
 
-        val leafs = rows.map { row ->
-            TLeaf(longToKey(row.id.asInteger()), row)
+        val leafs = rows.map { r ->
+            TLeaf(longToKey(r.id.asInteger()), r)
         }
         for (l in leafs) printTree(l)
         val t1 = mergeTrees(leafs)
@@ -242,19 +242,19 @@ class SnapshotTrieTest {
     fun testBuildTreeDeserialization() {
         val data =         listOf(
                 RowData(GtvInteger(5 ), GtvString("transactions"), TxData(5L, 1L, "t18".toByteArray(), "t18".toByteArray(), "t18".toByteArray(), 1L).toGtv()),
-                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 1L, 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(6), GtvString("transactions"), TxData(6L, 1L, "t342".toByteArray(), "t342".toByteArray(), "t342".toByteArray(), 3L).toGtv()),
-                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 1L, 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 1L, 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv()),
                 RowData(GtvInteger(7 ), GtvString("transactions"), TxData(7L,  1L, "t22".toByteArray(), "t22".toByteArray(), "t22".toByteArray(), 15L).toGtv()),
                 RowData(GtvInteger(8 ), GtvString("transactions"), TxData(8L,1L, "t86".toByteArray(), "t86".toByteArray(), "t86".toByteArray(), 12L).toGtv())
         )
         val blocks = listOf(
-                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
-                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv())
+                RowData(GtvInteger(1  ), GtvString("blocks"), BlockData(1L, "b3".toByteArray(), 1L, 1L, "h3".toByteArray(), "w3".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(2  ), GtvString("blocks"), BlockData(2L, "b1".toByteArray(), 1L, 2L, "h1".toByteArray(), "w1".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(3 ), GtvString("blocks"), BlockData(3L, "b17".toByteArray(), 1L, 3L, "h17".toByteArray(), "w17".toByteArray(), 10000L).toGtv()),
+                RowData(GtvInteger(4 ), GtvString("blocks"), BlockData(4L, "b15".toByteArray(), 1L, 4L, "h15".toByteArray(), "w15".toByteArray(), 10000L).toGtv())
         )
 
         val txs = listOf(

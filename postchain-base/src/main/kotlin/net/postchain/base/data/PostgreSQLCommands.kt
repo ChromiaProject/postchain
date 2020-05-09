@@ -19,13 +19,6 @@ object PostgreSQLCommands : SQLCommands {
             "  UNIQUE (chain_iid, block_rid)," +
             "  UNIQUE (chain_iid, block_height))"
 
-    override val createTableSnapshots: String = "CREATE TABLE snapshots" +
-            " (snapshot_iid BIGSERIAL PRIMARY KEY, " +
-            " root_hash bytea NOT NULL, " +
-            " block_height BIGINT NOT NULL, " +
-            " node_id integer NOT NULL, " +
-            " UNIQUE (root_hash, block_height, node_id))"
-
     override val createTableBlockChains: String = "CREATE TABLE blockchains " +
             " (chain_iid BIGINT PRIMARY KEY, blockchain_rid BYTEA NOT NULL)"
 
@@ -55,8 +48,6 @@ object PostgreSQLCommands : SQLCommands {
     override val createTableMeta: String = "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)"
 
     override val insertBlocks: String = "INSERT INTO blocks (chain_iid, block_height) VALUES (?, ?)"
-
-    override val insertSnapshots: String = "INSERT INTO snapshots (root_hash, block_height, node_id) VALUES (?, ?, ?)"
 
     override val insertTransactions: String = "INSERT INTO transactions (chain_iid, tx_rid, tx_data, tx_hash, block_iid) " +
             "VALUES (?, ?, ?, ?, ?)"

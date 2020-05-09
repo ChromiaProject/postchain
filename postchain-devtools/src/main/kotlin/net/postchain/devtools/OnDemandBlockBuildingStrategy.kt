@@ -22,9 +22,18 @@ class OnDemandBlockBuildingStrategy(
     @Volatile
     var committedHeight = -1
     val blocks = LinkedBlockingQueue<BlockData>()
+    private val strategyData = configData.getBlockBuildingStrategy()
+    private val epoch = strategyData?.get("epoch")?.asInteger() ?: 1024
 
     override fun shouldBuildBlock(): Boolean {
         return upToHeight > committedHeight
+    }
+
+    override fun shouldBuildSnapshot(): Boolean {
+        if (committedHeight == -1) {
+            return false
+        }
+        return (committedHeight+1) % epoch == 0L
     }
 
     fun buildBlocksUpTo(height: Long) {

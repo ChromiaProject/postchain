@@ -22,7 +22,6 @@ object BlockchainRidFactory {
      * TODO: Olle Can we check in any other way if the GTV config we are holding is NOT the first config?
      *
      * @param data is the [Gtv] data of the configuration
-     * @param merkleHashCalculator needed if the BC RID does not exist
      * @param eContext
      * @return the blockchain's RID, either old or just created
      */

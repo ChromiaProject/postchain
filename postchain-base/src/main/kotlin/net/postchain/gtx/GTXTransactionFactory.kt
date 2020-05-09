@@ -18,13 +18,13 @@ import net.postchain.gtx.serializer.GtxTransactionDataSerializer
  * Idea is that we can build a [GTXTransaction] from different layers.
  * The most normal way would be to build from binary, but sometimes we might have deserialized the binary data already
  */
-class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXModule, val cs: CryptoSystem, val maxTransactionSize : Long = 1024*1024) : TransactionFactory {
+class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXModule, val cs: CryptoSystem, private val maxTransactionSize : Long = 1024*1024) : TransactionFactory {
 
-    val gtvMerkleHashCalculator = GtvMerkleHashCalculator(cs) // Here we are using the standard cache
+    private val gtvMerkleHashCalculator = GtvMerkleHashCalculator(cs) // Here we are using the standard cache
 
     override fun decodeTransaction(data: ByteArray): Transaction {
         if (data.size > maxTransactionSize ) {
-            throw Exception("Transaction size exceeds max transaction size ${maxTransactionSize} bytes")
+            throw Exception("Transaction size exceeds max transaction size $maxTransactionSize bytes")
         }
         return internalBuild(data)
     }
@@ -69,7 +69,7 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
         // Extract some stuff
         val signers = body.signers
         val signatures = gtxData.signatures
-        val ops = body.getExtOpData().map({ module.makeTransactor(it) }).toTypedArray()
+        val ops = body.getExtOpData().map { module.makeTransactor(it) }.toTypedArray()
 
         return GTXTransaction(rawData, gtvData, gtxData, signers, signatures, ops, myHash, myRID, module, cs)
     }

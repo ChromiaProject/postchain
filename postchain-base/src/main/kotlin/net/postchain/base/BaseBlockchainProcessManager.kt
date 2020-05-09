@@ -9,7 +9,6 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.debug.SnapshotProcessName
 import net.postchain.devtools.PeerNameHelper.peerName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import java.util.*
@@ -36,7 +35,6 @@ open class BaseBlockchainProcessManager(
     val nodeConfig = nodeConfigProvider.getConfiguration()
     val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
-    private var snapshotProcess: BlockchainProcess? = null
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
@@ -90,10 +88,6 @@ open class BaseBlockchainProcessManager(
                         logger.debug { "$processName: BlockchainEngine has been created: chainId: $chainId" }
 
                         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
-                        val snapshotProcessName = SnapshotProcessName(nodeConfig.pubKey)
-                        if (snapshotProcess == null) {
-                            snapshotProcess = blockchainInfrastructure.makeSnapshotProcess(snapshotProcessName, engine)
-                        }
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                         blockchainProcessesLoggers[chainId] = timer(

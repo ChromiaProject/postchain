@@ -7,21 +7,17 @@
         blockdelay=1000 (milliseconds)
         -->
         <dict>
-            <entry key="name">
-                <string>net.postchain.devtools.OnDemandBlockBuildingStrategy</string>
-            </entry>
-        </dict>
-    </entry>
-    <entry key="snapshotstrategy">
-        <dict>
             <entry key="chunksize">
                 <int>8</int>
             </entry>
             <entry key="epoch">
                 <int>24</int>
             </entry>
+            <entry key="folder">
+                <string>snapshot</string>
+            </entry>
             <entry key="name">
-                <string>net.postchain.base.BaseSnapshotBuildingStrategy</string>
+                <string>net.postchain.devtools.OnDemandBlockBuildingStrategy</string>
             </entry>
         </dict>
     </entry>

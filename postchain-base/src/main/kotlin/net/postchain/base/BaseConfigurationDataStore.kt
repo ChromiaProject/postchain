@@ -38,7 +38,6 @@ object BaseConfigurationDataStore : KLogging(), ConfigurationDataStore {
      * @param height is the lowest block height from which the configuration should be used.
      * @param binData is the configuration as binary.
      * @param gtvData is the configuration in GTV format.
-     * @param merkleHashCalculator used to calculate BC RID if needed.
      * @return the Blockchain RID of the chain.
      */
     private fun addConfigurationDataInternal(

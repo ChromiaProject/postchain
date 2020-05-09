@@ -15,15 +15,17 @@ import net.postchain.gtv.GtvFactory.gtv
  *  1. bockchainRid [GtvByteArray]
  *  2. prevBlockRid [GtvByteArray]
  *  3. rootHash [GtvByteArray]
- *  4. timestamp [GtvInteger]
- *  5. height [GtvInteger]
- *  6. dependencies [GtvArray] or [GtvNull] (this is to save space)
- *  6. extra  [GtvDictionary]
+ *  4. snapshotRootHash [GtvByteArray]
+ *  5. timestamp [GtvInteger]
+ *  6. height [GtvInteger]
+ *  7. dependencies [GtvArray] or [GtvNull] (this is to save space)
+ *  8. extra  [GtvDictionary]
  */
 data class BlockHeaderData(
         val gtvBlockchainRid: GtvByteArray,
         val gtvPreviousBlockRid: GtvByteArray,
         val gtvMerkleRootHash: GtvByteArray,
+        val gtvSnapshotMerkleRootHash: GtvByteArray,
         val gtvTimestamp: GtvInteger,
         val gtvHeight: GtvInteger,
         val gtvDependencies: Gtv, // Can be either GtvNull or GtvArray
@@ -40,6 +42,10 @@ data class BlockHeaderData(
 
     fun getMerkleRootHash(): ByteArray {
         return gtvMerkleRootHash.bytearray
+    }
+
+    fun getSnapshotMerkleRootHash(): ByteArray {
+        return gtvSnapshotMerkleRootHash.bytearray
     }
 
     fun getTimestamp(): Long {
@@ -88,7 +94,7 @@ data class BlockHeaderData(
     }
 
     fun toGtv(): GtvArray {
-        return gtv(gtvBlockchainRid, gtvPreviousBlockRid, gtvMerkleRootHash, gtvTimestamp, gtvHeight, gtvDependencies, gtvExtra)
+        return gtv(gtvBlockchainRid, gtvPreviousBlockRid, gtvMerkleRootHash, gtvSnapshotMerkleRootHash, gtvTimestamp, gtvHeight, gtvDependencies, gtvExtra)
     }
 
     companion object {
@@ -98,10 +104,11 @@ data class BlockHeaderData(
                     gtv[0] as GtvByteArray,
                     gtv[1] as GtvByteArray,
                     gtv[2] as GtvByteArray,
-                    gtv[3] as GtvInteger,
+                    gtv[3] as GtvByteArray,
                     gtv[4] as GtvInteger,
-                    gtv[5],
-                    gtv[6] as GtvDictionary)
+                    gtv[5] as GtvInteger,
+                    gtv[6],
+                    gtv[7] as GtvDictionary)
         }
     }
 
