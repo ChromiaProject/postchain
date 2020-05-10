@@ -48,7 +48,7 @@ open class BaseBlockEContext(
     }
 }
 
-open class BaseSnaphotEContext(
+open class BaseSnapshotEContext(
         val ectx: EContext
 ): EContext by ectx
 

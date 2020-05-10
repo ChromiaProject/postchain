@@ -21,6 +21,7 @@ object PostgreSQLCommands : SQLCommands {
 
     override val createTableSnapshots: String = "CREATE TABLE snapshots" +
             " (snapshot_iid BIGSERIAL PRIMARY KEY, " +
+            " chain_iid bigint NOT NULL," +
             " root_hash bytea NOT NULL, " +
             " block_height BIGINT NOT NULL, " +
             " node_id integer NOT NULL, " +
@@ -56,7 +57,7 @@ object PostgreSQLCommands : SQLCommands {
 
     override val insertBlocks: String = "INSERT INTO blocks (chain_iid, block_height) VALUES (?, ?)"
 
-    override val insertSnapshots: String = "INSERT INTO snapshots (root_hash, block_height, node_id) VALUES (?, ?, ?)"
+    override val insertSnapshots: String = "INSERT INTO snapshots (chain_iid, root_hash, block_height, node_id) VALUES (?, ?, ?, ?)"
 
     override val insertTransactions: String = "INSERT INTO transactions (chain_iid, tx_rid, tx_data, tx_hash, block_iid) " +
             "VALUES (?, ?, ?, ?, ?)"

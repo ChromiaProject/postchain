@@ -97,17 +97,17 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun insertBlock(ctx: EContext, height: Long): Long {
         queryRunner.update(ctx.conn, sqlCommands.insertBlocks, ctx.chainID, height)
-        return queryRunner.query(ctx.conn, "SELECT block_iid FROM blocks WHERE chain_iid = ? and block_height = ?", longRes, ctx.chainID, height)
+        return queryRunner.query(ctx.conn, "SELECT block_iid FROM blocks WHERE chain_iid = ? AND block_height = ?", longRes, ctx.chainID, height)
     }
 
     override fun insertSnapshot(ctx: EContext, rootHash: ByteArray, height: Long): Long {
-        queryRunner.update(ctx.conn, sqlCommands.insertSnapshots, rootHash, height, ctx.nodeID)
-        return queryRunner.query(ctx.conn, "SELECT snapshot_iid FROM snapshots WHERE root_hash = ? and block_height = ? and node_id = ?", longRes, rootHash, height, ctx.nodeID)
+        queryRunner.update(ctx.conn, sqlCommands.insertSnapshots, ctx.chainID, rootHash, height, ctx.nodeID)
+        return queryRunner.query(ctx.conn, "SELECT snapshot_iid FROM snapshots WHERE chain_iid = ? AND root_hash = ? AND block_height = ? AND node_id = ?", longRes, ctx.chainID, rootHash, height, ctx.nodeID)
     }
 
     override fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long {
         queryRunner.update(ctx.conn, sqlCommands.insertTransactions, ctx.chainID, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID)
-        return queryRunner.query(ctx.conn, "SELECT tx_iid FROM transactions WHERE chain_iid= ? and tx_rid = ?", longRes, ctx.chainID, tx.getRID())
+        return queryRunner.query(ctx.conn, "SELECT tx_iid FROM transactions WHERE chain_iid= ? AND tx_rid = ?", longRes, ctx.chainID, tx.getRID())
     }
 
     override fun finalizeBlock(ctx: BlockEContext, header: BlockHeader) {
@@ -389,7 +389,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
                     SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, blockchain_rid FROM blockchains) x  
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid= ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
@@ -404,7 +404,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
                     SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, height, configuration_data FROM configurations) x  
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid= ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
@@ -458,7 +458,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
                     SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, tx_iid, chain_iid, tx_rid, tx_data, tx_hash, block_iid FROM transactions) x 
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid= ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
@@ -475,18 +475,19 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     override fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
-                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, block_iid, block_rid, block_height, block_header_data, block_witness, timestamp FROM blocks) x  
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, block_iid, block_rid, block_height, block_header_data, block_witness, timestamp FROM blocks) x 
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid = ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
             val blockIid = row["block_iid"] as Long
             val blockRid = row["block_rid"] as ByteArray
+            val chainIid = row["chain_iid"] as Long
             val blockHeight = row["block_height"] as Long
             val blockHeader = row["block_header_data"] as ByteArray
             val blockWitness = row["block_witness"] as ByteArray
             val timestamp = row["timestamp"] as Long
-            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockRid, blockHeight, blockHeader, blockWitness, timestamp).toGtv())
+            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockRid, chainIid, blockHeight, blockHeader, blockWitness, timestamp).toGtv())
         }
     }
 

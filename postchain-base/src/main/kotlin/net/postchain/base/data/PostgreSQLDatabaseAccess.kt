@@ -20,8 +20,9 @@ class PostgreSQLDatabaseAccess(sqlCommands: SQLCommands) : SQLDatabaseAccess(sql
     override fun insertSnapshot(ctx: EContext, rootHash: ByteArray, height: Long): Long {
         return queryRunner.query(
                 ctx.conn,
-                "INSERT INTO snapshots (root_hash, block_height, node_id) VALUES (?, ?, ?) RETURNING snapshot_iid",
+                "INSERT INTO snapshots (chain_iid, root_hash, block_height, node_id) VALUES (?, ?, ?, ?) RETURNING snapshot_iid",
                 longRes,
+                ctx.chainID,
                 rootHash,
                 height,
                 ctx.nodeID)

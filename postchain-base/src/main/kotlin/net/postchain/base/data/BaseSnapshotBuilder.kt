@@ -30,7 +30,7 @@ open class BaseSnapshotBuilder(
             // Serialize tree chunk object into file with name is root hash of the tree chunk
             if (data != null) {
 //                printTree(data)
-                val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator + snapshotFolder + File.separator + data.hash()
+                val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator + snapshotFolder + File.separator + ectx.chainID + File.separator + data.hash()
                 val file = File(path)
                 file.parentFile.mkdirs()
                 file.createNewFile()

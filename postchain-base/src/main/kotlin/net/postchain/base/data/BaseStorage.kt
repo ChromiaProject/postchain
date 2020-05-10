@@ -39,6 +39,7 @@ class BaseStorage(
     }
 
     override fun closeWriteConnection(context: EContext, commit: Boolean) {
+        if (context.conn.isClosed) return
         with(context.conn) {
             //            logger.debug("${context.nodeID} BaseStorage.closeWriteConnection()")
             when {

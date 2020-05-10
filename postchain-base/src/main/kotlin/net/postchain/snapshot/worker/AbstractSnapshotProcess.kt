@@ -48,7 +48,7 @@ abstract class AbstractSnapshotProcess: BlockchainProcess {
     override fun shutdown() {
         updateLoop.interrupt()
         updateLoop.join()
-        blockchainEngine.shutdown()
+//        blockchainEngine.shutdown()
         snapshotDatabase.stop()
     }
 }

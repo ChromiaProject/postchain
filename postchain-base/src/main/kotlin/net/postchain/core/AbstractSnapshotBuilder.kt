@@ -1,6 +1,6 @@
 package net.postchain.core
 
-import net.postchain.base.BaseSnaphotEContext
+import net.postchain.base.BaseSnapshotEContext
 
 abstract class AbstractSnapshotBuilder(
         val ectx: EContext
@@ -15,7 +15,7 @@ abstract class AbstractSnapshotBuilder(
         if (finalized) {
             ProgrammerMistake("This builder has already been used once (you must create a new builder instance)")
         }
-        bctx = BaseSnaphotEContext(ectx)
+        bctx = BaseSnapshotEContext(ectx)
     }
 
     override fun commit() {

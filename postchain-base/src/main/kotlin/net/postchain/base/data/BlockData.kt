@@ -5,11 +5,11 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 
-data class BlockData(val blockIid: Long, val blockRid: ByteArray, val blockHeight: Long,
+data class BlockData(val blockIid: Long, val blockRid: ByteArray, val chainIid: Long, val blockHeight: Long,
                      val blockHeader: ByteArray, val witness: ByteArray, val timestamp: Long) {
 
     fun toGtv(): GtvArray {
-        return GtvFactory.gtv(GtvInteger(blockIid), GtvByteArray(blockRid), GtvInteger(blockHeight),
+        return GtvFactory.gtv(GtvInteger(blockIid), GtvByteArray(blockRid), GtvInteger(chainIid), GtvInteger(blockHeight),
                 GtvByteArray(blockHeader), GtvByteArray(witness), GtvInteger(timestamp))
     }
 
@@ -19,9 +19,10 @@ data class BlockData(val blockIid: Long, val blockRid: ByteArray, val blockHeigh
                     gtv[0].asInteger(),
                     gtv[1].asByteArray(),
                     gtv[2].asInteger(),
-                    gtv[3].asByteArray(),
+                    gtv[3].asInteger(),
                     gtv[4].asByteArray(),
-                    gtv[5].asInteger()
+                    gtv[5].asByteArray(),
+                    gtv[6].asInteger()
             )
         }
     }

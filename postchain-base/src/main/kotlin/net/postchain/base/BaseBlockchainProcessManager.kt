@@ -36,7 +36,7 @@ open class BaseBlockchainProcessManager(
     val nodeConfig = nodeConfigProvider.getConfiguration()
     val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
-    private var snapshotProcess: BlockchainProcess? = null
+    private val snapshotProcesses = mutableMapOf<Long, BlockchainProcess>()
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
@@ -90,10 +90,8 @@ open class BaseBlockchainProcessManager(
                         logger.debug { "$processName: BlockchainEngine has been created: chainId: $chainId" }
 
                         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
-                        val snapshotProcessName = SnapshotProcessName(nodeConfig.pubKey)
-                        if (snapshotProcess == null) {
-                            snapshotProcess = blockchainInfrastructure.makeSnapshotProcess(snapshotProcessName, engine)
-                        }
+                        val snapshotProcessName = SnapshotProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRID)
+                        snapshotProcesses[chainId] = blockchainInfrastructure.makeSnapshotProcess(snapshotProcessName, engine)
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                         blockchainProcessesLoggers[chainId] = timer(
@@ -134,6 +132,10 @@ open class BaseBlockchainProcessManager(
                 it.shutdown()
             }
 
+            snapshotProcesses.remove(chainId)?.also {
+                it.shutdown()
+            }
+
             blockchainProcessesLoggers.remove(chainId)?.also {
                 it.cancel()
                 it.purge()
@@ -149,6 +151,9 @@ open class BaseBlockchainProcessManager(
 
         blockchainProcesses.forEach { (_, process) -> process.shutdown() }
         blockchainProcesses.clear()
+
+        snapshotProcesses.forEach { (_, process) -> process.shutdown() }
+        snapshotProcesses.clear()
 
         blockchainProcessesLoggers.forEach { (_, t) ->
             t.cancel()
