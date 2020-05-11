@@ -91,7 +91,9 @@ open class BaseBlockBuilder(
 
             // Serialize tree chunk object into file with name is root hash of the tree chunk
             if (data != null) {
-                val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator + snapshotFolder + File.separator + ectx.chainID + File.separator + data.hash()
+                val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator +
+                        snapshotFolder + File.separator + ectx.chainID + File.separator +
+                        initialBlockData.height + File.separator + data.hash()
                 val file = File(path)
                 file.parentFile.mkdirs()
                 file.createNewFile()
