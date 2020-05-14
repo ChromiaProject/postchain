@@ -123,8 +123,8 @@ open class BaseBlockBuilder(
      *  @throws ProgrammerMistake Invalid BlockWitness implementation
      */
     override fun validateWitness(blockWitness: BlockWitness): Boolean {
-        if (!(blockWitness is MultiSigBlockWitness)) {
-            throw ProgrammerMistake("Invalid BlockWitness impelmentation.")
+        if (blockWitness !is MultiSigBlockWitness) {
+            throw ProgrammerMistake("Invalid BlockWitness implementation.")
         }
         val witnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, _blockData!!.header, subjects, getBFTRequiredSignatureCount(subjects.size))
         for (signature in blockWitness.getSignatures()) {
