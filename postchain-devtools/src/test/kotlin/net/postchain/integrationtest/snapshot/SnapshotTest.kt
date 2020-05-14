@@ -126,7 +126,7 @@ open class SnapshotTest: IntegrationTest() {
 
         // Creating all nodes
         nodeConfigsFilenames.forEachIndexed { i, nodeConfig ->
-            createSingleNode(i, nodesCount, nodeConfig, "/net/postchain/devtools/snapshot/blockchain_config_3.xml")
+            createSingleNode(i, nodesCount, nodeConfig, "/net/postchain/devtools/snapshot/blockchain_config_3.xml", preWipeDatabase = true)
         }
 
         // Asserting chain 1 is started for all nodes

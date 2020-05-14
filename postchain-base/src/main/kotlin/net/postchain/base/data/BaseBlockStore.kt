@@ -144,8 +144,7 @@ class BaseBlockStore : BlockStore {
         var original = 0L
         var tables = getTables(ctx)
         while (data.size < limit && tables.isNotEmpty()) {
-            val tableName = tables.first()
-            val rows = when(tableName) {
+            val rows = when(val tableName = tables.first()) {
                 "meta" -> db.getMetaInRange(ctx, limit-data.size, offset+data.size, original)
                 "blockchains" -> db.getBlockchainsInRange(ctx, limit-data.size, offset+data.size, original)
                 "blocks" -> db.getBlocksInRange(ctx, limit-data.size, offset+data.size, original, height)
@@ -156,12 +155,11 @@ class BaseBlockStore : BlockStore {
             }
             if (rows.isEmpty()) {
                 tables = tables.drop(1)
-                original += db.getRowCount(ctx, tableName)
                 continue
             }
             data.addAll(rows)
             tables = tables.drop(1)
-            original += db.getRowCount(ctx, tableName)
+            original += rows.size
         }
         return data.sorted()
     }

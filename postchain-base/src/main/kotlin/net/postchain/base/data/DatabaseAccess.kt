@@ -467,7 +467,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     override fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
-                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, block_iid, block_rid, chain_iid, block_height, block_header_data, block_witness, timestamp FROM blocks) x  
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, block_iid, block_rid, chain_iid, block_height, block_header_data, timestamp FROM blocks) x  
                     WHERE row_id BETWEEN ? AND ? AND chain_iid = ? AND block_height < ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID, height)
 
         return rows.map { row ->
@@ -477,9 +477,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val chainIid = row["chain_iid"] as Long
             val blockHeight = row["block_height"] as Long
             val blockHeader = row["block_header_data"] as ByteArray
-            val blockWitness = row["block_witness"] as ByteArray
             val timestamp = row["timestamp"] as Long
-            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockRid, chainIid, blockHeight, blockHeader, blockWitness, timestamp).toGtv())
+            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockRid, chainIid, blockHeight, blockHeader, timestamp).toGtv())
         }
     }
 

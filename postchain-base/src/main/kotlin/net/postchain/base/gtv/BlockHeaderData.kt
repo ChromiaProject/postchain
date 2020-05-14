@@ -67,14 +67,12 @@ data class BlockHeaderData(
             is GtvNull -> arrayOf()
             is GtvArray -> {
                 val lastBlockRidArray = arrayOfNulls<Hash>(gtvDependencies.getSize())
-                var i = 0
-                for (blockRid in gtvDependencies.array) {
+                for ((i, blockRid) in gtvDependencies.array.withIndex()) {
                     lastBlockRidArray[i] = when (blockRid) {
                         is GtvByteArray -> blockRid.bytearray
                         is GtvNull -> null // Allowed
                         else -> throw UserMistake("Cannot use type ${blockRid.type} in dependency list (at pos: $i)")
                     }
-                    i++
                 }
                 lastBlockRidArray
             }
@@ -88,7 +86,7 @@ data class BlockHeaderData(
         val retMap = HashMap<String, String>()
         for (key in this.gtvExtra.dict.keys) {
             val gtvValue = gtvExtra[key] as GtvString
-            retMap.put(key, gtvValue.string)
+            retMap[key] = gtvValue.string
         }
         return retMap
     }

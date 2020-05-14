@@ -154,7 +154,6 @@ open class BaseBlockBuilder(
 
         val computedMerkleRoot = computeMerkleRootHash()
         val computedSnapshotMerkleRoot = computeSnapshotMerkleRootHash(withSnapshot)
-
         return when {
             !header.prevBlockRID.contentEquals(initialBlockData.prevBlockRID) ->
                 ValidationResult(false, "header.prevBlockRID != initialBlockData.prevBlockRID," +
@@ -173,9 +172,8 @@ open class BaseBlockBuilder(
             !header.blockHeaderRec.getMerkleRootHash().contentEquals(computedMerkleRoot) -> // Do this last since most expensive check!
                 ValidationResult(false, "header.blockHeaderRec.rootHash != computeRootHash()")
 
-            //TODO: [HaDV] Need to check why the local and remote hash of snapshot tree are difference
-//            !header.blockHeaderRec.getSnapshotMerkleRootHash().contentEquals(computedSnapshotMerkleRoot) ->
-//                ValidationResult(false, "header.blockHeaderRec.snapshotRootHash != computeSnapshotRootHash(), remote: ${header.blockHeaderRec.getSnapshotMerkleRootHash().toHex()}, local:${computedSnapshotMerkleRoot.toHex()}")
+            !header.blockHeaderRec.getSnapshotMerkleRootHash().contentEquals(computedSnapshotMerkleRoot) ->
+                ValidationResult(false, "header.blockHeaderRec.snapshotRootHash != computeSnapshotRootHash(), remote: ${String(header.blockHeaderRec.getSnapshotMerkleRootHash())}, local:${String(computedSnapshotMerkleRoot)}, at ${initialBlockData.height}")
 
             else -> ValidationResult(true)
         }
