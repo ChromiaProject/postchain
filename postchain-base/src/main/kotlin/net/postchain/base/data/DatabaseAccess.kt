@@ -442,7 +442,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun getTables(ctx: EContext): List<String> {
         return queryRunner.query(ctx.conn,
-                """SELECT table_name FROM information_schema.tables WHERE table_schema = ?""",
+                """SELECT table_name FROM information_schema.tables WHERE table_schema = ? ORDER BY table_name DESC""",
                 ColumnListHandler(), ctx.conn.schema)
     }
 
