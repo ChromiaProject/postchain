@@ -25,10 +25,11 @@ class BaseBlockBuilderValidationTest {
     var bbs = BaseBlockStore()
     val tf = BaseTransactionFactory()
     val myBlockchainRid = BlockchainRid("bcRid".toByteArray())
-    val empty32Bytes = ByteArray(32, { 0 })
-    val rootHash =    "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
-    val snapshotRootHash =    "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
+    val empty32Bytes = ByteArray(32) { 0 }
+    val rootHash = "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
+    val snapshotRootHash = "910DBF1D82BD57EA32C63889CE49787C6BB5B07AF127EAB17AC95DF1724FB903".hexStringToByteArray()
     val badRootHash = "46AF9064F12FFFFFFFFFFFFFF04ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
+    val badSnapshotRootHash = "910DBF1FFFFFFFFA32C63889CE49787C6BB5B07AF127EAB17AC95DF1724FB903".hexStringToByteArray()
     val subjects = arrayOf("test".toByteArray())
     val sigMaker = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
 
@@ -80,7 +81,7 @@ class BaseBlockBuilderValidationTest {
     }
 
     @Test
-    fun validateBlokcHeader_invalidRootHash() {
+    fun validateBlockHeader_invalidRootHash() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid,2, 2, empty32Bytes, 1, timestamp, null)
         val header = BaseBlockHeader.make(cryptoSystem, blockData, badRootHash, snapshotRootHash, timestamp)
@@ -91,6 +92,20 @@ class BaseBlockBuilderValidationTest {
 
         assert(!validation.result)
         assertEquals(validation.message, "header.blockHeaderRec.rootHash != computeRootHash()")
+    }
+
+    @Test
+    fun validateBlockHeader_invalidSnapshotRootHash() {
+        val timestamp = 100L
+        val blockData = InitialBlockData(myBlockchainRid,2, 2, empty32Bytes, 1, timestamp, null)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, badSnapshotRootHash, timestamp)
+        bbb.bctx = bctx
+        bbb.initialBlockData = blockData
+
+        val validation = bbb.validateBlockHeader(header)
+
+        assert(!validation.result)
+        assertEquals(validation.message, "header.blockHeaderRec.snapshotRootHash != computeSnapshotRootHash(), remote: 910DBF1FFFFFFFFA32C63889CE49787C6BB5B07AF127EAB17AC95DF1724FB903, local:910DBF1D82BD57EA32C63889CE49787C6BB5B07AF127EAB17AC95DF1724FB903, at 1")
     }
 
 }

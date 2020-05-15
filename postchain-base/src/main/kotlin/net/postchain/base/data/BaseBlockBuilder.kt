@@ -173,7 +173,7 @@ open class BaseBlockBuilder(
                 ValidationResult(false, "header.blockHeaderRec.rootHash != computeRootHash()")
 
             !header.blockHeaderRec.getSnapshotMerkleRootHash().contentEquals(computedSnapshotMerkleRoot) ->
-                ValidationResult(false, "header.blockHeaderRec.snapshotRootHash != computeSnapshotRootHash(), remote: ${String(header.blockHeaderRec.getSnapshotMerkleRootHash())}, local:${String(computedSnapshotMerkleRoot)}, at ${initialBlockData.height}")
+                ValidationResult(false, "header.blockHeaderRec.snapshotRootHash != computeSnapshotRootHash(), remote: ${header.blockHeaderRec.getSnapshotMerkleRootHash().toHex()}, local:${computedSnapshotMerkleRoot.toHex()}, at ${initialBlockData.height}")
 
             else -> ValidationResult(true)
         }
