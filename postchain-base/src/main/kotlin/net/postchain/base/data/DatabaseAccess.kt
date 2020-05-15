@@ -107,12 +107,12 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long {
         queryRunner.update(ctx.conn, sqlCommands.insertTransactions, ctx.chainID, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID)
-        return queryRunner.query(ctx.conn, "SELECT tx_iid FROM transactions WHERE chain_iid= ? and tx_rid = ?", longRes, ctx.chainID, tx.getRID())
+        return queryRunner.query(ctx.conn, "SELECT tx_iid FROM transactions WHERE chain_iid = ? and tx_rid = ?", longRes, ctx.chainID, tx.getRID())
     }
 
     override fun finalizeBlock(ctx: BlockEContext, header: BlockHeader) {
         queryRunner.update(ctx.conn,
-                "UPDATE blocks SET block_rid = ?, block_header_data = ?, timestamp = ? WHERE chain_iid= ? AND block_iid = ?",
+                "UPDATE blocks SET block_rid = ?, block_header_data = ?, timestamp = ? WHERE chain_iid = ? AND block_iid = ?",
                 header.blockRID, header.rawData, (header as BaseBlockHeader).timestamp, ctx.chainID, ctx.blockIID
         )
     }
@@ -124,19 +124,19 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     }
 
     override fun getBlockHeight(ctx: EContext, blockRID: ByteArray, chainId: Long): Long? {
-        return queryRunner.query(ctx.conn, "SELECT block_height FROM blocks where chain_iid= ? and block_rid = ?",
+        return queryRunner.query(ctx.conn, "SELECT block_height FROM blocks where chain_iid = ? and block_rid = ?",
                 nullableLongRes, chainId, blockRID)
     }
 
     // The combination of CHAIN_ID and BLOCK_HEIGHT is unique
     override fun getBlockRID(ctx: EContext, height: Long): ByteArray? {
         return queryRunner.query(ctx.conn,
-                "SELECT block_rid FROM blocks WHERE chain_iid= ? AND block_height = ?",
+                "SELECT block_rid FROM blocks WHERE chain_iid = ? AND block_height = ?",
                 nullableByteArrayRes, ctx.chainID, height)
     }
 
     override fun getBlockHeader(ctx: EContext, blockRID: ByteArray): ByteArray {
-        return queryRunner.query(ctx.conn, "SELECT block_header_data FROM blocks where chain_iid= ? and block_rid = ?",
+        return queryRunner.query(ctx.conn, "SELECT block_header_data FROM blocks where chain_iid = ? and block_rid = ?",
                 byteArrayRes, ctx.chainID, blockRID)
     }
 
@@ -144,8 +144,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         val sql = """
             SELECT tx_rid, tx_hash${if (hashesOnly) "" else ", tx_data"}
             FROM transactions t
-            JOIN blocks b ON t.block_iid=b.block_iid
-            WHERE b.block_rid=? AND b.chain_iid=?
+            JOIN blocks b ON t.block_iid = b.block_iid
+            WHERE b.block_rid = ? AND b.chain_iid = ?
             ORDER BY tx_iid
         """.trimIndent()
 
@@ -162,19 +162,19 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray {
         return queryRunner.query(ctx.conn,
-                "SELECT block_witness FROM blocks WHERE chain_iid= ? AND block_rid = ?",
+                "SELECT block_witness FROM blocks WHERE chain_iid = ? AND block_rid = ?",
                 byteArrayRes, ctx.chainID, blockRID)
     }
 
     override fun getLastBlockHeight(ctx: EContext): Long {
         return queryRunner.query(ctx.conn,
-                "SELECT block_height FROM blocks WHERE chain_iid= ? ORDER BY block_height DESC LIMIT 1",
+                "SELECT block_height FROM blocks WHERE chain_iid = ? ORDER BY block_height DESC LIMIT 1",
                 longRes, ctx.chainID) ?: -1L
     }
 
     override fun getLastBlockRid(ctx: EContext, chainId: Long): ByteArray? {
         return queryRunner.query(ctx.conn,
-                "SELECT block_rid FROM blocks WHERE chain_iid= ? ORDER BY block_height DESC LIMIT 1",
+                "SELECT block_rid FROM blocks WHERE chain_iid = ? ORDER BY block_height DESC LIMIT 1",
                 nullableByteArrayRes, chainId)
     }
 
@@ -182,7 +182,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         val res = queryRunner.query(ctx.conn, """
                     SELECT b.block_height, b.block_rid
                          FROM blocks b
-                         JOIN blockchains bc ON bc.chain_iid= b.chain_iid
+                         JOIN blockchains bc ON bc.chain_iid = b.chain_iid
                          WHERE bc.blockchain_rid = ?
                          ORDER BY b.block_height DESC LIMIT 1
                          """, mapListHandler, bcRid.data)
@@ -205,7 +205,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun getLastBlockTimestamp(ctx: EContext): Long {
         return queryRunner.query(ctx.conn,
-                "SELECT timestamp FROM blocks WHERE chain_iid= ? ORDER BY timestamp DESC LIMIT 1",
+                "SELECT timestamp FROM blocks WHERE chain_iid = ? ORDER BY timestamp DESC LIMIT 1",
                 longRes, ctx.chainID) ?: -1L
     }
 
@@ -213,8 +213,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         return queryRunner.query(ctx.conn,
                 "SELECT tx_rid FROM " +
                         "transactions t " +
-                        "INNER JOIN blocks b ON t.block_iid=b.block_iid " +
-                        "where b.block_height=? and b.chain_iid=?",
+                        "INNER JOIN blocks b ON t.block_iid = b.block_iid " +
+                        "WHERE b.block_height = ? AND b.chain_iid = ?",
                 ColumnListHandler<ByteArray>(), height, ctx.chainID).toTypedArray()
     }
 
@@ -223,8 +223,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                 """
                     SELECT b.block_iid, b.block_header_data, b.block_witness
                     FROM blocks b
-                    JOIN transactions t ON b.block_iid=t.block_iid
-                    WHERE t.chain_iid=? and t.tx_rid=?
+                    JOIN transactions t ON b.block_iid = t.block_iid
+                    WHERE t.chain_iid = ? AND t.tx_rid = ?
                     """, mapListHandler, ctx.chainID, txRID)!!
         if (block.size < 1) throw UserMistake("Can't get confirmation proof for nonexistent tx")
         if (block.size > 1) throw ProgrammerMistake("Expected at most one hit")
@@ -236,7 +236,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray {
         return queryRunner.query(ctx.conn,
-                "SELECT tx_hash FROM transactions WHERE tx_rid = ? and chain_iid=?",
+                "SELECT tx_hash FROM transactions WHERE tx_rid = ? and chain_iid = ?",
                 byteArrayRes, txRID, ctx.chainID)
     }
 
@@ -244,20 +244,20 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         return queryRunner.query(ctx.conn,
                 "SELECT tx_rid FROM " +
                         "transactions t " +
-                        "where t.block_iid=? order by tx_iid",
-                ColumnListHandler<ByteArray>(), blockIid)!!
+                        "WHERE t.block_iid = ? ORDER BY tx_iid",
+                ColumnListHandler(), blockIid)!!
     }
 
     override fun getBlockTxHashes(ctx: EContext, blockIid: Long): List<ByteArray> {
         return queryRunner.query(ctx.conn,
                 "SELECT tx_hash FROM " +
                         "transactions t " +
-                        "where t.block_iid=? order by tx_iid",
+                        "WHERE t.block_iid = ? ORDER BY tx_iid",
                 ColumnListHandler<ByteArray>(), blockIid)!!
     }
 
     override fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray? {
-        return queryRunner.query(ctx.conn, "SELECT tx_data FROM transactions WHERE chain_iid=? AND tx_rid=?",
+        return queryRunner.query(ctx.conn, "SELECT tx_data FROM transactions WHERE chain_iid = ? AND tx_rid = ?",
                 nullableByteArrayRes, ctx.chainID, txRID)
     }
 
@@ -265,13 +265,13 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         val res = queryRunner.query(ctx.conn,
                 """
                         SELECT 1 FROM transactions t
-                        WHERE t.chain_iid=? AND t.tx_rid=?
+                        WHERE t.chain_iid = ? AND t.tx_rid = ?
                         """, nullableIntRes, ctx.chainID, txRID)
         return (res != null)
     }
 
     override fun getBlockchainRID(ctx: EContext): BlockchainRid? {
-        val data = queryRunner.query(ctx.conn, "SELECT blockchain_rid FROM blockchains WHERE chain_iid= ?",
+        val data = queryRunner.query(ctx.conn, "SELECT blockchain_rid FROM blockchains WHERE chain_iid = ?",
                 nullableByteArrayRes, ctx.chainID)
         return if (data == null) null else BlockchainRid(data)
     }
@@ -285,7 +285,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
         if (tableExists(connection, "meta")) {
             // meta table already exists. Check the version
-            val versionString = queryRunner.query(connection, "SELECT value FROM meta WHERE key='version'", ScalarHandler<String>())
+            val versionString = queryRunner.query(connection, "SELECT value FROM meta WHERE key = 'version'", ScalarHandler<String>())
             val version = versionString.toInt()
             if (version != expectedDbVersion) {
                 throw UserMistake("Unexpected version '$version' in database. Expected '$expectedDbVersion'")
@@ -296,7 +296,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             queryRunner.update(connection, sqlCommands.createTableMeta)
             queryRunner.update(
                     connection,
-                    "INSERT INTO meta (key, value) values ('version', ?)",
+                    "INSERT INTO meta (key, value) VALUES ('version', ?)",
                     expectedDbVersion)
 
 
@@ -326,7 +326,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun getChainId(ctx: EContext, blockchainRID: BlockchainRid): Long? {
         return queryRunner.query(ctx.conn,
-                "SELECT chain_iid FROM blockchains WHERE blockchain_rid=?",
+                "SELECT chain_iid FROM blockchains WHERE blockchain_rid = ?",
                 nullableLongRes,
                 blockchainRID.data)
     }
@@ -335,7 +335,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         // Check that the blockchainRID is present for chain_iid
         val rid = queryRunner.query(
                 ctx.conn,
-                "SELECT blockchain_rid from blockchains where chain_iid=?",
+                "SELECT blockchain_rid FROM blockchains WHERE chain_iid = ?",
                 nullableByteArrayRes,
                 ctx.chainID)
 
@@ -344,7 +344,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             logger.info("Blockchain RID: ${blockchainRID.toHex()} doesn't exist in DB, so we add it.")
             queryRunner.update(
                     ctx.conn,
-                    "INSERT INTO blockchains (chain_iid, blockchain_rid) values (?, ?)",
+                    "INSERT INTO blockchains (chain_iid, blockchain_rid) VALUES (?, ?)",
                     ctx.chainID,
                     blockchainRID.data)
 
@@ -378,7 +378,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
     override fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long? {
         return queryRunner.query(ctx.conn,
-                "SELECT height FROM configurations WHERE chain_iid= ? AND height <= ? " +
+                "SELECT height FROM configurations WHERE chain_iid = ? AND height <= ? " +
                         "ORDER BY height DESC LIMIT 1",
                 nullableLongRes, ctx.chainID, height)
     }
@@ -449,10 +449,10 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
-            val host = row["$TABLE_PEERINFOS_FIELD_HOST"] as String
-            val port = row["$TABLE_PEERINFOS_FIELD_PORT"] as Int
-            val pubkey = row["$TABLE_PEERINFOS_FIELD_PUBKEY"] as String
-            val timestamp = row["$TABLE_PEERINFOS_FIELD_TIMESTAMP"] as Long
+            val host = row[TABLE_PEERINFOS_FIELD_HOST] as String
+            val port = row[TABLE_PEERINFOS_FIELD_PORT] as Int
+            val pubkey = row[TABLE_PEERINFOS_FIELD_PUBKEY] as String
+            val timestamp = row[TABLE_PEERINFOS_FIELD_TIMESTAMP] as Long
 
             RowData(GtvInteger(rowId), GtvString(TABLE_PEERINFOS), PeerInfo(host, port, pubkey, timestamp).toGtv())
         }
