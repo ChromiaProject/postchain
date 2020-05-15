@@ -31,7 +31,7 @@ fun withWriteConnection(storage: Storage, chainID: Long, op: (EContext) -> Boole
  *
  * @param storage is the storage
  * @param chainID is the chain we work on
- * @param op is an operation with return type RT (parametrict type)
+ * @param op is an operation with return type RT (parametric type)
  * @return the same object as "op"
  */
 fun <RT> withReadWriteConnection(storage: Storage, chainID: Long, op: (EContext) -> RT): RT {

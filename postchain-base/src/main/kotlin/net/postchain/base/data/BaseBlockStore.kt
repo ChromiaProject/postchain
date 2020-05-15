@@ -11,8 +11,6 @@ import net.postchain.core.*
 /**
  * Provides database access to the location where the blockchain with related metadata and transactions
  * are stored
- *
- * @property db Object used to access the DBMS
  */
 class BaseBlockStore : BlockStore {
 
