@@ -153,13 +153,23 @@ class BaseBlockStore : BlockStore {
                 "peerinfos" -> db.getPeerInfosInRange(ctx, limit-data.size, offset+data.size, original)
                 else -> db.getDataInRange(ctx, tableName, limit-data.size, offset+data.size, original)
             }
+            val count = when(val tableName = tables.first()) {
+                "meta" -> db.getMetaRowCount(ctx)
+                "blockchains" -> db.getBlockchainsRowCount(ctx)
+                "blocks" -> db.getBlocksRowCount(ctx, height)
+                "transactions" -> db.getTxsRowCount(ctx, height)
+                "configurations" -> db.getConfigurationsRowCount(ctx, height)
+                "peerinfos" -> db.getPeerInfosRowCount(ctx)
+                else -> db.getRowCount(ctx, tableName)
+            }
             if (rows.isEmpty()) {
                 tables = tables.drop(1)
+                original += count
                 continue
             }
             data.addAll(rows)
             tables = tables.drop(1)
-            original += rows.size
+            original += count
         }
         return data.sorted()
     }

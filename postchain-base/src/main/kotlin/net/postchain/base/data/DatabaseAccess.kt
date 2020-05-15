@@ -50,11 +50,17 @@ interface DatabaseAccess {
 
     // Get data to build snapshot
     fun getBlockchainsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getBlockchainsRowCount(ctx: EContext): Long
     fun getConfigurationsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0, height: Long): List<RowData>
+    fun getConfigurationsRowCount(ctx: EContext, height: Long): Long
     fun getMetaInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getMetaRowCount(ctx: EContext): Long
     fun getPeerInfosInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0): List<RowData>
+    fun getPeerInfosRowCount(ctx: EContext): Long
     fun getTxsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0, height: Long): List<RowData>
+    fun getTxsRowCount(ctx: EContext, height: Long): Long
     fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0, height: Long): List<RowData>
+    fun getBlocksRowCount(ctx: EContext, height: Long): Long
     fun getTables(ctx: EContext): List<String>
     // Query data for rellr app
     fun getDataInRange(ctx: EContext, tableName: String, limit: Int, offset: Long, original: Long = 0): List<RowData>
@@ -381,7 +387,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
                     SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, blockchain_rid FROM blockchains) x  
-                    WHERE row_id BETWEEN ? AND ?""", mapListHandler, original, offset+1, offset+limit)
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid = ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
@@ -390,6 +396,10 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
             RowData(GtvInteger(rowId), GtvString("blockchains"), BlockchainData(chainIid, blockchainRid).toGtv())
         }
+    }
+
+    override fun getBlockchainsRowCount(ctx: EContext): Long {
+        return queryRunner.query(ctx.conn, "SELECT count(*) FROM blockchains WHERE chain_iid = ?", longRes, ctx.chainID)
     }
 
     override fun getConfigurationsInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
@@ -408,6 +418,10 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
+    override fun getConfigurationsRowCount(ctx: EContext, height: Long): Long {
+        return queryRunner.query(ctx.conn, "SELECT count(*) FROM configurations WHERE chain_iid = ? AND height < ?", longRes, ctx.chainID, height)
+    }
+
     override fun getMetaInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
@@ -421,6 +435,10 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
             RowData(GtvInteger(rowId), GtvString("meta"), MetaData(key, value).toGtv())
         }
+    }
+
+    override fun getMetaRowCount(ctx: EContext): Long {
+        return queryRunner.query(ctx.conn, "SELECT count(*) FROM meta", longRes)
     }
 
     override fun getPeerInfosInRange(ctx: EContext, limit: Int, offset: Long, original: Long): List<RowData> {
@@ -438,6 +456,10 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
 
             RowData(GtvInteger(rowId), GtvString(TABLE_PEERINFOS), PeerInfo(host, port, pubkey, timestamp).toGtv())
         }
+    }
+
+    override fun getPeerInfosRowCount(ctx: EContext): Long {
+        return queryRunner.query(ctx.conn, "SELECT count(*) FROM $TABLE_PEERINFOS", longRes)
     }
 
     override fun getTables(ctx: EContext): List<String> {
@@ -464,6 +486,12 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         }
     }
 
+    override fun getTxsRowCount(ctx: EContext, height: Long): Long {
+        return queryRunner.query(ctx.conn,
+                """SELECT count(*) FROM transactions WHERE chain_iid = ? 
+                    AND block_iid IN (SELECT block_iid FROM blocks WHERE block_height < ?)""", longRes, ctx.chainID, height)
+    }
+
     override fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
@@ -480,6 +508,12 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val timestamp = row["timestamp"] as Long
             RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockRid, chainIid, blockHeight, blockHeader, timestamp).toGtv())
         }
+    }
+
+    override fun getBlocksRowCount(ctx: EContext, height: Long): Long {
+        return queryRunner.query(ctx.conn,
+                """SELECT count(*) FROM blocks 
+                WHERE chain_iid = ? AND block_height < ?""", longRes, ctx.chainID, height)
     }
 
     override fun getDataInRange(ctx: EContext, tableName: String, limit: Int, offset: Long, original: Long): List<RowData> {
