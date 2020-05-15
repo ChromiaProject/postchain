@@ -44,7 +44,7 @@ interface BlockStore {
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getConfirmationProofMaterial(ctx: EContext, txRID: ByteArray): Any
 
-    fun getChunkData(ctx: EContext, limit: Int, offset: Long): List<RowData>
+    fun getChunkData(ctx: EContext, limit: Int, offset: Long, height: Long): List<RowData>
 }
 
 /**

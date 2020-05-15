@@ -39,8 +39,8 @@ class BaseManagedSnapshotBuilder(
         storage.closeWriteConnection(eContext, true)
     }
 
-    override fun buildSnapshot(): Tree {
-        return runOp { snapshotBuilder.buildSnapshot() }
+    override fun buildSnapshot(height: Long): Tree {
+        return runOp { snapshotBuilder.buildSnapshot(height) }
     }
 
     override fun getSnapshotTree(): TreeElement {

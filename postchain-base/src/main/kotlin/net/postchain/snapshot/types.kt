@@ -9,5 +9,5 @@ interface SnapshotManager {
 }
 
 interface SnapshotDatabase {
-    fun buildSnapshot(): Promise<Tree, Exception>
+    fun buildSnapshot(height: Long): Promise<Tree, Exception>
 }

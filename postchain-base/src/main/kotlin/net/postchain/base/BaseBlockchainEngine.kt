@@ -232,10 +232,10 @@ open class BaseBlockchainEngine(
         return blockBuilder
     }
 
-    override fun buildSnapshot(): ManagedSnapshotBuilder {
+    override fun buildSnapshot(height: Long): ManagedSnapshotBuilder {
         val snapshotBuilder = makeSnapshotBuilder()
         snapshotBuilder.begin()
-        snapshotBuilder.buildSnapshot()
+        snapshotBuilder.buildSnapshot(height)
         snapshotBuilder.commit()
         return snapshotBuilder
     }

@@ -59,9 +59,9 @@ class BaseSnapshotDatabase(
         snapshotBuilder = null
     }
 
-    override fun buildSnapshot(): Promise<Tree, Exception> {
+    override fun buildSnapshot(height: Long): Promise<Tree, Exception> {
         return runOp("build snapshot") {
-            snapshotBuilder = engine.buildSnapshot()
+            snapshotBuilder = engine.buildSnapshot(height)
             snapshotBuilder?.getSnapshotTree()
         }
     }

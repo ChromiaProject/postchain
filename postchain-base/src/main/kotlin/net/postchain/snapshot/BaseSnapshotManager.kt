@@ -51,12 +51,13 @@ open class BaseSnapshotManager(
 
     protected fun update() {
         if (processing) return
-        if (!strategy.shouldBuildSnapshot()) {
+        val s = strategy.shouldBuildSnapshot()
+        if (!s.first) {
             return
         }
         BaseSnapshotManager.logger.debug("It's time to build a snapshot.")
         runDBOp({
-            snapshotDB.buildSnapshot()
+            snapshotDB.buildSnapshot(s.second)
         }, {
             snapshot = it
         })

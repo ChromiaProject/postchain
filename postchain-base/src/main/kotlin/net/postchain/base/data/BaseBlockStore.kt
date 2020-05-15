@@ -144,30 +144,38 @@ class BaseBlockStore : BlockStore {
         )
     }
 
-    override fun getChunkData(ctx: EContext, limit: Int, offset: Long): List<RowData> {
+    override fun getChunkData(ctx: EContext, limit: Int, offset: Long, height: Long): List<RowData> {
         val db = DatabaseAccess.of(ctx)
         val data = mutableListOf<RowData>()
         var original = 0L
         var tables = getTables(ctx)
         while (data.size < limit && tables.isNotEmpty()) {
-            val tableName = tables.first()
-            val rows = when(tableName) {
+            val rows = when(val tableName = tables.first()) {
                 "meta" -> db.getMetaInRange(ctx, limit-data.size, offset+data.size, original)
                 "blockchains" -> db.getBlockchainsInRange(ctx, limit-data.size, offset+data.size, original)
-                "blocks" -> db.getBlocksInRange(ctx, limit-data.size, offset+data.size, original)
-                "transactions" -> db.getTxsInRange(ctx, limit-data.size, offset+data.size, original)
-                "configurations" -> db.getConfigurationsInRange(ctx, limit-data.size, offset+data.size, original)
+                "blocks" -> db.getBlocksInRange(ctx, limit-data.size, offset+data.size, original, height)
+                "transactions" -> db.getTxsInRange(ctx, limit-data.size, offset+data.size, original, height)
+                "configurations" -> db.getConfigurationsInRange(ctx, limit-data.size, offset+data.size, original, height)
                 "peerinfos" -> db.getPeerInfosInRange(ctx, limit-data.size, offset+data.size, original)
                 else -> db.getDataInRange(ctx, tableName, limit-data.size, offset+data.size, original)
             }
+            val count = when(val tableName = tables.first()) {
+                "meta" -> db.getMetaRowCount(ctx)
+                "blockchains" -> db.getBlockchainsRowCount(ctx)
+                "blocks" -> db.getBlocksRowCount(ctx, height)
+                "transactions" -> db.getTxsRowCount(ctx, height)
+                "configurations" -> db.getConfigurationsRowCount(ctx, height)
+                "peerinfos" -> db.getPeerInfosRowCount(ctx)
+                else -> db.getRowCount(ctx, tableName)
+            }
             if (rows.isEmpty()) {
                 tables = tables.drop(1)
-                original += db.getRowCount(ctx, tableName)
+                original += count
                 continue
             }
             data.addAll(rows)
             tables = tables.drop(1)
-            original += db.getRowCount(ctx, tableName)
+            original += count
         }
         return data.sorted()
     }

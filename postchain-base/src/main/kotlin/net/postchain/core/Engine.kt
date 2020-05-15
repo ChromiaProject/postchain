@@ -22,7 +22,7 @@ interface BlockchainEngine : Shutdownable {
     fun addBlock(block: BlockDataWithWitness)
     fun loadUnfinishedBlock(block: BlockData): ManagedBlockBuilder
     fun buildBlock(): ManagedBlockBuilder
-    fun buildSnapshot(): ManagedSnapshotBuilder
+    fun buildSnapshot(height: Long): ManagedSnapshotBuilder
     fun getTransactionQueue(): TransactionQueue
     fun getBlockBuildingStrategy(): BlockBuildingStrategy
     fun getSnapshotBuildingStrategy(): SnapshotBuildingStrategy

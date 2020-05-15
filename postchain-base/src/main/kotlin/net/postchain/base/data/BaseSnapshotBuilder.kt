@@ -13,12 +13,12 @@ open class BaseSnapshotBuilder(
         private val snapshotFolder: String = "snapshot"
 ): AbstractSnapshotBuilder(ectx) {
 
-    override fun buildSnapshot(): Tree {
+    override fun buildSnapshot(height: Long): Tree {
         var idx = 0L
         var offset = 0L
         var listOfChunk = listOf<TreeElement?>()
         while (true) {
-            var rows = store.getChunkData(ectx, chunkSize, offset)
+            var rows = store.getChunkData(ectx, chunkSize, offset, height)
             if (rows.isEmpty()) {
                 break
             }
@@ -30,7 +30,9 @@ open class BaseSnapshotBuilder(
             // Serialize tree chunk object into file with name is root hash of the tree chunk
             if (data != null) {
 //                printTree(data)
-                val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator + snapshotFolder + File.separator + ectx.chainID + File.separator + data.hash()
+                val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator +
+                        snapshotFolder + File.separator + ectx.chainID + File.separator +
+                        height + File.separator + data.hash()
                 val file = File(path)
                 file.parentFile.mkdirs()
                 file.createNewFile()
@@ -53,7 +55,6 @@ open class BaseSnapshotBuilder(
 
         // only need to return hash snapshot tree
         val root = mergeHashTrees(listOfChunk as List<TreeElement>)
-        val height = store.getLastBlockHeight(ectx)
         store.commitSnapshot(ectx, root!!.hash().toByteArray(), height)
         snapshotData = root
 
