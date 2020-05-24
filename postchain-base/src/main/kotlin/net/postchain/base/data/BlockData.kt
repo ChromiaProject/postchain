@@ -6,15 +6,20 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 
 data class BlockData(val blockIid: Long, val blockRid: ByteArray, val chainIid: Long, val blockHeight: Long,
-                     val blockHeader: ByteArray, val witness: ByteArray, val timestamp: Long) {
+                     val blockHeader: ByteArray, val witness: ByteArray, val timestamp: Long): BaseData() {
 
-    fun toGtv(): GtvArray {
+    override fun toGtv(): GtvArray {
         return GtvFactory.gtv(GtvInteger(blockIid), GtvByteArray(blockRid), GtvInteger(chainIid), GtvInteger(blockHeight),
                 GtvByteArray(blockHeader), GtvByteArray(witness), GtvInteger(timestamp))
     }
 
-    companion object {
-        fun fromGtv(gtv: GtvArray): BlockData {
+    override fun toHashGtv(): GtvArray {
+        return GtvFactory.gtv(GtvInteger(blockIid), GtvByteArray(blockRid), GtvInteger(chainIid), GtvInteger(blockHeight),
+                GtvByteArray(blockHeader), GtvInteger(timestamp))
+    }
+
+    companion object: FromGtv {
+        override fun fromGtv(gtv: GtvArray): BlockData {
             return BlockData(
                     gtv[0].asInteger(),
                     gtv[1].asByteArray(),

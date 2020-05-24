@@ -396,7 +396,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val chainIid = row["chain_iid"] as Long
             val blockchainRid = row["blockchain_rid"] as ByteArray
 
-            RowData(GtvInteger(rowId), GtvString("blockchains"), BlockchainData(chainIid, blockchainRid).toGtv())
+            val blockchain = BlockchainData(chainIid, blockchainRid)
+            RowData(GtvInteger(rowId), GtvString("blockchains"), blockchain.toGtv(), blockchain.toHashGtv())
         }
     }
 
@@ -412,7 +413,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val height = row["height"] as Long
             val data = row["configuration_data"] as ByteArray
 
-            RowData(GtvInteger(rowId), GtvString("configurations"), ConfigurationData(chainIid, height, data).toGtv())
+            val config = ConfigurationData(chainIid, height, data)
+            RowData(GtvInteger(rowId), GtvString("configurations"), config.toGtv(), config.toHashGtv())
         }
     }
 
@@ -427,7 +429,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val key = row["key"] as String
             val value = row["value"] as String?
 
-            RowData(GtvInteger(rowId), GtvString("meta"), MetaData(key, value).toGtv())
+            val metadata = MetaData(key, value)
+            RowData(GtvInteger(rowId), GtvString("meta"), metadata.toGtv(), metadata.toHashGtv())
         }
     }
 
@@ -444,7 +447,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val pubkey = row["$TABLE_PEERINFOS_FIELD_PUBKEY"] as String
             val timestamp = row["$TABLE_PEERINFOS_FIELD_TIMESTAMP"] as Long
 
-            RowData(GtvInteger(rowId), GtvString(TABLE_PEERINFOS), PeerInfo(host, port, pubkey, timestamp).toGtv())
+            val peer = PeerInfo(host, port, pubkey, timestamp)
+            RowData(GtvInteger(rowId), GtvString(TABLE_PEERINFOS), peer.toGtv(), peer.toHashGtv())
         }
     }
 
@@ -468,7 +472,9 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val txData = row["tx_data"] as ByteArray
             val txHash = row["tx_hash"] as ByteArray
             val blockIid = row["block_iid"] as Long
-            RowData(GtvInteger(rowId), GtvString("transactions"), TxData(txIid, chainIid, txRid, txData, txHash, blockIid).toGtv())
+
+            val tx = TxData(txIid, chainIid, txRid, txData, txHash, blockIid)
+            RowData(GtvInteger(rowId), GtvString("transactions"), tx.toGtv(), tx.toHashGtv())
         }
     }
 
@@ -487,7 +493,9 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val blockHeader = row["block_header_data"] as ByteArray
             val blockWitness = row["block_witness"] as ByteArray
             val timestamp = row["timestamp"] as Long
-            RowData(GtvInteger(rowId), GtvString("blocks"), BlockData(blockIid, blockRid, chainIid, blockHeight, blockHeader, blockWitness, timestamp).toGtv())
+
+            val block = BlockData(blockIid, blockRid, chainIid, blockHeight, blockHeader, blockWitness, timestamp)
+            RowData(GtvInteger(rowId), GtvString("blocks"), block.toGtv(), block.toHashGtv())
         }
     }
 
@@ -525,7 +533,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
                     }
                 }
             }
-            RowData(GtvInteger(rowId), GtvString(tableName), GtvFactory.gtv(GtvDictionary.build(data)))
+            RowData(GtvInteger(rowId), GtvString(tableName), GtvFactory.gtv(GtvDictionary.build(data)), GtvFactory.gtv(GtvDictionary.build(data)))
         }
     }
 

@@ -7,7 +7,7 @@ import net.postchain.gtv.*
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import java.io.Serializable
 
-data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvArray): Comparable<RowData>, Serializable {
+data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvArray, val hash: GtvArray): Comparable<RowData>, Serializable {
     @Transient
     private var cryptoSystem = SECP256K1CryptoSystem()
 
@@ -15,15 +15,19 @@ data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvAr
     private var merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
 
     fun toGtv(): GtvArray {
-        return GtvFactory.gtv(id, tableName, data)
+        return GtvFactory.gtv(id, tableName, data, hash)
+    }
+
+    fun toHashGtv(): GtvArray {
+        return GtvFactory.gtv(id, tableName, hash)
     }
 
     fun toHash(): Hash {
-        return toGtv().merkleHash(merkleHashCalculator)
+        return toHashGtv().merkleHash(merkleHashCalculator)
     }
 
     fun toHex(): String {
-        return toGtv().merkleHash(merkleHashCalculator).toHex()
+        return toHashGtv().merkleHash(merkleHashCalculator).toHex()
     }
 
     override fun compareTo(other: RowData): Int {
@@ -42,7 +46,8 @@ data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvAr
             return RowData(
                     gtv[0] as GtvInteger,
                     gtv[1] as GtvString,
-                    gtv[2] as GtvArray
+                    gtv[2] as GtvArray,
+                    gtv[3] as GtvArray
             )
         }
 

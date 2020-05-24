@@ -7,13 +7,18 @@ data class TableDefinition(
         val dataType: String,
         val isNullable: Boolean,
         val columnDefault: String?
-) {
-    fun toGtv(): GtvArray {
+): BaseData() {
+
+    override fun toGtv(): GtvArray {
         return GtvFactory.gtv(GtvString(columnName), GtvString(dataType), GtvInteger(isNullable.toLong()), GtvString(columnDefault.toString()))
     }
 
-    companion object {
-        fun fromGtv(gtv: GtvArray): TableDefinition {
+    override fun toHashGtv(): GtvArray {
+        return toGtv()
+    }
+
+    companion object: FromGtv {
+        override fun fromGtv(gtv: GtvArray): TableDefinition {
             return TableDefinition(
                     gtv[0].asString(),
                     gtv[1].asString(),
