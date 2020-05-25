@@ -7,7 +7,7 @@ import net.postchain.gtv.*
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import java.io.Serializable
 
-data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvArray, val hash: GtvArray): Comparable<RowData>, Serializable {
+data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvArray, val ignoreIndex: GtvArray = GtvArray(arrayOf())): Comparable<RowData>, Serializable {
     @Transient
     private var cryptoSystem = SECP256K1CryptoSystem()
 
@@ -15,11 +15,27 @@ data class RowData(val id: GtvInteger, val tableName: GtvString, val data: GtvAr
     private var merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
 
     fun toGtv(): GtvArray {
-        return GtvFactory.gtv(id, tableName, data, hash)
+        return GtvFactory.gtv(id, tableName, data, ignoreIndex)
     }
 
     fun toHashGtv(): GtvArray {
-        return GtvFactory.gtv(id, tableName, hash)
+        if (ignoreIndex.isNull() || ignoreIndex.getSize() == 0) {
+            return toGtv()
+        }
+        val a = mutableListOf<Gtv>()
+        for (i in 0 until data.getSize()) {
+            var ignore = false
+            for (j in 0 until ignoreIndex.getSize()) {
+                if (ignoreIndex[j].asInteger().toInt() == i) {
+                    ignore = true
+                    break
+                }
+            }
+            if (!ignore) {
+                a.add(data[i])
+            }
+        }
+        return GtvFactory.gtv(id, tableName, GtvArray(a.toTypedArray()))
     }
 
     fun toHash(): Hash {
