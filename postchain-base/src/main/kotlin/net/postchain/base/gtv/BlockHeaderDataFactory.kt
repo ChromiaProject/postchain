@@ -15,7 +15,7 @@ object BlockHeaderDataFactory {
     }
 
     fun buildFromGtv(gtvBlockHeader: Gtv): BlockHeaderData {
-        val gtvMainArr = gtvBlockHeader as GtvArray
+        val gtvMainArr = gtvBlockHeader as GtvArray<Gtv>
 
         // Fill it up some descriptive variables (not really needed but...)
         val gtvBlockchainRid: GtvByteArray = gtvMainArr[0] as GtvByteArray

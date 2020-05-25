@@ -46,7 +46,7 @@ object GtvMLParser {
         }
     }
 
-    private fun parseArrayGtvML(array: ArrayType, params: Map<String, Gtv>): GtvArray {
+    private fun parseArrayGtvML(array: ArrayType, params: Map<String, Gtv>): GtvArray<Gtv> {
         val elements = array.elements.map { parseJAXBElementToGtvML(it, params) }
         return GtvArray(elements.toTypedArray())
     }

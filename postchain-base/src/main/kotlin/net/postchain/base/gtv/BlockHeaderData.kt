@@ -59,7 +59,7 @@ data class BlockHeaderData(
     fun getBlockHeightDependencyArray(): Array<Hash?> {
         return when (gtvDependencies) {
             is GtvNull -> arrayOf()
-            is GtvArray -> {
+            is GtvArray<Gtv> -> {
                 val lastBlockRidArray = arrayOfNulls<Hash>(gtvDependencies.getSize())
                 var i = 0
                 for (blockRid in gtvDependencies.array) {
@@ -87,13 +87,13 @@ data class BlockHeaderData(
         return retMap
     }
 
-    fun toGtv(): GtvArray {
+    fun toGtv(): GtvArray<Gtv> {
         return gtv(gtvBlockchainRid, gtvPreviousBlockRid, gtvMerkleRootHash, gtvTimestamp, gtvHeight, gtvDependencies, gtvExtra)
     }
 
     companion object {
 
-        fun fromGtv(gtv: GtvArray): BlockHeaderData {
+        fun fromGtv(gtv: GtvArray<Gtv>): BlockHeaderData {
             return BlockHeaderData(
                     gtv[0] as GtvByteArray,
                     gtv[1] as GtvByteArray,

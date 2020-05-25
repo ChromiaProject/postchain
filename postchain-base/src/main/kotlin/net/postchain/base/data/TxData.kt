@@ -4,16 +4,16 @@ import net.postchain.gtv.*
 
 data class TxData(val txIid: Long, val chainIid: Long, val txRid: ByteArray, val txData: ByteArray, val txHash: ByteArray, val blockIid: Long): BaseData() {
 
-    override fun toGtv(): GtvArray {
+    override fun toGtv(): GtvArray<Gtv> {
         return GtvFactory.gtv(GtvInteger(txIid), GtvInteger(chainIid), GtvByteArray(txRid), GtvByteArray(txData), GtvByteArray(txHash), GtvInteger(blockIid))
     }
 
-    override fun toHashGtv(): GtvArray {
+    override fun toHashGtv(): GtvArray<Gtv> {
         return toGtv()
     }
 
     companion object: FromGtv {
-        override fun fromGtv(gtv: GtvArray): TxData {
+        override fun fromGtv(gtv: GtvArray<Gtv>): TxData {
             return TxData(
                     gtv[0].asInteger(),
                     gtv[1].asInteger(),

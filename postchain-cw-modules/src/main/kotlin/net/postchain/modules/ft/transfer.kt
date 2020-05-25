@@ -40,7 +40,7 @@ fun parseTransferData(opData: ExtOpData): StaticTransferData {
     val args = opData.args
     if (args.size < 2) throw UserMistake("Not enough arguments to transfer")
     fun parseElement(it: Gtv): StaticTransferElement {
-        val arr = it as GtvArray
+        val arr = it as GtvArray<Gtv>
         val extra = if (arr.getSize() >= 4) arr[3].asDict() else NoExtraData
         return TransferElement(
                 arr[0].asByteArray(),

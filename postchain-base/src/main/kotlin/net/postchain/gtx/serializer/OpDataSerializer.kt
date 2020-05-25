@@ -14,7 +14,7 @@ object OpDataSerializer {
      * 1. Operation name
      * 2. array of arguments
      */
-    fun serializeToGtv(opData: OpData): GtvArray {
+    fun serializeToGtv(opData: OpData): GtvArray<Gtv> {
 
         // 1. Operation name
         val name: Gtv = gtv(opData.opName)

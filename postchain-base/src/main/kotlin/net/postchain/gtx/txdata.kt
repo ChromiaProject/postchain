@@ -67,7 +67,7 @@ data class GTXTransactionBodyData(
 
     fun calculateRID(calculator: MerkleHashCalculator<Gtv>): Hash {
         if (cachedRid == null) {
-            val txBodyGtvArr: GtvArray = GtxTransactionBodyDataSerializer.serializeToGtv(this)
+            val txBodyGtvArr = GtxTransactionBodyDataSerializer.serializeToGtv(this)
             cachedRid = txBodyGtvArr.merkleHash(calculator)
         }
 

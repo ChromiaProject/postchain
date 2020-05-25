@@ -211,13 +211,13 @@ class GtvMLParserDictsTest {
 
                 "entry_2" to GtvInteger(42),
 
-                "entry_3" to GtvArray(arrayOf(
+                "entry_3" to GtvArray<Gtv>(arrayOf(
                         GtvString("foo"),
                         GtvString("bar"),
-                        GtvArray(arrayOf(
+                        GtvArray<Gtv>(arrayOf(
                                 GtvInteger(42),
                                 GtvInteger(43),
-                                GtvArray(arrayOf(
+                                GtvArray<Gtv>(arrayOf(
                                         GtvInteger(44)
                                 )),
                                 GtvDictionary.build(mapOf(
@@ -226,7 +226,7 @@ class GtvMLParserDictsTest {
                                 ))
                         )),
                         GtvDictionary.build(mapOf(
-                                "hello" to GtvArray(arrayOf(
+                                "hello" to GtvArray<Gtv>(arrayOf(
                                         GtvString("world"),
                                         GtvString("world")
                                 )),
@@ -241,7 +241,7 @@ class GtvMLParserDictsTest {
                                 "hello" to GtvString("foo"),
                                 "123" to GtvInteger(123)
                         )),
-                        "array123" to GtvArray(arrayOf(
+                        "array123" to GtvArray<Gtv>(arrayOf(
                                 GtvInteger(42),
                                 GtvInteger(43)
                         ))

@@ -41,7 +41,7 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
 
         fun queryGetPeerInfos(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_get_peer_infos" }
-            return GtvArray(arrayOf(
+            return GtvArray<Gtv>(arrayOf(
                     peerInfoToGtv(peerInfo0))
             )
         }
@@ -53,7 +53,7 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
 
         fun queryComputeBlockchainList(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_compute_blockchain_list" }
-            return GtvArray(arrayOf(gtvBlockchainRid(0L)))
+            return GtvArray<Gtv>(arrayOf(gtvBlockchainRid(0L)))
         }
 
         fun queryGetConfiguration(unit: Unit, eContext: EContext, args: Gtv): Gtv {

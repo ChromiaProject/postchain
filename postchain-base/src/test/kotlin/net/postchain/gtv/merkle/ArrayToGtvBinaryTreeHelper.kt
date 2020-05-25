@@ -21,7 +21,7 @@ object ArrayToGtvBinaryTreeHelper {
     // ----------------- 1 -----------------------------
     fun intArrOf1() = intArrayOf(1)
 
-    fun buildGtvArrayOf1(): GtvArray {
+    fun buildGtvArrayOf1(): GtvArray<Gtv> {
         val intArray = intArrOf1()
         val gtvArrayList = GtvTreeHelper.transformIntToGtv(intArray.toCollection(ArrayList()))
         return gtv(gtvArrayList)
@@ -30,7 +30,7 @@ object ArrayToGtvBinaryTreeHelper {
     // ----------------- 4 -----------------------------
     fun intArrOf4() = intArrayOf(1,2,3,4)
 
-    fun buildGtvArrayOf4(): GtvArray {
+    fun buildGtvArrayOf4(): GtvArray<Gtv> {
         val intArray = intArrOf4()
         val gtvArrayList =GtvTreeHelper.transformIntToGtv(intArray.toCollection(ArrayList()))
         return gtv(gtvArrayList)
@@ -39,7 +39,7 @@ object ArrayToGtvBinaryTreeHelper {
     // ----------------- 7 -----------------------------
     fun intArrOf7() = intArrayOf(1, 2, 3, 4, 5, 6, 7)
 
-    fun buildGtvArrayOf7(): GtvArray {
+    fun buildGtvArrayOf7(): GtvArray<Gtv> {
         val intArray = intArrOf7()
         val gtvList: List<Gtv> =GtvTreeHelper.transformIntToGtv(intArray.toCollection(ArrayList()))
         return gtv(gtvList)
@@ -48,7 +48,7 @@ object ArrayToGtvBinaryTreeHelper {
     // ----------------- 9 -----------------------------
     fun intArrOf9() = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9)
 
-    fun buildGtvArrayOf9(): GtvArray {
+    fun buildGtvArrayOf9(): GtvArray<Gtv> {
         val intArray = intArrOf9()
         val gtvList: List<Gtv> =GtvTreeHelper.transformIntToGtv(intArray.toCollection(ArrayList()))
         return gtv(gtvList)
@@ -57,13 +57,13 @@ object ArrayToGtvBinaryTreeHelper {
     // ----------------- 7 with 3-----------------------------
     private fun intArrOfInner3() = intArrayOf(1,9,3)
 
-    fun buildGtvArrInnerOf3(): GtvArray {
+    fun buildGtvArrInnerOf3(): GtvArray<Gtv> {
         val innerIntArray = intArrOfInner3()
         val innerIntArrayList =GtvTreeHelper.transformIntToGtv(innerIntArray.toCollection(ArrayList()))
         return gtv(innerIntArrayList)
     }
 
-    fun buildGtvArrOf7WithInner3(): GtvArray {
+    fun buildGtvArrOf7WithInner3(): GtvArray<Gtv> {
         val intArray = intArrOf7()
         val gtvArrayList =GtvTreeHelper.transformIntToGtv(intArray.toCollection(ArrayList()))
 

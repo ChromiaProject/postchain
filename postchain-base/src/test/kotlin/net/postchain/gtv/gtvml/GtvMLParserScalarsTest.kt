@@ -87,7 +87,7 @@ class GtvMLParserScalarsTest {
         val xml = "<param key='param_key' type='string'/>"
         GtvMLParser.parseGtvML(
                 xml,
-                mapOf("param_key" to GtvArray(arrayOf(GtvInteger(123)))))
+                mapOf("param_key" to GtvArray<Gtv>(arrayOf(GtvInteger(123)))))
     }
 
     @Test(expected = IllegalArgumentException::class)

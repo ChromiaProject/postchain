@@ -28,7 +28,7 @@ interface FTAccount {
  * @property skipUpdate signals if deltas should be applied to the database in a token transfer operation
  */
 interface FTInputAccount : FTAccount {
-    val descriptor: GtvArray
+    val descriptor: GtvArray<Gtv>
     val skipUpdate: Boolean
     fun verifyInput(ctx: OpEContext, dbops: FTDBOps, index: Int, data: CompleteTransferData): Boolean
     fun applyInput(ctx: OpEContext, dbops: FTDBOps, index: Int, data: CompleteTransferData): Boolean
@@ -50,7 +50,7 @@ interface FTOutputAccount : FTAccount {
 /**
  * Constructor for input accounts, taking accountID and account descriptor as input values
  */
-typealias InputAccountConstructor = (ByteArray, GtvArray)->FTInputAccount
+typealias InputAccountConstructor = (ByteArray, GtvArray<Gtv>)->FTInputAccount
 
 /**
  * Constructor for output accounts, taking accountID and account descriptor as input values
@@ -105,7 +105,7 @@ class BaseAccountFactory(val accountConstructors: Map<Int, AccountConstructors>)
      * @param descriptor the account descriptor
      * @return the input account
      */
-    override fun makeInputAccount(accountID: ByteArray, descriptor: GtvArray): FTInputAccount {
+    override fun makeInputAccount(accountID: ByteArray, descriptor: GtvArray<Gtv>): FTInputAccount {
         val accType = descriptor[0].asInteger().toInt()
         if (accType in accountConstructors) {
             return accountConstructors[accType]!!.first(accountID, descriptor)
@@ -119,7 +119,7 @@ class BaseAccountFactory(val accountConstructors: Map<Int, AccountConstructors>)
      * @param descriptor the account descriptor
      * @return the output account
      */
-    override fun makeOutputAccount(accountID: ByteArray, descriptor: GtvArray): FTOutputAccount {
+    override fun makeOutputAccount(accountID: ByteArray, descriptor: GtvArray<Gtv>): FTOutputAccount {
         val accType = descriptor[0].asInteger().toInt()
         if (accType in accountConstructors) {
             return accountConstructors[accType]!!.second(accountID, descriptor)
@@ -142,7 +142,7 @@ class BaseAccountResolver(val factory: AccountFactory) : AccountResolver {
      * @return the input account instance
      */
     override fun resolveInputAccount(ctx: OpEContext, dbops: FTDBOps, accountID: ByteArray): FTInputAccount {
-        val descriptor = dbops.getDescriptor(ctx.txCtx, accountID) as GtvArray
+        val descriptor = dbops.getDescriptor(ctx.txCtx, accountID) as GtvArray<Gtv>
         if (descriptor == null)
             throw UserMistake("Account descriptor not found")
         else
@@ -158,7 +158,7 @@ class BaseAccountResolver(val factory: AccountFactory) : AccountResolver {
      * @return the output account instance
      */
     override fun resolveOutputAccount(ctx: OpEContext, dbops: FTDBOps, accountID: ByteArray): FTOutputAccount {
-        val descriptor = dbops.getDescriptor(ctx.txCtx, accountID) as GtvArray
+        val descriptor = dbops.getDescriptor(ctx.txCtx, accountID) as GtvArray<Gtv>
         if (descriptor == null)
             throw UserMistake("Account descriptor not found")
         else
@@ -174,7 +174,7 @@ class BaseAccountResolver(val factory: AccountFactory) : AccountResolver {
  * @property blockchainRID reference to blockchain account is tied to
  * @property pubkey the cryptographic public key associated with the account
  */
-class BasicAccountInput(override val accountID: ByteArray, override val descriptor: GtvArray) : FTInputAccount {
+class BasicAccountInput(override val accountID: ByteArray, override val descriptor: GtvArray<Gtv>) : FTInputAccount {
     val blockchainRID = descriptor[1]
     val pubkey = descriptor[2].asByteArray()
 
@@ -240,7 +240,7 @@ object BasicAccount : AccountType(1, ::BasicAccountInput, simpleOutputAccount) {
  * @property descriptor account descriptor including [blockchainRID]
  * @property blockchainRID reference to blockchain account is tied to
  */
-class NullAccountInput(override val accountID: ByteArray, override val descriptor: GtvArray) : FTInputAccount {
+class NullAccountInput(override val accountID: ByteArray, override val descriptor: GtvArray<Gtv>) : FTInputAccount {
     override val skipUpdate = false
     val blockchainRID = descriptor[1]
 

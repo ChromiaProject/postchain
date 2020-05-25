@@ -12,6 +12,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.RestartHandler
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
@@ -41,10 +42,10 @@ class Chromia0BlockchainProcessManager(
                 txb.addOperation("anchor_block",
                         arrayOf(
                                 GtvDecoder.decodeGtv(blockHeader),
-                                GtvArray(
+                                GtvArray<Gtv>(
                                         sortedSignatures.map { GtvByteArray(it.subjectID) }.toTypedArray()
                                 ),
-                                GtvArray(
+                                GtvArray<Gtv>(
                                         sortedSignatures.map { GtvByteArray(it.data) }.toTypedArray()
                                 )
                                 )
@@ -67,7 +68,7 @@ class Chromia0BlockchainProcessManager(
                 try {
                     anchorLastBlock(chainId)
                 } catch (e: Exception) {
-                    logger.error("Error when anchoring ${e.toString()}")
+                    logger.error("Error when anchoring $e")
                     e.printStackTrace()
                 }
                 baseHandler()

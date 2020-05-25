@@ -22,7 +22,7 @@ object GtvBinaryTreeFactoryArray {
      * - When the args is empty. -> We return a top node with two empty leafs
      * - When there is only one element. -> We set the right element as empty
      */
-    fun buildFromGtvArray(gtvArray: GtvArray, gtvPaths: GtvPathSet): BinaryTreeElement {
+    fun buildFromGtvArray(gtvArray: GtvArray<Gtv>, gtvPaths: GtvPathSet): BinaryTreeElement {
         val pathElem: PathElement? =  gtvPaths.getPathLeafOrElseAnyCurrentPathElement()
 
         // 1. Build leaf layer
@@ -50,7 +50,7 @@ object GtvBinaryTreeFactoryArray {
         }
     }
 
-    private fun buildFromOneLeaf(leafList: List<Gtv>, orgRoot: BinaryTreeElement, gtvArray: GtvArray, sumNrOfBytes: Int, pathElem: PathElement?): GtvArrayHeadNode {
+    private fun buildFromOneLeaf(leafList: List<Gtv>, orgRoot: BinaryTreeElement, gtvArray: GtvArray<Gtv>, sumNrOfBytes: Int, pathElem: PathElement?): GtvArrayHeadNode {
         return if (leafList.size > 1) {
             throw IllegalStateException("How come we got a leaf returned when we had ${leafList.size} elements is the args?")
         } else {

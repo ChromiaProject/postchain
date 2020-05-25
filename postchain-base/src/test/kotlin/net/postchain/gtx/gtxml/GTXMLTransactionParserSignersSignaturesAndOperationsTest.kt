@@ -242,16 +242,16 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
                 BlockchainRid.buildFromHex("23213213"),
                 arrayOf(
                         OpData("ft_transfer",
-                                arrayOf(GtvArray(arrayOf(
+                                arrayOf(GtvArray<Gtv>(arrayOf(
                                         GtvString("foo"),
-                                        GtvArray(arrayOf(
+                                        GtvArray<Gtv>(arrayOf(
                                                 GtvString("foo"),
                                                 GtvString("bar")
                                         )),
                                         GtvDictionary.build(mapOf(
                                                 "key2" to GtvString("42"),
                                                 "key1" to GtvInteger(42),
-                                                "key3" to GtvArray(arrayOf(
+                                                "key3" to GtvArray<Gtv>(arrayOf(
                                                         GtvString("hello"),
                                                         GtvInteger(42)))
                                         ))
@@ -266,16 +266,16 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
         val context = TransactionContext(
                 null,
                 mapOf("param_compound" to
-                        GtvArray(arrayOf(
+                        GtvArray<Gtv>(arrayOf(
                                 GtvString("foo"),
-                                GtvArray(arrayOf(
+                                GtvArray<Gtv>(arrayOf(
                                         GtvString("foo"),
                                         GtvString("bar")
                                 )),
                                 GtvDictionary.build(mapOf(
                                         "key1" to GtvInteger(42),
                                         "key2" to GtvString("42"),
-                                        "key3" to GtvArray(arrayOf(
+                                        "key3" to GtvArray<Gtv>(arrayOf(
                                                 GtvString("hello"),
                                                 GtvInteger(42)
                                         ))

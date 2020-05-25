@@ -20,7 +20,7 @@ object MixArrayDictToGtvBinaryTreeHelper {
         val innerIntArray = intArrayOf(1,2,3,4)
         val gtvArrayList =GtvTreeHelper.transformIntToGtv(innerIntArray.toCollection(ArrayList()))
         val gtvs: Array<Gtv> = gtvArrayList.toTypedArray()
-        val innerGtvArr = GtvArray(gtvs)
+        val innerGtvArr = GtvArray<Gtv>(gtvs)
 
         // Put the inner Array in the outer Dict
         val outerMap = HashMap<String, Gtv>()

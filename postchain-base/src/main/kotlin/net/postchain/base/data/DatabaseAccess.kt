@@ -546,7 +546,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         return rows.map { row ->
             val rowId = row["row_id"] as Long
             val data = mutableMapOf<String, Gtv>()
-            data["definition"] = GtvArray(defs)
+            data["definition"] = GtvArray<Gtv>(defs)
             data["ddl"] = GtvString(ddl)
             cols.forEach {
                 data[it.columnName] = when (it.dataType) {

@@ -37,7 +37,7 @@ class SnapshotTrieTest {
         )
         val defs = cols.map { it.toGtv() }.toTypedArray()
         val data = mutableMapOf<String, Gtv>()
-        data["definition"] = GtvArray(defs)
+        data["definition"] = GtvArray<Gtv>(defs)
         data["name"] = GtvString("ChromaWay")
         data["age"] = GtvInteger(20L)
         data["city"] = GtvString("Stockholm")
@@ -60,7 +60,7 @@ class SnapshotTrieTest {
 
         // Verify row data can be gtv encoded & decoded properly
         val b = GtvEncoder.encodeGtv(rows[0].toGtv())
-        val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray)
+        val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray<Gtv>)
         require(row == rows[0])
 
         val leafs = rows.map { r ->
@@ -107,7 +107,7 @@ class SnapshotTrieTest {
 
         // Verify row data can be gtv encoded & decoded properly
         val b = GtvEncoder.encodeGtv(rows[0].toGtv())
-        val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray)
+        val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray<Gtv>)
         require(row == rows[0])
 
         val leafs = rows.map { r ->
@@ -166,7 +166,7 @@ class SnapshotTrieTest {
 
         // Verify row data can be gtv encoded & decoded properly
         val b = GtvEncoder.encodeGtv(rows[0].toGtv())
-        val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray)
+        val row = RowData.fromGtv(GtvDecoder.decodeGtv(b) as GtvArray<Gtv>)
         require(row == rows[0])
 
         val leafs = rows.map { r ->

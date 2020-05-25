@@ -59,7 +59,7 @@ class GtvMLEncodeScalarsTest {
     fun encodeXMLGtv_bytea_as_nested_element_successfully() {
         val gtv = GtvByteArray(
                 byteArrayOf(0x01, 0x02, 0x03, 0x0A, 0x0B, 0x0C))
-        val array = GtvArray(arrayOf(gtv))
+        val array = GtvArray<Gtv>(arrayOf(gtv))
 
         val actual = GtvMLEncoder.encodeXMLGtv(array)
         val expected = expected("""

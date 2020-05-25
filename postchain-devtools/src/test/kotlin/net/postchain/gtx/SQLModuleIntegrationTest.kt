@@ -67,7 +67,7 @@ class SQLModuleIntegrationTest : IntegrationTest() {
         // Should find 1 hit for key "k" in type "test_get_value"
         // ------------------------------------------
         val result1 = blockQueries.query("""{type: 'test_get_value', q_key: 'k'}""").get()
-        val gtvArrRes1 = gson.fromJson<Gtv>(result1, Gtv::class.java) as GtvArray
+        val gtvArrRes1 = gson.fromJson<Gtv>(result1, Gtv::class.java) as GtvArray<Gtv>
         assertEquals(1, gtvArrRes1.getSize())
 
         val hit0 = gtvArrRes1[0].asDict()
@@ -80,7 +80,7 @@ class SQLModuleIntegrationTest : IntegrationTest() {
         // Look for type "test_get_count"
         // ------------------------------------------
         val result2 = blockQueries.query("""{type: 'test_get_count'}""").get()
-        val gtvArrRes2 = gson.fromJson<Gtv>(result2, Gtv::class.java) as GtvArray
+        val gtvArrRes2 = gson.fromJson<Gtv>(result2, Gtv::class.java) as GtvArray<Gtv>
         assertEquals(1, gtvArrRes2.getSize())
         assertEquals(1, gtvArrRes2[0]["nbigint"]!!.asInteger())
         assertEquals(2, gtvArrRes2[0]["ncount"]!!.asInteger())
@@ -100,7 +100,7 @@ class SQLModuleIntegrationTest : IntegrationTest() {
         val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
         val gson = make_gtv_gson()
         var result = blockQueries.query("""{type: 'test_get_value', q_key: 'k', q_value : 'v'}""").get()
-        var gtxResult = gson.fromJson<Gtv>(result, Gtv::class.java) as GtvArray
+        var gtxResult = gson.fromJson<Gtv>(result, Gtv::class.java) as GtvArray<Gtv>
         assertEquals(1, gtxResult.getSize())
     }
 

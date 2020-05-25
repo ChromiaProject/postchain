@@ -52,7 +52,7 @@ class GtvEncoderTest {
     @Test
     fun testGtvArray() {
         val gtvArray = Array<Gtv>(3) { GtvString("postchain")}
-        val expected = GtvArray(gtvArray)
+        val expected = GtvArray<Gtv>(gtvArray)
         val b = GtvEncoder.encodeGtv(expected)
         val result = GtvDecoder.decodeGtv(b)
         assertEquals(expected, result)
@@ -74,7 +74,7 @@ class GtvEncoderTest {
         // currently it requires >2 GB to compute hash
         val gtvArray  = (1..size).map { GtvInteger( it.toLong() ) }.toTypedArray()
         var encoded = ByteArray(0)
-        val gtv = GtvArray(gtvArray)
+        val gtv = GtvArray<Gtv>(gtvArray)
         val serializationTime = measureTimeMillis {
             encoded = GtvEncoder.encodeGtv(gtv)
         }

@@ -45,7 +45,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
 
         fun queryGetPeerInfos(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_get_peer_infos" }
-            return GtvArray(arrayOf(
+            return GtvArray<Gtv>(arrayOf(
                     peerInfoToGtv(peerInfo0))
             )
         }
@@ -66,7 +66,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
                 else -> arrayOf(0L, 101L)
             }
 
-            return GtvArray(
+            return GtvArray<Gtv>(
                     chainIds.map(::gtvBlockchainRid).toTypedArray())
         }
 

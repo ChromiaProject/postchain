@@ -10,6 +10,7 @@ import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import nl.komponents.kovenant.task
@@ -253,7 +254,7 @@ open class BaseBlockchainEngine(
         val grossTimeMs = (gross.second - gross.first) / 1_000_000
 
         val gtvBlockHeader = GtvDecoder.decodeGtv(blockHeader.rawData)
-        val blockHeaderData = BlockHeaderData.fromGtv(gtvBlockHeader as GtvArray)
+        val blockHeaderData = BlockHeaderData.fromGtv(gtvBlockHeader as GtvArray<Gtv>)
 
         return "$grossTimeMs ms" +
                 ", $netRate net tps" +

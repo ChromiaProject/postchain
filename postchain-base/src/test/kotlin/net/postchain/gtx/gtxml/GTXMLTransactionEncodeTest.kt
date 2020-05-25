@@ -161,16 +161,16 @@ class GTXMLTransactionEncodeTest {
                         OpData("ft_transfer",
                                 arrayOf(
                                         GtvString("foo"),
-                                        GtvArray(arrayOf(
+                                        GtvArray<Gtv>(arrayOf(
                                                 GtvString("foo"),
-                                                GtvArray(arrayOf(
+                                                GtvArray<Gtv>(arrayOf(
                                                         GtvString("foo"),
                                                         GtvString("bar")
                                                 )),
                                                 GtvDictionary.build(mapOf(
                                                         "key1" to GtvInteger(42),
                                                         "key2" to GtvString("42"),
-                                                        "key3" to GtvArray(arrayOf(
+                                                        "key3" to GtvArray<Gtv>(arrayOf(
                                                                 GtvString("hello"),
                                                                 GtvInteger(42)
                                                         ))

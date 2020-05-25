@@ -34,7 +34,7 @@ class GtvArrayHeadNode(left: BinaryTreeElement, right: BinaryTreeElement, conten
         SubTreeRootNode<Gtv>(left, right, content, pathElem) {
 
     init {
-        if (content !is GtvArray) {
+        if (content !is GtvArray<Gtv>) {
             throw IllegalStateException("How come we use this array type when the type is not an GtvArray?")
         }
     }

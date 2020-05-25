@@ -12,7 +12,7 @@ import org.apache.commons.dbutils.handlers.MapListHandler
 
 class AssuranceContract(
         override val accountID: ByteArray,
-        override val descriptor: GtvArray
+        override val descriptor: GtvArray<Gtv>
 ) : FTInputAccount, FTOutputAccount {
     override val skipUpdate = false
     val assetID = descriptor[2].asString()

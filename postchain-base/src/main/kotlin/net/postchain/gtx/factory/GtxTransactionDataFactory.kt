@@ -18,15 +18,15 @@ object GtxTransactionDataFactory {
      */
     fun deserializeFromGtv(gtv: Gtv): GTXTransactionData {
         // Check base structure
-        val mainArr = gtv as GtvArray
+        val mainArr = gtv as GtvArray<Gtv>
         FactoryUtils.formatChecker(mainArr, GtxBase.NR_FIELDS_TRANSACTION, "GTXTransactionData")
 
         // 1. transaction data body
-        val opsGtvArr = (mainArr[0] as GtvArray)
+        val opsGtvArr = (mainArr[0] as GtvArray<Gtv>)
         val transactionBody: GTXTransactionBodyData = GtxTransactionBodyDataFactory.deserializeFromGtv(opsGtvArr)
 
         // 2. signatures
-        val signaturesGtvArr = (mainArr[1] as GtvArray)
+        val signaturesGtvArr = (mainArr[1] as GtvArray<Gtv>)
         val signatures: Array<ByteArray> = signaturesGtvArr.array.map { (it as GtvByteArray).bytearray }.toTypedArray()
 
         return GTXTransactionData(transactionBody, signatures)

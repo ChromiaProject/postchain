@@ -83,10 +83,10 @@ class BaseBlockchainConfigurationData(
         return if (dep != null) {
             try {
                 // Should contain an array of String, ByteArr pairs
-                val gtvDepArray = dep as GtvArray
+                val gtvDepArray = dep as GtvArray<Gtv>
                 val depList = mutableListOf<BlockchainRelatedInfo>()
                 for (element in gtvDepArray.array) {
-                    val elemArr = element as GtvArray
+                    val elemArr = element as GtvArray<Gtv>
                     val nickname = elemArr[0] as GtvString
                     val blockchainRid = elemArr[1] as GtvByteArray
                     depList.add(

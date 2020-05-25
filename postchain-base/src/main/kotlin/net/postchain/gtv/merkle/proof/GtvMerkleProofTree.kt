@@ -83,7 +83,7 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
      * 2 -> a node
      * (we can add more in sub classes)
      */
-    fun serializeToGtv(): GtvArray {
+    fun serializeToGtv(): GtvArray<Gtv> {
         return serializeToGtvInternal(this.root)
     }
 
@@ -97,7 +97,7 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
     }
 
 
-    fun serializeToGtvInternal(currentElement: MerkleProofElement): GtvArray {
+    fun serializeToGtvInternal(currentElement: MerkleProofElement): GtvArray<Gtv> {
         return when (currentElement) {
             is ProofHashedLeaf -> {
                 val tail = GtvByteArray(currentElement.merkleHash)

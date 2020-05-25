@@ -2,6 +2,7 @@
 
 package net.postchain.gtx.serializer
 
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
@@ -15,16 +16,16 @@ object GtxTransactionBodyDataSerializer {
      * 2. operations [GtvArray]
      * 3. signers [GtvArray]
      */
-    fun serializeToGtv(txBody: GTXTransactionBodyData): GtvArray {
+    fun serializeToGtv(txBody: GTXTransactionBodyData): GtvArray<Gtv> {
 
         //  1. blockchainRId
         val blockchainRid: GtvByteArray = gtv(txBody.blockchainRID)
 
         // 2. operations
-        val opsGtvArr: GtvArray = gtv(txBody.operations.map{OpDataSerializer.serializeToGtv(it)})
+        val opsGtvArr: GtvArray<Gtv> = gtv(txBody.operations.map{OpDataSerializer.serializeToGtv(it)})
 
         // 3. signers
-        val signersGtvArr: GtvArray = gtv(txBody.signers.map{ gtv(it)})
+        val signersGtvArr: GtvArray<Gtv> = gtv(txBody.signers.map{ gtv(it)})
 
         return gtv(blockchainRid, opsGtvArr, signersGtvArr)
     }

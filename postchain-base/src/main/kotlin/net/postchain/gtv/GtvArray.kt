@@ -6,15 +6,15 @@ import net.postchain.gtv.messages.RawGtv
 import java.util.*
 
 
-data class GtvArray(val array: Array<out Gtv>) : GtvCollection() {
+data class GtvArray<out T: Gtv>(val array: Array<out T>) : GtvCollection() {
 
     override val type = GtvType.ARRAY
 
-    override operator fun get(index: Int): Gtv {
+    override operator fun get(index: Int): T {
         return array[index]
     }
 
-    override fun asArray(): Array<out Gtv> {
+    override fun asArray(): Array<out T> {
         return array
     }
 
@@ -43,16 +43,16 @@ data class GtvArray(val array: Array<out Gtv>) : GtvCollection() {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as GtvArray
+        other as GtvArray<*>
 
-        if (!Arrays.equals(array, other.array)) return false
+        if (!array.contentEquals(other.array)) return false
         if (type != other.type) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = Arrays.hashCode(array)
+        var result = array.contentHashCode()
         result = 31 * result + type.hashCode()
         return result
     }

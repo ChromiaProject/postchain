@@ -42,11 +42,11 @@ object GtvFactory {
         return GtvByteArray(ba.data)
     }
 
-    fun gtv(vararg a: Gtv): GtvArray {
+    fun gtv(vararg a: Gtv): GtvArray<Gtv> {
         return GtvArray(a)
     }
 
-    fun gtv(a: List<Gtv>): GtvArray {
+    fun gtv(a: List<Gtv>): GtvArray<Gtv> {
         return GtvArray(a.toTypedArray())
     }
 

@@ -11,7 +11,7 @@ object GtvTreeHelper {
     /**
      * Transforms (readable) integers into [GtvArray]
      */
-    fun transformIntListToGtvArray(ints: List<Int>): GtvArray {
+    fun transformIntListToGtvArray(ints: List<Int>): GtvArray<Gtv> {
         return transformGtvsToGtvArray(transformIntToGtv(ints))
     }
 
@@ -29,7 +29,7 @@ object GtvTreeHelper {
     /**
      * Packs a list of [Gtv] into an [GtvArray]
      */
-    fun transformGtvsToGtvArray(gtvList: List<Gtv>): GtvArray {
+    fun transformGtvsToGtvArray(gtvList: List<Gtv>): GtvArray<Gtv> {
         val gtvArr: Array<Gtv> = gtvList.toTypedArray()
         return GtvArray(gtvArr)
     }

@@ -4,6 +4,7 @@ package net.postchain.gtx.serializer
 
 import net.postchain.base.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
@@ -30,17 +31,17 @@ class GtxDataSerializerTest {
 
         // Operation Data
         val opName: GtvString = gtv(op_name)
-        val opArgs: GtvArray = gtv(op_args.map { gtv(it.toLong()) })
-        val op1: GtvArray = gtv(listOf(opName, opArgs))
+        val opArgs: GtvArray<Gtv> = gtv(op_args.map { gtv(it.toLong()) })
+        val op1: GtvArray<Gtv> = gtv(listOf(opName, opArgs))
 
         // Transaction Body Data
         val bcRid: GtvByteArray = gtv(blockchainRID)
-        val operations: GtvArray = gtv(listOf(op1))
-        val signers: GtvArray = gtv(listOf(gtv(aliceSigner)))
-        val txb: GtvArray = gtv(listOf(bcRid, operations, signers))
+        val operations: GtvArray<Gtv> = gtv(listOf(op1))
+        val signers: GtvArray<Gtv> = gtv(listOf(gtv(aliceSigner)))
+        val txb: GtvArray<Gtv> = gtv(listOf(bcRid, operations, signers))
 
         // Transaction Data
-        val signatures: GtvArray = gtv(listOf(gtv(aliceSignature)))
+        val signatures: GtvArray<Gtv> = gtv(listOf(gtv(aliceSignature)))
         val expectedGtvTxStruct = gtv(listOf(txb, signatures))
 
         // ---------- Build GTXData ---------------------------

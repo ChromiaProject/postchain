@@ -14,7 +14,7 @@ import net.postchain.gtx.GTXOperation
 class FTRegisterData(val opData: ExtOpData,
                      val accountID: ByteArray,
                      val accountRawDesc: ByteArray,
-                     val accountDesc: GtvArray,
+                     val accountDesc: GtvArray<Gtv>,
                      val extra: ExtraData)
 
 typealias StaticRegisterRule = (FTRegisterData)->Boolean
@@ -33,7 +33,7 @@ class FT_register_op (val config: FTConfig, data: ExtOpData): GTXOperation(data)
             data,
             config.cryptoSystem.digest(data.args[0].asByteArray()),
             data.args[0].asByteArray(),
-            decodeGtv(data.args[0].asByteArray()) as GtvArray,
+            decodeGtv(data.args[0].asByteArray()) as GtvArray<Gtv>,
             getExtraData(data, 1)
     )
 

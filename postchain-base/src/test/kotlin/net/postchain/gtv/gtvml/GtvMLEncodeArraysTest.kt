@@ -12,7 +12,7 @@ class GtvMLEncodeArraysTest {
 
     @Test
     fun encodeXMLGtv_array_empty_successfully() {
-        val gtv = GtvArray(arrayOf())
+        val gtv = GtvArray<Gtv>(arrayOf())
         val actual = GtvMLEncoder.encodeXMLGtv(gtv)
         val expected = arrayOf(
                 expected("<array></array>"),
@@ -23,7 +23,7 @@ class GtvMLEncodeArraysTest {
 
     @Test
     fun encodeXMLGtv_array_successfully() {
-        val gtv = GtvArray(arrayOf(
+        val gtv = GtvArray<Gtv>(arrayOf(
                 GtvString("hello"),
                 GtvInteger(42)))
         val actual = GtvMLEncoder.encodeXMLGtv(gtv)
@@ -38,13 +38,13 @@ class GtvMLEncodeArraysTest {
 
     @Test
     fun encodeXMLGtv_compound_array_successfully() {
-        val gtv = GtvArray(arrayOf(
+        val gtv = GtvArray<Gtv>(arrayOf(
                 GtvNull,
                 GtvString("hello"),
                 GtvInteger(42),
-                GtvArray(arrayOf()),
-                GtvArray(arrayOf(
-                        GtvArray(arrayOf(
+                GtvArray<Gtv>(arrayOf()),
+                GtvArray<Gtv>(arrayOf(
+                        GtvArray<Gtv>(arrayOf(
                                 GtvDictionary.build(mapOf(
                                         "0" to GtvNull,
                                         "1" to GtvString("1"),
@@ -52,7 +52,7 @@ class GtvMLEncodeArraysTest {
                                 ))
                         )),
                         GtvDictionary.build(mapOf(
-                                "array" to GtvArray(arrayOf(
+                                "array" to GtvArray<Gtv>(arrayOf(
                                         GtvInteger(1),
                                         GtvString("2")
                                 )),

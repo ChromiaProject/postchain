@@ -9,16 +9,16 @@ data class TableDefinition(
         val columnDefault: String?
 ): BaseData() {
 
-    override fun toGtv(): GtvArray {
+    override fun toGtv(): GtvArray<Gtv> {
         return GtvFactory.gtv(GtvString(columnName), GtvString(dataType), GtvInteger(isNullable.toLong()), GtvString(columnDefault.toString()))
     }
 
-    override fun toHashGtv(): GtvArray {
+    override fun toHashGtv(): GtvArray<Gtv> {
         return toGtv()
     }
 
     companion object: FromGtv {
-        override fun fromGtv(gtv: GtvArray): TableDefinition {
+        override fun fromGtv(gtv: GtvArray<Gtv>): TableDefinition {
             return TableDefinition(
                     gtv[0].asString(),
                     gtv[1].asString(),

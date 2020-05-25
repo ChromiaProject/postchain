@@ -69,7 +69,7 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
                 else -> emptyArray()
             }
 
-            return GtvArray(peerInfos
+            return GtvArray<Gtv>(peerInfos
                     .map(::peerInfoToGtv)
                     .toTypedArray()
             )
@@ -92,7 +92,7 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
 
         fun queryComputeBlockchainList(node: Nodes, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_compute_blockchain_list" }
-            return GtvArray(arrayOf(gtvBlockchainRid(0L)))
+            return GtvArray<Gtv>(arrayOf(gtvBlockchainRid(0L)))
         }
 
         fun queryGetConfiguration(node: Nodes, eContext: EContext, args: Gtv): Gtv {

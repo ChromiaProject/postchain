@@ -35,13 +35,13 @@ object GtvMLEncoder {
             is GtvString -> objectFactory.createString(gtv.string)
             is GtvInteger -> objectFactory.createInt(gtv.integer)
             is GtvByteArray -> objectFactory.createBytea(gtv.bytearray) // See comments in GTXMLValueEncodeScalarsTest
-            is GtvArray -> createArrayElement(gtv)
+            is GtvArray<Gtv> -> createArrayElement(gtv)
             is GtvDictionary -> createDictElement(gtv)
             else -> throw IllegalArgumentException("Unknown GTV type: {${gtv.type}")
         }
     }
 
-    private fun createArrayElement(gtv: GtvArray): JAXBElement<ArrayType> {
+    private fun createArrayElement(gtv: GtvArray<Gtv>): JAXBElement<ArrayType> {
         return with(objectFactory.createArrayType()) {
             gtv.array
                     .map(GtvMLEncoder::encodeGTXMLValueToJAXBElement)

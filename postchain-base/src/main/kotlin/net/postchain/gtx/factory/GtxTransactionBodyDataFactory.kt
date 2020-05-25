@@ -21,18 +21,18 @@ object GtxTransactionBodyDataFactory {
      */
     fun deserializeFromGtv(gtv: Gtv): GTXTransactionBodyData {
         // Check base structure
-        val mainArr = gtv as GtvArray
+        val mainArr = gtv as GtvArray<Gtv>
         FactoryUtils.formatChecker(mainArr, GtxBase.NR_FIELDS_TRANSACTION_BODY, "GTXTransactionBodyData")
 
         //  1. blockchainRId
         val blockchainRid = BlockchainRid((mainArr[0] as GtvByteArray).bytearray)
 
         // 2. operations
-        val opsGtvArr = (mainArr[1] as GtvArray)
+        val opsGtvArr = (mainArr[1] as GtvArray<Gtv>)
         val ops: Array<OpData> = opsGtvArr.array.map { OpDataFactory.deserializeFromGtv(it) }.toTypedArray()
 
         // 3. signers
-        val signersGtvArr = (mainArr[2] as GtvArray)
+        val signersGtvArr = (mainArr[2] as GtvArray<Gtv>)
         val signers: Array<ByteArray> = signersGtvArr.array.map { (it as GtvByteArray).bytearray }.toTypedArray()
 
         return GTXTransactionBodyData(blockchainRid, ops, signers)

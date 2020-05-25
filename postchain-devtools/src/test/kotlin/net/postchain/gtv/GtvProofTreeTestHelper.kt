@@ -74,14 +74,14 @@ object GtvProofTreeTestHelper {
     fun translateGtvStringToGtvByteArray(gtv: Gtv): Gtv {
         return when (gtv) {
             is GtvString -> GtvByteArray(gtv.string.hexStringToByteArray())
-            is GtvArray -> {
+            is GtvArray<Gtv> -> {
                 // Translate all content
                 val retList = mutableListOf<Gtv>()
                 for (elem in gtv.array) {
                     val ret = translateGtvStringToGtvByteArray(elem)
                     retList.add(ret)
                 }
-                GtvArray(retList.toTypedArray())
+                GtvArray<Gtv>(retList.toTypedArray())
             }
             is GtvDictionary -> throw IllegalArgumentException("translateGtvStringToGtvByteArray() - does not handle dicts yet")
             else -> gtv

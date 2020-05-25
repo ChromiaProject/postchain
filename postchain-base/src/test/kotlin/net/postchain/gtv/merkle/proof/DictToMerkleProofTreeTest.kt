@@ -5,6 +5,7 @@ package net.postchain.base.merkle.proof
 import net.postchain.base.merkle.PrintableTreeFactory
 import net.postchain.base.merkle.TreeHelper
 import net.postchain.base.merkle.TreePrinter
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.generateProof
 import net.postchain.gtv.merkle.DictToGtvBinaryTreeHelper
@@ -93,7 +94,7 @@ class DictToMerkleProofTreeTest {
         assertEquals(expectedMerkleRoot1, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray<Gtv> = merkleProofTree.serializeToGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "GtvArray(array=[$ln" +
@@ -200,7 +201,7 @@ class DictToMerkleProofTreeTest {
         assertEquals(expectedMerkleRoot4, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray<Gtv> = merkleProofTree.serializeToGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "GtvArray(array=[$ln" +
@@ -287,7 +288,7 @@ class DictToMerkleProofTreeTest {
         assertEquals(expectedMerkleRootDictInDict, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray<Gtv> = merkleProofTree.serializeToGtv()
         println("Serilalized: $serialize")
 
         val expectedSerialization =  "GtvArray(array=[$ln" +
@@ -373,7 +374,7 @@ class DictToMerkleProofTreeTest {
         assertEquals(expectedMerkleRootDictInDict, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray<Gtv> = merkleProofTree.serializeToGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "GtvArray(array=[$ln" +

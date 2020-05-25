@@ -366,7 +366,7 @@ class ApiIntegrationTestNightly : IntegrationTest() {
         println("Proof as gtv: $gtvCleanProof")
         // GTV -> Proof
         val proofTreeFactory = GtvMerkleProofTreeFactory()
-        val x = proofTreeFactory.deserialize(gtvCleanProof as GtvArray)
+        val x = proofTreeFactory.deserialize(gtvCleanProof as GtvArray<Gtv>)
         println("Proof as classes: $x")
         val myNewBlockHash = x.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 

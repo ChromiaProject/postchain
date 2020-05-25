@@ -6,6 +6,7 @@ import net.postchain.base.merkle.PrintableTreeFactory
 import net.postchain.base.merkle.TreeHelper
 import net.postchain.base.merkle.TreeHelper.stripWhite
 import net.postchain.base.merkle.TreePrinter
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.generateProof
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper
@@ -93,7 +94,7 @@ class ArrayToMerkleProofTreeTest {
         assertEquals(expected1ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray<Gtv> = merkleProofTree.serializeToGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "GtvArray(array=[$ln" +
@@ -167,7 +168,7 @@ class ArrayToMerkleProofTreeTest {
         assertEquals(expected4ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray<Gtv> = merkleProofTree.serializeToGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "GtvArray(array=[$ln" +
@@ -257,7 +258,7 @@ class ArrayToMerkleProofTreeTest {
         assertEquals(expected7ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray<Gtv> = merkleProofTree.serializeToGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "GtvArray(array=[$ln" +
@@ -498,7 +499,7 @@ class ArrayToMerkleProofTreeTest {
         assertEquals(expectet7and3ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray<Gtv> = merkleProofTree.serializeToGtv()
         println("Serilalized: $serialize")
 
         val expectedSerialization = "GtvArray(array=[$ln" +

@@ -13,7 +13,7 @@ class GtvMLParserArraysTest {
     fun parseGtv_array_empty_successfully() {
         val xml = "<array></array>"
         val actual = GtvMLParser.parseGtvML(xml)
-        val expected = GtvArray(arrayOf())
+        val expected = GtvArray<Gtv>(arrayOf())
 
         assert(actual).isEqualTo(expected)
     }
@@ -22,7 +22,7 @@ class GtvMLParserArraysTest {
     fun parseGtv_array_of_scalars_successfully() {
         val xml = "<array><string>hello</string><int>42</int></array>"
         val actual = GtvMLParser.parseGtvML(xml)
-        val expected = GtvArray(arrayOf(
+        val expected = GtvArray<Gtv>(arrayOf(
                 GtvString("hello"),
                 GtvInteger(42)
         ))
@@ -37,7 +37,7 @@ class GtvMLParserArraysTest {
                 xml,
                 mapOf("num" to GtvInteger(42)))
 
-        val expected = GtvArray(arrayOf(
+        val expected = GtvArray<Gtv>(arrayOf(
                 GtvString("hello"),
                 GtvInteger(42)
         ))
@@ -77,12 +77,12 @@ class GtvMLParserArraysTest {
         """.trimIndent()
 
         val actual = GtvMLParser.parseGtvML(xml)
-        val expected = GtvArray(arrayOf(
-                GtvArray(arrayOf(
+        val expected = GtvArray<Gtv>(arrayOf(
+                GtvArray<Gtv>(arrayOf(
                         GtvString("foo"),
                         GtvString("bar")
                 )),
-                GtvArray(arrayOf(
+                GtvArray<Gtv>(arrayOf(
                         GtvInteger(42),
                         GtvInteger(43)
                 ))
@@ -159,18 +159,18 @@ class GtvMLParserArraysTest {
                         "param_string_foo" to GtvString("foo"))
         )
 
-        val expected = GtvArray(arrayOf(
+        val expected = GtvArray<Gtv>(arrayOf(
                 GtvString("foo"),
                 GtvInteger(42),
-                GtvArray(arrayOf(
+                GtvArray<Gtv>(arrayOf(
                         GtvNull,
                         GtvString("foo"),
                         GtvNull,
                         GtvString("bar"),
-                        GtvArray(arrayOf(
+                        GtvArray<Gtv>(arrayOf(
                                 GtvInteger(42),
                                 GtvInteger(43),
-                                GtvArray(arrayOf(
+                                GtvArray<Gtv>(arrayOf(
                                         GtvInteger(44)
                                 )),
                                 GtvDictionary.build(mapOf(
@@ -179,14 +179,14 @@ class GtvMLParserArraysTest {
                                 ))
                         )),
                         GtvDictionary.build(mapOf(
-                                "hello" to GtvArray(arrayOf(
+                                "hello" to GtvArray<Gtv>(arrayOf(
                                         GtvString("world"),
                                         GtvString("world")
                                 )),
                                 "123" to GtvInteger(123)
                         ))
                 )),
-                GtvArray(arrayOf(
+                GtvArray<Gtv>(arrayOf(
                         GtvInteger(42),
                         GtvDictionary.build(mapOf(
                                 "hello" to GtvString("world"),
@@ -199,7 +199,7 @@ class GtvMLParserArraysTest {
                                 "hello" to GtvString("foo"),
                                 "123" to GtvInteger(123)
                         )),
-                        "array123" to GtvArray(arrayOf(
+                        "array123" to GtvArray<Gtv>(arrayOf(
                                 GtvInteger(42),
                                 GtvInteger(43)
                         ))

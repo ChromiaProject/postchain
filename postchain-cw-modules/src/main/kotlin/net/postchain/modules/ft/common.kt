@@ -35,8 +35,8 @@ open class FTRules<DataT>(val staticRules: Array<(DataT)->Boolean>, val dbRules:
 }
 
 interface AccountFactory {
-    fun makeInputAccount(accountID: ByteArray, descriptor: GtvArray): FTInputAccount
-    fun makeOutputAccount(accountID: ByteArray, descriptor: GtvArray): FTOutputAccount
+    fun makeInputAccount(accountID: ByteArray, descriptor: GtvArray<Gtv>): FTInputAccount
+    fun makeOutputAccount(accountID: ByteArray, descriptor: GtvArray<Gtv>): FTOutputAccount
 }
 
 interface AccountResolver {

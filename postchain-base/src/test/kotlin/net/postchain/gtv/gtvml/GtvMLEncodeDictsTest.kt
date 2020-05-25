@@ -47,9 +47,9 @@ class GtvMLEncodeDictsTest {
         val gtv = GtvDictionary.build(mapOf(
                 "k1" to GtvString("hello"),
                 "k2" to GtvInteger(42),
-                "k3" to GtvArray(arrayOf()),
-                "k4" to GtvArray(arrayOf(
-                        GtvArray(arrayOf(
+                "k3" to GtvArray<Gtv>(arrayOf()),
+                "k4" to GtvArray<Gtv>(arrayOf(
+                        GtvArray<Gtv>(arrayOf(
                                 GtvNull,
                                 GtvDictionary.build(mapOf(
                                         "1" to GtvString("1"),
@@ -57,7 +57,7 @@ class GtvMLEncodeDictsTest {
                                 ))
                         )),
                         GtvDictionary.build(mapOf(
-                                "array" to GtvArray(arrayOf(
+                                "array" to GtvArray<Gtv>(arrayOf(
                                         GtvInteger(1),
                                         GtvString("2")
                                 )),

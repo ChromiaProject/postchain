@@ -32,7 +32,7 @@ class BlockHeaderDataFactoryTest {
 
         val gtvDep = blockHeaderData.gtvDependencies
         assertEquals(GtvType.ARRAY, gtvDep.type)
-        val gtvDepArr = gtvDep as GtvArray
+        val gtvDepArr = gtvDep as GtvArray<Gtv>
         assertEquals(4, gtvDepArr.getSize())
 
         // Check the entire array
@@ -61,14 +61,14 @@ class BlockHeaderDataFactoryTest {
     @Test
     fun buildFromGtv_4Dependencies() {
         val depArr = arrayOf(GtvNull, GtvNull, GtvByteArray(dummyBlockRid), GtvNull)
-        val gtvDependencies = GtvArray(depArr)
+        val gtvDependencies = GtvArray<Gtv>(depArr)
         val mainArr = buildGtvArray(gtvDependencies)
         val gtvMainArr = GtvArray(mainArr)
         val blockHeaderData = BlockHeaderDataFactory.buildFromGtv(gtvMainArr)
 
         val gtvDep = blockHeaderData.gtvDependencies
         assertEquals(GtvType.ARRAY, gtvDep.type)
-        val gtvDepArr = gtvDep as GtvArray
+        val gtvDepArr = gtvDep as GtvArray<Gtv>
         assertEquals(4, gtvDepArr.getSize())
 
         // Check the entire array
@@ -81,7 +81,7 @@ class BlockHeaderDataFactoryTest {
     @Test
     fun buildFromGtv_emptyDependencies() {
         val mainArr = buildGtvArray(GtvNull)
-        val gtvMainArr = GtvArray(mainArr)
+        val gtvMainArr = GtvArray<Gtv>(mainArr)
         val blockHeaderData = BlockHeaderDataFactory.buildFromGtv(gtvMainArr)
 
         assertEquals(blockHeaderData.gtvDependencies, GtvNull)
