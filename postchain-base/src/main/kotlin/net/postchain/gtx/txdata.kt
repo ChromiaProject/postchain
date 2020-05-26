@@ -86,8 +86,8 @@ data class GTXTransactionBodyData(
         other as GTXTransactionBodyData
 
         if (blockchainRID != other.blockchainRID) return false
-        if (!Arrays.deepEquals(signers, other.signers)) return false
-        if (!Arrays.equals(operations, other.operations)) return false
+        if (!signers.contentDeepEquals(other.signers)) return false
+        if (!operations.contentEquals(other.operations)) return false
 
         return true
     }

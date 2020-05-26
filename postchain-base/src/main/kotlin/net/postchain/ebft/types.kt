@@ -102,7 +102,7 @@ class FetchUnfinishedBlockIntent(val blockRID: ByteArray) : BlockIntent() {
     }
 
     override fun hashCode(): Int {
-        return Arrays.hashCode(blockRID)
+        return blockRID.contentHashCode()
     }
 }
 
@@ -113,7 +113,7 @@ data class FetchCommitSignatureIntent(val blockRID: ByteArray, val nodes: Array<
         if (this === other) return true
         other as FetchCommitSignatureIntent
         if (!blockRID.contentEquals(other.blockRID)) return false
-        if (!Arrays.equals(nodes, other.nodes)) return false
+        if (!nodes.contentEquals(other.nodes)) return false
         return true
     }
 

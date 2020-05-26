@@ -378,7 +378,7 @@ class ValidatorSyncManager(
                 processIntent()
 
                 // RevoltTracker will check trigger a revolt if conditions for revolting are met
-                // A revolt will be triggerd by calling statusManager.onStartRevolting()
+                // A revolt will be triggered by calling statusManager.onStartRevolting()
                 // Typical revolt conditions
                 //    * A timeout happens and round has not increased. Round is increased then 2f+1 nodes
                 //      are revolting.
