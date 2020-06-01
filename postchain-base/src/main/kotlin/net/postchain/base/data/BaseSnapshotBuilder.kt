@@ -55,7 +55,8 @@ open class BaseSnapshotBuilder(
 
         // only need to return hash snapshot tree
         val root = mergeHashTrees(listOfChunk as List<TreeElement>)
-        store.commitSnapshot(ectx, root!!.hash().toByteArray(), height)
+        // TODO: Will apply snapshot tnx to commit the snapshot
+//        store.commitSnapshot(ectx, root!!.hash().toByteArray(), height)
         snapshotData = root
 
         return root

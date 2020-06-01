@@ -27,7 +27,7 @@ class BaseBlockBuildingStrategy(val configData: BaseBlockchainConfigurationData,
         }
     }
 
-    override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean {
+    override fun    shouldStopBuildingBlock(bb: BlockBuilder): Boolean {
         val abb = bb as AbstractBlockBuilder
         return abb.transactions.size >= maxBlockTransactions
     }

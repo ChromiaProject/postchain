@@ -28,7 +28,6 @@ class BaseSnapshotDatabase(
         BaseSnapshotDatabase.logger.debug("BaseSnapshotDatabase stopping")
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS) // TODO: [et]: 1000 ms
-        maybeRollback()
     }
 
     private fun <RT> runOp(name: String, op: () -> RT): Promise<RT, Exception> {
@@ -48,15 +47,6 @@ class BaseSnapshotDatabase(
         }
 
         return deferred.promise
-    }
-
-    private fun maybeRollback() {
-        BaseSnapshotDatabase.logger.trace("BaseSnapshotDatabase maybeRollback.")
-        if (snapshotBuilder != null) {
-            BaseSnapshotDatabase.logger.debug("BaseSnapshotDatabase snapshotBuilder is not null.")
-        }
-        snapshotBuilder?.rollback()
-        snapshotBuilder = null
     }
 
     override fun buildSnapshot(height: Long): Promise<Tree, Exception> {

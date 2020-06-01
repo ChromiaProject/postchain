@@ -5,6 +5,7 @@ package net.postchain.base
 import net.postchain.StorageBuilder
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.BaseTransactionQueue
+import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
@@ -43,7 +44,6 @@ class BaseBlockchainInfrastructure(
      * @param eContext is the DB context
      * @param nodeID
      * @param chainID
-     * @param initialBlockchainRID is null or a blokchain RID
      * @return the newly created [BlockchainConfiguration]
      */
     override fun makeBlockchainConfiguration(
@@ -79,7 +79,7 @@ class BaseBlockchainInfrastructure(
                 (configuration as BaseBlockchainConfiguration)
                         .configData.getBlockBuildingStrategy()?.get("queuecapacity")?.asInteger()?.toInt() ?: 2500)
 
-        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue)
+        return BaseBlockchainEngine(processName, configuration, nodeConfigProvider.getConfiguration(), storage, configuration.chainID, transactionQueue)
                 .apply {
                     setRestartHandler(restartHandler)
                     initializeDB()

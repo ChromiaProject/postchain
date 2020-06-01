@@ -32,7 +32,8 @@
         * Single node GTX: SingleNodeGtxBlockchainConfigurationFactory
         * Normal Gtx: GTXBlockchainConfigurationFactory
         -->
-        <string>net.postchain.devtools.testinfra.TestBlockchainConfigurationFactory</string>
+        <!-- <string>net.postchain.devtools.testinfra.TestBlockchainConfigurationFactory</string> -->
+        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
     </entry>
     <entry key="signers">
         <array>

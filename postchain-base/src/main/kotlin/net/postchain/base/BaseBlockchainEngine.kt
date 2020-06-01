@@ -8,11 +8,14 @@ import net.postchain.base.data.BaseManagedSnapshotBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
+import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtx.GTXDataBuilder
 import nl.komponents.kovenant.task
 import java.lang.Long.max
 
@@ -21,6 +24,7 @@ const val LOG_STATS = true
 open class BaseBlockchainEngine(
         private val processName: BlockchainProcessName,
         private val blockchainConfiguration: BlockchainConfiguration,
+        private val nodeConfig: NodeConfig,
         val storage: Storage,
         private val chainID: Long,
         private val transactionQueue: TransactionQueue,
@@ -103,7 +107,7 @@ open class BaseBlockchainEngine(
 
     private fun makeSnapshotBuilder(): ManagedSnapshotBuilder {
         if (closed) throw ProgrammerMistake("Engine is already closed")
-        val eContext = storage.openWriteConnection(chainID)
+        val eContext = storage.openReadConnection(chainID)
 
         return BaseManagedSnapshotBuilder(eContext, storage, blockchainConfiguration.makeSnapshotBuilder(eContext))
     }
@@ -236,7 +240,14 @@ open class BaseBlockchainEngine(
     override fun buildSnapshot(height: Long): ManagedSnapshotBuilder {
         val snapshotBuilder = makeSnapshotBuilder()
         snapshotBuilder.begin()
-        snapshotBuilder.buildSnapshot(height)
+        val tree = snapshotBuilder.buildSnapshot(height)
+        val builder = GTXDataBuilder(blockchainConfiguration.blockchainRID, arrayOf(nodeConfig.pubKeyByteArray), cryptoSystem)
+
+        builder.addOperation("nop", arrayOf(GtvFactory.gtv("snapshot"), GtvFactory.gtv(chainID), GtvFactory.gtv(height), GtvFactory.gtv(tree!!.hash())))
+        builder.finish()
+        builder.sign(cryptoSystem.buildSigMaker(nodeConfig.pubKeyByteArray, nodeConfig.privKeyByteArray))
+        val tx = this.blockchainConfiguration.getTransactionFactory().decodeTransaction(builder.serialize())
+        transactionQueue.enqueue(tx)
         snapshotBuilder.commit()
         return snapshotBuilder
     }

@@ -20,15 +20,8 @@ class BaseManagedSnapshotBuilder(
         try {
             return fn()
         } catch (e: Exception) {
-            rollback()
             throw e
         }
-    }
-
-    override fun rollback() {
-        if (closed) throw ProgrammerMistake("Already closed")
-        closed = true
-        storage.closeWriteConnection(eContext, false)
     }
 
     override fun begin() {
@@ -36,7 +29,8 @@ class BaseManagedSnapshotBuilder(
     }
 
     override fun commit() {
-        storage.closeWriteConnection(eContext, true)
+        // Only need to close the read connection
+        storage.closeReadConnection(eContext)
     }
 
     override fun buildSnapshot(height: Long): Tree {

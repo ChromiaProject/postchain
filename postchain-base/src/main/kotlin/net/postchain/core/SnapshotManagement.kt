@@ -9,7 +9,7 @@ interface SnapshotBuilder {
 }
 
 interface ManagedSnapshotBuilder: SnapshotBuilder {
-    fun rollback()
+//    fun rollback()
 }
 
 /**
