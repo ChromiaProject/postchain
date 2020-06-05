@@ -4,7 +4,6 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.StorageBuilder
-import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
@@ -38,6 +37,7 @@ open class BaseBlockchainProcessManager(
     val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     private var snapshotProcess: BlockchainProcess? = null
+
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
@@ -72,18 +72,15 @@ open class BaseBlockchainProcessManager(
 
                 logger.info("[${nodeName()}]: Starting of Blockchain: chainId: $chainId")
 
-                withReadConnection(storage, chainId) { eContext ->
+                withReadWriteConnection(storage, chainId) { eContext ->
                     val configuration = blockchainConfigProvider.getConfiguration(eContext, chainId)
                     if (configuration != null) {
 
                         val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                                configuration,
-                                eContext,
-                                NODE_ID_AUTO,
-                                chainId)
+                                configuration, eContext, NODE_ID_AUTO, chainId)
 
                         val processName = BlockchainProcessName(
-                                nodeConfig.pubKey, blockchainConfig.blockchainRID)
+                                nodeConfig.pubKey, blockchainConfig.blockchainRid)
 
                         logger.debug { "$processName: BlockchainConfiguration has been created: chainId: $chainId" }
 
@@ -102,7 +99,7 @@ open class BaseBlockchainProcessManager(
                                 action = { logPeerTopology(chainId) }
                         )
                         logger.info("$processName: Blockchain has been started: chainId: $chainId")
-                        blockchainConfig.blockchainRID
+                        blockchainConfig.blockchainRid
 
                     } else {
                         logger.error("[${nodeName()}]: Can't start Blockchain chainId: $chainId due to configuration is absent")

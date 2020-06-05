@@ -50,7 +50,7 @@ open class SnapshotTest: IntegrationTest() {
         nodes.clear()
         nodesNames.clear()
         logger.debug("Closed nodes")
-        peerInfos = null
+        peerInfos = emptyArray()
         expectedSuccessRids = mutableMapOf()
         configOverrides.clear()
         val path = Paths.get("").toAbsolutePath().normalize().toString() + File.separator + snapshotFolder

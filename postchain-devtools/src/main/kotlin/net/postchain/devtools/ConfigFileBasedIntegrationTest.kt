@@ -6,7 +6,8 @@ import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.core.*
+import net.postchain.core.NODE_ID_TODO
+import net.postchain.core.Transaction
 import net.postchain.devtools.utils.configuration.NodeNameWithBlockchains
 import net.postchain.devtools.utils.configuration.UniversalFileLocationStrategy
 import net.postchain.gtv.Gtv
@@ -30,7 +31,7 @@ typealias IntegrationTest = ConfigFileBasedIntegrationTest
  * We should still use this class for tests when we need to test broken configuration files,
  * or when we need to do non-standard stuff, like adding one blockchain at a time.
  */
-open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
+open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
 
     protected val nodes = mutableListOf<PostchainTestNode>()
     protected val nodesNames = mutableMapOf<String, String>() // { pubKey -> Node${i} }
@@ -40,7 +41,7 @@ open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
     // PeerInfos must be shared between all nodes because
     // a listening node will update the PeerInfo port after
     // ServerSocket is created.
-    protected open var peerInfos: Array<PeerInfo>? = null
+    protected open var peerInfos: Array<PeerInfo> = arrayOf()
     protected var expectedSuccessRids = mutableMapOf<Long, MutableList<ByteArray>>()
 
     companion object : KLogging() {
@@ -54,7 +55,7 @@ open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
         nodes.clear()
         nodesNames.clear()
         logger.debug("Closed nodes")
-        peerInfos = null
+        peerInfos = emptyArray()
         expectedSuccessRids = mutableMapOf()
         configOverrides.clear()
         System.gc()

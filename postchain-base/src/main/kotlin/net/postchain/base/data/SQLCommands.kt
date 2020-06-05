@@ -2,7 +2,10 @@
 
 package net.postchain.base.data
 
+@Deprecated("POS-128")
 interface SQLCommands {
+    fun configurationsTable(chainId: Long): String
+
     val createTableBlocks: String
     val createTableSnapshots: String
     val createTableBlockChains: String
@@ -14,6 +17,7 @@ interface SQLCommands {
     val insertSnapshots: String
     val insertTransactions: String
     val insertConfiguration: String
+    fun insertConfigurationCmd(chainId: Long): String
     val createTableGtxModuleVersion: String
     val createDescribeTableFunction: String
 
@@ -21,4 +25,6 @@ interface SQLCommands {
     fun dropSchemaCascade(schema: String): String
     fun createSchema(schema: String): String
     fun setCurrentSchema(schema: String): String
+
+    fun pref(chainId: Long): String = "c$chainId."
 }

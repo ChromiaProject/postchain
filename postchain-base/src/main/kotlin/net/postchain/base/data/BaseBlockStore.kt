@@ -199,7 +199,7 @@ class BaseBlockStore : BlockStore {
 
     fun initialValidation(ctx: EContext, dependencies: List<BlockchainRelatedInfo>) {
         // At this point we must have stored BC RID
-        DatabaseAccess.of(ctx).getBlockchainRID(ctx)
+        DatabaseAccess.of(ctx).getBlockchainRid(ctx)
                 ?: throw IllegalStateException("Cannot initialize block store for a chain without a RID")
 
         // Verify all dependencies
@@ -229,4 +229,5 @@ class BaseBlockStore : BlockStore {
 //        }
 //        return rellAppTables
     }
+
 }
