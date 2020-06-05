@@ -38,7 +38,7 @@ class TwoPeersReconnectionTest : ReconnectionTest() {
         //println("---- Both started ------")
 
         Awaitility.await().atMost(Duration.FIVE_SECONDS)
-                .untilAsserted{
+                .untilAsserted {
                     nodes[0].assertNodeConnectedWith(1, nodes[1])
                     nodes[1].assertNodeConnectedWith(1, nodes[0])
                 }

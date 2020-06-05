@@ -30,7 +30,7 @@ class BaseManagedBlockBuilder(
 ) : ManagedBlockBuilder {
     companion object : KLogging()
 
-    var closed: Boolean = false
+    private var closed = false
 
     /**
      * Wrapper for blockbuilder operations. Will close current working block for further modifications
@@ -40,9 +40,9 @@ class BaseManagedBlockBuilder(
      * @param fn operation to be executed
      * @return whatever [fn] returns
      */
-    fun <RT> runOp(fn: () -> RT): RT {
-        if (closed)
-            throw ProgrammerMistake("Already closed")
+    private fun <RT> runOpSafely(fn: () -> RT): RT {
+        if (closed) throw ProgrammerMistake("Already closed")
+
         try {
             return fn()
         } catch (e: Exception) {
@@ -52,11 +52,11 @@ class BaseManagedBlockBuilder(
     }
 
     override fun begin(partialBlockHeader: BlockHeader?) {
-        runOp { blockBuilder.begin(partialBlockHeader) }
+        runOpSafely { blockBuilder.begin(partialBlockHeader) }
     }
 
     override fun appendTransaction(tx: Transaction) {
-        runOp { blockBuilder.appendTransaction(tx) }
+        runOpSafely { blockBuilder.appendTransaction(tx) }
     }
 
     /**
@@ -95,11 +95,11 @@ class BaseManagedBlockBuilder(
     }
 
     override fun finalizeBlock(): BlockHeader {
-        return runOp { blockBuilder.finalizeBlock() }
+        return runOpSafely { blockBuilder.finalizeBlock() }
     }
 
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
-        runOp { blockBuilder.finalizeAndValidate(blockHeader) }
+        runOpSafely { blockBuilder.finalizeAndValidate(blockHeader) }
     }
 
     override fun getBlockData(): BlockData {
@@ -113,18 +113,30 @@ class BaseManagedBlockBuilder(
 
     override fun commit(blockWitness: BlockWitness?) {
         logger.debug("${eContext.nodeID} committing block - start -------------------")
-        runOp { blockBuilder.commit(blockWitness) }
-        closed = true
-        beforeCommit(blockBuilder)
-        storage.closeWriteConnection(eContext, true)
-        afterCommit(blockBuilder)
+
+        synchronized(storage) {
+            if (!closed) {
+                beforeCommit(blockBuilder)
+                runOpSafely { blockBuilder.commit(blockWitness) }
+                storage.closeWriteConnection(eContext, true)
+                closed = true
+                afterCommit(blockBuilder)
+            }
+        }
+
         logger.debug("${eContext.nodeID} committing block - end -------------------")
     }
 
     override fun rollback() {
-        logger.debug("${eContext.nodeID} BaseManagedBlockBuilder.rollback()")
-        if (closed) throw ProgrammerMistake("Already closed")
-        closed = true
-        storage.closeWriteConnection(eContext, false)
+        logger.debug("${eContext.nodeID} rolling back block - start -------------------")
+
+        synchronized(storage) {
+            if (!closed) {
+                storage.closeWriteConnection(eContext, false)
+                closed = true
+            }
+        }
+
+        logger.debug("${eContext.nodeID} rolling back block - end -------------------")
     }
 }
