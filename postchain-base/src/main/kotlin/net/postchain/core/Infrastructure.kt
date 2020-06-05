@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.base.Storage
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
@@ -37,8 +36,6 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
             restartHandler: RestartHandler
     ): BlockchainEngine
 
-    @Deprecated("POS-128")
-    fun makeStorage(): Storage
 }
 
 interface ApiInfrastructure : Shutdownable {

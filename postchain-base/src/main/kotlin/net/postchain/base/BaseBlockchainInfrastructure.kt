@@ -100,7 +100,4 @@ class BaseBlockchainInfrastructure(
         return synchronizationInfrastructure.makeSnapshotProcess(processName, engine)
     }
 
-    override fun makeStorage(): Storage {
-        return StorageBuilder.buildStorage(nodeConfigProvider.getConfiguration().appConfig, NODE_ID_TODO)
-    }
 }
