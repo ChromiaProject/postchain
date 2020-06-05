@@ -16,10 +16,7 @@ import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.Lock
-import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.timer
-import kotlin.concurrent.withLock
 
 /**
  * Will run many chains as [BlockchainProcess]:es and keep them in a map.
@@ -31,7 +28,7 @@ open class BaseBlockchainProcessManager(
         protected val nodeDiagnosticContext: NodeDiagnosticContext
 ) : BlockchainProcessManager {
 
-    override var synchronizer: Lock = ReentrantLock()
+    override val synchronizer = Any()
 
     val nodeConfig = nodeConfigProvider.getConfiguration()
     val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
@@ -66,7 +63,7 @@ open class BaseBlockchainProcessManager(
      * @return the Blockchain's RID if successful, else null
      */
     override fun startBlockchain(chainId: Long): BlockchainRid? {
-        return synchronizer.withLock {
+        return synchronized(synchronizer) {
             try {
                 stopBlockchain(chainId)
 
@@ -125,7 +122,7 @@ open class BaseBlockchainProcessManager(
      * @param chainId is the chain to be stopped.
      */
     override fun stopBlockchain(chainId: Long) {
-        synchronizer.withLock {
+        synchronized(synchronizer) {
             logger.info("[${nodeName()}]: Stopping of Blockchain: chainId: $chainId")
 
             blockchainProcesses.remove(chainId)?.also {
