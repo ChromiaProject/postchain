@@ -9,6 +9,20 @@ ALREADY_INITED="ALREADY_INITED"
 
 if [ ! -e $ALREADY_INITED ]
 then
+  echo "file of /opt/chromaway/postchain-subnode"
+  files=`ls /opt/chromaway/postchain-subnode`
+  for f in $files
+  do
+    echo $f
+  done
+
+  echo "file of /opt/chromaway/postchain-subnode/rte"
+  files2=`ls /opt/chromaway/postchain-subnode/rte`
+  for f in $files2
+  do
+    echo $f
+  done
+
 	echo "Deleting the database..."
 	postchain-node/postchain.sh wipe-db -nc rte/node-config.properties
 

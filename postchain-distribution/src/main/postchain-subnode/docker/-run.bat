@@ -5,5 +5,5 @@ REM docker run --name postchain-subnode -p 7741:7741 -it chromaway/postchain-sub
 docker run ^
     --name postchain-subnode ^
     -p 7742:7741 ^
-    -v d:\Home\Dev\ChromaWay\postchain2\postchain-subnode\src\main\docker\rte:/opt/chromaway/postchain-subnode/rte ^
+    -v D:\Home\Dev\ChromaWay\postchain2\postchain-distribution\src\main\postchain-subnode\docker\rte:/opt/chromaway/postchain-subnode/rte ^
     -it chromaway/postchain-subnode:3.2.1

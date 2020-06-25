@@ -7,6 +7,7 @@ import net.postchain.config.node.PeerInfoDataSource
 interface ManagedNodeDataSource : PeerInfoDataSource {
     fun getPeerListVersion(): Long
     fun computeBlockchainList(): List<ByteArray>
-    fun getConfiguration(blockchainRIDRaw: ByteArray, height: Long): ByteArray?
-    fun findNextConfigurationHeight(blockchainRIDRaw: ByteArray, height: Long): Long?
+    fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray?
+    fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray>
+    fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
 }

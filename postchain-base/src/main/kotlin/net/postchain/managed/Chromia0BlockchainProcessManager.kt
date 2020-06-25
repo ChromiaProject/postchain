@@ -22,8 +22,29 @@ class Chromia0BlockchainProcessManager(
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext
-) : ManagedBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider,
-        blockchainConfigProvider, nodeDiagnosticContext) {
+) : ManagedBlockchainProcessManager(
+        blockchainInfrastructure,
+        nodeConfigProvider,
+        blockchainConfigProvider,
+        nodeDiagnosticContext
+) {
+
+    override fun restartHandler(chainId: Long): RestartHandler {
+        val baseHandler = super.restartHandler(chainId)
+        if (chainId == 0L)
+            return baseHandler
+        else {
+            return {
+                try {
+                    anchorLastBlock(chainId)
+                } catch (e: Exception) {
+                    logger.error("Error when anchoring ${e.toString()}")
+                    e.printStackTrace()
+                }
+                baseHandler()
+            }
+        }
+    }
 
     private fun anchorLastBlock(chainId: Long) {
         withReadConnection(storage, chainId) { eContext ->
@@ -54,23 +75,6 @@ class Chromia0BlockchainProcessManager(
                         txb.serialize()
                 )
                 chain0Engine.getTransactionQueue().enqueue(tx)
-            }
-        }
-    }
-
-    override fun restartHandler(chainId: Long): RestartHandler {
-        val baseHandler = super.restartHandler(chainId)
-        if (chainId == 0L)
-            return baseHandler
-        else {
-            return {
-                try {
-                    anchorLastBlock(chainId)
-                } catch (e: Exception) {
-                    logger.error("Error when anchoring ${e.toString()}")
-                    e.printStackTrace()
-                }
-                baseHandler()
             }
         }
     }
