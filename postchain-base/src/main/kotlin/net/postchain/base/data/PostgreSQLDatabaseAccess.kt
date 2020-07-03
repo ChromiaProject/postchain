@@ -17,17 +17,6 @@ class PostgreSQLDatabaseAccess(sqlCommands: SQLCommands) : SQLDatabaseAccess(sql
                 height)
     }
 
-    override fun insertSnapshot(ctx: EContext, rootHash: ByteArray, height: Long): Long {
-        return queryRunner.query(
-                ctx.conn,
-                "INSERT INTO snapshots (chain_iid, root_hash, block_height, node_id) VALUES (?, ?, ?, ?) RETURNING snapshot_iid",
-                longRes,
-                ctx.chainID,
-                rootHash,
-                height,
-                ctx.nodeID)
-    }
-
     override fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long {
         return queryRunner.query(
                 ctx.conn,

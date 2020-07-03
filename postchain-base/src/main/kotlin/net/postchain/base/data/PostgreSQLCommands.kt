@@ -21,11 +21,12 @@ object PostgreSQLCommands : SQLCommands {
 
     override val createTableSnapshots: String = "CREATE TABLE snapshots" +
             " (snapshot_iid BIGSERIAL PRIMARY KEY, " +
-            " chain_iid bigint NOT NULL," +
-            " root_hash bytea NOT NULL, " +
+            " chain_iid bigint NOT NULL, " +
             " block_height BIGINT NOT NULL, " +
-            " node_id integer NOT NULL, " +
-            " UNIQUE (root_hash, block_height, node_id))"
+            " tx_iid bigint NOT NULL, " +
+            " snapshot_hash text NOT NULL, " +
+            " pubkey text NOT NULL, " +
+            " UNIQUE (chain_iid, block_height, tx_iid, snapshot_hash, pubkey))"
 
     override val createTableBlockChains: String = "CREATE TABLE blockchains " +
             " (chain_iid BIGINT PRIMARY KEY, blockchain_rid BYTEA NOT NULL)"

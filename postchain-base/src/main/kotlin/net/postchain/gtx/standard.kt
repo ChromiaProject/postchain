@@ -10,6 +10,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
 /**
@@ -42,6 +43,29 @@ class GTX_timeb(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
             val until = data.args[1].asInteger()
             if (until < ctx.timestamp) return false
         }
+        return true
+    }
+
+}
+
+class GTX_snapshot(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
+    val r = QueryRunner()
+
+    override fun isCorrect(): Boolean {
+        if (data.args.size != 3) return false
+        // TODO: Need to implement some validation for snapshot tnx?
+        return true
+    }
+
+    override fun apply(ctx: TxEContext): Boolean {
+        val height = data.args[0].asInteger()
+        val hash = data.args[1].asString()
+        val pubkey = data.args[2].asString()
+        println("apply tx to insert snapshot by node, pubkey: $pubkey, height: $height, hash: $hash")
+
+        r.update(ctx.conn, "INSERT INTO snapshots (chain_iid, block_height, tx_iid, snapshot_hash, pubkey) VALUES (?, ?, ?, ?, ?)",
+                ctx.chainID, height, ctx.txIID, hash, pubkey)
+
         return true
     }
 
@@ -85,7 +109,8 @@ fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
 
 class StandardOpsGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(
         "nop" to ::GTX_nop,
-        "timeb" to ::GTX_timeb
+        "timeb" to ::GTX_timeb,
+        "snapshot" to ::GTX_snapshot
 ), mapOf(
         "last_block_info" to ::lastBlockInfoQuery,
         "tx_confirmation_time" to ::txConfirmationTime

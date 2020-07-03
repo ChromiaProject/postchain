@@ -10,6 +10,7 @@ import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXDataBuilder
 import net.postchain.integrationtest.assertChainStarted
+import net.postchain.integrationtest.awaitBuiltBlock
 import net.postchain.integrationtest.enqueueTxsAndAwaitBuiltBlock
 import org.awaitility.Awaitility
 import org.awaitility.Duration
@@ -135,7 +136,6 @@ open class SnapshotTest: IntegrationTest() {
                     nodes.forEach { it.assertChainStarted() }
                 }
 
-
-        nodes[0].enqueueTxsAndAwaitBuiltBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 6, tx(0), tx(1))
+        nodes[0].awaitBuiltBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 30)
     }
 }

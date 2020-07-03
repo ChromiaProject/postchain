@@ -23,7 +23,6 @@ interface DatabaseAccess {
 
     fun getBlockchainRID(ctx: EContext): BlockchainRid?
     fun insertBlock(ctx: EContext, height: Long): Long
-    fun insertSnapshot(ctx: EContext, rootHash: ByteArray, height: Long): Long
     fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long
     fun finalizeBlock(ctx: BlockEContext, header: BlockHeader)
 
@@ -104,11 +103,6 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     override fun insertBlock(ctx: EContext, height: Long): Long {
         queryRunner.update(ctx.conn, sqlCommands.insertBlocks, ctx.chainID, height)
         return queryRunner.query(ctx.conn, "SELECT block_iid FROM blocks WHERE chain_iid = ? AND block_height = ?", longRes, ctx.chainID, height)
-    }
-
-    override fun insertSnapshot(ctx: EContext, rootHash: ByteArray, height: Long): Long {
-        queryRunner.update(ctx.conn, sqlCommands.insertSnapshots, ctx.chainID, rootHash, height, ctx.nodeID)
-        return queryRunner.query(ctx.conn, "SELECT snapshot_iid FROM snapshots WHERE chain_iid = ? AND root_hash = ? AND block_height = ? AND node_id = ?", longRes, ctx.chainID, rootHash, height, ctx.nodeID)
     }
 
     override fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long {

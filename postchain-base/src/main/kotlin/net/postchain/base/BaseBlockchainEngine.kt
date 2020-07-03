@@ -243,7 +243,7 @@ open class BaseBlockchainEngine(
         val tree = snapshotBuilder.buildSnapshot(height)
         val builder = GTXDataBuilder(blockchainConfiguration.blockchainRID, arrayOf(nodeConfig.pubKeyByteArray), cryptoSystem)
 
-        builder.addOperation("nop", arrayOf(GtvFactory.gtv("snapshot"), GtvFactory.gtv(chainID), GtvFactory.gtv(height), GtvFactory.gtv(tree!!.hash())))
+        builder.addOperation("snapshot", arrayOf(GtvFactory.gtv(height), GtvFactory.gtv(tree!!.hash()), GtvFactory.gtv(nodeConfig.pubKey)))
         builder.finish()
         builder.sign(cryptoSystem.buildSigMaker(nodeConfig.pubKeyByteArray, nodeConfig.privKeyByteArray))
         val tx = this.blockchainConfiguration.getTransactionFactory().decodeTransaction(builder.serialize())

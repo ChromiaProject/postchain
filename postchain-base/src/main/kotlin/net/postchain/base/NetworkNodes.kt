@@ -32,7 +32,7 @@ class NetworkNodes(
         const val DAY_IN_MILLIS = 24 * 60 * 60 * 1000
 
         fun buildNetworkNodes(peers: Collection<PeerInfo>, myKey: XPeerID): NetworkNodes {
-            if (peers.size < 1) {
+            if (peers.isEmpty()) {
                 throw UserMistake("No peers have been configured for the network. Cannot proceed.")
             }
             var me: PeerInfo? = null
@@ -59,7 +59,7 @@ class NetworkNodes(
     }
 
     fun hasPeers(): Boolean {
-        return !peerInfoMap.isEmpty()
+        return peerInfoMap.isNotEmpty()
     }
 
     operator fun get(key: XPeerID): PeerInfo? = peerInfoMap[key]

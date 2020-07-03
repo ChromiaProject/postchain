@@ -56,11 +56,6 @@ class BaseBlockStore : BlockStore {
         DatabaseAccess.of(bctx).commitBlock(bctx, w)
     }
 
-    override fun commitSnapshot(ctx: EContext, rootHash: ByteArray, height: Long) {
-        val db = DatabaseAccess.of(ctx)
-        db.insertSnapshot(ctx, rootHash, height)
-    }
-
     override fun getBlockHeightFromOwnBlockchain(ctx: EContext, blockRID: ByteArray): Long? {
         return DatabaseAccess.of(ctx).getBlockHeight(ctx, blockRID, ctx.chainID)
     }

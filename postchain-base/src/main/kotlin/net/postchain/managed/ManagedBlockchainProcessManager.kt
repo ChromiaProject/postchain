@@ -152,19 +152,19 @@ open class ManagedBlockchainProcessManager(
             }
         }
 
-        fun wrappedRestardHandler (): Boolean {
+        fun wrappedRestartHandler (): Boolean {
             try {
                 return synchronizer.withLock {
                     if (chainId == 0L) restartHandlerChain0() else restartHandlerChainN()
                 }
             } catch (e: Exception) {
-                logger.error("Exception in restard handler: ${e.toString()}")
+                logger.error("Exception in restart handler: $e")
                 e.printStackTrace()
                 reloadBlockchainConfigAsync(chainId)
                 return true // let's hope restarting a blockchain fixes the problem
             }
         }
-        return ::wrappedRestardHandler
+        return ::wrappedRestartHandler
     }
 
     private fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
