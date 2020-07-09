@@ -15,14 +15,6 @@ open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
         return ManagedBlockchainConfigurationProvider()
     }
 
-    override fun makeBlockchainInfrastructure(
-            nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
-    ): BlockchainInfrastructure {
-        // TODO: [POS-82]: ???
-        return super.makeBlockchainInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
-    }
-
     override fun makeProcessManager(
             nodeConfigProvider: NodeConfigurationProvider,
             blockchainInfrastructure: BlockchainInfrastructure,

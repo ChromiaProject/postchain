@@ -7,8 +7,12 @@ import net.postchain.core.byteArrayKeyOf
 import net.postchain.network.IdentPacketInfo
 
 class XPeerConnectionDescriptor(
+        /**
+         * It is *target* peer for client (outgoing) connections
+         * and *source* peer for server (incoming) connections.
+         */
         val peerId: XPeerID,
-        val blockchainRID: BlockchainRid,
+        val blockchainRid: BlockchainRid,
         val sessionKey: ByteArray? = null
 ) {
 
@@ -16,7 +20,7 @@ class XPeerConnectionDescriptor(
 
         fun createFromIdentPacketInfo(identPacketInfo: IdentPacketInfo): XPeerConnectionDescriptor {
             return XPeerConnectionDescriptor(
-                    identPacketInfo.peerID.byteArrayKeyOf(),
+                    identPacketInfo.peerId.byteArrayKeyOf(),
                     identPacketInfo.blockchainRID)
         }
 

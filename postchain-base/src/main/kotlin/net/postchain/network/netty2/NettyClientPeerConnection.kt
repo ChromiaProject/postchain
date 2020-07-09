@@ -16,8 +16,8 @@ import nl.komponents.kovenant.task
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 
-class NettyClientPeerConnection<PacketType>(
-        val peerInfo: PeerInfo,
+class NettyClientPeerConnection<PacketType> (
+        private val targetPeerInfo: PeerInfo,
         private val packetEncoder: XPacketEncoder<PacketType>
 ) : ChannelInboundHandlerAdapter(), XPeerConnection {
 
@@ -55,7 +55,7 @@ class NettyClientPeerConnection<PacketType>(
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         packetHandler?.invoke(
                 Transport.unwrapMessage(msg as ByteBuf),
-                peerInfo.peerId())
+                targetPeerInfo.peerId())
         (msg as ByteBuf).release()
     }
 
@@ -81,11 +81,11 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     private fun peerAddress(): SocketAddress {
-        return InetSocketAddress(peerInfo.host, peerInfo.port)
+        return InetSocketAddress(targetPeerInfo.host, targetPeerInfo.port)
     }
 
     private fun buildIdentPacket(): ByteBuf {
         return Transport.wrapMessage(
-                packetEncoder.makeIdentPacket(peerInfo.pubKey))
+                packetEncoder.makeIdentPacket(targetPeerInfo.pubKey))
     }
 }

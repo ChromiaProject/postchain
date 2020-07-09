@@ -28,12 +28,12 @@ object DefaultPeersConnectionStrategy : PeersConnectionStrategy {
      */
     fun getPeersThatShouldDoAction(peerMap: Map<XPeerID, PeerInfo>, myKey: XPeerID): Set<PeerInfo> {
         val myKeyAsString = myKey.byteArray.toHex()
-        val keysAsStringMap: Map<String, PeerInfo> = peerMap.map{ it.key.byteArray.toHex() to it.value }.toMap()
+        val keysAsStringMap: Map<String, PeerInfo> = peerMap.map { it.key.byteArray.toHex() to it.value }.toMap()
 
         return keysAsStringMap.filter { myKeyAsString.compareTo(it.key) > 0 }.values.toSet()
     }
 
     private fun runEachPeerAction(configuration: PeerCommConfiguration, action: (PeerInfo) -> Unit) {
-        configuration.networkNodes.filterAndRunActionOnPeers(DefaultPeersConnectionStrategy::getPeersThatShouldDoAction, action)
+        configuration.networkNodes.filterAndRunActionOnPeers(::getPeersThatShouldDoAction, action)
     }
 }

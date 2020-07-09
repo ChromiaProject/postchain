@@ -11,7 +11,7 @@ import net.postchain.network.x.XConnectorEvents
 import net.postchain.network.x.XPeerConnectionDescriptor
 
 class NettyConnector<PacketType>(
-        private val eventReceiver: XConnectorEvents
+        private val eventsReceiver: XConnectorEvents
 ) : XConnector<PacketType> {
 
     companion object : KLogging()
@@ -20,14 +20,14 @@ class NettyConnector<PacketType>(
 
     override fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>) {
         server = NettyServer().apply {
-            setChannelHandler {
+            setCreateChannelHandler {
                 NettyServerPeerConnection(packetDecoder)
                         .onConnected { descriptor, connection ->
-                            eventReceiver.onPeerConnected(descriptor, connection)
+                            eventsReceiver.onPeerConnected(descriptor, connection)
                                     ?.also { connection.accept(it) }
                         }
                         .onDisconnected { descriptor, connection ->
-                            eventReceiver.onPeerDisconnected(descriptor, connection)
+                            eventsReceiver.onPeerDisconnected(descriptor, connection)
                         }
             }
 
@@ -37,22 +37,22 @@ class NettyConnector<PacketType>(
 
     override fun connectPeer(
             peerConnectionDescriptor: XPeerConnectionDescriptor,
-            peerInfo: PeerInfo,
+            targetPeerInfo: PeerInfo,
             packetEncoder: XPacketEncoder<PacketType>
     ) {
-        with(NettyClientPeerConnection(peerInfo, packetEncoder)) {
+        with(NettyClientPeerConnection(targetPeerInfo, packetEncoder)) {
             try {
                 open(
                         onConnected = {
-                            eventReceiver.onPeerConnected(peerConnectionDescriptor, this)
+                            eventsReceiver.onPeerConnected(peerConnectionDescriptor, this)
                                     ?.also { this.accept(it) }
                         },
                         onDisconnected = {
-                            eventReceiver.onPeerDisconnected(peerConnectionDescriptor, this)
+                            eventsReceiver.onPeerDisconnected(peerConnectionDescriptor, this)
                         })
             } catch (e: Exception) {
                 logger.error { e.message }
-                eventReceiver.onPeerDisconnected(peerConnectionDescriptor, this) // TODO: [et]: Maybe create different event receiver.
+                eventsReceiver.onPeerDisconnected(peerConnectionDescriptor, this) // TODO: [et]: Maybe create different event receiver.
             }
         }
     }

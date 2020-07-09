@@ -5,8 +5,8 @@ package net.postchain.debug
 import net.postchain.base.BlockchainRid
 import net.postchain.devtools.PeerNameHelper
 
-class BlockchainProcessName(val pubKey: String, val blockchainRID: BlockchainRid) {
+class BlockchainProcessName(val pubKey: String, val blockchainRid: BlockchainRid) {
 
-    override fun toString(): String = "[${PeerNameHelper.peerName(pubKey)}]/[${blockchainRID.toShortHex()}]"
+    override fun toString(): String = "[${PeerNameHelper.peerName(pubKey)}]/[${blockchainRid.toShortHex()}]"
 
 }

@@ -26,7 +26,9 @@ interface XPacketDecoderFactory<PacketType> {
     fun create(config: PeerCommConfiguration): XPacketDecoder<PacketType>
 }
 
-data class IdentPacketInfo(val peerID: PeerID,
-                           val blockchainRID: BlockchainRid,
-                           val sessionKey: ByteArray? = null,
-                           val ephemeralPubKey: ByteArray? = null)
+data class IdentPacketInfo(
+        val peerId: PeerID, // It is *target* peer for outgoing packets and *source* peer for incoming packets.
+        val blockchainRID: BlockchainRid,
+        val sessionKey: ByteArray? = null,
+        val ephemeralPubKey: ByteArray? = null
+)

@@ -32,6 +32,10 @@ class BaseBlockchainInfrastructure(
         subjectID = pubKey
     }
 
+    override fun init() {
+        // See init {}
+    }
+
     override fun shutdown() {
         synchronizationInfrastructure.shutdown()
         apiInfrastructure.shutdown()

@@ -1,4 +1,4 @@
-package net.postchain.managed.container
+package net.postchain.extchains.bpm
 
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
@@ -10,19 +10,20 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.BlockchainInfrastructure
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.extchains.MasterBlockchainInfrastructure
 import net.postchain.managed.ManagedBlockchainProcessManager
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class ManagedContainerBlockchainProcessManager(
-        blockchainInfrastructure: BlockchainInfrastructure,
+class MasterManagedBlockchainProcessManager(
+        private val extBlockchainInfrastructure: MasterBlockchainInfrastructure,
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext
 ) : ManagedBlockchainProcessManager(
-        blockchainInfrastructure,
+        extBlockchainInfrastructure,
         nodeConfigProvider,
         blockchainConfigProvider,
         nodeDiagnosticContext
@@ -30,6 +31,7 @@ class ManagedContainerBlockchainProcessManager(
 
     private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
     private val runningChains = mutableMapOf<Long, ContainerChain>()
+    private val extBlockchainProcesses = mutableMapOf<Long, ExternalBlockchainProcess>()
     private val lock = Any()
 
     override fun startBlockchain(chainId: Long): BlockchainRid? {
@@ -103,6 +105,7 @@ class ManagedContainerBlockchainProcessManager(
                 DatabaseAccess.of(ctx).getBlockchainRid(ctx)
             }
             log("BlockchainRid: ${chain.blockchainRid}")
+            // TODO: Exception if blockchainRid is null
 
             // Dumping all chain configs to chain dir
             val configs = try {
@@ -120,7 +123,12 @@ class ManagedContainerBlockchainProcessManager(
 
             // Creating and starting container
             chain.containerId = createContainer(containerRteDir, chain)
-            startContainer(chain)
+
+            val processName = BlockchainProcessName(nodeConfig.pubKey, chain.blockchainRid!!)
+            extBlockchainProcesses[chainId] = extBlockchainInfrastructure.makeExternalBlockchainProcess(
+                    chainId, chain.blockchainRid!!, processName)
+
+            dockerClient.startContainer(chain.containerId)
         }
 
         return chain.blockchainRid
@@ -135,10 +143,16 @@ class ManagedContainerBlockchainProcessManager(
             dockerClient.stopContainer(chain.containerId, 10)
 //            dockerClient.pauseContainer(chain.containerId)
             runningChains.remove(chainId)
+            extBlockchainProcesses.remove(chainId) // TODO: [POS-129]: Redesign this
         } else {
             log("stopContainerChain: container not found: ${chain.containerName}")
             runningChains.remove(chainId)
         }
+    }
+
+    // TODO: [POS-129]: Implement it
+    override fun shutdown() {
+        super.shutdown()
     }
 
     private fun logChain(caller: String, chain: ContainerChain) {
@@ -193,10 +207,6 @@ class ManagedContainerBlockchainProcessManager(
         val containerCreation = dockerClient.createContainer(containerConfig, chain.containerName)
         log("Container created: ${containerCreation.id()}")
         return containerCreation.id()
-    }
-
-    private fun startContainer(chain: ContainerChain) {
-        dockerClient.startContainer(chain.containerId)
     }
 
     override fun getLaunchedBlockchains(): Set<Long> {

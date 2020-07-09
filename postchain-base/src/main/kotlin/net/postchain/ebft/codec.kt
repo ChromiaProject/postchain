@@ -48,7 +48,7 @@ fun decodeAndVerify(bytes: ByteArray, verify: Verifier): Message? {
 
 fun tryDecodeAndVerify(bytes: ByteArray, pubKey: ByteArray, verify: Verifier): Message? {
     val message = SignedMessage.decode(bytes)
-    val verified = Arrays.equals(message.pubKey, pubKey)
+    val verified = message.pubKey.contentEquals(pubKey)
             && verify(message.message, Signature(message.pubKey, message.signature))
     return if (verified) Message.decode(message.message)
     else null

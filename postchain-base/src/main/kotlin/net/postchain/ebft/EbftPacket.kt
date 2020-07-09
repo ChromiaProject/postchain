@@ -13,8 +13,8 @@ import net.postchain.network.*
 
 class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketEncoder<Message> {
 
-    override fun makeIdentPacket(forPeer: ByteArray): ByteArray {
-        val bytes = Identification(forPeer, blockchainRID, System.currentTimeMillis()).encode()
+    override fun makeIdentPacket(targetPeer: ByteArray): ByteArray {
+        val bytes = Identification(targetPeer, blockchainRID, System.currentTimeMillis()).encode()
         val sigMaker = config.sigMaker()
         val signature = sigMaker.signMessage(bytes)
         return SignedMessage(bytes, config.pubKey, signature.data).encode()

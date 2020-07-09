@@ -22,7 +22,8 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
 
     init {
         val infrastructureFactory = BaseInfrastructureFactoryProvider().createInfrastructureFactory(nodeConfigProvider)
-        blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(nodeConfigProvider, diagnosticContext)
+        blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(
+                nodeConfigProvider, diagnosticContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(
                 nodeConfigProvider, blockchainInfrastructure, blockchainConfigProvider, diagnosticContext)

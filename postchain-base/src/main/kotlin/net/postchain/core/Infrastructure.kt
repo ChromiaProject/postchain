@@ -9,6 +9,8 @@ import net.postchain.debug.NodeDiagnosticContext
 
 interface SynchronizationInfrastructure : Shutdownable {
 
+    fun init()
+
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine

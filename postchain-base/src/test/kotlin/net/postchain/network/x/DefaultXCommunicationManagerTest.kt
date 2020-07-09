@@ -48,10 +48,10 @@ class DefaultXCommunicationManagerTest {
         communicationManager.init()
 
         // Then
-        argumentCaptor<XChainPeerConfiguration>().apply {
+        argumentCaptor<XChainPeersConfiguration>().apply {
             verify(connectionManager).connectChain(capture(), eq(true), any())
 
-            assert(firstValue.chainID).isEqualTo(CHAIN_ID)
+            assert(firstValue.chainId).isEqualTo(CHAIN_ID)
             assert(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
 //            val f: XPacketHandler = { _, _ -> ; } // TODO: Assert function types
 //            assert(firstValue.packetHandler).isInstanceOf(f.javaClass)
@@ -79,10 +79,10 @@ class DefaultXCommunicationManagerTest {
         communicationManager.init()
 
         // Then
-        argumentCaptor<XChainPeerConfiguration>().apply {
+        argumentCaptor<XChainPeersConfiguration>().apply {
             verify(connectionManager).connectChain(capture(), eq(true), any())
 
-            assert(firstValue.chainID).isEqualTo(CHAIN_ID)
+            assert(firstValue.chainId).isEqualTo(CHAIN_ID)
             assert(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
 //            val f: XPacketHandler = { _, _ -> ; } // TODO: Assert function types
 //            assert(firstValue.packetHandler).isInstanceOf(f.javaClass)

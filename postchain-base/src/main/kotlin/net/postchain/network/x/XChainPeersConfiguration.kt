@@ -8,9 +8,9 @@ import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 
 /* TODO: merge with PeerCommConfiguration */
-open class XChainPeerConfiguration(
-        val chainID: Long,
-        val blockchainRID: BlockchainRid,
+open class XChainPeersConfiguration(
+        val chainId: Long,
+        val blockchainRid: BlockchainRid,
         val commConfiguration: PeerCommConfiguration, // TODO: Rename it
         val packetHandler: XPacketHandler,
         val packetEncoder: XPacketEncoder<*>,

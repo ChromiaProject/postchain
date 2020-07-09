@@ -12,6 +12,7 @@ import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.testinfra.UnexpectedExceptionTransaction
 import org.junit.Assert.*
+import org.junit.Ignore
 import org.junit.Test
 
 class BlockchainEngineTest : IntegrationTestSetup() {
@@ -169,6 +170,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     @Test
+    @Ignore
     fun testMaxBlockTransactionsOk() {
         val (node0, node1) = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_max_block_transaction.xml")
         val blockBuilder = createBlockWithTx(node0, 6)

@@ -19,7 +19,7 @@ import nl.komponents.kovenant.task
 import java.util.*
 import kotlin.concurrent.schedule
 
-class DefaultXConnectionManager<PacketType>(
+open class DefaultXConnectionManager<PacketType>(
         connectorFactory: XConnectorFactory<PacketType>,
         val peerCommConfiguration: PeerCommConfiguration,
         private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
@@ -28,15 +28,15 @@ class DefaultXConnectionManager<PacketType>(
         private val peersConnectionStrategy: PeersConnectionStrategy = DefaultPeersConnectionStrategy
 ) : XConnectionManager, XConnectorEvents {
 
+    companion object : KLogging()
+
     private val connector = connectorFactory.createConnector(
             peerCommConfiguration.myPeerInfo(),
             packetDecoderFactory.create(peerCommConfiguration),
-            this)
+            this) // TODO: [POS-129]: ?
 
-    companion object : KLogging()
-
-    private class Chain(
-            val peerConfig: XChainPeerConfiguration,
+    protected class Chain(
+            val peerConfig: XChainPeersConfiguration,
             val connectAll: Boolean) {
         val neededConnections = mutableSetOf<XPeerID>()
         val connections = mutableMapOf<XPeerID, XPeerConnection>()
@@ -44,7 +44,7 @@ class DefaultXConnectionManager<PacketType>(
 
     private val chains: MutableMap<Long, Chain> = mutableMapOf()
     private val chainIDforBlockchainRID = mutableMapOf<BlockchainRid, Long>()
-    private var isShutDown = false
+    protected var isShutDown = false
 
     private val peerToDelayMap: MutableMap<XPeerID, ExponentialDelay> = mutableMapOf()
 
@@ -62,112 +62,108 @@ class DefaultXConnectionManager<PacketType>(
     }
 
     @Synchronized
-    override fun connectChain(peerConfig: XChainPeerConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String) {
+    override fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String) {
         logger.debug {
-            "${loggingPrefix()}: Connecting chain: ${peerConfig.chainID}" +
-                    ", blockchainRID: ${peerConfig.blockchainRID.toShortHex()}"
+            "${loggingPrefix()}: Connecting chain: ${chainPeersConfig.chainId}" +
+                    ", blockchainRID: ${chainPeersConfig.blockchainRid.toShortHex()}"
         }
 
         if (isShutDown) throw ProgrammerMistake("Already shut down")
-        val chainID = peerConfig.chainID
         var ok = true
-        if (chainID in chains) {
-            disconnectChain(chainID, loggingPrefix)
+        if (chainPeersConfig.chainId in chains) {
+            disconnectChain(chainPeersConfig.chainId, loggingPrefix)
             ok = false
         }
-        chains[peerConfig.chainID] = Chain(peerConfig, autoConnectAll)
-        chainIDforBlockchainRID[peerConfig.blockchainRID] = peerConfig.chainID
+        chains[chainPeersConfig.chainId] = Chain(chainPeersConfig, autoConnectAll)
+        chainIDforBlockchainRID[chainPeersConfig.blockchainRid] = chainPeersConfig.chainId
 
         if (autoConnectAll) {
-            peersConnectionStrategy.forEach(peerConfig.commConfiguration) {
-                connectorConnectPeer(peerConfig, it.pubKey.byteArrayKeyOf())
+            peersConnectionStrategy.forEach(chainPeersConfig.commConfiguration) {
+                connectPeer(chainPeersConfig, it.pubKey.byteArrayKeyOf())
             }
         }
 
         if (!ok) throw ProgrammerMistake("Error: multiple connections to for one chain")
 
-        logger.debug { "${logger(peerConfig)}: Chain connected: ${peerConfig.chainID}" }
+        logger.debug { "${logger(chainPeersConfig)}: Chain connected: ${chainPeersConfig.chainId}" }
     }
 
-    private fun connectorConnectPeer(peerConfig: XChainPeerConfiguration, peerId: XPeerID) {
-        logger.info { "${logger(peerConfig)}: Connecting chain peer: chain = ${peerConfig.chainID}, peer = ${peerName(peerId)}" }
+    private fun connectPeer(chainPeersConfig: XChainPeersConfiguration, targetPeerId: XPeerID) {
+        logger.info { "${logger(chainPeersConfig)}: Connecting chain peer: chain = ${chainPeersConfig.chainId}, peer = ${peerName(targetPeerId)}" }
 
         val peerConnectionDescriptor = XPeerConnectionDescriptor(
-                peerId,
-                peerConfig.blockchainRID)
+                targetPeerId,
+                chainPeersConfig.blockchainRid)
 
-        val peerInfo = peerConfig.commConfiguration.resolvePeer(peerId.byteArray)
-                ?: throw ProgrammerMistake("Peer ID not found: ${peerId.byteArray.toHex()}")
+        val targetPeerInfo = chainPeersConfig.commConfiguration.resolvePeer(targetPeerId.byteArray)
+                ?: throw ProgrammerMistake("Peer ID not found: ${targetPeerId.byteArray.toHex()}")
 
         val packetEncoder = packetEncoderFactory.create(
-                peerConfig.commConfiguration,
-                peerConfig.blockchainRID)
+                chainPeersConfig.commConfiguration,
+                chainPeersConfig.blockchainRid)
 
         task {
-            connector.connectPeer(peerConnectionDescriptor, peerInfo, packetEncoder)
+            connector.connectPeer(peerConnectionDescriptor, targetPeerInfo, packetEncoder)
         }
     }
 
     @Synchronized
-    override fun connectChainPeer(chainID: Long, peerID: XPeerID) {
-        val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
-        if (peerID !in chain.connections) { // ignore if already connected
-            connectorConnectPeer(chain.peerConfig, peerID)
+    override fun connectChainPeer(chainId: Long, targetPeerId: XPeerID) {
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Chain ID not found: $chainId")
+        if (targetPeerId !in chain.connections) { // ignore if already connected
+            connectPeer(chain.peerConfig, targetPeerId)
         }
     }
 
     @Synchronized
-    override fun isPeerConnected(chainID: Long, peerID: XPeerID): Boolean {
-        val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
-        return peerID in chain.connections
+    override fun isPeerConnected(chainId: Long, targetPeerId: XPeerID): Boolean {
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Chain ID not found: $chainId")
+        return targetPeerId in chain.connections
     }
 
     @Synchronized
-    override fun getConnectedPeers(chainID: Long): List<XPeerID> {
-        val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
+    override fun getConnectedPeers(chainId: Long): List<XPeerID> {
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Chain ID not found: $chainId")
         return chain.connections.keys.toList()
     }
 
     @Synchronized
-    override fun sendPacket(data: LazyPacket, chainID: Long, peerID: XPeerID) {
-        val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
-        chain.connections[peerID]?.sendPacket(data)
+    override fun sendPacket(data: LazyPacket, chainId: Long, targetPeerId: XPeerID) {
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Chain ID not found: $chainId")
+        chain.connections[targetPeerId]?.sendPacket(data)
     }
 
     @Synchronized
-    override fun broadcastPacket(data: LazyPacket, chainID: Long) {
+    override fun broadcastPacket(data: LazyPacket, chainId: Long) {
         // TODO: lazypacket might be computed multiple times
-        val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Chain ID not found: $chainId")
         chain.connections.forEach { (_, conn) ->
             conn.sendPacket(data)
         }
     }
 
     @Synchronized
-    override fun disconnectChainPeer(chainID: Long, peerID: XPeerID) {
-        val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
-        val conn = chain.connections[peerID]
+    override fun disconnectChainPeer(chainId: Long, targetPeerId: XPeerID) {
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Chain ID not found: $chainId")
+        val conn = chain.connections[targetPeerId]
         if (conn != null) {
             conn.close()
-            chain.connections.remove(peerID)
+            chain.connections.remove(targetPeerId)
         }
     }
 
     @Synchronized
-    override fun disconnectChain(chainID: Long, loggingPrefix: () -> String) {
-        logger.debug { "${loggingPrefix()}: Disconnecting chain: $chainID" }
+    override fun disconnectChain(chainId: Long, loggingPrefix: () -> String) {
+        logger.debug { "${loggingPrefix()}: Disconnecting chain: $chainId" }
 
-        val chain = chains[chainID]
+        val chain = chains[chainId]
         if (chain != null) {
-            chain.connections.forEach { (_, conn) ->
-                conn.close()
-            }
+            chain.connections.values.forEach(XPeerConnection::close)
             chain.connections.clear()
-            chains.remove(chainID)
-            logger.debug { "${loggingPrefix()}: Chain disconnected: $chainID" }
-
+            chains.remove(chainId)
+            logger.debug { "${loggingPrefix()}: Chain disconnected: $chainId" }
         } else {
-            logger.debug { "${loggingPrefix()}: Unknown chain: $chainID" }
+            logger.debug { "${loggingPrefix()}: Chain not found: $chainId" }
         }
     }
 
@@ -175,23 +171,25 @@ class DefaultXConnectionManager<PacketType>(
     override fun onPeerConnected(descriptor: XPeerConnectionDescriptor, connection: XPeerConnection): XPacketHandler? {
         logger.info {
             "${logger(descriptor)}: Peer connected: peer = ${peerName(descriptor.peerId)}" +
-                    ", blockchainRID: ${descriptor.blockchainRID}" +
+                    ", blockchainRID: ${descriptor.blockchainRid}" +
                     ", (size of c4Brid: ${chainIDforBlockchainRID.size}, size of chains: ${chains.size}) "
         }
 
-        val chainID = chainIDforBlockchainRID[descriptor.blockchainRID]
-        val chain = if (chainID != null) chains[chainID] else null
+        val chainId = chainIDforBlockchainRID[descriptor.blockchainRid]
+        val chain = if (chainId != null) chains[chainId] else null
         if (chain == null) {
-            logger.warn("${logger(descriptor)}: onPeerConnected: Chain not found by blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID")
+            logger.warn("${logger(descriptor)}: onPeerConnected: Chain not found by blockchainRID = ${descriptor.blockchainRid} / chainID = $chainId")
             connection.close()
             return null
         }
 
         return if (!peerCommConfiguration.networkNodes.isNodeBehavingWell(descriptor.peerId, System.currentTimeMillis())) {
             logger.debug { "${logger(descriptor)}: onPeerConnected: Peer not behaving well, so ignore: peer = ${peerName(descriptor.peerId)}" }
+            // TODO: [POS-129]: Should we `connection.close()` here? See `if (chain == null)` above.
             null
         } else if (chain.connections[descriptor.peerId] != null) {
             logger.debug { "${logger(descriptor)}: onPeerConnected: Peer already connected: peer = ${peerName(descriptor.peerId)}" }
+            // TODO: [POS-129]: Should we `connection.close()` here? See `if (chain == null)` above.
             null
         } else {
             chain.connections[descriptor.peerId] = connection
@@ -206,12 +204,13 @@ class DefaultXConnectionManager<PacketType>(
         logger.debug { "${logger(descriptor)}: Peer disconnected: peer = ${peerName(descriptor.peerId)}" }
 
         // Closing local connection entity
+        // TODO: [POS-129]: Close single time only of connection == oldConnection (see below)
         connection.close()
 
-        val chainID = chainIDforBlockchainRID[descriptor.blockchainRID]
+        val chainID = chainIDforBlockchainRID[descriptor.blockchainRid]
         val chain = if (chainID != null) chains[chainID] else null
         if (chain == null) {
-            logger.warn("${logger(descriptor)}: Peer disconnected: chain not found by blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID")
+            logger.warn("${logger(descriptor)}: Peer disconnected: chain not found by blockchainRID = ${descriptor.blockchainRid} / chainID = $chainID")
             return
         }
 
@@ -221,6 +220,7 @@ class DefaultXConnectionManager<PacketType>(
             chain.connections.remove(descriptor.peerId)
         }
 
+        // TODO: [POS-129]: See connection strategy !!!
         // Reconnecting if connectionType is CLIENT
         if (connection is NettyClientPeerConnection<*>) {
             if (chain.connectAll || (descriptor.peerId in chain.neededConnections)) {
@@ -231,13 +231,13 @@ class DefaultXConnectionManager<PacketType>(
 
     override fun getPeersTopology(): Map<String, Map<String, String>> {
         return chains
-                .mapKeys { (id, chain) -> id to chain.peerConfig.blockchainRID.toHex() }
+                .mapKeys { (id, chain) -> id to chain.peerConfig.blockchainRid.toHex() }
                 .mapValues { (idToRid, _) -> getPeersTopology(idToRid.first).mapKeys { (k, _) -> k.toString() } }
                 .mapKeys { (idToRid, _) -> idToRid.second }
     }
 
-    override fun getPeersTopology(chainID: Long): Map<XPeerID, String> {
-        return chains[chainID]
+    override fun getPeersTopology(chainId: Long): Map<XPeerID, String> {
+        return chains[chainId]
                 ?.connections
                 ?.mapValues { connection ->
                     // TODO: Fix this
@@ -249,13 +249,13 @@ class DefaultXConnectionManager<PacketType>(
                 ?: emptyMap()
     }
 
-    private fun reconnect(peerConfig: XChainPeerConfiguration, peerId: XPeerID) {
+    private fun reconnect(peerConfig: XChainPeersConfiguration, peerId: XPeerID) {
         val delay = peerToDelayMap.computeIfAbsent(peerId) { ExponentialDelay() }
         val (timeUnit, timeDelay) = prettyDelay(delay)
         logger.info { "${logger(peerConfig)}: Reconnecting in $timeDelay $timeUnit to peer = ${peerName(peerId)}" }
         Timer("Reconnecting").schedule(delay.getDelayMillis()) {
             logger.info { "${logger(peerConfig)}: Reconnecting to peer: peer = ${peerName(peerId)}" }
-            connectorConnectPeer(peerConfig, peerId)
+            connectPeer(peerConfig, peerId)
         }
     }
 
@@ -264,9 +264,9 @@ class DefaultXConnectionManager<PacketType>(
             blockchainRid
     ).toString()
 
-    private fun logger(descriptor: XPeerConnectionDescriptor): String = loggingPrefix(descriptor.blockchainRID)
+    private fun logger(descriptor: XPeerConnectionDescriptor): String = loggingPrefix(descriptor.blockchainRid)
 
-    private fun logger(config: XChainPeerConfiguration): String = loggingPrefix(config.blockchainRID)
+    private fun logger(config: XChainPeersConfiguration): String = loggingPrefix(config.blockchainRid)
 
     private fun prettyDelay(delay: ExponentialDelay): Pair<String, Long> {
         return if (delay.getDelayMillis() < 1000) {

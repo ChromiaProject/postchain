@@ -1,4 +1,4 @@
-package net.postchain.managed.container
+package net.postchain.extchains.bpm
 
 import com.spotify.docker.client.messages.Container
 import net.postchain.base.BlockchainRid

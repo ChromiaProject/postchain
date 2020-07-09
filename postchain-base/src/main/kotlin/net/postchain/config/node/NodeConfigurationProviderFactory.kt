@@ -8,10 +8,14 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders.*
 import net.postchain.core.NODE_ID_NA
 
-object NodeConfigurationProviderFactory {
+class NodeConfigurationProviderFactory(
+        private val storageFactory: (AppConfig) -> Storage = DEFAULT_STORAGE_FACTORY
+) {
 
-    private val storageFactory: (AppConfig) -> Storage = { appConfig ->
-        StorageBuilder.buildStorage(appConfig, NODE_ID_NA)
+    companion object {
+        val DEFAULT_STORAGE_FACTORY: (AppConfig) -> Storage = { appConfig ->
+            StorageBuilder.buildStorage(appConfig, NODE_ID_NA)
+        }
     }
 
     fun createProvider(appConfig: AppConfig): NodeConfigurationProvider {

@@ -34,8 +34,26 @@ class AppConfig(val config: Configuration) {
         }
     }
 
+    /**
+     * This config dir
+     */
     lateinit var configDir: String
         private set
+
+    /**
+     * Container chains
+     */
+    val isSlave: Boolean
+        get() = config.getBoolean("externalChains.isSlave", false)
+
+    val masterHost: String
+        get() = config.getString("externalChains.slave.masterHost", "")
+
+    val masterPort: Int
+        get() = config.getInt("externalChains.slave.masterPort", 9999) // TODO: [POS-129]: Change port
+
+    val isMaster: Boolean
+        get() = config.getBoolean("externalChains.isMaster", false)
 
     /**
      * Configuration provider

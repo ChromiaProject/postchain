@@ -20,7 +20,7 @@ class NettyServer : Shutdownable {
     private lateinit var createChannelHandler: () -> ChannelHandler
     private lateinit var eventLoopGroup: EventLoopGroup
 
-    fun setChannelHandler(handlerFactory: () -> ChannelHandler) {
+    fun setCreateChannelHandler(handlerFactory: () -> ChannelHandler) {
         this.createChannelHandler = handlerFactory
     }
 

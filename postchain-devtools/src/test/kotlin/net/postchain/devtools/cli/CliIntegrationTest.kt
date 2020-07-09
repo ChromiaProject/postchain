@@ -26,7 +26,7 @@ class CliIntegrationTest {
     fun testModule() {
         val nodeConfigPath = fullPath("node-config.properties")
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigPath)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
 
         // this wipes the data base!
         StorageBuilder.buildStorage(appConfig, NODE_ID_NA, true)
@@ -56,7 +56,7 @@ class CliIntegrationTest {
     fun testModuleWithSAPDatabase() {
         val nodeConfigPath = fullPath("node-config-saphana.properties")
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigPath)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
 
         // this wipes the data base!
         StorageBuilder.buildStorage(appConfig, NODE_ID_NA, true)
@@ -86,7 +86,7 @@ class CliIntegrationTest {
     fun testAddConfiguration() {
         val nodeConfigPath = fullPath("node-config.properties")
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigPath)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
 
         // this wipes the data base!
         StorageBuilder.buildStorage(appConfig, NODE_ID_NA, true)

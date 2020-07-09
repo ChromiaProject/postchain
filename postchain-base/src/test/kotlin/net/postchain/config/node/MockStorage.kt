@@ -10,7 +10,7 @@ import net.postchain.core.AppContext
 
 object MockStorage {
 
-    fun mock(peerInfos: Array<PeerInfo>): Storage {
+    fun mock(peerInfos: Array<PeerInfo> = emptyArray()): Storage {
         val mockDb: DatabaseAccess = mock {
             on { getPeerInfoCollection(any()) } doReturn peerInfos
         }
@@ -20,6 +20,7 @@ object MockStorage {
         }
 
         return mock {
+            on { openReadConnection() } doReturn mockContext
             on { openWriteConnection() } doReturn mockContext
         }
     }
