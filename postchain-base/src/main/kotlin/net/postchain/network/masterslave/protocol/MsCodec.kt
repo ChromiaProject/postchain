@@ -1,6 +1,7 @@
 package net.postchain.network.masterslave.protocol
 
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 
 object MsCodec {
@@ -14,7 +15,7 @@ object MsCodec {
                 GtvFactory.gtv(message.messageData)
         )
 
-        return gtv.asByteArray()
+        return GtvEncoder.encodeGtv(gtv)
     }
 
     fun decode(bytes: ByteArray): MsMessage {

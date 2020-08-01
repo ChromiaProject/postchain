@@ -55,9 +55,20 @@ interface InfrastructureFactory {
     ): BlockchainProcessManager
 }
 
-enum class Infrastructures(val secondName: String) {
+enum class Infrastructures(val key: String) {
     BaseEbft("base/ebft"),
-    BaseTest("base/test")
+    BaseTest("base/test"),
+
+    Ebft("ebft"), // The same as 'base/ebft'
+    EbftManaged("ebft-managed"),
+
+    EbftManagedChromia0("ebft-managed-chromia0"),
+    Chromia0("chromia0"), // alias to 'ebft-managed-chromia0'
+
+    // External chains
+    EbftManagedMaster("ebft-managed-master"),
+    EbftSlave("ebft-slave"),
+    EbftManagedMasterChromia0("ebft-managed-master-chromia0")
 }
 
 interface InfrastructureFactoryProvider {

@@ -4,7 +4,6 @@ package net.postchain.network.masterslave.master.netty
 
 import mu.KLogging
 import net.postchain.base.PeerInfo
-import net.postchain.network.XPacketDecoder
 import net.postchain.network.masterslave.master.MasterConnector
 import net.postchain.network.masterslave.master.MasterConnectorEvents
 import net.postchain.network.netty2.NettyServer
@@ -17,7 +16,8 @@ class NettyMasterConnector<PacketType>(
 
     private lateinit var server: NettyServer
 
-    override fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>) {
+    // TODO: [POS-129]: Put MsCodec here
+    override fun init(port: Int/*, packetDecoder: XPacketDecoder<PacketType>*/) {
         server = NettyServer().apply {
             setCreateChannelHandler {
                 NettyMasterConnection().apply {
@@ -32,7 +32,7 @@ class NettyMasterConnector<PacketType>(
                 }
             }
 
-            run(peerInfo.port) // TODO: [POS-129]: Change port (add the port to AppConfig)
+            run(port) // TODO: [POS-129]: Change port (add the port to AppConfig)
         }
     }
 

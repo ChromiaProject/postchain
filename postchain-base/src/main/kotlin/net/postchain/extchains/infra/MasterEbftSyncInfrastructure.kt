@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.extchains.ebft
+package net.postchain.extchains.infra
 
 import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
@@ -11,7 +11,6 @@ import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
 import net.postchain.ebft.message.Message
-import net.postchain.extchains.MasterSyncInfrastructure
 import net.postchain.extchains.bpm.ContainerBlockchainProcess
 import net.postchain.extchains.bpm.ExternalBlockchainProcess
 import net.postchain.network.masterslave.master.DefaultMasterCommunicationManager
@@ -33,10 +32,11 @@ class MasterEbftSyncInfrastructure(
                 buildInternalPeerCommConfiguration(nodeConfig),
                 EbftPacketEncoderFactory(),
                 EbftPacketDecoderFactory(),
-                SECP256K1CryptoSystem())
+                SECP256K1CryptoSystem(),
+                nodeConfig)
     }
 
-    override fun makeExternalBlockchainProcess(
+    override fun makeSlaveBlockchainProcess(
             chainId: Long,
             blockchainRid: BlockchainRid,
             processName: BlockchainProcessName

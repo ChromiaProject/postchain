@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.extchains
+package net.postchain.extchains.infra
 
 import net.postchain.base.BlockchainRid
 import net.postchain.core.BlockchainInfrastructure
@@ -10,7 +10,7 @@ import net.postchain.extchains.bpm.ExternalBlockchainProcess
 
 interface MasterSyncInfrastructure : SynchronizationInfrastructure {
 
-    fun makeExternalBlockchainProcess(
+    fun makeSlaveBlockchainProcess(
             chainId: Long,
             blockchainRid: BlockchainRid,
             processName: BlockchainProcessName

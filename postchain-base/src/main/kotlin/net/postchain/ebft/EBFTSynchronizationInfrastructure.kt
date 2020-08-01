@@ -34,7 +34,7 @@ open class EBFTSynchronizationInfrastructure(
     private val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<String, Any>>()
 
     init {
-        init()
+        this.init()
     }
 
     override fun init() {

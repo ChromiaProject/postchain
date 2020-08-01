@@ -67,8 +67,8 @@ class DefaultSlaveConnectionManager(
         logger.info { "${logger(chain)}: Connecting to master node: $chainStr" }
 
         val masterNode = PeerInfo(
-                nodeConfig.appConfig.masterHost,
-                nodeConfig.appConfig.masterPort,
+                nodeConfig.masterHost,
+                nodeConfig.masterPort,
                 byteArrayOf() // Is not necessary here
         )
 

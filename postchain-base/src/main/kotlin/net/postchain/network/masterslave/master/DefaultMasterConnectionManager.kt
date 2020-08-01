@@ -3,6 +3,8 @@ package net.postchain.network.masterslave.master
 import net.postchain.base.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.PeerCommConfiguration
+import net.postchain.base.PeerInfo
+import net.postchain.config.node.NodeConfig
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.debug.BlockchainProcessName
@@ -24,6 +26,7 @@ class DefaultMasterConnectionManager<PacketType>(
         packetEncoderFactory: XPacketEncoderFactory<PacketType>,
         packetDecoderFactory: XPacketDecoderFactory<PacketType>,
         cryptoSystem: CryptoSystem,
+        nodeConfig: NodeConfig,
         peersConnectionStrategy: PeersConnectionStrategy = DefaultPeersConnectionStrategy
 ) : DefaultXConnectionManager<PacketType>(
         connectorFactory,
@@ -42,7 +45,11 @@ class DefaultMasterConnectionManager<PacketType>(
     }
 
     // TODO: [POS-129]: Extract to factory
-    private val masterConnector = NettyMasterConnector<PacketType>(this) // Runs Netty Server
+    // Runs Netty Server
+    private val masterConnector = NettyMasterConnector<PacketType>(this).apply {
+        init(nodeConfig.masterPort)
+    }
+
     protected val slaveChains: MutableMap<BlockchainRid, SlaveChain> = mutableMapOf()
 
     @Synchronized

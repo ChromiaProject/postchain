@@ -8,22 +8,25 @@ import com.spotify.docker.client.messages.HostConfig
 import net.postchain.base.BlockchainRid
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.core.Infrastructures
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.extchains.MasterBlockchainInfrastructure
+import net.postchain.extchains.infra.MasterBlockchainInfrastructure
 import net.postchain.managed.ManagedBlockchainProcessManager
+import org.apache.commons.configuration2.ConfigurationUtils
 import java.nio.file.Path
 import java.nio.file.Paths
 
 class MasterManagedBlockchainProcessManager(
-        private val extBlockchainInfrastructure: MasterBlockchainInfrastructure,
+        private val masterBlockchainInfra: MasterBlockchainInfrastructure,
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext
 ) : ManagedBlockchainProcessManager(
-        extBlockchainInfrastructure,
+        masterBlockchainInfra,
         nodeConfigProvider,
         blockchainConfigProvider,
         nodeDiagnosticContext
@@ -31,7 +34,7 @@ class MasterManagedBlockchainProcessManager(
 
     private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
     private val runningChains = mutableMapOf<Long, ContainerChain>()
-    private val extBlockchainProcesses = mutableMapOf<Long, ExternalBlockchainProcess>()
+    private val slaveBlockchainProcesses = mutableMapOf<Long, ExternalBlockchainProcess>()
     private val lock = Any()
 
     override fun startBlockchain(chainId: Long): BlockchainRid? {
@@ -72,9 +75,7 @@ class MasterManagedBlockchainProcessManager(
         return if (chainId == 0L) {
             super.isBlockchainRunning(chainId)
         } else {
-            log("Chain $chainId is running: ${runningChains.contains(chainId)}")
             runningChains.contains(chainId)
-//            dockerClient.inspectContainer("")
         }
     }
 
@@ -94,11 +95,15 @@ class MasterManagedBlockchainProcessManager(
              *  We should mount /mnt/d to /d and remove prefix '/mnt' everywhere.
              */
             val rteDir = nodeConfig.appConfig.configDir.removePrefix("/mnt")
-            val containerRteDir = Paths.get(rteDir, "containers")
-            val containerChainDir = containerRteDir.resolve("blockchains").resolve("$chainId")
-            log("Container chain dir: $containerChainDir")
-            val created = containerChainDir.toFile().mkdirs()
+            val containerRteDir = Paths.get(rteDir, "containers", "$chainId")
+            val chainConfigsDir = containerRteDir.resolve("blockchains").resolve("$chainId")
+            log("Container chain configs dir: $chainConfigsDir")
+            val created = chainConfigsDir.toFile().mkdirs()
             log("Container chain dir created: $created")
+
+            // Creating node-config for container node
+            createContainerNodeConfig(chainId, containerRteDir)
+            log("Container sub-node properties file has been created")
 
             // Getting blockchainRid
             chain.blockchainRid = withReadConnection(storage, chainId) { ctx ->
@@ -108,27 +113,17 @@ class MasterManagedBlockchainProcessManager(
             // TODO: Exception if blockchainRid is null
 
             // Dumping all chain configs to chain dir
-            val configs = try {
-                dataSource.getConfigurations(chain.blockchainRid?.data ?: byteArrayOf())
-            } catch (e: Exception) {
-                log("Exception in dataSource.getConfigurations(): " + e.message)
-                mapOf<Long, ByteArray>()
-            }
-            log("Configs to dump: ${configs.size}")
-            configs.forEach { (height, config) ->
-                val configPath = containerChainDir.resolve("$height.gtv")
-                log("Config file dumped: $configPath")
-                configPath.toFile().writeBytes(config)
-            }
+            dumpConfigs(chain, chainConfigsDir)
 
             // Creating and starting container
             chain.containerId = createContainer(containerRteDir, chain)
+            dockerClient.startContainer(chain.containerId)
 
+            // Creating external blockchain process
             val processName = BlockchainProcessName(nodeConfig.pubKey, chain.blockchainRid!!)
-            extBlockchainProcesses[chainId] = extBlockchainInfrastructure.makeExternalBlockchainProcess(
+            slaveBlockchainProcesses[chainId] = masterBlockchainInfra.makeSlaveBlockchainProcess(
                     chainId, chain.blockchainRid!!, processName)
 
-            dockerClient.startContainer(chain.containerId)
         }
 
         return chain.blockchainRid
@@ -143,7 +138,7 @@ class MasterManagedBlockchainProcessManager(
             dockerClient.stopContainer(chain.containerId, 10)
 //            dockerClient.pauseContainer(chain.containerId)
             runningChains.remove(chainId)
-            extBlockchainProcesses.remove(chainId) // TODO: [POS-129]: Redesign this
+            slaveBlockchainProcesses.remove(chainId) // TODO: [POS-129]: Redesign this
         } else {
             log("stopContainerChain: container not found: ${chain.containerName}")
             runningChains.remove(chainId)
@@ -189,7 +184,7 @@ class MasterManagedBlockchainProcessManager(
 
     private fun createContainer(containerRteDir: Path, chain: ContainerChain): String? {
         // -v /d/Home/Dev/ChromaWay/postchain2/postchain-distribution/src/main/postchain-subnode/docker/rte:/opt/chromaway/postchain-subnode/rte \
-        log("Bind:: from: $containerRteDir to: /opt/chromaway/postchain-subnode/rte")
+        log("Bind from $containerRteDir to /opt/chromaway/postchain-subnode/rte")
         val volume = HostConfig.Bind
                 .from(containerRteDir.toString())
                 .to("/opt/chromaway/postchain-subnode/rte")
@@ -207,6 +202,37 @@ class MasterManagedBlockchainProcessManager(
         val containerCreation = dockerClient.createContainer(containerConfig, chain.containerName)
         log("Container created: ${containerCreation.id()}")
         return containerCreation.id()
+    }
+
+    private fun createContainerNodeConfig(chainId: Long, containerRteDir: Path) {
+        val containerNodeConfigFile = containerRteDir.resolve("node-config.properties").toString()
+        val subnodeConfig = ConfigurationUtils.cloneConfiguration(nodeConfig.appConfig.config)
+        subnodeConfig.setProperty("configuration.provider.node", "manual")
+        subnodeConfig.setProperty("infrastructure", Infrastructures.EbftSlave.key)
+        subnodeConfig.setProperty("database.schema", "pos129_$chainId")
+
+        subnodeConfig.setProperty("externalChains.masterHost", nodeConfig.masterHost)
+        subnodeConfig.setProperty("externalChains.masterPort", nodeConfig.masterPort)
+
+        AppConfig.toPropertiesFile(containerNodeConfigFile, subnodeConfig)
+    }
+
+    private fun dumpConfigs(chain: ContainerChain, chainConfigsDir: Path) {
+        // Retrieving configs from data-source/db
+        val configs = try {
+            dataSource.getConfigurations(chain.blockchainRid?.data ?: byteArrayOf())
+        } catch (e: Exception) {
+            log("Exception in dataSource.getConfigurations(): " + e.message)
+            mapOf<Long, ByteArray>()
+        }
+
+        // Dumping configs to chain-configs dir
+        log("Configs to dump: ${configs.size}")
+        configs.forEach { (height, config) ->
+            val configPath = chainConfigsDir.resolve("$height.gtv")
+            log("Config file dumped: $configPath")
+            configPath.toFile().writeBytes(config)
+        }
     }
 
     override fun getLaunchedBlockchains(): Set<Long> {

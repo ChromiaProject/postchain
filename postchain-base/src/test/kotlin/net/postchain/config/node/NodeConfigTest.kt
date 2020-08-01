@@ -15,7 +15,8 @@ class NodeConfigTest {
                 javaClass.getResource("/net/postchain/config/empty-node-config.properties").file)
         val nodeConfig = NodeConfig(appConfig)
 
-        assertk.assert(nodeConfig.blockchainConfigProvider).isEmpty()
+        // TODO: [POS-129]: Remove it
+//        assertk.assert(nodeConfig.blockchainConfigProvider).isEmpty()
         assertk.assert(nodeConfig.infrastructure).isEqualTo("base/ebft")
 
         assertk.assert(nodeConfig.databaseDriverclass).isEmpty()

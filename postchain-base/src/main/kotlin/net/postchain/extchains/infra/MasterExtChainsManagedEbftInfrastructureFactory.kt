@@ -1,19 +1,19 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.extchains.ebft
+package net.postchain.extchains.infra
 
 import net.postchain.base.BaseApiInfrastructure
-import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.extchains.MasterBlockchainInfrastructure
 import net.postchain.extchains.bpm.MasterManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 
-class MasterExtChainsEbftInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
+typealias ExtChainsManagedEbftInfrastructureFactory = MasterExtChainsManagedEbftInfrastructureFactory
+
+class MasterExtChainsManagedEbftInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
 
     override fun makeBlockchainInfrastructure(
             nodeConfigProvider: NodeConfigurationProvider,
@@ -26,7 +26,7 @@ class MasterExtChainsEbftInfrastructureFactory : ManagedEBFTInfrastructureFactor
         val apiInfra = BaseApiInfrastructure(
                 nodeConfigProvider, nodeDiagnosticContext)
 
-        return BaseBlockchainInfrastructure(
+        return DefaultMasterBlockchainInfrastructure(
                 nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext)
     }
 

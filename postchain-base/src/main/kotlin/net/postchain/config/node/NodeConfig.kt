@@ -18,13 +18,25 @@ open class NodeConfig(val appConfig: AppConfig) {
     /**
      * Blockchain configuration provider
      */
-    val blockchainConfigProvider: String
-        // manual | managed
-        get() = config.getString("configuration.provider.blockchain", "")
+    @Deprecated("POS-129: Defined implicitly by 'infrastructure' param")
+            /*
+            val blockchainConfigProvider: String
+                // manual | managed
+                get() = config.getString("configuration.provider.blockchain", "")
+             */
 
     val infrastructure: String
         // "base/ebft" is the default
-        get() = config.getString("infrastructure", Infrastructures.BaseEbft.secondName.toLowerCase())
+        get() = config.getString("infrastructure", Infrastructures.BaseEbft.key.toLowerCase())
+
+    /**
+     * Container chains
+     */
+    val masterHost: String
+        get() = config.getString("externalChains.masterHost", "")
+
+    val masterPort: Int
+        get() = config.getInt("externalChains.masterPort", 9999) // TODO: [POS-129]: Change port
 
 
     /**

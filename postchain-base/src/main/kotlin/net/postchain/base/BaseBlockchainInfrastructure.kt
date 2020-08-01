@@ -14,7 +14,7 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
-class BaseBlockchainInfrastructure(
+open class BaseBlockchainInfrastructure(
         private val nodeConfigProvider: NodeConfigurationProvider,
         val synchronizationInfrastructure: SynchronizationInfrastructure,
         val apiInfrastructure: ApiInfrastructure,

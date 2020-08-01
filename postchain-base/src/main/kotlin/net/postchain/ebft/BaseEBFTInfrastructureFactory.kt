@@ -23,8 +23,13 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
             nodeConfigProvider: NodeConfigurationProvider,
             nodeDiagnosticContext: NodeDiagnosticContext
     ): BlockchainInfrastructure {
-        val syncInfra = EBFTSynchronizationInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
-        val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
+        
+        val syncInfra = EBFTSynchronizationInfrastructure(
+                nodeConfigProvider, nodeDiagnosticContext)
+
+        val apiInfra = BaseApiInfrastructure(
+                nodeConfigProvider, nodeDiagnosticContext)
+
         return BaseBlockchainInfrastructure(
                 nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext)
     }

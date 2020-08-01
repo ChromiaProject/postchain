@@ -43,6 +43,7 @@ class NettyMasterConnection : ChannelInboundHandlerAdapter(), NodeConnection {
     }
 
     // TODO: [POS-129]: Make it generic: <MsMessage>
+    // TODO: [POS-129]: Extract MsCodec, see `NettyConnector`
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         val messageBytes = Transport.unwrapMessage(msg as ByteBuf)
         when (val message = MsCodec.decode(messageBytes)) {

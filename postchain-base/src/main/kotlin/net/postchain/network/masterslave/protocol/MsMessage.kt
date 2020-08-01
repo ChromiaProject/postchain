@@ -1,6 +1,7 @@
 package net.postchain.network.masterslave.protocol
 
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 
 interface MsMessage {
@@ -50,8 +51,8 @@ class HandshakeMsMessage(
                 GtvDecoder.decodeGtv(bytes).asArray().map { it.asByteArray() }
 
         fun encodeSingers(singers: List<ByteArray>): ByteArray {
-            return singers.map { GtvFactory.gtv(it) }
-                    .let { GtvFactory.gtv(it) }.asByteArray()
+            val gtv = singers.map { GtvFactory.gtv(it) }.let { GtvFactory.gtv(it) }
+            return GtvEncoder.encodeGtv(gtv)
         }
     }
 }

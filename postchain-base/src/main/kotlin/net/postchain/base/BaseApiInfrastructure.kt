@@ -4,7 +4,6 @@ package net.postchain.base
 
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
@@ -48,20 +47,19 @@ class BaseApiInfrastructure(
                     DefaultDebugInfoQuery(nodeDiagnosticContext)
             )
 
-            restApi.attachModel(blockchainRID(process), apiModel)
+            restApi.attachModel(blockchainRid(process), apiModel)
         }
     }
 
     override fun disconnectProcess(process: BlockchainProcess) {
-        restApi?.detachModel(blockchainRID(process))
+        restApi?.detachModel(blockchainRid(process))
     }
 
     override fun shutdown() {
         restApi?.stop()
     }
 
-    private fun blockchainRID(process: BlockchainProcess): String {
-        return (process.getEngine().getConfiguration() as BaseBlockchainConfiguration) // TODO: [et]: Resolve type cast
-                .blockchainRid.toHex()
+    private fun blockchainRid(process: BlockchainProcess): String {
+        return process.getEngine().getConfiguration().blockchainRid.toHex()
     }
 }

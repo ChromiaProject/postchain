@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.extchains.ebft
+package net.postchain.extchains.infra
 
 import net.postchain.base.BaseApiInfrastructure
 import net.postchain.base.BaseBlockchainInfrastructure

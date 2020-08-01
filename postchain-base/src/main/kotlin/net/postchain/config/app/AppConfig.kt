@@ -3,11 +3,15 @@
 package net.postchain.config.app
 
 import org.apache.commons.configuration2.Configuration
+import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import java.io.File
+import java.io.FileWriter
+import java.io.PrintWriter
+
 
 /**
  * Wrapper to the generic [Configuration]
@@ -27,10 +31,14 @@ class AppConfig(val config: Configuration) {
                     .configuration
 
             return AppConfig(configuration).apply {
-                // [POS-129]: Improve this
+                // TODO: [POS-129]: Improve this
                 val absolutePath = File(configFile).absolutePath
                 configDir = File(absolutePath).parent
             }
+        }
+
+        fun toPropertiesFile(configFile: String, config: Configuration) {
+            ConfigurationUtils.dump(config, PrintWriter(FileWriter(configFile)))
         }
     }
 
@@ -39,21 +47,6 @@ class AppConfig(val config: Configuration) {
      */
     lateinit var configDir: String
         private set
-
-    /**
-     * Container chains
-     */
-    val isSlave: Boolean
-        get() = config.getBoolean("externalChains.isSlave", false)
-
-    val masterHost: String
-        get() = config.getString("externalChains.slave.masterHost", "")
-
-    val masterPort: Int
-        get() = config.getInt("externalChains.slave.masterPort", 9999) // TODO: [POS-129]: Change port
-
-    val isMaster: Boolean
-        get() = config.getBoolean("externalChains.isMaster", false)
 
     /**
      * Configuration provider
