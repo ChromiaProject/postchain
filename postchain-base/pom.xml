@@ -94,10 +94,19 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
         </dependency>
+
+        <!-- Spark -->
         <dependency>
             <groupId>com.sparkjava</groupId>
             <artifactId>spark-core</artifactId>
             <version>${spark-core.version}</version>
+        </dependency>
+
+        <!-- Unirest -->
+        <dependency>
+            <groupId>com.konghq</groupId>
+            <artifactId>unirest-java</artifactId>
+            <version>3.8.06</version>
         </dependency>
 
         <dependency>

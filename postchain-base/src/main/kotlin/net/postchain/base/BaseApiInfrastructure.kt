@@ -11,8 +11,8 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.AbstractBlockchainProcess
 
-class BaseApiInfrastructure(
-        nodeConfigProvider: NodeConfigurationProvider,
+open class BaseApiInfrastructure(
+        val nodeConfigProvider: NodeConfigurationProvider,
         val nodeDiagnosticContext: NodeDiagnosticContext
 ) : ApiInfrastructure {
 
@@ -59,7 +59,7 @@ class BaseApiInfrastructure(
         restApi?.stop()
     }
 
-    private fun blockchainRid(process: BlockchainProcess): String {
+    protected fun blockchainRid(process: BlockchainProcess): String {
         return process.getEngine().getConfiguration().blockchainRid.toHex()
     }
 }

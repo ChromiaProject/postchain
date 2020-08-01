@@ -2,12 +2,12 @@
 
 package net.postchain.extchains.infra
 
-import net.postchain.base.BaseApiInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.extchains.api.DefaultExtApiInfrastructure
 import net.postchain.extchains.bpm.MasterManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 
@@ -23,7 +23,7 @@ class MasterExtChainsManagedEbftInfrastructureFactory : ManagedEBFTInfrastructur
         val syncInfra = MasterEbftSyncInfrastructure(
                 nodeConfigProvider, nodeDiagnosticContext)
 
-        val apiInfra = BaseApiInfrastructure(
+        val apiInfra = DefaultExtApiInfrastructure(
                 nodeConfigProvider, nodeDiagnosticContext)
 
         return DefaultMasterBlockchainInfrastructure(

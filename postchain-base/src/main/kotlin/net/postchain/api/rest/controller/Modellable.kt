@@ -5,18 +5,18 @@ package net.postchain.api.rest.controller
 interface Modellable {
 
     /**
-     * Attaches a [model] associated with key [blockchainRID]
+     * Attaches a [model] associated with key [blockchainRid]
      */
-    fun attachModel(blockchainRID: String, model: Model)
+    fun attachModel(blockchainRid: String, model: AbstractModel)
 
     /**
-     * Detaches a model associated with key [blockchainRID]
+     * Detaches a model associated with key [blockchainRid]
      */
-    fun detachModel(blockchainRID: String)
+    fun detachModel(blockchainRid: String)
 
     /**
-     * Retrieves a model associated with key [blockchainRID]
+     * Retrieves a model associated with key [blockchainRid]
      */
-    fun retrieveModel(blockchainRID: String): Model?
+    fun retrieveModel(blockchainRid: String): AbstractModel?
 
 }

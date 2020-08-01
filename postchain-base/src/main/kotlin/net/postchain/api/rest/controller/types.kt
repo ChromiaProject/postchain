@@ -10,8 +10,15 @@ import net.postchain.core.BlockDetail
 import net.postchain.core.TransactionInfoExt
 import net.postchain.gtv.Gtv
 
-interface Model {
+interface AbstractModel {
     val chainIID: Long
+}
+
+interface ExternalModel : AbstractModel {
+    val path: String
+}
+
+interface Model : AbstractModel {
     fun postTransaction(tx: ApiTx)
     fun getTransaction(txRID: TxRID): ApiTx?
     fun getTransactionInfo(txRID: TxRID): TransactionInfoExt?

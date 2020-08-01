@@ -38,6 +38,8 @@ open class NodeConfig(val appConfig: AppConfig) {
     val masterPort: Int
         get() = config.getInt("externalChains.masterPort", 9999) // TODO: [POS-129]: Change port
 
+    val slaveHost: String
+        get() = config.getString("externalChains.slaveHost", "")
 
     /**
      * Database

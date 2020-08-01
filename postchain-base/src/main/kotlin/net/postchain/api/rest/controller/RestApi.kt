@@ -3,6 +3,7 @@
 package net.postchain.api.rest.controller
 
 import com.google.gson.*
+import kong.unirest.Unirest
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
@@ -46,7 +47,7 @@ class RestApi(
 
     private val http = Service.ignite()!!
     private val gson = JsonFactory.makeJson()
-    private val models = mutableMapOf<String, Model>()
+    private val models = mutableMapOf<String, AbstractModel>()
     private val bridByIID = mutableMapOf<Long, String>()
 
     init {
@@ -56,21 +57,21 @@ class RestApi(
         logger.info { "Rest API attached on $basePath/" }
     }
 
-    override fun attachModel(blockchainRID: String, model: Model) {
-        models[blockchainRID.toUpperCase()] = model
-        bridByIID[model.chainIID] = blockchainRID.toUpperCase()
+    override fun attachModel(blockchainRid: String, model: AbstractModel) {
+        models[blockchainRid.toUpperCase()] = model
+        bridByIID[model.chainIID] = blockchainRid.toUpperCase()
     }
 
-    override fun detachModel(blockchainRID: String) {
-        val model = models[blockchainRID.toUpperCase()]
+    override fun detachModel(blockchainRid: String) {
+        val model = models[blockchainRid.toUpperCase()]
         if (model != null) {
             bridByIID.remove(model.chainIID)
-            models.remove(blockchainRID.toUpperCase())
-        } else throw ProgrammerMistake("Blockchain $blockchainRID not attached")
+            models.remove(blockchainRid.toUpperCase())
+        } else throw ProgrammerMistake("Blockchain $blockchainRid not attached")
     }
 
-    override fun retrieveModel(blockchainRID: String): Model? {
-        return models[blockchainRID.toUpperCase()]
+    override fun retrieveModel(blockchainRid: String): AbstractModel? {
+        return models[blockchainRid.toUpperCase()]
     }
 
     fun actualPort(): Int {
@@ -141,24 +142,32 @@ class RestApi(
                 "OK"
             }
 
-            http.post("/tx/$PARAM_BLOCKCHAIN_RID") { request, _ ->
-                val n = TimeLog.startSumConc("RestApi.buildRouter().postTx")
-                val tx = toTransaction(request)
-                val maxLength = try {
-                    if (tx.bytes.size > 200) 200 else tx.bytes.size
-                } catch (e: Exception) {
-                    throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
-                }
+            http.post("/tx/$PARAM_BLOCKCHAIN_RID") { request, response ->
+                val model = abstractModel(request)
+                if (model is ExternalModel) {
+                    val blockchainRid = checkBlockchainRID(request)
+                    Unirest.post(model.path + "/tx/$blockchainRid")
+                            .header("Content-Type", "application/json")
+                            .body(request.body())
+                            .asEmptyAsync()
+                    "{}"
+                } else {
+                    val n = TimeLog.startSumConc("RestApi.buildRouter().postTx")
+                    val tx = toTransaction(request)
+                    val maxLength = try {
+                        if (tx.bytes.size > 200) 200 else tx.bytes.size
+                    } catch (e: Exception) {
+                        throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
+                    }
 
-                logger.debug("""
-                    Request body : {"tx": "${tx.bytes.sliceArray(0 until maxLength).toHex()}" } 
-                """.trimIndent())
-                if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
-                    throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
+                    logger.debug("""Request body : {"tx": "${tx.bytes.sliceArray(0 until maxLength).toHex()}" }""")
+                    if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
+                        throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
+                    }
+                    model(request).postTransaction(tx)
+                    TimeLog.end("RestApi.buildRouter().postTx", n)
+                    "{}"
                 }
-                model(request).postTransaction(tx)
-                TimeLog.end("RestApi.buildRouter().postTx", n)
-                "{}"
             }
 
             http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", { request, _ ->
@@ -247,7 +256,6 @@ class RestApi(
 
             http.get("/brid/$PARAM_BLOCKCHAIN_RID") { request, _ ->
                 checkBlockchainRID(request)
-
             }
         }
 
@@ -427,18 +435,24 @@ class RestApi(
                 ?: throw NotFoundError("Can't find tx with hash $txHashHex")
     }
 
-    private fun model(request: Request): Model {
+    private fun abstractModel(request: Request): AbstractModel {
         val blockchainRID = checkBlockchainRID(request)
         return models[blockchainRID.toUpperCase()]
                 ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
+    }
+
+    private fun model(request: Request): Model {
+        return abstractModel(request) as Model
     }
 
     private fun model0(request: Request): Model {
         val chain0Rid = bridByIID[0L]
                 ?: throw NotFoundError("Can't find chain0 in DB. Is this node in managed mode?")
 
-        return models[chain0Rid]
+        val model = models[chain0Rid]
                 ?: throw NotFoundError("Can't find blockchain with blockchainRID: $chain0Rid")
+
+        return model as Model
     }
 
     private fun parseMultipleQueriesRequest(request: Request): JsonArray {

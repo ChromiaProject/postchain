@@ -6,6 +6,7 @@ import net.postchain.network.masterslave.master.MasterCommunicationManager
 interface ExternalBlockchainProcess
 
 class ContainerBlockchainProcess(
+        val chainId: Long,
         val processName: BlockchainProcessName,
         val communicationManager: MasterCommunicationManager
 ) : ExternalBlockchainProcess {

@@ -51,7 +51,7 @@ class MasterEbftSyncInfrastructure(
                 processName
         ).apply { init() }
 
-        return ContainerBlockchainProcess(processName, communicationManager)
+        return ContainerBlockchainProcess(chainId, processName, communicationManager)
     }
 
 }

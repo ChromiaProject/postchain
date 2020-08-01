@@ -5,6 +5,7 @@ import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.DockerClient.ListContainersParam
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
+import com.spotify.docker.client.messages.PortBinding
 import net.postchain.base.BlockchainRid
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
@@ -190,8 +191,16 @@ class MasterManagedBlockchainProcessManager(
                 .to("/opt/chromaway/postchain-subnode/rte")
                 .build()
 
+        // container-port -> [host-port]
+        val containerPort = nodeConfig.restApiPort
+        val hostPort = nodeConfig.restApiPort + 10 * chain.chainId.toInt()
         val hostConfig = HostConfig.builder()
                 .appendBinds(volume)
+                .portBindings(
+                        mapOf(
+                                "$containerPort/tcp" to listOf(PortBinding.of("", hostPort))
+                        )
+                )
                 .build()
 
         val containerConfig = ContainerConfig.builder()
