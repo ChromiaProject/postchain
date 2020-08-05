@@ -23,7 +23,7 @@ class DefaultExtApiInfrastructure(
 
             val path = URL("http",
                     nodeConfig.slaveHost,
-                    nodeConfig.restApiPort + 10 * process.chainId.toInt(),
+                    nodeConfig.restApiPort + 10 * process.chainId.toInt(), // TODO: [POS-129]: Implement port selection
                     nodeConfig.restApiBasePath
             ).toString()
 

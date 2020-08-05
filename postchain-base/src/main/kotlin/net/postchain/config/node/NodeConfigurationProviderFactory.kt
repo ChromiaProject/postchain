@@ -22,6 +22,8 @@ class NodeConfigurationProviderFactory(
         return when (appConfig.nodeConfigProvider.toLowerCase()) {
             Legacy.name.toLowerCase() -> LegacyNodeConfigurationProvider(appConfig)
 
+            File.name.toLowerCase() -> FileNodeConfigurationProvider(appConfig)
+
             Manual.name.toLowerCase() -> ManualNodeConfigurationProvider(
                     appConfig, storageFactory)
 

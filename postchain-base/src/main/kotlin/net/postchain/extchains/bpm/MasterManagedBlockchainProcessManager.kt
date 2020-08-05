@@ -11,10 +11,12 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.FileNodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.Infrastructures
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.devtools.PeerNameHelper
 import net.postchain.extchains.infra.MasterBlockchainInfrastructure
 import net.postchain.managed.ManagedBlockchainProcessManager
 import org.apache.commons.configuration2.ConfigurationUtils
@@ -192,8 +194,8 @@ class MasterManagedBlockchainProcessManager(
                 .build()
 
         // container-port -> [host-port]
-        val containerPort = nodeConfig.restApiPort
-        val hostPort = nodeConfig.restApiPort + 10 * chain.chainId.toInt()
+        val containerPort = nodeConfig.restApiPortDefault
+        val hostPort = nodeConfig.restApiPort + 10 * chain.chainId.toInt() // TODO: [POS-129]: Implement port selection
         val hostConfig = HostConfig.builder()
                 .appendBinds(volume)
                 .portBindings(
@@ -214,15 +216,26 @@ class MasterManagedBlockchainProcessManager(
     }
 
     private fun createContainerNodeConfig(chainId: Long, containerRteDir: Path) {
+        // Making a copy of configuration object
         val containerNodeConfigFile = containerRteDir.resolve("node-config.properties").toString()
         val subnodeConfig = ConfigurationUtils.cloneConfiguration(nodeConfig.appConfig.config)
-        subnodeConfig.setProperty("configuration.provider.node", "manual")
+
+        // Replacing/adding some properties
+        subnodeConfig.setProperty("configuration.provider.node", "file")
         subnodeConfig.setProperty("infrastructure", Infrastructures.EbftSlave.key)
-        subnodeConfig.setProperty("database.schema", "pos129_$chainId")
+        val scheme = "${nodeConfig.appConfig.databaseSchema}_${PeerNameHelper.peerName(nodeConfig.pubKey)}_$chainId"
+        subnodeConfig.setProperty("database.schema", scheme)
+
+        subnodeConfig.setProperty("api.port", nodeConfig.restApiPortDefault)
 
         subnodeConfig.setProperty("externalChains.masterHost", nodeConfig.masterHost)
         subnodeConfig.setProperty("externalChains.masterPort", nodeConfig.masterPort)
 
+        // Adding peerInfos property as array/list
+        val peerInfos = nodeConfig.peerInfoMap.values.map { FileNodeConfigurationProvider.packPeerInfo(it) }
+        subnodeConfig.setProperty("peerinfos", peerInfos)
+
+        // Saving .properties file
         AppConfig.toPropertiesFile(containerNodeConfigFile, subnodeConfig)
     }
 

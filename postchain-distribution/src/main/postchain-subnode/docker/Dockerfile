@@ -8,7 +8,7 @@ RUN apk update && apk add bash curl
 ADD ./postchain-subnode-3.2.1-SNAPSHOT-dist.tar.gz /opt/chromaway/
 ADD ./entrypoint.sh /opt/chromaway/postchain-subnode/entrypoint.sh
 
-EXPOSE 7741
+EXPOSE 7740
 
 ENV BUILD_RELL_DAPP false
 
