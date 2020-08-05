@@ -51,7 +51,7 @@ class BlockchainRidTest {
         val actual = BlockchainRid(ridByteArray)
 
         assert(actual.toShortHex().toUpperCase())
-                .isEqualTo("78:a3".toUpperCase())
+                .isEqualTo("78967b".toUpperCase())
     }
 
     @Test
