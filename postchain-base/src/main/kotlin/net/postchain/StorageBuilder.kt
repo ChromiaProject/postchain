@@ -66,10 +66,16 @@ object StorageBuilder {
             defaultAutoCommit = false
 
             if (withSchema) {
-                defaultSchema = appConfig.databaseSchema
+                /**
+                 * [POS-129]: For some reason: DataSource.getConnection().schema might be null
+                 * while DataSource.defaultSchema is set to smth which is not null.
+                 */
+//                defaultSchema = appConfig.databaseSchema
+//                val scripts = listOf("SET SCHEMA '${appConfig.databaseSchema}'")
+                val scripts = listOf("SET search_path TO ${appConfig.databaseSchema}")
+                setConnectionInitSqls(scripts)
             }
         }
-
     }
 
     private fun wipeDatabase(dataSource: DataSource, appConfig: AppConfig, db: DatabaseAccess) {

@@ -29,7 +29,6 @@ class NettySlaveConnection(
     private val nettyClient = NettyClient()
     private lateinit var context: ChannelHandlerContext
     private var packetHandler: PacketHandler? = null
-    private lateinit var onDisconnected: () -> Unit
 
     var onConnectedHandler: (() -> Unit)? = null
     var onDisconnectedHandler: (() -> Unit)? = null
@@ -52,7 +51,7 @@ class NettySlaveConnection(
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
-        onDisconnected()
+        onDisconnectedHandler?.invoke()
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {

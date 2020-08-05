@@ -58,7 +58,8 @@ data class BlockchainRid(val data: ByteArray) {
 
     fun toShortHex(): String {
         return toHex().run {
-            "${take(2)}:${takeLast(2)}"
+            "${take(6)}"
+//            "${take(2)}:${takeLast(2)}"
         }
     }
 

@@ -34,7 +34,7 @@ class DefaultSlaveConnectionManager(
         val blockchainRid = config.blockchainRid
         val xPacketHandler: XPacketHandler = config.packetHandler
         val packetHandler: PacketHandler = { msg ->
-            xPacketHandler(msg.messageData, XPeerID(msg.destination))
+            xPacketHandler(msg.messageData, XPeerID(msg.source))
         }
         val singers: List<ByteArray> = (config.commConfiguration as SlavePeerCommConfiguration).singers
         var connection: NodeConnection? = null
