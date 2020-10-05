@@ -4,6 +4,7 @@ package net.postchain.modules.ft
 
 import net.postchain.core.TxEContext
 import net.postchain.gtv.GtvArray
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder.decodeGtv
 import net.postchain.gtx.ExtOpData
 import net.postchain.gtx.GTXOperation
