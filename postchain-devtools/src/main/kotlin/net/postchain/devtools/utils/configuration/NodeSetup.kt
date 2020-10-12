@@ -23,12 +23,12 @@ data class NodeSetup(
         val chainsToRead: Set<Int>,
         val pubKeyHex: String,
         val privKeyHex: String,
-        var configurationProvider: NodeConfigurationProvider? = null // We might not set this at first
+        var configurationProvider: NodeConfigurationProvider? = null, // We might not set this at first
+        var netPortNum: Int = 0, // Use any available port
+        var apiPortNum: Int = 0  // Use any available port
 ) {
 
     companion object : KLogging() {
-        const val DEFAULT_PORT_BASE_NR = 9870 // Just some made up number. Can be used if there is no other test running in parallel on this machine.
-        const val DEFAULT_API_PORT_BASE = 7740 // Made up number, used for the REST API
 
         fun buildSimple(nodeNr: NodeSeqNumber,
                         signerChains: Set<Int>,
@@ -47,14 +47,8 @@ data class NodeSetup(
 
     fun getAllBlockchains() = this.chainsToSign.plus(this.chainsToRead)
 
-    /**
-     * The nodes have ports depending on the order of their sequence number
-     */
-    fun getPortNumber() = getPortNumber(DEFAULT_PORT_BASE_NR)
-    fun getPortNumber(portBase: Int) = sequenceNumber.nodeNumber + portBase
-
-    fun getApiPortNumber() = getApiPortNumber(DEFAULT_API_PORT_BASE)
-    fun getApiPortNumber(portBase: Int) = sequenceNumber.nodeNumber + portBase // Must be different from "normal" port base
+    fun getPortNumber() = netPortNum
+    fun getApiPortNumber() = apiPortNum
 
     /**
      * It can be pretty hard to figure out if a node needs to know about some other node,

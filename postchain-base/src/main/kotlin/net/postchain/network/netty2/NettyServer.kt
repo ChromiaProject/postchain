@@ -10,7 +10,10 @@ import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
+import net.postchain.base.DynamicPortPeerInfo
+import net.postchain.base.PeerInfo
 import net.postchain.core.Shutdownable
+import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit
 
 class NettyServer : Shutdownable {
@@ -24,7 +27,7 @@ class NettyServer : Shutdownable {
         this.createChannelHandler = handlerFactory
     }
 
-    fun run(port: Int) {
+    fun run(peerInfo : PeerInfo) {
         eventLoopGroup = NioEventLoopGroup(1)
 
         server = ServerBootstrap()
@@ -44,7 +47,15 @@ class NettyServer : Shutdownable {
                     }
                 })
 
-        bindFuture = server.bind(port).sync()
+        if (peerInfo is DynamicPortPeerInfo) {
+            bindFuture = server.bind(0).sync()
+            val channel = bindFuture.channel()
+            // I don't know if there's a more elegant way to get the assigned port
+            val p = (channel.localAddress() as InetSocketAddress).port
+            peerInfo.portAssigned(p)
+        } else {
+            bindFuture = server.bind(peerInfo.port).sync()
+        }
     }
 
     override fun shutdown() {

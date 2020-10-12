@@ -31,7 +31,7 @@ class NettyConnector<PacketType>(
                         }
             }
 
-            run(peerInfo.port)
+            run(peerInfo)
         }
     }
 

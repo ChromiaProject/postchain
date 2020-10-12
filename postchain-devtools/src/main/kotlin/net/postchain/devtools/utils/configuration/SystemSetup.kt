@@ -1,5 +1,6 @@
 package net.postchain.devtools.utils.configuration
 
+import net.postchain.base.DynamicPortPeerInfo
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.node.NodeConfigurationProvider
@@ -113,7 +114,10 @@ data class SystemSetup(
         val peerInfos = mutableListOf<PeerInfo>()
         for (node in this. nodeMap.values) {
             val key = ByteArrayKey(node.pubKeyHex.hexStringToByteArray())
-            val pi = PeerInfo("localhost", node.getPortNumber(), key)
+            val pi = if (node.getPortNumber() == 0)
+                DynamicPortPeerInfo("localhost", key.byteArray)
+            else
+                PeerInfo("localhost", node.getPortNumber(), key)
             peerInfos.add(pi)
         }
 

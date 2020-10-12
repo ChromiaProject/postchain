@@ -85,10 +85,13 @@ open class BaseBlockchainProcessManager(
                         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
-                        blockchainProcessesLoggers[chainId] = timer(
-                                period = 3000,
-                                action = { logPeerTopology(chainId) }
-                        )
+                        // This logging can cause NullPointerException if a channel is
+                        // disconnected. Commenting until further investigation.
+                        // Every now and then this causes the test suite to fail.
+//                        blockchainProcessesLoggers[chainId] = timer(
+//                                period = 3000,
+//                                action = { logPeerTopology(chainId) }
+//                        )
                         logger.info("$processName: Blockchain has been started: chainId: $chainId")
                         blockchainConfig.blockchainRid
 

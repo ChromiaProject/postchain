@@ -2,6 +2,7 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.StorageBuilder
+import net.postchain.base.DynamicPortPeerInfo
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
@@ -303,11 +304,13 @@ open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
 
     open fun generatePubKey(nodeId: Int): ByteArray = KeyPairHelper.pubKey(nodeId)
 
+
+
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
         if (peerInfos == null) {
             peerInfos =
-                    Array(nodeCount) { PeerInfo("localhost", BASE_PORT + it, generatePubKey(it)) } +
-                            Array(replicasCount) { PeerInfo("localhost", BASE_PORT - it - 1, generatePubKey(-it - 1)) }
+                    Array<PeerInfo>(nodeCount) { DynamicPortPeerInfo("localhost", KeyPairHelper.pubKey(it)) } +
+                            Array<PeerInfo>(replicasCount) { DynamicPortPeerInfo("localhost", KeyPairHelper.pubKey(-it - 1)) }
         }
 
         return peerInfos!!
