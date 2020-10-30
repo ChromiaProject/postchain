@@ -6,13 +6,15 @@ open class ProgrammerMistake(message: String, cause: Exception? = null) : Runtim
 
 open class UserMistake(message: String, cause: Exception? = null) : RuntimeException(message, cause)
 
+open class BlockValidationMistake(message: String, cause: Exception? = null) : RuntimeException(message, cause)
+
 /**
  * Used when the format of some data is incorrect, see [BadDataType] for examples
  */
-open class BadDataMistake(val type: BadDataType, message: String, cause: Exception? = null): RuntimeException(message, cause)
+open class BadDataMistake(val type: BadDataType, message: String, cause: Exception? = null) : RuntimeException(message, cause)
 
 
-enum class BadDataType (val type: Int) {
+enum class BadDataType(val type: Int) {
     BAD_GTV(1), // Something wrong on GTV level, for example GtvDictionary is broken.
     BAD_GTX(2), // A TX is incorrectly represented (even though the GTV itself is correct)
     BAD_BLOCK(3), // The block's format is incorrect in some way (including header errors)
