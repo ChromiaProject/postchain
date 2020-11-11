@@ -58,8 +58,6 @@ object PostgreSQLCommands : SQLCommands {
 
     override val insertBlocks: String = "INSERT INTO blocks (chain_iid, block_height) VALUES (?, ?)"
 
-    override val insertSnapshots: String = "INSERT INTO snapshots (chain_iid, root_hash, block_height, node_id) VALUES (?, ?, ?, ?)"
-
     override val insertTransactions: String = "INSERT INTO transactions (chain_iid, tx_rid, tx_data, tx_hash, block_iid) " +
             "VALUES (?, ?, ?, ?, ?)"
 
@@ -135,7 +133,7 @@ object PostgreSQLCommands : SQLCommands {
                     ORDER BY a.attnum
                 LOOP
                     IF column_record.attnum = 1 THEN
-                        v_table_ddl:='CREATE TABLE '||column_record.schema_name||'.'||column_record.table_name||' (';
+                        v_table_ddl:='CREATE TABLE '||column_record.table_name||' (';
                     ELSE
                         v_table_ddl:=v_table_ddl||',';
                     END IF;

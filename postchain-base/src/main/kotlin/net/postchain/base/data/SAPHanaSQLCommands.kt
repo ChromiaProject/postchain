@@ -54,9 +54,6 @@ object SAPHanaSQLCommands : SQLCommands {
 
     override val insertBlocks: String = "INSERT INTO blocks (chain_iid, block_height) VALUES (?, ?) "
 
-    override val insertSnapshots: String
-        get() = TODO("Not yet implemented")
-
     override val insertTransactions: String = "INSERT INTO transactions (chain_iid, tx_rid, tx_data, tx_hash, block_iid) " +
             "VALUES (?, ?, ?, ?, ?) "
 

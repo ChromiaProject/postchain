@@ -61,6 +61,8 @@ interface DatabaseAccess {
     fun getTxsRowCount(ctx: EContext, height: Long): Long
     fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0, height: Long): List<RowData>
     fun getBlocksRowCount(ctx: EContext, height: Long): Long
+    fun getSnapshotsInRange(ctx: EContext, limit: Int, offset: Long, original: Long = 0, height: Long): List<RowData>
+    fun getSnapshotsRowCount(ctx: EContext, height: Long): Long
     fun getTables(ctx: EContext): List<String>
     // Query data for rellr app
     fun getDataInRange(ctx: EContext, tableName: String, limit: Int, offset: Long, original: Long = 0): List<RowData>
@@ -490,7 +492,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val blockIid = row["block_iid"] as Long
 
             val tx = TxData(txIid, chainIid, txRid, txData, txHash, blockIid)
-            RowData(GtvInteger(rowId), GtvString("transactions"), tx.toGtv())
+            RowData(GtvInteger(rowId), GtvString("transactions"), tx.toGtv(), GtvArray(arrayOf(GtvFactory.gtv(0L), GtvFactory.gtv(5L))))
         }
     }
 
@@ -517,7 +519,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
             val timestamp = row["timestamp"] as Long
 
             val block = BlockData(blockIid, blockRid, chainIid, blockHeight, blockHeader, blockWitness, timestamp)
-            RowData(GtvInteger(rowId), GtvString("blocks"), block.toGtv(), GtvArray(arrayOf(GtvFactory.gtv(5L))))
+            RowData(GtvInteger(rowId), GtvString("blocks"), block.toGtv(), GtvArray(arrayOf(GtvFactory.gtv(0L), GtvFactory.gtv(5L))))
         }
     }
 
@@ -525,6 +527,32 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
         return queryRunner.query(ctx.conn,
                 """SELECT count(*) FROM blocks 
                 WHERE chain_iid = ? AND block_height < ?""", longRes, ctx.chainID, height)
+    }
+
+    override fun getSnapshotsInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
+        var rows = queryRunner.query(ctx.conn,
+                """SELECT * FROM (
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, snapshot_iid, tx_iid, block_height, snapshot_hash, pubkey FROM snapshots) x 
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid = ? AND block_height < ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID, height)
+
+        return rows.map { row ->
+            val rowId = row["row_id"] as Long
+            val chainIid = row["chain_iid"] as Long
+            val snapshotIid = row["snapshot_iid"] as Long
+            val txIid = row["tx_iid"] as Long
+            val blockHeight = row["block_height"] as Long
+            val snapshotHash = row["snapshot_hash"] as String
+            val pubkey = row["pubkey"] as String
+
+            val snapshot = SnapshotData(chainIid, snapshotIid, txIid, blockHeight, snapshotHash, pubkey)
+            RowData(GtvInteger(rowId), GtvString("snapshots"), snapshot.toGtv(), GtvArray(arrayOf(GtvFactory.gtv(1L), GtvFactory.gtv(2L))))
+        }
+    }
+
+    override fun getSnapshotsRowCount(ctx: EContext, height: Long): Long {
+        return queryRunner.query(ctx.conn,
+                """SELECT count(*) FROM snapshots
+|               WHERE chain_iid = ? AND block_height < ?""".trimMargin(), longRes, ctx.chainID, height)
     }
 
     override fun getDataInRange(ctx: EContext, tableName: String, limit: Int, offset: Long, original: Long): List<RowData> {

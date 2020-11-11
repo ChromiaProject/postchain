@@ -11,7 +11,6 @@ interface SQLCommands {
     val createTablePeerInfos: String
     val createTableMeta: String
     val insertBlocks: String
-    val insertSnapshots: String
     val insertTransactions: String
     val insertConfiguration: String
     val createTableGtxModuleVersion: String
