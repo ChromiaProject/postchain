@@ -3,7 +3,6 @@ package net.postchain.snapshot
 import mu.KLogging
 import net.postchain.core.SnapshotBuildingStrategy
 import net.postchain.core.Tree
-import net.postchain.core.printTree
 import nl.komponents.kovenant.Promise
 
 open class BaseSnapshotManager(

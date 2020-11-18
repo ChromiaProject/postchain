@@ -479,8 +479,8 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     override fun getTxsInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
         val rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
-                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, tx_iid, chain_iid, tx_rid, tx_data, tx_hash, block_iid FROM transactions) x 
-                    WHERE row_id BETWEEN ? AND ? AND chain_iid = ? AND block_iid IN (SELECT block_iid FROM blocks WHERE block_height < ?)""", mapListHandler, original, offset+1, offset+limit, ctx.chainID, height)
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, tx_iid, chain_iid, tx_rid, tx_data, tx_hash, block_iid FROM transactions order by block_iid) x 
+                    WHERE row_id BETWEEN ? AND ? AND chain_iid = ? AND block_iid IN (SELECT block_iid FROM blocks WHERE block_height < ? order by  block_height)""", mapListHandler, original, offset+1, offset+limit, ctx.chainID, height)
 
         return rows.map { row ->
             val rowId = row["row_id"] as Long
@@ -505,7 +505,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     override fun getBlocksInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
-                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, block_iid, block_rid, block_height, block_header_data, block_witness, timestamp FROM blocks) x 
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, block_iid, block_rid, block_height, block_header_data, block_witness, timestamp FROM blocks order by block_height) x 
                     WHERE row_id BETWEEN ? AND ? AND chain_iid = ? AND block_height < ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID, height)
 
         return rows.map { row ->
@@ -532,7 +532,7 @@ open class SQLDatabaseAccess(val sqlCommands: SQLCommands) : DatabaseAccess {
     override fun getSnapshotsInRange(ctx: EContext, limit: Int, offset: Long, original: Long, height: Long): List<RowData> {
         var rows = queryRunner.query(ctx.conn,
                 """SELECT * FROM (
-                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, snapshot_iid, tx_iid, block_height, snapshot_hash, pubkey FROM snapshots) x 
+                    SELECT (row_number() OVER (ORDER BY chain_iid) + ?) AS row_id, chain_iid, snapshot_iid, tx_iid, block_height, snapshot_hash, pubkey FROM snapshots order by block_height) x 
                     WHERE row_id BETWEEN ? AND ? AND chain_iid = ? AND block_height < ?""", mapListHandler, original, offset+1, offset+limit, ctx.chainID, height)
 
         return rows.map { row ->

@@ -12,8 +12,9 @@ class BaseSnapshotBuildingStrategy(
     private val epoch = strategyData?.get("epoch")?.asInteger() ?: 1024
 
     override fun shouldBuildSnapshot(): Pair<Boolean, Long> {
-        val height = blockQueries.getBestHeight().get()
-        if (height == -1L) {
+        // build the snapshot for previous epoch
+        val height = blockQueries.getBestHeight().get() - epoch
+        if (height <= -1L) {
             return Pair(false, height)
         }
         return Pair((height+1) % epoch == 0L, height)
