@@ -32,6 +32,7 @@ class SignedMessage(val message: ByteArray, val pubKey: ByteArray, val signature
     }
 }
 
+/* SIG and BLOCKDATA seem to be unused */
 enum class MessageType {
     ID, STATUS, TX, SIG, BLOCKSIG, BLOCKDATA, UNFINISHEDBLOCK,
     GETBLOCKSIG, COMPLETEBLOCK, GETBLOCKATHEIGHT, GETUNFINISHEDBLOCK, GETBLOCKHEADERANDBLOCK, BLOCKHEADER
