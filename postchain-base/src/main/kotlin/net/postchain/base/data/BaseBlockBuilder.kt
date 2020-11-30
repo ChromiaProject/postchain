@@ -8,6 +8,7 @@ import net.postchain.base.merkle.Hash
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -74,6 +75,10 @@ open class BaseBlockBuilder(
         }
     }
 
+    open fun getExtraData(): Map<String, Gtv> {
+        return mapOf();
+    }
+
     /**
      * Create block header from initial block data
      *
@@ -83,7 +88,7 @@ open class BaseBlockBuilder(
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp)
+        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, getExtraData())
     }
 
     /**
@@ -230,7 +235,7 @@ open class BaseBlockBuilder(
 
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
         if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End) && !haveSpecialEndTransaction)
-            throw BadDataMistake(BadDataType.BAD_BLOCK,"End special transaction is missing")
+            throw BlockValidationMistake("End special transaction is missing")
         super.finalizeAndValidate(blockHeader)
     }
 
@@ -264,12 +269,12 @@ open class BaseBlockBuilder(
     override fun appendTransaction(tx: Transaction) {
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
         super.appendTransaction(tx)
-        blockSize += tx.getRawData().size
-        if (blockSize >= maxBlockSize) {
-            throw BlockValidationMistake("block size exceeds max block size ${maxBlockSize} bytes")
+        if (blockSize + tx.getRawData().size >= maxBlockSize) {
+            throw UserMistake("block size exceeds max block size ${maxBlockSize} bytes")
         } else if (transactions.size >= maxBlockTransactions) {
             throw BlockValidationMistake("Number of transactions exceeds max ${maxBlockTransactions} transactions in block")
         }
+        blockSize +=  tx.getRawData().size
     }
 
 }
