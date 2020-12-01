@@ -39,15 +39,20 @@ open class BaseBlockchainProcessManager(
 
     companion object : KLogging()
 
-    /**
-     * Put the startup operation of chainId in the [executor]'s work queue.
-     *
-     * @param chainId is the chain to start.
-     */
     protected fun startBlockchainAsync(chainId: Long) {
         executor.execute {
             try {
                 startBlockchain(chainId)
+            } catch (e: Exception) {
+                logger.error(e) { e.message }
+            }
+        }
+    }
+
+    protected fun stopBlockchainAsync(chainId: Long) {
+        executor.execute {
+            try {
+                stopBlockchain(chainId)
             } catch (e: Exception) {
                 logger.error(e) { e.message }
             }
@@ -137,7 +142,7 @@ open class BaseBlockchainProcessManager(
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
 
-        blockchainProcesses.forEach {it.value.shutdown()}
+        blockchainProcesses.forEach { it.value.shutdown() }
         blockchainProcesses.clear()
 
         blockchainProcessesLoggers.forEach { (_, t) ->
