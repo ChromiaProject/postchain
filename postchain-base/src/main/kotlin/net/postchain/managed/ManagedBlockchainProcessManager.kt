@@ -50,9 +50,9 @@ open class ManagedBlockchainProcessManager(
         nodeDiagnosticContext
 ) {
 
-    private lateinit var dataSource: ManagedNodeDataSource
+    protected lateinit var dataSource: ManagedNodeDataSource
     private var lastPeerListVersion: Long? = null
-    private val CHAIN0 = 0L
+    protected val CHAIN0 = 0L
 
     companion object : KLogging()
 

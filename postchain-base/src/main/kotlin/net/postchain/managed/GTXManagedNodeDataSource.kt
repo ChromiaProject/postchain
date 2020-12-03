@@ -53,6 +53,16 @@ class GTXManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeCo
         return if (res.isNull()) null else res.asByteArray()
     }
 
+    override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
+        val res = queries.query(
+                "nm_get_blockchain_configurations",
+                buildArgs("blockchain_rid" to GtvFactory.gtv(blockchainRidRaw))
+        ).get()
+
+        return res.asArray()
+                .associate { heightConfig -> heightConfig[0].asInteger() to heightConfig[1].asByteArray() }
+    }
+
     override fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long? {
         val res = queries.query(
                 "nm_find_next_configuration_height",

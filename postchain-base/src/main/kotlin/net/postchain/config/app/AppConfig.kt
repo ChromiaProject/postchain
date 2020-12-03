@@ -7,6 +7,7 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
+import java.io.File
 
 /**
  * Wrapper to the generic [Configuration]
@@ -25,9 +26,14 @@ class AppConfig(val config: Configuration) {
                     .configure(params)
                     .configuration
 
-            return AppConfig(configuration)
+            return AppConfig(configuration).apply {
+                configDir = File(configFile).absoluteFile.parent
+            }
         }
     }
+
+    lateinit var configDir: String
+        private set
 
     /**
      * Configuration provider
