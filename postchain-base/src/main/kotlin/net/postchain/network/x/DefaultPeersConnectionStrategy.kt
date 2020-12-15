@@ -5,7 +5,7 @@ package net.postchain.network.x
 import mu.KLogging
 import net.postchain.common.ExponentialDelay
 import net.postchain.core.ProgrammerMistake
-import net.postchain.devtools.PeerNameHelper.peerName
+import net.postchain.devtools.NameHelper.peerName
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random

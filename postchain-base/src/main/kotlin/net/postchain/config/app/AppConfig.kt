@@ -3,11 +3,14 @@
 package net.postchain.config.app
 
 import org.apache.commons.configuration2.Configuration
+import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import java.io.File
+import java.io.FileWriter
+import java.io.PrintWriter
 
 /**
  * Wrapper to the generic [Configuration]
@@ -30,8 +33,15 @@ class AppConfig(val config: Configuration) {
                 configDir = File(configFile).absoluteFile.parent
             }
         }
+
+        fun toPropertiesFile(config: Configuration, configFile: String) {
+            ConfigurationUtils.dump(config, PrintWriter(FileWriter(configFile)))
+        }
     }
 
+    /**
+     * This config dir
+     */
     lateinit var configDir: String
         private set
 

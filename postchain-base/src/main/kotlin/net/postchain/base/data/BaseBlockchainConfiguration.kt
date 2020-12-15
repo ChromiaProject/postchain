@@ -14,7 +14,7 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
     override val chainID = configData.context.chainID
     override val blockchainRid = configData.context.blockchainRID
     val effectiveBlockchainRID = configData.getHistoricBRID() ?: configData.context.blockchainRID
-    val signers = configData.getSigners()
+    override val signers = configData.getSigners()
 
     val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
 

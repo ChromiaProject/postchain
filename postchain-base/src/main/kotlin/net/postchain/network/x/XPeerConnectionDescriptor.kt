@@ -6,28 +6,32 @@ import net.postchain.base.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.network.IdentPacketInfo
 
-enum class direction {
+enum class Direction {
     INCOMING, OUTGOING
 }
 
 class XPeerConnectionDescriptor(
+        /**
+         * It is *target* peer for client (outgoing) connections
+         * and *source* peer for server (incoming) connections.
+         */
         val peerId: XPeerID,
-        val blockchainRID: BlockchainRid,
+        val blockchainRid: BlockchainRid,
         val sessionKey: ByteArray? = null,
-        val dir: direction = direction.OUTGOING
+        val dir: Direction = Direction.OUTGOING
 ) {
 
     companion object Factory {
 
         fun createFromIdentPacketInfo(identPacketInfo: IdentPacketInfo): XPeerConnectionDescriptor {
             return XPeerConnectionDescriptor(
-                    identPacketInfo.peerID.byteArrayKeyOf(),
-                    identPacketInfo.blockchainRID, identPacketInfo.sessionKey, direction.INCOMING)
+                    identPacketInfo.peerId.byteArrayKeyOf(),
+                    identPacketInfo.blockchainRid, identPacketInfo.sessionKey, Direction.INCOMING)
         }
 
     }
 
     fun isOutgoing(): Boolean {
-        return dir == direction.OUTGOING
+        return dir == Direction.OUTGOING
     }
 }

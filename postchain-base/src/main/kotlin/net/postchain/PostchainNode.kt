@@ -11,7 +11,7 @@ import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Shutdownable
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.devtools.PeerNameHelper.peerName
+import net.postchain.devtools.NameHelper.peerName
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.

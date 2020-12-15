@@ -13,6 +13,7 @@ import net.postchain.gtv.Gtv
 interface BlockchainConfiguration {
     val chainID: Long
     val blockchainRid: BlockchainRid
+    val signers: List<ByteArray>
     val traits: Set<String>
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader

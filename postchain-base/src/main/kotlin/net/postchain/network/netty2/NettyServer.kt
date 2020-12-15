@@ -16,14 +16,14 @@ import java.util.concurrent.TimeUnit
 
 class NettyServer : Shutdownable {
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     private lateinit var server: ServerBootstrap
     private lateinit var bindFuture: ChannelFuture
     private lateinit var createChannelHandler: () -> ChannelHandler
     private lateinit var eventLoopGroup: EventLoopGroup
 
-    fun setChannelHandler(handlerFactory: () -> ChannelHandler) {
+    fun setCreateChannelHandler(handlerFactory: () -> ChannelHandler) {
         this.createChannelHandler = handlerFactory
     }
 

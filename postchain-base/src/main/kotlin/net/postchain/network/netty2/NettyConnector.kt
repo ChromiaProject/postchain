@@ -11,7 +11,7 @@ import net.postchain.network.x.XConnectorEvents
 import net.postchain.network.x.XPeerConnectionDescriptor
 
 class NettyConnector<PacketType>(
-        private val eventReceiver: XConnectorEvents
+        private val eventsReceiver: XConnectorEvents
 ) : XConnector<PacketType> {
 
     companion object : KLogging()
@@ -20,14 +20,14 @@ class NettyConnector<PacketType>(
 
     override fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>) {
         server = NettyServer().apply {
-            setChannelHandler {
+            setCreateChannelHandler {
                 NettyServerPeerConnection(packetDecoder)
                         .onConnected { connection ->
-                            eventReceiver.onPeerConnected(connection)
+                            eventsReceiver.onPeerConnected(connection)
                                     ?.also { connection.accept(it) }
                         }
                         .onDisconnected { connection ->
-                            eventReceiver.onPeerDisconnected(connection)
+                            eventsReceiver.onPeerDisconnected(connection)
                         }
             }
 
@@ -44,15 +44,15 @@ class NettyConnector<PacketType>(
             try {
                 open(
                         onConnected = {
-                            eventReceiver.onPeerConnected(this)
+                            eventsReceiver.onPeerConnected(this)
                                     ?.also { this.accept(it) }
                         },
                         onDisconnected = {
-                            eventReceiver.onPeerDisconnected(this)
+                            eventsReceiver.onPeerDisconnected(this)
                         })
             } catch (e: Exception) {
                 logger.error { e.message }
-                eventReceiver.onPeerDisconnected(this) // TODO: [et]: Maybe create different event receiver.
+                eventsReceiver.onPeerDisconnected(this) // TODO: [et]: Maybe create different event receiver.
             }
         }
     }

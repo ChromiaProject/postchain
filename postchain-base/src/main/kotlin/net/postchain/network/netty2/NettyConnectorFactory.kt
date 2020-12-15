@@ -11,13 +11,13 @@ import net.postchain.network.x.XConnectorFactory
 class NettyConnectorFactory<PacketType> : XConnectorFactory<PacketType> {
 
     override fun createConnector(
-            peerInfo: PeerInfo,
+            myPeerInfo: PeerInfo,
             packetDecoder: XPacketDecoder<PacketType>,
             eventReceiver: XConnectorEvents
     ): XConnector<PacketType> {
 
         return NettyConnector<PacketType>(eventReceiver).apply {
-            init(peerInfo, packetDecoder)
+            init(myPeerInfo, packetDecoder)
         }
     }
 }

@@ -9,6 +9,8 @@ import net.postchain.debug.NodeDiagnosticContext
 
 interface SynchronizationInfrastructure : Shutdownable {
 
+    fun init()
+
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine
@@ -53,9 +55,20 @@ interface InfrastructureFactory {
     ): BlockchainProcessManager
 }
 
-enum class Infrastructures(val secondName: String) {
-    BaseEbft("base/ebft"),
-    BaseTest("base/test")
+enum class Infrastructure(vararg val key: String) {
+    Ebft("ebft", "base-ebft", "base/ebft"),
+    EbftManaged("ebft-managed"),
+    EbftManagedChromia0("chromia0", "ebft-managed-chromia0"),
+
+    // Container chains
+    EbftManagedContainerMaster("ebft-managed-container-master"),
+    EbftContainerSlave("ebft-container-slave"),
+    EbftManagedChromia0ContainerMaster("ebft-managed-chromia0-container-master"),
+
+    // Tests
+    BaseTest("base-test", "base/test");
+
+    fun get(): String = key.first()
 }
 
 interface InfrastructureFactoryProvider {

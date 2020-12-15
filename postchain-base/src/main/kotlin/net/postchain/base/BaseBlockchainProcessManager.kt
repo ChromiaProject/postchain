@@ -9,7 +9,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.devtools.PeerNameHelper.peerName
+import net.postchain.devtools.NameHelper.peerName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import java.util.*
 import java.util.concurrent.ExecutorService

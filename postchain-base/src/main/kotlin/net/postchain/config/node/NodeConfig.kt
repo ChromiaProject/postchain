@@ -6,7 +6,7 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
-import net.postchain.core.Infrastructures
+import net.postchain.core.Infrastructure
 import net.postchain.network.x.XPeerID
 import org.apache.commons.configuration2.Configuration
 
@@ -15,17 +15,26 @@ open class NodeConfig(val appConfig: AppConfig) {
     private val config: Configuration
         get() = appConfig.config
 
-    /**
-     * Blockchain configuration provider
-     */
+    @Deprecated("POS-129: Defined implicitly by 'infrastructure' param")
+            /**
+             * Blockchain configuration provider
+             */
     val blockchainConfigProvider: String
         // manual | managed
         get() = config.getString("configuration.provider.blockchain", "")
 
     val infrastructure: String
         // "base/ebft" is the default
-        get() = config.getString("infrastructure", Infrastructures.BaseEbft.secondName.toLowerCase())
+        get() = config.getString("infrastructure", Infrastructure.Ebft.get())
 
+    /**
+     * Container chains
+     */
+    val masterHost: String
+        get() = config.getString("containerChains.masterHost", "")
+
+    val masterPort: Int
+        get() = config.getInt("containerChains.masterPort", 9999) // TODO: [POS-129]: Change port
 
     /**
      * Database

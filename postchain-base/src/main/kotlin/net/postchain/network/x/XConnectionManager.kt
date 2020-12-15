@@ -6,19 +6,19 @@ import net.postchain.core.ByteArrayKey
 import net.postchain.core.Shutdownable
 
 typealias XPeerID = ByteArrayKey
-typealias XPacketHandler = (data: ByteArray, peerID: XPeerID) -> Unit
+typealias XPacketHandler = (data: ByteArray, peerId: XPeerID) -> Unit
 
 typealias LazyPacket = () -> ByteArray
 
 interface XConnectionManager : NetworkTopology, Shutdownable {
-    fun connectChain(peerConfig: XChainPeerConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String)
-    fun connectChainPeer(chainID: Long, peerID: XPeerID)
-    fun isPeerConnected(chainID: Long, peerID: XPeerID): Boolean
-    fun getConnectedPeers(chainID: Long): List<XPeerID>
-    fun sendPacket(data: LazyPacket, chainID: Long, peerID: XPeerID)
-    fun broadcastPacket(data: LazyPacket, chainID: Long)
-    fun disconnectChainPeer(chainID: Long, peerID: XPeerID)
-    fun disconnectChain(chainID: Long, loggingPrefix: () -> String)
+    fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String)
+    fun connectChainPeer(chainId: Long, peerId: XPeerID)
+    fun isPeerConnected(chainId: Long, peerId: XPeerID): Boolean
+    fun getConnectedPeers(chainId: Long): List<XPeerID>
+    fun sendPacket(data: LazyPacket, chainId: Long, peerId: XPeerID)
+    fun broadcastPacket(data: LazyPacket, chainId: Long)
+    fun disconnectChainPeer(chainId: Long, peerId: XPeerID)
+    fun disconnectChain(chainId: Long, loggingPrefix: () -> String)
 }
 
 interface NetworkTopology {

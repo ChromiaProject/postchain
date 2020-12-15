@@ -11,7 +11,7 @@ import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.devtools.PeerNameHelper.peerName
+import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv

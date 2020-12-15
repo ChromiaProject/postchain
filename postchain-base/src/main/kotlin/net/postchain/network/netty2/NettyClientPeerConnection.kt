@@ -18,7 +18,7 @@ import java.net.InetSocketAddress
 import java.net.SocketAddress
 
 class NettyClientPeerConnection<PacketType>(
-        val peerInfo: PeerInfo,
+        private val peerInfo: PeerInfo,
         private val packetEncoder: XPacketEncoder<PacketType>,
         private val descriptor: XPeerConnectionDescriptor
 ) : ChannelInboundHandlerAdapter(), XPeerConnection {

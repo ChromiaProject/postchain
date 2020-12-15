@@ -122,7 +122,7 @@ object CliExecution {
     }
 
     fun runNode(nodeConfigFile: String, chainIds: List<Long>) {
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(
                 AppConfig.fromPropertiesFile(nodeConfigFile))
 
         with(PostchainNode(nodeConfigProvider)) {
@@ -162,7 +162,7 @@ object CliExecution {
 
     private fun tryCreateBasicDataSource(nodeConfigFile: String): Connection? {
         return try {
-            val nodeConfig = NodeConfigurationProviderFactory.createProvider(
+            val nodeConfig = NodeConfigurationProviderFactory().createProvider(
                     AppConfig.fromPropertiesFile(nodeConfigFile)
             ).getConfiguration()
 

@@ -1,13 +1,13 @@
-package net.postchain.managed.container
+package net.postchain.containers.bpm
 
-import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
+import net.postchain.containers.NameService
 import java.nio.file.Path
 
-object ContainerFactory {
+object ContainerConfigFactory {
 
-    fun createContainer(dockerClient: DockerClient, containerCwd: Path, chain: ContainerChain): String? {
+    fun createConfig(containerCwd: Path): ContainerConfig {
         // -v $containerCwd:/opt/chromaway/postchain-subnode/rte \
         val volume = HostConfig.Bind
                 .from(containerCwd.toString())
@@ -18,13 +18,10 @@ object ContainerFactory {
                 .appendBinds(volume)
                 .build()
 
-        val containerConfig = ContainerConfig.builder()
-                .image("chromaway/postchain-subnode:3.2.1")
+        return ContainerConfig.builder()
+                .image(NameService.containerImage())
                 .hostConfig(hostConfig)
                 .build()
-
-        val containerCreation = dockerClient.createContainer(containerConfig, chain.containerName)
-        return containerCreation.id()
     }
 
 }
