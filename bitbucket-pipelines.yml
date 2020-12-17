@@ -13,6 +13,17 @@ pipelines:
         services:
           - postgres
           - docker
+  custom:
+      ojdk11:
+         - step:
+             size: 2x
+             script:
+              - export TESTCONTAINERS_RYUK_DISABLED=true
+              - mvn -e -B -P ci clean install
+             services:
+               - postgres
+               - docker
+
 
 definitions:
   services:
