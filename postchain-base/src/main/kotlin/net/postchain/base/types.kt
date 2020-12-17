@@ -60,4 +60,6 @@ open class BaseBlockEContext(
 open class BaseTxEContext(
         val bectx: BlockEContext,
         override val txIID: Long
-) : BlockEContext by bectx, TxEContext
+) : BlockEContext by bectx, TxEContext {
+    override fun done() {}
+}

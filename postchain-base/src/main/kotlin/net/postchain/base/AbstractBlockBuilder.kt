@@ -62,6 +62,10 @@ abstract class AbstractBlockBuilder(
         buildingNewBlock = partialBlockHeader != null
     }
 
+    open fun wrapTxEContext(ectx: TxEContext): TxEContext {
+        return ectx
+    }
+
     /**
      * Apply transaction to current working block
      *
@@ -83,7 +87,7 @@ abstract class AbstractBlockBuilder(
         val txctx: TxEContext
         try {
             TimeLog.startSum("AbstractBlockBuilder.appendTransaction().addTransaction")
-            txctx = store.addTransaction(bctx, tx)
+            txctx = wrapTxEContext(store.addTransaction(bctx, tx))
             TimeLog.end("AbstractBlockBuilder.appendTransaction().addTransaction")
         } catch (e: Exception) {
             throw UserMistake("Failed to save tx to database", e)
@@ -91,6 +95,7 @@ abstract class AbstractBlockBuilder(
         // In case of errors, tx.apply may either return false or throw UserMistake
         TimeLog.startSum("AbstractBlockBuilder.appendTransaction().apply")
         if (tx.apply(txctx)) {
+            txctx.done()
             transactions.add(tx)
             rawTransactions.add(tx.getRawData())
         } else {

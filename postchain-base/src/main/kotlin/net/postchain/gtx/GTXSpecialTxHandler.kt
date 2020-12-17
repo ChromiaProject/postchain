@@ -20,7 +20,6 @@ class GTXSpecialTxHandler(val module: GTXModule,
                           val cs: CryptoSystem,
                           val factory: GTXTransactionFactory
 ) : SpecialTransactionHandler {
-
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
         return module.getOperations().contains(
                 if (position == SpecialTransactionPosition.End)

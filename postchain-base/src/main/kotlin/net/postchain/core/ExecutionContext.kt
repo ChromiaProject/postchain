@@ -31,6 +31,9 @@ interface BlockEContext : EContext {
 
 interface TxEContext : BlockEContext {
     val txIID: Long
+
+    // called after transaction was added to DB
+    fun done()
 }
 
 /**
