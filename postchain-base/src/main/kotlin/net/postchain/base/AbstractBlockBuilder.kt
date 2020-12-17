@@ -7,7 +7,6 @@ import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.OK
 import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
-import net.postchain.gtv.Gtv
 
 /**
  * This class includes the bare minimum functionality required by a real block builder
@@ -145,7 +144,7 @@ abstract class AbstractBlockBuilder(
     }
 
     /**
-     * By commiting to the block we update the database to include the witness for that block
+     * By committing to the block we update the database to include the witness for that block
      *
      * @param blockWitness The witness for the block
      * @throws ProgrammerMistake If the witness is invalid
