@@ -3,14 +3,12 @@
 package net.postchain.base
 
 import mu.KLogging
-import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.OK
 import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
 import net.postchain.debug.BlockTrace
-import net.postchain.gtv.Gtv
 
 /**
  * This class includes the bare minimum functionality required by a real block builder
