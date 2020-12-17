@@ -97,11 +97,9 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
      * @param targetTxHash Target hash to validate path for
      * @return Boolean for if hash is part of the Merkle path
      */
+    /* TODO
     fun validateMerklePath(merklePath: MerklePath, targetTxHash: ByteArray): Boolean {
-        return validateMerklePath(cryptoSystem, merklePath, targetTxHash, blockHeaderRec.getMerkleRootHash())
-    }
-
-
+     */
 }
 
 
