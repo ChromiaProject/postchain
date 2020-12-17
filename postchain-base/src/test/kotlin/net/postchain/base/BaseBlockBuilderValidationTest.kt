@@ -53,7 +53,7 @@ class BaseBlockBuilderValidationTest {
     fun validateBlockHeader_valid() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
@@ -65,8 +65,8 @@ class BaseBlockBuilderValidationTest {
     @Test
     fun validateBlockHeader_invalidMonotoneTimestamp() {
         val timestamp = 1L
-        val blockData = InitialBlockData(myBlockchainRid,2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, timestamp)
+        val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
@@ -78,8 +78,8 @@ class BaseBlockBuilderValidationTest {
     @Test
     fun validateBlockHeader_invalidMonotoneTimestampEquals() {
         val timestamp = 10L
-        val blockData = InitialBlockData(myBlockchainRid,2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, timestamp)
+        val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, rootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
@@ -91,8 +91,8 @@ class BaseBlockBuilderValidationTest {
     @Test
     fun validateBlokcHeader_invalidRootHash() {
         val timestamp = 100L
-        val blockData = InitialBlockData(myBlockchainRid,2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, badRootHash, timestamp)
+        val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, badRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
