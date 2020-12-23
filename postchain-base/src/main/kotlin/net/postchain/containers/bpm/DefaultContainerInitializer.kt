@@ -2,6 +2,7 @@ package net.postchain.containers.bpm
 
 import mu.KLogging
 import net.postchain.config.app.AppConfig
+import net.postchain.config.node.FileNodeConfigurationProvider
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.NameService
@@ -40,14 +41,23 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         return containerCwd to containerChainDir
     }
 
-    override fun createContainerNodeConfig(chainId: Long, containerCwd: Path) {
+    override fun createContainerNodeConfig(process: ContainerBlockchainProcess, containerCwd: Path) {
+        // Cloning original nodeConfig
         val config = ConfigurationUtils.cloneConfiguration(nodeConfig.appConfig.config)
-        config.setProperty("configuration.provider.node", NodeConfigProviders.Manual.name.toLowerCase())
+
+        // Setting up params for container node
+        config.setProperty("configuration.provider.node", NodeConfigProviders.File.name.toLowerCase())
         config.setProperty("infrastructure", Infrastructure.EbftContainerSlave.get())
-        config.setProperty("database.schema", NameService.databaseSchema(chainId))
+
+        val scheme = NameService.databaseSchema(nodeConfig, process.chainId, process.blockchainRid)
+        config.setProperty("database.schema", scheme)
 
         config.setProperty("containerChains.masterHost", nodeConfig.masterHost)
         config.setProperty("containerChains.masterPort", nodeConfig.masterPort)
+
+        // Adding peerInfos property as array/list
+        val peerInfos = FileNodeConfigurationProvider.packPeerInfoCollection(nodeConfig.peerInfoMap.values)
+        config.setProperty("peerinfos", peerInfos)
 
         // Creating a nodeConfig file
         val filename = containerCwd.resolve("node-config.properties").toString()

@@ -78,7 +78,7 @@ class ContainerManagedBlockchainProcessManager(
         val (containerCwd, chainCwd) = containerInitializer.createContainerWorkingDir(process)
 
         // Creating nodeConfig for container node
-        containerInitializer.createContainerNodeConfig(chainId, containerCwd)
+        containerInitializer.createContainerNodeConfig(process, containerCwd)
 
         // Creating chain configs
         containerInitializer.createContainerChainConfigs(dataSource, process, chainCwd)

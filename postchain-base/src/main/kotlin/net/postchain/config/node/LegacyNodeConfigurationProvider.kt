@@ -36,9 +36,9 @@ class LegacyNodeConfigurationProvider(private val appConfig: AppConfig) : NodeCo
             }
         }
 
-        // TODO: [et]: Refactor this
+        // Calculating the number of nodes
         var peerCount = 0
-        config.getKeys("node").forEach { peerCount++ }
+        config.getKeys("node").forEach { _ -> peerCount++ }
         peerCount /= 4
 
         return Array(peerCount) {

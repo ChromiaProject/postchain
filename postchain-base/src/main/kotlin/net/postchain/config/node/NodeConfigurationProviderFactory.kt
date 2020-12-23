@@ -21,10 +21,10 @@ class NodeConfigurationProviderFactory(
     fun createProvider(appConfig: AppConfig): NodeConfigurationProvider {
         return when (appConfig.nodeConfigProvider.toLowerCase()) {
             Legacy.name.toLowerCase() -> LegacyNodeConfigurationProvider(appConfig)
+            File.name.toLowerCase() -> FileNodeConfigurationProvider(appConfig)
             Manual.name.toLowerCase() -> ManualNodeConfigurationProvider(appConfig, storageFactory)
             Managed.name.toLowerCase() -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
-            // TODO: Change 'Legacy' to 'Manual' in v3.0
-            else -> LegacyNodeConfigurationProvider(appConfig)
+            else -> ManualNodeConfigurationProvider(appConfig, storageFactory)
         }
     }
 }

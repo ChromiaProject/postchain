@@ -1,6 +1,8 @@
 package net.postchain.containers
 
 import net.postchain.base.BlockchainRid
+import net.postchain.config.node.NodeConfig
+import net.postchain.devtools.NameHelper
 
 object NameService {
 
@@ -9,7 +11,10 @@ object NameService {
         return "postchain-subnode-$node-chain$chainId-${blockchainRid.toHex().take(8)}"
     }
 
-    fun databaseSchema(chainId: Long) = "subnode_$chainId"
+    fun databaseSchema(nodeConfig: NodeConfig, chainId: Long, blockchainRid: BlockchainRid): String {
+        return "${nodeConfig.appConfig.databaseSchema}_${NameHelper.peerName(nodeConfig.pubKey)}" +
+                "_${blockchainRid.toShortHex()}_${chainId}"
+    }
 
     // TODO: [POS-129]: Redesign this
     fun containerImage() = "chromaway/postchain-subnode:3.2.1"

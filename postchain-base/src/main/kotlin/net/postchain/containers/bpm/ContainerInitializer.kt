@@ -13,7 +13,7 @@ interface ContainerInitializer {
     /**
      *
      */
-    fun createContainerNodeConfig(chainId: Long, containerCwd: Path)
+    fun createContainerNodeConfig(process: ContainerBlockchainProcess, containerCwd: Path)
 
     /**
      *
