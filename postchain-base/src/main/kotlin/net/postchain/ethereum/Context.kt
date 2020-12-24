@@ -1,6 +1,7 @@
 package net.postchain.ethereum
 
 import net.postchain.core.BlockEContext
+import net.postchain.gtv.Gtv
 
 open class L2BlockEContext(
     private val ectx: BlockEContext, private val bb: L2BlockBuilder
@@ -12,7 +13,7 @@ open class L2BlockEContext(
             return super.getInterface(c)
     }
 
-    fun emitL2Event(evt: ByteArray) {
+    fun emitL2Event(evt: Gtv) {
         bb.appendL2Event(evt)
     }
 }

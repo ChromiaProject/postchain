@@ -6,7 +6,11 @@ import net.postchain.core.BlockHeader
 import net.postchain.core.BlockStore
 import net.postchain.core.EContext
 import net.postchain.core.TransactionFactory
-import net.postchain.gtv.Gtv
+import net.postchain.gtv.*
+import net.postchain.gtv.merkle.GtvBinaryTreeFactory
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
+import net.postchain.gtv.merkle.proof.merkleHash
 
 class L2BlockBuilder(blockchainRID: BlockchainRid,
                      cryptoSystem: CryptoSystem,
@@ -24,9 +28,9 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
     blockchainRelatedInfoDependencyList, usingHistoricBRID,
     maxBlockSize, maxBlockTransactions)
 {
-    private val l2Events = mutableListOf<ByteArray>()
+    private val l2Events = mutableListOf<Gtv>()
 
-    fun appendL2Event(evt: ByteArray) {
+    fun appendL2Event(evt: Gtv) {
         l2Events.add(evt)
     }
 
@@ -36,8 +40,11 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
     }
 
     override fun getExtraData(): Map<String, Gtv> {
-        return mapOf() // TODO: compute merkle root hash of l2Events
+        val events = GtvArray(l2Events.toTypedArray())
+        val tree = GtvBinaryTreeFactory().buildFromGtv(events)
+        val merkleTree = GtvMerkleProofTreeFactory().buildFromBinaryTree(tree, GtvMerkleHashCalculator(cryptoSystem))
+        val merkleRootHash = merkleTree.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        return mapOf("l2events" to merkleTree.serializeToGtv(), "l2hash" to GtvFactory.gtv(merkleRootHash))
     }
-
 
 }
