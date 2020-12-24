@@ -10,7 +10,7 @@ open class L2BlockEContext(
         if (c == L2BlockEContext::class.java) {
             return this as T?
         } else
-            return super.getInterface(c)
+            return ectx.getInterface(c)
     }
 
     fun emitL2Event(evt: Gtv) {
