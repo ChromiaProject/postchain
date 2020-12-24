@@ -8,6 +8,7 @@ import net.postchain.base.merkle.Hash
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -26,18 +27,18 @@ import java.util.*
  * @property blockSigMaker used to produce signatures on blocks for local node
  */
 open class BaseBlockBuilder(
-        blockchainRID: BlockchainRid,
-        val cryptoSystem: CryptoSystem,
-        eContext: EContext,
-        store: BlockStore,
-        txFactory: TransactionFactory,
-        val specialTxHandler: SpecialTransactionHandler,
-        val subjects: Array<ByteArray>,
-        val blockSigMaker: SigMaker,
-        val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
-        val usingHistoricBRID: Boolean,
-        val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
-        val maxBlockTransactions: Long = 100
+    blockchainRID: BlockchainRid,
+    val cryptoSystem: CryptoSystem,
+    eContext: EContext,
+    store: BlockStore,
+    txFactory: TransactionFactory,
+    val specialTxHandler: SpecialTransactionHandler,
+    val subjects: Array<ByteArray>,
+    val blockSigMaker: SigMaker,
+    val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
+    val usingHistoricBRID: Boolean,
+    val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
+    val maxBlockTransactions: Long = 100
 ): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory) {
 
     companion object : KLogging()
@@ -74,6 +75,10 @@ open class BaseBlockBuilder(
         }
     }
 
+    open fun getExtraData(): Map<String, Gtv> {
+        return mapOf()
+    }
+
     /**
      * Create block header from initial block data
      *
@@ -83,7 +88,7 @@ open class BaseBlockBuilder(
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp)
+        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, getExtraData())
     }
 
     /**

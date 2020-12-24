@@ -11,6 +11,10 @@ interface AppContext {
     }
 }
 
+inline fun <reified T> AppContext.queryInterface(): T? {
+    return this.getInterface(T::class.java)
+}
+
 interface ExecutionContext : AppContext {
     val chainID: Long
     val nodeID: Int // TODO: [et]: Remove it?

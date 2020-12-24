@@ -52,25 +52,26 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
         return BaseBlockBuilder(
-                effectiveBlockchainRID,
-                cryptoSystem,
-                ctx,
-                blockStore,
-                getTransactionFactory(),
-                getSpecialTxHandler(),
-                signers.toTypedArray(),
-                configData.blockSigMaker,
-                bcRelatedInfosDependencyList,
-                effectiveBlockchainRID != blockchainRid,
-                configData.getMaxBlockSize(),
-                configData.getMaxBlockTransactions())
+            effectiveBlockchainRID,
+            cryptoSystem,
+            ctx,
+            blockStore,
+            getTransactionFactory(),
+            getSpecialTxHandler(),
+            signers.toTypedArray(),
+            configData.blockSigMaker,
+            bcRelatedInfosDependencyList,
+            effectiveBlockchainRID != blockchainRid,
+            configData.getMaxBlockSize(),
+            configData.getMaxBlockTransactions()
+        )
     }
 
     /**
      * Will add ChainID to the dependency list, if needed.
      */
     @Synchronized
-    private fun addChainIDToDependencies(ctx: EContext) {
+    protected fun addChainIDToDependencies(ctx: EContext) {
         if (bcRelatedInfosDependencyList.isNotEmpty()) {
             // Check if we have added ChainId's already
             val first = bcRelatedInfosDependencyList.first()

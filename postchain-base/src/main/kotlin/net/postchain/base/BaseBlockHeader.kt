@@ -10,6 +10,7 @@ import net.postchain.core.BlockHeader
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.InitialBlockData
 import net.postchain.core.UserMistake
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.generateProof
@@ -58,8 +59,12 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
          * @param timestamp timestamp
          * @return Serialized block header
          */
-        @JvmStatic fun make(cryptoSystem: CryptoSystem, iBlockData: InitialBlockData, rootHash: ByteArray, timestamp: Long): BaseBlockHeader {
-            val gtvBhd = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, rootHash, timestamp)
+        @JvmStatic fun make(cryptoSystem: CryptoSystem,
+                            iBlockData: InitialBlockData,
+                            rootHash: ByteArray,
+                            timestamp: Long,
+                            extraData: Map<String, Gtv> = mapOf()): BaseBlockHeader {
+            val gtvBhd = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, rootHash, timestamp, extraData)
 
             val raw = GtvEncoder.encodeGtv(gtvBhd.toGtv())
             return BaseBlockHeader(raw, cryptoSystem)
