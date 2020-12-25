@@ -1,7 +1,8 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle.proof
+package net.postchain.gtv.merkle.proof
 
+import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.merkle.PrintableTreeFactory
 import net.postchain.base.merkle.TreeHelper
 import net.postchain.base.merkle.TreeHelper.stripWhite
@@ -13,10 +14,8 @@ import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected1ElementArray
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected4ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected7ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expectet7and3ElementArrayMerkleRoot
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
-import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
@@ -546,6 +545,81 @@ class ArrayToMerkleProofTreeTest {
         println(deserializedPrintout)
 
         Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+
+    }
+
+    @Test
+    fun testBlockHeader() {
+        val calculator = GtvMerkleHashCalculator(SECP256K1CryptoSystem())
+//        val path: Array<Any> = arrayOf()
+//        val gtvPath: GtvPath = GtvPathFactory.buildFromArrayOfPointers(path)
+//        val gtvPaths = GtvPathSet(setOf(gtvPath))
+        val orgGtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrOfBlockHeader()
+
+        val merkleProofTree = orgGtvArr.generateProof(GtvPath.NO_PATHS, calculator)
+
+        // Print the result tree
+        val printer = TreePrinter()
+        val pbt = PrintableTreeFactory.buildPrintableTreeFromProofTree(merkleProofTree)
+        val resultPrintout = printer.printNode(pbt)
+        println(resultPrintout)
+
+//        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+
+        // Make sure the merkle root stays the same as without proof
+        val merkleProofRoot = merkleProofTree.merkleHash(calculator)
+        println(TreeHelper.convertToHex(merkleProofRoot))
+//        assertEquals(expectet7and3ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
+
+        // Proof -> Serialize
+//        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+//        println("Serilalized: $serialize")
+//
+//        val expectedSerialization = "GtvArray(array=[$ln" +
+//                "  GtvInteger(integer=103), $ln" + // 103 = array head node type
+//                "  GtvInteger(integer=7), $ln" + // length of array
+//                "  GtvInteger(integer=-10), $ln" + // no path elem
+//                "  GtvArray(array=[$ln" +
+//                "    GtvInteger(integer=102), $ln" + // 102 = dummy node
+//                "    GtvArray(array=[$ln" +
+//                "      GtvInteger(integer=100), $ln" + // 100 = hash
+//                "      GtvByteArray(bytearray=[1, 3, 3, 3, 4])$ln" +
+//                "    ]),$ln" +
+//                "    GtvArray(array=[$ln" +
+//                "      GtvInteger(integer=102), $ln" + // 102 = dummy node
+//                "      GtvArray(array=[$ln" +
+//                "        GtvInteger(integer=100), $ln" + // 100 = hash
+//                "        GtvByteArray(bytearray=[2, 4])$ln" +
+//                "      ]), $ln" +
+//                "      GtvArray(array=[$ln" +
+//                "        GtvInteger(integer=101), $ln" + // 101 = value to prove
+//                "        GtvInteger(integer=3), $ln" + // path elem = 2
+//                "        GtvArray(array=[$ln" +  // Here the value to prove is a regular GtvArray. Interesting to see that this is deserialized propely (i.e. kept)
+//                "          GtvInteger(integer=1), $ln" +
+//                "          GtvInteger(integer=9), $ln" +
+//                "          GtvInteger(integer=3)$ln" +
+//                "        ])$ln" +
+//                "      ])$ln" +
+//                "    ])$ln" +
+//                "  ]), $ln" +
+//                "  GtvArray(array=[$ln" +
+//                "    GtvInteger(integer=100), $ln" + // 100 = hash
+//                "    GtvByteArray(bytearray=[1, 2, 4, 8, 4, 9, 3, 9])$ln" +
+//                "  ])$ln" +
+//                "])$ln"
+//
+//        Assert.assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
+//
+//        // Serialize -> deserialize
+//        val deserialized = proofFactory.deserialize(serialize)
+//
+//
+//        // Print the result tree
+//        val pbtDes = PrintableTreeFactory.buildPrintableTreeFromProofTree(deserialized)
+//        val deserializedPrintout = printer.printNode(pbtDes)
+//        println(deserializedPrintout)
+//
+//        Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
 
     }
 }

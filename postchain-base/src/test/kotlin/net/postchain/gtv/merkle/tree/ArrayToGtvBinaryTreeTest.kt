@@ -150,6 +150,21 @@ class ArrayToGtvBinaryTreeTest {
         return treePrintout
     }
 
+    private fun buildBlockHeaderTree(gtvPaths: GtvPathSet): String {
+        val gtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrOfBlockHeader()
+        val fullBinaryTree = factory.buildFromGtvAndPath(gtvArr, gtvPaths)
+        val printer = TreePrinter()
+        val printableBinaryTree = PrintableTreeFactory.buildPrintableTreeFromClfbTree(fullBinaryTree)
+
+        return printer.printNode(printableBinaryTree)
+    }
+
+    @Test
+    fun testBlockHeaderArray() {
+        val treePrintout = buildBlockHeaderTree(GtvPath.NO_PATHS)
+        println(treePrintout)
+    }
+
     @Test
     fun testIntArrayLength7() {
         val expectedTree =

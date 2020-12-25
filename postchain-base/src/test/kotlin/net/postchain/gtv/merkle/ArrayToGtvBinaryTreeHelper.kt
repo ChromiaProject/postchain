@@ -2,8 +2,8 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvArray
+import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 
 object ArrayToGtvBinaryTreeHelper {
@@ -74,5 +74,25 @@ object ArrayToGtvBinaryTreeHelper {
         return gtv(gtvArrayList)
     }
 
+    fun buildGtvArrOfBlockHeader(): GtvArray {
+        val calculator = GtvMerkleHashCalculator(SECP256K1CryptoSystem())
+        val blockchainRid = GtvByteArray(gtv(2).merkleHash(calculator))
+        val previousBlockRid = GtvByteArray(gtv(1).merkleHash(calculator))
+        val merkleRootHashHashedLeaf = GtvByteArray(gtv(0).merkleHash(calculator))
+        val timestamp = GtvInteger(12345)
+        val height = GtvInteger(10)
+        val dependenciesHashedLeaf = GtvByteArray(gtv(100).merkleHash(calculator))
+        val l2RootHash = GtvByteArray(gtv(3).merkleHash(calculator).plus(gtv(4).merkleHash(calculator)))
+
+        return gtv(
+            blockchainRid,
+            previousBlockRid,
+            merkleRootHashHashedLeaf,
+            timestamp,
+            height,
+            dependenciesHashedLeaf,
+            l2RootHash
+        )
+    }
 
 }
