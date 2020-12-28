@@ -2,12 +2,10 @@
 
 package net.postchain.gtv.merkle.tree
 
+import net.postchain.base.SECP256K1KeccakCryptoSystem
 import net.postchain.base.merkle.PrintableTreeFactory
 import net.postchain.base.merkle.TreePrinter
-import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper
-import net.postchain.gtv.merkle.GtvBinaryTree
-import net.postchain.gtv.merkle.GtvBinaryTreeFactory
-import net.postchain.gtv.merkle.GtvTreeHelper
+import net.postchain.gtv.merkle.*
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
@@ -151,7 +149,7 @@ class ArrayToGtvBinaryTreeTest {
     }
 
     private fun buildBlockHeaderTree(gtvPaths: GtvPathSet): String {
-        val gtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrOfBlockHeader()
+        val gtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrOfBlockHeader(GtvMerkleHashCalculator(SECP256K1KeccakCryptoSystem()))
         val fullBinaryTree = factory.buildFromGtvAndPath(gtvArr, gtvPaths)
         val printer = TreePrinter()
         val printableBinaryTree = PrintableTreeFactory.buildPrintableTreeFromClfbTree(fullBinaryTree)
