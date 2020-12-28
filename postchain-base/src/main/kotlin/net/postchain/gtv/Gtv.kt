@@ -62,8 +62,8 @@ interface Gtv {
  * @param calculator describes the method we use for hashing and serialization
  * @return the merkle root hash (32 bytes) of the [Gtv] structure.
  */
-fun Gtv.merkleHash(calculator: MerkleHashCalculator<Gtv>): Hash {
-    return merkleHashSummary(calculator).merkleHash
+fun Gtv.merkleHash(calculator: MerkleHashCalculator<Gtv>, includePrefix: Boolean = true): Hash {
+    return merkleHashSummary(calculator, includePrefix).merkleHash
 }
 
 /**
@@ -77,17 +77,17 @@ fun Gtv.merkleHash(calculator: MerkleHashCalculator<Gtv>): Hash {
  * @param calculator describes the method we use for hashing and serialization
  * @return the merkle root hash summary
  */
-fun Gtv.merkleHashSummary(calculator: MerkleHashCalculator<Gtv>): MerkleHashSummary {
+fun Gtv.merkleHashSummary(calculator: MerkleHashCalculator<Gtv>, includePrefix: Boolean = true): MerkleHashSummary {
     return when (this) {
         is GtvVirtual -> {
             // We have cached the proof element for this object inside the GTV Virtual
             // and we cannot use the cache directly on the virtual GTV since it doesn't even have a hashCode() impl.
             val proofTree: GtvMerkleProofTree = this.getGtvMerkleProofTree()
-            proofTree.merkleHashSummary(calculator)
+            proofTree.merkleHashSummary(calculator, includePrefix)
         }
         else -> {
             val summaryFactory = GtvMerkleBasics.getGtvMerkleHashSummaryFactory()
-            summaryFactory.calculateMerkleRoot(this, calculator)
+            summaryFactory.calculateMerkleRoot(this, calculator, includePrefix)
         }
     }
 }
@@ -99,11 +99,11 @@ fun Gtv.merkleHashSummary(calculator: MerkleHashCalculator<Gtv>): MerkleHashSumm
  * @param calculator describes the method we use for hashing and serialization
  * @return the created proof tree
  */
-fun Gtv.generateProof(indexOfElementsToProve: List<Int>, calculator: MerkleHashCalculator<Gtv>): GtvMerkleProofTree {
+fun Gtv.generateProof(indexOfElementsToProve: List<Int>, calculator: MerkleHashCalculator<Gtv>, includePrefix: Boolean = true): GtvMerkleProofTree {
 
     val gtvPathList: List<GtvPath> = indexOfElementsToProve.map { GtvPathFactory.buildFromArrayOfPointers(arrayOf(it)) }
     val gtvPaths = GtvPathSet(gtvPathList.toSet())
-    return this.generateProof(gtvPaths, calculator)
+    return this.generateProof(gtvPaths, calculator, includePrefix)
 }
 
 /**
@@ -113,12 +113,12 @@ fun Gtv.generateProof(indexOfElementsToProve: List<Int>, calculator: MerkleHashC
  * @param calculator describes the method we use for hashing and serialization
  * @return the created proof tree
  */
-fun Gtv.generateProof(gtvPaths: GtvPathSet, calculator: MerkleHashCalculator<Gtv>): GtvMerkleProofTree {
+fun Gtv.generateProof(gtvPaths: GtvPathSet, calculator: MerkleHashCalculator<Gtv>, includePrefix: Boolean = true): GtvMerkleProofTree {
     val factory = GtvMerkleBasics.getGtvBinaryTreeFactory()
     val proofFactory = GtvMerkleBasics.getGtvMerkleProofTreeFactory()
 
     val binaryTree = factory.buildFromGtvAndPath(this ,gtvPaths)
 
-    return proofFactory.buildFromBinaryTree(binaryTree, calculator)
+    return proofFactory.buildFromBinaryTree(binaryTree, calculator, includePrefix)
 }
 

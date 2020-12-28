@@ -33,14 +33,15 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
      */
     fun buildFromBinaryTree(
             orginalTree: GtvBinaryTree,
-            calculator: MerkleHashCalculator<Gtv>
+            calculator: MerkleHashCalculator<Gtv>,
+            includePrefix: Boolean = true
     ): GtvMerkleProofTree {
         if (logger.isTraceEnabled) {
             logger.trace("--------------------------------------------")
             logger.trace("--- Converting binary tree to proof tree ---")
             logger.trace("--------------------------------------------")
         }
-        val rootElement = buildFromBinaryTreeInternal(orginalTree.root, calculator)
+        val rootElement = buildFromBinaryTreeInternal(orginalTree.root, calculator, includePrefix)
         if (logger.isTraceEnabled) {
             logger.trace("--------------------------------------------")
             logger.trace("--- /Converting binary tree to proof tree --")
@@ -51,7 +52,8 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
 
     override fun buildFromBinaryTreeInternal(
             currentElement: BinaryTreeElement,
-            calculator: MerkleHashCalculator<Gtv>
+            calculator: MerkleHashCalculator<Gtv>,
+            includePrefix: Boolean
     ): MerkleProofElement {
         return when (currentElement) {
             is EmptyLeaf -> {
@@ -79,11 +81,11 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
                         if (content is GtvPrimitive) {
                             // Not GtvNull -> Make it a hash
                             if (logger.isTraceEnabled) { logger.debug("Hash the leaf with content: $content") }
-                            val hashCarrier = calculator.calculateLeafHash(content)
+                            val hashCarrier = calculator.calculateLeafHash(content, includePrefix)
                             hashCarrier
                         } else {
                             logger.warn("What is this leaf that's not a primitive? type: ${content.type}")
-                            calculator.calculateLeafHash(content)
+                            calculator.calculateLeafHash(content, includePrefix)
                         }
                     }
                     ProofHashedLeaf(hashCarrier)
@@ -100,15 +102,15 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
                         ProofValueGtvLeaf(content, currentElement.getNrOfBytes(), pathElem.previous!!)
                     } else {
                         if (logger.isTraceEnabled) { logger.trace("Part of a path (=$pathElem), but not leaf so convert") }
-                        convertNode(currentElement, calculator)
+                        convertNode(currentElement, calculator, includePrefix)
                     }
                 } else {
                     if (logger.isTraceEnabled) { logger.trace("Not part of a path, so convert node of type; ${currentElement::class.simpleName}") }
-                    convertNode(currentElement, calculator)
+                    convertNode(currentElement, calculator, includePrefix)
                 }
             }
             is Node -> {
-                convertNode(currentElement, calculator)
+                convertNode(currentElement, calculator, includePrefix)
             }
             else -> throw IllegalStateException("Cannot handle $currentElement")
         }

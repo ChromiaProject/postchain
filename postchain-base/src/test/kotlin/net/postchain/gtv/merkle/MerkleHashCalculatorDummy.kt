@@ -63,13 +63,12 @@ fun dummyAddOneHashFun(bArr: ByteArray, cryptoSystem: CryptoSystem?): Hash {
 class MerkleHashCalculatorDummy(): MerkleHashCalculator<Gtv>(null) {
 
 
-    override fun calculateLeafHash(value: Gtv): Hash {
-        val hash = calculateHashOfValueInternal(value, ::dummySerializatorFun, ::dummyAddOneHashFun)
+    override fun calculateLeafHash(value: Gtv, includePrefix: Boolean): Hash {
         //println("Hex: " + TreeHelper.convertToHex(hash))
-        return hash
+        return calculateHashOfValueInternal(value, ::dummySerializatorFun, ::dummyAddOneHashFun)
     }
 
-    override fun calculateNodeHash(prefix: Byte, hashLeft: Hash, hashRight: Hash): Hash {
+    override fun calculateNodeHash(prefix: Byte, hashLeft: Hash, hashRight: Hash, includePrefix: Boolean): Hash {
         return calculateNodeHashInternal(prefix ,hashLeft, hashRight, ::dummyAddOneHashFun)
     }
 

@@ -31,23 +31,25 @@ abstract class MerkleProofTreeFactory<T> {
      * @param isRoot is "true" if this is the root element of the structure
      * @return the [MerkleProofElement] we have built.
      */
-    abstract fun buildFromBinaryTreeInternal(currentElement: BinaryTreeElement, calculator: MerkleHashCalculator<T>):
+    abstract fun buildFromBinaryTreeInternal(currentElement: BinaryTreeElement, calculator: MerkleHashCalculator<T>, includePrefix: Boolean = true):
             MerkleProofElement
 
 
     /**
      * Note: we cannot add to the cache, since a node does not map one-to-one to a source element.
      */
-    protected fun convertNode(currentNode: Node, calculator: MerkleHashCalculator<T>): MerkleProofElement {
-        val left = buildFromBinaryTreeInternal(currentNode.left, calculator)
-        val right = buildFromBinaryTreeInternal(currentNode.right, calculator)
+    protected fun convertNode(currentNode: Node, calculator: MerkleHashCalculator<T>, includePrefix: Boolean = true): MerkleProofElement {
+        val left = buildFromBinaryTreeInternal(currentNode.left, calculator, includePrefix)
+        val right = buildFromBinaryTreeInternal(currentNode.right, calculator, includePrefix)
         return if (left is ProofHashedLeaf && right is ProofHashedLeaf) {
             // If both children are hashes, then
             // we must reduce them to a new (combined) hash.
             val addedHash = calculator.calculateNodeHash(
-                    currentNode.getPrefixByte(),
-                    left.merkleHash,
-                    right.merkleHash)
+                currentNode.getPrefixByte(),
+                left.merkleHash,
+                right.merkleHash,
+                includePrefix
+            )
             ProofHashedLeaf(addedHash)
         } else {
             buildNodeOfCorrectType(currentNode, left, right)

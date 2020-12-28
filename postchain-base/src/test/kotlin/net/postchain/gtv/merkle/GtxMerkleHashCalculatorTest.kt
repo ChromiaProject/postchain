@@ -50,6 +50,23 @@ class GtvMerkleHashCalculatorTest {
     }
 
     @Test
+    fun testHashOfGtvCalculation_RealSerialization_RealHash_NoPrefix() {
+
+        val calculator =GtvMerkleHashCalculator(SECP256K1CryptoSystem())
+
+        val iGtv = GtvInteger(7)
+        // The "7" is expected to serialize to "A303020107" (in hex)
+        // The expected resulting leaf hash will be:
+        val expectedResultAfterAddOneHash = "616B6CDFF1A56CF63A0F04151C409B15941D5816D50DC739DBB4795D7BB97B6E"
+        // This expected result is two parts:
+        // 1. "01" (= signals leaf) and
+        // 2. the 32 byte hashed value
+
+        val result = calculator.calculateLeafHash(iGtv, false)
+        Assert.assertEquals(expectedResultAfterAddOneHash, TreeHelper.convertToHex(result))
+    }
+
+    @Test
     fun testHashOfGtvCalculation_RealSerialization_RealHash2() {
 
         val calculator =GtvMerkleHashCalculator(SECP256K1CryptoSystem())
@@ -64,6 +81,24 @@ class GtvMerkleHashCalculatorTest {
         // 2. the 32 byte hashed value
 
         val result = calculator.calculateLeafHash(aGtv)
+        Assert.assertEquals(expectedResultAfterAddOneHash, TreeHelper.convertToHex(result))
+    }
+
+    @Test
+    fun testHashOfGtvCalculation_RealSerialization_RealHash2_NoPrefix() {
+
+        val calculator =GtvMerkleHashCalculator(SECP256K1CryptoSystem())
+
+        val aGtv = GtvByteArray(GtvInteger(1).merkleHash(calculator, false))
+        println(TreeHelper.convertToHex(GtvInteger(1).merkleHash(calculator, false)))
+        // The "7" is expected to serialize to "A303020107" (in hex)
+        // The expected resulting leaf hash will be:
+        val expectedResultAfterAddOneHash = "534A9A39D6FBBD402488E789F94AED22A05E23869AA576FCD2D0EBB2A0FE6CBD"
+        // This expected result is two parts:
+        // 1. "01" (= signals leaf) and
+        // 2. the 32 byte hashed value
+
+        val result = calculator.calculateLeafHash(aGtv, false)
         Assert.assertEquals(expectedResultAfterAddOneHash, TreeHelper.convertToHex(result))
     }
 
@@ -100,6 +135,24 @@ class GtvMerkleHashCalculatorTest {
         // 2. the 32 byte hashed value
 
         val result = calculator.calculateLeafHash(sGtv)
+        Assert.assertEquals(expectedResultAfterAddOneHash, TreeHelper.convertToHex(result))
+    }
+
+    @Test
+    fun testHashOfGtvCalculation_RealSerialization_RealHash4_NoPrefix() {
+
+        val calculator = GtvMerkleHashCalculator(SECP256K1CryptoSystem())
+
+        val sGtv = GtvByteArray(GtvInteger(3).merkleHash(calculator, false).plus(GtvInteger(4).merkleHash(calculator, false)))
+        println(TreeHelper.convertToHex(GtvInteger(3).merkleHash(calculator, false).plus(GtvInteger(4).merkleHash(calculator, false))))
+        // The "7" is expected to serialize to "A303020107" (in hex)
+        // The expected resulting leaf hash will be:
+        val expectedResultAfterAddOneHash = "548A908259BE67AAE86F4A49E41D8DF7B08AEF79470EBDCD22928C15B15A6FBF"
+        // This expected result is two parts:
+        // 1. "01" (= signals leaf) and
+        // 2. the 32 byte hashed value
+
+        val result = calculator.calculateLeafHash(sGtv, false)
         Assert.assertEquals(expectedResultAfterAddOneHash, TreeHelper.convertToHex(result))
     }
 }

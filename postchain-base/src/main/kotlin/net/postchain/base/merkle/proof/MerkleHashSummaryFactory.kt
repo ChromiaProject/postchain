@@ -31,7 +31,7 @@ abstract class MerkleHashSummaryFactory<T, TPathSet: PathSet>(
      * @param calculator holds the function we'll use to hash & serialize
      * @return the calculated merkle root of the proof.
      */
-    abstract fun calculateMerkleRoot(value: T, calculator: MerkleHashCalculator<T>): MerkleHashSummary
+    abstract fun calculateMerkleRoot(value: T, calculator: MerkleHashCalculator<T>, includePrefix: Boolean = true): MerkleHashSummary
 
     /**
      * Calculates the merkle root of the given proof tree.
@@ -45,29 +45,29 @@ abstract class MerkleHashSummaryFactory<T, TPathSet: PathSet>(
      * @param treeFactory is needed sometimes (see above)
      * @return the calculated merkle root of the proof.
      */
-    fun calculateMerkleRoot(proofTree: MerkleProofTree<T>, calculator: MerkleHashCalculator<T>): MerkleHashSummary {
-        val calculatedSummary = calculateMerkleRootInternal(proofTree.root, calculator)
+    fun calculateMerkleRoot(proofTree: MerkleProofTree<T>, calculator: MerkleHashCalculator<T>, includePrefix: Boolean = true): MerkleHashSummary {
+        val calculatedSummary = calculateMerkleRootInternal(proofTree.root, calculator, includePrefix)
         return MerkleHashSummary(calculatedSummary, proofTree.totalNrOfBytes)
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun calculateMerkleRootInternal(currentElement: MerkleProofElement, calculator: MerkleHashCalculator<T>): Hash {
+    private fun calculateMerkleRootInternal(currentElement: MerkleProofElement, calculator: MerkleHashCalculator<T>, includePrefix: Boolean = true): Hash {
         return when (currentElement) {
             is ProofHashedLeaf -> currentElement.merkleHash
             is ProofValueLeaf<*> -> {
                 val value = currentElement.content as T // Compiler "unchecked cast" warning here, but this is actually safe.
                 if (calculator.isContainerProofValueLeaf(value)) {
                     // We have a container value to prove, so need to convert the value to a binary tree, and THEN hash it
-                    val merkleProofTree: MerkleProofTree<T> = buildProofTree(value, calculator)
-                    calculateMerkleRootInternal(merkleProofTree.root, calculator)
+                    val merkleProofTree: MerkleProofTree<T> = buildProofTree(value, calculator, includePrefix)
+                    calculateMerkleRootInternal(merkleProofTree.root, calculator, includePrefix)
                 } else {
-                    calculator.calculateLeafHash(value)
+                    calculator.calculateLeafHash(value, includePrefix)
                 }
             }
             is ProofNode -> {
-                val left = calculateMerkleRootInternal(currentElement.left, calculator)
-                val right = calculateMerkleRootInternal(currentElement.right, calculator)
-                calculator.calculateNodeHash(currentElement.prefix ,left, right)
+                val left = calculateMerkleRootInternal(currentElement.left, calculator, includePrefix)
+                val right = calculateMerkleRootInternal(currentElement.right, calculator, includePrefix)
+                calculator.calculateNodeHash(currentElement.prefix ,left, right, includePrefix)
             }
             else -> {
                 throw IllegalStateException("Should have handled this type: $currentElement")
@@ -80,5 +80,5 @@ abstract class MerkleHashSummaryFactory<T, TPathSet: PathSet>(
      * @param treeFactory needed to build the proof tree
      * @return the new proof tree
      */
-    abstract fun buildProofTree(value: T, calculator: MerkleHashCalculator<T>): MerkleProofTree<T>
+    abstract fun buildProofTree(value: T, calculator: MerkleHashCalculator<T>, includePrefix: Boolean = true): MerkleProofTree<T>
 }

@@ -19,7 +19,7 @@ abstract class MerkleHashCalculator<T>(cryptoSystem: CryptoSystem?): BinaryNodeH
      * @param value The leaf
      * @return the hash of a leaf.
      */
-    abstract fun calculateLeafHash(value: T): Hash
+    abstract fun calculateLeafHash(value: T, includePrefix: Boolean = true): Hash
 
 
     /**
@@ -33,9 +33,13 @@ abstract class MerkleHashCalculator<T>(cryptoSystem: CryptoSystem?): BinaryNodeH
     protected fun calculateHashOfValueInternal(
             valueToHash: T,
             serializeFun: (T) -> ByteArray,
-            hashFun: (ByteArray, CryptoSystem?) -> Hash
+            hashFun: (ByteArray, CryptoSystem?) -> Hash,
+            includePrefix: Boolean = true
     ): Hash {
-        val byteArr: ByteArray = byteArrayOf(MerkleBasics.HASH_PREFIX_LEAF) + serializeFun(valueToHash)
+        val byteArr: ByteArray =  if (includePrefix)
+            byteArrayOf(MerkleBasics.HASH_PREFIX_LEAF) + serializeFun(valueToHash)
+        else
+            serializeFun(valueToHash)
         return hashFun(byteArr, cryptoSystem)
     }
 

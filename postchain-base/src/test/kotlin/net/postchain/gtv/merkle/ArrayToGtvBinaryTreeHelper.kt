@@ -74,15 +74,15 @@ object ArrayToGtvBinaryTreeHelper {
         return gtv(gtvArrayList)
     }
 
-    fun buildGtvArrOfBlockHeader(): GtvArray {
+    fun buildGtvArrOfBlockHeader(includePrefix: Boolean = true): GtvArray {
         val calculator = GtvMerkleHashCalculator(SECP256K1CryptoSystem())
-        val blockchainRid = GtvByteArray(gtv(2).merkleHash(calculator))
-        val previousBlockRid = GtvByteArray(gtv(1).merkleHash(calculator))
-        val merkleRootHashHashedLeaf = GtvByteArray(gtv(0).merkleHash(calculator))
+        val blockchainRid = GtvByteArray(gtv(2).merkleHash(calculator, includePrefix))
+        val previousBlockRid = GtvByteArray(gtv(1).merkleHash(calculator, includePrefix))
+        val merkleRootHashHashedLeaf = GtvByteArray(gtv(0).merkleHash(calculator, includePrefix))
         val timestamp = GtvInteger(12345)
         val height = GtvInteger(10)
-        val dependenciesHashedLeaf = GtvByteArray(gtv(100).merkleHash(calculator))
-        val l2RootHash = GtvByteArray(gtv(3).merkleHash(calculator).plus(gtv(4).merkleHash(calculator)))
+        val dependenciesHashedLeaf = GtvByteArray(gtv(100).merkleHash(calculator, includePrefix))
+        val l2RootHash = GtvByteArray(gtv(3).merkleHash(calculator, includePrefix).plus(gtv(4).merkleHash(calculator, includePrefix)))
 
         return gtv(
             blockchainRid,

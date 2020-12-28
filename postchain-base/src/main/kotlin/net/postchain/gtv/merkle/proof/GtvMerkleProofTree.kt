@@ -142,11 +142,7 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
     }
 
     private fun serializePathElement(pathElem: SearchableGtvPathElement?): Gtv {
-        return if (pathElem != null) {
-            pathElem.buildGtv()
-        } else {
-            GtvInteger(UNKNOWN_COLLECTION_POSITION )
-        }
+        return pathElem?.buildGtv() ?: GtvInteger(UNKNOWN_COLLECTION_POSITION )
     }
 
 }
@@ -158,8 +154,8 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
  * @param calculator describes the method we use for hashing and serialization
  * @return the merkle root hash
  */
-fun GtvMerkleProofTree.merkleHash(calculator: MerkleHashCalculator<Gtv>): Hash {
-    return this.merkleHashSummary(calculator).merkleHash
+fun GtvMerkleProofTree.merkleHash(calculator: MerkleHashCalculator<Gtv>, includePrefix: Boolean = true): Hash {
+    return this.merkleHashSummary(calculator, includePrefix).merkleHash
 }
 
 /**
@@ -168,10 +164,10 @@ fun GtvMerkleProofTree.merkleHash(calculator: MerkleHashCalculator<Gtv>): Hash {
  * @param calculator describes the method we use for hashing and serialization
  * @return the merkle root hash summary
  */
-fun GtvMerkleProofTree.merkleHashSummary(calculator: MerkleHashCalculator<Gtv>): MerkleHashSummary {
+fun GtvMerkleProofTree.merkleHashSummary(calculator: MerkleHashCalculator<Gtv>, includePrefix: Boolean = true): MerkleHashSummary {
 
     val summaryFactory = GtvMerkleBasics.getGtvMerkleHashSummaryFactory()
-    return summaryFactory.calculateMerkleRoot(this, calculator)
+    return summaryFactory.calculateMerkleRoot(this, calculator, includePrefix)
 }
 
 /**

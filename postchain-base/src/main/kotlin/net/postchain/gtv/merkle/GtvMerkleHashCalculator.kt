@@ -37,8 +37,8 @@ fun serializeGtvToByteArary(gtv: Gtv): ByteArray {
 class GtvMerkleHashCalculator(cryptoSystem: CryptoSystem):
         MerkleHashCalculator<Gtv>(cryptoSystem) {
 
-    override fun calculateNodeHash(prefix: Byte, hashLeft: Hash, hashRight: Hash): Hash {
-        return calculateNodeHashInternal(prefix, hashLeft, hashRight, MerkleBasics::hashingFun)
+    override fun calculateNodeHash(prefix: Byte, hashLeft: Hash, hashRight: Hash, includePrefix: Boolean): Hash {
+        return calculateNodeHashInternal(prefix, hashLeft, hashRight, MerkleBasics::hashingFun, includePrefix)
     }
 
     /**
@@ -47,8 +47,8 @@ class GtvMerkleHashCalculator(cryptoSystem: CryptoSystem):
      * @param value The leaf
      * @return Returns the hash of the leaf.
      */
-    override fun calculateLeafHash(value: Gtv): Hash {
-        return calculateHashOfValueInternal(value, ::serializeGtvToByteArary, MerkleBasics::hashingFun)
+    override fun calculateLeafHash(value: Gtv, includePrefix: Boolean): Hash {
+        return calculateHashOfValueInternal(value, ::serializeGtvToByteArary, MerkleBasics::hashingFun, includePrefix)
     }
 
     override fun isContainerProofValueLeaf(value: Gtv): Boolean {

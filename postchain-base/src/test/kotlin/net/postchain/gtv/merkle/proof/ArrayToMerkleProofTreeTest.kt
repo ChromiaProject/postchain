@@ -554,9 +554,9 @@ class ArrayToMerkleProofTreeTest {
 //        val path: Array<Any> = arrayOf()
 //        val gtvPath: GtvPath = GtvPathFactory.buildFromArrayOfPointers(path)
 //        val gtvPaths = GtvPathSet(setOf(gtvPath))
-        val orgGtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrOfBlockHeader()
+        val orgGtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrOfBlockHeader(false)
 
-        val merkleProofTree = orgGtvArr.generateProof(GtvPath.NO_PATHS, calculator)
+        val merkleProofTree = orgGtvArr.generateProof(GtvPath.NO_PATHS, calculator, false)
 
         // Print the result tree
         val printer = TreePrinter()
@@ -567,7 +567,7 @@ class ArrayToMerkleProofTreeTest {
 //        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
-        val merkleProofRoot = merkleProofTree.merkleHash(calculator)
+        val merkleProofRoot = merkleProofTree.merkleHash(calculator, false)
         println(TreeHelper.convertToHex(merkleProofRoot))
 //        assertEquals(expectet7and3ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
 
