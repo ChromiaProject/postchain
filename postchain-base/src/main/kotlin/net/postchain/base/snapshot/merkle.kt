@@ -25,6 +25,7 @@ class SnapshotPage(val blockHeight: Long, val level: Int, val left: Long,
     }
 }
 
+// TODO: do we need to suppply blockEContext as parameters?
 abstract class SnapshotPageStore(
         val levelsPerPage: Int,
         val writeDataSource: DataSource,
@@ -40,7 +41,7 @@ abstract class SnapshotPageStore(
 
     // delete all pages with height at or below given
     // except those which are used
-    abstract fun pruneBelowHeight(blockHeight: Long)
+    abstract fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit)
 
     abstract fun highestLevelPage(): Int
 }
