@@ -14,6 +14,7 @@ interface L2EventProcessor {
 }
 
 interface L2Implementation : L2EventProcessor {
+    fun init(blockEContext: BlockEContext)
     fun finalize(): Map<String, Gtv>
 }
 
@@ -81,6 +82,12 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
 ) : BaseBlockBuilder(blockchainRID, cryptoSystem, eContext, store, txFactory, specialTxHandler, subjects, blockSigMaker,
         blockchainRelatedInfoDependencyList, usingHistoricBRID,
         maxBlockSize, maxBlockTransactions), L2EventProcessor by l2Implementation {
+
+    override fun begin(partialBlockHeader: BlockHeader?) {
+        super.begin(partialBlockHeader)
+        l2Implementation.init(bctx)
+    }
+
     override fun wrapTxEContext(ectx: TxEContext): TxEContext {
         return L2TxEContext(ectx, this)
     }
