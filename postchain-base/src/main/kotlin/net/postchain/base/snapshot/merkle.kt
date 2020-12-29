@@ -2,6 +2,7 @@
 
 package net.postchain.base.snapshot
 
+import net.postchain.core.BlockEContext
 import net.postchain.core.ProgrammerMistake
 import java.util.*
 import javax.sql.DataSource
@@ -25,11 +26,12 @@ class SnapshotPage(val blockHeight: Long, val level: Int, val left: Long,
     }
 }
 
-// TODO: do we need to suppply blockEContext as parameters?
+/*
+
+ */
 abstract class SnapshotPageStore(
         val levelsPerPage: Int,
-        val writeDataSource: DataSource,
-        val chainID: Long,
+        val blockEContext: BlockEContext,
         val snapshotName: String,
         val hasher: TreeHasher
 ) {
