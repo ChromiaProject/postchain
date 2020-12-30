@@ -15,7 +15,9 @@ import org.spongycastle.util.Arrays
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.security.SecureRandom
-import org.bouncycastle.jcajce.provider.digest.Keccak
+import org.spongycastle.jcajce.provider.digest.Keccak
+import org.spongycastle.math.ec.ECAlgorithms
+import org.spongycastle.math.ec.ECPoint
 
 
 // signing code taken from bitcoinj ECKey
@@ -123,6 +125,77 @@ fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
     return digest.digest(Q.multiply(d).normalize().getEncoded(true))
 }
 
+// implementation is based on BitcoinJ ECKey code
+// see https://github.com/bitcoinj/bitcoinj/blob/master/core/src/main/java/org/bitcoinj/core/ECKey.java
+fun ecrecover(recId: Int, message: ByteArray, r: BigInteger, s: BigInteger): ByteArray? {
+    val n = CURVE.n
+    // Let x = r + jn
+    val i = BigInteger.valueOf((recId / 2).toLong())
+    val x = r.add(i.multiply(n))
+
+    if (x >= CURVE_PARAMS.curve.order) {
+        // Cannot have point co-ordinates larger than this as everything takes place modulo Q.
+        return null
+    }
+
+    // Compressed keys require you to know an extra bit of data about the y-coord as there are two possibilities.
+    // So it's encoded in the recId.
+    val R = decompressKey(x, recId and 1 == 1)
+    if (!R.multiply(n).isInfinity) {
+        // If nR != point at infinity, then recId (i.e. v) is invalid
+        return null
+    }
+
+    //
+    // Compute a candidate public key as:
+    // Q = mi(r) * (sR - eG)
+    //
+    // Where mi(x) is the modular multiplicative inverse. We transform this into the following:
+    // Q = (mi(r) * s ** R) + (mi(r) * -e ** G)
+    // Where -e is the modular additive inverse of e, that is z such that z + e = 0 (mod n).
+    // In the above equation, ** is point multiplication and + is point addition (the EC group operator).
+    //
+    // We can find the additive inverse by subtracting e from zero then taking the mod. For example the additive
+    // inverse of 3 modulo 11 is 8 because 3 + 8 mod 11 = 0, and -3 mod 11 = 8.
+    //
+    val e = BigInteger(1, message)
+    val eInv = BigInteger.ZERO.subtract(e).mod(n)
+    val rInv = r.modInverse(n)
+    val srInv = rInv.multiply(s).mod(n)
+    val eInvrInv = rInv.multiply(eInv).mod(n)
+
+    return try {
+        val q = ECAlgorithms.sumOfTwoMultiplies(CURVE.g, eInvrInv, R, srInv)
+
+        // For Ethereum we don't use first byte of the key
+        val full = q.getEncoded(false)
+        full.takeLast(full.size-1).toByteArray()
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * Decompress a compressed public key (x coordinate and low-bit of y-coordinate).
+ *
+ * @param xBN X-coordinate
+ * @param yBit Sign of Y-coordinate
+ * @return Uncompressed public key
+ */
+fun decompressKey(xBN: BigInteger, yBit: Boolean): ECPoint {
+    val x = CURVE_PARAMS.curve.fromBigInteger(xBN)
+    val alpha = x.multiply(x.square().add(CURVE_PARAMS.curve.a)).add(CURVE_PARAMS.curve.b)
+    val beta = alpha.sqrt() ?: throw IllegalArgumentException("Invalid point compression")
+    val ecPoint: ECPoint
+    val nBeta = beta.toBigInteger()
+    if (nBeta.testBit(0) == yBit) {
+        ecPoint = CURVE_PARAMS.curve.createPoint(x.toBigInteger(), nBeta);
+    } else {
+        val y = CURVE_PARAMS.curve.fromBigInteger(CURVE_PARAMS.curve.order.subtract(nBeta))
+        ecPoint = CURVE_PARAMS.curve.createPoint(x.toBigInteger(), y.toBigInteger())
+    }
+    return ecPoint
+}
 /**
  * A factory for signatures using the elliptic curve secp256k1
  *

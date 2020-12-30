@@ -2,9 +2,7 @@
 
 package net.postchain.gtx.gtxml
 
-import net.postchain.base.CURVE
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.SECP256K1KeccakCryptoSystem
+import net.postchain.base.*
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.privKeyHex
@@ -29,8 +27,8 @@ class SigningTest {
 
         val pubKey0 = pubKey(0)
         val privKey0 = privKey(0)
-        val pubKey1 = pubKey(1)
-        val privKey1 = privKey(1)
+        val pubKey1 = pubKey(2)
+        val privKey1 = privKey(2)
         val sigMaker0 = cs.buildSigMaker(pubKey0, privKey0)
         val sigMaker1 = cs.buildSigMaker(pubKey1, privKey1)
 
@@ -51,6 +49,11 @@ class SigningTest {
         val signature1 = sigMaker1.signDigest(merkleRoot)
         println("sig0: ${signature0.data.toHex()}")
         println("sig1: ${signature1.data.toHex()}")
+        val sig0 = secp256k1_decodeSignature(signature0.data)
+        val sig1 = secp256k1_decodeSignature(signature1.data)
+
+        println("pubkey: ${ecrecover(0, merkleRoot, sig0[0], sig0[1])?.toHex()} ${CURVE.curve.decodePoint(pubKey0).getEncoded(false).takeLast(64).toByteArray().toHex()}")
+        println("pubkey: ${ecrecover(1, merkleRoot, sig1[0], sig1[1])?.toHex()} ${CURVE.curve.decodePoint(pubKey1).getEncoded(false).takeLast(64).toByteArray().toHex()}")
 
         val verify = cs.verifyDigest(merkleRoot, signature0)
         assertTrue(verify)
