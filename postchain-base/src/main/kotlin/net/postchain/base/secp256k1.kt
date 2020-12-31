@@ -18,6 +18,8 @@ import java.security.SecureRandom
 import org.spongycastle.jcajce.provider.digest.Keccak
 import org.spongycastle.math.ec.ECAlgorithms
 import org.spongycastle.math.ec.ECPoint
+import java.lang.IllegalStateException
+import java.nio.ByteBuffer
 
 
 // signing code taken from bitcoinj ECKey
@@ -50,6 +52,14 @@ fun encodeSignature(r: BigInteger, s: BigInteger): ByteArray {
     return Arrays.concatenate(
             bigIntegerToBytes(r, 32),
             bigIntegerToBytes(s, 32)
+    )
+}
+
+fun encodeSignature(r: BigInteger, s: BigInteger, v: Int): ByteArray {
+    return Arrays.concatenate(
+        bigIntegerToBytes(r, 32),
+        bigIntegerToBytes(s, 32),
+        ByteBuffer.allocate(1).put(v.toByte()).array()
     )
 }
 
@@ -125,6 +135,26 @@ fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
     return digest.digest(Q.multiply(d).normalize().getEncoded(true))
 }
 
+fun encodeSignatureWithV(hash: ByteArray, pubKey: ByteArray, signature: ByteArray): ByteArray {
+    val pub = decompressKey(pubKey)
+    val sig = secp256k1_decodeSignature(signature)
+    val pub0 = ecrecover(0, hash, sig[0], sig[1])
+    if (Arrays.areEqual(pub0, pub)) {
+        return encodeSignature(sig[0], sig[1], 27)
+    }
+    val pub1 = ecrecover(1, hash, sig[0], sig[1])
+    if (Arrays.areEqual(pub1, pub)) {
+        return encodeSignature(sig[0], sig[1], 28)
+    }
+    throw IllegalStateException("Cannot find correct y")
+}
+
+fun getEthereumAddress(pubKey: ByteArray): ByteArray {
+    val k = SECP256K1KeccakCryptoSystem()
+    val pub = CURVE.curve.decodePoint(pubKey).getEncoded(false).takeLast(64).toByteArray()
+    return k.digest(pub).takeLast(20).toByteArray()
+}
+
 // implementation is based on BitcoinJ ECKey code
 // see https://github.com/bitcoinj/bitcoinj/blob/master/core/src/main/java/org/bitcoinj/core/ECKey.java
 fun ecrecover(recId: Int, message: ByteArray, r: BigInteger, s: BigInteger): ByteArray? {
@@ -195,6 +225,13 @@ fun decompressKey(xBN: BigInteger, yBit: Boolean): ECPoint {
         ecPoint = CURVE_PARAMS.curve.createPoint(x.toBigInteger(), y.toBigInteger())
     }
     return ecPoint
+}
+
+fun decompressKey(pubKey: ByteArray): ByteArray {
+    if (pubKey.size == 64) {
+        return pubKey
+    }
+    return CURVE.curve.decodePoint(pubKey).getEncoded(false).takeLast(64).toByteArray()
 }
 /**
  * A factory for signatures using the elliptic curve secp256k1

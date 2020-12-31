@@ -35,12 +35,8 @@ class SigningTest {
         val k = SECP256K1KeccakCryptoSystem()
         println("pubkey 0: ${pubKeyHex(0)}")
         println("privkey 0: ${privKeyHex(0)}")
-        val hashedPubKey0 = k.digest(CURVE.curve.decodePoint(pubKey0).getEncoded(false).takeLast(64).toByteArray())
-        val address0 = hashedPubKey0.takeLast(20).toByteArray()
-        val hashedPubKey1 = k.digest(CURVE.curve.decodePoint(pubKey1).getEncoded(false).takeLast(64).toByteArray())
-        val address1 = hashedPubKey1.takeLast(20).toByteArray()
-        println("ethereum address 0: ${address0.toHex()}")
-        println("ethereum address 1: ${address1.toHex()}")
+        println("ethereum address 0: ${getEthereumAddress(pubKey0).toHex()}")
+        println("ethereum address 1: ${getEthereumAddress(pubKey1).toHex()}")
 
         // Signing
         val merkleRoot = tx.transactionBodyData.calculateRID(GtvMerkleHashCalculator(cs))
@@ -57,6 +53,11 @@ class SigningTest {
 
         val verify = cs.verifyDigest(merkleRoot, signature0)
         assertTrue(verify)
+
+        val sigWithV0 = encodeSignatureWithV(merkleRoot, pubKey0, signature0.data)
+        val sigWithV1 = encodeSignatureWithV(merkleRoot, pubKey1, signature1.data)
+        println(sigWithV0.toHex())
+        println(sigWithV1.toHex())
     }
 
 }
