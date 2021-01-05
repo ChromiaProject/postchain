@@ -2,6 +2,7 @@ package net.postchain.crypto
 
 import junit.framework.TestCase
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
 import org.junit.Test
 
 class SECP256K1KeccakTest : TestCase() {
@@ -15,10 +16,11 @@ class SECP256K1KeccakTest : TestCase() {
     }
 
     @Test
-    fun testGetEthereumAddress2() {
+    fun testToChecksumAddress() {
         val pubkey = "039562c20fffe6f1b2f62565978da44fd25eae3703492c869deb105f83259df6b0".hexStringToByteArray()
         val address = SECP256K1Keccak.getEthereumAddress(pubkey)
-        val expected = "17d2C9EAb8d3BeDf39497c1A176eaEedfc3075CB".hexStringToByteArray()
-        assertTrue(expected.contentEquals(address))
+        val checksumAddress = SECP256K1Keccak.toChecksumAddress(address.toHex())
+        val expected = "0x17d2C9EAb8d3BeDf39497c1A176eaEedfc3075CB"
+        assertEquals(expected, checksumAddress)
     }
 }
