@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>postchain</artifactId>
+        <groupId>net.postchain</groupId>
+        <version>3.3.1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>postchain-ethereum</artifactId>
+
+    <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <spongycastle.core.version>1.56.0.0</spongycastle.core.version>
+    </properties>
+
+    <dependencies>
+        <!-- Kotlin -->
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.madgag.spongycastle</groupId>
+            <artifactId>core</artifactId>
+            <version>${spongycastle.core.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.madgag.spongycastle</groupId>
+            <artifactId>prov</artifactId>
+            <version>${spongycastle.core.version}</version>
+        </dependency>
+    </dependencies>
+
+</project>
