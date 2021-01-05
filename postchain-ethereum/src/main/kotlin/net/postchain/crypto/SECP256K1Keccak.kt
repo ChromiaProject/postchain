@@ -1,5 +1,6 @@
 package net.postchain.crypto
 
+import net.postchain.utils.Numeric
 import org.spongycastle.asn1.x9.X9ECParameters
 import org.spongycastle.crypto.ec.CustomNamedCurves
 import org.spongycastle.crypto.params.ECDomainParameters
@@ -23,6 +24,21 @@ class SECP256K1Keccak {
         fun getEthereumAddress(pubKey: ByteArray): ByteArray {
             val pub = CURVE.decodePoint(pubKey).getEncoded(false).takeLast(64).toByteArray()
             return  digest(pub).takeLast(20).toByteArray()
+        }
+
+        @JvmStatic
+        fun toChecksumAddress(address: String): String {
+            val lowercaseAddress = Numeric.cleanHexPrefix(address).toLowerCase()
+            val addressHash = Numeric.cleanHexPrefix(Hash.sha3String(lowercaseAddress))
+            val result = StringBuilder(lowercaseAddress.length + 2)
+            for (i in lowercaseAddress.indices) {
+                if (addressHash[i].toString().toInt(16) >= 8) {
+                    result.append(lowercaseAddress[i].toString().toUpperCase())
+                } else {
+                    result.append(lowercaseAddress[i])
+                }
+            }
+            return Numeric.prependHexPrefix(result.toString())
         }
 
         /**
