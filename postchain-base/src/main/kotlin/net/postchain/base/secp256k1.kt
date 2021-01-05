@@ -4,6 +4,7 @@ package net.postchain.base
 
 import net.postchain.common.data.Hash
 import net.postchain.core.Signature
+import net.postchain.crypto.SECP256K1Keccak
 import org.spongycastle.crypto.digests.SHA256Digest
 import org.spongycastle.crypto.ec.CustomNamedCurves
 import org.spongycastle.crypto.params.ECDomainParameters
@@ -13,6 +14,7 @@ import org.spongycastle.crypto.signers.ECDSASigner
 import org.spongycastle.crypto.signers.HMacDSAKCalculator
 import org.spongycastle.util.Arrays
 import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -47,6 +49,14 @@ fun encodeSignature(r: BigInteger, s: BigInteger): ByteArray {
     return Arrays.concatenate(
             bigIntegerToBytes(r, 32),
             bigIntegerToBytes(s, 32)
+    )
+}
+
+fun encodeSignature(r: BigInteger, s: BigInteger, v: Int): ByteArray {
+    return Arrays.concatenate(
+        bigIntegerToBytes(r, 32),
+        bigIntegerToBytes(s, 32),
+        ByteBuffer.allocate(1).put(v.toByte()).array()
     )
 }
 
@@ -120,6 +130,37 @@ fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
     val Q = CURVE.curve.decodePoint(pubKey)
     val digest = MessageDigest.getInstance("SHA-256")
     return digest.digest(Q.multiply(d).normalize().getEncoded(true))
+}
+
+/**
+ * @param hash signed message
+ * @param pubKey compress public key
+ * @param signature signature without v
+ * @return signature with v to run ecrecover properly on ethereum solidity smart contract
+ */
+fun encodeSignatureWithV(hash: ByteArray, pubKey: ByteArray, signature: ByteArray): ByteArray {
+    val pub = decompressKey(pubKey)
+    val sig = secp256k1_decodeSignature(signature)
+    val pub0 = SECP256K1Keccak.ecrecover(0, hash, sig[0], sig[1])
+    if (Arrays.areEqual(pub0, pub)) {
+        return encodeSignature(sig[0], sig[1], 27)
+    }
+    val pub1 = SECP256K1Keccak.ecrecover(1, hash, sig[0], sig[1])
+    if (Arrays.areEqual(pub1, pub)) {
+        return encodeSignature(sig[0], sig[1], 28)
+    }
+    throw IllegalStateException("Cannot find correct y")
+}
+
+/**
+ * @param pubKey public key
+ * @return uncompress public key (64 bytes)
+ */
+fun decompressKey(pubKey: ByteArray): ByteArray {
+    if (pubKey.size == 64) {
+        return pubKey
+    }
+    return CURVE.curve.decodePoint(pubKey).getEncoded(false).takeLast(64).toByteArray()
 }
 
 /**
