@@ -14,6 +14,7 @@
         <module>postchain-docker</module>
         <module>postchain-client</module>
         <module>postchain-distribution</module>
+        <module>postchain-ethereum</module>
     </modules>
     <packaging>pom</packaging>
 
