@@ -38,6 +38,10 @@ class SAPHanaSQLDatabaseAccess : SQLDatabaseAccess() {
                 "  UNIQUE (block_height))"
     }
 
+    override fun cmdCreateTableSnapshotPage(ctx: EContext): String {
+        TODO("Not yet implemented")
+    }
+
     override fun cmdCreateTableBlockchains(): String {
         return "CREATE TABLE ${tableBlockchains()} " +
                 " (chain_iid BIGINT, blockchain_rid VARBINARY(1000) NOT NULL)"
@@ -98,6 +102,10 @@ class SAPHanaSQLDatabaseAccess : SQLDatabaseAccess() {
     override fun cmdInsertTransactions(ctx: EContext): String {
         return "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
                 "VALUES (?, ?, ?, ?) "
+    }
+
+    override fun cmdInsertSnapshotPages(ctx: EContext): String {
+        TODO("Not yet implemented")
     }
 
     override fun cmdInsertConfiguration(ctx: EContext): String {

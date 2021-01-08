@@ -4,6 +4,7 @@ package net.postchain.base.data
 
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
+import net.postchain.base.snapshot.SnapshotPage
 import net.postchain.core.*
 import net.postchain.network.x.XPeerID
 import java.sql.Connection
@@ -65,9 +66,12 @@ interface DatabaseAccess {
 
     // Blockchain configurations
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
-
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
+
+    // L2 implementation for snapshot page
+    fun insertSnapshotPage(ctx: EContext, page: SnapshotPage)
+    fun getSnapshotPage(ctx: EContext, height: Long, level: Int, left: Long): SnapshotPage?
 
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
     fun findPeerInfo(ctx: AppContext, host: String?, port: Int?, pubKeyPattern: String?): Array<PeerInfo>
