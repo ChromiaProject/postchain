@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
+import net.postchain.base.snapshot.SnapshotPage
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
@@ -25,6 +26,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
+    protected fun tableSnapshotPages(ctx: EContext): String = tableName(ctx, "snapshot_pages")
     protected fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
     fun tableGtxModuleVersion(ctx: EContext): String = tableName(ctx, "gtx_module_version")
 
@@ -44,8 +46,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableConfigurations(ctx: EContext): String
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
+    protected abstract fun cmdCreateTableSnapshotPage(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
     protected abstract fun cmdInsertTransactions(ctx: EContext): String
+    protected abstract fun cmdInsertSnapshotPages(ctx: EContext): String
     protected abstract fun cmdInsertConfiguration(ctx: EContext): String
     abstract fun cmdCreateTableGtxModuleVersion(ctx: EContext): String
 
@@ -292,6 +296,28 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return data?.let(::BlockchainRid)
     }
 
+    // L2
+    override fun insertSnapshotPage(ctx: EContext, page: SnapshotPage) {
+        val childHashes = page.childHashes.fold(ByteArray(0)) {total, item -> total.plus(item)}
+        queryRunner.update(ctx.conn, cmdInsertSnapshotPages(ctx), page.blockHeight, page.level, page.left, childHashes)
+    }
+
+    override fun getSnapshotPage(ctx: EContext, height: Long, level: Int, left: Long): SnapshotPage? {
+        val hashLength = 32
+        val sql = "SELECT child_hashes FROM ${tableSnapshotPages(ctx)} WHERE block_height = ? AND level = ? AND left = ?"
+        val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left)
+        // if data size is not contain correct length then it regards to error
+        if (data == null || data.size % hashLength != 0) return null
+        val length = data.size / hashLength
+        val childHashes = Array(length){ByteArray(hashLength)}
+        for (i in 0 until length) {
+            val start = i * hashLength
+            val end = start + hashLength - 1
+            childHashes[i] = data.sliceArray(start..end)
+        }
+        return SnapshotPage(height, level, left, childHashes)
+    }
+
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
         /**
          * "CREATE TABLE IF NOT EXISTS" is not good enough for the meta table
@@ -336,6 +362,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         createIfNotExist(ctx, tableBlocks(ctx), cmdCreateTableBlocks(ctx))
         createIfNotExist(ctx, tableTransactions(ctx), cmdCreateTableTransactions(ctx))
         createIfNotExist(ctx, tableConfigurations(ctx), cmdCreateTableConfigurations(ctx))
+
+        // TODO: [POS-147]: temporarily here, might init in other place for L2
+        // L2 tables
+        createIfNotExist(ctx, tableSnapshotPages(ctx), cmdCreateTableSnapshotPage(ctx))
 
         // TODO: [POS-128]: Temporal solution
         val indexCreated = tableExists(ctx.conn, tableTransactions(ctx))
