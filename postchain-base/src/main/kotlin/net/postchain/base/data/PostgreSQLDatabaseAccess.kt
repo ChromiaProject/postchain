@@ -62,6 +62,15 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " data BYTEA NOT NULL)"
     }
 
+    override fun cmdCreateTableSnapshotPage(ctx: EContext): String {
+        return "CREATE TABLE ${tableSnapshotPages(ctx)}" +
+                " (snapshot_page_iid BIGSERIAL PRIMARY KEY," +
+                " block_height BIGINT NOT NULL, " +
+                " level INTEGER NOT NULL, " +
+                " left BIGINT NOT NULL), " +
+                " child_hashes BYTEA NOT NULL)"
+    }
+
     override fun cmdCreateTableBlockchains(): String {
         return "CREATE TABLE ${tableBlockchains()} " +
                 " (chain_iid BIGINT PRIMARY KEY," +
@@ -118,6 +127,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun cmdInsertTransactions(ctx: EContext): String {
         return "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
+                "VALUES (?, ?, ?, ?)"
+    }
+
+    override fun cmdInsertSnapshotPages(ctx: EContext): String {
+        return "INSERT INTO ${tableSnapshotPages(ctx)} (block_height, level, left, child_hashes) " +
                 "VALUES (?, ?, ?, ?)"
     }
 
