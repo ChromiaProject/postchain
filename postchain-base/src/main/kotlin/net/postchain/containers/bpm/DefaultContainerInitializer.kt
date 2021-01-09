@@ -21,15 +21,8 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
     private fun m(message: String) = "\t" + message
 
     override fun createContainerWorkingDir(process: ContainerBlockchainProcess): Pair<Path, Path> {
-        // Creating current working dir (or runtime-environment (rte) dir)
-        /**
-         *  Windows/Docker: WSL(2) doesn't work correctly with /mnt/.
-         *  We should mount /mnt/d to /d and pass paths to Docker without '/mnt' prefix.
-         */
-        val cwd = nodeConfig.appConfig.configDir.let {
-            if (OsHelper.isWindows()) it.removePrefix("/mnt") else it
-        }
-        val containerCwd = Paths.get(cwd, "containers", process.chainId.toString())
+        // Creating current working dir (target)
+        val containerCwd = Paths.get(nodeConfig.appConfig.configDir, "containers", process.chainId.toString())
         val containerChainDir = containerCwd.resolve("blockchains${File.separator}${process.chainId}")
         if (containerChainDir.toFile().exists()) {
             logger.info(m("Container chain dir exists: $containerChainDir"))
@@ -62,7 +55,7 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         // Creating a nodeConfig file
         val filename = containerCwd.resolve("node-config.properties").toString()
         AppConfig.toPropertiesFile(config, filename)
-        logger.info(m("Container subnode properties file has been created: $filename"))
+        logger.info(m("Container slave node properties file has been created: $filename"))
     }
 
     override fun createContainerChainConfigs(dataSource: ManagedNodeDataSource, process: ContainerBlockchainProcess, chainDir: Path) {

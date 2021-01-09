@@ -13,13 +13,21 @@ import net.postchain.network.masterslave.protocol.MsDataMessage
 import net.postchain.network.masterslave.slave.netty.NettySlaveConnector
 import net.postchain.network.x.LazyPacket
 import net.postchain.network.x.XChainPeersConfiguration
+import net.postchain.network.x.XConnectionManager
 import net.postchain.network.x.XPeerID
 import java.util.*
 import kotlin.concurrent.schedule
 
+/**
+ * [SlaveConnectionManager] has only one connection; it's connection to
+ * [net.postchain.network.masterslave.master.MasterConnectionManager] of master node.
+ */
+interface SlaveConnectionManager : XConnectionManager
+
+
 class DefaultSlaveConnectionManager(
         private val nodeConfig: NodeConfig
-) : RestrictedSlaveConnectionManager(), SlaveConnectorEvents {
+) : SlaveConnectionManager, SlaveConnectorEvents {
 
     companion object : KLogging()
 
@@ -55,6 +63,20 @@ class DefaultSlaveConnectionManager(
 
             logger.debug { "${logger(chain)}: Master chain connected: $logMsg" }
         }
+    }
+
+    override fun connectChainPeer(chainId: Long, peerId: XPeerID) {
+        logger.debug { "connectChainPeer: Not implemented" }
+    }
+
+    override fun isPeerConnected(chainId: Long, peerId: XPeerID): Boolean {
+        logger.debug { "isPeerConnected: Not implemented" }
+        return false
+    }
+
+    override fun getConnectedPeers(chainId: Long): List<XPeerID> {
+        logger.debug { "getConnectedPeers: Not implemented" }
+        return emptyList()
     }
 
     private fun connectToMaster(chain: Chain) {
@@ -93,6 +115,10 @@ class DefaultSlaveConnectionManager(
         chain.peers.forEach { peerId -> sendPacket(data, chainId, XPeerID(peerId)) }
     }
 
+    override fun disconnectChainPeer(chainId: Long, peerId: XPeerID) {
+        logger.debug { "disconnectChainPeer: Not implemented" }
+    }
+
     @Synchronized
     override fun disconnectChain(chainId: Long, loggingPrefix: () -> String) {
         logger.debug { "${loggingPrefix()}: Disconnecting master chain: $chainId" }
@@ -105,6 +131,16 @@ class DefaultSlaveConnectionManager(
         } else {
             logger.debug { "${loggingPrefix()}: Master chain is not connected: $chainId" }
         }
+    }
+
+    override fun getPeersTopology(): Map<String, Map<String, String>> {
+        logger.debug { "getPeersTopology: Not implemented" }
+        return emptyMap()
+    }
+
+    override fun getPeersTopology(chainID: Long): Map<XPeerID, String> {
+        logger.debug { "getPeersTopology(chainId): Not implemented" }
+        return emptyMap()
     }
 
     @Synchronized
@@ -164,8 +200,8 @@ class DefaultSlaveConnectionManager(
     }
 
     private fun reconnect(chain: Chain) {
-        val timeUnit = "seconds"
-        val timeDelay = 15L // TODO: [POS-129]: Implement exponential delay connection strategy
+        val timeUnit = "ms"
+        val timeDelay = 15_000L // TODO: [POS-129]: Implement exponential delay connection strategy
         val brid = chain.config.blockchainRid.toShortHex()
         logger.info { "${logger(chain)}: Reconnecting in $timeDelay $timeUnit to master node: blockchainRid: $brid" }
         reconnectionTimer.schedule(timeDelay) {

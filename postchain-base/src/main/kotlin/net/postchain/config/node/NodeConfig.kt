@@ -31,10 +31,10 @@ open class NodeConfig(val appConfig: AppConfig) {
      * Container chains
      */
     val masterHost: String
-        get() = config.getString("containerChains.masterHost", "")
+        get() = config.getString("containerChains.masterHost", "localhost")
 
     val masterPort: Int
-        get() = config.getInt("containerChains.masterPort", 9999) // TODO: [POS-129]: Change port
+        get() = config.getInt("containerChains.masterPort", 9860)
 
     /**
      * Database

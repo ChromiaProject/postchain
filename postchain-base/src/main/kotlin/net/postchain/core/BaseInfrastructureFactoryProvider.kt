@@ -20,6 +20,7 @@ class BaseInfrastructureFactoryProvider : InfrastructureFactoryProvider {
         val infra = nodeConfigProvider.getConfiguration().infrastructure
 
         val factoryClass = when (infra) {
+            // Base
             in Ebft.key -> BaseEBFTInfrastructureFactory::class.java
             in EbftManaged.key -> ManagedEBFTInfrastructureFactory::class.java
             in EbftManagedChromia0.key -> Chromia0InfrastructureFactory::class.java
@@ -29,6 +30,7 @@ class BaseInfrastructureFactoryProvider : InfrastructureFactoryProvider {
             in EbftContainerSlave.key -> SlaveEbftInfraFactory::class.java
             in EbftManagedChromia0ContainerMaster.key -> Class.forName(infra) // TODO: [POS-129]: Will be implemented
 
+            // Tests
             in BaseTest.key -> BaseTestInfrastructureFactory::class.java
 
             else -> Class.forName(infra)

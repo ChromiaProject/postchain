@@ -53,6 +53,7 @@ open class ManagedBlockchainProcessManager(
     protected lateinit var dataSource: ManagedNodeDataSource
     private var lastPeerListVersion: Long? = null
     protected val CHAIN0 = 0L
+    protected var loggedChains: Array<Set<Long>> = emptyArray()
 
     companion object : KLogging()
 
@@ -211,14 +212,19 @@ open class ManagedBlockchainProcessManager(
         if (logger.isInfoEnabled /*isDebugEnabled*/) {
             val toStart0 = if (restartChain0 && CHAIN0 !in toStart) toStart.plus(CHAIN0) else toStart
 
-            logger.info /*debug*/ {
-                val pubKey = nodeConfigProvider.getConfiguration().pubKey
-                val peerInfos = nodeConfigProvider.getConfiguration().peerInfoMap
-                "pubKey: $pubKey" +
-                        ", peerInfos: ${peerInfos.keys.toTypedArray().contentToString()}" +
-                        ", chains to start: [${toStart0.joinToString()}]" +
-                        ", chains to stop: [${toStop.joinToString()}]" +
-                        ", chains to restart: [${toRestart.joinToString()}]"
+            val loggedChainsNew = arrayOf(toStart0, toStop, toRestart)
+            if (!loggedChains.contentDeepEquals(loggedChainsNew)) {
+                logger.info /*debug*/ {
+                    val pubKey = nodeConfigProvider.getConfiguration().pubKey
+                    val peerInfos = nodeConfigProvider.getConfiguration().peerInfoMap
+                    "pubKey: $pubKey" +
+                            ", peerInfos: ${peerInfos.keys.toTypedArray().contentToString()}" +
+                            ", chains to start: [${toStart0.joinToString()}]" +
+                            ", chains to stop: [${toStop.joinToString()}]" +
+                            ", chains to restart: [${toRestart.joinToString()}]"
+                }
+
+                loggedChains = loggedChainsNew
             }
         }
     }

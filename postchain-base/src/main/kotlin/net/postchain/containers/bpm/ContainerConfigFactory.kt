@@ -8,10 +8,10 @@ import java.nio.file.Path
 object ContainerConfigFactory {
 
     fun createConfig(containerCwd: Path): ContainerConfig {
-        // -v $containerCwd:/opt/chromaway/postchain-subnode/rte \
+        // -v $containerCwd:/opt/chromaway/postchain/target \
         val volume = HostConfig.Bind
                 .from(containerCwd.toString())
-                .to("/opt/chromaway/postchain-subnode/rte")
+                .to("/opt/chromaway/postchain/target")
                 .build()
 
         val hostConfig = HostConfig.builder()
