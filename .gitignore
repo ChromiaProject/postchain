@@ -11,3 +11,4 @@ postchain-base/start.sh
 *.log.lck
 logs
 postchain-distribution/lib
+*.jar
