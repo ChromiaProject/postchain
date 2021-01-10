@@ -381,6 +381,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return SnapshotPage(height, level, left, childHashes)
     }
 
+    override fun getSnapshotHighestLevelPage(ctx: EContext): Int {
+        val sql = "SELECT MAX(level) FROM ${tableSnapshotPages(ctx)}"
+        return queryRunner.query(ctx.conn, sql, intRes)
+    }
+
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
         /**
          * "CREATE TABLE IF NOT EXISTS" is not good enough for the meta table
