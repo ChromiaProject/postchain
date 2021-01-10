@@ -9,13 +9,26 @@ import org.spongycastle.math.ec.ECAlgorithms
 import org.spongycastle.math.ec.ECCurve
 import org.spongycastle.math.ec.ECPoint
 import java.math.BigInteger
+import java.security.InvalidParameterException
 
 class SECP256K1Keccak {
 
     companion object {
+        private const val HASH_LENGTH = 32
         private val params: X9ECParameters = CustomNamedCurves.getByName("secp256k1")
         private val CURVE_PARAMS = ECDomainParameters(params.curve, params.g, params.n, params.h)
         private val CURVE: ECCurve = CURVE_PARAMS.curve
+        private val EMPTY_HASH = ByteArray(HASH_LENGTH) { 0 }
+
+        fun treeHasher(left: ByteArray, right: ByteArray): ByteArray {
+            if (left.size != HASH_LENGTH || right.size != HASH_LENGTH)
+                throw InvalidParameterException("invalid hash length")
+            return if (left.contentEquals(EMPTY_HASH) && right.contentEquals(EMPTY_HASH)) {
+                EMPTY_HASH
+            } else {
+                digest(left.plus(right))
+            }
+        }
 
         /**
          * Get ethereum address from compress public key
