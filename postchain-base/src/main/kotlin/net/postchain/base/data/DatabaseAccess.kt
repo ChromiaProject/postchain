@@ -72,6 +72,7 @@ interface DatabaseAccess {
     // L2 implementation for snapshot page
     fun insertSnapshotPage(ctx: EContext, page: SnapshotPage)
     fun getSnapshotPage(ctx: EContext, height: Long, level: Int, left: Long): SnapshotPage?
+    fun getSnapshotHighestLevelPage(ctx: EContext): Int
 
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
     fun findPeerInfo(ctx: AppContext, host: String?, port: Int?, pubKeyPattern: String?): Array<PeerInfo>
