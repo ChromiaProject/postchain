@@ -51,7 +51,8 @@ class SnapshotPageStore(
     }
 
     fun highestLevelPage(): Int {
-        TODO()
+        val db = DatabaseAccess.of(blockEContext)
+        return db.getSnapshotHighestLevelPage(blockEContext)
     }
 }
 
@@ -91,7 +92,7 @@ fun updateSnapshot(store: SnapshotPageStore, blockHeight: Long, leafHashes: Navi
             val left = leafsPerEntry * leftInEntries // left in leafs
             var haveMissingLeafs = false
             val pageElts = Array(entriesPerPage) {
-                val leaf = entryHashes.get(it + left)
+                val leaf = entryHashes[it + left]
                 if (leaf == null) haveMissingLeafs = true
                 leaf
             }
