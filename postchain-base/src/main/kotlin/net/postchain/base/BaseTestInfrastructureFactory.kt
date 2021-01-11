@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider

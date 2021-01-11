@@ -2,7 +2,7 @@
 
 package net.postchain.ebft
 
-import net.postchain.base.BaseApiInfrastructure
+import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.blockchain.BlockchainConfigurationProvider

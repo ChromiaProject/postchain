@@ -2,9 +2,9 @@
 
 package net.postchain.containers.infra
 
-import net.postchain.base.BaseApiInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.containers.api.DefaultMasterApiInfra
 import net.postchain.containers.bpm.ContainerManagedBlockchainProcessManager
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
@@ -21,7 +21,7 @@ class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
         val syncInfra = DefaultMasterSyncInfra(
                 nodeConfigProvider, nodeDiagnosticContext)
 
-        val apiInfra = BaseApiInfrastructure(
+        val apiInfra = DefaultMasterApiInfra(
                 nodeConfigProvider, nodeDiagnosticContext)
 
         return DefaultMasterBlockchainInfra(

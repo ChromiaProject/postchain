@@ -36,6 +36,9 @@ open class NodeConfig(val appConfig: AppConfig) {
     val masterPort: Int
         get() = config.getInt("containerChains.masterPort", 9860)
 
+    val slaveHost: String
+        get() = config.getString("containerChains.slaveHost", "localhost")
+
     /**
      * Database
      */

@@ -13,7 +13,6 @@ import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.ManagedBlockchainProcessManager
-import java.util.concurrent.atomic.AtomicInteger
 
 class ContainerManagedBlockchainProcessManager(
         private val masterBlockchainInfra: MasterBlockchainInfra,
@@ -98,7 +97,7 @@ class ContainerManagedBlockchainProcessManager(
                 container.id()
             } else {
                 logger.info(m("startContainerChain: Container ${process.containerName} is being created"))
-                val config = ContainerConfigFactory.createConfig(containerCwd)
+                val config = ContainerConfigFactory.createConfig(nodeConfig, process, containerCwd)
                 val containerId = dockerClient.createContainer(config, process.containerName).id()
                 // TODO: [POS-129]: Handle the case when containerId is null
                 logger.info(m("startContainerChain: Container ${process.containerName} has been created: $containerId"))

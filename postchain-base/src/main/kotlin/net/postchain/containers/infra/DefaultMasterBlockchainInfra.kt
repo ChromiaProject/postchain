@@ -3,20 +3,20 @@ package net.postchain.containers.infra
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.base.BlockchainRid
 import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.containers.api.MasterApiInfra
 import net.postchain.containers.bpm.ContainerBlockchainProcess
-import net.postchain.core.ApiInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 
 class DefaultMasterBlockchainInfra(
         nodeConfigProvider: NodeConfigurationProvider,
         private val masterSyncInfra: MasterSyncInfra,
-        apiInfrastructure: ApiInfrastructure,
+        private val masterApiInfra: MasterApiInfra,
         nodeDiagnosticContext: NodeDiagnosticContext
 ) : BaseBlockchainInfrastructure(
         nodeConfigProvider,
         masterSyncInfra,
-        apiInfrastructure,
+        masterApiInfra,
         nodeDiagnosticContext
 ), MasterBlockchainInfra {
 
@@ -26,5 +26,6 @@ class DefaultMasterBlockchainInfra(
             blockchainRid: BlockchainRid
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(processName, chainId, blockchainRid)
+                .also(masterApiInfra::connectContainerProcess)
     }
 }

@@ -1,9 +1,10 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base
+package net.postchain.api.rest.infra
 
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.base.BaseBlockQueries
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
@@ -11,8 +12,8 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.AbstractBlockchainProcess
 
-class BaseApiInfrastructure(
-        nodeConfigProvider: NodeConfigurationProvider,
+open class BaseApiInfrastructure(
+        val nodeConfigProvider: NodeConfigurationProvider,
         val nodeDiagnosticContext: NodeDiagnosticContext
 ) : ApiInfrastructure {
 

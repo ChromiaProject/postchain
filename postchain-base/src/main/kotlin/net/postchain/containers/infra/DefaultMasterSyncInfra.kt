@@ -49,10 +49,10 @@ class DefaultMasterSyncInfra(
         ).apply { init() }
 
         return DefaultContainerBlockchainProcess(
+                nodeConfig,
                 processName,
                 chainId,
                 blockchainRid,
-                nodeConfig.pubKey,
                 communicationManager)
     }
 

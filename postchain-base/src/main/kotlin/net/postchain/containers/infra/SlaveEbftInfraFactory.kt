@@ -2,7 +2,7 @@
 
 package net.postchain.containers.infra
 
-import net.postchain.base.BaseApiInfrastructure
+import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
