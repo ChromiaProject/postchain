@@ -15,7 +15,7 @@ object GtvDecoder {
         return wrapValue(gtv)
     }
 
-    private fun wrapValue(r: RawGtv): net.postchain.gtv.Gtv {
+    private fun wrapValue(r: RawGtv): Gtv {
         if (r.null_ != null) {
             return GtvNull
         }
