@@ -5,6 +5,12 @@ contract ChrL2 {
 
     bytes32 constant DICT_KEY = 0x43758C97091F5141260E8E3FD3A352A8FE106C353FCC7C9CDEEC71CEEFFDBB0F;
 
+    struct Event {
+        bytes32 root;
+        uint256 amount;
+        bytes32 proof;
+    }
+
     function hashGtvIntegerLeaf(uint value) public pure returns (bytes32) {
         uint8 nbytes = 1;
         uint remainingValue = value >> 8; // minimal length is 1 so we skip the first byte
@@ -176,5 +182,14 @@ contract ChrL2 {
         require(signer != address(0), "ECDSA: invalid signature");
 
         return signer;
+    }
+
+    function verifyProof(bytes calldata value, bytes32 proof) public pure returns (bytes32, uint256, bytes32) {
+        Event memory evt = abi.decode(value, (Event));
+        bytes32 hash = keccak256(value);
+        if (hash != proof) {
+            revert('invalid event');
+        }
+        return (evt.root, evt.amount, evt.proof);
     }
 }
