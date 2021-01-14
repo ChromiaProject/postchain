@@ -38,8 +38,7 @@ object GtvBinaryTreeFactoryArray {
         val result = mainFactory.buildHigherLayer(1, leafArray)
 
         // 3. Fix and return the root node
-        val orgRoot = result.get(0)
-        return when (orgRoot) {
+        return when (val orgRoot = result[0]) {
             is Node -> {
                 GtvArrayHeadNode(orgRoot.left, orgRoot.right, gtvArray, leafList.size, sumNrOfBytes, pathElem)
             }
