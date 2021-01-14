@@ -4,15 +4,23 @@ package net.postchain.base.l2
 
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockBuilder
+import net.postchain.base.snapshot.LeafStore
+import net.postchain.base.snapshot.SnapshotPageStore
+import net.postchain.base.snapshot.updateSnapshot
+import net.postchain.common.data.Hash
 import net.postchain.core.*
+import net.postchain.crypto.SECP256K1Keccak
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvEncoder
+import java.util.*
 
 interface L2EventProcessor {
     fun emitL2Event(evt: Gtv)
     fun emitL2State(state_n: Long, state: Gtv)
 }
 
-interface L2Implementation : L2EventProcessor {
+interface L2Implementation: L2EventProcessor {
     fun init(blockEContext: BlockEContext)
     fun finalize(): Map<String, Gtv>
 }
@@ -38,10 +46,10 @@ open class L2TxEContext(
     }
 
     override fun <T> getInterface(c: Class<T>): T? {
-        if (c == L2TxEContext::class.java) {
-            return this as T?
+        return if (c == L2TxEContext::class.java) {
+            this as T?
         } else
-            return super.getInterface(c)
+            super.getInterface(c)
     }
 
     companion object {
@@ -78,7 +86,7 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
                      val l2Implementation: L2Implementation,
                      maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
                      maxBlockTransactions: Long = 100
-) : BaseBlockBuilder(blockchainRID, cryptoSystem, eContext, store, txFactory, specialTxHandler, subjects, blockSigMaker,
+): BaseBlockBuilder(blockchainRID, cryptoSystem, eContext, store, txFactory, specialTxHandler, subjects, blockSigMaker,
         blockchainRelatedInfoDependencyList, usingHistoricBRID,
         maxBlockSize, maxBlockTransactions), L2EventProcessor by l2Implementation {
 
@@ -90,4 +98,54 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
     override fun getExtraData(): Map<String, Gtv> {
         return l2Implementation.finalize()
     }
+}
+
+class EthereumL2Implementation: L2Implementation {
+    lateinit var bctx: BlockEContext
+    lateinit var store: LeafStore
+    lateinit var snapshot: SnapshotPageStore
+
+    val events = mutableListOf<Hash>()
+    val states = mutableMapOf<Long, Hash>()
+
+    override fun init(blockEContext: BlockEContext) {
+        bctx = blockEContext
+        store = LeafStore()
+        snapshot = SnapshotPageStore(2, blockEContext, "", SECP256K1Keccak::treeHasher)
+    }
+
+    /**
+     * Compute event (as a simple Merkle tree) and state hashes (using updateSnapshot)
+     */
+    override fun finalize(): Map<String, Gtv> {
+        val extra = mutableMapOf<String, Gtv>()
+        val stateRootHash = updateSnapshot(snapshot, bctx.height, states as NavigableMap<Long, Hash>)
+        extra["l2StateRoot"] = GtvByteArray(stateRootHash)
+
+        return extra
+    }
+
+    /**
+     * Serialize, write to leaf store, hash using keccak256.
+     * Hashes are remembered and later combined into a Merkle tree
+     */
+    override fun emitL2Event(evt: Gtv) {
+        val data = GtvEncoder.simpleEncodeGtv(evt)
+        val hash = SECP256K1Keccak.digest(data)
+        events.add(hash)
+        store.writeEvent(bctx, data)
+    }
+
+    /**
+     * Serialize, write to leaf store,
+     * hash using keccak256. (state_n, hash) pairs are submitted to updateSnapshot
+     * during finalization
+     */
+    override fun emitL2State(state_n: Long, state: Gtv) {
+        val data = GtvEncoder.simpleEncodeGtv(state)
+        val hash = SECP256K1Keccak.digest(data)
+        states[state_n] = hash
+        store.writeState(bctx, state_n, data)
+    }
+
 }

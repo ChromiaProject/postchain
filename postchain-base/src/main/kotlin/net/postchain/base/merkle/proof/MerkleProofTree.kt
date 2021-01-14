@@ -2,9 +2,9 @@
 
 package net.postchain.base.merkle.proof
 
-import net.postchain.base.merkle.Hash
 import net.postchain.base.merkle.MerkleBasics.HASH_PREFIX_NODE
 import net.postchain.base.merkle.MerkleBasics.UNKNOWN_SIZE_IN_BYTE
+import net.postchain.common.data.Hash
 import java.util.*
 
 const val SERIALIZATION_HASH_LEAF_TYPE: Long = 100

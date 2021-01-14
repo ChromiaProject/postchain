@@ -2,15 +2,34 @@
 
 package net.postchain.base.snapshot
 
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.BlockEContext
 
-abstract class LeafStore {
-    abstract fun writeEvent(blockEContext: BlockEContext, data: ByteArray)
-    abstract fun writeState(blockEContext: BlockEContext, state_n: Long, data: ByteArray)
+class LeafStore {
+
+    /**
+     *
+     */
+    fun writeEvent(blockEContext: BlockEContext, data: ByteArray) {
+        val db = DatabaseAccess.of(blockEContext)
+        db.insertEvent(blockEContext, blockEContext.height, data)
+    }
+
+    /**
+     *
+     */
+    fun writeState(blockEContext: BlockEContext, state_n: Long, data: ByteArray) {
+        val db = DatabaseAccess.of(blockEContext)
+        db.insertState(blockEContext, blockEContext.height, state_n, data)
+    }
 
     // delete events at and below given height
-    abstract fun pruneEvents(blockEContext: BlockEContext, height: Long)
+    fun pruneEvents(blockEContext: BlockEContext, height: Long) {
+        TODO()
+    }
 
     // delete all states such that state_n is between left and right and state_height <= height
-    abstract fun pruneStates(blockEContext: BlockEContext, left: Long, right: Long, height: Long)
+    fun pruneStates(blockEContext: BlockEContext, left: Long, right: Long, height: Long) {
+        TODO()
+    }
 }

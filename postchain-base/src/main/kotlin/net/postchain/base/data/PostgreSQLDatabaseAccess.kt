@@ -47,6 +47,21 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " child_hashes BYTEA NOT NULL)"
     }
 
+    override fun cmdCreateTableEvent(ctx: EContext): String {
+        return "CREATE TABLE ${tableEvents(ctx)}" +
+                " (event_iid BIGSERIAL PRIMARY KEY," +
+                " block_height BIGINT NOT NULL, " +
+                " data BYTEA NOT NULL)"
+    }
+
+    override fun cmdCreateTableState(ctx: EContext): String {
+        return "CREATE TABLE ${tableStates(ctx)}" +
+                " (state_iid BIGSERIAL PRIMARY KEY," +
+                " block_height BIGINT NOT NULL, " +
+                " state_n BIGINT NOT NULL, " +
+                " data BYTEA NOT NULL)"
+    }
+
     override fun cmdCreateTableBlockchains(): String {
         return "CREATE TABLE ${tableBlockchains()} " +
                 " (chain_iid BIGINT PRIMARY KEY," +
@@ -109,6 +124,14 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     override fun cmdInsertSnapshotPages(ctx: EContext): String {
         return "INSERT INTO ${tableSnapshotPages(ctx)} (block_height, level, left, child_hashes) " +
                 "VALUES (?, ?, ?, ?)"
+    }
+
+    override fun cmdInsertEvents(ctx: EContext): String {
+        return "INSERT INTO ${tableEvents(ctx)} (block_height, data) " + "VALUES (?, ?)"
+    }
+
+    override fun cmdInsertStates(ctx: EContext): String {
+        return "INSERT INTO ${tableStates(ctx)} (block_height, state_n, data) " + "VALUES (?, ?, ?)"
     }
 
     override fun cmdInsertConfiguration(ctx: EContext): String {

@@ -2,7 +2,7 @@
 
 package net.postchain.base
 
-import net.postchain.base.merkle.Hash
+import net.postchain.common.data.Hash
 import net.postchain.core.Signature
 import net.postchain.crypto.SECP256K1Keccak
 import org.spongycastle.crypto.digests.SHA256Digest

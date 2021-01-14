@@ -73,6 +73,8 @@ interface DatabaseAccess {
     fun insertSnapshotPage(ctx: EContext, page: SnapshotPage)
     fun getSnapshotPage(ctx: EContext, height: Long, level: Int, left: Long): SnapshotPage?
     fun getSnapshotHighestLevelPage(ctx: EContext): Int
+    fun insertEvent(ctx: EContext, height: Long, data: ByteArray)
+    fun insertState(ctx: EContext, height: Long, state_n: Long, data: ByteArray)
 
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
     fun findPeerInfo(ctx: AppContext, host: String?, port: Int?, pubKeyPattern: String?): Array<PeerInfo>
