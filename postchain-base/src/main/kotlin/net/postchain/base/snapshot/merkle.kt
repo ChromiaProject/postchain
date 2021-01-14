@@ -3,13 +3,11 @@
 package net.postchain.base.snapshot
 
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.data.Hash
+import net.postchain.common.data.TreeHasher
 import net.postchain.core.BlockEContext
 import net.postchain.core.ProgrammerMistake
 import java.util.*
-
-typealias Hash = ByteArray
-
-typealias TreeHasher = (Hash, Hash) -> Hash
 
 class SnapshotPage(val blockHeight: Long, val level: Int, val left: Long,
                    val childHashes: Array<Hash>) {
@@ -27,10 +25,10 @@ class SnapshotPage(val blockHeight: Long, val level: Int, val left: Long,
 }
 
 class SnapshotPageStore(
-        val levelsPerPage: Int,
-        val blockEContext: BlockEContext,
-        val snapshotName: String,
-        val hasher: TreeHasher
+    val levelsPerPage: Int,
+    val blockEContext: BlockEContext,
+    val snapshotName: String,
+    val hasher: TreeHasher
 ) {
     fun writeSnapshotPage(page: SnapshotPage) {
         val db = DatabaseAccess.of(blockEContext)

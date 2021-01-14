@@ -4,6 +4,7 @@ package net.postchain.gtv.merkle.proof
 
 import net.postchain.base.merkle.*
 import net.postchain.base.merkle.proof.*
+import net.postchain.common.data.Hash
 import net.postchain.core.UserMistake
 import net.postchain.gtv.*
 import net.postchain.gtv.merkle.GtvArrayHeadNode

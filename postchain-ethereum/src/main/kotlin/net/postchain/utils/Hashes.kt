@@ -1,11 +1,10 @@
-package net.postchain.crypto
+package net.postchain.utils
 
-import net.postchain.utils.Numeric
 import org.spongycastle.jcajce.provider.digest.Keccak
 import java.nio.charset.StandardCharsets
 
 
-class Hash {
+class Hashes {
     companion object {
         /**
          * Keccak-256 hash function.

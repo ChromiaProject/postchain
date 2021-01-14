@@ -4,7 +4,7 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.merkle.Hash
+import net.postchain.common.data.Hash
 import net.postchain.core.*
 
 /**
@@ -99,8 +99,7 @@ class BaseBlockStore : BlockStore {
     override fun getBlock(ctx: EContext, blockRID: ByteArray, hashesOnly: Boolean): BlockDetail? {
         val db = DatabaseAccess.of(ctx)
         val blockInfo = db.getBlock(ctx, blockRID) ?: return null
-        var txDetails = listOf<TxDetail>()
-        txDetails = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
+        var txDetails: List<TxDetail> = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
         val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, SECP256K1CryptoSystem()) // TODO can I do this on the node or is it too computational expensive
         return BlockDetail(blockInfo.blockRid, blockHeaderDecoded.prevBlockRID, blockInfo.blockHeader, blockInfo.blockHeight, txDetails, blockInfo.witness, blockInfo.timestamp)
     }

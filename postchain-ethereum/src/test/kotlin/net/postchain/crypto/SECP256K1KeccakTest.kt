@@ -39,7 +39,7 @@ class SECP256K1KeccakTest : TestCase() {
     @Test
     fun testTreeHasherLeftNull() {
         val expected = "075E5B763130D2422F348BE7B0B5F6325D77894507B96AB2B266A3BF89E27129"
-        val left = ByteArray(32) {0}
+        val left = ByteArray(32) { 0 }
         val right = "ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray()
         val actual = SECP256K1Keccak.treeHasher(left, right)
         assertEquals(expected, actual.toHex())
@@ -50,7 +50,7 @@ class SECP256K1KeccakTest : TestCase() {
     fun testTreeHasherRightNull() {
         val expected = "6225C4B700F552912ACDFAD9481140B6B2F8B19D27459370EC47600BB18D73A7"
         val left = "ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray()
-        val right = ByteArray(32) {0}
+        val right = ByteArray(32) { 0 }
         val actual = SECP256K1Keccak.treeHasher(left, right)
         assertEquals(expected, actual.toHex())
         assertTrue(actual.contentEquals(expected.hexStringToByteArray()))
@@ -58,15 +58,15 @@ class SECP256K1KeccakTest : TestCase() {
 
     @Test
     fun testTreeHasherEmpty() {
-        val expected = ByteArray(32) {0}
-        val actual = SECP256K1Keccak.treeHasher(ByteArray(32) {0}, ByteArray(32) {0})
+        val expected = ByteArray(32) { 0 }
+        val actual = SECP256K1Keccak.treeHasher(ByteArray(32) { 0 }, ByteArray(32) { 0 })
         assertTrue(actual.contentEquals(expected))
     }
 
     @Test
     fun testTreeHasherInvalidHash() {
         val exception = assertFailsWith<InvalidParameterException> {
-            SECP256K1Keccak.treeHasher(byteArrayOf(0), ByteArray(32) {0})
+            SECP256K1Keccak.treeHasher(byteArrayOf(0), ByteArray(32) { 0 })
         }
         assertEquals("invalid hash length", exception.message)
     }

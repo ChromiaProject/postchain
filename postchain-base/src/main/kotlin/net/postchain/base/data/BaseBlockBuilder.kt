@@ -4,7 +4,7 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.merkle.Hash
+import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.*
@@ -91,7 +91,7 @@ open class BaseBlockBuilder(
     }
 
     open fun getExtraData(): Map<String, Gtv> {
-        return mapOf();
+        return mapOf()
     }
 
     /**
