@@ -2,9 +2,9 @@
 
 package net.postchain.gtv
 
-import net.postchain.common.data.Hash
 import net.postchain.base.merkle.MerkleHashCalculator
 import net.postchain.base.merkle.proof.MerkleHashSummary
+import net.postchain.common.data.Hash
 import net.postchain.gtv.merkle.GtvMerkleBasics
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.merkleHashSummary
