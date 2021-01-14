@@ -42,6 +42,14 @@ class SAPHanaSQLDatabaseAccess : SQLDatabaseAccess() {
         TODO("Not yet implemented")
     }
 
+    override fun cmdCreateTableEvent(ctx: EContext): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun cmdCreateTableState(ctx: EContext): String {
+        TODO("Not yet implemented")
+    }
+
     override fun cmdCreateTableBlockchains(): String {
         return "CREATE TABLE ${tableBlockchains()} " +
                 " (chain_iid BIGINT, blockchain_rid VARBINARY(1000) NOT NULL)"
@@ -105,6 +113,14 @@ class SAPHanaSQLDatabaseAccess : SQLDatabaseAccess() {
     }
 
     override fun cmdInsertSnapshotPages(ctx: EContext): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun cmdInsertEvents(ctx: EContext): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun cmdInsertStates(ctx: EContext): String {
         TODO("Not yet implemented")
     }
 

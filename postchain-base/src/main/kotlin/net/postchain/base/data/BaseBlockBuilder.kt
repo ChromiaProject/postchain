@@ -91,7 +91,7 @@ open class BaseBlockBuilder(
     }
 
     open fun getExtraData(): Map<String, Gtv> {
-        return mapOf();
+        return mapOf()
     }
 
     /**

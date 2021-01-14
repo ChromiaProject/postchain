@@ -2,10 +2,10 @@
 
 package net.postchain.gtv.merkle.proof
 
-import net.postchain.common.data.Hash
 import net.postchain.base.merkle.MerkleBasics.UNKNOWN_SIZE_IN_BYTE
 import net.postchain.base.merkle.MerkleHashCalculator
 import net.postchain.base.merkle.proof.*
+import net.postchain.common.data.Hash
 import net.postchain.gtv.*
 import net.postchain.gtv.merkle.GtvMerkleBasics
 import net.postchain.gtv.merkle.GtvMerkleBasics.HASH_PREFIX_NODE_GTV_ARRAY

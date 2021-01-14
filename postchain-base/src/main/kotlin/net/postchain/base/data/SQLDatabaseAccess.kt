@@ -28,6 +28,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
     protected fun tableSnapshotPages(ctx: EContext): String = tableName(ctx, "snapshot_pages")
+    protected fun tableEvents(ctx: EContext): String = tableName(ctx, "events")
+    protected fun tableStates(ctx: EContext): String = tableName(ctx, "states")
     protected fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
     protected fun tableEvents(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_events")
     protected fun tableStates(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_states")
@@ -52,6 +54,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdCreateTableSnapshotPage(ctx: EContext): String
+    protected abstract fun cmdCreateTableEvent(ctx: EContext): String
+    protected abstract fun cmdCreateTableState(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
@@ -59,6 +63,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     // --- Insert ---
     protected abstract fun cmdInsertTransactions(ctx: EContext): String
     protected abstract fun cmdInsertSnapshotPages(ctx: EContext): String
+    protected abstract fun cmdInsertEvents(ctx: EContext): String
+    protected abstract fun cmdInsertStates(ctx: EContext): String
     protected abstract fun cmdInsertConfiguration(ctx: EContext): String
     protected abstract fun cmdInsertEvents(ctx: EContext, prefix: String): String
     protected abstract fun cmdInsertStates(ctx: EContext, prefix: String): String
@@ -96,7 +102,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val schemas = connection.metaData.schemas
 
         while (schemas.next()) {
-            if (schemas.getString(1).toLowerCase() == schema.toLowerCase()) {
+            if (schemas.getString(1).equals(schema, ignoreCase = true)) {
                 return true
             }
         }
@@ -386,6 +392,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, intRes)
     }
 
+    override fun insertEvent(ctx: EContext, height: Long, data: ByteArray) {
+        queryRunner.update(ctx.conn, cmdInsertEvents(ctx), height, data)
+    }
+
+    override fun insertState(ctx: EContext, height: Long, state_n: Long, data: ByteArray) {
+        queryRunner.update(ctx.conn, cmdInsertStates(ctx), height, state_n, data)
+    }
+
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
         /**
          * "CREATE TABLE IF NOT EXISTS" is not good enough for the meta table
@@ -442,6 +456,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         // TODO: [POS-147]: temporarily here, might init in other place for L2
         // L2 tables
         queryRunner.update(ctx.conn, cmdCreateTableSnapshotPage(ctx))
+        queryRunner.update(ctx.conn, cmdCreateTableSnapshotPage(ctx))
+        queryRunner.update(ctx.conn, tableEvents(ctx), cmdCreateTableEvent(ctx))
+        queryRunner.update(ctx.conn, tableStates(ctx), cmdCreateTableState(ctx))
 
         // TODO: [POS-128]: Temporal solution
         val indexCreated = tableExists(ctx.conn, tableTransactions(ctx))

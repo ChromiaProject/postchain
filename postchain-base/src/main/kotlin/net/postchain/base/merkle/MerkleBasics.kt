@@ -55,8 +55,6 @@ import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
  * Ripple ([2]) uses a such a prefix system.
  * --------
  */
-
-
 object MerkleBasics {
 
     /**
