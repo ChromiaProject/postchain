@@ -13,6 +13,7 @@ import net.postchain.crypto.SECP256K1Keccak
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
+import net.postchain.merkle.MerkleTreeBuilder
 import java.util.*
 
 interface L2EventProcessor {
@@ -120,8 +121,9 @@ class EthereumL2Implementation: L2Implementation {
     override fun finalize(): Map<String, Gtv> {
         val extra = mutableMapOf<String, Gtv>()
         val stateRootHash = updateSnapshot(snapshot, bctx.height, states as NavigableMap<Long, Hash>)
-        extra["l2StateRoot"] = GtvByteArray(stateRootHash)
-
+        val builer = MerkleTreeBuilder(SECP256K1Keccak::treeHasher)
+        val eventRootHash = builer.merkleRootHash(events)
+        extra["l2RootHash"] = GtvByteArray(stateRootHash.plus(eventRootHash))
         return extra
     }
 
