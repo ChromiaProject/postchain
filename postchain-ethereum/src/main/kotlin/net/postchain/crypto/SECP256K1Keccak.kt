@@ -1,5 +1,6 @@
 package net.postchain.crypto
 
+import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.utils.Hashes
 import net.postchain.utils.Numeric
@@ -19,7 +20,6 @@ object SECP256K1Keccak {
     private val params: X9ECParameters = CustomNamedCurves.getByName("secp256k1")
     private val CURVE_PARAMS = ECDomainParameters(params.curve, params.g, params.n, params.h)
     private val CURVE: ECCurve = CURVE_PARAMS.curve
-    private val EMPTY_HASH = ByteArray(HASH_LENGTH) { 0 }
 
     fun treeHasher(left: Hash, right: Hash): Hash {
         if (left.size != HASH_LENGTH || right.size != HASH_LENGTH)

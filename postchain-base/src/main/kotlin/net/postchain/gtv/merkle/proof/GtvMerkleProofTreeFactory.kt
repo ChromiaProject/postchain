@@ -4,6 +4,7 @@ package net.postchain.gtv.merkle.proof
 
 import net.postchain.base.merkle.*
 import net.postchain.base.merkle.proof.*
+import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.core.UserMistake
 import net.postchain.gtv.*
@@ -56,7 +57,7 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
     ): MerkleProofElement {
         return when (currentElement) {
             is EmptyLeaf -> {
-                ProofHashedLeaf(MerkleBasics.EMPTY_HASH) // Just zeros
+                ProofHashedLeaf(EMPTY_HASH) // Just zeros
             }
             is Leaf<*> -> {
                 val content: Gtv = currentElement.content as Gtv // Have to convert here

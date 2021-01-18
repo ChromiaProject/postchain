@@ -18,8 +18,8 @@ class MerkleTree(val treeHasher: TreeHasher) {
     /**
      * Adds two child subtrees to this Merkle Tree.
      *
-     * @param leftChild The left child tree
-     * @param rightChild The right child tree
+     * @param leftTree The left child tree
+     * @param rightTree The right child tree
      */
     fun add(leftTree: MerkleTree, rightTree: MerkleTree) {
         this.leftTree = leftTree
@@ -34,8 +34,8 @@ class MerkleTree(val treeHasher: TreeHasher) {
     /**
      * Adds two child leaves to this Merkle Tree.
      *
-     * @param leftChild The left child leaf
-     * @param rightChild The right child leaf
+     * @param leftLeaf The left child leaf
+     * @param rightLeaf The right child leaf
      */
     fun add(leftLeaf: Leaf, rightLeaf: Leaf) {
         this.leftLeaf = leftLeaf
