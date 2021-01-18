@@ -64,11 +64,6 @@ object MerkleBasics {
     const val HASH_PREFIX_NODE: Byte = 0
     const val HASH_PREFIX_LEAF: Byte = 1
 
-    /**
-     * Use this to represent a hash of an empty element (in a tree, typically)
-     */
-    val EMPTY_HASH = ByteArray(32) // Just zeros
-
     const val UNKNOWN_SIZE_IN_BYTE = -101
 
     /**

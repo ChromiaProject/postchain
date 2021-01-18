@@ -3,6 +3,7 @@
 package net.postchain.base.snapshot
 
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.TreeHasher
 import net.postchain.core.BlockEContext
@@ -53,8 +54,6 @@ class SnapshotPageStore(
         return db.getSnapshotHighestLevelPage(blockEContext)
     }
 }
-
-val EMPTY_HASH = ByteArray(32) { 0 }
 
 fun getMerkleProof(blockHeight: Long, store: SnapshotPageStore, leafPos: Long): List<Hash> {
     val path = mutableListOf<Hash>()
@@ -110,10 +109,10 @@ fun updateSnapshot(store: SnapshotPageStore, blockHeight: Long, leafHashes: Navi
             store.writeSnapshotPage(page)
             current = leftInEntries + entriesPerPage
         }
-        if (upperEntryMap.lastKey() > 0 || prevHighestLevelPage > level)
-            return updateLevel(level + store.levelsPerPage, upperEntryMap)
+        return if (upperEntryMap.lastKey() > 0 || prevHighestLevelPage > level)
+            updateLevel(level + store.levelsPerPage, upperEntryMap)
         else
-            return upperEntryMap[0]!!
+            upperEntryMap[0]!!
     }
 
     if (leafHashes.size == 0) throw ProgrammerMistake("couldn't because")
