@@ -10,52 +10,61 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.ProgrammerMistake
 import java.util.*
 
-class SnapshotPage(val blockHeight: Long, val level: Int, val left: Long,
-                   val childHashes: Array<Hash>) {
+class SnapshotPage(
+    val blockHeight: Long, val level: Int, val left: Long,
+    val childHashes: Array<Hash>
+) {
     fun getHashes(relLevel: Int, treeHasher: TreeHasher): Array<Hash> {
         return if (relLevel == 0) childHashes
         else {
             val priorHashes = getHashes(relLevel - 1, treeHasher)
-            Array(
-                (priorHashes.size / 2)
-            ) { i ->
-                treeHasher(priorHashes[i * 2], priorHashes[i * 2 + 1])
+            Array(priorHashes.size / 2) {
+                treeHasher(priorHashes[it * 2], priorHashes[it * 2 + 1])
             }
         }
     }
 }
 
+interface BasePageStore {
+    val levelsPerPage: Int
+    val hasher: TreeHasher
+    fun writeSnapshotPage(page: SnapshotPage)
+    fun readSnapshotPage(blockHeight: Long, level: Int, left: Long): SnapshotPage?
+    fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit)
+    fun highestLevelPage(): Int
+}
+
 class SnapshotPageStore(
-    val levelsPerPage: Int,
     val blockEContext: BlockEContext,
     val snapshotName: String,
-    val hasher: TreeHasher
-) {
-    fun writeSnapshotPage(page: SnapshotPage) {
+    override val levelsPerPage: Int,
+    override val hasher: TreeHasher
+): BasePageStore {
+    override fun writeSnapshotPage(page: SnapshotPage) {
         val db = DatabaseAccess.of(blockEContext)
         db.insertSnapshotPage(blockEContext, page)
     }
 
     // read the page with blockHeight equal or lower than given
     // for a given level and position, if exists
-    fun readSnapshotPage(blockHeight: Long, level: Int, left: Long): SnapshotPage? {
+    override fun readSnapshotPage(blockHeight: Long, level: Int, left: Long): SnapshotPage? {
         val db = DatabaseAccess.of(blockEContext)
         return db.getSnapshotPage(blockEContext, blockHeight, level, left)
     }
 
     // delete all pages with height at or below given
     // except those which are used
-    fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit) {
+    override fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit) {
         TODO("Not yet implemented")
     }
 
-    fun highestLevelPage(): Int {
+    override fun highestLevelPage(): Int {
         val db = DatabaseAccess.of(blockEContext)
         return db.getSnapshotHighestLevelPage(blockEContext)
     }
 }
 
-fun getMerkleProof(blockHeight: Long, store: SnapshotPageStore, leafPos: Long): List<Hash> {
+fun getMerkleProof(blockHeight: Long, store: BasePageStore, leafPos: Long): List<Hash> {
     val path = mutableListOf<Hash>()
     val highest = store.highestLevelPage()
     for (level in 0..highest step store.levelsPerPage) {
@@ -74,7 +83,7 @@ fun getMerkleProof(blockHeight: Long, store: SnapshotPageStore, leafPos: Long): 
     return path
 }
 
-fun updateSnapshot(store: SnapshotPageStore, blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
+fun updateSnapshot(store: BasePageStore, blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
     val entriesPerPage = 1 shl store.levelsPerPage
     val prevHighestLevelPage = store.highestLevelPage()
 
