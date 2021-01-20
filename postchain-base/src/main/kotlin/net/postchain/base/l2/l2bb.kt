@@ -112,7 +112,7 @@ class EthereumL2Implementation: L2Implementation {
     override fun init(blockEContext: BlockEContext) {
         bctx = blockEContext
         store = LeafStore()
-        snapshot = SnapshotPageStore(2, blockEContext, "", SECP256K1Keccak::treeHasher)
+        snapshot = SnapshotPageStore(blockEContext, "", 2, SECP256K1Keccak::treeHasher)
     }
 
     /**
@@ -121,8 +121,8 @@ class EthereumL2Implementation: L2Implementation {
     override fun finalize(): Map<String, Gtv> {
         val extra = mutableMapOf<String, Gtv>()
         val stateRootHash = updateSnapshot(snapshot, bctx.height, states as NavigableMap<Long, Hash>)
-        val builer = MerkleTreeBuilder(SECP256K1Keccak::treeHasher)
-        val eventRootHash = builer.merkleRootHash(events)
+        val builder = MerkleTreeBuilder(SECP256K1Keccak::treeHasher)
+        val eventRootHash = builder.merkleRootHash(events)
         extra["l2RootHash"] = GtvByteArray(stateRootHash.plus(eventRootHash))
         return extra
     }
