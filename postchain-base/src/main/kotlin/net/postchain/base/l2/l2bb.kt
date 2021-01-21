@@ -107,7 +107,7 @@ class EthereumL2Implementation: L2Implementation {
     lateinit var snapshot: SnapshotPageStore
 
     val events = mutableListOf<Hash>()
-    val states = mutableMapOf<Long, Hash>()
+    val states = TreeMap<Long, Hash>()
 
     override fun init(blockEContext: BlockEContext) {
         bctx = blockEContext
