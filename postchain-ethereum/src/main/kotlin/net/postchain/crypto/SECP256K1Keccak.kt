@@ -24,10 +24,11 @@ object SECP256K1Keccak {
     fun treeHasher(left: Hash, right: Hash): Hash {
         if (left.size != HASH_LENGTH || right.size != HASH_LENGTH)
             throw InvalidParameterException("invalid hash length")
-        return if (left.contentEquals(EMPTY_HASH) && right.contentEquals(EMPTY_HASH)) {
-            EMPTY_HASH
-        } else {
-            digest(left.plus(right))
+        return when {
+            left.contentEquals(EMPTY_HASH) && right.contentEquals(EMPTY_HASH) -> EMPTY_HASH
+            left.contentEquals(EMPTY_HASH) -> right
+            right.contentEquals(EMPTY_HASH) -> left
+            else -> digest(left.plus(right))
         }
     }
 
