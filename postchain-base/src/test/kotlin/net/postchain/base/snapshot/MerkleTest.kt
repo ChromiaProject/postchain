@@ -85,4 +85,50 @@ class MerkleTest : TestCase() {
         val root = SECP256K1Keccak.treeHasher(leftHash, rightHash)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
+
+    fun testUpdateSnapshot_5pages_Multiple_Blocks() {
+        leafHashes[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()
+        leafHashes[9] = "d2f8f61201b2b11a78d6e866abc9c3db2ae8631fa656bfe5cb53668255367afb".hexStringToByteArray()
+        updateSnapshot(store, 1, leafHashes)
+
+        val leafHashes2 = TreeMap<Long, Hash>()
+        leafHashes2[2] = "ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray()
+        leafHashes2[8] = "9ae6066ff8547d3138cce35b150f93047df88fa376c8808f462d3bbdbcb4a690".hexStringToByteArray()
+        leafHashes2[9] = "c41c8390c0da0418b7667ee0df6c246c26c4be6c0618368dce5a916e8008b0db".hexStringToByteArray()
+
+        updateSnapshot(store, 2, leafHashes2)
+
+        val leafHashes3 = TreeMap<Long, Hash>()
+        leafHashes3[10] = "1a192fabce13988b84994d4296e6cdc418d55e2f1d7f942188d4040b94fc57ac".hexStringToByteArray()
+        leafHashes3[11] = "7880aec93413f117ef14bd4e6d130875ab2c7d7d55a064fac3c2f7bd51516380".hexStringToByteArray()
+
+        updateSnapshot(store, 3, leafHashes3)
+
+        val leafHashes4 =TreeMap<Long, Hash>()
+
+        leafHashes4[0] = "8c18210df0d9514f2d2e5d8ca7c100978219ee80d3968ad850ab5ead208287b3".hexStringToByteArray()
+        leafHashes4[12] = "7f8b6b088b6d74c2852fc86c796dca07b44eed6fb3daf5e6b59f7c364db14528".hexStringToByteArray()
+        leafHashes4[13] = "789bcdf275fa270780a52ae3b79bb1ce0fda7e0aaad87b57b74bb99ac290714a".hexStringToByteArray()
+        leafHashes4[14] = "5c4c6aa067b6f8e6cb38e6ab843832a94d1712d661a04d73c517d6a1931a9e5d".hexStringToByteArray()
+        leafHashes4[15] = "1d3be50b2bb17407dd170f1d5da128d1def30c6b1598d6a629e79b4775265526".hexStringToByteArray()
+
+        val stateRootHash = updateSnapshot(store, 4, leafHashes4)
+
+        val l01 = SECP256K1Keccak.treeHasher(leafHashes4[0]!!, leafHashes[1]!!)
+        val l23 = SECP256K1Keccak.treeHasher(leafHashes2[2]!!, leafHashes[3]!!)
+        val hash00 = SECP256K1Keccak.treeHasher(l01, l23)
+        val l45 = SECP256K1Keccak.treeHasher(leafHashes[4]!!, leafHashes[5]!!)
+        val l67 = SECP256K1Keccak.treeHasher(leafHashes[6]!!, leafHashes[7]!!)
+        val hash01 = SECP256K1Keccak.treeHasher(l45, l67)
+        val l89 = SECP256K1Keccak.treeHasher(leafHashes2[8]!!, leafHashes2[9]!!)
+        val l1011 = SECP256K1Keccak.treeHasher(leafHashes3[10]!!, leafHashes3[11]!!)
+        val hash10 = SECP256K1Keccak.treeHasher(l89, l1011)
+        val l1213 = SECP256K1Keccak.treeHasher(leafHashes4[12]!!, leafHashes4[13]!!)
+        val l1415 = SECP256K1Keccak.treeHasher(leafHashes4[14]!!, leafHashes4[15]!!)
+        val hash11 = SECP256K1Keccak.treeHasher(l1213, l1415)
+        val leftHash = SECP256K1Keccak.treeHasher(hash00, hash01)
+        val rightHash = SECP256K1Keccak.treeHasher(hash10, hash11)
+        val root = SECP256K1Keccak.treeHasher(leftHash, rightHash)
+        assertEquals(stateRootHash.toHex(), root.toHex())
+    }
 }
