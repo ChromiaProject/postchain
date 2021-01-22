@@ -43,7 +43,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " (snapshot_page_iid BIGSERIAL PRIMARY KEY," +
                 " block_height BIGINT NOT NULL, " +
                 " level INTEGER NOT NULL, " +
-                " left BIGINT NOT NULL), " +
+                " left_index BIGINT NOT NULL, " +
                 " child_hashes BYTEA NOT NULL)"
     }
 
@@ -122,7 +122,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     }
 
     override fun cmdInsertSnapshotPages(ctx: EContext): String {
-        return "INSERT INTO ${tableSnapshotPages(ctx)} (block_height, level, left, child_hashes) " +
+        return "INSERT INTO ${tableSnapshotPages(ctx)} (block_height, level, left_index, child_hashes) " +
                 "VALUES (?, ?, ?, ?)"
     }
 
