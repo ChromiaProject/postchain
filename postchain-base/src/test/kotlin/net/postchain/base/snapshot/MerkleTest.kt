@@ -86,7 +86,7 @@ class MerkleTest : TestCase() {
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
-    fun testUpdateSnapshot_5pages_Multiple_Blocks() {
+    fun testUpdateSnapshot_6pages_Multiple_Blocks() {
         leafHashes[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()
         leafHashes[9] = "d2f8f61201b2b11a78d6e866abc9c3db2ae8631fa656bfe5cb53668255367afb".hexStringToByteArray()
         updateSnapshot(store, 1, leafHashes)
@@ -104,7 +104,7 @@ class MerkleTest : TestCase() {
 
         updateSnapshot(store, 3, leafHashes3)
 
-        val leafHashes4 =TreeMap<Long, Hash>()
+        val leafHashes4 = TreeMap<Long, Hash>()
 
         leafHashes4[0] = "8c18210df0d9514f2d2e5d8ca7c100978219ee80d3968ad850ab5ead208287b3".hexStringToByteArray()
         leafHashes4[12] = "7f8b6b088b6d74c2852fc86c796dca07b44eed6fb3daf5e6b59f7c364db14528".hexStringToByteArray()
@@ -130,5 +130,29 @@ class MerkleTest : TestCase() {
         val rightHash = SECP256K1Keccak.treeHasher(hash10, hash11)
         val root = SECP256K1Keccak.treeHasher(leftHash, rightHash)
         assertEquals(stateRootHash.toHex(), root.toHex())
+
+        val leafHashes5 = TreeMap<Long, Hash>()
+        leafHashes5[16] = "277ab82e5a4641341820a4a2933a62c1de997e42e92548657ae21b3728d580fe".hexStringToByteArray()
+
+        val stateRootHash2 = updateSnapshot(store, 5, leafHashes5)
+
+        val root2 = SECP256K1Keccak.treeHasher(root, leafHashes5[16]!!)
+        assertEquals(stateRootHash2.toHex(), root2.toHex())
     }
+
+//    fun test() {
+//        val leafs = TreeMap<Long, Hash>()
+//
+//        for (i in 0..15) {
+//            leafs[i.toLong()] = SECP256K1Keccak.digest(BigInteger.valueOf(i.toLong()).toByteArray())
+//        }
+//
+//        updateSnapshot(store, 5, leafs)
+//
+//        val leaf2 = TreeMap<Long, Hash>()
+//        leaf2[16] = SECP256K1Keccak.digest(BigInteger.valueOf(16L).toByteArray())
+//
+//        val rootHash = updateSnapshot(store, 6, leaf2)
+//        println(rootHash.toHex())
+//    }
 }

@@ -39,7 +39,7 @@ class SnapshotPageStore(
     val snapshotName: String,
     override val levelsPerPage: Int,
     override val hasher: TreeHasher
-): BasePageStore {
+) : BasePageStore {
     override fun writeSnapshotPage(page: SnapshotPage) {
         val db = DatabaseAccess.of(blockEContext)
         db.insertSnapshotPage(blockEContext, page)
@@ -90,12 +90,12 @@ fun updateSnapshot(store: BasePageStore, blockHeight: Long, leafHashes: Navigabl
     fun updateLevel(level: Int, entryHashes: NavigableMap<Long, Hash>): Hash {
         var current = 0L
         val upperEntryMap = TreeMap<Long, Hash>()
-        val leafsPerEntry = 1 shl level // one entry corresponds to this many leafs at the bottom
+//        val leafsPerEntry = 1 shl level // one entry corresponds to this many leafs at the bottom
         while (true) {
             val next = entryHashes.ceilingEntry(current) ?: break
             // calculate left boundary of page, in entries on this level, in entries at this level
-            val leftInEntries = next.key - (next.key % entriesPerPage)
-            val left = leafsPerEntry * leftInEntries // left in leafs
+            val left = next.key - (next.key % entriesPerPage)
+//            val left = leafsPerEntry * leftInEntries // left in leafs
             var haveMissingLeafs = false
             val pageElts = Array(entriesPerPage) {
                 val leaf = entryHashes[it + left]
@@ -114,14 +114,18 @@ fun updateSnapshot(store: BasePageStore, blockHeight: Long, leafHashes: Navigabl
             val pageChildren = pageElts.map { it ?: EMPTY_HASH }.toTypedArray()
             val page = SnapshotPage(blockHeight, level, left, pageChildren)
             val pageHash = page.getHashes(store.levelsPerPage, store.hasher)[0]
-            upperEntryMap[leftInEntries / entriesPerPage] = pageHash
+            upperEntryMap[left / entriesPerPage] = pageHash
             store.writeSnapshotPage(page)
-            current = leftInEntries + entriesPerPage
+            current = left + entriesPerPage
         }
         return if (upperEntryMap.lastKey() > 0 || prevHighestLevelPage > level)
             updateLevel(level + store.levelsPerPage, upperEntryMap)
-        else
+        else {
+            val pageChildren = Array(entriesPerPage) { EMPTY_HASH }
+            pageChildren[0] = upperEntryMap[0]!!
+            store.writeSnapshotPage(SnapshotPage(blockHeight, level + store.levelsPerPage, 0, pageChildren))
             upperEntryMap[0]!!
+        }
     }
 
     if (leafHashes.size == 0) throw ProgrammerMistake("couldn't because")
