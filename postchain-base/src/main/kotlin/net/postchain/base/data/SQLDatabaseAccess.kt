@@ -308,10 +308,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdInsertSnapshotPages(ctx), page.blockHeight, page.level, page.left, childHashes)
     }
 
+    /**
+     * If we didn't prune the old one then we need to query the snapshot page
+     * at highest block height that less than or equal to specific height
+     */
     override fun getSnapshotPage(ctx: EContext, height: Long, level: Int, left: Long): SnapshotPage? {
         val hashLength = 32
-        val sql = "SELECT child_hashes FROM ${tableSnapshotPages(ctx)} WHERE block_height = ? AND level = ? AND left = ?"
-        val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left)
+        val sql = """
+            SELECT child_hashes FROM ${tableSnapshotPages(ctx)} 
+            WHERE block_height = (SELECT MAX(block_height) FROM ${tableSnapshotPages(ctx)} 
+                                    WHERE block_height <= ? AND level = ? AND left_index = ?)
+            AND level = ? AND left_index = ?"""
+        val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left, level, left)
         // if data size is not contain correct length then it regards to error
         if (data == null || data.size % hashLength != 0) return null
         val length = data.size / hashLength
