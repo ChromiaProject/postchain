@@ -16,7 +16,7 @@ class TestPageStore(
     }
 
     override fun readSnapshotPage(blockHeight: Long, level: Int, left: Long): SnapshotPage? {
-        var maxHeight:Long = 0
+        var maxHeight: Long = 0
         var result: SnapshotPage? = null
         for ((_, v) in store) {
             if (v.blockHeight <= blockHeight && v.level == level && v.left == left) {
