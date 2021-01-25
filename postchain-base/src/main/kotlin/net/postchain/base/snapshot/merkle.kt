@@ -7,7 +7,6 @@ import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.TreeHasher
 import net.postchain.core.BlockEContext
-import net.postchain.core.ProgrammerMistake
 import java.util.*
 
 class SnapshotPage(
@@ -128,7 +127,7 @@ fun updateSnapshot(store: BasePageStore, blockHeight: Long, leafHashes: Navigabl
         }
     }
 
-    if (leafHashes.size == 0) throw ProgrammerMistake("couldn't because")
+    if (leafHashes.size == 0) return EMPTY_HASH
     return updateLevel(0, leafHashes)
 }
 
