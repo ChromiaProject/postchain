@@ -396,7 +396,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getSnapshotHighestLevelPage(ctx: EContext): Int {
-        val sql = "SELECT MAX(level) FROM ${tableSnapshotPages(ctx)}"
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tableSnapshotPages(ctx)}"
         return queryRunner.query(ctx.conn, sql, intRes)
     }
 

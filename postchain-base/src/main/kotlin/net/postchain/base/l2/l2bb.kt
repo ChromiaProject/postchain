@@ -27,7 +27,7 @@ interface L2Implementation: L2EventProcessor {
 }
 
 open class L2TxEContext(
-        protected val ectx: TxEContext, protected val bb: L2BlockBuilder
+    private val ectx: TxEContext, private val bb: L2BlockBuilder
 ) : TxEContext by ectx, L2EventProcessor {
 
     val events = mutableListOf<Gtv>()
@@ -50,7 +50,7 @@ open class L2TxEContext(
         return if (c == L2TxEContext::class.java) {
             this as T?
         } else
-            super.getInterface(c)
+            ectx.getInterface(c)
     }
 
     companion object {
