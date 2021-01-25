@@ -1,6 +1,7 @@
 package net.postchain.devtools.l2
 
 import net.postchain.base.BlockchainRid
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.Transaction
 import net.postchain.devtools.IntegrationTestSetup
@@ -13,6 +14,17 @@ import org.junit.Assert
 import kotlin.test.Test
 
 class L2BlockBuilderTest : IntegrationTestSetup() {
+
+    fun makeL2Op(bcRid: BlockchainRid): ByteArray {
+        val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
+        b.addOperation("l2_event",
+            arrayOf(
+                GtvFactory.gtv(1),
+                GtvFactory.gtv("044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d".hexStringToByteArray())))
+        b.finish()
+        b.sign(myCS.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
+        return b.serialize()
+    }
 
     fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
@@ -87,6 +99,10 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         // Tx 3: Nop (invalid, since need more ops)
         val x = makeNOPGTX(bcRid)
         enqueueTx(x)
+
+        // Tx: L2 Event Op
+        val validTx2 = enqueueTx(makeL2Op(bcRid))!!
+        validTxs.add(validTx2)
 
         // -------------------------
         // Build it
