@@ -10,7 +10,11 @@ class MerkleTreeBuilder(private val hasher: TreeHasher) {
         val leafs = buildLeafs(data)
         val firstLayer = buildBottomLayer(leafs)
         val root = build(firstLayer)
-        return root[0].digest()
+        return if (root.isEmpty()) {
+             EMPTY_HASH
+        } else {
+            root[0].digest()
+        }
     }
 
     fun buildLeafs(data: List<Hash>): List<Leaf> {
@@ -37,9 +41,7 @@ class MerkleTreeBuilder(private val hasher: TreeHasher) {
     }
 
     fun build(data: List<MerkleTree>): List<MerkleTree> {
-        if (data.isEmpty()) {
-            throw IllegalStateException("invalid data")
-        } else if (data.size == 1) {
+        if (data.size <= 1) {
             return data
         }
 
