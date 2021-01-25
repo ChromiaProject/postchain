@@ -7,7 +7,6 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.NameService
 import net.postchain.core.Infrastructure
-import net.postchain.managed.ManagedNodeDataSource
 import org.apache.commons.configuration2.ConfigurationUtils
 import java.io.File
 import java.nio.file.Path
@@ -20,21 +19,21 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
     // Just for tests
     private fun m(message: String) = "\t" + message
 
-    override fun createContainerWorkingDir(process: ContainerBlockchainProcess): Pair<Path, Path> {
+    override fun createContainerWorkingDir(chainId: Long): Pair<Path, Path> {
         // Creating current working dir (target)
-        val containerCwd = Paths.get(nodeConfig.appConfig.configDir, "containers", process.chainId.toString())
-        val containerChainDir = containerCwd.resolve("blockchains${File.separator}${process.chainId}")
-        if (containerChainDir.toFile().exists()) {
-            logger.info(m("Container chain dir exists: $containerChainDir"))
+        val containerDir = Paths.get(nodeConfig.appConfig.configDir, "containers", chainId.toString())
+        val containerChainConfigsDir = containerDir.resolve("blockchains${File.separator}$chainId")
+        if (containerChainConfigsDir.toFile().exists()) {
+            logger.info(m("Container chain dir exists: $containerChainConfigsDir"))
         } else {
-            val created = containerChainDir.toFile().mkdirs()
-            logger.info(m("Container chain dir ${if (created) "has" else "hasn't"} been created: $containerChainDir"))
+            val created = containerChainConfigsDir.toFile().mkdirs()
+            logger.info(m("Container chain dir ${if (created) "has" else "hasn't"} been created: $containerChainConfigsDir"))
         }
 
-        return containerCwd to containerChainDir
+        return containerDir to containerChainConfigsDir
     }
 
-    override fun createContainerNodeConfig(process: ContainerBlockchainProcess, containerCwd: Path) {
+    override fun createContainerNodeConfig(process: ContainerBlockchainProcess, containerDir: Path) {
         // Cloning original nodeConfig
         val config = ConfigurationUtils.cloneConfiguration(nodeConfig.appConfig.config)
 
@@ -53,28 +52,9 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         config.setProperty("peerinfos", peerInfos)
 
         // Creating a nodeConfig file
-        val filename = containerCwd.resolve("node-config.properties").toString()
+        val filename = containerDir.resolve("node-config.properties").toString()
         AppConfig.toPropertiesFile(config, filename)
         logger.info(m("Container slave node properties file has been created: $filename"))
-    }
-
-    override fun createContainerChainConfigs(dataSource: ManagedNodeDataSource, process: ContainerBlockchainProcess, chainDir: Path) {
-        // Retrieving configs from dataSource/chain0
-        val configs: Map<Long, ByteArray> = try {
-            dataSource.getConfigurations(process.blockchainRid.data)
-        } catch (e: Exception) {
-            logger.error(m("Exception in dataSource.getConfigurations(): " + e.message))
-            mapOf()
-        }
-
-        // Dumping all chain configs to chain dir
-        // TODO: [POS-129]: Skip already dumped configs
-        logger.info(m("Number of chain configs to dump: ${configs.size}"))
-        configs.forEach { (height, config) ->
-            val configPath = chainDir.resolve("$height.gtv")
-            configPath.toFile().writeBytes(config)
-            logger.info(m("Config file dumped: $configPath"))
-        }
     }
 
 }

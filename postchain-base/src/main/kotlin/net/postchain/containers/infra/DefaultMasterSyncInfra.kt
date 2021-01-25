@@ -11,10 +11,12 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
+import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.masterslave.master.DefaultMasterCommunicationManager
 import net.postchain.network.masterslave.master.DefaultMasterConnectionManager
 import net.postchain.network.masterslave.master.MasterConnectionManager
 import net.postchain.network.netty2.NettyConnectorFactory
+import java.nio.file.Path
 
 class DefaultMasterSyncInfra(
         nodeConfigProvider: NodeConfigurationProvider,
@@ -36,7 +38,9 @@ class DefaultMasterSyncInfra(
     override fun makeMasterBlockchainProcess(
             processName: BlockchainProcessName,
             chainId: Long,
-            blockchainRid: BlockchainRid
+            blockchainRid: BlockchainRid,
+            dataSource: ManagedNodeDataSource,
+            chainConfigsDir: Path
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -53,7 +57,9 @@ class DefaultMasterSyncInfra(
                 processName,
                 chainId,
                 blockchainRid,
-                communicationManager)
+                communicationManager,
+                dataSource,
+                chainConfigsDir)
     }
 
 }

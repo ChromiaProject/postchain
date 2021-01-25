@@ -1,23 +1,17 @@
 package net.postchain.containers.bpm
 
-import net.postchain.managed.ManagedNodeDataSource
 import java.nio.file.Path
 
 interface ContainerInitializer {
 
     /**
-     *
+     * TODO: [POS-129]: Add kdoc
      */
-    fun createContainerWorkingDir(process: ContainerBlockchainProcess): Pair<Path, Path>
+    fun createContainerWorkingDir(chainId: Long): Pair<Path, Path>
 
     /**
-     *
+     * TODO: [POS-129]: Add kdoc
      */
-    fun createContainerNodeConfig(process: ContainerBlockchainProcess, containerCwd: Path)
-
-    /**
-     *
-     */
-    fun createContainerChainConfigs(dataSource: ManagedNodeDataSource, process: ContainerBlockchainProcess, chainDir: Path)
+    fun createContainerNodeConfig(process: ContainerBlockchainProcess, containerDir: Path)
 
 }

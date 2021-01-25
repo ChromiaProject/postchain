@@ -13,6 +13,8 @@ import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.managed.ManagedNodeDataSource
+import java.nio.file.Path
 
 class ContainerManagedBlockchainProcessManager(
         private val masterBlockchainInfra: MasterBlockchainInfra,
@@ -76,19 +78,20 @@ class ContainerManagedBlockchainProcessManager(
     }
 
     private fun startContainerChain(chainId: Long): BlockchainRid? {
-        val process = createProcess(chainId).apply { state = ProcessState.STARTING }
-        containerProcesses[chainId] = process
-        logChain("startContainerChain", process)
-
         return try {
             // Creating working dir
-            val (containerCwd, chainCwd) = containerInitializer.createContainerWorkingDir(process)
+            val (containerDir, chainConfigsDir) = containerInitializer.createContainerWorkingDir(chainId)
+
+            // Creating process
+            val process = createProcess(chainId, dataSource, chainConfigsDir).apply { state = ProcessState.STARTING }
+            containerProcesses[chainId] = process
+            logChain("startContainerChain", process)
 
             // Creating nodeConfig for container node
-            containerInitializer.createContainerNodeConfig(process, containerCwd)
+            containerInitializer.createContainerNodeConfig(process, containerDir)
 
             // Creating chain configs
-            containerInitializer.createContainerChainConfigs(dataSource, process, chainCwd)
+            process.transferConfigsToContainer()
 
             // Creating a container if not exists
             val container = findChainContainer(process.containerName)
@@ -97,7 +100,7 @@ class ContainerManagedBlockchainProcessManager(
                 container.id()
             } else {
                 logger.info(m("startContainerChain: Container ${process.containerName} is being created"))
-                val config = ContainerConfigFactory.createConfig(nodeConfig, process, containerCwd)
+                val config = ContainerConfigFactory.createConfig(nodeConfig, process, containerDir)
                 val containerId = dockerClient.createContainer(config, process.containerName).id()
                 // TODO: [POS-129]: Handle the case when containerId is null
                 logger.info(m("startContainerChain: Container ${process.containerName} has been created: $containerId"))
@@ -106,20 +109,19 @@ class ContainerManagedBlockchainProcessManager(
 
             logger.info(m("startContainerChain: Container ${process.containerName} is starting up"))
             dockerClient.startContainer(process.containerId)
-            process.state = ProcessState.RUNNING
+            process.start()
             logger.info(m("startContainerChain: Container ${process.containerName} is running"))
             process.blockchainRid
         } catch (e: Exception) {
             // TODO: [POS-129]: Improve error handling/logging
-            process.state = ProcessState.STOPPING
+            containerProcesses[chainId]?.stop()
             containerProcesses.remove(chainId)
             null
         }
     }
 
     private fun stopContainerChain(chainId: Long) {
-        val process = containerProcesses.remove(chainId)
-                ?.apply { state = ProcessState.STOPPING }
+        val process = containerProcesses.remove(chainId)?.apply { stop() }
         if (process == null) {
             logger.info(m("stopContainerChain: Can't find chain by chainId: $chainId"))
         } else {
@@ -152,13 +154,13 @@ class ContainerManagedBlockchainProcessManager(
     // Just for tests
     private fun m(message: String) = "\t" + message
 
-    private fun createProcess(chainId: Long): ContainerBlockchainProcess {
+    private fun createProcess(chainId: Long, dataSource: ManagedNodeDataSource, chainConfigsDir: Path): ContainerBlockchainProcess {
         val brid = withReadConnection(storage, chainId) { ctx ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
         }
         val processName = BlockchainProcessName(nodeConfig.pubKey, brid)
         return masterBlockchainInfra.makeMasterBlockchainProcess(
-                processName, chainId, brid)
+                processName, chainId, brid, dataSource, chainConfigsDir)
     }
 
     private fun findChainContainer(containerName: String): Container? {
