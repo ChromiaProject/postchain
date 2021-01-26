@@ -1,26 +1,48 @@
 package net.postchain.devtools.l2
 
 import net.postchain.base.BlockchainRid
+import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.Transaction
+import net.postchain.crypto.SECP256K1Keccak
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.gtx.myCS
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXDataBuilder
 import org.junit.Assert
+import java.math.BigInteger
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class L2BlockBuilderTest : IntegrationTestSetup() {
 
-    fun makeL2Op(bcRid: BlockchainRid): ByteArray {
+    fun makeL2EventOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
         b.addOperation("l2_event",
             arrayOf(
-                GtvFactory.gtv(1),
-                GtvFactory.gtv("044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d".hexStringToByteArray())))
+                GtvFactory.gtv(num),
+                GtvFactory.gtv(SECP256K1Keccak.digest(BigInteger.valueOf(num).toByteArray()))
+            )
+        )
+        b.finish()
+        b.sign(myCS.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
+        return b.serialize()
+    }
+
+    fun makeL2StateOp(bcRid: BlockchainRid, num: Long): ByteArray {
+        val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
+        b.addOperation("l2_state",
+            arrayOf(
+                GtvFactory.gtv(num),
+                GtvFactory.gtv(num),
+                GtvFactory.gtv(SECP256K1Keccak.digest(BigInteger.valueOf(num).toByteArray()))
+            )
+        )
         b.finish()
         b.sign(myCS.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
         return b.serialize()
@@ -101,13 +123,27 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         enqueueTx(x)
 
         // Tx: L2 Event Op
-        val validTx2 = enqueueTx(makeL2Op(bcRid))!!
+        val validTx2 = enqueueTx(makeL2EventOp(bcRid, 1L))!!
         validTxs.add(validTx2)
+
+        // Tx: L2 Account State Op
+        val validTx3 = enqueueTx(makeL2StateOp(bcRid, 2L))!!
+        validTxs.add(validTx3)
 
         // -------------------------
         // Build it
         // -------------------------
         makeSureBlockIsBuiltCorrectly()
+
+        val blockHeaderData = getBlockHeaderData(node, currentBlockHeight)
+        val extraData = blockHeaderData.gtvExtra
+        val l2RootHash = extraData["l2RootHash"]?.asByteArray()
+        val eventData = "0000000000000000000000000000000000000000000000000000000000000002f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2".hexStringToByteArray()
+        val eventHash = SECP256K1Keccak.digest(eventData)
+        val stateData = "00000000000000000000000000000000000000000000000000000000000000015fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2".hexStringToByteArray()
+        val stateHash = SECP256K1Keccak.digest(stateData)
+        val root = eventHash.plus(stateHash)
+        assertEquals(l2RootHash!!.toHex(), root.toHex())
 
         // Tx 4: time, valid, no stop is ok
         val tx4Time = makeTimeBTx(0, null, bcRid)
@@ -133,5 +169,12 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val value = node.getBlockchainInstance().getEngine().getBlockQueries().query(
             """{"type"="gtx_test_get_value", "txRID"="${validTx1.getRID().toHex()}"}""")
         Assert.assertEquals("\"true\"", value.get())
+    }
+
+    private fun getBlockHeaderData(node: PostchainTestNode, height: Long): BlockHeaderData {
+        val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
+        val blockRid = blockQueries.getBlockRid(height).get()
+        val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
+        return BlockHeaderDataFactory.buildFromBinary(blockHeader.rawData)
     }
 }
