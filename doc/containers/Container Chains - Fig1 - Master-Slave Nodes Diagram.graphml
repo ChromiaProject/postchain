@@ -454,11 +454,11 @@ slave&lt;br&gt;
     <node id="n25">
       <data key="d6">
         <y:ShapeNode>
-          <y:Geometry height="57.446021444801886" width="570.2207495488453" x="-1155.1103747744228" y="-5887.384688022909"/>
+          <y:Geometry height="57.446021444801886" width="570.2207495488453" x="-1035.1103747744228" y="-5887.384688022909"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle hasColor="false" raised="false" type="line" width="1.0"/>
-          <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Dialog" fontSize="44" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="111.80859375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="451.412109375" x="59.40432008692278" xml:space="preserve" y="-27.18128615259866">Container Chains
-Fig.1: Nodes diagram
+          <y:NodeLabel alignment="left" autoSizePolicy="content" fontFamily="Dialog" fontSize="44" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="111.80859375" horizontalTextPosition="center" iconTextGap="4" modelName="internal" modelPosition="c" textColor="#000000" verticalTextPosition="bottom" visible="true" width="730.21484375" x="-79.99704710057722" xml:space="preserve" y="-27.18128615259866">Container Chains
+Fig.1: Master-Slave nodes diagram
 </y:NodeLabel>
           <y:Shape type="rectangle"/>
         </y:ShapeNode>

@@ -56,7 +56,7 @@ class NodeConfigurationProviderFactoryTest {
         val sut = NodeConfigurationProviderFactory { mockStorage }
 
         assert(sut.createProvider(appConfig)).isInstanceOf(
-                LegacyNodeConfigurationProvider::class)
+                ManualNodeConfigurationProvider::class)
     }
 
     @Test
@@ -68,6 +68,6 @@ class NodeConfigurationProviderFactoryTest {
         val sut = NodeConfigurationProviderFactory { mockStorage }
 
         assert(sut.createProvider(appConfig)).isInstanceOf(
-                LegacyNodeConfigurationProvider::class)
+                ManualNodeConfigurationProvider::class)
     }
 }

@@ -26,7 +26,7 @@ class NodeConfigTest {
 
         // TODO: [POS-129]: Remove it
         assertk.assert(nodeConfig.blockchainConfigProvider).isEmpty()
-        assertk.assert(nodeConfig.infrastructure).isEqualTo("base/ebft")
+        assertk.assert(nodeConfig.infrastructure).isEqualTo("ebft")
 
         assertk.assert(nodeConfig.databaseDriverclass).isEmpty()
         assertk.assert(nodeConfig.databaseUrl).isEmpty()
