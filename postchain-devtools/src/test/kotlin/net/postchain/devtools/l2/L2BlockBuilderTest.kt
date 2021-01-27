@@ -137,13 +137,14 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         val blockHeaderData = getBlockHeaderData(node, currentBlockHeight)
         val extraData = blockHeaderData.gtvExtra
-        val l2RootHash = extraData["l2RootHash"]?.asByteArray()
-        val eventData = "0000000000000000000000000000000000000000000000000000000000000002f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2".hexStringToByteArray()
+        val l2RootEvent = extraData["l2RootEvent"]?.asByteArray()
+        val l2RootState = extraData["l2RootState"]?.asByteArray()
+        val eventData = "00000000000000000000000000000000000000000000000000000000000000015fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2".hexStringToByteArray()
         val eventHash = SECP256K1Keccak.digest(eventData)
-        val stateData = "00000000000000000000000000000000000000000000000000000000000000015fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2".hexStringToByteArray()
+        val stateData = "0000000000000000000000000000000000000000000000000000000000000002f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2".hexStringToByteArray()
         val stateHash = SECP256K1Keccak.digest(stateData)
-        val root = eventHash.plus(stateHash)
-        assertEquals(l2RootHash!!.toHex(), root.toHex())
+        assertEquals(eventHash.toHex(), l2RootEvent!!.toHex())
+        assertEquals(stateHash.toHex(), l2RootState!!.toHex())
 
         // Tx 4: time, valid, no stop is ok
         val tx4Time = makeTimeBTx(0, null, bcRid)
@@ -231,10 +232,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         // query state root from block header's extra data
         val blockHeaderData = getBlockHeaderData(node, currentBlockHeight)
         val extraData = blockHeaderData.gtvExtra
-        val l2RootHash = extraData["l2RootHash"]?.asByteArray()
-        val l2StateRoot = l2RootHash!!.take(32).toByteArray()
+        val l2StateRoot = extraData["l2RootState"]?.asByteArray()
 
-        assertEquals(root.toHex(), l2StateRoot.toHex())
+        assertEquals(root.toHex(), l2StateRoot!!.toHex())
 
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
@@ -249,12 +249,11 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         // query state root from block header's extra data
         val blockHeaderData2 = getBlockHeaderData(node, currentBlockHeight)
         val extraData2 = blockHeaderData2.gtvExtra
-        val l2RootHash2 = extraData2["l2RootHash"]?.asByteArray()
-        val l2StateRoot2 = l2RootHash2!!.take(32).toByteArray()
+        val l2StateRoot2 = extraData2["l2RootState"]?.asByteArray()
 
         // calculate state root
         val root2 = SECP256K1Keccak.treeHasher(root, leafHashes[l]!!)
-        assertEquals(root2.toHex(), l2StateRoot2.toHex())
+        assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
     }
 
     @Test
@@ -330,14 +329,15 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val leftHash = SECP256K1Keccak.treeHasher(hash00, hash01)
         val rightHash = SECP256K1Keccak.treeHasher(hash10, hash11)
         val stateRootHash = SECP256K1Keccak.treeHasher(leftHash, rightHash)
-        val root = stateRootHash.plus(eventRootHash)
 
         // query state root from block header's extra data
         val blockHeaderData = getBlockHeaderData(node, currentBlockHeight)
         val extraData = blockHeaderData.gtvExtra
-        val l2RootHash = extraData["l2RootHash"]?.asByteArray()
+        val l2RootState = extraData["l2RootState"]?.asByteArray()
+        val l2RootEvent = extraData["l2RootEvent"]?.asByteArray()
 
-        assertEquals(root.toHex(), l2RootHash!!.toHex())
+        assertEquals(stateRootHash.toHex(), l2RootState!!.toHex())
+        assertEquals(eventRootHash.toHex(), l2RootEvent!!.toHex())
 
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
@@ -352,12 +352,11 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         // query state root from block header's extra data
         val blockHeaderData2 = getBlockHeaderData(node, currentBlockHeight)
         val extraData2 = blockHeaderData2.gtvExtra
-        val l2RootHash2 = extraData2["l2RootHash"]?.asByteArray()
-        val l2StateRoot2 = l2RootHash2!!.take(32).toByteArray()
+        val l2StateRoot2 = extraData2["l2RootState"]?.asByteArray()
 
         // calculate state root in new block
         val root2 = SECP256K1Keccak.treeHasher(stateRootHash, leafHashes[l]!!)
-        assertEquals(root2.toHex(), l2StateRoot2.toHex())
+        assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
     }
 
     private fun getBlockHeaderData(node: PostchainTestNode, height: Long): BlockHeaderData {

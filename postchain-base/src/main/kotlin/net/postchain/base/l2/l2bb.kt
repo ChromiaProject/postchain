@@ -124,7 +124,8 @@ class EthereumL2Implementation(val hasher: TreeHasher): L2Implementation {
         val stateRootHash = updateSnapshot(snapshot, bctx.height, states)
         val builder = MerkleTreeBuilder(hasher)
         val eventRootHash = builder.merkleRootHash(events)
-        extra["l2RootHash"] = GtvByteArray(stateRootHash.plus(eventRootHash))
+        extra["l2RootState"] = GtvByteArray(stateRootHash)
+        extra["l2RootEvent"] = GtvByteArray(eventRootHash)
         return extra
     }
 
