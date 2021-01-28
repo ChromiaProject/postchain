@@ -72,7 +72,7 @@ interface DatabaseAccess {
     // L2 implementation for snapshot page
     fun insertSnapshotPage(ctx: EContext, page: SnapshotPage)
     fun getSnapshotPage(ctx: EContext, height: Long, level: Int, left: Long): SnapshotPage?
-    fun getSnapshotHighestLevelPage(ctx: EContext): Int
+    fun getSnapshotHighestLevelPage(ctx: EContext, height: Long): Int
     fun insertEvent(ctx: EContext, height: Long, data: ByteArray)
     fun insertState(ctx: EContext, height: Long, state_n: Long, data: ByteArray)
 
