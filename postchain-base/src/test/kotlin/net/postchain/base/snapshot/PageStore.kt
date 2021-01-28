@@ -33,10 +33,10 @@ class TestPageStore(
         TODO("Not yet implemented")
     }
 
-    override fun highestLevelPage(): Int {
+    override fun highestLevelPage(blockHeight: Long): Int {
         var highestLevel = 0
         for ((_, v) in store) {
-            if (highestLevel < v.level) {
+            if (highestLevel < v.level && v.blockHeight <= blockHeight) {
                 highestLevel = v.level
             }
         }

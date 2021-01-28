@@ -395,9 +395,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return SnapshotPage(height, level, left, childHashes)
     }
 
-    override fun getSnapshotHighestLevelPage(ctx: EContext): Int {
-        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tableSnapshotPages(ctx)}"
-        return queryRunner.query(ctx.conn, sql, intRes)
+    override fun getSnapshotHighestLevelPage(ctx: EContext, height: Long): Int {
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tableSnapshotPages(ctx)} WHERE block_height <= ?"
+        return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
     override fun insertEvent(ctx: EContext, height: Long, data: ByteArray) {
