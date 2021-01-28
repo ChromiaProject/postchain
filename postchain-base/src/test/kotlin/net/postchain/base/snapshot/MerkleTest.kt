@@ -6,7 +6,9 @@ import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.crypto.SECP256K1Keccak
+import java.math.BigInteger
 import java.util.*
+import kotlin.test.Test
 
 class MerkleTest : TestCase() {
 
@@ -169,6 +171,21 @@ class MerkleTest : TestCase() {
 
         val root = SECP256K1Keccak.treeHasher(SECP256K1Keccak.treeHasher(leftHash, rightHash), leafHashes[16]!!)
         val stateRootHash = updateSnapshot(store, 1, leafHashes)
+        assertEquals(stateRootHash.toHex(), root.toHex())
+    }
+
+    @Test
+    fun testGetMerkleProof() {
+        val leafs = TreeMap<Long, Hash>()
+        for (i in 0..7) {
+            leafs[i.toLong()] = SECP256K1Keccak.digest(BigInteger.valueOf(i.toLong()).toByteArray())
+        }
+
+        val stateRootHash = updateSnapshot(store, 0, leafs)
+        val proofs = getMerkleProof(0, store, 5)
+        val l45 = SECP256K1Keccak.treeHasher(proofs[0], leafs[5]!!)
+        val l4567 = SECP256K1Keccak.treeHasher(l45, proofs[1])
+        val root = SECP256K1Keccak.treeHasher(proofs[2], l4567)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 }
