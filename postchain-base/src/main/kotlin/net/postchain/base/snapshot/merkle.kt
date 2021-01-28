@@ -30,7 +30,7 @@ interface BasePageStore {
     fun writeSnapshotPage(page: SnapshotPage)
     fun readSnapshotPage(blockHeight: Long, level: Int, left: Long): SnapshotPage?
     fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit)
-    fun highestLevelPage(): Int
+    fun highestLevelPage(blockHeight: Long): Int
 }
 
 class SnapshotPageStore(
@@ -57,15 +57,15 @@ class SnapshotPageStore(
         TODO("Not yet implemented")
     }
 
-    override fun highestLevelPage(): Int {
+    override fun highestLevelPage(blockHeight: Long): Int {
         val db = DatabaseAccess.of(blockEContext)
-        return db.getSnapshotHighestLevelPage(blockEContext)
+        return db.getSnapshotHighestLevelPage(blockEContext, blockHeight)
     }
 }
 
 fun getMerkleProof(blockHeight: Long, store: BasePageStore, leafPos: Long): List<Hash> {
     val path = mutableListOf<Hash>()
-    val highest = store.highestLevelPage()
+    val highest = store.highestLevelPage(blockHeight)
     for (level in 0..highest step store.levelsPerPage) {
         val leafsInPage = 1 shl (level + store.levelsPerPage)
         val left = leafPos - leafPos % leafsInPage
@@ -84,7 +84,7 @@ fun getMerkleProof(blockHeight: Long, store: BasePageStore, leafPos: Long): List
 
 fun updateSnapshot(store: BasePageStore, blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
     val entriesPerPage = 1 shl store.levelsPerPage
-    val prevHighestLevelPage = store.highestLevelPage()
+    val prevHighestLevelPage = store.highestLevelPage(blockHeight)
 
     fun updateLevel(level: Int, entryHashes: NavigableMap<Long, Hash>): Hash {
         var current = 0L
