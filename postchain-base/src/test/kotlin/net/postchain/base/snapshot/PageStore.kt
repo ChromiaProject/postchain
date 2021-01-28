@@ -20,7 +20,7 @@ class TestPageStore(
         var result: SnapshotPage? = null
         for ((_, v) in store) {
             if (v.blockHeight <= blockHeight && v.level == level && v.left == left) {
-                if (maxHeight < v.blockHeight) {
+                if (maxHeight <= v.blockHeight) {
                     maxHeight = v.blockHeight
                     result = v
                 }
