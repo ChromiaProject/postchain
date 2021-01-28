@@ -69,13 +69,16 @@ fun getMerkleProof(blockHeight: Long, store: BasePageStore, leafPos: Long): List
     for (level in 0..highest step store.levelsPerPage) {
         val leafsInPage = 1 shl (level + store.levelsPerPage)
         val left = leafPos - leafPos % leafsInPage
-        val page = store.readSnapshotPage(blockHeight, level, left)!!
+        // if page is not found (a.k.a null), continue move to handle next page
+        val page = store.readSnapshotPage(blockHeight, level, left) ?: continue
         var relPos = ((leafPos - left) shr level).toInt() // relative position of entry on a level
-        // TODO: number of levels can be different for the topmost page
         for (relLevel in 0 until store.levelsPerPage) {
             val another = relPos xor 0x1 // flip the lowest bit to find the other child of same node
             val hashes = page.getHashes(relLevel, store.hasher) // TODO: this is inefficient
-            path.add(hashes[another])
+            // if the topmost page is not reach max level then exclude it by ignoring the empty hash
+            if (!hashes[another].contentEquals(EMPTY_HASH)) {
+                path.add(hashes[another])
+            }
             relPos = relPos shr 1
         }
     }
