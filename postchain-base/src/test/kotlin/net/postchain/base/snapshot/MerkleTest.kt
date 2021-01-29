@@ -3,8 +3,10 @@ package net.postchain.base.snapshot
 import junit.framework.TestCase
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
+import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.crypto.EthereumL2DigestSystem
 import net.postchain.crypto.SECP256K1Keccak
 import java.math.BigInteger
 import java.util.*
@@ -12,12 +14,14 @@ import kotlin.test.Test
 
 class MerkleTest : TestCase() {
 
-    private lateinit var store: TestPageStore
     private val leafHashes = TreeMap<Long, Hash>()
+    private val ds = EthereumL2DigestSystem(KECCAK256)
+
+    private lateinit var store: TestPageStore
 
     public override fun setUp() {
         super.setUp()
-        store = TestPageStore(2, SECP256K1Keccak::treeHasher)
+        store = TestPageStore(2, ds)
         leafHashes[0] = "044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d".hexStringToByteArray()
         leafHashes[1] = "c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6".hexStringToByteArray()
         leafHashes[3] = "2a80e1ef1d7842f27f2e6be0972bb708b9a135c38860dbe73c27c3486c34f4de".hexStringToByteArray()
