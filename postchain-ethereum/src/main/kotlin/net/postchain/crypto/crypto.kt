@@ -4,11 +4,9 @@ import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
 import java.security.InvalidParameterException
-import java.security.MessageDigest
 
 interface DigestSystem {
     val algorithm: String
-    val md: MessageDigest
 
     fun hash(left: Hash, right: Hash): Hash
     fun digest(data: ByteArray): Hash
@@ -16,7 +14,7 @@ interface DigestSystem {
 
 class EthereumL2DigestSystem(override val algorithm: String) : DigestSystem {
 
-    override val md = MessageDigestFactory.create(algorithm)
+    private val md = MessageDigestFactory.create(algorithm)
 
     override fun hash(left: Hash, right: Hash): Hash {
         if (left.size != HASH_LENGTH || right.size != HASH_LENGTH)

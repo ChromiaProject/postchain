@@ -4,10 +4,11 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.data.Hash
+import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.Transaction
-import net.postchain.crypto.SECP256K1Keccak
+import net.postchain.crypto.EthereumL2DigestSystem
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
@@ -21,12 +22,14 @@ import kotlin.test.assertEquals
 
 class L2BlockBuilderTest : IntegrationTestSetup() {
 
+    private val ds = EthereumL2DigestSystem(KECCAK256)
+
     fun makeL2EventOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
         b.addOperation("l2_event",
             arrayOf(
                 GtvFactory.gtv(num),
-                GtvFactory.gtv(SECP256K1Keccak.digest(BigInteger.valueOf(num).toByteArray()))
+                GtvFactory.gtv(ds.digest(BigInteger.valueOf(num).toByteArray()))
             )
         )
         b.finish()
@@ -40,7 +43,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             arrayOf(
                 GtvFactory.gtv(num),
                 GtvFactory.gtv(num),
-                GtvFactory.gtv(SECP256K1Keccak.digest(BigInteger.valueOf(num).toByteArray()))
+                GtvFactory.gtv(ds.digest(BigInteger.valueOf(num).toByteArray()))
             )
         )
         b.finish()
@@ -140,9 +143,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val l2RootEvent = extraData["l2RootEvent"]?.asByteArray()
         val l2RootState = extraData["l2RootState"]?.asByteArray()
         val eventData = "00000000000000000000000000000000000000000000000000000000000000015fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2".hexStringToByteArray()
-        val eventHash = SECP256K1Keccak.digest(eventData)
+        val eventHash = ds.digest(eventData)
         val stateData = "0000000000000000000000000000000000000000000000000000000000000002f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2".hexStringToByteArray()
-        val stateHash = SECP256K1Keccak.digest(stateData)
+        val stateHash = ds.digest(stateData)
         assertEquals(eventHash.toHex(), l2RootEvent!!.toHex())
         assertEquals(stateHash.toHex(), l2RootState!!.toHex())
 
@@ -205,29 +208,29 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             val l = i.toLong()
             val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
                 GtvInteger(l),
-                GtvByteArray(SECP256K1Keccak.digest(BigInteger.valueOf(l).toByteArray()))))
-            leafHashes[l] = SECP256K1Keccak.digest(state)
+                GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
+            leafHashes[l] = ds.digest(state)
         }
 
         // build 1st block and commit
         sealBlock()
 
         // calculate state root
-        val l01 = SECP256K1Keccak.treeHasher(leafHashes[0]!!, leafHashes[1]!!)
-        val l23 = SECP256K1Keccak.treeHasher(leafHashes[2]!!, leafHashes[3]!!)
-        val hash00 = SECP256K1Keccak.treeHasher(l01, l23)
-        val l45 = SECP256K1Keccak.treeHasher(leafHashes[4]!!, leafHashes[5]!!)
-        val l67 = SECP256K1Keccak.treeHasher(leafHashes[6]!!, leafHashes[7]!!)
-        val hash01 = SECP256K1Keccak.treeHasher(l45, l67)
-        val l89 = SECP256K1Keccak.treeHasher(leafHashes[8]!!, leafHashes[9]!!)
-        val l1011 = SECP256K1Keccak.treeHasher(leafHashes[10]!!, leafHashes[11]!!)
-        val hash10 = SECP256K1Keccak.treeHasher(l89, l1011)
-        val l1213 = SECP256K1Keccak.treeHasher(leafHashes[12]!!, leafHashes[13]!!)
-        val l1415 = SECP256K1Keccak.treeHasher(leafHashes[14]!!, leafHashes[15]!!)
-        val hash11 = SECP256K1Keccak.treeHasher(l1213, l1415)
-        val leftHash = SECP256K1Keccak.treeHasher(hash00, hash01)
-        val rightHash = SECP256K1Keccak.treeHasher(hash10, hash11)
-        val root = SECP256K1Keccak.treeHasher(leftHash, rightHash)
+        val l01 = ds.hash(leafHashes[0]!!, leafHashes[1]!!)
+        val l23 = ds.hash(leafHashes[2]!!, leafHashes[3]!!)
+        val hash00 = ds.hash(l01, l23)
+        val l45 = ds.hash(leafHashes[4]!!, leafHashes[5]!!)
+        val l67 = ds.hash(leafHashes[6]!!, leafHashes[7]!!)
+        val hash01 = ds.hash(l45, l67)
+        val l89 = ds.hash(leafHashes[8]!!, leafHashes[9]!!)
+        val l1011 = ds.hash(leafHashes[10]!!, leafHashes[11]!!)
+        val hash10 = ds.hash(l89, l1011)
+        val l1213 = ds.hash(leafHashes[12]!!, leafHashes[13]!!)
+        val l1415 = ds.hash(leafHashes[14]!!, leafHashes[15]!!)
+        val hash11 = ds.hash(l1213, l1415)
+        val leftHash = ds.hash(hash00, hash01)
+        val rightHash = ds.hash(hash10, hash11)
+        val root = ds.hash(leftHash, rightHash)
 
         // query state root from block header's extra data
         val blockHeaderData = getBlockHeaderData(node, currentBlockHeight)
@@ -240,8 +243,8 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         enqueueTx(makeL2StateOp(bcRid, l))
         val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
             GtvInteger(l),
-            GtvByteArray(SECP256K1Keccak.digest(BigInteger.valueOf(l).toByteArray()))))
-        leafHashes[l] = SECP256K1Keccak.digest(state)
+            GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
+        leafHashes[l] = ds.digest(state)
 
         // build 2nd block and commit
         sealBlock()
@@ -252,7 +255,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val l2StateRoot2 = extraData2["l2RootState"]?.asByteArray()
 
         // calculate state root
-        val root2 = SECP256K1Keccak.treeHasher(root, leafHashes[l]!!)
+        val root2 = ds.hash(root, leafHashes[l]!!)
         assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
     }
 
@@ -289,9 +292,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             enqueueTx(makeL2EventOp(bcRid, l))
             val event = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
                 GtvInteger(l),
-                GtvByteArray(SECP256K1Keccak.digest(BigInteger.valueOf(l).toByteArray())))
+                GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray())))
             )
-            leafs.add(SECP256K1Keccak.digest(event))
+            leafs.add(ds.digest(event))
         }
 
         // enqueue txs that emit accounts' state
@@ -301,34 +304,34 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             enqueueTx(makeL2StateOp(bcRid, l))
             val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
                 GtvInteger(l),
-                GtvByteArray(SECP256K1Keccak.digest(BigInteger.valueOf(l).toByteArray()))))
-            leafHashes[l] = SECP256K1Keccak.digest(state)
+                GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
+            leafHashes[l] = ds.digest(state)
         }
 
         // build 1st block and commit
         sealBlock()
 
         // calculate event root hash
-        val l12 = SECP256K1Keccak.treeHasher(leafs[0], leafs[1])
-        val l34 = SECP256K1Keccak.treeHasher(leafs[2], leafs[3])
-        val eventRootHash = SECP256K1Keccak.treeHasher(l12, l34)
+        val l12 = ds.hash(leafs[0], leafs[1])
+        val l34 = ds.hash(leafs[2], leafs[3])
+        val eventRootHash = ds.hash(l12, l34)
 
         // calculate state root hash
-        val l01 = SECP256K1Keccak.treeHasher(leafHashes[0]!!, leafHashes[1]!!)
-        val l23 = SECP256K1Keccak.treeHasher(leafHashes[2]!!, leafHashes[3]!!)
-        val hash00 = SECP256K1Keccak.treeHasher(l01, l23)
-        val l45 = SECP256K1Keccak.treeHasher(leafHashes[4]!!, leafHashes[5]!!)
-        val l67 = SECP256K1Keccak.treeHasher(leafHashes[6]!!, leafHashes[7]!!)
-        val hash01 = SECP256K1Keccak.treeHasher(l45, l67)
-        val l89 = SECP256K1Keccak.treeHasher(leafHashes[8]!!, leafHashes[9]!!)
-        val l1011 = SECP256K1Keccak.treeHasher(leafHashes[10]!!, leafHashes[11]!!)
-        val hash10 = SECP256K1Keccak.treeHasher(l89, l1011)
-        val l1213 = SECP256K1Keccak.treeHasher(leafHashes[12]!!, leafHashes[13]!!)
-        val l1415 = SECP256K1Keccak.treeHasher(leafHashes[14]!!, leafHashes[15]!!)
-        val hash11 = SECP256K1Keccak.treeHasher(l1213, l1415)
-        val leftHash = SECP256K1Keccak.treeHasher(hash00, hash01)
-        val rightHash = SECP256K1Keccak.treeHasher(hash10, hash11)
-        val stateRootHash = SECP256K1Keccak.treeHasher(leftHash, rightHash)
+        val l01 = ds.hash(leafHashes[0]!!, leafHashes[1]!!)
+        val l23 = ds.hash(leafHashes[2]!!, leafHashes[3]!!)
+        val hash00 = ds.hash(l01, l23)
+        val l45 = ds.hash(leafHashes[4]!!, leafHashes[5]!!)
+        val l67 = ds.hash(leafHashes[6]!!, leafHashes[7]!!)
+        val hash01 = ds.hash(l45, l67)
+        val l89 = ds.hash(leafHashes[8]!!, leafHashes[9]!!)
+        val l1011 = ds.hash(leafHashes[10]!!, leafHashes[11]!!)
+        val hash10 = ds.hash(l89, l1011)
+        val l1213 = ds.hash(leafHashes[12]!!, leafHashes[13]!!)
+        val l1415 = ds.hash(leafHashes[14]!!, leafHashes[15]!!)
+        val hash11 = ds.hash(l1213, l1415)
+        val leftHash = ds.hash(hash00, hash01)
+        val rightHash = ds.hash(hash10, hash11)
+        val stateRootHash = ds.hash(leftHash, rightHash)
 
         // query state root from block header's extra data
         val blockHeaderData = getBlockHeaderData(node, currentBlockHeight)
@@ -343,8 +346,8 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         enqueueTx(makeL2StateOp(bcRid, l))
         val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
             GtvInteger(l),
-            GtvByteArray(SECP256K1Keccak.digest(BigInteger.valueOf(l).toByteArray()))))
-        leafHashes[l] = SECP256K1Keccak.digest(state)
+            GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
+        leafHashes[l] = ds.digest(state)
 
         // build 2nd block and commit
         sealBlock()
@@ -355,7 +358,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val l2StateRoot2 = extraData2["l2RootState"]?.asByteArray()
 
         // calculate state root in new block
-        val root2 = SECP256K1Keccak.treeHasher(stateRootHash, leafHashes[l]!!)
+        val root2 = ds.hash(stateRootHash, leafHashes[l]!!)
         assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
     }
 
