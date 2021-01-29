@@ -1,9 +1,9 @@
 package net.postchain.merkle
 
 import net.postchain.common.data.Hash
-import net.postchain.common.data.TreeHasher
+import net.postchain.crypto.DigestSystem
 
-class MerkleTree(val treeHasher: TreeHasher) {
+class MerkleTree(private val ds: DigestSystem) {
     // Child trees
     private var leftTree: MerkleTree? = null
     private var rightTree: MerkleTree? = null
@@ -28,7 +28,7 @@ class MerkleTree(val treeHasher: TreeHasher) {
         // Calculate the message digest using the
         // specified digest algorithm and the
         // contents of the two child nodes
-        hash = treeHasher(leftTree.hash, rightTree.hash)
+        hash = ds.hash(leftTree.hash, rightTree.hash)
     }
 
     /**
@@ -44,7 +44,7 @@ class MerkleTree(val treeHasher: TreeHasher) {
         // Calculate the message digest using the
         // specified digest algorithm and the
         // contents of the two child nodes
-        hash = treeHasher(leftLeaf.hash, rightLeaf.hash)
+        hash = ds.hash(leftLeaf.hash, rightLeaf.hash)
     }
 
     fun digest(): Hash {

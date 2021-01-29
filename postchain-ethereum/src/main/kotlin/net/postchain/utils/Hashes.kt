@@ -1,6 +1,7 @@
 package net.postchain.utils
 
-import org.spongycastle.jcajce.provider.digest.Keccak
+import net.postchain.common.data.KECCAK256
+import net.postchain.crypto.MessageDigestFactory
 import java.nio.charset.StandardCharsets
 
 
@@ -15,9 +16,9 @@ class Hashes {
          * @return hash value
          */
         fun sha3(input: ByteArray?, offset: Int, length: Int): ByteArray {
-            val k: Keccak.DigestKeccak = Keccak.Digest256()
-            k.update(input, offset, length)
-            return k.digest()
+            val m = MessageDigestFactory.create(KECCAK256)
+            m.update(input, offset, length)
+            return m.digest()
         }
 
         /**
