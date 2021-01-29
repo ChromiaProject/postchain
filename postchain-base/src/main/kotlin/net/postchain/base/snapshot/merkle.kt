@@ -7,6 +7,7 @@ import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.TreeHasher
 import net.postchain.core.BlockEContext
+import net.postchain.crypto.DigestSystem
 import java.util.*
 
 class SnapshotPage(
@@ -26,7 +27,7 @@ class SnapshotPage(
 
 interface BasePageStore {
     val levelsPerPage: Int
-    val hasher: TreeHasher
+    val ds: DigestSystem
     fun writeSnapshotPage(page: SnapshotPage)
     fun readSnapshotPage(blockHeight: Long, level: Int, left: Long): SnapshotPage?
     fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit)
@@ -37,7 +38,7 @@ class SnapshotPageStore(
     val blockEContext: BlockEContext,
     val snapshotName: String,
     override val levelsPerPage: Int,
-    override val hasher: TreeHasher
+    override val ds: DigestSystem
 ) : BasePageStore {
     override fun writeSnapshotPage(page: SnapshotPage) {
         val db = DatabaseAccess.of(blockEContext)
@@ -74,7 +75,7 @@ fun getMerkleProof(blockHeight: Long, store: BasePageStore, leafPos: Long): List
         var relPos = ((leafPos - left) shr level).toInt() // relative position of entry on a level
         for (relLevel in 0 until store.levelsPerPage) {
             val another = relPos xor 0x1 // flip the lowest bit to find the other child of same node
-            val hashes = page.getHashes(relLevel, store.hasher) // TODO: this is inefficient
+            val hashes = page.getHashes(relLevel, store.ds::hash) // TODO: this is inefficient
             // if the topmost page is not reach max level then exclude it by ignoring the empty hash
             if (!hashes[another].contentEquals(EMPTY_HASH)) {
                 path.add(hashes[another])
@@ -115,7 +116,7 @@ fun updateSnapshot(store: BasePageStore, blockHeight: Long, leafHashes: Navigabl
             }
             val pageChildren = pageElts.map { it ?: EMPTY_HASH }.toTypedArray()
             val page = SnapshotPage(blockHeight, level, left, pageChildren)
-            val pageHash = page.getHashes(store.levelsPerPage, store.hasher)[0]
+            val pageHash = page.getHashes(store.levelsPerPage, store.ds::hash)[0]
             upperEntryMap[left / entriesPerPage] = pageHash
             store.writeSnapshotPage(page)
             current = left + entriesPerPage
