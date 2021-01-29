@@ -241,4 +241,20 @@ class MerkleTest : TestCase() {
         assertEquals(5, proofs.size)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
+
+    @Test
+    fun testWriteEventTree_2_Leafs() {
+        val leafs = arrayListOf<Hash>()
+        leafs.add("c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6".hexStringToByteArray())
+        leafs.add("ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray())
+        leafs.add("2a80e1ef1d7842f27f2e6be0972bb708b9a135c38860dbe73c27c3486c34f4de".hexStringToByteArray())
+        leafs.add("13600b294191fc92924bb3ce4b969c1e7e2bab8f4c93c3fc6d0a51733df3c060".hexStringToByteArray())
+        val root = writeEventTree(store, 0, leafs)
+
+        val l12 = ds.hash(leafs[0], leafs[1])
+        val l34 = ds.hash(leafs[2], leafs[3])
+        val expected = ds.hash(l12, l34)
+
+        assertEquals(expected.toHex(), root.toHex())
+    }
 }
