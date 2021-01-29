@@ -179,7 +179,7 @@ class MerkleTest : TestCase() {
     }
 
     @Test
-    fun testGetMerkleProof() {
+    fun testGetMerkleProof8_Proof5() {
         val leafs = TreeMap<Long, Hash>()
         for (i in 0..7) {
             leafs[i.toLong()] = SECP256K1Keccak.digest(BigInteger.valueOf(i.toLong()).toByteArray())
@@ -190,6 +190,56 @@ class MerkleTest : TestCase() {
         val l45 = SECP256K1Keccak.treeHasher(proofs[0], leafs[5]!!)
         val l4567 = SECP256K1Keccak.treeHasher(l45, proofs[1])
         val root = SECP256K1Keccak.treeHasher(proofs[2], l4567)
+        assertEquals(3, proofs.size)
+        assertEquals(stateRootHash.toHex(), root.toHex())
+    }
+
+    @Test
+    fun testGetMerkleProof16_Proof5() {
+        val leafs = TreeMap<Long, Hash>()
+        for (i in 0..16) {
+            leafs[i.toLong()] = SECP256K1Keccak.digest(BigInteger.valueOf(i.toLong()).toByteArray())
+        }
+
+        val stateRootHash = updateSnapshot(store, 0, leafs)
+        val proofs = getMerkleProof(0, store, 5)
+        val l45 = SECP256K1Keccak.treeHasher(proofs[0], leafs[5]!!)
+        val l4567 = SECP256K1Keccak.treeHasher(l45, proofs[1])
+        val l16 = SECP256K1Keccak.treeHasher(proofs[2], l4567)
+        val left = SECP256K1Keccak.treeHasher(l16, proofs[3])
+        val root = SECP256K1Keccak.treeHasher(left, proofs[4])
+        assertEquals(5, proofs.size)
+        assertEquals(stateRootHash.toHex(), root.toHex())
+    }
+
+    @Test
+    fun testGetMerkleProof16_Proof16() {
+        val leafs = TreeMap<Long, Hash>()
+        for (i in 0..16) {
+            leafs[i.toLong()] = SECP256K1Keccak.digest(BigInteger.valueOf(i.toLong()).toByteArray())
+        }
+        val stateRootHash = updateSnapshot(store, 0, leafs)
+        val proofs = getMerkleProof(0, store, 16)
+        val root = SECP256K1Keccak.treeHasher(proofs[0], leafs[16]!!)
+        assertEquals(1, proofs.size)
+        assertEquals(stateRootHash.toHex(), root.toHex())
+    }
+
+    @Test
+    fun testGetMerkleProof_32_Proof8() {
+        val leafs = TreeMap<Long, Hash>()
+        for (i in 0..31) {
+            leafs[i.toLong()] = SECP256K1Keccak.digest(BigInteger.valueOf(i.toLong()).toByteArray())
+        }
+
+        val stateRootHash = updateSnapshot(store, 0, leafs)
+        val proofs = getMerkleProof(0, store, 8)
+        val l89 = SECP256K1Keccak.treeHasher(leafs[8]!!, proofs[0])
+        val l891011 = SECP256K1Keccak.treeHasher(l89, proofs[1])
+        val l16 = SECP256K1Keccak.treeHasher(l891011, proofs[2])
+        val left = SECP256K1Keccak.treeHasher(proofs[3], l16)
+        val root = SECP256K1Keccak.treeHasher(left, proofs[4])
+        assertEquals(5, proofs.size)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 }
