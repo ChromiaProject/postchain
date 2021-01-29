@@ -10,7 +10,7 @@ import org.junit.Test
 
 class MerkleTreeTest : TestCase() {
 
-    lateinit var ds: DigestSystem
+    private lateinit var ds: DigestSystem
 
     override fun setUp() {
         super.setUp()
