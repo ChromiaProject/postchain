@@ -9,6 +9,7 @@ import net.postchain.common.data.TreeHasher
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.DigestSystem
 import java.util.*
+import kotlin.collections.ArrayList
 
 class SnapshotPage(
     val blockHeight: Long, val level: Int, val left: Long,
@@ -132,6 +133,39 @@ fun updateSnapshot(store: BasePageStore, blockHeight: Long, leafHashes: Navigabl
     }
 
     if (leafHashes.size == 0) return EMPTY_HASH
+    return updateLevel(0, leafHashes)
+}
+
+fun writeEventTree(store: BasePageStore, blockHeight: Long, leafHashes: List<Hash>): Hash {
+    val entriesPerPage = 1 shl store.levelsPerPage
+    val prevHighestLevelPage = store.highestLevelPage(blockHeight)
+
+    fun updateLevel(level: Int, entryHashes: List<Hash>): Hash {
+        var current = 0
+        val upperEntry = arrayListOf<Hash>()
+        while (current < entryHashes.size) {
+            // calculate left boundary of page, in entries on this level, in entries at this level
+            val left = current - (current % entriesPerPage)
+            val pageChildren = Array(entriesPerPage) {
+                entryHashes.getOrElse(it + left) { EMPTY_HASH }
+            }
+            val page = SnapshotPage(blockHeight, level, left.toLong(), pageChildren)
+            val pageHash = page.getHashes(store.levelsPerPage, store.ds::hash)[0]
+            upperEntry.add(pageHash)
+            store.writeSnapshotPage(page)
+            current = left + entriesPerPage
+        }
+        return if (upperEntry.size > 2 || prevHighestLevelPage > level)
+            updateLevel(level + store.levelsPerPage, upperEntry)
+        else {
+            val pageChildren = Array(entriesPerPage) { EMPTY_HASH }
+            pageChildren[0] = upperEntry[0]!!
+            store.writeSnapshotPage(SnapshotPage(blockHeight, level + store.levelsPerPage, 0, pageChildren))
+            upperEntry[0]!!
+        }
+    }
+
+    if (leafHashes.isEmpty()) return EMPTY_HASH
     return updateLevel(0, leafHashes)
 }
 
