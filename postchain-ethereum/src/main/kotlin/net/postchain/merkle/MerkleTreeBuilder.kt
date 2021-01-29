@@ -2,9 +2,9 @@ package net.postchain.merkle
 
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
-import net.postchain.common.data.TreeHasher
+import net.postchain.crypto.DigestSystem
 
-class MerkleTreeBuilder(private val hasher: TreeHasher) {
+class MerkleTreeBuilder(private val ds: DigestSystem) {
 
     fun merkleRootHash(data: List<Hash>): Hash {
         val leafs = buildLeafs(data)
@@ -33,7 +33,7 @@ class MerkleTreeBuilder(private val hasher: TreeHasher) {
             size / 2 + 1
         }
         for (i in 0 until level) {
-            val tree = MerkleTree(hasher)
+            val tree = MerkleTree(ds)
             tree.add(data[i*2], data[(i*2)+1])
             result.add(tree)
         }
@@ -53,7 +53,7 @@ class MerkleTreeBuilder(private val hasher: TreeHasher) {
                 leftValue = element
                 isLeft = false
             } else {
-                val node = MerkleTree(hasher)
+                val node = MerkleTree(ds)
                 node.add(leftValue!!, element)
                 result.add(node)
                 isLeft = true

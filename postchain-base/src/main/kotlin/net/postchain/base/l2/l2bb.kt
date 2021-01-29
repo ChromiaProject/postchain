@@ -8,9 +8,8 @@ import net.postchain.base.snapshot.LeafStore
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.base.snapshot.updateSnapshot
 import net.postchain.common.data.Hash
-import net.postchain.common.data.TreeHasher
 import net.postchain.core.*
-import net.postchain.crypto.SECP256K1Keccak
+import net.postchain.crypto.DigestSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
@@ -102,7 +101,7 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
     }
 }
 
-class EthereumL2Implementation(val hasher: TreeHasher): L2Implementation {
+class EthereumL2Implementation(private val ds: DigestSystem): L2Implementation {
     lateinit var bctx: BlockEContext
     lateinit var store: LeafStore
     lateinit var snapshot: SnapshotPageStore
@@ -113,7 +112,7 @@ class EthereumL2Implementation(val hasher: TreeHasher): L2Implementation {
     override fun init(blockEContext: BlockEContext) {
         bctx = blockEContext
         store = LeafStore()
-        snapshot = SnapshotPageStore(blockEContext, "", 2, hasher)
+        snapshot = SnapshotPageStore(blockEContext, "", 2, ds)
     }
 
     /**
@@ -122,7 +121,7 @@ class EthereumL2Implementation(val hasher: TreeHasher): L2Implementation {
     override fun finalize(): Map<String, Gtv> {
         val extra = mutableMapOf<String, Gtv>()
         val stateRootHash = updateSnapshot(snapshot, bctx.height, states)
-        val builder = MerkleTreeBuilder(hasher)
+        val builder = MerkleTreeBuilder(ds)
         val eventRootHash = builder.merkleRootHash(events)
         extra["l2RootState"] = GtvByteArray(stateRootHash)
         extra["l2RootEvent"] = GtvByteArray(eventRootHash)
@@ -135,7 +134,7 @@ class EthereumL2Implementation(val hasher: TreeHasher): L2Implementation {
      */
     override fun emitL2Event(evt: Gtv) {
         val data = GtvEncoder.simpleEncodeGtv(evt)
-        val hash = SECP256K1Keccak.digest(data)
+        val hash = ds.digest(data)
         events.add(hash)
         store.writeEvent(bctx, data)
     }
@@ -147,7 +146,7 @@ class EthereumL2Implementation(val hasher: TreeHasher): L2Implementation {
      */
     override fun emitL2State(state_n: Long, state: Gtv) {
         val data = GtvEncoder.simpleEncodeGtv(state)
-        val hash = SECP256K1Keccak.digest(data)
+        val hash = ds.digest(data)
         states[state_n] = hash
         store.writeState(bctx, state_n, data)
     }

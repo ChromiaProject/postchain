@@ -1,10 +1,10 @@
 package net.postchain.base.snapshot
 
-import net.postchain.common.data.TreeHasher
+import net.postchain.crypto.DigestSystem
 
 class TestPageStore(
     override val levelsPerPage: Int,
-    override val hasher: TreeHasher
+    override val ds: DigestSystem
 ) : BasePageStore {
 
     private val store = mutableMapOf<Long, SnapshotPage>()

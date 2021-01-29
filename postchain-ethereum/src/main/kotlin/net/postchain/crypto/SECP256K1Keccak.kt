@@ -1,13 +1,14 @@
 package net.postchain.crypto
 
 import net.postchain.common.data.EMPTY_HASH
+import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
+import net.postchain.common.data.KECCAK256
 import net.postchain.utils.Hashes
 import net.postchain.utils.Numeric
 import org.spongycastle.asn1.x9.X9ECParameters
 import org.spongycastle.crypto.ec.CustomNamedCurves
 import org.spongycastle.crypto.params.ECDomainParameters
-import org.spongycastle.jcajce.provider.digest.Keccak
 import org.spongycastle.math.ec.ECAlgorithms
 import org.spongycastle.math.ec.ECCurve
 import org.spongycastle.math.ec.ECPoint
@@ -16,7 +17,6 @@ import java.security.InvalidParameterException
 
 object SECP256K1Keccak {
 
-    private const val HASH_LENGTH = 32
     private val params: X9ECParameters = CustomNamedCurves.getByName("secp256k1")
     private val CURVE_PARAMS = ECDomainParameters(params.curve, params.g, params.n, params.h)
     private val CURVE: ECCurve = CURVE_PARAMS.curve
@@ -61,7 +61,8 @@ object SECP256K1Keccak {
      * @return The keccak256 hash digest of [bytes]
      */
     fun digest(bytes: ByteArray): Hash {
-        return Keccak.Digest256().digest(bytes)
+        val m = MessageDigestFactory.create(KECCAK256)
+        return m.digest(bytes)
     }
 
     // implementation is based on BitcoinJ ECKey code
