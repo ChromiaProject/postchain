@@ -4,8 +4,12 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
+<<<<<<< HEAD
 import net.postchain.common.data.Hash
 import net.postchain.base.snapshot.SnapshotPage
+=======
+import net.postchain.base.snapshot.Page
+>>>>>>> 7b97decb... refactor page store
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
@@ -27,7 +31,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
-    protected fun tableSnapshotPages(ctx: EContext): String = tableName(ctx, "snapshot_pages")
+    protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, name)
     protected fun tableEvents(ctx: EContext): String = tableName(ctx, "events")
     protected fun tableStates(ctx: EContext): String = tableName(ctx, "states")
     protected fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
@@ -53,7 +57,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableConfigurations(ctx: EContext): String
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
-    protected abstract fun cmdCreateTableSnapshotPage(ctx: EContext): String
+    protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
     protected abstract fun cmdCreateTableEvent(ctx: EContext): String
     protected abstract fun cmdCreateTableState(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
@@ -62,7 +66,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     // --- Insert ---
     protected abstract fun cmdInsertTransactions(ctx: EContext): String
-    protected abstract fun cmdInsertSnapshotPages(ctx: EContext): String
+    protected abstract fun cmdInsertPages(ctx: EContext, name: String): String
     protected abstract fun cmdInsertEvents(ctx: EContext): String
     protected abstract fun cmdInsertStates(ctx: EContext): String
     protected abstract fun cmdInsertConfiguration(ctx: EContext): String
@@ -366,20 +370,20 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     // --- Init App ----
     // L2
-    override fun insertSnapshotPage(ctx: EContext, page: SnapshotPage) {
+    override fun insertPage(ctx: EContext, name: String, page: Page) {
         val childHashes = page.childHashes.fold(ByteArray(0)) {total, item -> total.plus(item)}
-        queryRunner.update(ctx.conn, cmdInsertSnapshotPages(ctx), page.blockHeight, page.level, page.left, childHashes)
+        queryRunner.update(ctx.conn, cmdInsertPages(ctx, name), page.blockHeight, page.level, page.left, childHashes)
     }
 
     /**
      * If we didn't prune the old one then we need to query the snapshot page
      * at highest block height that less than or equal to specific height
      */
-    override fun getSnapshotPage(ctx: EContext, height: Long, level: Int, left: Long): SnapshotPage? {
+    override fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
         val hashLength = 32
         val sql = """
-            SELECT child_hashes FROM ${tableSnapshotPages(ctx)} 
-            WHERE block_height = (SELECT MAX(block_height) FROM ${tableSnapshotPages(ctx)} 
+            SELECT child_hashes FROM ${tablePages(ctx, name)} 
+            WHERE block_height = (SELECT MAX(block_height) FROM ${tablePages(ctx, name)} 
                                     WHERE block_height <= ? AND level = ? AND left_index = ?)
             AND level = ? AND left_index = ?"""
         val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left, level, left)
@@ -392,11 +396,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             val end = start + hashLength - 1
             childHashes[i] = data.sliceArray(start..end)
         }
-        return SnapshotPage(height, level, left, childHashes)
+        return Page(height, level, left, childHashes)
     }
 
-    override fun getSnapshotHighestLevelPage(ctx: EContext, height: Long): Int {
-        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tableSnapshotPages(ctx)} WHERE block_height <= ?"
+    override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height <= ?"
         return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
@@ -463,8 +467,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
         // TODO: [POS-147]: temporarily here, might init in other place for L2
         // L2 tables
-        queryRunner.update(ctx.conn, cmdCreateTableSnapshotPage(ctx))
-        queryRunner.update(ctx.conn, cmdCreateTableSnapshotPage(ctx))
+        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "snapshot_pages"))
+        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "event_pages"))
         queryRunner.update(ctx.conn, tableEvents(ctx), cmdCreateTableEvent(ctx))
         queryRunner.update(ctx.conn, tableStates(ctx), cmdCreateTableState(ctx))
 
