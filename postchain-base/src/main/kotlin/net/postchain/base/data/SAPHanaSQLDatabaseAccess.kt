@@ -38,7 +38,7 @@ class SAPHanaSQLDatabaseAccess : SQLDatabaseAccess() {
                 "  UNIQUE (block_height))"
     }
 
-    override fun cmdCreateTableSnapshotPage(ctx: EContext): String {
+    override fun cmdCreateTablePage(ctx: EContext, name: String): String {
         TODO("Not yet implemented")
     }
 
@@ -112,7 +112,7 @@ class SAPHanaSQLDatabaseAccess : SQLDatabaseAccess() {
                 "VALUES (?, ?, ?, ?) "
     }
 
-    override fun cmdInsertSnapshotPages(ctx: EContext): String {
+    override fun cmdInsertPages(ctx: EContext, name: String): String {
         TODO("Not yet implemented")
     }
 

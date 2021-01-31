@@ -4,7 +4,7 @@ package net.postchain.base.data
 
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
-import net.postchain.base.snapshot.SnapshotPage
+import net.postchain.base.snapshot.Page
 import net.postchain.core.*
 import net.postchain.network.x.XPeerID
 import java.sql.Connection
@@ -70,9 +70,9 @@ interface DatabaseAccess {
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 
     // L2 implementation for snapshot page
-    fun insertSnapshotPage(ctx: EContext, page: SnapshotPage)
-    fun getSnapshotPage(ctx: EContext, height: Long, level: Int, left: Long): SnapshotPage?
-    fun getSnapshotHighestLevelPage(ctx: EContext, height: Long): Int
+    fun insertPage(ctx: EContext, name: String, page: Page)
+    fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page?
+    fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int
     fun insertEvent(ctx: EContext, height: Long, data: ByteArray)
     fun insertState(ctx: EContext, height: Long, state_n: Long, data: ByteArray)
 
