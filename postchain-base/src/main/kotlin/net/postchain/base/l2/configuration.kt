@@ -14,7 +14,7 @@ class L2BlockchainConfiguration(configData: BaseBlockchainConfigurationData, mod
 
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
         addChainIDToDependencies(ctx)
-        val l2Implementation = EthereumL2Implementation(EthereumL2DigestSystem(KECCAK256))
+        val l2Implementation = EthereumL2Implementation(EthereumL2DigestSystem(KECCAK256), 2)
         return L2BlockBuilder(
             effectiveBlockchainRID,
             cryptoSystem,

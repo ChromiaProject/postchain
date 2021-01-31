@@ -9,9 +9,8 @@ import net.postchain.common.data.TreeHasher
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.DigestSystem
 import java.util.*
-import kotlin.collections.ArrayList
 
-class SnapshotPage(
+class Page(
     val blockHeight: Long, val level: Int, val left: Long,
     val childHashes: Array<Hash>
 ) {
@@ -26,146 +25,158 @@ class SnapshotPage(
     }
 }
 
-interface BasePageStore {
-    val levelsPerPage: Int
-    val ds: DigestSystem
-    fun writeSnapshotPage(page: SnapshotPage)
-    fun readSnapshotPage(blockHeight: Long, level: Int, left: Long): SnapshotPage?
-    fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit)
+interface PageStore {
+    fun writePage(page: Page)
+    fun readPage(blockHeight: Long, level: Int, left: Long): Page?
     fun highestLevelPage(blockHeight: Long): Int
+    fun getMerkleProof(blockHeight: Long, leafPos: Long): List<Hash>
 }
 
-class SnapshotPageStore(
-    val blockEContext: BlockEContext,
-    val snapshotName: String,
-    override val levelsPerPage: Int,
-    override val ds: DigestSystem
-) : BasePageStore {
-    override fun writeSnapshotPage(page: SnapshotPage) {
-        val db = DatabaseAccess.of(blockEContext)
-        db.insertSnapshotPage(blockEContext, page)
+abstract class BasePageStore(
+    val name: String,
+    val blockEContext: BlockEContext?,
+    val levelsPerPage: Int,
+    val ds: DigestSystem) : PageStore {
+
+    override fun writePage(page: Page) {
+        val db = DatabaseAccess.of(blockEContext!!)
+        db.insertPage(blockEContext, name, page)
     }
 
     // read the page with blockHeight equal or lower than given
     // for a given level and position, if exists
-    override fun readSnapshotPage(blockHeight: Long, level: Int, left: Long): SnapshotPage? {
-        val db = DatabaseAccess.of(blockEContext)
-        return db.getSnapshotPage(blockEContext, blockHeight, level, left)
+    override fun readPage(blockHeight: Long, level: Int, left: Long): Page? {
+        val db = DatabaseAccess.of(blockEContext!!)
+        return db.getPage(blockEContext, name, blockHeight, level, left)
+    }
+
+    override fun highestLevelPage(blockHeight: Long): Int {
+        val db = DatabaseAccess.of(blockEContext!!)
+        return db.getHighestLevelPage(blockEContext, name, blockHeight)
+    }
+
+    override fun getMerkleProof(blockHeight: Long, leafPos: Long): List<Hash> {
+        val path = mutableListOf<Hash>()
+        val highest = highestLevelPage(blockHeight)
+        for (level in 0..highest step levelsPerPage) {
+            val leafsInPage = 1 shl (level + levelsPerPage)
+            val left = leafPos - leafPos % leafsInPage
+            // if page is not found (a.k.a null), continue move to handle next page
+            val page = readPage(blockHeight, level, left) ?: continue
+            var relPos = ((leafPos - left) shr level).toInt() // relative position of entry on a level
+            for (relLevel in 0 until levelsPerPage) {
+                val another = relPos xor 0x1 // flip the lowest bit to find the other child of same node
+                val hashes = page.getHashes(relLevel, ds::hash) // TODO: this is inefficient
+                // if the topmost page is not reach max level then exclude it by ignoring the empty hash
+                if (!hashes[another].contentEquals(EMPTY_HASH)) {
+                    path.add(hashes[another])
+                }
+                relPos = relPos shr 1
+            }
+        }
+        return path
+    }
+}
+
+open class EventPageStore(
+    blockEContext: BlockEContext?,
+    levelsPerPage: Int,
+    ds: DigestSystem
+) : BasePageStore("event_pages", blockEContext, levelsPerPage, ds) {
+
+    fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>): Hash {
+        val entriesPerPage = 1 shl levelsPerPage
+        val prevHighestLevelPage = highestLevelPage(blockHeight)
+
+        fun updateLevel(level: Int, entryHashes: List<Hash>): Hash {
+            var current = 0
+            val upperEntry = arrayListOf<Hash>()
+            while (current < entryHashes.size) {
+                // calculate left boundary of page, in entries on this level
+                val left = current - (current % entriesPerPage)
+                val pageChildren = Array(entriesPerPage) {
+                    entryHashes.getOrElse(it + left) { EMPTY_HASH }
+                }
+                val page = Page(blockHeight, level, left.toLong(), pageChildren)
+                val pageHash = page.getHashes(levelsPerPage, ds::hash)[0]
+                upperEntry.add(pageHash)
+                writePage(page)
+                current = left + entriesPerPage
+            }
+            return if (upperEntry.size > 2 || prevHighestLevelPage > level)
+                updateLevel(level + levelsPerPage, upperEntry)
+            else {
+                val pageChildren = Array(entriesPerPage) { EMPTY_HASH }
+                pageChildren[0] = upperEntry[0]
+                writePage(Page(blockHeight, level + levelsPerPage, 0, pageChildren))
+                upperEntry[0]
+            }
+        }
+
+        if (leafHashes.isEmpty()) return EMPTY_HASH
+        return updateLevel(0, leafHashes)
+    }
+}
+
+open class SnapshotPageStore(
+    blockEContext: BlockEContext?,
+    levelsPerPage: Int,
+    ds: DigestSystem
+) : BasePageStore("snapshot_pages", blockEContext, levelsPerPage, ds) {
+
+    fun updateSnapshot(blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
+        val entriesPerPage = 1 shl levelsPerPage
+        val prevHighestLevelPage = highestLevelPage(blockHeight)
+
+        fun updateLevel(level: Int, entryHashes: NavigableMap<Long, Hash>): Hash {
+            var current = 0L
+            val upperEntryMap = TreeMap<Long, Hash>()
+//            val leafsPerEntry = 1 shl level // one entry corresponds to this many leafs at the bottom
+            while (true) {
+                val next = entryHashes.ceilingEntry(current) ?: break
+                // calculate left boundary of page, in entries on this level
+                val left = next.key - (next.key % entriesPerPage)
+//            val left = leafsPerEntry * leftInEntries // left in leafs
+                var haveMissingLeafs = false
+                val pageElts = Array(entriesPerPage) {
+                    val leaf = entryHashes[it + left]
+                    if (leaf == null) haveMissingLeafs = true
+                    leaf
+                }
+                if (haveMissingLeafs) {
+                    val oldPage = readPage(blockHeight, level, left)
+                    if (oldPage != null) {
+                        for (i in 0 until entriesPerPage) {
+                            if (pageElts[i] == null)
+                                pageElts[i] = oldPage.childHashes[i]
+                        }
+                    }
+                }
+                val pageChildren = pageElts.map { it ?: EMPTY_HASH }.toTypedArray()
+                val page = Page(blockHeight, level, left, pageChildren)
+                val pageHash = page.getHashes(levelsPerPage, ds::hash)[0]
+                upperEntryMap[left / entriesPerPage] = pageHash
+                writePage(page)
+                current = left + entriesPerPage
+            }
+            return if (upperEntryMap.lastKey() > 0 || prevHighestLevelPage > level)
+                updateLevel(level + levelsPerPage, upperEntryMap)
+            else {
+                val pageChildren = Array(entriesPerPage) { EMPTY_HASH }
+                pageChildren[0] = upperEntryMap[0]!!
+                writePage(Page(blockHeight, level + levelsPerPage, 0, pageChildren))
+                upperEntryMap[0]!!
+            }
+        }
+
+        if (leafHashes.size == 0) return EMPTY_HASH
+        return updateLevel(0, leafHashes)
     }
 
     // delete all pages with height at or below given
     // except those which are used
-    override fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit) {
+    fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit) {
         TODO("Not yet implemented")
     }
-
-    override fun highestLevelPage(blockHeight: Long): Int {
-        val db = DatabaseAccess.of(blockEContext)
-        return db.getSnapshotHighestLevelPage(blockEContext, blockHeight)
-    }
-}
-
-fun getMerkleProof(blockHeight: Long, store: BasePageStore, leafPos: Long): List<Hash> {
-    val path = mutableListOf<Hash>()
-    val highest = store.highestLevelPage(blockHeight)
-    for (level in 0..highest step store.levelsPerPage) {
-        val leafsInPage = 1 shl (level + store.levelsPerPage)
-        val left = leafPos - leafPos % leafsInPage
-        // if page is not found (a.k.a null), continue move to handle next page
-        val page = store.readSnapshotPage(blockHeight, level, left) ?: continue
-        var relPos = ((leafPos - left) shr level).toInt() // relative position of entry on a level
-        for (relLevel in 0 until store.levelsPerPage) {
-            val another = relPos xor 0x1 // flip the lowest bit to find the other child of same node
-            val hashes = page.getHashes(relLevel, store.ds::hash) // TODO: this is inefficient
-            // if the topmost page is not reach max level then exclude it by ignoring the empty hash
-            if (!hashes[another].contentEquals(EMPTY_HASH)) {
-                path.add(hashes[another])
-            }
-            relPos = relPos shr 1
-        }
-    }
-    return path
-}
-
-fun updateSnapshot(store: BasePageStore, blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
-    val entriesPerPage = 1 shl store.levelsPerPage
-    val prevHighestLevelPage = store.highestLevelPage(blockHeight)
-
-    fun updateLevel(level: Int, entryHashes: NavigableMap<Long, Hash>): Hash {
-        var current = 0L
-        val upperEntryMap = TreeMap<Long, Hash>()
-//        val leafsPerEntry = 1 shl level // one entry corresponds to this many leafs at the bottom
-        while (true) {
-            val next = entryHashes.ceilingEntry(current) ?: break
-            // calculate left boundary of page, in entries on this level, in entries at this level
-            val left = next.key - (next.key % entriesPerPage)
-//            val left = leafsPerEntry * leftInEntries // left in leafs
-            var haveMissingLeafs = false
-            val pageElts = Array(entriesPerPage) {
-                val leaf = entryHashes[it + left]
-                if (leaf == null) haveMissingLeafs = true
-                leaf
-            }
-            if (haveMissingLeafs) {
-                val oldPage = store.readSnapshotPage(blockHeight, level, left)
-                if (oldPage != null) {
-                    for (i in 0 until entriesPerPage) {
-                        if (pageElts[i] == null)
-                            pageElts[i] = oldPage.childHashes[i]
-                    }
-                }
-            }
-            val pageChildren = pageElts.map { it ?: EMPTY_HASH }.toTypedArray()
-            val page = SnapshotPage(blockHeight, level, left, pageChildren)
-            val pageHash = page.getHashes(store.levelsPerPage, store.ds::hash)[0]
-            upperEntryMap[left / entriesPerPage] = pageHash
-            store.writeSnapshotPage(page)
-            current = left + entriesPerPage
-        }
-        return if (upperEntryMap.lastKey() > 0 || prevHighestLevelPage > level)
-            updateLevel(level + store.levelsPerPage, upperEntryMap)
-        else {
-            val pageChildren = Array(entriesPerPage) { EMPTY_HASH }
-            pageChildren[0] = upperEntryMap[0]!!
-            store.writeSnapshotPage(SnapshotPage(blockHeight, level + store.levelsPerPage, 0, pageChildren))
-            upperEntryMap[0]!!
-        }
-    }
-
-    if (leafHashes.size == 0) return EMPTY_HASH
-    return updateLevel(0, leafHashes)
-}
-
-fun writeEventTree(store: BasePageStore, blockHeight: Long, leafHashes: List<Hash>): Hash {
-    val entriesPerPage = 1 shl store.levelsPerPage
-    val prevHighestLevelPage = store.highestLevelPage(blockHeight)
-
-    fun updateLevel(level: Int, entryHashes: List<Hash>): Hash {
-        var current = 0
-        val upperEntry = arrayListOf<Hash>()
-        while (current < entryHashes.size) {
-            // calculate left boundary of page, in entries on this level, in entries at this level
-            val left = current - (current % entriesPerPage)
-            val pageChildren = Array(entriesPerPage) {
-                entryHashes.getOrElse(it + left) { EMPTY_HASH }
-            }
-            val page = SnapshotPage(blockHeight, level, left.toLong(), pageChildren)
-            val pageHash = page.getHashes(store.levelsPerPage, store.ds::hash)[0]
-            upperEntry.add(pageHash)
-            store.writeSnapshotPage(page)
-            current = left + entriesPerPage
-        }
-        return if (upperEntry.size > 2 || prevHighestLevelPage > level)
-            updateLevel(level + store.levelsPerPage, upperEntry)
-        else {
-            val pageChildren = Array(entriesPerPage) { EMPTY_HASH }
-            pageChildren[0] = upperEntry[0]!!
-            store.writeSnapshotPage(SnapshotPage(blockHeight, level + store.levelsPerPage, 0, pageChildren))
-            upperEntry[0]!!
-        }
-    }
-
-    if (leafHashes.isEmpty()) return EMPTY_HASH
-    return updateLevel(0, leafHashes)
 }
 
