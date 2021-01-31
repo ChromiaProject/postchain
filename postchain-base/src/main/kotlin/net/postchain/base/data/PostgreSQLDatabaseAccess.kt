@@ -62,8 +62,8 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " data BYTEA NOT NULL)"
     }
 
-    override fun cmdCreateTableSnapshotPage(ctx: EContext): String {
-        return "CREATE TABLE ${tableSnapshotPages(ctx)}" +
+    override fun cmdCreateTablePage(ctx: EContext, name: String): String {
+        return "CREATE TABLE ${tablePages(ctx, name)}" +
                 " (snapshot_page_iid BIGSERIAL PRIMARY KEY," +
                 " block_height BIGINT NOT NULL, " +
                 " level INTEGER NOT NULL, " +
@@ -145,8 +145,8 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 "VALUES (?, ?, ?, ?)"
     }
 
-    override fun cmdInsertSnapshotPages(ctx: EContext): String {
-        return "INSERT INTO ${tableSnapshotPages(ctx)} (block_height, level, left_index, child_hashes) " +
+    override fun cmdInsertPages(ctx: EContext, name: String): String {
+        return "INSERT INTO ${tablePages(ctx, name)} (block_height, level, left_index, child_hashes) " +
                 "VALUES (?, ?, ?, ?)"
     }
 

@@ -4,16 +4,15 @@ package net.postchain.base.l2
 
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockBuilder
+import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.LeafStore
 import net.postchain.base.snapshot.SnapshotPageStore
-import net.postchain.base.snapshot.updateSnapshot
 import net.postchain.common.data.Hash
 import net.postchain.core.*
 import net.postchain.crypto.DigestSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
-import net.postchain.merkle.MerkleTreeBuilder
 import java.util.*
 
 interface L2EventProcessor {
@@ -84,7 +83,7 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
                      blockSigMaker: SigMaker,
                      blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
                      usingHistoricBRID: Boolean,
-                     val l2Implementation: L2Implementation,
+                     private val l2Implementation: L2Implementation,
                      maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
                      maxBlockTransactions: Long = 100
 ): BaseBlockBuilder(blockchainRID, cryptoSystem, eContext, store, txFactory, specialTxHandler, subjects, blockSigMaker,
@@ -101,10 +100,14 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
     }
 }
 
-class EthereumL2Implementation(private val ds: DigestSystem): L2Implementation {
-    lateinit var bctx: BlockEContext
+class EthereumL2Implementation(
+    private val ds: DigestSystem,
+    private val levelsPerPage: Int): L2Implementation {
+
+    private lateinit var bctx: BlockEContext
     lateinit var store: LeafStore
     lateinit var snapshot: SnapshotPageStore
+    lateinit var event: EventPageStore
 
     val events = mutableListOf<Hash>()
     val states = TreeMap<Long, Hash>()
@@ -112,7 +115,8 @@ class EthereumL2Implementation(private val ds: DigestSystem): L2Implementation {
     override fun init(blockEContext: BlockEContext) {
         bctx = blockEContext
         store = LeafStore()
-        snapshot = SnapshotPageStore(blockEContext, "", 2, ds)
+        snapshot = SnapshotPageStore(blockEContext, levelsPerPage, ds)
+        event = EventPageStore(blockEContext, levelsPerPage, ds)
     }
 
     /**
@@ -120,9 +124,8 @@ class EthereumL2Implementation(private val ds: DigestSystem): L2Implementation {
      */
     override fun finalize(): Map<String, Gtv> {
         val extra = mutableMapOf<String, Gtv>()
-        val stateRootHash = updateSnapshot(snapshot, bctx.height, states)
-        val builder = MerkleTreeBuilder(ds)
-        val eventRootHash = builder.merkleRootHash(events)
+        val stateRootHash = snapshot.updateSnapshot(bctx.height, states)
+        val eventRootHash = event.writeEventTree(bctx.height, events)
         extra["l2RootState"] = GtvByteArray(stateRootHash)
         extra["l2RootEvent"] = GtvByteArray(eventRootHash)
         return extra

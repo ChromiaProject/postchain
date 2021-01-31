@@ -16,11 +16,13 @@ class MerkleTest : TestCase() {
     private val leafHashes = TreeMap<Long, Hash>()
     private val ds = EthereumL2DigestSystem(KECCAK256)
 
-    private lateinit var store: TestPageStore
+    private lateinit var snapshot: TestSnapshotPageStore
+    private lateinit var event: TestEventPageStore
 
     public override fun setUp() {
         super.setUp()
-        store = TestPageStore(2, ds)
+        snapshot = TestSnapshotPageStore(2, ds)
+        event = TestEventPageStore(2, ds)
         leafHashes[0] = "044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d".hexStringToByteArray()
         leafHashes[1] = "c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6".hexStringToByteArray()
         leafHashes[3] = "2a80e1ef1d7842f27f2e6be0972bb708b9a135c38860dbe73c27c3486c34f4de".hexStringToByteArray()
@@ -31,7 +33,7 @@ class MerkleTest : TestCase() {
     }
 
     fun testUpdateSnapshot_3pages() {
-        val stateRootHash = updateSnapshot(store, 1, leafHashes)
+        val stateRootHash = snapshot.updateSnapshot( 1, leafHashes)
         val l01 = ds.hash(leafHashes[0]!!, leafHashes[1]!!)
         val l23 = ds.hash(EMPTY_HASH, leafHashes[3]!!)
         val hash00 = ds.hash(l01, l23)
@@ -46,7 +48,7 @@ class MerkleTest : TestCase() {
     fun testUpdateSnapshot_4pages() {
         leafHashes[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()
         leafHashes[9] = "d2f8f61201b2b11a78d6e866abc9c3db2ae8631fa656bfe5cb53668255367afb".hexStringToByteArray()
-        val stateRootHash = updateSnapshot(store, 1, leafHashes)
+        val stateRootHash = snapshot.updateSnapshot( 1, leafHashes)
         val l01 = ds.hash(leafHashes[0]!!, leafHashes[1]!!)
         val l23 = ds.hash(EMPTY_HASH, leafHashes[3]!!)
         val hash00 = ds.hash(l01, l23)
@@ -66,14 +68,14 @@ class MerkleTest : TestCase() {
     fun testUpdateSnapshot_4pages_Multiple_Blocks() {
         leafHashes[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()
         leafHashes[9] = "d2f8f61201b2b11a78d6e866abc9c3db2ae8631fa656bfe5cb53668255367afb".hexStringToByteArray()
-        updateSnapshot(store, 1, leafHashes)
+        snapshot.updateSnapshot(1, leafHashes)
 
         val leafHashes2 = TreeMap<Long, Hash>()
         leafHashes2[2] = "ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray()
         leafHashes2[8] = "9ae6066ff8547d3138cce35b150f93047df88fa376c8808f462d3bbdbcb4a690".hexStringToByteArray()
         leafHashes2[9] = "c41c8390c0da0418b7667ee0df6c246c26c4be6c0618368dce5a916e8008b0db".hexStringToByteArray()
 
-        val stateRootHash = updateSnapshot(store, 2, leafHashes2)
+        val stateRootHash = snapshot.updateSnapshot( 2, leafHashes2)
 
         val l01 = ds.hash(leafHashes[0]!!, leafHashes[1]!!)
         val l23 = ds.hash(leafHashes2[2]!!, leafHashes[3]!!)
@@ -94,20 +96,20 @@ class MerkleTest : TestCase() {
     fun testUpdateSnapshot_6pages_Multiple_Blocks() {
         leafHashes[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()
         leafHashes[9] = "d2f8f61201b2b11a78d6e866abc9c3db2ae8631fa656bfe5cb53668255367afb".hexStringToByteArray()
-        updateSnapshot(store, 1, leafHashes)
+        snapshot.updateSnapshot(1, leafHashes)
 
         val leafHashes2 = TreeMap<Long, Hash>()
         leafHashes2[2] = "ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray()
         leafHashes2[8] = "9ae6066ff8547d3138cce35b150f93047df88fa376c8808f462d3bbdbcb4a690".hexStringToByteArray()
         leafHashes2[9] = "c41c8390c0da0418b7667ee0df6c246c26c4be6c0618368dce5a916e8008b0db".hexStringToByteArray()
 
-        updateSnapshot(store, 2, leafHashes2)
+        snapshot.updateSnapshot(2, leafHashes2)
 
         val leafHashes3 = TreeMap<Long, Hash>()
         leafHashes3[10] = "1a192fabce13988b84994d4296e6cdc418d55e2f1d7f942188d4040b94fc57ac".hexStringToByteArray()
         leafHashes3[11] = "7880aec93413f117ef14bd4e6d130875ab2c7d7d55a064fac3c2f7bd51516380".hexStringToByteArray()
 
-        updateSnapshot(store, 3, leafHashes3)
+        snapshot.updateSnapshot(3, leafHashes3)
 
         val leafHashes4 = TreeMap<Long, Hash>()
 
@@ -117,7 +119,7 @@ class MerkleTest : TestCase() {
         leafHashes4[14] = "5c4c6aa067b6f8e6cb38e6ab843832a94d1712d661a04d73c517d6a1931a9e5d".hexStringToByteArray()
         leafHashes4[15] = "1d3be50b2bb17407dd170f1d5da128d1def30c6b1598d6a629e79b4775265526".hexStringToByteArray()
 
-        val stateRootHash = updateSnapshot(store, 4, leafHashes4)
+        val stateRootHash = snapshot.updateSnapshot(4, leafHashes4)
 
         val l01 = ds.hash(leafHashes4[0]!!, leafHashes[1]!!)
         val l23 = ds.hash(leafHashes2[2]!!, leafHashes[3]!!)
@@ -139,7 +141,7 @@ class MerkleTest : TestCase() {
         val leafHashes5 = TreeMap<Long, Hash>()
         leafHashes5[16] = "277ab82e5a4641341820a4a2933a62c1de997e42e92548657ae21b3728d580fe".hexStringToByteArray()
 
-        val stateRootHash2 = updateSnapshot(store, 5, leafHashes5)
+        val stateRootHash2 = snapshot.updateSnapshot(5, leafHashes5)
 
         val root2 = ds.hash(root, leafHashes5[16]!!)
         assertEquals(stateRootHash2.toHex(), root2.toHex())
@@ -173,7 +175,7 @@ class MerkleTest : TestCase() {
         val rightHash = ds.hash(hash10, hash11)
 
         val root = ds.hash(ds.hash(leftHash, rightHash), leafHashes[16]!!)
-        val stateRootHash = updateSnapshot(store, 1, leafHashes)
+        val stateRootHash = snapshot.updateSnapshot(1, leafHashes)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -184,8 +186,8 @@ class MerkleTest : TestCase() {
             leafs[i.toLong()] = ds.digest(BigInteger.valueOf(i.toLong()).toByteArray())
         }
 
-        val stateRootHash = updateSnapshot(store, 0, leafs)
-        val proofs = getMerkleProof(0, store, 5)
+        val stateRootHash = snapshot.updateSnapshot(0, leafs)
+        val proofs = snapshot.getMerkleProof(0, 5)
         val l45 = ds.hash(proofs[0], leafs[5]!!)
         val l4567 = ds.hash(l45, proofs[1])
         val root = ds.hash(proofs[2], l4567)
@@ -200,8 +202,8 @@ class MerkleTest : TestCase() {
             leafs[i.toLong()] = ds.digest(BigInteger.valueOf(i.toLong()).toByteArray())
         }
 
-        val stateRootHash = updateSnapshot(store, 0, leafs)
-        val proofs = getMerkleProof(0, store, 5)
+        val stateRootHash = snapshot.updateSnapshot(0, leafs)
+        val proofs = snapshot.getMerkleProof(0, 5)
         val l45 = ds.hash(proofs[0], leafs[5]!!)
         val l4567 = ds.hash(l45, proofs[1])
         val l16 = ds.hash(proofs[2], l4567)
@@ -217,8 +219,8 @@ class MerkleTest : TestCase() {
         for (i in 0..16) {
             leafs[i.toLong()] = ds.digest(BigInteger.valueOf(i.toLong()).toByteArray())
         }
-        val stateRootHash = updateSnapshot(store, 0, leafs)
-        val proofs = getMerkleProof(0, store, 16)
+        val stateRootHash = snapshot.updateSnapshot(0, leafs)
+        val proofs = snapshot.getMerkleProof(0, 16)
         val root = ds.hash(proofs[0], leafs[16]!!)
         assertEquals(1, proofs.size)
         assertEquals(stateRootHash.toHex(), root.toHex())
@@ -231,8 +233,8 @@ class MerkleTest : TestCase() {
             leafs[i.toLong()] = ds.digest(BigInteger.valueOf(i.toLong()).toByteArray())
         }
 
-        val stateRootHash = updateSnapshot(store, 0, leafs)
-        val proofs = getMerkleProof(0, store, 8)
+        val stateRootHash = snapshot.updateSnapshot(0, leafs)
+        val proofs = snapshot.getMerkleProof(0, 8)
         val l89 = ds.hash(leafs[8]!!, proofs[0])
         val l891011 = ds.hash(l89, proofs[1])
         val l16 = ds.hash(l891011, proofs[2])
@@ -249,7 +251,7 @@ class MerkleTest : TestCase() {
         leafs.add("ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray())
         leafs.add("2a80e1ef1d7842f27f2e6be0972bb708b9a135c38860dbe73c27c3486c34f4de".hexStringToByteArray())
         leafs.add("13600b294191fc92924bb3ce4b969c1e7e2bab8f4c93c3fc6d0a51733df3c060".hexStringToByteArray())
-        val root = writeEventTree(store, 0, leafs)
+        val root = event.writeEventTree(0, leafs)
 
         val l12 = ds.hash(leafs[0], leafs[1])
         val l34 = ds.hash(leafs[2], leafs[3])
