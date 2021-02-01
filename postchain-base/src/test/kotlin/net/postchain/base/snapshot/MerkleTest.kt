@@ -196,6 +196,22 @@ class MerkleTest : TestCase() {
     }
 
     @Test
+    fun testGetMerkleProof8_Proof5_With_Empty_Hash_Leaf() {
+        val leafs = TreeMap<Long, Hash>()
+        for (i in 0..7) {
+            leafs[i.toLong()] = ds.digest(BigInteger.valueOf(i.toLong()).toByteArray())
+        }
+        leafs[4] = EMPTY_HASH
+
+        val stateRootHash = snapshot.updateSnapshot(0, leafs)
+        val proofs = snapshot.getMerkleProof(0, 5)
+        val l4567 = ds.hash(leafs[5]!!, proofs[0])
+        val root = ds.hash(proofs[1], l4567)
+        assertEquals(2, proofs.size)
+        assertEquals(stateRootHash.toHex(), root.toHex())
+    }
+
+    @Test
     fun testGetMerkleProof16_Proof5() {
         val leafs = TreeMap<Long, Hash>()
         for (i in 0..16) {
@@ -210,6 +226,26 @@ class MerkleTest : TestCase() {
         val left = ds.hash(l16, proofs[3])
         val root = ds.hash(left, proofs[4])
         assertEquals(5, proofs.size)
+        assertEquals(stateRootHash.toHex(), root.toHex())
+    }
+
+    @Test
+    fun testGetMerkleProof16_Proof5_With_Empty_Leafs() {
+        val leafs = TreeMap<Long, Hash>()
+        for (i in 0..16) {
+            leafs[i.toLong()] = ds.digest(BigInteger.valueOf(i.toLong()).toByteArray())
+        }
+
+        leafs[4] = EMPTY_HASH
+        leafs[6] = EMPTY_HASH
+        leafs[7] = EMPTY_HASH
+
+        val stateRootHash = snapshot.updateSnapshot(0, leafs)
+        val proofs = snapshot.getMerkleProof(0, 5)
+        val l16 = ds.hash(proofs[0], leafs[5]!!)
+        val left = ds.hash(l16, proofs[1])
+        val root = ds.hash(left, proofs[2])
+        assertEquals(3, proofs.size)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -247,10 +283,9 @@ class MerkleTest : TestCase() {
     @Test
     fun testWriteEventTree_4_Leafs() {
         val leafs = arrayListOf<Hash>()
-        leafs.add("c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6".hexStringToByteArray())
-        leafs.add("ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray())
-        leafs.add("2a80e1ef1d7842f27f2e6be0972bb708b9a135c38860dbe73c27c3486c34f4de".hexStringToByteArray())
-        leafs.add("13600b294191fc92924bb3ce4b969c1e7e2bab8f4c93c3fc6d0a51733df3c060".hexStringToByteArray())
+        for (i in 1..4) {
+            leafs.add(ds.digest(BigInteger.valueOf(i.toLong()).toByteArray()))
+        }
         val root = event.writeEventTree(0, leafs)
 
         val l12 = ds.hash(leafs[0], leafs[1])
@@ -261,17 +296,53 @@ class MerkleTest : TestCase() {
     }
 
     @Test
+    fun testWriteEventTree_9_Leafs() {
+        val leafs = arrayListOf<Hash>()
+        for (i in 1..9) {
+            leafs.add(ds.digest(BigInteger.valueOf(i.toLong()).toByteArray()))
+        }
+        val root = event.writeEventTree(0, leafs)
+
+        val l12 = ds.hash(leafs[0], leafs[1])
+        val l34 = ds.hash(leafs[2], leafs[3])
+        val l56 = ds.hash(leafs[4], leafs[5])
+        val l78 = ds.hash(leafs[6], leafs[7])
+        val left = ds.hash(l12, l34)
+        val right = ds.hash(l56, l78)
+        val expected = ds.hash(ds.hash(left, right), leafs[8])
+
+        assertEquals(expected.toHex(), root.toHex())
+    }
+
+    @Test
     fun testGetMerkleProofForEvent_4_Leafs() {
         val leafs = arrayListOf<Hash>()
-        leafs.add("c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6".hexStringToByteArray())
-        leafs.add("ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray())
-        leafs.add("2a80e1ef1d7842f27f2e6be0972bb708b9a135c38860dbe73c27c3486c34f4de".hexStringToByteArray())
-        leafs.add("13600b294191fc92924bb3ce4b969c1e7e2bab8f4c93c3fc6d0a51733df3c060".hexStringToByteArray())
+        for (i in 1..4) {
+            leafs.add(ds.digest(BigInteger.valueOf(i.toLong()).toByteArray()))
+        }
         val root = event.writeEventTree(0, leafs)
         val proofs = event.getMerkleProof(0, 1)
         val l12 = ds.hash(proofs[0], leafs[1])
         val expected = ds.hash(l12, proofs[1])
 
+        assertEquals(2, proofs.size)
+        assertEquals(expected.toHex(), root.toHex())
+    }
+
+    @Test
+    fun testGetMerkleProofForEvent_9_Leafs() {
+        val leafs = arrayListOf<Hash>()
+        for (i in 1..9) {
+            leafs.add(ds.digest(BigInteger.valueOf(i.toLong()).toByteArray()))
+        }
+        val root = event.writeEventTree(0, leafs)
+        val proofs = event.getMerkleProof(0, 4)
+        val l45 = ds.hash(leafs[4], proofs[0])
+        val l4567 = ds.hash(l45, proofs[1])
+        val left = ds.hash(proofs[2], l4567)
+        val expected = ds.hash(left, proofs[3])
+
+        assertEquals(4, proofs.size)
         assertEquals(expected.toHex(), root.toHex())
     }
 }
