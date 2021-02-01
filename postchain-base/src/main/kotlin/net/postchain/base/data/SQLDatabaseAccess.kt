@@ -26,7 +26,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
-    protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, name)
+    protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
     protected fun tableEvents(ctx: EContext): String = tableName(ctx, "events")
     protected fun tableStates(ctx: EContext): String = tableName(ctx, "states")
     protected fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
@@ -392,8 +392,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
         // TODO: [POS-147]: temporarily here, might init in other place for L2
         // L2 tables
-        createIfNotExist(ctx, tablePages(ctx, "snapshot_pages"), cmdCreateTablePage(ctx, "snapshot_pages"))
-        createIfNotExist(ctx, tablePages(ctx, "event_pages"), cmdCreateTablePage(ctx, "event_pages"))
+        createIfNotExist(ctx, tablePages(ctx, "snapshot"), cmdCreateTablePage(ctx, "snapshot"))
+        createIfNotExist(ctx, tablePages(ctx, "event"), cmdCreateTablePage(ctx, "event"))
         createIfNotExist(ctx, tableEvents(ctx), cmdCreateTableEvent(ctx))
         createIfNotExist(ctx, tableStates(ctx), cmdCreateTableState(ctx))
 

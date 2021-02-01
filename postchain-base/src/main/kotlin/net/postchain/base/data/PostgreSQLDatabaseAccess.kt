@@ -40,7 +40,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun cmdCreateTablePage(ctx: EContext, name: String): String {
         return "CREATE TABLE ${tablePages(ctx, name)}" +
-                " (snapshot_page_iid BIGSERIAL PRIMARY KEY," +
+                " (${name}_page_iid BIGSERIAL PRIMARY KEY," +
                 " block_height BIGINT NOT NULL, " +
                 " level INTEGER NOT NULL, " +
                 " left_index BIGINT NOT NULL, " +
