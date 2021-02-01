@@ -82,7 +82,7 @@ open class EventPageStore(
     blockEContext: BlockEContext?,
     levelsPerPage: Int,
     ds: DigestSystem
-) : BasePageStore("event_pages", blockEContext, levelsPerPage, ds) {
+) : BasePageStore("event", blockEContext, levelsPerPage, ds) {
 
     fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
@@ -122,7 +122,7 @@ open class SnapshotPageStore(
     blockEContext: BlockEContext?,
     levelsPerPage: Int,
     ds: DigestSystem
-) : BasePageStore("snapshot_pages", blockEContext, levelsPerPage, ds) {
+) : BasePageStore("snapshot", blockEContext, levelsPerPage, ds) {
 
     fun updateSnapshot(blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage

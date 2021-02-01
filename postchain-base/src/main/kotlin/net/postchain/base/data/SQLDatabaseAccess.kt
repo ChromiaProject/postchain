@@ -4,12 +4,8 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
-<<<<<<< HEAD
 import net.postchain.common.data.Hash
-import net.postchain.base.snapshot.SnapshotPage
-=======
 import net.postchain.base.snapshot.Page
->>>>>>> 7b97decb... refactor page store
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
@@ -31,7 +27,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
-    protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, name)
+    protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
     protected fun tableEvents(ctx: EContext): String = tableName(ctx, "events")
     protected fun tableStates(ctx: EContext): String = tableName(ctx, "states")
     protected fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
@@ -467,10 +463,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
         // TODO: [POS-147]: temporarily here, might init in other place for L2
         // L2 tables
-        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "snapshot_pages"))
-        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "event_pages"))
-        queryRunner.update(ctx.conn, tableEvents(ctx), cmdCreateTableEvent(ctx))
-        queryRunner.update(ctx.conn, tableStates(ctx), cmdCreateTableState(ctx))
+        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "snapshot"))
+        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "event"))
+        queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx))
+        queryRunner.update(ctx.conn, cmdCreateTableState(ctx))
 
         // TODO: [POS-128]: Temporal solution
         val indexCreated = tableExists(ctx.conn, tableTransactions(ctx))
