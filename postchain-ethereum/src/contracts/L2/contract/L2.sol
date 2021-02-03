@@ -192,4 +192,20 @@ contract ChrL2 {
         }
         return (evt.root, evt.amount, evt.proof);
     }
+
+    /**
+     * @dev verify merkle proof
+     */
+    function verifyMerkleProof(bytes32[] calldata proofs, bytes32 leaf, uint position, bytes32 root) public pure returns (bool) {
+        bytes32 r = leaf;
+        for (uint i = 0; i < proofs.length; i++) {
+            uint b = position & (1 << i);
+            if (b == 0) {
+                r = keccak256(abi.encodePacked(r, proofs[i]));
+            } else {
+                r = keccak256(abi.encodePacked(proofs[i], r));
+            }
+        }
+        return (r == root);
+    }
 }
