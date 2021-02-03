@@ -320,13 +320,17 @@ class MerkleTest : TestCase() {
         for (i in 1..4) {
             leafs.add(ds.digest(BigInteger.valueOf(i.toLong()).toByteArray()))
         }
+        val pos = 2L
         val root = event.writeEventTree(0, leafs)
-        val proofs = event.getMerkleProof(0, 1)
-        val l12 = ds.hash(proofs[0], leafs[1])
-        val expected = ds.hash(l12, proofs[1])
+        val proofs = event.getMerkleProof(0, pos)
+        val l23 = ds.hash(leafs[pos.toInt()], proofs[0])
+        val expected = ds.hash(proofs[1], l23)
 
         assertEquals(2, proofs.size)
         assertEquals(expected.toHex(), root.toHex())
+        proofs.forEach { println("proofs: ${it.toHex()}") }
+        println("root: ${root.toHex()}")
+        println("leaf 1: ${leafs[pos.toInt()].toHex()}")
     }
 
     @Test
