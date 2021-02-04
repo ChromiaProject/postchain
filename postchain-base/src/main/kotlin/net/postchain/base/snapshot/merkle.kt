@@ -61,8 +61,9 @@ abstract class BasePageStore(
         for (level in 0..highest step levelsPerPage) {
             val leafsInPage = 1 shl (level + levelsPerPage)
             val left = leafPos - leafPos % leafsInPage
+            val leftInEntry = left/(1 shl level)
             // if page is not found (a.k.a null), continue move to handle next page
-            val page = readPage(blockHeight, level, left) ?: continue
+            val page = readPage(blockHeight, level, leftInEntry) ?: continue
             var relPos = ((leafPos - left) shr level).toInt() // relative position of entry on a level
             // TODO: Need to handle topmost page level
             for (relLevel in 0 until levelsPerPage) {
