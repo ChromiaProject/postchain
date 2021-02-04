@@ -32,7 +32,7 @@ class TestSnapshotPageStore(
     override fun highestLevelPage(blockHeight: Long): Int {
         var highestLevel = 0
         for ((_, v) in store) {
-            if (highestLevel < v.level && v.blockHeight <= blockHeight) {
+            if (highestLevel < v.level && v.blockHeight < blockHeight) {
                 highestLevel = v.level
             }
         }
@@ -70,7 +70,7 @@ class TestEventPageStore(
     override fun highestLevelPage(blockHeight: Long): Int {
         var highestLevel = 0
         for ((_, v) in store) {
-            if (highestLevel < v.level && v.blockHeight <= blockHeight) {
+            if (highestLevel < v.level && v.blockHeight < blockHeight) {
                 highestLevel = v.level
             }
         }
