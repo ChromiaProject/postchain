@@ -108,9 +108,6 @@ open class EventPageStore(
             return if (upperEntry.size > 2 || prevHighestLevelPage > level)
                 updateLevel(level + levelsPerPage, upperEntry)
             else {
-                val pageChildren = Array(entriesPerPage) { EMPTY_HASH }
-                pageChildren[0] = upperEntry[0]
-                writePage(Page(blockHeight, level + levelsPerPage, 0, pageChildren))
                 upperEntry[0]
             }
         }
