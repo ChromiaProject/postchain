@@ -3,6 +3,7 @@ package net.postchain.devtools.l2
 import net.postchain.base.BlockchainRid
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
@@ -143,9 +144,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val l2RootEvent = extraData["l2RootEvent"]?.asByteArray()
         val l2RootState = extraData["l2RootState"]?.asByteArray()
         val eventData = "00000000000000000000000000000000000000000000000000000000000000015fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2".hexStringToByteArray()
-        val eventHash = ds.digest(eventData)
+        val eventHash = ds.hash(ds.hash(ds.digest(eventData), EMPTY_HASH), EMPTY_HASH)
         val stateData = "0000000000000000000000000000000000000000000000000000000000000002f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2".hexStringToByteArray()
-        val stateHash = ds.digest(stateData)
+        val stateHash = ds.hash(ds.hash(ds.digest(stateData), EMPTY_HASH), EMPTY_HASH)
         assertEquals(eventHash.toHex(), l2RootEvent!!.toHex())
         assertEquals(stateHash.toHex(), l2RootState!!.toHex())
 
@@ -254,8 +255,10 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val extraData2 = blockHeaderData2.gtvExtra
         val l2StateRoot2 = extraData2["l2RootState"]?.asByteArray()
 
-        // calculate state root
-        val root2 = ds.hash(root, leafHashes[l]!!)
+        // calculate the new state root
+        val p5 = ds.hash(ds.hash(leafHashes[l]!!, EMPTY_HASH), EMPTY_HASH)
+        val p7 = ds.hash(ds.hash(p5, EMPTY_HASH), EMPTY_HASH)
+        val root2 = ds.hash(ds.hash(root, p7), EMPTY_HASH)
         assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
     }
 
@@ -358,7 +361,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val l2StateRoot2 = extraData2["l2RootState"]?.asByteArray()
 
         // calculate state root in new block
-        val root2 = ds.hash(stateRootHash, leafHashes[l]!!)
+        val p5 = ds.hash(ds.hash(leafHashes[l]!!, EMPTY_HASH), EMPTY_HASH)
+        val p7 = ds.hash(ds.hash(p5, EMPTY_HASH), EMPTY_HASH)
+        val root2 = ds.hash(ds.hash(stateRootHash, p7), EMPTY_HASH)
         assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
     }
 
