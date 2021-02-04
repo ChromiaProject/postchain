@@ -213,6 +213,19 @@ class MerkleTest : TestCase() {
     }
 
     @Test
+    fun testGetMerkleProof8_Proof8() {
+        val leafs = TreeMap<Long, Hash>()
+        for (i in 0..8) {
+            leafs[i.toLong()] = ds.digest(BigInteger.valueOf(i.toLong()).toByteArray())
+        }
+
+        val stateRootHash = snapshot.updateSnapshot(0, leafs)
+        val proofs = snapshot.getMerkleProof(0, 8)
+        val root = getMerkleProof(proofs, 8, leafs[8]!!)
+        assertEquals(stateRootHash.toHex(), root.toHex())
+    }
+
+    @Test
     fun testGetMerkleProof16_Proof5() {
         val leafs = TreeMap<Long, Hash>()
         for (i in 0..16) {
@@ -251,7 +264,6 @@ class MerkleTest : TestCase() {
         val stateRootHash = snapshot.updateSnapshot(0, leafs)
         val proofs = snapshot.getMerkleProof(0, 16)
         val root = getMerkleProof(proofs, 16, leafs[16]!!)
-//        assertEquals(1, proofs.size)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -264,12 +276,7 @@ class MerkleTest : TestCase() {
 
         val stateRootHash = snapshot.updateSnapshot(0, leafs)
         val proofs = snapshot.getMerkleProof(0, 8)
-        val l89 = ds.hash(leafs[8]!!, proofs[0])
-        val l891011 = ds.hash(l89, proofs[1])
-        val l16 = ds.hash(l891011, proofs[2])
-        val left = ds.hash(proofs[3], l16)
-        val root = ds.hash(left, proofs[4])
-//        assertEquals(5, proofs.size)
+        val root = getMerkleProof(proofs, 8, leafs[8]!!)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
