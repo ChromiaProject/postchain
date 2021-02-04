@@ -21,8 +21,8 @@ class EthereumL2DigestSystem(override val algorithm: String) : DigestSystem {
             throw InvalidParameterException("invalid hash length")
         return when {
             left.contentEquals(EMPTY_HASH) && right.contentEquals(EMPTY_HASH) -> EMPTY_HASH
-            left.contentEquals(EMPTY_HASH) -> right
-            right.contentEquals(EMPTY_HASH) -> left
+            left.contentEquals(EMPTY_HASH) -> digest(right)
+            right.contentEquals(EMPTY_HASH) -> digest(left)
             else -> digest(left.plus(right))
         }
     }

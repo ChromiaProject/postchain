@@ -40,8 +40,9 @@ class MerkleTest : TestCase() {
         val l45 = ds.hash(leafHashes[4]!!, leafHashes[5]!!)
         val l67 = ds.hash(leafHashes[6]!!, leafHashes[7]!!)
         val hash01 = ds.hash(l45, l67)
-
-        val root = ds.hash(hash00, hash01)
+        val left = ds.hash(hash00, hash01)
+        val right  = ds.hash(EMPTY_HASH, EMPTY_HASH)
+        val root = ds.hash(left, right)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -59,9 +60,9 @@ class MerkleTest : TestCase() {
         val l89 = ds.hash(leafHashes[8]!!, leafHashes[9]!!)
         val hash10 = ds.hash(l89, EMPTY_HASH)
         val hash11 = ds.hash(EMPTY_HASH, EMPTY_HASH)
-        val leftHash = ds.hash(hash00, hash01)
-        val rightHash = ds.hash(hash10, hash11)
-        val root = ds.hash(leftHash, rightHash)
+        val left = ds.hash(hash00, hash01)
+        val right = ds.hash(hash10, hash11)
+        val root = ds.hash(left, right)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -87,9 +88,9 @@ class MerkleTest : TestCase() {
         val l89 = ds.hash(leafHashes2[8]!!, leafHashes2[9]!!)
         val hash10 = ds.hash(l89, EMPTY_HASH)
         val hash11 = ds.hash(EMPTY_HASH, EMPTY_HASH)
-        val leftHash = ds.hash(hash00, hash01)
-        val rightHash = ds.hash(hash10, hash11)
-        val root = ds.hash(leftHash, rightHash)
+        val left = ds.hash(hash00, hash01)
+        val right = ds.hash(hash10, hash11)
+        val root = ds.hash(left, right)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -143,7 +144,9 @@ class MerkleTest : TestCase() {
 
         val stateRootHash2 = snapshot.updateSnapshot(5, leafHashes5)
 
-        val root2 = ds.hash(root, leafHashes5[16]!!)
+        val p5 = ds.hash(ds.hash(leafHashes5[16]!!, EMPTY_HASH), EMPTY_HASH)
+        val p7 = ds.hash(ds.hash(p5, EMPTY_HASH), EMPTY_HASH)
+        val root2 = ds.hash(ds.hash(root, p7), EMPTY_HASH)
         assertEquals(stateRootHash2.toHex(), root2.toHex())
     }
 
@@ -174,7 +177,10 @@ class MerkleTest : TestCase() {
         val leftHash = ds.hash(hash00, hash01)
         val rightHash = ds.hash(hash10, hash11)
 
-        val root = ds.hash(ds.hash(leftHash, rightHash), leafHashes[16]!!)
+        val p5 = ds.hash(ds.hash(leafHashes[16]!!, EMPTY_HASH), EMPTY_HASH)
+        val p7 = ds.hash(ds.hash(p5, EMPTY_HASH), EMPTY_HASH)
+        val p6 = ds.hash(leftHash, rightHash)
+        val root = ds.hash(ds.hash(p6, p7), EMPTY_HASH)
         val stateRootHash = snapshot.updateSnapshot(1, leafHashes)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
@@ -188,10 +194,7 @@ class MerkleTest : TestCase() {
 
         val stateRootHash = snapshot.updateSnapshot(0, leafs)
         val proofs = snapshot.getMerkleProof(0, 5)
-        val l45 = ds.hash(proofs[0], leafs[5]!!)
-        val l4567 = ds.hash(l45, proofs[1])
-        val root = ds.hash(proofs[2], l4567)
-        assertEquals(3, proofs.size)
+        val root = getMerkleProof(proofs, 5, leafs[5]!!)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -205,9 +208,7 @@ class MerkleTest : TestCase() {
 
         val stateRootHash = snapshot.updateSnapshot(0, leafs)
         val proofs = snapshot.getMerkleProof(0, 5)
-        val l4567 = ds.hash(leafs[5]!!, proofs[0])
-        val root = ds.hash(proofs[1], l4567)
-        assertEquals(2, proofs.size)
+        val root = getMerkleProof(proofs, 5, leafs[5]!!)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -220,12 +221,7 @@ class MerkleTest : TestCase() {
 
         val stateRootHash = snapshot.updateSnapshot(0, leafs)
         val proofs = snapshot.getMerkleProof(0, 5)
-        val l45 = ds.hash(proofs[0], leafs[5]!!)
-        val l4567 = ds.hash(l45, proofs[1])
-        val l16 = ds.hash(proofs[2], l4567)
-        val left = ds.hash(l16, proofs[3])
-        val root = ds.hash(left, proofs[4])
-        assertEquals(5, proofs.size)
+        val root = getMerkleProof(proofs, 5, leafs[5]!!)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -242,10 +238,7 @@ class MerkleTest : TestCase() {
 
         val stateRootHash = snapshot.updateSnapshot(0, leafs)
         val proofs = snapshot.getMerkleProof(0, 5)
-        val l16 = ds.hash(proofs[0], leafs[5]!!)
-        val left = ds.hash(l16, proofs[1])
-        val root = ds.hash(left, proofs[2])
-        assertEquals(3, proofs.size)
+        val root = getMerkleProof(proofs, 5, leafs[5]!!)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -257,8 +250,8 @@ class MerkleTest : TestCase() {
         }
         val stateRootHash = snapshot.updateSnapshot(0, leafs)
         val proofs = snapshot.getMerkleProof(0, 16)
-        val root = ds.hash(proofs[0], leafs[16]!!)
-        assertEquals(1, proofs.size)
+        val root = getMerkleProof(proofs, 16, leafs[16]!!)
+//        assertEquals(1, proofs.size)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -276,7 +269,7 @@ class MerkleTest : TestCase() {
         val l16 = ds.hash(l891011, proofs[2])
         val left = ds.hash(proofs[3], l16)
         val root = ds.hash(left, proofs[4])
-        assertEquals(5, proofs.size)
+//        assertEquals(5, proofs.size)
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
@@ -348,5 +341,17 @@ class MerkleTest : TestCase() {
 
         assertEquals(4, proofs.size)
         assertEquals(expected.toHex(), root.toHex())
+    }
+
+    private fun getMerkleProof(proofs: List<Hash>, pos: Int, leaf: Hash): Hash {
+        var r = leaf
+        proofs.forEachIndexed { i, h ->
+            r = if (((pos shr i) and 1) != 0) {
+                ds.hash(h, r)
+            } else {
+                ds.hash(r, h)
+            }
+        }
+        return r
     }
 }
