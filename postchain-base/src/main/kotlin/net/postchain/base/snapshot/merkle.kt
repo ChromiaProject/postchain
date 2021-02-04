@@ -64,15 +64,11 @@ abstract class BasePageStore(
             // if page is not found (a.k.a null), continue move to handle next page
             val page = readPage(blockHeight, level, left) ?: continue
             var relPos = ((leafPos - left) shr level).toInt() // relative position of entry on a level
+            // TODO: Need to handle topmost page level
             for (relLevel in 0 until levelsPerPage) {
                 val another = relPos xor 0x1 // flip the lowest bit to find the other child of same node
                 val hashes = page.getHashes(relLevel, ds::hash) // TODO: this is inefficient
-                // if the topmost page is not reach max level then exclude it by ignoring the empty hash
-                if (level < highest) {
-                    path.add(hashes[another])
-                } else if (!EMPTY_HASH.contentEquals(hashes[another])) {
-                    path.add(hashes[another])
-                }
+                path.add(hashes[another])
                 relPos = relPos shr 1
             }
         }
@@ -125,7 +121,7 @@ open class SnapshotPageStore(
 
     fun updateSnapshot(blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
-        val prevHighestLevelPage = highestLevelPage(blockHeight)
+        val prevHighestLevelPage = highestLevelPage(blockHeight-1)
 
         fun updateLevel(level: Int, entryHashes: NavigableMap<Long, Hash>): Hash {
             var current = 0L

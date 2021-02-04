@@ -396,7 +396,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {
-        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height < ?"
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height <= ?"
         return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
