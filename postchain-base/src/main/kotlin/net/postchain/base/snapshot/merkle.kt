@@ -68,7 +68,9 @@ abstract class BasePageStore(
                 val another = relPos xor 0x1 // flip the lowest bit to find the other child of same node
                 val hashes = page.getHashes(relLevel, ds::hash) // TODO: this is inefficient
                 // if the topmost page is not reach max level then exclude it by ignoring the empty hash
-                if (!hashes[another].contentEquals(EMPTY_HASH)) {
+                if (level < highest) {
+                    path.add(hashes[another])
+                } else if (!EMPTY_HASH.contentEquals(hashes[another])) {
                     path.add(hashes[another])
                 }
                 relPos = relPos shr 1
@@ -136,7 +138,7 @@ open class SnapshotPageStore(
                 val next = entryHashes.ceilingEntry(current) ?: break
                 // calculate left boundary of page, in entries on this level
                 val left = next.key - (next.key % entriesPerPage)
-//            val left = leafsPerEntry * leftInEntries // left in leafs
+//                val left = leafsPerEntry * leftInEntries // left in leafs
                 var haveMissingLeafs = false
                 val pageElts = Array(entriesPerPage) {
                     val leaf = entryHashes[it + left]
@@ -145,7 +147,16 @@ open class SnapshotPageStore(
                 }
                 if (haveMissingLeafs) {
                     val oldPage = readPage(blockHeight, level, left)
-                    if (oldPage != null) {
+                    if (oldPage == null) {
+                        // calculate the topmost page from all existing lower level pages
+                        val lowerLevel = level shr 1
+                        val mostLeft = level * left
+                        for (i in 0 until entriesPerPage) {
+                            val childPage = readPage(blockHeight, lowerLevel, mostLeft+i)
+                            if (childPage != null && pageElts[i] == null)
+                                pageElts[i] = childPage.getHashes(lowerLevel, ds::hash)[0]
+                        }
+                    } else {
                         for (i in 0 until entriesPerPage) {
                             if (pageElts[i] == null)
                                 pageElts[i] = oldPage.childHashes[i]
@@ -162,9 +173,6 @@ open class SnapshotPageStore(
             return if (upperEntryMap.lastKey() > 0 || prevHighestLevelPage > level)
                 updateLevel(level + levelsPerPage, upperEntryMap)
             else {
-                val pageChildren = Array(entriesPerPage) { EMPTY_HASH }
-                pageChildren[0] = upperEntryMap[0]!!
-                writePage(Page(blockHeight, level + levelsPerPage, 0, pageChildren))
                 upperEntryMap[0]!!
             }
         }
