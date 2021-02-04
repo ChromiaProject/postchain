@@ -302,7 +302,8 @@ class MerkleTest : TestCase() {
         val l78 = ds.hash(leafs[6], leafs[7])
         val left = ds.hash(l12, l34)
         val right = ds.hash(l56, l78)
-        val expected = ds.hash(ds.hash(left, right), leafs[8])
+        val p3 = ds.hash(ds.hash(leafs[8], EMPTY_HASH), EMPTY_HASH)
+        val expected = ds.hash(ds.hash(left, right), ds.hash(p3, EMPTY_HASH))
 
         assertEquals(expected.toHex(), root.toHex())
     }
