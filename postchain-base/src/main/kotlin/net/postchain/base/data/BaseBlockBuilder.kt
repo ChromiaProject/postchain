@@ -300,9 +300,9 @@ open class BaseBlockBuilder(
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
         super.appendTransaction(tx)
         if (blockSize + tx.getRawData().size >= maxBlockSize) {
-            throw UserMistake("block size exceeds max block size ${maxBlockSize} bytes")
+            throw BlockValidationMistake("block size exceeds max block size $maxBlockSize bytes")
         } else if (transactions.size >= maxBlockTransactions) {
-            throw BlockValidationMistake("Number of transactions exceeds max ${maxBlockTransactions} transactions in block")
+            throw BlockValidationMistake("Number of transactions exceeds max $maxBlockTransactions transactions in block")
         }
         blockSize +=  tx.getRawData().size
     }
