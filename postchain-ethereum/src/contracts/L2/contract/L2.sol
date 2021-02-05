@@ -27,81 +27,81 @@ contract ChrL2 {
         }
 
         return sha256(abi.encodePacked(
-           uint8(0x1),  // Gtv merkle tree leaf prefix
-           uint8(0xA3), // GtvInteger tag: CONTEXT_CLASS, CONSTRUCTED, 3
-           uint8(nbytes + 2),
-           uint8(0x2), // DER integer tag
-           nbytes,
-           b
-        ));
+                uint8(0x1),  // Gtv merkle tree leaf prefix
+                uint8(0xA3), // GtvInteger tag: CONTEXT_CLASS, CONSTRUCTED, 3
+                uint8(nbytes + 2),
+                uint8(0x2), // DER integer tag
+                nbytes,
+                b
+            ));
     }
 
     function hashGtvBytes32Leaf(bytes32 value) public pure returns (bytes32) {
         return sha256(abi.encodePacked(
-            uint8(0x1),  // Gtv merkle tree leaf prefix
-            uint8(0xA1), // // Gtv ByteArray tag: CONTEXT_CLASS, CONSTRUCTED, 1
-            uint8(32 + 2),
-            uint8(0x4), // DER ByteArray tag
-            uint8(32),
-            value
-        ));
+                uint8(0x1),  // Gtv merkle tree leaf prefix
+                uint8(0xA1), // // Gtv ByteArray tag: CONTEXT_CLASS, CONSTRUCTED, 1
+                uint8(32 + 2),
+                uint8(0x4), // DER ByteArray tag
+                uint8(32),
+                value
+            ));
     }
 
     function hashGtvBytes64Leaf(bytes calldata value) public pure returns (bytes32) {
         return sha256(abi.encodePacked(
-            uint8(0x1),  // Gtv merkle tree leaf prefix
-            uint8(0xA1), // // Gtv ByteArray tag: CONTEXT_CLASS, CONSTRUCTED, 1
-            uint8(64 + 2),
-            uint8(0x4), // DER ByteArray tag
-            uint8(64),
-            value
-        ));
+                uint8(0x1),  // Gtv merkle tree leaf prefix
+                uint8(0xA1), // // Gtv ByteArray tag: CONTEXT_CLASS, CONSTRUCTED, 1
+                uint8(64 + 2),
+                uint8(0x4), // DER ByteArray tag
+                uint8(64),
+                value
+            ));
     }
 
     function hashBlockHeader(bytes32 blockchainRid, bytes32 previousBlockRid, bytes32 merkleRootHashHashedLeaf,
-                            uint timestamp, uint height, bytes32 dependeciesHashedLeaf, bytes calldata l2RootHash) public pure returns (bytes32) {
+        uint timestamp, uint height, bytes32 dependeciesHashedLeaf, bytes calldata l2RootHash) public pure returns (bytes32) {
 
         bytes32 node12 = sha256(abi.encodePacked(
-            uint8(0x00),
-            hashGtvBytes32Leaf(blockchainRid),
-            hashGtvBytes32Leaf(previousBlockRid)
-        ));
+                uint8(0x00),
+                hashGtvBytes32Leaf(blockchainRid),
+                hashGtvBytes32Leaf(previousBlockRid)
+            ));
 
         bytes32 node34 = sha256(abi.encodePacked(
-            uint8(0x00),
-            merkleRootHashHashedLeaf,
-            hashGtvIntegerLeaf(timestamp)
-        ));
+                uint8(0x00),
+                merkleRootHashHashedLeaf,
+                hashGtvIntegerLeaf(timestamp)
+            ));
 
         bytes32 node56 = sha256(abi.encodePacked(
-            uint8(0x00),
-            hashGtvIntegerLeaf(height),
-            dependeciesHashedLeaf
-        ));
+                uint8(0x00),
+                hashGtvIntegerLeaf(height),
+                dependeciesHashedLeaf
+            ));
 
         bytes32 node78 = sha256(abi.encodePacked(
-            uint8(0x8), // Gtv merkle tree dict prefix
-            DICT_KEY,
-            hashGtvBytes64Leaf(l2RootHash)
-        ));
+                uint8(0x8), // Gtv merkle tree dict prefix
+                DICT_KEY,
+                hashGtvBytes64Leaf(l2RootHash)
+            ));
 
         bytes32 node1234 = sha256(abi.encodePacked(
-            uint8(0x00),
-            node12,
-            node34
-        ));
+                uint8(0x00),
+                node12,
+                node34
+            ));
 
         bytes32 node5678 = sha256(abi.encodePacked(
-            uint8(0x00),
-            node56,
-            node78
-        ));
+                uint8(0x00),
+                node56,
+                node78
+            ));
 
         return sha256(abi.encodePacked(
-            uint8(0x7), // Gtv merkle tree Array Root Node prefix
-            node1234,
-            node5678
-        ));
+                uint8(0x7), // Gtv merkle tree Array Root Node prefix
+                node1234,
+                node5678
+            ));
     }
 
     function verifyBlockSig(bytes32 message, bytes[] calldata sigs, address[] calldata signers) public pure returns (bool) {
@@ -201,11 +201,23 @@ contract ChrL2 {
         for (uint i = 0; i < proofs.length; i++) {
             uint b = position & (1 << i);
             if (b == 0) {
-                r = keccak256(abi.encodePacked(r, proofs[i]));
+                r = sha3Hash(r, proofs[i]);
             } else {
-                r = keccak256(abi.encodePacked(proofs[i], r));
+                r = sha3Hash(proofs[i], r);
             }
         }
         return (r == root);
+    }
+
+    function sha3Hash(bytes32 left, bytes32 right) public pure returns (bytes32) {
+        if (left == 0x0 && right == 0x0) {
+            return 0x0;
+        } else if (left == 0x0) {
+            return keccak256(abi.encodePacked(right));
+        } else if (right == 0x0) {
+            return keccak256(abi.encodePacked(left));
+        } else {
+            return keccak256(abi.encodePacked(left, right));
+        }
     }
 }
