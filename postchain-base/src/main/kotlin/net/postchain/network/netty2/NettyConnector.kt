@@ -18,7 +18,7 @@ class NettyConnector<PacketType>(
 
     private lateinit var server: NettyServer
 
-    override fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>) {
+    override fun init(listeningHostPort: Pair<String, Int>, packetDecoder: XPacketDecoder<PacketType>) {
         server = NettyServer().apply {
             setChannelHandler {
                 NettyServerPeerConnection(packetDecoder)
@@ -30,8 +30,7 @@ class NettyConnector<PacketType>(
                             eventReceiver.onPeerDisconnected(connection)
                         }
             }
-
-            run(peerInfo.port)
+            run(listeningHostPort)
         }
     }
 

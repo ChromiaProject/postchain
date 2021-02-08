@@ -119,7 +119,8 @@ class EBFTSynchronizationInfrastructure(
                 relevantPeerMap.values,
                 SECP256K1CryptoSystem(),
                 nodeConfig.privKeyByteArray,
-                nodeConfig.pubKeyByteArray)
+                nodeConfig.pubKeyByteArray,
+                nodeConfig.listeningHostPort)
     }
 
     private fun addBlockchainDiagnosticProperty() {

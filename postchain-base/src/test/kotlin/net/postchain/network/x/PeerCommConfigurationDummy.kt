@@ -10,6 +10,7 @@ import net.postchain.base.*
 open class PeerCommConfigurationDummy: PeerCommConfiguration {
     override val networkNodes: NetworkNodes = NetworkNodes.buildNetworkNodesDummy()
     override val pubKey: ByteArray = ByteArray(1)
+    override val listeningHostPort = Pair("", 0)
     override fun resolvePeer(peerID: PeerID): PeerInfo? = null
     override fun myPeerInfo(): PeerInfo = throw NotImplementedError("Not impl")
     override fun sigMaker(): SigMaker = throw NotImplementedError("Not impl")

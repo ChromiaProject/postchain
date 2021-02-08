@@ -10,7 +10,6 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
-import net.postchain.devtools.argumentCaptor2
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
@@ -56,7 +55,7 @@ class IntNettyConnector3PeersReconnectionIT {
     private fun startContext(peerInfo: PeerInfo): IntTestContext {
         return IntTestContext(peerInfo, arrayOf(peerInfo1, peerInfo2, peerInfo3))
                 .also {
-                    it.peer.init(peerInfo, it.packetDecoder)
+                    it.peer.init(Pair(peerInfo.host, peerInfo.port), it.packetDecoder)
                 }
     }
 

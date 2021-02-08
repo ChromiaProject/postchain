@@ -27,7 +27,7 @@ class NettyServer : Shutdownable {
         this.createChannelHandler = handlerFactory
     }
 
-    fun run(port: Int) {
+    fun run(listeningHostPort: Pair<String, Int>) {
         eventLoopGroup = NioEventLoopGroup(1)
 
         server = ServerBootstrap()
@@ -47,7 +47,7 @@ class NettyServer : Shutdownable {
                     }
                 })
 
-        bindFuture = server.bind(port).sync()
+        bindFuture = server.bind(listeningHostPort.first, listeningHostPort.second).sync()
     }
 
     override fun shutdown() {

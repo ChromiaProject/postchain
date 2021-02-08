@@ -9,6 +9,7 @@ interface PeerResolver {
 interface PeerCommConfiguration : PeerResolver {
     val networkNodes: NetworkNodes
     val pubKey: ByteArray
+    val listeningHostPort: Pair<String, Int>
     fun myPeerInfo(): PeerInfo
     fun sigMaker(): SigMaker
     fun verifier(): Verifier

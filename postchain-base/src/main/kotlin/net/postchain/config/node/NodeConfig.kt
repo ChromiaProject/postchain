@@ -85,6 +85,9 @@ open class NodeConfig(val appConfig: AppConfig) {
      */
     open val peerInfoMap: Map<XPeerID, PeerInfo> = mapOf()
 
+    // Allow listening host post to differ from access host port:
+    val listeningHostPort: Pair<String, Int>
+        get() = Pair(config.getString("listeningHost","0.0.0.0"), config.getInt("listeningPort", 0))
     // list of replicas for a given node
     open val nodeReplicas: Map<XPeerID, List<XPeerID>> = mapOf()
     open val blockchainReplicaNodes: Map<BlockchainRid, List<XPeerID>> = mapOf()

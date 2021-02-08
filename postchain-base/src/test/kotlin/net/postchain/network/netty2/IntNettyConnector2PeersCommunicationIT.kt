@@ -13,7 +13,6 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
-import net.postchain.devtools.argumentCaptor2
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
@@ -41,8 +40,8 @@ class IntNettyConnector2PeersCommunicationIT {
         context2 = IntTestContext(peerInfo2, arrayOf(peerInfo1, peerInfo2))
 
         // Initializing
-        context1.peer.init(peerInfo1, context1.packetDecoder)
-        context2.peer.init(peerInfo2, context2.packetDecoder)
+        context1.peer.init(Pair(peerInfo1.host, peerInfo1.port), context1.packetDecoder)
+        context2.peer.init(Pair(peerInfo2.host, peerInfo2.port), context2.packetDecoder)
     }
 
     @After

@@ -21,13 +21,13 @@ interface XConnectorEvents {
 }
 
 interface XConnector<PacketType> : Shutdownable {
-    fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>)
+    fun init(listeningHostPort: Pair<String, Int>, packetDecoder: XPacketDecoder<PacketType>)
     // TODO: [et]: Two different structures for one thing
     fun connectPeer(peerConnectionDescriptor: XPeerConnectionDescriptor, peerInfo: PeerInfo, packetEncoder: XPacketEncoder<PacketType>)
 }
 
 interface XConnectorFactory<PacketType> {
-    fun createConnector(myPeerInfo: PeerInfo,
+    fun createConnector(listeningHostPort: Pair<String, Int>,
                         packetDecoder: XPacketDecoder<PacketType>,
                         eventReceiver: XConnectorEvents): XConnector<PacketType>
 }
