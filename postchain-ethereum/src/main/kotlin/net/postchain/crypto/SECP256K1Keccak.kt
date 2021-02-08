@@ -1,7 +1,5 @@
 package net.postchain.crypto
 
-import net.postchain.common.data.EMPTY_HASH
-import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import net.postchain.utils.Hashes
@@ -13,24 +11,12 @@ import org.spongycastle.math.ec.ECAlgorithms
 import org.spongycastle.math.ec.ECCurve
 import org.spongycastle.math.ec.ECPoint
 import java.math.BigInteger
-import java.security.InvalidParameterException
 
 object SECP256K1Keccak {
 
     private val params: X9ECParameters = CustomNamedCurves.getByName("secp256k1")
     private val CURVE_PARAMS = ECDomainParameters(params.curve, params.g, params.n, params.h)
     private val CURVE: ECCurve = CURVE_PARAMS.curve
-
-    fun treeHasher(left: Hash, right: Hash): Hash {
-        if (left.size != HASH_LENGTH || right.size != HASH_LENGTH)
-            throw InvalidParameterException("invalid hash length")
-        return when {
-            left.contentEquals(EMPTY_HASH) && right.contentEquals(EMPTY_HASH) -> EMPTY_HASH
-            left.contentEquals(EMPTY_HASH) -> right
-            right.contentEquals(EMPTY_HASH) -> left
-            else -> digest(left.plus(right))
-        }
-    }
 
     /**
      * Get ethereum address from compress public key
