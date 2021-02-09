@@ -3,6 +3,8 @@ package net.postchain.devtools.l2
 import net.postchain.base.BlockchainRid
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.base.l2.EthereumL2Implementation
+import net.postchain.base.l2.L2BlockBuilder
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
@@ -240,6 +242,19 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         assertEquals(root.toHex(), l2StateRoot!!.toHex())
 
+        // Verify state merkle proof
+        val engine = node.getBlockchainInstance().getEngine()
+        val blockBuilder = engine.getBlockBuilder() as L2BlockBuilder
+        val snapshot = blockBuilder.l2Implementation as EthereumL2Implementation
+
+        for (pos in 0..15) {
+            val proofs = snapshot.getSnapshot().getMerkleProof(currentBlockHeight, pos.toLong())
+            val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
+            assertEquals(stateRoot.toHex(), l2StateRoot!!.toHex())
+        }
+
+        engine.close()
+
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
         val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
@@ -260,6 +275,18 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val p7 = ds.hash(ds.hash(p5, EMPTY_HASH), EMPTY_HASH)
         val root2 = ds.hash(ds.hash(root, p7), EMPTY_HASH)
         assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
+
+        // Verify state merkle proof
+        val engine2 = node.getBlockchainInstance().getEngine()
+        val blockBuilder2 = engine2.getBlockBuilder() as L2BlockBuilder
+        val snapshot2 = blockBuilder2.l2Implementation as EthereumL2Implementation
+
+        for (pos in 0..16) {
+            val proofs = snapshot2.getSnapshot().getMerkleProof(currentBlockHeight, pos.toLong())
+            val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
+            assertEquals(stateRoot.toHex(), l2StateRoot2.toHex())
+        }
+        engine2.close()
     }
 
     @Test
@@ -345,6 +372,18 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         assertEquals(stateRootHash.toHex(), l2RootState!!.toHex())
         assertEquals(eventRootHash.toHex(), l2RootEvent!!.toHex())
 
+        // Verify event merkle proof
+        val engine = node.getBlockchainInstance().getEngine()
+        val blockBuilder = engine.getBlockBuilder() as L2BlockBuilder
+        val event = blockBuilder.l2Implementation as EthereumL2Implementation
+
+        for (pos in 0..3) {
+            val proofs = event.getEvent().getMerkleProof(currentBlockHeight, pos.toLong())
+            val eventRoot = getMerkleProof(proofs, pos, leafs[pos])
+            assertEquals(eventRoot.toHex(), eventRootHash.toHex())
+        }
+        engine.close()
+
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
         val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
@@ -372,5 +411,17 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val blockRid = blockQueries.getBlockRid(height).get()
         val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
         return BlockHeaderDataFactory.buildFromBinary(blockHeader.rawData)
+    }
+
+    private fun getMerkleProof(proofs: List<Hash>, pos: Int, leaf: Hash): Hash {
+        var r = leaf
+        proofs.forEachIndexed { i, h ->
+            r = if (((pos shr i) and 1) != 0) {
+                ds.hash(h, r)
+            } else {
+                ds.hash(r, h)
+            }
+        }
+        return r
     }
 }
