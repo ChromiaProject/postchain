@@ -28,12 +28,10 @@ class BasePeerCommConfiguration(override val networkNodes: NetworkNodes,
                   listeningHostPort: Pair<String, Int>
         ): BasePeerCommConfiguration {
             val nn = NetworkNodes.buildNetworkNodes(peers, ByteArrayKey(pubKey))
-            //If listeningPort not set in node.properties, use access host port as listening host port.
-            if (listeningHostPort.second == 0) {
-                val hostport = Pair(nn.myself.host, nn.myself.port)
-                return BasePeerCommConfiguration(nn, cryptoSystem, privKey, pubKey, hostport)
-            } else
-                return BasePeerCommConfiguration(nn, cryptoSystem, privKey, pubKey, listeningHostPort)
+            //If listening host or port not set in node.properties, use access host port for server binding.
+            val host = if (listeningHostPort.first == "") nn.myself.host else listeningHostPort.first
+            val port = if (listeningHostPort.second == 0) nn.myself.port else listeningHostPort.second
+            return BasePeerCommConfiguration(nn, cryptoSystem, privKey, pubKey, Pair(host, port))
         }
     }
 

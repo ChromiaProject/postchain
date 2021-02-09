@@ -4,8 +4,10 @@ package net.postchain.integrationtest.managedmode
 
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
+import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
+import net.postchain.common.hexStringToByteArray
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.hasSize
 import net.postchain.devtools.assertChainNotStarted
@@ -18,10 +20,33 @@ import org.junit.Test
 
 class ManagedModeTest : ConfigFileBasedIntegrationTest() {
 
+    val blockchainConfig0 = "/net/postchain/devtools/managedmode/singlepeer_loads_config_and_reconfigures/blockchain_config_reconfiguring_0.xml"
+
+    /**
+     * Adding "bad" host and port in PeerInfo. Test passes since listeningHostPort is set in the node.properties file.
+     */
+    @Test
+    fun testListeningHostPort() {
+        val nodeConfig0 = "classpath:/net/postchain/managedmode/node0listeninghostport.properties"
+
+        val badPeerInfo0 = PeerInfo(
+                "192.0.2.1", //bad host
+                70000, //bad port
+                "03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070".hexStringToByteArray()
+        )
+        // Creating node0
+        createSingleNode(0, 1, nodeConfig0, blockchainConfig0) { appConfig, _ ->
+            runStorageCommand(appConfig) { ctx ->
+                DatabaseAccess.of(ctx).addPeerInfo(ctx, badPeerInfo0)
+            }
+        }
+        // Asserting chain 0 is started for node0
+        nodes[0].assertChainStarted(0L)
+    }
+
     @Test
     fun singlePeer_loadsBlockchain0Configuration_fromManagedDataSource_and_reconfigures() {
         val nodeConfig0 = "classpath:/net/postchain/managedmode/node0.properties"
-        val blockchainConfig0 = "/net/postchain/devtools/managedmode/singlepeer_loads_config_and_reconfigures/blockchain_config_reconfiguring_0.xml"
 
         // Creating node0
         createSingleNode(0, 1, nodeConfig0, blockchainConfig0) { appConfig, _ ->
