@@ -23,7 +23,8 @@ class ManagedModeTest : ConfigFileBasedIntegrationTest() {
     val blockchainConfig0 = "/net/postchain/devtools/managedmode/singlepeer_loads_config_and_reconfigures/blockchain_config_reconfiguring_0.xml"
 
     /**
-     * Adding "bad" host and port in PeerInfo. Test passes since listeningHostPort is set in the node.properties file.
+     * Adding "bad" host and port in PeerInfo. Test passes since "good" listeningHostPort is set in the node.properties
+     * file.
      */
     @Test
     fun testListeningHostPort() {
