@@ -4,6 +4,8 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.StorageBuilder
+import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
@@ -82,7 +84,20 @@ open class BaseBlockchainProcessManager(
                         val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, restartHandler(chainId))
                         logger.debug { "$processName: BlockchainEngine has been created: chainId: $chainId" }
 
-                        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
+                        var histConf: BlockchainConfiguration? = null
+                        if (blockchainConfig is BaseBlockchainConfiguration &&
+                                blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid) {
+                            val db = DatabaseAccess.of(eContext)
+                            val historicChainIid = db.getChainId(eContext, blockchainConfig.effectiveBlockchainRID)
+                            if (historicChainIid != null) {
+                                val histConfBytes = blockchainConfigProvider.getConfiguration(eContext, historicChainIid)
+                                if (histConfBytes != null) {
+                                    histConf = blockchainInfrastructure.makeBlockchainConfiguration(histConfBytes, eContext, NODE_ID_READ_ONLY, historicChainIid)
+                                }
+                            }
+                        }
+
+                        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                         blockchainProcessesLoggers[chainId] = timer(

@@ -22,7 +22,7 @@ class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
 
 class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
-    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine): BlockchainProcess {
+    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine, historicBlockchain: BlockchainConfiguration?): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }
 

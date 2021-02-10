@@ -2,6 +2,7 @@
 
 package net.postchain.ebft
 
+import net.postchain.StorageBuilder
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
@@ -16,6 +17,7 @@ import net.postchain.debug.DiagnosticProperty.BLOCKCHAIN
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.message.Message
+import net.postchain.ebft.worker.HistoricChainWorker
 import net.postchain.ebft.worker.ReadOnlyWorker
 import net.postchain.ebft.worker.ValidatorWorker
 import net.postchain.ebft.worker.WorkerContext
@@ -50,7 +52,8 @@ class EBFTSynchronizationInfrastructure(
         connectionManager.shutdown()
     }
 
-    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine): BlockchainProcess {
+    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine,
+                                       historicBlockchain: BlockchainConfiguration?): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration() as BaseBlockchainConfiguration // TODO: [et]: Resolve type cast
         val unregisterBlockchainDiagnosticData: () -> Unit = {
             blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
@@ -64,7 +67,33 @@ class EBFTSynchronizationInfrastructure(
                 nodeConfig,
                 unregisterBlockchainDiagnosticData)
 
-        return if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
+        /*
+        Block building is prohibited on FB if its current configuration has a historicBrid set.
+
+        When starting a blockchain:
+
+        If !hasHistoricBrid then do nothing special, proceed as we always did
+
+        Otherwise:
+
+        1 Sync from local-OB (if available) until drained
+        2 Sync from remote-OB until drained or timeout
+        3 Sync from FB until drained or timeout
+        4 Goto 2
+        */
+        return if (historicBlockchain != null) {
+//            val engine = makeBlockchainEngine(processName, blockchainConfig, restartHandler(chainId))
+            val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_READ_ONLY)
+            val histChain = historicBlockchain as BaseBlockchainConfiguration
+            val historicBlockQueries = historicBlockchain.makeBlockQueries(storage)
+
+            val histPeerCommConf = buildPeerCommConfiguration(nodeConfig, histChain)
+            val histCommManager = buildXCommunicationManager(processName, histChain, histPeerCommConf)
+            val historicWorkerContext = WorkerContext(processName, historicBlockchain.signers,
+                    engine, blockchainConfig.configData.context.nodeID, histCommManager, histPeerCommConf,
+                    nodeConfig, unregisterBlockchainDiagnosticData)
+            HistoricChainWorker(workerContext, historicWorkerContext, historicBlockQueries)
+        } else if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
             registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_VALIDATOR)
             ValidatorWorker(workerContext)
         } else {

@@ -11,7 +11,8 @@ interface SynchronizationInfrastructure : Shutdownable {
 
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
-            engine: BlockchainEngine
+            engine: BlockchainEngine,
+            historicBlockchain: BlockchainConfiguration? = null
     ): BlockchainProcess
 
 }
