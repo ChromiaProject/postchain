@@ -22,6 +22,11 @@ object TestModulesHelper {
         return args["blockchain_rid"]?.asByteArray()?.toHex() ?: ""
     }
 
+    fun argContainerID(args: Gtv): String {
+        return args["container_id"]?.asString() ?: ""
+    }
+
+
     fun peerInfoToGtv(peerInfo: PeerInfo): Gtv {
         return GtvFactory.gtv(
                 GtvFactory.gtv(peerInfo.host),
