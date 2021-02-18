@@ -25,6 +25,12 @@ interface DatabaseAccess {
             val witness: ByteArray,
             val timestamp: Long)
 
+    class EventInfo(
+        val pos: Long,
+        val blockHeight: Long,
+        val hash: Hash,
+        val data: ByteArray)
+
     fun tableName(ctx: EContext, table: String): String
 
     fun isSavepointSupported(): Boolean
@@ -74,8 +80,8 @@ interface DatabaseAccess {
     fun insertPage(ctx: EContext, name: String, page: Page)
     fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page?
     fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int
-    fun getEventHashPositionInBlock(ctx: EContext, blockHeight: Long, eventHash: ByteArray): Long
     fun insertEvent(ctx: EContext, height: Long, hash: Hash, data: ByteArray)
+    fun getEvent(ctx: EContext, blockHeight: Long, eventHash: ByteArray): EventInfo?
     fun insertState(ctx: EContext, height: Long, state_n: Long, data: ByteArray)
 
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>

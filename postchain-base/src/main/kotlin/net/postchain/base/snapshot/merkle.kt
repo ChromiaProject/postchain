@@ -84,11 +84,6 @@ open class EventPageStore(
     ds: DigestSystem
 ) : BasePageStore("event", ctx, levelsPerPage, ds) {
 
-    fun getEventPosition(blockHeight: Long, eventHash: Hash): Long {
-        val db = DatabaseAccess.of(ctx!!)
-        return db.getEventHashPositionInBlock(ctx, blockHeight, eventHash)
-    }
-
     fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
         val prevHighestLevelPage = highestLevelPage(blockHeight)
