@@ -6,7 +6,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.TreeHasher
-import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
 import net.postchain.crypto.DigestSystem
 import java.util.*
 
@@ -32,27 +32,28 @@ interface PageStore {
     fun getMerkleProof(blockHeight: Long, leafPos: Long): List<Hash>
 }
 
-abstract class BasePageStore(
+// base page store can be used for query merkle proof
+open class BasePageStore(
     val name: String,
-    val blockEContext: BlockEContext?,
+    val ctx: EContext?,
     val levelsPerPage: Int,
     val ds: DigestSystem) : PageStore {
 
     override fun writePage(page: Page) {
-        val db = DatabaseAccess.of(blockEContext!!)
-        db.insertPage(blockEContext, name, page)
+        val db = DatabaseAccess.of(ctx!!)
+        db.insertPage(ctx, name, page)
     }
 
     // read the page with blockHeight equal or lower than given
     // for a given level and position, if exists
     override fun readPage(blockHeight: Long, level: Int, left: Long): Page? {
-        val db = DatabaseAccess.of(blockEContext!!)
-        return db.getPage(blockEContext, name, blockHeight, level, left)
+        val db = DatabaseAccess.of(ctx!!)
+        return db.getPage(ctx, name, blockHeight, level, left)
     }
 
     override fun highestLevelPage(blockHeight: Long): Int {
-        val db = DatabaseAccess.of(blockEContext!!)
-        return db.getHighestLevelPage(blockEContext, name, blockHeight)
+        val db = DatabaseAccess.of(ctx!!)
+        return db.getHighestLevelPage(ctx, name, blockHeight)
     }
 
     override fun getMerkleProof(blockHeight: Long, leafPos: Long): List<Hash> {
@@ -78,10 +79,15 @@ abstract class BasePageStore(
 }
 
 open class EventPageStore(
-    blockEContext: BlockEContext?,
+    ctx: EContext?,
     levelsPerPage: Int,
     ds: DigestSystem
-) : BasePageStore("event", blockEContext, levelsPerPage, ds) {
+) : BasePageStore("event", ctx, levelsPerPage, ds) {
+
+    fun getEventPosition(blockHeight: Long, eventHash: Hash): Long {
+        val db = DatabaseAccess.of(ctx!!)
+        return db.getEventHashPositionInBlock(ctx, blockHeight, eventHash)
+    }
 
     fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
@@ -115,10 +121,10 @@ open class EventPageStore(
 }
 
 open class SnapshotPageStore(
-    blockEContext: BlockEContext?,
+    ctx: EContext?,
     levelsPerPage: Int,
     ds: DigestSystem
-) : BasePageStore("snapshot", blockEContext, levelsPerPage, ds) {
+) : BasePageStore("snapshot", ctx, levelsPerPage, ds) {
 
     fun updateSnapshot(blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
