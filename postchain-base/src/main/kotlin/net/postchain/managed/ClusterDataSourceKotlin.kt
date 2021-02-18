@@ -8,7 +8,7 @@ import net.postchain.gtv.GtvFactory
 class ClusterDataSourceKotlin(queries: BlockQueries, nodeConfig: NodeConfig) : GTXManagedNodeDataSource(queries, nodeConfig), ClusterDataSource {
 
 
-    override fun getContainersToRun(): List<String> {
+    override fun getContainersToRun(): List<String>? {
         val res = queries.query("nm_get_containers", buildArgs()).get()
         return res.asArray().map { it.asString() }
     }
@@ -23,22 +23,12 @@ class ClusterDataSourceKotlin(queries: BlockQueries, nodeConfig: NodeConfig) : G
     }
 
     override fun getResourceLimitForContainer(containerID: String): Map<String, Long>? {
-        val result = mutableMapOf<String, Long>()
         val queryReply = queries.query(
                 "nm_get_resource_limit",
                 buildArgs("container_id" to GtvFactory.gtv(containerID))
         ).get().asDict()
-//        val keys = queryReply.keys
-//        val test = mapOf(keys to queryReply.values)
-        for (r in queryReply) {
-            result.put(r.key, r.value.asInteger())
-        }
-        return result
-//        return queryReply { i, brid ->
-//            BlockchainRid(brid) to if (i < replicas.size) {
-//                replicas[i].asArray().map { XPeerID(it.asByteArray()) }
-//            } else emptyMap<String, Long>()
-//        }.toMap()
+        val resList = queryReply.map { it.key to it.value.asInteger() }.toMap()
+        return resList
     }
 
 

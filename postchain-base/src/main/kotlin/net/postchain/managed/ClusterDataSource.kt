@@ -7,7 +7,7 @@ interface ClusterDataSource : ManagedNodeDataSource {
     /**
      * I'm a node, unique to this cluster. What containers should I run?
      */
-    fun getContainersToRun(): List<String>
+    fun getContainersToRun(): List<String>?
 
     /**
      * Which blockchains to run in which container?
