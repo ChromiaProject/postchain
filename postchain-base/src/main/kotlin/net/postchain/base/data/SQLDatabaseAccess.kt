@@ -401,8 +401,20 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
-    override fun getEventHashPositionInBlock(ctx: EContext, blockHeight: Long, eventHash: ByteArray): Long {
-        TODO("Not yet implemented")
+    override fun getEvent(ctx: EContext, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
+        val sql = """SELECT block_height, hash, data, 
+            RANK() OVER (ORDER BY event_iid) rank_number 
+            FROM ${tableEvents(ctx)} 
+            WHERE block_height = ? AND hash = ?"""
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
+        if (rows.isEmpty()) return null
+        val data = rows.first()
+        return DatabaseAccess.EventInfo(
+            data["rank_number"] as Long,
+            data["block_height"] as Long,
+            data["hash"] as Hash,
+            data["data"] as ByteArray
+        )
     }
 
     override fun insertEvent(ctx: EContext, height: Long, hash: Hash, data: ByteArray) {

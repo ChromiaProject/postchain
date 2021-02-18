@@ -7,7 +7,6 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.snapshot.Page
 import net.postchain.common.data.Hash
 import net.postchain.core.*
-import net.postchain.common.data.Hash
 import net.postchain.network.x.XPeerID
 import java.sql.Connection
 import java.time.Instant
@@ -95,8 +94,8 @@ interface DatabaseAccess {
     fun insertPage(ctx: EContext, name: String, page: Page)
     fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page?
     fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int
-    fun getEventHashPositionInBlock(ctx: EContext, blockHeight: Long, eventHash: ByteArray): Long
     fun insertEvent(ctx: EContext, height: Long, hash: Hash, data: ByteArray)
+    fun getEvent(ctx: EContext, blockHeight: Long, eventHash: ByteArray): EventInfo?
     fun insertState(ctx: EContext, height: Long, state_n: Long, data: ByteArray)
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
     fun findPeerInfo(ctx: AppContext, host: String?, port: Int?, pubKeyPattern: String?): Array<PeerInfo>
