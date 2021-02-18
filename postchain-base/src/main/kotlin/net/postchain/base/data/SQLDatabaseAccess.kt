@@ -5,6 +5,7 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.snapshot.Page
+import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
@@ -337,8 +338,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
-    override fun insertEvent(ctx: EContext, height: Long, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertEvents(ctx), height, data)
+    override fun getEventHashPositionInBlock(ctx: EContext, blockHeight: Long, eventHash: ByteArray): Long {
+        TODO("Not yet implemented")
+    }
+
+    override fun insertEvent(ctx: EContext, height: Long, hash: Hash, data: ByteArray) {
+        queryRunner.update(ctx.conn, cmdInsertEvents(ctx), height, hash, data)
     }
 
     override fun insertState(ctx: EContext, height: Long, state_n: Long, data: ByteArray) {

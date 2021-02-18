@@ -3,6 +3,7 @@
 package net.postchain.base.snapshot
 
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.data.Hash
 import net.postchain.core.BlockEContext
 
 class LeafStore {
@@ -10,9 +11,9 @@ class LeafStore {
     /**
      *
      */
-    fun writeEvent(blockEContext: BlockEContext, data: ByteArray) {
+    fun writeEvent(blockEContext: BlockEContext, hash: Hash, data: ByteArray) {
         val db = DatabaseAccess.of(blockEContext)
-        db.insertEvent(blockEContext, blockEContext.height, data)
+        db.insertEvent(blockEContext, blockEContext.height, hash, data)
     }
 
     /**

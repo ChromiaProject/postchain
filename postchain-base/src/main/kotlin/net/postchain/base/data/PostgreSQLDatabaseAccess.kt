@@ -51,6 +51,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
         return "CREATE TABLE ${tableEvents(ctx)}" +
                 " (event_iid BIGSERIAL PRIMARY KEY," +
                 " block_height BIGINT NOT NULL, " +
+                " hash BYTEA NOT NULL," +
                 " data BYTEA NOT NULL)"
     }
 
@@ -127,7 +128,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     }
 
     override fun cmdInsertEvents(ctx: EContext): String {
-        return "INSERT INTO ${tableEvents(ctx)} (block_height, data) " + "VALUES (?, ?)"
+        return "INSERT INTO ${tableEvents(ctx)} (block_height, hash, data) " + "VALUES (?, ?, ?)"
     }
 
     override fun cmdInsertStates(ctx: EContext): String {
