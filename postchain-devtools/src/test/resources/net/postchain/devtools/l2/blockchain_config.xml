@@ -43,6 +43,7 @@
                     <string>net.postchain.configurations.GTXTestModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                     <string>net.postchain.devtools.l2.L2TestModule</string>
+                    <string>net.postchain.gtx.L2OpsGTXModule</string>
                 </array>
             </entry>
         </dict>
