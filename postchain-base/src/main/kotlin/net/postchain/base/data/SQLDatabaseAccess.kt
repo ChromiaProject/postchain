@@ -402,15 +402,15 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getEvent(ctx: EContext, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
-        val sql = """SELECT block_height, hash, data, 
+        val sql = """SELECT * FROM (SELECT block_height, hash, data, 
             RANK() OVER (ORDER BY event_iid) rank_number 
             FROM ${tableEvents(ctx)} 
-            WHERE block_height = ? AND hash = ?"""
+            WHERE block_height = ?) x WHERE hash = ?"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
         if (rows.isEmpty()) return null
         val data = rows.first()
         return DatabaseAccess.EventInfo(
-            data["rank_number"] as Long,
+            (data["rank_number"] as Long) - 1,
             data["block_height"] as Long,
             data["hash"] as Hash,
             data["data"] as ByteArray

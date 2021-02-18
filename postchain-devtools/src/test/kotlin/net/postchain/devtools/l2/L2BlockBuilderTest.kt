@@ -17,6 +17,7 @@ import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.gtx.myCS
 import net.postchain.gtv.*
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXDataBuilder
 import org.junit.Assert
 import java.math.BigInteger
@@ -320,7 +321,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (i in 1..4) {
             val l = i.toLong()
             enqueueTx(makeL2EventOp(bcRid, l))
-            val event = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
+            val event = GtvEncoder.simpleEncodeGtv(gtv(
                 GtvInteger(l),
                 GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray())))
             )
@@ -373,16 +374,19 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         assertEquals(eventRootHash.toHex(), l2RootEvent!!.toHex())
 
         // Verify event merkle proof
-        val engine = node.getBlockchainInstance().getEngine()
-        val blockBuilder = engine.getBlockBuilder() as L2BlockBuilder
-        val event = blockBuilder.l2Implementation as EthereumL2Implementation
-
         for (pos in 0..3) {
-            val proofs = event.getEvent().getMerkleProof(currentBlockHeight, pos.toLong())
+            val args = gtv(
+                "blockHeight" to gtv(currentBlockHeight),
+                "eventHash" to gtv(leafs[pos])
+            )
+            val gtvProof = node.getBlockchainInstance().getEngine().getBlockQueries().query(
+                "event_merkle_proof",
+                args
+            ).get().asDict()["proof"]!!.asArray()
+            val proofs = gtvProof.map { it.asByteArray() }
             val eventRoot = getMerkleProof(proofs, pos, leafs[pos])
             assertEquals(eventRoot.toHex(), eventRootHash.toHex())
         }
-        engine.close()
 
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
