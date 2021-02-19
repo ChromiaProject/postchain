@@ -4,7 +4,6 @@ package net.postchain.base.l2
 
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockBuilder
-import net.postchain.base.snapshot.BasePageStore
 import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.LeafStore
 import net.postchain.base.snapshot.SnapshotPageStore
@@ -84,7 +83,7 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
                      blockSigMaker: SigMaker,
                      blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
                      usingHistoricBRID: Boolean,
-                     val l2Implementation: L2Implementation,
+                     private val l2Implementation: L2Implementation,
                      maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
                      maxBlockTransactions: Long = 100
 ): BaseBlockBuilder(blockchainRID, cryptoSystem, eContext, store, txFactory, specialTxHandler, subjects, blockSigMaker,
@@ -154,15 +153,4 @@ class EthereumL2Implementation(
         states[state_n] = hash
         store.writeState(bctx, state_n, data)
     }
-
-
-    // TODO: [POS-147] - for testing purpose only (begin)
-    fun getSnapshot(): BasePageStore {
-        return snapshot
-    }
-
-    fun getEvent(): BasePageStore {
-        return event
-    }
-    // TODO: [POS-147] - for testing purpose only (end)
 }

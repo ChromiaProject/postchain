@@ -29,24 +29,6 @@ open class BaseBlockchainEngine(
 
     private lateinit var strategy: BlockBuildingStrategy
     private lateinit var blockQueries: BlockQueries
-
-    // TODO: [POS-147] - for testing purpose only (begin)
-    private lateinit var blockBuilder: BlockBuilder
-    private lateinit var eContext: EContext
-
-    override fun getBlockBuilder(): BlockBuilder {
-        eContext = storage.openWriteConnection(chainID)
-        blockBuilder = blockchainConfiguration.makeBlockBuilder(eContext)
-        blockBuilder.begin(null)
-        return blockBuilder
-    }
-
-    override fun close() {
-        storage.closeWriteConnection(eContext, false)
-    }
-    // TODO: [POS-147] - for testing purpose only (end)
-
-
     private var initialized = false
     private var closed = false
     private var restartHandler: RestartHandler = { false }
