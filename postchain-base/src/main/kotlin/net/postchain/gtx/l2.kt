@@ -2,6 +2,7 @@ package net.postchain.gtx
 
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.snapshot.EventPageStore
+import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.common.data.KECCAK256
 import net.postchain.core.EContext
 import net.postchain.crypto.EthereumL2DigestSystem
@@ -12,8 +13,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 
 class L2OpsGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf(
-    "event_merkle_proof" to ::eventMerkleProofQuery,
-    "account_state_merkle_proof" to ::accountStateMerkleProofQuery
+    "get_event_merkle_proof" to ::eventMerkleProofQuery,
+    "get_account_state_merkle_proof" to ::accountStateMerkleProofQuery
 )
 ) {
     override fun initializeDB(ctx: EContext) {}
@@ -29,10 +30,18 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val proofs = event.getMerkleProof(blockHeight, eventInfo.pos)
     val gtvProofs = proofs.map { gtv(it) }
     return gtv(
-        "proof" to GtvArray(gtvProofs.toTypedArray())
+        "merkleProofs" to GtvArray(gtvProofs.toTypedArray())
     )
 }
 
 fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
-    TODO()
+    val argsDict = args as GtvDictionary
+    val blockHeight = argsDict["blockHeight"]!!.asInteger()
+    val accountNumber = argsDict["accountNumber"]!!.asInteger()
+    val snapshot = SnapshotPageStore(ctx, 2, EthereumL2DigestSystem(KECCAK256))
+    val proofs = snapshot.getMerkleProof(blockHeight, accountNumber)
+    val gtvProofs = proofs.map { gtv(it) }
+    return gtv(
+        "merkleProofs" to GtvArray(gtvProofs.toTypedArray())
+    )
 }
