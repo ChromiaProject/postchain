@@ -3,8 +3,6 @@ package net.postchain.devtools.l2
 import net.postchain.base.BlockchainRid
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
-import net.postchain.base.l2.EthereumL2Implementation
-import net.postchain.base.l2.L2BlockBuilder
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
@@ -32,8 +30,8 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
         b.addOperation("l2_event",
             arrayOf(
-                GtvFactory.gtv(num),
-                GtvFactory.gtv(ds.digest(BigInteger.valueOf(num).toByteArray()))
+                gtv(num),
+                gtv(ds.digest(BigInteger.valueOf(num).toByteArray()))
             )
         )
         b.finish()
@@ -45,9 +43,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
         b.addOperation("l2_state",
             arrayOf(
-                GtvFactory.gtv(num),
-                GtvFactory.gtv(num),
-                GtvFactory.gtv(ds.digest(BigInteger.valueOf(num).toByteArray()))
+                gtv(num),
+                gtv(num),
+                gtv(ds.digest(BigInteger.valueOf(num).toByteArray()))
             )
         )
         b.finish()
@@ -57,7 +55,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
     fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
-        b.addOperation("nop", arrayOf(GtvFactory.gtv(42)))
+        b.addOperation("nop", arrayOf(gtv(42)))
         b.finish()
         b.sign(myCS.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
         return b.serialize()
@@ -65,7 +63,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
     fun makeTestTx(id: Long, value: String, bcRid: BlockchainRid): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
-        b.addOperation("gtx_test", arrayOf(GtvFactory.gtv(id), GtvFactory.gtv(value)))
+        b.addOperation("gtx_test", arrayOf(gtv(id), gtv(value)))
         b.finish()
         b.sign(myCS.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
         return b.serialize()
@@ -74,11 +72,11 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     fun makeTimeBTx(from: Long, to: Long?, bcRid: BlockchainRid): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
         b.addOperation("timeb", arrayOf(
-            GtvFactory.gtv(from),
-            if (to != null) GtvFactory.gtv(to) else GtvNull
+            gtv(from),
+            if (to != null) gtv(to) else GtvNull
         ))
         // Need to add a valid dummy operation to make the entire TX valid
-        b.addOperation("gtx_test", arrayOf(GtvFactory.gtv(1), GtvFactory.gtv("true")))
+        b.addOperation("gtx_test", arrayOf(gtv(1), gtv("true")))
         b.finish()
         b.sign(myCS.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
         return b.serialize()
@@ -210,7 +208,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (i in 0..15) {
             enqueueTx(makeL2StateOp(bcRid, i.toLong()))
             val l = i.toLong()
-            val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
+            val state = GtvEncoder.simpleEncodeGtv(gtv(
                 GtvInteger(l),
                 GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
             leafHashes[l] = ds.digest(state)
@@ -243,22 +241,24 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         assertEquals(root.toHex(), l2StateRoot!!.toHex())
 
-        // Verify state merkle proof
-        val engine = node.getBlockchainInstance().getEngine()
-        val blockBuilder = engine.getBlockBuilder() as L2BlockBuilder
-        val snapshot = blockBuilder.l2Implementation as EthereumL2Implementation
-
+        // Verify account state merkle proof
         for (pos in 0..15) {
-            val proofs = snapshot.getSnapshot().getMerkleProof(currentBlockHeight, pos.toLong())
+            val args = gtv(
+                "blockHeight" to gtv(currentBlockHeight),
+                "accountNumber" to gtv(pos.toLong())
+            )
+            val gtvProof = node.getBlockchainInstance().getEngine().getBlockQueries().query(
+                "get_account_state_merkle_proof",
+                args
+            ).get().asDict()["merkleProofs"]!!.asArray()
+            val proofs = gtvProof.map { it.asByteArray() }
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
-            assertEquals(stateRoot.toHex(), l2StateRoot!!.toHex())
+            assertEquals(stateRoot.toHex(), l2StateRoot.toHex())
         }
-
-        engine.close()
 
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
-        val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
+        val state = GtvEncoder.simpleEncodeGtv(gtv(
             GtvInteger(l),
             GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
         leafHashes[l] = ds.digest(state)
@@ -277,17 +277,20 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val root2 = ds.hash(ds.hash(root, p7), EMPTY_HASH)
         assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
 
-        // Verify state merkle proof
-        val engine2 = node.getBlockchainInstance().getEngine()
-        val blockBuilder2 = engine2.getBlockBuilder() as L2BlockBuilder
-        val snapshot2 = blockBuilder2.l2Implementation as EthereumL2Implementation
-
+        // Verify account state merkle proof
         for (pos in 0..16) {
-            val proofs = snapshot2.getSnapshot().getMerkleProof(currentBlockHeight, pos.toLong())
+            val args = gtv(
+                "blockHeight" to gtv(currentBlockHeight),
+                "accountNumber" to gtv(pos.toLong())
+            )
+            val gtvProof = node.getBlockchainInstance().getEngine().getBlockQueries().query(
+                "get_account_state_merkle_proof",
+                args
+            ).get().asDict()["merkleProofs"]!!.asArray()
+            val proofs = gtvProof.map { it.asByteArray() }
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
             assertEquals(stateRoot.toHex(), l2StateRoot2.toHex())
         }
-        engine2.close()
     }
 
     @Test
@@ -333,7 +336,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (i in 0..15) {
             val l = i.toLong()
             enqueueTx(makeL2StateOp(bcRid, l))
-            val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
+            val state = GtvEncoder.simpleEncodeGtv(gtv(
                 GtvInteger(l),
                 GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
             leafHashes[l] = ds.digest(state)
@@ -380,9 +383,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
                 "eventHash" to gtv(leafs[pos])
             )
             val gtvProof = node.getBlockchainInstance().getEngine().getBlockQueries().query(
-                "event_merkle_proof",
+                "get_event_merkle_proof",
                 args
-            ).get().asDict()["proof"]!!.asArray()
+            ).get().asDict()["merkleProofs"]!!.asArray()
             val proofs = gtvProof.map { it.asByteArray() }
             val eventRoot = getMerkleProof(proofs, pos, leafs[pos])
             assertEquals(eventRoot.toHex(), eventRootHash.toHex())
@@ -390,7 +393,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
-        val state = GtvEncoder.simpleEncodeGtv(GtvFactory.gtv(
+        val state = GtvEncoder.simpleEncodeGtv(gtv(
             GtvInteger(l),
             GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
         leafHashes[l] = ds.digest(state)
