@@ -27,10 +27,6 @@ interface BlockchainEngine : Shutdownable {
     fun getBlockBuildingStrategy(): BlockBuildingStrategy
     fun getBlockQueries(): BlockQueries
     fun getConfiguration(): BlockchainConfiguration
-
-    // TODO: [POS-147] - for testing purpose only
-    fun getBlockBuilder(): BlockBuilder
-    fun close()
 }
 
 interface BlockchainProcess {
