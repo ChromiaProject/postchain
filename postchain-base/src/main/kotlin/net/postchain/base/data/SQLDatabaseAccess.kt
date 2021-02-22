@@ -354,6 +354,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
+    override fun getAccountState(ctx: EContext, height: Long, state_n: Long): DatabaseAccess.AccountState? {
+        val sql = """SELECT block_height, state_n, data FROM ${tableStates(ctx)} WHERE block_height <= ? AND state_n = ?"""
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, state_n)
+        if (rows.isEmpty()) return null
+        val data = rows.first()
+        return DatabaseAccess.AccountState(
+            data["block_height"] as Long,
+            data["state_n"] as Long,
+            data["data"] as ByteArray
+        )
+    }
+
     override fun insertEvent(ctx: EContext, height: Long, hash: Hash, data: ByteArray) {
         queryRunner.update(ctx.conn, cmdInsertEvents(ctx), height, hash, data)
     }
