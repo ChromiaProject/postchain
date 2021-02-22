@@ -5,6 +5,7 @@ package net.postchain.base
 import net.postchain.common.data.Hash
 import net.postchain.core.Signature
 import net.postchain.crypto.SECP256K1Keccak
+import net.postchain.gtx.EMPTY_SIGNATURE
 import org.spongycastle.crypto.digests.SHA256Digest
 import org.spongycastle.crypto.ec.CustomNamedCurves
 import org.spongycastle.crypto.params.ECDomainParameters
@@ -149,7 +150,7 @@ fun encodeSignatureWithV(hash: ByteArray, pubKey: ByteArray, signature: ByteArra
     if (Arrays.areEqual(pub1, pub)) {
         return encodeSignature(sig[0], sig[1], 28)
     }
-    throw IllegalStateException("Cannot find correct y")
+    return EMPTY_SIGNATURE
 }
 
 /**
