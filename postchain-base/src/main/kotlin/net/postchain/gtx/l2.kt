@@ -4,6 +4,7 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.encodeSignatureWithV
 import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.common.data.KECCAK256
@@ -87,6 +88,6 @@ private fun blockWitnessData(
 ): Gtv {
     val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
     val witness = BaseBlockWitness.fromBytes(db.getWitnessData(ctx, blockRid)) as MultiSigBlockWitness
-    val signatures = witness.getSignatures().map { GtvByteArray(it.data) }.toTypedArray()
-    return GtvArray(signatures)
+    val signatures = witness.getSignatures().map { encodeSignatureWithV(blockRid, it.subjectID, it.data) }
+    return GtvArray(signatures.map { gtv(it) }.toTypedArray())
 }
