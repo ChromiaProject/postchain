@@ -12,7 +12,7 @@ import net.postchain.gtv.GtvFactory.gtv
 /**
  * The structure of the block header goes like this:
  *
- *  1. bockchainRid [GtvByteArray]
+ *  1. blockchainRid [GtvByteArray]
  *  2. prevBlockRid [GtvByteArray]
  *  3. rootHash [GtvByteArray]
  *  4. timestamp [GtvInteger]
@@ -82,7 +82,7 @@ data class BlockHeaderData(
         val retMap = HashMap<String, String>()
         for (key in this.gtvExtra.dict.keys) {
             val gtvValue = gtvExtra[key] as GtvString
-            retMap.put(key, gtvValue.string)
+            retMap[key] = gtvValue.string
         }
         return retMap
     }

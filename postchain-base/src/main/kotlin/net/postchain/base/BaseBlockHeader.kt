@@ -31,17 +31,16 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
     override val blockRID: ByteArray
     val blockHeightDependencyArray: Array<Hash?>
     val timestamp: Long get() = blockHeaderRec.getTimestamp()
-    val blockHeaderRec: BlockHeaderData
+    val blockHeaderRec: BlockHeaderData = BlockHeaderDataFactory.buildFromBinary(rawData)
 
     init {
-        blockHeaderRec = BlockHeaderDataFactory.buildFromBinary(rawData)
         prevBlockRID = blockHeaderRec.getPreviousBlockRid()
         blockRID = blockHeaderRec.toGtv().merkleHash(  GtvMerkleHashCalculator(cryptoSystem) )
         blockHeightDependencyArray = blockHeaderRec.getBlockHeightDependencyArray()
     }
 
     /**
-     * @param depMap contains the Chain IDs we depend on
+     * @param depRequired contains the Chain IDs we depend on
      * @return true if there are the same number of elements in the block header as in the configuration
      *          (it's lame, but it's the best we can do, since we allow "null")
      */

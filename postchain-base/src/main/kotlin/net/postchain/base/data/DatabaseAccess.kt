@@ -97,6 +97,7 @@ interface DatabaseAccess {
     fun insertEvent(ctx: EContext, height: Long, hash: Hash, data: ByteArray)
     fun getEvent(ctx: EContext, blockHeight: Long, eventHash: ByteArray): EventInfo?
     fun insertState(ctx: EContext, height: Long, state_n: Long, data: ByteArray)
+    fun getAccountState(ctx: EContext, height: Long, state_n: Long): AccountState?
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
     fun findPeerInfo(ctx: AppContext, host: String?, port: Int?, pubKeyPattern: String?): Array<PeerInfo>
     fun addPeerInfo(ctx: AppContext, peerInfo: PeerInfo): Boolean
