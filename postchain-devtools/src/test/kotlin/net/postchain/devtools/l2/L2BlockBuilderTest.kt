@@ -21,6 +21,7 @@ import org.junit.Assert
 import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class L2BlockBuilderTest : IntegrationTestSetup() {
 
@@ -250,10 +251,22 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             val gtvProof = node.getBlockchainInstance().getEngine().getBlockQueries().query(
                 "get_account_state_merkle_proof",
                 args
-            ).get().asDict()["merkleProofs"]!!.asArray()
-            val proofs = gtvProof.map { it.asByteArray() }
+            ).get().asDict()
+
+            val merkleProofs = gtvProof["merkleProofs"]!!.asArray()
+            val proofs = merkleProofs.map { it.asByteArray() }
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
             assertEquals(stateRoot.toHex(), l2StateRoot.toHex())
+
+            val l2RootState = gtvProof["blockHeader"]!!.asArray()[6].asDict()["l2RootState"]!!.asByteArray()
+            assertEquals(stateRoot.toHex(), l2RootState.toHex())
+
+            val accountState = gtvProof["accountState"]!!.asArray()
+            assertEquals(accountState[0].asInteger(), currentBlockHeight)
+            assertEquals(accountState[1].asInteger(), pos.toLong())
+
+            val pubkey = gtvProof["blockWitness"]!!.asArray()[0].asDict()["pubkey"]!!.asByteArray()
+            assertEquals(pubkey.toHex(), node.pubKey)
         }
 
         val l = 16L
@@ -286,10 +299,21 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             val gtvProof = node.getBlockchainInstance().getEngine().getBlockQueries().query(
                 "get_account_state_merkle_proof",
                 args
-            ).get().asDict()["merkleProofs"]!!.asArray()
-            val proofs = gtvProof.map { it.asByteArray() }
+            ).get().asDict()
+
+            val merkleProofs = gtvProof["merkleProofs"]!!.asArray()
+            val proofs = merkleProofs.map { it.asByteArray() }
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
             assertEquals(stateRoot.toHex(), l2StateRoot2.toHex())
+
+            val l2RootState = gtvProof["blockHeader"]!!.asArray()[6].asDict()["l2RootState"]!!.asByteArray()
+            assertEquals(stateRoot.toHex(), l2RootState.toHex())
+
+            val accountState = gtvProof["accountState"]!!.asArray()
+            assertEquals(accountState[1].asInteger(), pos.toLong())
+
+            val pubkey = gtvProof["blockWitness"]!!.asArray()[0].asDict()["pubkey"]!!.asByteArray()
+            assertEquals(pubkey.toHex(), node.pubKey)
         }
     }
 
@@ -385,10 +409,23 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             val gtvProof = node.getBlockchainInstance().getEngine().getBlockQueries().query(
                 "get_event_merkle_proof",
                 args
-            ).get().asDict()["merkleProofs"]!!.asArray()
-            val proofs = gtvProof.map { it.asByteArray() }
+            ).get().asDict()
+
+            val merkleProofs = gtvProof["merkleProofs"]!!.asArray()
+            val proofs = merkleProofs.map { it.asByteArray() }
             val eventRoot = getMerkleProof(proofs, pos, leafs[pos])
             assertEquals(eventRoot.toHex(), eventRootHash.toHex())
+
+            val l2RootEvent = gtvProof["blockHeader"]!!.asArray()[6].asDict()["l2RootEvent"]!!.asByteArray()
+            assertEquals(eventRoot.toHex(), l2RootEvent.toHex())
+
+            val eventData = gtvProof["eventData"]!!.asArray()
+            assertEquals(eventData[0].asInteger(), currentBlockHeight)
+            assertEquals(eventData[1].asInteger(), pos.toLong())
+            assertTrue(eventData[2].asByteArray().contentEquals(leafs[pos]))
+
+            val pubkey = gtvProof["blockWitness"]!!.asArray()[0].asDict()["pubkey"]!!.asByteArray()
+            assertEquals(pubkey.toHex(), node.pubKey)
         }
 
         val l = 16L

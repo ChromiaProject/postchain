@@ -88,6 +88,11 @@ private fun blockWitnessData(
 ): Gtv {
     val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
     val witness = BaseBlockWitness.fromBytes(db.getWitnessData(ctx, blockRid)) as MultiSigBlockWitness
-    val signatures = witness.getSignatures().map { encodeSignatureWithV(blockRid, it.subjectID, it.data) }
-    return GtvArray(signatures.map { gtv(it) }.toTypedArray())
+    val signatures = witness.getSignatures().map {
+        gtv(
+            "sig" to GtvByteArray(encodeSignatureWithV(blockRid, it.subjectID, it.data)),
+            "pubkey" to GtvByteArray(it.subjectID)
+        )
+    }
+    return GtvArray(signatures.toTypedArray())
 }
