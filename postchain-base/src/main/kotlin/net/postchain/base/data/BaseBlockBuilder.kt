@@ -150,7 +150,7 @@ open class BaseBlockBuilder(
             !header.checkIfAllBlockchainDependenciesArePresent(blockchainRelatedInfoDependencyList) ->
                 ValidationResult(MISSING_BLOCKCHAIN_DEPENDENCY, "checkIfAllBlockchainDependenciesArePresent() is false")
 
-            !Arrays.equals(header.blockHeaderRec.getMerkleRootHash(), computedMerkleRoot) -> // Do this last since most expensive check!
+            !header.blockHeaderRec.getMerkleRootHash().contentEquals(computedMerkleRoot) -> // Do this last since most expensive check!
                 ValidationResult(INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeRootHash()")
 
             else -> ValidationResult(OK)
@@ -198,8 +198,7 @@ open class BaseBlockBuilder(
             if (givenDependencies.size == blockchainRelatedInfoDependencyList.size) {
 
                 val resList = mutableListOf<BlockchainDependency>()
-                var i = 0
-                for (bcInfo in blockchainRelatedInfoDependencyList) {
+                for ((i, bcInfo) in blockchainRelatedInfoDependencyList.withIndex()) {
                     val blockRid = givenDependencies[i]
                     val dep = if (blockRid != null) {
                         val dbHeight = store.getBlockHeightFromAnyBlockchain(bctx, blockRid, bcInfo.chainId!!)
@@ -214,7 +213,6 @@ open class BaseBlockBuilder(
                         BlockchainDependency(bcInfo, null) // No blocks required -> allowed
                     }
                     resList.add(dep)
-                    i++
                 }
                 BlockchainDependencies(resList)
             } else {
