@@ -17,6 +17,7 @@ class L2BlockchainConfiguration(configData: BaseBlockchainConfigurationData, mod
         val l2Implementation = EthereumL2Implementation(EthereumL2DigestSystem(KECCAK256), 2)
         return L2BlockBuilder(
             effectiveBlockchainRID,
+            module,
             cryptoSystem,
             ctx,
             blockStore,
