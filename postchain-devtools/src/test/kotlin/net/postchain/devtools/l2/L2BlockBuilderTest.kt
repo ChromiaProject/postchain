@@ -181,7 +181,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     @Test
     fun testL2UpdateSnapshot() {
         configOverrides.setProperty("infrastructure", "base/test")
-        val nodes = createNodes(1, "/net/postchain/devtools/l2/blockchain_config.xml")
+        val nodes = createNodes(1, "/net/postchain/devtools/l2/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
 
@@ -320,7 +320,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     @Test
     fun testL2EventAndUpdateSnapshot() {
         configOverrides.setProperty("infrastructure", "base/test")
-        val nodes = createNodes(1, "/net/postchain/devtools/l2/blockchain_config.xml")
+        val nodes = createNodes(1, "/net/postchain/devtools/l2/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
 
