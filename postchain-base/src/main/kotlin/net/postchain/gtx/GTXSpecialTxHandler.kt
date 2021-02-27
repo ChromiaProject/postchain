@@ -37,10 +37,10 @@ class GTXSpecialTxHandler(val module: GTXModule,
     }
 
     override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, ectx: BlockEContext): Boolean {
-        val gtx_tx = tx as GTXTransaction
-        val gtx_data = gtx_tx.gtxData
-        if (gtx_data.transactionBodyData.operations.size < 1 ) return false
-        val op0 = gtx_data.transactionBodyData.operations[0]
+        val gtxTransaction = tx as GTXTransaction
+        val gtxData = gtxTransaction.gtxData
+        if (gtxData.transactionBodyData.operations.isEmpty()) return false
+        val op0 = gtxData.transactionBodyData.operations[0]
         if (op0.opName != if (position == SpecialTransactionPosition.Begin)
                     OP_BEGIN_BLOCK
                 else OP_END_BLOCK) return false
@@ -50,10 +50,10 @@ class GTXSpecialTxHandler(val module: GTXModule,
         if (arg.asInteger() != ectx.height) return false
 
         // allow single "nop" after begin_block
-        if (gtx_data.transactionBodyData.operations.size > 1) {
-            val op1 = gtx_data.transactionBodyData.operations[0]
+        if (gtxData.transactionBodyData.operations.size > 1) {
+            val op1 = gtxData.transactionBodyData.operations[1]
             if (op1.opName != "nop") return false
-            if (gtx_data.transactionBodyData.operations.size > 2) return false
+            if (gtxData.transactionBodyData.operations.size > 2) return false
         }
 
         return true
