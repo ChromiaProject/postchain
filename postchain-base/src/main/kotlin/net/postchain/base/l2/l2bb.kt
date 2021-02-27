@@ -21,6 +21,7 @@ import org.web3j.protocol.core.DefaultBlockParameterName
 import java.util.*
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
+import org.web3j.protocol.core.methods.response.EthBlockNumber
 import org.web3j.protocol.http.HttpService
 import org.web3j.tx.ClientTransactionManager
 import org.web3j.tx.gas.DefaultGasProvider
@@ -108,18 +109,20 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
         l2Implementation.init(bctx)
 
         val web3j = Web3j.build(HttpService("https://mainnet.infura.io/v3/6e8d7fef09c9485daac48699bea64f66"))
-        val startBlock = web3j.ethBlockNumber().send().blockNumber.minus(BigInteger.valueOf(1000L))
+        val ethBlockNumber: EthBlockNumber = web3j.ethBlockNumber().send()
+        val startBlock = ethBlockNumber.blockNumber.minus(BigInteger.valueOf(1000L))
         val contract = ERC20Token.load(
             "0x8a2279d4a90b6fe1c4b30fa660cc9f926797baa2",
             web3j,
-            ClientTransactionManager(web3j, "0xcc1D6cB60fF206dAd2De21cA3812d24A9E0F4715"),
+            ClientTransactionManager(web3j, "0x0"),
             DefaultGasProvider())
         contract.transferEventFlowable(
             DefaultBlockParameter.valueOf(startBlock), DefaultBlockParameterName.LATEST)
             .subscribe {
                 if (module.getOperations().contains("__transfer")) {
                     val b = GTXDataBuilder(blockchainRID, arrayOf(), cryptoSystem)
-                    b.addOperation("__transfer", arrayOf(gtv(it.from), gtv(it.to), gtv(it.value)))
+                    b.addOperation("nop", arrayOf(gtv(System.currentTimeMillis())))
+                    b.addOperation("__transfer", arrayOf(gtv(it.log.blockHash), gtv(it.log.transactionHash), gtv(it.log.logIndex), gtv(it.from), gtv(it.to), gtv(it.value)))
                     val tx = txFactory.decodeTransaction(b.serialize())
                     appendTransaction(tx)
                 }
