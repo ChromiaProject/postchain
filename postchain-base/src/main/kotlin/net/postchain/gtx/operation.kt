@@ -14,6 +14,10 @@ class GTXOpMistake(message: String, opData: ExtOpData, argPos: Int? = null, caus
 
 abstract class GTXOperation(val data: ExtOpData) : Transactor {
     override fun isSpecial(): Boolean = false
+
+    override fun isL2(): Boolean {
+        return data.opName.startsWith("__l2_")
+    }
 }
 
 class SimpleGTXOperation(data: ExtOpData,
@@ -31,16 +35,20 @@ class SimpleGTXOperation(data: ExtOpData,
     override fun isSpecial(): Boolean {
         return data.opName.startsWith("__")
     }
+
+    override fun isL2(): Boolean {
+        return data.opName.startsWith("__l2_")
+    }
 }
 
 fun gtxOP(applyF: (TxEContext) -> Boolean): (Unit, ExtOpData) -> Transactor {
-    return { unit, data ->
+    return { _, data ->
         SimpleGTXOperation(data, applyF, { true })
     }
 }
 
 fun gtxOP(applyF: (TxEContext) -> Boolean, isCorrectF: () -> Boolean): (Unit, ExtOpData) -> Transactor {
-    return { unit, data ->
+    return { _, data ->
         SimpleGTXOperation(data, applyF, isCorrectF)
     }
 }
