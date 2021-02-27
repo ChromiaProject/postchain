@@ -8,13 +8,22 @@ import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.*
+import net.postchain.ethereum.contracts.ERC20Token
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import net.postchain.gtx.GTXTransaction
+import org.web3j.abi.EventEncoder
+import org.web3j.protocol.Web3j
+import org.web3j.protocol.core.DefaultBlockParameter
+import org.web3j.protocol.http.HttpService
+import org.web3j.tx.ClientTransactionManager
+import org.web3j.tx.gas.DefaultGasProvider
 import java.lang.Long.max
 import java.util.*
+
 
 /**
  * BaseBlockBuilder is used to aid in building blocks, including construction and validation of block header and witness
@@ -296,6 +305,9 @@ open class BaseBlockBuilder(
 
     override fun appendTransaction(tx: Transaction) {
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
+        if (!isValidateL2(tx)) {
+            throw BlockValidationMistake("invalid l2 transaction")
+        }
         super.appendTransaction(tx)
         if (blockSize + tx.getRawData().size >= maxBlockSize) {
             throw BlockValidationMistake("block size exceeds max block size $maxBlockSize bytes")
@@ -305,4 +317,33 @@ open class BaseBlockBuilder(
         blockSize +=  tx.getRawData().size
     }
 
+    private fun isValidateL2(tx: Transaction): Boolean {
+        if (!tx.isL2()) return true
+        var isValid = false
+        val gtxTnx = tx as GTXTransaction
+        val gtxData = gtxTnx.gtxData
+        for (op in gtxData.transactionBodyData.operations) {
+            if (!op.opName.startsWith("__l2_")) continue
+            val web3j = Web3j.build(HttpService("https://mainnet.infura.io/v3/6e8d7fef09c9485daac48699bea64f66"))
+            val contract = ERC20Token.load(
+                op.args[5].asString(),
+                web3j,
+                ClientTransactionManager(web3j, "0x0"),
+                DefaultGasProvider())
+            val event =  op.args[4].asString()
+            if (event == EventEncoder.encode(ERC20Token.TRANSFER_EVENT)) {
+
+                contract.transferEventFlowable(
+                    DefaultBlockParameter.valueOf(op.args[0].asBigInteger()),
+                    DefaultBlockParameter.valueOf(op.args[0].asBigInteger())).subscribe {
+                        if (it.from == op.args[6].asString()
+                            && it.to == op.args[7].asString()
+                            && it.value == op.args[8].asBigInteger()) {
+                            isValid = true
+                        }
+                }
+            }
+        }
+        return isValid
+    }
 }

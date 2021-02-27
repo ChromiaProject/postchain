@@ -24,7 +24,7 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
 
     override fun decodeTransaction(data: ByteArray): Transaction {
         if (data.size > maxTransactionSize ) {
-            throw Exception("Transaction size exceeds max transaction size ${maxTransactionSize} bytes")
+            throw Exception("Transaction size exceeds max transaction size $maxTransactionSize bytes")
         }
         return internalBuild(data)
     }
