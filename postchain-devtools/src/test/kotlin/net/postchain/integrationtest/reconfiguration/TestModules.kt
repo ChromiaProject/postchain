@@ -18,6 +18,10 @@ open class AbstractDummyModule : GTXModule {
                 return false
             }
 
+            override fun isL2(): Boolean {
+                return false
+            }
+
             override fun isCorrect(): Boolean = true
             override fun apply(ctx: TxEContext): Boolean = true
         }

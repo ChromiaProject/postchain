@@ -59,14 +59,17 @@ class L2StateOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 class L2TransferOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     override fun isCorrect(): Boolean {
-        if (data.args.size != 6) return false
+        if (data.args.size != 9) return false
         return true
     }
 
     override fun apply(ctx: TxEContext): Boolean {
         r.update(ctx.conn,
-            """INSERT INTO ${table_l2_test_tnx(ctx)}(blockHash, tnxHash, logIndex, fromAddress, toAddress, value) VALUES (?, ?, ?, ?, ?, ?)""",
-            data.args[0].asString(), data.args[1].asString(), data.args[2].asInteger(), data.args[3].asString(), data.args[4].asString(), data.args[5].asInteger())
+            """INSERT INTO ${table_l2_test_tnx(ctx)}(blockNumber, blockHash, tnxHash, logIndex, 
+                |eventSignature, contractAddress, fromAddress, toAddress, value) 
+                |VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""".trimMargin(),
+            data.args[0].asInteger(), data.args[1].asString(), data.args[2].asString(), data.args[3].asInteger(),
+            data.args[4].asString(), data.args[5].asString(), data.args[6].asString(), data.args[7].asString(), data.args[8].asInteger())
         return true
     }
 }
@@ -85,7 +88,7 @@ class L2TransferTestModule : SimpleGTXModule<Unit>(Unit,
     mapOf(
         "l2_event" to ::L2EventOp,
         "l2_state" to ::L2StateOp,
-        "__transfer" to ::L2TransferOp
+        "__l2_transfer" to ::L2TransferOp
     ),
     mapOf()
 ) {
@@ -93,7 +96,17 @@ class L2TransferTestModule : SimpleGTXModule<Unit>(Unit,
         val moduleName = this::class.qualifiedName!!
         val version = GTXSchemaManager.getModuleVersion(ctx, moduleName)
         if (version == null) {
-            val sql = "CREATE TABLE ${table_l2_test_tnx(ctx)}(tx_iid BIGSERIAL PRIMARY KEY, blockHash TEXT NOT NULL, tnxHash TEXT NOT NULL, logIndex BIGINT, fromAddress TEXT NOT NULL, toAddress TEXT NOT NULL, value BIGINT)"
+            val sql = """CREATE TABLE ${table_l2_test_tnx(ctx)}(
+                |tx_iid BIGSERIAL PRIMARY KEY, 
+                |blockNumber BIGINT,
+                |blockHash TEXT NOT NULL, 
+                |tnxHash TEXT NOT NULL, 
+                |logIndex BIGINT,
+                |eventSignature TEXT NOT NULL,
+                |contractAddress TEXT NOT NULL,
+                |fromAddress TEXT NOT NULL, 
+                |toAddress TEXT NOT NULL, 
+                |value BIGINT)""".trimMargin()
             r.update(ctx.conn, sql)
             GTXSchemaManager.setModuleVersion(ctx, moduleName, 0)
         }

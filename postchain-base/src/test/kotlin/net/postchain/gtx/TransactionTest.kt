@@ -4,6 +4,8 @@ package net.postchain.gtx
 
 import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.core.Transactor
+import net.postchain.core.TxEContext
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
@@ -22,6 +24,12 @@ fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
 }
 
 class GTXTransactionTest {
+    class DummyOperation : Transactor {
+        override fun isSpecial() = false
+        override fun isL2() = false
+        override fun isCorrect() = true
+        override fun apply(ctx: TxEContext) = true
+    }
 
     val module = StandardOpsGTXModule()
     val gtxData = makeNOPGTX(BlockchainRid.ZERO_RID)
