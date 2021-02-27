@@ -69,7 +69,7 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
         // Extract some stuff
         val signers = body.signers
         val signatures = gtxData.signatures
-        val ops = body.getExtOpData().map({ module.makeTransactor(it) }).toTypedArray()
+        val ops = body.getExtOpData().map { module.makeTransactor(it) }.toTypedArray()
 
         return GTXTransaction(rawData, gtvData, gtxData, signers, signatures, ops, myHash, myRID, module, cs)
     }
