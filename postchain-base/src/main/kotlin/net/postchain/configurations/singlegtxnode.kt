@@ -55,16 +55,16 @@ class GTXTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
 class GTXTestModule : SimpleGTXModule<Unit>(Unit,
         mapOf("gtx_test" to ::GTXTestOp),
-        mapOf("gtx_test_get_value" to { u, ctxt, args ->
-            val txRID = (args as GtvDictionary).get("txRID")
+        mapOf("gtx_test_get_value" to { _, ctx, args ->
+            val txRID = (args as GtvDictionary)["txRID"]
                     ?: throw UserMistake("No txRID property supplied")
 
             val sql = """
-                SELECT value FROM ${table_gtx_test_value(ctxt)} g
-                INNER JOIN ${table_transactions(ctxt)} t ON g.tx_iid=t.tx_iid
+                SELECT value FROM ${table_gtx_test_value(ctx)} g
+                INNER JOIN ${table_transactions(ctx)} t ON g.tx_iid=t.tx_iid
                 WHERE t.tx_rid = ?
             """.trimIndent()
-            val value = r.query(ctxt.conn, sql, nullableStringReader, txRID.asByteArray(true))
+            val value = r.query(ctx.conn, sql, nullableStringReader, txRID.asByteArray(true))
             if (value == null)
                 GtvNull
             else
