@@ -78,12 +78,11 @@ class DefaultXConnectionManager<PacketType>(
         // This solution is getting us half-way. We solve the issue for the first
         // blockchain started, but not for subsequent ones.
         if (connector == null) {
-            val peerConfigcommConfiguration = peerConfig.commConfiguration
-            myPeerInfo = peerConfigcommConfiguration.myPeerInfo()
-            val listeningHostPort = peerConfigcommConfiguration.listeningHostPort
-            peersConnectionStrategy = DefaultPeersConnectionStrategy(this, myPeerInfo.peerId())
+            val commConf = peerConfig.commConfiguration
+            peersConnectionStrategy = DefaultPeersConnectionStrategy(this,
+                    commConf.myPeerInfo().peerId())
             connector = connectorFactory.createConnector(
-                    listeningHostPort,
+                    commConf.listeningHostPort,
                     packetDecoderFactory.create(peerConfig.commConfiguration),
                     this)
         }
