@@ -14,6 +14,19 @@
             </entry>
         </dict>
     </entry>
+    <entry key="layer_2">
+        <dict>
+            <entry key="levels_per_page">
+                <int>2</int>
+            </entry>
+            <entry key="eth_rpc_api_node_url">
+                <string>https://mainnet.infura.io/v3/6e8d7fef09c9485daac48699bea64f66</string>
+            </entry>
+            <entry key="contract_address">
+                <string>0x8a2279d4a90b6fe1c4b30fa660cc9f926797baa2</string>
+            </entry>
+        </dict>
+    </entry>
     <entry key="configurationfactory">
         <!--
         This is the main blockchain configuration class for chain 1
