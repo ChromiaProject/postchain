@@ -14,7 +14,8 @@ class L2BlockchainConfiguration(configData: BaseBlockchainConfigurationData, mod
 
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
         addChainIDToDependencies(ctx)
-        val l2Implementation = EthereumL2Implementation(EthereumL2DigestSystem(KECCAK256), 2)
+        val levelsPerPage = configData.getLayer2()?.get("levels_per_page")?.asInteger() ?: 2
+        val l2Implementation = EthereumL2Implementation(EthereumL2DigestSystem(KECCAK256), levelsPerPage.toInt())
         return L2BlockBuilder(
             effectiveBlockchainRID,
             module,
@@ -28,6 +29,7 @@ class L2BlockchainConfiguration(configData: BaseBlockchainConfigurationData, mod
             bcRelatedInfosDependencyList,
             effectiveBlockchainRID != blockchainRid,
             l2Implementation,
+            configData.getLayer2(),
             configData.getMaxBlockSize(),
             configData.getMaxBlockTransactions()
         )
