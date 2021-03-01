@@ -317,33 +317,7 @@ open class BaseBlockBuilder(
         blockSize += tx.getRawData().size
     }
 
-    private fun isValidateL2(tx: Transaction): Boolean {
-        if (!tx.isL2()) return true
-        var isValid = false
-        val gtxTnx = tx as GTXTransaction
-        val gtxData = gtxTnx.gtxData
-        for (op in gtxData.transactionBodyData.operations) {
-            if (!op.opName.startsWith("__l2_")) continue
-            val web3j = Web3j.build(HttpService("https://mainnet.infura.io/v3/6e8d7fef09c9485daac48699bea64f66"))
-            val contract = ERC20Token.load(
-                op.args[5].asString(),
-                web3j,
-                ClientTransactionManager(web3j, "0x0"),
-                DefaultGasProvider())
-            val event =  op.args[4].asString()
-            if (event == EventEncoder.encode(ERC20Token.TRANSFER_EVENT)) {
-
-                contract.transferEventFlowable(
-                    DefaultBlockParameter.valueOf(op.args[0].asBigInteger()),
-                    DefaultBlockParameter.valueOf(op.args[0].asBigInteger())).subscribe {
-                        if (it.from == op.args[6].asString()
-                            && it.to == op.args[7].asString()
-                            && it.value == op.args[8].asBigInteger()) {
-                            isValid = true
-                        }
-                }
-            }
-        }
-        return isValid
+    protected open fun isValidateL2(tx: Transaction): Boolean {
+        return true
     }
 }
