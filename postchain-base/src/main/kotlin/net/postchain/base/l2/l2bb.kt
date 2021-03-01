@@ -100,6 +100,7 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
                      blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
                      usingHistoricBRID: Boolean,
                      private val l2Implementation: L2Implementation,
+                     private val layer2: Gtv?,
                      maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
                      maxBlockTransactions: Long = 100
 ): BaseBlockBuilder(blockchainRID, cryptoSystem, eContext, store, txFactory, specialTxHandler, subjects, blockSigMaker,
@@ -110,11 +111,13 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
         super.begin(partialBlockHeader)
         l2Implementation.init(bctx)
 
-        val web3j = Web3j.build(HttpService("https://mainnet.infura.io/v3/6e8d7fef09c9485daac48699bea64f66"))
+        val url = layer2?.get("eth_rpc_api_node_url")?.asString() ?: "http://localhost:8545"
+        val contractAddress = layer2?.get("contract_address")?.asString() ?: "0x0"
+        val web3j = Web3j.build(HttpService(url))
         val ethBlockNumber: EthBlockNumber = web3j.ethBlockNumber().send()
         val startBlock = ethBlockNumber.blockNumber.minus(BigInteger.valueOf(200L))
         val contract = ERC20Token.load(
-            "0x8a2279d4a90b6fe1c4b30fa660cc9f926797baa2",
+            contractAddress,
             web3j,
             ClientTransactionManager(web3j, "0x0"),
             DefaultGasProvider())
