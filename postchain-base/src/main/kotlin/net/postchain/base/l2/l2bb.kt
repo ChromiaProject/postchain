@@ -17,6 +17,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXDataBuilder
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GTXTransaction
 import org.web3j.abi.EventEncoder
 import org.web3j.abi.datatypes.Event
 import org.web3j.protocol.core.DefaultBlockParameterName
@@ -139,6 +140,37 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
 
     override fun getExtraData(): Map<String, Gtv> {
         return l2Implementation.finalize()
+    }
+
+    override fun isValidateL2(tx: Transaction): Boolean {
+        if (!tx.isL2()) return true
+        var isValid = false
+        val gtxTnx = tx as GTXTransaction
+        val gtxData = gtxTnx.gtxData
+        val url = layer2?.get("eth_rpc_api_node_url")?.asString() ?: "http://localhost:8545"
+        for (op in gtxData.transactionBodyData.operations) {
+            if (!op.opName.startsWith("__l2_")) continue
+            val web3j = Web3j.build(HttpService(url))
+            val contract = ERC20Token.load(
+                op.args[5].asString(),
+                web3j,
+                ClientTransactionManager(web3j, "0x0"),
+                DefaultGasProvider())
+            val event =  op.args[4].asString()
+            if (event == EventEncoder.encode(ERC20Token.TRANSFER_EVENT)) {
+
+                contract.transferEventFlowable(
+                    DefaultBlockParameter.valueOf(op.args[0].asBigInteger()),
+                    DefaultBlockParameter.valueOf(op.args[0].asBigInteger())).subscribe {
+                    if (it.from == op.args[6].asString()
+                        && it.to == op.args[7].asString()
+                        && it.value == op.args[8].asBigInteger()) {
+                        isValid = true
+                    }
+                }
+            }
+        }
+        return isValid
     }
 }
 
