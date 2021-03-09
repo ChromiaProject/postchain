@@ -14,7 +14,7 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
-class BaseBlockchainInfrastructure(
+open class BaseBlockchainInfrastructure(
         private val nodeConfigProvider: NodeConfigurationProvider,
         val synchronizationInfrastructure: SynchronizationInfrastructure,
         val apiInfrastructure: ApiInfrastructure,
@@ -91,7 +91,7 @@ class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine,
-                                       historicBlockchain: BlockchainConfiguration?): BlockchainProcess {
+                                       historicBlockchain: HistoricBlockchain?): BlockchainProcess {
         return synchronizationInfrastructure.makeBlockchainProcess(processName, engine, historicBlockchain)
                 .also(apiInfrastructure::connectProcess)
     }
