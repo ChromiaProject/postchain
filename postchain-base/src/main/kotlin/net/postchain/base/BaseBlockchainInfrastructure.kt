@@ -44,7 +44,7 @@ open class BaseBlockchainInfrastructure(
      * @param eContext is the DB context
      * @param nodeId
      * @param chainId
-     * @param initialBlockchainRID is null or a blokchain RID
+     * @param initialBlockchainRID is null or a blockchain RID
      * @return the newly created [BlockchainConfiguration]
      */
     override fun makeBlockchainConfiguration(
