@@ -55,7 +55,8 @@ interface InfrastructureFactory {
 
 enum class Infrastructures(val secondName: String) {
     BaseEbft("base/ebft"),
-    BaseTest("base/test")
+    BaseTest("base/test"),
+    BaseL2Test("base/l2test")
 }
 
 interface InfrastructureFactoryProvider {

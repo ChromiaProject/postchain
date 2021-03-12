@@ -20,7 +20,8 @@ import kotlin.concurrent.thread
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorWorker(val workerContext: WorkerContext
+open class ValidatorWorker(
+    private val workerContext: WorkerContext
 ) : BlockchainProcess {
 
     private lateinit var updateLoop: Thread
@@ -70,7 +71,7 @@ class ValidatorWorker(val workerContext: WorkerContext
 
     /**
      * Create and run the [updateLoop] thread
-     * @param syncManager the syncronization manager
+     * @param syncManager the synchronization manager
      */
     protected fun startUpdateLoop(syncManager: SyncManager) {
         updateLoop = thread(name = "updateLoop-${workerContext.processName}") {

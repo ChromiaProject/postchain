@@ -18,9 +18,9 @@ private val r = QueryRunner()
 
 private val nullableLongReader = ScalarHandler<Long?>()
 
-private fun table_l2_test_tnx(ctx: EContext): String {
+private fun table_eth_event(ctx: EContext): String {
     val db = DatabaseAccess.of(ctx)
-    return db.tableName(ctx, "l2_test_tnx")
+    return db.tableName(ctx, "eth_events")
 }
 
 class L2EventOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
@@ -68,7 +68,7 @@ class L2TransferOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     override fun apply(ctx: TxEContext): Boolean {
         r.update(ctx.conn,
-            """INSERT INTO ${table_l2_test_tnx(ctx)}(block_number, block_hash, tnx_hash, log_index, 
+            """INSERT INTO ${table_eth_event(ctx)}(block_number, block_hash, tnx_hash, log_index, 
                 |event_signature, contract_address, from_address, to_address, value) 
                 |VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""".trimMargin(),
             data.args[0].asInteger(), data.args[1].asString(), data.args[2].asString(), data.args[3].asInteger(),
@@ -91,10 +91,10 @@ class L2TransferTestModule : SimpleGTXModule<Unit>(Unit,
     mapOf(
         "l2_event" to ::L2EventOp,
         "l2_state" to ::L2StateOp,
-        "__l2_transfer" to ::L2TransferOp
+        "__eth_event" to ::L2TransferOp
     ),
-    mapOf("l2_current_block" to { _, ctx, _ ->
-        val sql = "SELECT MAX(block_number) FROM ${table_l2_test_tnx(ctx)}"
+    mapOf("get_last_eth_block" to { _, ctx, _ ->
+        val sql = "SELECT MAX(block_number) FROM ${table_eth_event(ctx)}"
         val value = r.query(ctx.conn, sql, nullableLongReader)
         value?.let { gtv(it) } ?: gtv(0L)
     })
@@ -103,7 +103,7 @@ class L2TransferTestModule : SimpleGTXModule<Unit>(Unit,
         val moduleName = this::class.qualifiedName!!
         val version = GTXSchemaManager.getModuleVersion(ctx, moduleName)
         if (version == null) {
-            val sql = """CREATE TABLE ${table_l2_test_tnx(ctx)}(
+            val sql = """CREATE TABLE ${table_eth_event(ctx)}(
                 |tx_iid BIGSERIAL PRIMARY KEY, 
                 |block_number BIGINT,
                 |block_hash TEXT NOT NULL, 
