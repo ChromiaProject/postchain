@@ -4,6 +4,7 @@ package net.postchain.core
 
 import net.postchain.base.BlockchainRid
 import net.postchain.debug.BlockTrace
+import net.postchain.l2.Web3Connector
 
 interface Shutdownable {
     fun shutdown()
@@ -20,7 +21,8 @@ interface BlockchainEngine : Shutdownable {
     fun isRunning(): Boolean
     fun initialize()
     fun setRestartHandler(restartHandler: RestartHandler)
-
+    fun setWeb3Connector(web3Connector: Web3Connector?)
+    fun getWeb3Connector(): Web3Connector?
     fun loadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?>
     fun buildBlock(): Pair<ManagedBlockBuilder, Exception?>
     fun getTransactionQueue(): TransactionQueue

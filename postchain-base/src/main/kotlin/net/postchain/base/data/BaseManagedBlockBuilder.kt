@@ -8,6 +8,7 @@ import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
+import java.math.BigInteger
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
@@ -204,4 +205,7 @@ class BaseManagedBlockBuilder(
         }
     }
 
+    override fun appendL2Transactions(from: BigInteger, to: BigInteger): Boolean {
+        return true
+    }
 }

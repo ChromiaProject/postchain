@@ -8,20 +8,14 @@ import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.*
-import net.postchain.ethereum.contracts.ERC20Token
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import net.postchain.gtx.GTXTransaction
-import org.web3j.abi.EventEncoder
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.protocol.http.HttpService
-import org.web3j.tx.ClientTransactionManager
-import org.web3j.tx.gas.DefaultGasProvider
+import net.postchain.l2.Web3Connector
 import java.lang.Long.max
+import java.math.BigInteger
 import java.util.*
 
 
@@ -59,6 +53,7 @@ open class BaseBlockBuilder(
 
     private var blockSize: Long = 0L
     private var haveSpecialEndTransaction = false
+    private var web3c: Web3Connector? = null
 
     /**
      * Computes the root hash for the Merkle tree of transactions currently in a block
@@ -103,6 +98,14 @@ open class BaseBlockBuilder(
         return mapOf()
     }
 
+    override fun useWeb3Connector(web3Connector: Web3Connector?) {
+        web3c = web3Connector
+    }
+
+    override fun getWeb3Connector(): Web3Connector? {
+        return web3c
+    }
+
     /**
      * Create block header from initial block data
      *
@@ -119,7 +122,7 @@ open class BaseBlockBuilder(
      * Validate block header:
      * - check that previous block RID is used in this block
      * - check for correct height
-     *   - If height is too low check if it's a split or dublicate
+     *   - If height is too low check if it's a split or duplicate
      *   - If too high, it's from the future
      * - check that timestamp occurs after previous blocks timestamp
      * - check if all required dependencies are present
@@ -305,7 +308,7 @@ open class BaseBlockBuilder(
 
     override fun appendTransaction(tx: Transaction) {
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
-        if (!isValidateL2(tx)) {
+        if (!isValidL2(tx)) {
             throw BlockValidationMistake("invalid l2 transaction")
         }
         super.appendTransaction(tx)
@@ -317,7 +320,11 @@ open class BaseBlockBuilder(
         blockSize += tx.getRawData().size
     }
 
-    protected open fun isValidateL2(tx: Transaction): Boolean {
+    protected open fun isValidL2(tx: Transaction): Boolean {
+        return true
+    }
+
+    override fun appendL2Transactions(from: BigInteger, to: BigInteger): Boolean {
         return true
     }
 }

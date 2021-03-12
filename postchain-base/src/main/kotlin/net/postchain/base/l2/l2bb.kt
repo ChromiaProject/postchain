@@ -16,19 +16,13 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXDataBuilder
-import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXTransaction
 import org.web3j.abi.EventEncoder
-import org.web3j.abi.datatypes.Event
-import org.web3j.protocol.core.DefaultBlockParameterName
-import java.util.*
-import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.protocol.core.methods.response.EthBlockNumber
-import org.web3j.protocol.http.HttpService
 import org.web3j.tx.ClientTransactionManager
 import org.web3j.tx.gas.DefaultGasProvider
 import java.math.BigInteger
+import java.util.*
 
 
 interface L2EventProcessor {
@@ -90,7 +84,6 @@ open class L2TxEContext(
 }
 
 class L2BlockBuilder(blockchainRID: BlockchainRid,
-                     private val module: GTXModule,
                      cryptoSystem: CryptoSystem,
                      eContext: EContext,
                      store: BlockStore,
@@ -101,7 +94,6 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
                      blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
                      usingHistoricBRID: Boolean,
                      private val l2Implementation: L2Implementation,
-                     private val layer2: Gtv?,
                      maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
                      maxBlockTransactions: Long = 100
 ): BaseBlockBuilder(blockchainRID, cryptoSystem, eContext, store, txFactory, specialTxHandler, subjects, blockSigMaker,
@@ -111,46 +103,20 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
     override fun begin(partialBlockHeader: BlockHeader?) {
         super.begin(partialBlockHeader)
         l2Implementation.init(bctx)
-
-        val url = layer2?.get("eth_rpc_api_node_url")?.asString() ?: "http://localhost:8545"
-        val contractAddress = layer2?.get("contract_address")?.asString() ?: "0x0"
-        val web3j = Web3j.build(HttpService(url))
-        val ethBlockNumber: EthBlockNumber = web3j.ethBlockNumber().send()
-        val startBlock = ethBlockNumber.blockNumber.minus(BigInteger.valueOf(200L))
-        val contract = ERC20Token.load(
-            contractAddress,
-            web3j,
-            ClientTransactionManager(web3j, "0x0"),
-            DefaultGasProvider())
-        contract.transferEventFlowable(
-            DefaultBlockParameter.valueOf(startBlock), DefaultBlockParameterName.LATEST)
-            .subscribe {
-                if (module.getOperations().contains("__l2_transfer")) {
-                    val b = GTXDataBuilder(blockchainRID, arrayOf(), cryptoSystem)
-                    b.addOperation("nop", arrayOf(gtv(System.currentTimeMillis())))
-                    b.addOperation("__l2_transfer", arrayOf(
-                        gtv(it.log.blockNumber), gtv(it.log.blockHash), gtv(it.log.transactionHash),
-                        gtv(it.log.logIndex), gtv(EventEncoder.encode(ERC20Token.TRANSFER_EVENT)),
-                        gtv(contract.contractAddress), gtv(it.from), gtv(it.to), gtv(it.value)))
-                    val tx = txFactory.decodeTransaction(b.serialize())
-                    appendTransaction(tx)
-                }
-            }
     }
 
     override fun getExtraData(): Map<String, Gtv> {
         return l2Implementation.finalize()
     }
 
-    override fun isValidateL2(tx: Transaction): Boolean {
+    override fun isValidL2(tx: Transaction): Boolean {
         if (!tx.isL2()) return true
         var isValid = false
         val gtxTnx = tx as GTXTransaction
         val gtxData = gtxTnx.gtxData
-        val url = layer2?.get("eth_rpc_api_node_url")?.asString() ?: "http://localhost:8545"
         for (op in gtxData.transactionBodyData.operations) {
-            if (!op.opName.startsWith("__l2_")) continue
-            val web3j = Web3j.build(HttpService(url))
+            if (!op.opName.startsWith("__eth")) continue
+            val web3j = getWeb3Connector()!!.web3j
             val contract = ERC20Token.load(
                 op.args[5].asString(),
                 web3j,
@@ -171,6 +137,29 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
             }
         }
         return isValid
+    }
+
+    override fun appendL2Transactions(from: BigInteger, to: BigInteger): Boolean {
+        val web3c = getWeb3Connector() ?: return true
+        val web3j = web3c.web3j
+        val contract = ERC20Token.load(
+            web3c.contractAddress,
+            web3j,
+            ClientTransactionManager(web3j, "0x0"),
+            DefaultGasProvider())
+        contract.transferEventFlowable(
+            DefaultBlockParameter.valueOf(from), DefaultBlockParameter.valueOf(to))
+            .subscribe {
+                    val b = GTXDataBuilder(blockchainRID, arrayOf(), cryptoSystem)
+                    b.addOperation("nop", arrayOf(gtv(System.currentTimeMillis())))
+                    b.addOperation("__eth_event", arrayOf(
+                        gtv(it.log.blockNumber), gtv(it.log.blockHash), gtv(it.log.transactionHash),
+                        gtv(it.log.logIndex), gtv(EventEncoder.encode(ERC20Token.TRANSFER_EVENT)),
+                        gtv(contract.contractAddress), gtv(it.from), gtv(it.to), gtv(it.value)))
+                    val tx = txFactory.decodeTransaction(b.serialize())
+                    appendTransaction(tx)
+            }
+        return true
     }
 }
 
