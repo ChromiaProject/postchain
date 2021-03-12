@@ -5,7 +5,9 @@ package net.postchain.core
 import net.postchain.base.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.gtv.Gtv
+import net.postchain.l2.Web3Connector
 import nl.komponents.kovenant.Promise
+import java.math.BigInteger
 
 interface BlockWitnessBuilder {
     fun isComplete(): Boolean
@@ -84,6 +86,7 @@ interface BlockQueries {
 interface BlockBuilder {
     fun begin(partialBlockHeader: BlockHeader?)
     fun appendTransaction(tx: Transaction)
+    fun appendL2Transactions(from: BigInteger, to: BigInteger): Boolean
     fun finalizeBlock(): BlockHeader
     fun finalizeAndValidate(blockHeader: BlockHeader)
     fun getBlockData(): BlockData
