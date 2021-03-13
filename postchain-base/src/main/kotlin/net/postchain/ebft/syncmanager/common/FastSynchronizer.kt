@@ -242,6 +242,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     private fun processDoneJob(j: Job, final: Boolean = false) {
         val exception = j.addBlockException
         if (exception == null) {
+            debug("Job $j done")
             // Add new job and remove old job
             if (!final) {
                 startNextJob()
@@ -305,6 +306,10 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         val legacyPeers = mutableSetOf<XPeerID>()
         for (j in jobs.values) {
             if (j.hasRestartFailed) {
+                if (j.startTime + params.jobTimeout < now) {
+                    trace("Marking peer for restarted job ${j} unresponsive")
+                    peerStatuses.unresponsive(j.peerId)
+                }
                 // These are jobs that couldn't be restarted because there
                 // were no peers available at the time. Try again every
                 // time, because there is virtually no cost in doing so.
@@ -315,26 +320,24 @@ class FastSynchronizer(private val workerContext: WorkerContext,
                 // This might be because it's a legacy node and thus doesn't respond to
                 // GetBlockHeaderAndBlock messages or because it's just unresponsive
                 if (peerStatuses.isConfirmedModern(j.peerId)) {
-                    trace("Marking job ${j} unresponsive")
+                    trace("Marking modern peer for job ${j} unresponsive")
                     peerStatuses.unresponsive(j.peerId)
-                    toRestart.add(j)
                 } else if (!legacyPeers.contains(j.peerId) && peerStatuses.isMaybeLegacy(j.peerId)) {
                     // Peer is marked as legacy, but still appears unresponsive.
                     // This probably wasn't a legacy node, but simply an unresponsive one.
                     // It *could* still be a legacy node, but we give it another chance to
                     // prove itself a modern node after the timeout
                     peerStatuses.setMaybeLegacy(j.peerId, false)
-                    trace("Marking job ${j} unresponsive")
+                    trace("Marking potentially legacy peer for job ${j} unresponsive")
                     peerStatuses.unresponsive(j.peerId)
-                    toRestart.add(j)
                 } else {
                     // Let's assume this is a legacy node and use GetCompleteBlock for the
                     // next try.
                     // If that try is unresponsive too, we'll mark it as unresponsive
                     peerStatuses.setMaybeLegacy(j.peerId, true)
                     legacyPeers.add(j.peerId)
-                    toRestart.add(j)
                 }
+                toRestart.add(j)
             }
         }
         // Avoid ConcurrentModificationException by restartingJob after for loop
@@ -350,6 +353,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     private fun refillJobs() {
         (jobs.size until params.parallelism).forEach {
             if (!startNextJob()) {
+                // There are no peers to talk to
                 return
             }
         }
@@ -369,18 +373,15 @@ class FastSynchronizer(private val workerContext: WorkerContext,
 
     private fun sendLegacyRequest(height: Long): XPeerID? {
         val peers = peerStatuses.getLegacyPeers(height).intersect(configuredPeers)
-        return sendToRandomPeer(peers, height)
+        if (peers.isEmpty()) return null
+        return communicationManager.sendToRandomPeer(GetBlockAtHeight(height), peers)
     }
 
     private fun sendRequest(height: Long): XPeerID? {
         val excludedPeers = peerStatuses.exclNonSyncable(height)
         val peers = configuredPeers.minus(excludedPeers)
-        return sendToRandomPeer(peers, height)
-    }
-
-    private fun sendToRandomPeer(amongPeers: Set<XPeerID>, height: Long): XPeerID? {
-        if (amongPeers.isEmpty()) return null
-        return communicationManager.sendToRandomPeer(GetBlockHeaderAndBlock(height), amongPeers)
+        if (peers.isEmpty()) return null
+        return communicationManager.sendToRandomPeer(GetBlockHeaderAndBlock(height), peers)
     }
 
     private fun startJob(height: Long): Boolean {
