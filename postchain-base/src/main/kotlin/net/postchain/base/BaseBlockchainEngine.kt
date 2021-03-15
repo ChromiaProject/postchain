@@ -10,32 +10,23 @@ import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ethereum.contracts.ERC20Token
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
-import net.postchain.gtx.GTXDataBuilder
 import net.postchain.l2.Web3Connector
 import nl.komponents.kovenant.task
-import org.web3j.abi.EventEncoder
-import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.protocol.core.DefaultBlockParameterName
-import org.web3j.protocol.core.methods.response.EthBlockNumber
-import org.web3j.tx.ClientTransactionManager
-import org.web3j.tx.gas.DefaultGasProvider
 import java.lang.Long.max
 import java.math.BigInteger
 
 const val LOG_STATS = true
 
 open class BaseBlockchainEngine(
-        private val processName: BlockchainProcessName,
-        private val blockchainConfiguration: BlockchainConfiguration,
-        val storage: Storage,
-        private val chainID: Long,
-        private val transactionQueue: TransactionQueue,
-        private val useParallelDecoding: Boolean = true
+    private val processName: BlockchainProcessName,
+    private val blockchainConfiguration: BlockchainConfiguration,
+    val storage: Storage,
+    private val chainID: Long,
+    private val transactionQueue: TransactionQueue,
+    private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
     companion object : KLogging()
@@ -95,14 +86,14 @@ open class BaseBlockchainEngine(
         val eContext = storage.openWriteConnection(chainID) // TODO: Close eContext
 
         return BaseManagedBlockBuilder(eContext, storage, blockchainConfiguration.makeBlockBuilder(eContext), { },
-                {
-                    val blockBuilder = it as AbstractBlockBuilder
-                    transactionQueue.removeAll(blockBuilder.transactions)
-                    strategy.blockCommitted(blockBuilder.getBlockData())
-                    if (restartHandler()) {
-                        closed = true
-                    }
-                })
+            {
+                val blockBuilder = it as AbstractBlockBuilder
+                transactionQueue.removeAll(blockBuilder.transactions)
+                strategy.blockCommitted(blockBuilder.getBlockData())
+                if (restartHandler()) {
+                    closed = true
+                }
+            })
     }
 
     override fun loadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
@@ -142,8 +133,8 @@ open class BaseBlockchainEngine(
     }
 
     private fun loadUnfinishedBlockImpl(
-            block: BlockData,
-            transactionsDecoder: (List<ByteArray>) -> List<Transaction>
+        block: BlockData,
+        transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
 
         val grossStart = System.nanoTime()
@@ -163,7 +154,8 @@ open class BaseBlockchainEngine(
 
             if (LOG_STATS) {
                 val prettyBlockHeader = prettyBlockHeader(
-                        block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd)
+                    block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd
+                )
                 logger.info("$processName: Loaded block: $prettyBlockHeader")
             }
 
@@ -214,7 +206,10 @@ open class BaseBlockchainEngine(
                     TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
                     if (tx.isSpecial()) {
                         rejectedTxs++
-                        transactionQueue.rejectTransaction(tx, ProgrammerMistake("special transactions can't enter queue"))
+                        transactionQueue.rejectTransaction(
+                            tx,
+                            ProgrammerMistake("special transactions can't enter queue")
+                        )
                         continue
                     }
                     val txException = blockBuilder.maybeAppendTransaction(tx)
@@ -245,7 +240,8 @@ open class BaseBlockchainEngine(
 
             if (LOG_STATS) {
                 val prettyBlockHeader = prettyBlockHeader(
-                        blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd)
+                    blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
+                )
                 logger.info("$processName: Block is finalized: $prettyBlockHeader")
             } else {
                 logger.info("$processName: Block is finalized")
@@ -259,11 +255,11 @@ open class BaseBlockchainEngine(
     }
 
     private fun prettyBlockHeader(
-            blockHeader: BlockHeader,
-            acceptedTxs: Int,
-            rejectedTxs: Int,
-            gross: Pair<Long, Long>,
-            net: Pair<Long, Long>
+        blockHeader: BlockHeader,
+        acceptedTxs: Int,
+        rejectedTxs: Int,
+        gross: Pair<Long, Long>,
+        net: Pair<Long, Long>
     ): String {
 
         val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first, 1)

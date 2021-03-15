@@ -14,8 +14,11 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.gtx.myCS
-import net.postchain.gtv.*
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXDataBuilder
 import org.junit.Assert
 import java.math.BigInteger
@@ -29,7 +32,8 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
     fun makeL2EventOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
-        b.addOperation("l2_event",
+        b.addOperation(
+            "l2_event",
             arrayOf(
                 gtv(num),
                 gtv(ds.digest(BigInteger.valueOf(num).toByteArray()))
@@ -42,7 +46,8 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
     fun makeL2StateOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
-        b.addOperation("l2_state",
+        b.addOperation(
+            "l2_state",
             arrayOf(
                 gtv(num),
                 gtv(num),
@@ -72,10 +77,12 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
     fun makeTimeBTx(from: Long, to: Long?, bcRid: BlockchainRid): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
-        b.addOperation("timeb", arrayOf(
-            gtv(from),
-            if (to != null) gtv(to) else GtvNull
-        ))
+        b.addOperation(
+            "timeb", arrayOf(
+                gtv(from),
+                if (to != null) gtv(to) else GtvNull
+            )
+        )
         // Need to add a valid dummy operation to make the entire TX valid
         b.addOperation("gtx_test", arrayOf(gtv(1), gtv("true")))
         b.finish()
@@ -92,7 +99,8 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         fun enqueueTx(data: ByteArray): Transaction? {
             try {
-                val tx = node.getBlockchainInstance().getEngine().getConfiguration().getTransactionFactory().decodeTransaction(data)
+                val tx = node.getBlockchainInstance().getEngine().getConfiguration().getTransactionFactory()
+                    .decodeTransaction(data)
                 node.getBlockchainInstance().getEngine().getTransactionQueue().enqueue(tx)
                 return tx
             } catch (e: Exception) {
@@ -145,9 +153,11 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val extraData = blockHeaderData.gtvExtra
         val l2RootEvent = extraData["l2RootEvent"]?.asByteArray()
         val l2RootState = extraData["l2RootState"]?.asByteArray()
-        val eventData = "00000000000000000000000000000000000000000000000000000000000000015fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2".hexStringToByteArray()
+        val eventData =
+            "00000000000000000000000000000000000000000000000000000000000000015fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2".hexStringToByteArray()
         val eventHash = ds.hash(ds.hash(ds.digest(eventData), EMPTY_HASH), EMPTY_HASH)
-        val stateData = "0000000000000000000000000000000000000000000000000000000000000002f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2".hexStringToByteArray()
+        val stateData =
+            "0000000000000000000000000000000000000000000000000000000000000002f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2".hexStringToByteArray()
         val stateHash = ds.hash(ds.hash(ds.digest(stateData), EMPTY_HASH), EMPTY_HASH)
         assertEquals(eventHash.toHex(), l2RootEvent!!.toHex())
         assertEquals(stateHash.toHex(), l2RootState!!.toHex())
@@ -174,7 +184,8 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         makeSureBlockIsBuiltCorrectly()
 
         val value = node.getBlockchainInstance().getEngine().getBlockQueries().query(
-            """{"type"="gtx_test_get_value", "txRID"="${validTx1.getRID().toHex()}"}""")
+            """{"type"="gtx_test_get_value", "txRID"="${validTx1.getRID().toHex()}"}"""
+        )
         Assert.assertEquals("\"true\"", value.get())
     }
 
@@ -187,7 +198,8 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         fun enqueueTx(data: ByteArray): Transaction? {
             try {
-                val tx = node.getBlockchainInstance().getEngine().getConfiguration().getTransactionFactory().decodeTransaction(data)
+                val tx = node.getBlockchainInstance().getEngine().getConfiguration().getTransactionFactory()
+                    .decodeTransaction(data)
                 node.getBlockchainInstance().getEngine().getTransactionQueue().enqueue(tx)
                 return tx
             } catch (e: Exception) {
@@ -209,9 +221,12 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (i in 0..15) {
             enqueueTx(makeL2StateOp(bcRid, i.toLong()))
             val l = i.toLong()
-            val state = GtvEncoder.simpleEncodeGtv(gtv(
-                GtvInteger(l),
-                GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
+            val state = GtvEncoder.simpleEncodeGtv(
+                gtv(
+                    GtvInteger(l),
+                    GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))
+                )
+            )
             leafHashes[l] = ds.digest(state)
         }
 
@@ -271,9 +286,12 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
-        val state = GtvEncoder.simpleEncodeGtv(gtv(
-            GtvInteger(l),
-            GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
+        val state = GtvEncoder.simpleEncodeGtv(
+            gtv(
+                GtvInteger(l),
+                GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))
+            )
+        )
         leafHashes[l] = ds.digest(state)
 
         // build 2nd block and commit
@@ -319,14 +337,15 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
     @Test
     fun testL2EventAndUpdateSnapshot() {
-        configOverrides.setProperty("infrastructure", "base/test")
+        configOverrides.setProperty("infrastructure", "base/l2test")
         val nodes = createNodes(1, "/net/postchain/devtools/l2/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
 
         fun enqueueTx(data: ByteArray): Transaction? {
             try {
-                val tx = node.getBlockchainInstance().getEngine().getConfiguration().getTransactionFactory().decodeTransaction(data)
+                val tx = node.getBlockchainInstance().getEngine().getConfiguration().getTransactionFactory()
+                    .decodeTransaction(data)
                 node.getBlockchainInstance().getEngine().getTransactionQueue().enqueue(tx)
                 return tx
             } catch (e: Exception) {
@@ -348,9 +367,11 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (i in 1..4) {
             val l = i.toLong()
             enqueueTx(makeL2EventOp(bcRid, l))
-            val event = GtvEncoder.simpleEncodeGtv(gtv(
-                GtvInteger(l),
-                GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray())))
+            val event = GtvEncoder.simpleEncodeGtv(
+                gtv(
+                    GtvInteger(l),
+                    GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))
+                )
             )
             leafs.add(ds.digest(event))
         }
@@ -360,9 +381,12 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (i in 0..15) {
             val l = i.toLong()
             enqueueTx(makeL2StateOp(bcRid, l))
-            val state = GtvEncoder.simpleEncodeGtv(gtv(
-                GtvInteger(l),
-                GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
+            val state = GtvEncoder.simpleEncodeGtv(
+                gtv(
+                    GtvInteger(l),
+                    GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))
+                )
+            )
             leafHashes[l] = ds.digest(state)
         }
 
@@ -430,9 +454,12 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
-        val state = GtvEncoder.simpleEncodeGtv(gtv(
-            GtvInteger(l),
-            GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))))
+        val state = GtvEncoder.simpleEncodeGtv(
+            gtv(
+                GtvInteger(l),
+                GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))
+            )
+        )
         leafHashes[l] = ds.digest(state)
 
         // build 2nd block and commit
