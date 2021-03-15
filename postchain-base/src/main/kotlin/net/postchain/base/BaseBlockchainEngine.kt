@@ -14,6 +14,7 @@ import net.postchain.ethereum.contracts.ERC20Token
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXDataBuilder
 import net.postchain.l2.Web3Connector
 import nl.komponents.kovenant.task
@@ -188,7 +189,10 @@ open class BaseBlockchainEngine(
 
             if (web3c != null) {
                 val to = web3c!!.web3j.ethBlockNumber().send().blockNumber.minus(BigInteger.valueOf(100L))
-                val from = to.minus(BigInteger.valueOf(100L))
+                var from = blockQueries.query("get_last_eth_block", GtvNull).get().asBigInteger()
+                if (from == BigInteger.ZERO) {
+                    from = to.minus(BigInteger.valueOf(100L))
+                }
                 (abstractBlockBuilder as L2BlockBuilder).appendL2Transactions(from, to)
             }
 
