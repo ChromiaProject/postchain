@@ -24,6 +24,18 @@ import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
  */
 data class FastSyncParameters(var resurrectDrainedTime: Long = 10000,
                               var resurrectUnresponsiveTime: Long = 20000,
+                              /**
+                               * For tiny blocks it might make sense to increase parallelism to, eg 100,
+                               * to increase throughput by ~6x (as experienced through experimets),
+                               * but for non-trivial blockchains, this will require substantial amounts
+                               * of memory, worst case about parallelism*blocksize.
+                               *
+                               * There seems to be a sweet-spot throughput-wise at parallelism=120,
+                               * but it can come at great memory cost. We set this to 10
+                               * to be safe.
+                               *
+                               * Ultimately, this should be a configuration setting.
+                               */
                               var parallelism: Int = 10,
                               /**
                                * Don't exit fastsync for at least this amount of time (ms).

@@ -10,6 +10,7 @@ import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
 import java.util.concurrent.TimeUnit
 
@@ -27,7 +28,7 @@ class NettyServer {
     }
 
     fun run(port: Int) {
-        eventLoopGroup = NioEventLoopGroup(1)
+        eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyServer"))
 
         server = ServerBootstrap()
                 .group(eventLoopGroup)
