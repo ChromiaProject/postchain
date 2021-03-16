@@ -11,10 +11,9 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import mu.KLogging
-import net.postchain.core.Shutdownable
 import java.util.concurrent.TimeUnit
 
-class NettyServer : Shutdownable {
+class NettyServer {
 
     companion object: KLogging()
 
@@ -50,7 +49,7 @@ class NettyServer : Shutdownable {
         bindFuture = server.bind(port).sync()
     }
 
-    override fun shutdown() {
+    fun shutdown() {
         logger.debug("Shutting down NettyServer")
         try {
             eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).sync()

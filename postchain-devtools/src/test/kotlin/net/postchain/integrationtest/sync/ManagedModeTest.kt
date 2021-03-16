@@ -103,6 +103,8 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     fun newBlockchainConfiguration(nodeSet: NodeSet, historicChain: Long?, height: Long, excludeChain0Nodes: Set<Int> = setOf()) {
         addBlockchainConfiguration(nodeSet, historicChain, height)
+        // We need to build a block on c0 to trigger c0's restartHandler, otherwise
+        // the node manager won't become aware of the new configuration
         buildBlock(c0.remove(excludeChain0Nodes))
     }
 

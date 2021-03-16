@@ -307,7 +307,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         for (j in jobs.values) {
             if (j.hasRestartFailed) {
                 if (j.startTime + params.jobTimeout < now) {
-                    trace("Marking peer for restarted job ${j} unresponsive")
+//                    trace("Marking peer for restarted job ${j} unresponsive")
                     peerStatuses.unresponsive(j.peerId)
                 }
                 // These are jobs that couldn't be restarted because there
@@ -393,8 +393,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
                 // there were no peers at all to sync from. give up.
                 return false
             }
-            // Make a legacy request for block
-            communicationManager.sendPacket(GetBlockAtHeight(height), peer)
         }
         val j = Job(height, peer)
         addJob(j)
