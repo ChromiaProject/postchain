@@ -15,24 +15,23 @@ const val OP_BEGIN_BLOCK = "__begin_block"
 const val OP_END_BLOCK = "__end_block"
 
 // NOTE: we need to refactor this if we want to make it subclass-able
-class GTXSpecialTxHandler(val module: GTXModule,
+open class GTXSpecialTxHandler(val module: GTXModule,
                           val blockchainRID: BlockchainRid,
                           val cs: CryptoSystem,
                           val factory: GTXTransactionFactory
 ) : SpecialTransactionHandler {
+
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
-        return module.getOperations().contains(
-                if (position == SpecialTransactionPosition.End)
-                    OP_END_BLOCK else OP_BEGIN_BLOCK
-        )
+        val op = if (position == SpecialTransactionPosition.Begin)
+            OP_BEGIN_BLOCK else OP_END_BLOCK
+        return module.getOperations().contains(op)
     }
 
     override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction {
         val b = GTXDataBuilder(blockchainRID, arrayOf(), cs)
-        b.addOperation(
-                if (position == SpecialTransactionPosition.Begin)
-                    OP_BEGIN_BLOCK
-                else OP_END_BLOCK, arrayOf(GtvInteger(bctx.height)))
+        val op = if (position == SpecialTransactionPosition.Begin)
+            OP_BEGIN_BLOCK else OP_END_BLOCK
+        b.addOperation(op, arrayOf(GtvInteger(bctx.height)))
         return factory.decodeTransaction(b.serialize())
     }
 

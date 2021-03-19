@@ -5,18 +5,14 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.base.l2.L2BlockBuilder
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvNull
-import net.postchain.l2.Web3Connector
 import nl.komponents.kovenant.task
 import java.lang.Long.max
-import java.math.BigInteger
 
 const val LOG_STATS = true
 
@@ -33,7 +29,6 @@ open class BaseBlockchainEngine(
 
     private lateinit var strategy: BlockBuildingStrategy
     private lateinit var blockQueries: BlockQueries
-    private var web3c: Web3Connector? = null
     private var initialized = false
     private var closed = false
     private var restartHandler: RestartHandler = { false }
@@ -49,14 +44,6 @@ open class BaseBlockchainEngine(
 
     override fun setRestartHandler(handler: RestartHandler) {
         restartHandler = handler
-    }
-
-    override fun setWeb3Connector(web3Connector: Web3Connector?) {
-        web3c = web3Connector
-    }
-
-    override fun getWeb3Connector(): Web3Connector? {
-        return web3c
     }
 
     override fun getTransactionQueue(): TransactionQueue {
@@ -177,21 +164,10 @@ open class BaseBlockchainEngine(
             blockBuilder.begin(null)
             val abstractBlockBuilder = ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
             val netStart = System.nanoTime()
-            abstractBlockBuilder.useWeb3Connector(web3c)
-
-            if (web3c != null) {
-                val to = web3c!!.web3j.ethBlockNumber().send().blockNumber.minus(BigInteger.valueOf(100L))
-                var from = blockQueries.query("get_last_eth_block", GtvNull).get().asBigInteger()
-                if (from == BigInteger.ZERO) {
-                    from = to.minus(BigInteger.valueOf(100L))
-                }
-                (abstractBlockBuilder as L2BlockBuilder).appendL2Transactions(from, to)
-            }
 
             // TODO Potential problem: if the block fails for some reason,
             // the transaction queue is gone. This could potentially happen
             // during a revolt. We might need a "transactional" tx queue...
-
             TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendtransactions")
             var acceptedTxs = 0
             var rejectedTxs = 0
