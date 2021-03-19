@@ -7,7 +7,7 @@ import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
 
 enum class SpecialTransactionPosition {
-    Begin, End
+    Begin, End, EthEvent
 }
 
 interface SpecialTransactionHandler {

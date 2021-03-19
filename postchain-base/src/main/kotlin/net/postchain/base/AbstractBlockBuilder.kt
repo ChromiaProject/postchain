@@ -9,7 +9,6 @@ import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.OK
 import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
 import net.postchain.debug.BlockTrace
-import net.postchain.l2.Web3Connector
 
 /**
  * This class includes the bare minimum functionality required by a real block builder
@@ -34,9 +33,6 @@ abstract class AbstractBlockBuilder(
 
     // functions which need to be implemented in a concrete BlockBuilder:
     abstract fun makeBlockHeader(): BlockHeader
-    abstract fun useWeb3Connector(web3Connector: Web3Connector?)
-    abstract fun getWeb3Connector(): Web3Connector?
-
     abstract fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult
     abstract fun validateWitness(blockWitness: BlockWitness): Boolean
     abstract fun buildBlockchainDependencies(partialBlockHeader: BlockHeader?): BlockchainDependencies

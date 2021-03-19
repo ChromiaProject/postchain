@@ -8,7 +8,6 @@ import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
-import java.math.BigInteger
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
@@ -40,7 +39,7 @@ class BaseManagedBlockBuilder(
     var blocTrace: BlockTrace? = null // Only for logging, remains "null" unless TRACE
 
     /**
-     * Wrapper for blockbuilder operations. Will close current working block for further modifications
+     * Wrapper for block builder operations. Will close current working block for further modifications
      * if an operation fails to execute in full.
      *
      * @param RT type of returned object from called operation (Currently all Unit)
@@ -203,9 +202,5 @@ class BaseManagedBlockBuilder(
         if (logger.isTraceEnabled) {
             logger.trace("${eContext.chainID} rollback() -- $str, from block: ${getBTrace()}")
         }
-    }
-
-    override fun appendL2Transactions(from: BigInteger, to: BigInteger): Boolean {
-        return true
     }
 }

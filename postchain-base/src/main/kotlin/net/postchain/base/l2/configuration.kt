@@ -1,6 +1,7 @@
 package net.postchain.base.l2
 
 import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.SpecialTransactionHandler
 import net.postchain.common.data.KECCAK256
 import net.postchain.core.BlockBuilder
 import net.postchain.core.BlockchainConfiguration
@@ -9,8 +10,14 @@ import net.postchain.crypto.EthereumL2DigestSystem
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.l2.L2SpecialTxHandler
 
 class L2BlockchainConfiguration(configData: BaseBlockchainConfigurationData, module: GTXModule): GTXBlockchainConfiguration(configData, module) {
+
+    private val txFactory = GTXTransactionFactory(
+        effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize())
+    private val specTxHandler = L2SpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem, txFactory)
 
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
         addChainIDToDependencies(ctx)
@@ -31,6 +38,10 @@ class L2BlockchainConfiguration(configData: BaseBlockchainConfigurationData, mod
             configData.getMaxBlockSize(),
             configData.getMaxBlockTransactions()
         )
+    }
+
+    override fun getSpecialTxHandler(): SpecialTransactionHandler {
+        return specTxHandler
     }
 }
 

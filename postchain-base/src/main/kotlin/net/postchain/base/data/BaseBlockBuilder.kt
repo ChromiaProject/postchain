@@ -13,9 +13,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import net.postchain.l2.Web3Connector
 import java.lang.Long.max
-import java.math.BigInteger
 import java.util.*
 
 
@@ -53,7 +51,6 @@ open class BaseBlockBuilder(
 
     private var blockSize: Long = 0L
     private var haveSpecialEndTransaction = false
-    private var web3c: Web3Connector? = null
 
     /**
      * Computes the root hash for the Merkle tree of transactions currently in a block
@@ -92,18 +89,14 @@ open class BaseBlockBuilder(
                     bctx
             ))
         }
+
+        if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.EthEvent)) {
+            appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.EthEvent, bctx))
+        }
     }
 
     open fun getExtraData(): Map<String, Gtv> {
         return mapOf()
-    }
-
-    override fun useWeb3Connector(web3Connector: Web3Connector?) {
-        web3c = web3Connector
-    }
-
-    override fun getWeb3Connector(): Web3Connector? {
-        return web3c
     }
 
     /**
@@ -304,13 +297,16 @@ open class BaseBlockBuilder(
                 throw BlockValidationMistake("First transaction must be special transaction")
             }
         }
+
+        if (tx.isL2()) {
+            if (!specialTxHandler.validateSpecialTransaction(SpecialTransactionPosition.EthEvent, tx, bctx)) {
+                throw BlockValidationMistake("Special transaction validation failed")
+            }
+        }
     }
 
     override fun appendTransaction(tx: Transaction) {
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
-        if (!isValidL2(tx)) {
-            throw BlockValidationMistake("invalid l2 transaction")
-        }
         super.appendTransaction(tx)
         if (blockSize + tx.getRawData().size >= maxBlockSize) {
             throw BlockValidationMistake("block size exceeds max block size $maxBlockSize bytes")
@@ -318,13 +314,5 @@ open class BaseBlockBuilder(
             throw BlockValidationMistake("Number of transactions exceeds max $maxBlockTransactions transactions in block")
         }
         blockSize +=  tx.getRawData().size
-    }
-
-    protected open fun isValidL2(tx: Transaction): Boolean {
-        return true
-    }
-
-    override fun appendL2Transactions(from: BigInteger, to: BigInteger): Boolean {
-        return true
     }
 }
