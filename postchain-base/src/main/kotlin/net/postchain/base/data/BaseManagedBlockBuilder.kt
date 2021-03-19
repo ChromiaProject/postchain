@@ -7,7 +7,6 @@ import net.postchain.base.Storage
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
-import java.math.BigInteger
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
@@ -33,7 +32,7 @@ class BaseManagedBlockBuilder(
     private var closed = false
 
     /**
-     * Wrapper for blockbuilder operations. Will close current working block for further modifications
+     * Wrapper for block builder operations. Will close current working block for further modifications
      * if an operation fails to execute in full.
      *
      * @param RT type of returned object from called operation (Currently all Unit)
@@ -138,9 +137,5 @@ class BaseManagedBlockBuilder(
         }
 
         logger.debug("${eContext.nodeID} rolling back block - end -------------------")
-    }
-
-    override fun appendL2Transactions(from: BigInteger, to: BigInteger): Boolean {
-        return true
     }
 }

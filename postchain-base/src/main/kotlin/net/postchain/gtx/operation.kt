@@ -16,7 +16,7 @@ abstract class GTXOperation(val data: ExtOpData) : Transactor {
     override fun isSpecial(): Boolean = false
 
     override fun isL2(): Boolean {
-        return data.opName.startsWith("__l2_")
+        return data.opName.startsWith("__eth_")
     }
 }
 
@@ -37,7 +37,7 @@ class SimpleGTXOperation(data: ExtOpData,
     }
 
     override fun isL2(): Boolean {
-        return data.opName.startsWith("__l2_")
+        return data.opName.startsWith("__eth_")
     }
 }
 

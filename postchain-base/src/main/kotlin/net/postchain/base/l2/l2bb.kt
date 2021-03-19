@@ -10,18 +10,9 @@ import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.common.data.Hash
 import net.postchain.core.*
 import net.postchain.crypto.DigestSystem
-import net.postchain.ethereum.contracts.ERC20Token
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.GTXDataBuilder
-import net.postchain.gtx.GTXTransaction
-import org.web3j.abi.EventEncoder
-import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.tx.ClientTransactionManager
-import org.web3j.tx.gas.DefaultGasProvider
-import java.math.BigInteger
 import java.util.*
 
 
@@ -107,59 +98,6 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
 
     override fun getExtraData(): Map<String, Gtv> {
         return l2Implementation.finalize()
-    }
-
-    override fun isValidL2(tx: Transaction): Boolean {
-        if (!tx.isL2()) return true
-        var isValid = false
-        val gtxTnx = tx as GTXTransaction
-        val gtxData = gtxTnx.gtxData
-        for (op in gtxData.transactionBodyData.operations) {
-            if (!op.opName.startsWith("__eth")) continue
-            val web3j = getWeb3Connector()!!.web3j
-            val contract = ERC20Token.load(
-                op.args[5].asString(),
-                web3j,
-                ClientTransactionManager(web3j, "0x0"),
-                DefaultGasProvider())
-            val event =  op.args[4].asString()
-            if (event == EventEncoder.encode(ERC20Token.TRANSFER_EVENT)) {
-
-                contract.transferEventFlowable(
-                    DefaultBlockParameter.valueOf(op.args[0].asBigInteger()),
-                    DefaultBlockParameter.valueOf(op.args[0].asBigInteger())).subscribe {
-                    if (it.from == op.args[6].asString()
-                        && it.to == op.args[7].asString()
-                        && it.value == op.args[8].asBigInteger()) {
-                        isValid = true
-                    }
-                }
-            }
-        }
-        return isValid
-    }
-
-    override fun appendL2Transactions(from: BigInteger, to: BigInteger): Boolean {
-        val web3c = getWeb3Connector() ?: return true
-        val web3j = web3c.web3j
-        val contract = ERC20Token.load(
-            web3c.contractAddress,
-            web3j,
-            ClientTransactionManager(web3j, "0x0"),
-            DefaultGasProvider())
-        contract.transferEventFlowable(
-            DefaultBlockParameter.valueOf(from), DefaultBlockParameter.valueOf(to))
-            .subscribe {
-                    val b = GTXDataBuilder(blockchainRID, arrayOf(), cryptoSystem)
-                    b.addOperation("nop", arrayOf(gtv(System.currentTimeMillis())))
-                    b.addOperation("__eth_event", arrayOf(
-                        gtv(it.log.blockNumber), gtv(it.log.blockHash), gtv(it.log.transactionHash),
-                        gtv(it.log.logIndex), gtv(EventEncoder.encode(ERC20Token.TRANSFER_EVENT)),
-                        gtv(contract.contractAddress), gtv(it.from), gtv(it.to), gtv(it.value)))
-                    val tx = txFactory.decodeTransaction(b.serialize())
-                    appendTransaction(tx)
-            }
-        return true
     }
 }
 
