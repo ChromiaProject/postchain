@@ -2,15 +2,15 @@
 
 package net.postchain.base
 
+import net.postchain.base.l2.L2BlockchainConfiguration
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.l2.Web3Connector
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.http.HttpService
+import net.postchain.l2.EthereumEventProcessor
+import net.postchain.l2.L2SpecialTxHandler
 
 class TestL2BlockchainProcess(private val _engine: BlockchainEngine) : BlockchainProcess {
     override fun getEngine(): BlockchainEngine {
@@ -29,9 +29,12 @@ class TestL2SynchronizationInfrastructure : SynchronizationInfrastructure {
         processName: BlockchainProcessName,
         engine: BlockchainEngine
     ): BlockchainProcess {
-        val web3j = Web3j.build(HttpService("https://mainnet.infura.io/v3/6e8d7fef09c9485daac48699bea64f66"))
-        val web3c = Web3Connector(web3j, "0x8a2279d4a90b6fe1c4b30fa660cc9f926797baa2")
-        engine.setWeb3Connector(web3c)
+        val blockchainConfig = engine.getConfiguration() as L2BlockchainConfiguration // TODO: [et]: Resolve type cast
+        val layer2 = blockchainConfig.configData.getLayer2()
+        val url = layer2?.get("eth_rpc_api_node_url")?.asString() ?: "http://localhost:8545"
+        val contractAddress = layer2?.get("contract_address")?.asString() ?: "0x0"
+        val proc = EthereumEventProcessor(url, contractAddress, engine.getBlockQueries())
+        ((engine.getConfiguration() as L2BlockchainConfiguration).getSpecialTxHandler() as L2SpecialTxHandler).useEventProcessor(proc)
         return TestL2BlockchainProcess(engine)
     }
 

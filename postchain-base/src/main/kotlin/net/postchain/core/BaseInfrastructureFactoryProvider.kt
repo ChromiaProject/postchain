@@ -16,6 +16,7 @@ class BaseInfrastructureFactoryProvider : InfrastructureFactoryProvider {
     override fun createInfrastructureFactory(nodeConfigProvider: NodeConfigurationProvider): InfrastructureFactory {
         val factoryClass = when (val infrastructure = nodeConfigProvider.getConfiguration().infrastructure) {
             Infrastructures.BaseEbft.secondName.toLowerCase() -> BaseEBFTInfrastructureFactory::class.java
+            Infrastructures.BaseL2Ebft.secondName.toLowerCase() -> BaseL2EBFTInfrastructureFactory::class.java
             Infrastructures.BaseTest.secondName.toLowerCase() -> BaseTestInfrastructureFactory::class.java
             Infrastructures.BaseL2Test.secondName.toLowerCase() -> BaseL2TestInfrastructureFactory::class.java
             else -> Class.forName(infrastructure)

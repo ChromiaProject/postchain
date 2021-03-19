@@ -63,6 +63,8 @@ class L2EBFTSynchronizationInfrastructure(
 
         val url = layer2?.get("eth_rpc_api_node_url")?.asString() ?: "http://localhost:8545"
         val contractAddress = layer2?.get("contract_address")?.asString() ?: "0x0"
+        val eventProcessor = EthereumEventProcessor(url, contractAddress, engine.getBlockQueries())
+        (blockchainConfig.getSpecialTxHandler() as L2SpecialTxHandler).useEventProcessor(eventProcessor)
         val workerContext = WorkerContext(
             processName, blockchainConfig.signers, engine,
             blockchainConfig.configData.context.nodeID,
@@ -70,7 +72,7 @@ class L2EBFTSynchronizationInfrastructure(
             peerCommConfiguration,
             nodeConfig,
             unregisterBlockchainDiagnosticData
-        ).useWeb3Connector(url, contractAddress)
+        )
 
         return if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
             registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_VALIDATOR)
