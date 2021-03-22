@@ -15,7 +15,6 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
 import java.util.*
 
-
 interface L2EventProcessor {
     fun emitL2Event(evt: Gtv)
     fun emitL2State(state_n: Long, state: Gtv)
@@ -24,54 +23,6 @@ interface L2EventProcessor {
 interface L2Implementation: L2EventProcessor {
     fun init(blockEContext: BlockEContext)
     fun finalize(): Map<String, Gtv>
-}
-
-open class L2TxEContext(
-    private val ectx: TxEContext, private val bb: L2BlockBuilder
-) : TxEContext by ectx, L2EventProcessor {
-
-    val events = mutableListOf<Gtv>()
-    val states = mutableListOf<Pair<Long, Gtv>>()
-
-    override fun emitL2Event(evt: Gtv) {
-        events.add(evt)
-    }
-
-    override fun emitL2State(state_n: Long, state: Gtv) {
-        states.add(Pair(state_n, state))
-    }
-
-    override fun done() {
-        for (evt in events) bb.emitL2Event(evt)
-        for ((state_n, state) in states) bb.emitL2State(state_n, state)
-    }
-
-    override fun <T> getInterface(c: Class<T>): T? {
-        return if (c == L2TxEContext::class.java) {
-            this as T?
-        } else
-            ectx.getInterface(c)
-    }
-
-    companion object {
-        fun emitL2Event(ectx: BlockEContext, evt: Gtv) {
-            val l2Ctx = ectx.queryInterface<L2TxEContext>()
-            if (l2Ctx == null) {
-                throw ProgrammerMistake("Blockchain configuration does not support L2")
-            } else {
-                l2Ctx.emitL2Event(evt)
-            }
-        }
-
-        fun emitL2AccountState(ectx: BlockEContext, state_n: Long, state: Gtv) {
-            val l2Ctx = ectx.queryInterface<L2TxEContext>()
-            if (l2Ctx == null) {
-                throw ProgrammerMistake("Blockchain configuration does not support L2")
-            } else {
-                l2Ctx.emitL2State(state_n, state)
-            }
-        }
-    }
 }
 
 class L2BlockBuilder(blockchainRID: BlockchainRid,
@@ -98,6 +49,16 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
 
     override fun getExtraData(): Map<String, Gtv> {
         return l2Implementation.finalize()
+    }
+
+    override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
+        if ("l2_event" == type) {
+            l2Implementation.emitL2Event(data)
+        } else if ("l2_state" == type) {
+            val account = data[0].asInteger()
+            val state = data[1]
+            l2Implementation.emitL2State(account, state)
+        }
     }
 }
 

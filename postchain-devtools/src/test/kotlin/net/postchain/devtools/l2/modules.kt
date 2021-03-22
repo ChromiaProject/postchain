@@ -1,7 +1,6 @@
 package net.postchain.devtools.l2
 
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.l2.L2TxEContext
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.GtvByteArray
@@ -31,12 +30,14 @@ class L2EventOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
     }
 
     override fun apply(ctx: TxEContext): Boolean {
-        L2TxEContext.emitL2Event(ctx,
+        ctx.emitEvent(
+            "l2_event",
             gtv(
                 GtvInteger(data.args[0].asInteger()),
                 GtvByteArray(data.args[1].asByteArray())
             )
         )
+
         return true
     }
 }
@@ -49,12 +50,17 @@ class L2StateOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
     }
 
     override fun apply(ctx: TxEContext): Boolean {
-        L2TxEContext.emitL2AccountState(ctx, data.args[0].asInteger(),
+        ctx.emitEvent(
+            "l2_state",
             gtv(
-                GtvInteger(data.args[1].asInteger()),
-                GtvByteArray(data.args[2].asByteArray())
+                gtv(data.args[0].asInteger()),
+                gtv(
+                    GtvInteger(data.args[1].asInteger()),
+                    GtvByteArray(data.args[2].asByteArray())
+                )
             )
         )
+
         return true
     }
 }

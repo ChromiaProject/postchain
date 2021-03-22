@@ -72,7 +72,7 @@ open class BaseBlockBuilder(
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         when (val proc = eventProcessors[type]) {
-            null -> throw ProgrammerMistake("Event sink for ${type} not found")
+            null -> throw ProgrammerMistake("Event sink for $type not found")
             else -> proc.processEmittedEvent(ctxt, type, data)
         }
     }
