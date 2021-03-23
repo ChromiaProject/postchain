@@ -23,7 +23,7 @@ class L2BlockchainConfiguration(configData: BaseBlockchainConfigurationData, mod
         addChainIDToDependencies(ctx)
         val levelsPerPage = configData.getLayer2()?.get("levels_per_page")?.asInteger() ?: 2
         val l2Implementation = EthereumL2Implementation(EthereumL2DigestSystem(KECCAK256), levelsPerPage.toInt())
-        return L2BlockBuilder(
+        val bb = L2BlockBuilder(
             effectiveBlockchainRID,
             cryptoSystem,
             ctx,
@@ -38,6 +38,9 @@ class L2BlockchainConfiguration(configData: BaseBlockchainConfigurationData, mod
             configData.getMaxBlockSize(),
             configData.getMaxBlockTransactions()
         )
+        bb.installEventProcessor("l2_event", l2Implementation.eventProc)
+        bb.installEventProcessor("l2_state", l2Implementation.stateProc)
+        return bb
     }
 
     override fun getSpecialTxHandler(): SpecialTransactionHandler {

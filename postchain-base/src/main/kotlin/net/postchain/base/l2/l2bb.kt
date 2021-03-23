@@ -15,12 +15,7 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
 import java.util.*
 
-interface L2EventProcessor {
-    fun emitL2Event(evt: Gtv)
-    fun emitL2State(state_n: Long, state: Gtv)
-}
-
-interface L2Implementation: L2EventProcessor {
+interface L2Implementation {
     fun init(blockEContext: BlockEContext)
     fun finalize(): Map<String, Gtv>
 }
@@ -40,7 +35,7 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
                      maxBlockTransactions: Long = 100
 ): BaseBlockBuilder(blockchainRID, cryptoSystem, eContext, store, txFactory, specialTxHandler, subjects, blockSigMaker,
         blockchainRelatedInfoDependencyList, usingHistoricBRID,
-        maxBlockSize, maxBlockTransactions), L2EventProcessor by l2Implementation {
+        maxBlockSize, maxBlockTransactions) {
 
     override fun begin(partialBlockHeader: BlockHeader?) {
         super.begin(partialBlockHeader)
@@ -49,16 +44,6 @@ class L2BlockBuilder(blockchainRID: BlockchainRid,
 
     override fun getExtraData(): Map<String, Gtv> {
         return l2Implementation.finalize()
-    }
-
-    override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
-        if ("l2_event" == type) {
-            l2Implementation.emitL2Event(data)
-        } else if ("l2_state" == type) {
-            val account = data[0].asInteger()
-            val state = data[1]
-            l2Implementation.emitL2State(account, state)
-        }
     }
 }
 
@@ -73,6 +58,20 @@ class EthereumL2Implementation(
 
     val events = mutableListOf<Hash>()
     val states = TreeMap<Long, Hash>()
+
+    val eventProc = object : TxEventSink {
+        override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
+            emitL2Event(data)
+        }
+    }
+
+    val stateProc = object : TxEventSink {
+        override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
+            val account = data[0].asInteger()
+            val state = data[1]
+            emitL2State(account, state)
+        }
+    }
 
     override fun init(blockEContext: BlockEContext) {
         bctx = blockEContext
@@ -97,7 +96,7 @@ class EthereumL2Implementation(
      * Serialize, write to leaf store, hash using keccak256.
      * Hashes are remembered and later combined into a Merkle tree
      */
-    override fun emitL2Event(evt: Gtv) {
+    private fun emitL2Event(evt: Gtv) {
         val data = GtvEncoder.simpleEncodeGtv(evt)
         val hash = ds.digest(data)
         events.add(hash)
@@ -109,7 +108,7 @@ class EthereumL2Implementation(
      * hash using keccak256. (state_n, hash) pairs are submitted to updateSnapshot
      * during finalization
      */
-    override fun emitL2State(state_n: Long, state: Gtv) {
+    private fun emitL2State(state_n: Long, state: Gtv) {
         val data = GtvEncoder.simpleEncodeGtv(state)
         val hash = ds.digest(data)
         states[state_n] = hash
