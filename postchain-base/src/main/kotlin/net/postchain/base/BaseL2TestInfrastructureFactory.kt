@@ -9,8 +9,8 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.l2.EthereumEventProcessor
 import net.postchain.l2.L2SpecialTxHandler
+import net.postchain.l2.L2TestEventProcessor
 
 class TestL2BlockchainProcess(private val _engine: BlockchainEngine) : BlockchainProcess {
     override fun getEngine(): BlockchainEngine {
@@ -29,11 +29,7 @@ class TestL2SynchronizationInfrastructure : SynchronizationInfrastructure {
         processName: BlockchainProcessName,
         engine: BlockchainEngine
     ): BlockchainProcess {
-        val blockchainConfig = engine.getConfiguration() as L2BlockchainConfiguration // TODO: [et]: Resolve type cast
-        val layer2 = blockchainConfig.configData.getLayer2()
-        val url = layer2?.get("eth_rpc_api_node_url")?.asString() ?: "http://localhost:8545"
-        val contractAddress = layer2?.get("contract_address")?.asString() ?: "0x0"
-        val proc = EthereumEventProcessor(url, contractAddress, engine.getBlockQueries())
+        val proc = L2TestEventProcessor(engine.getBlockQueries())
         ((engine.getConfiguration() as L2BlockchainConfiguration).getSpecialTxHandler() as L2SpecialTxHandler).useEventProcessor(proc)
         return TestL2BlockchainProcess(engine)
     }
