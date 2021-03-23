@@ -1,7 +1,10 @@
 package net.postchain.l2
 
+import net.postchain.common.data.KECCAK256
+import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
 import net.postchain.core.BlockValidationMistake
+import net.postchain.crypto.EthereumL2DigestSystem
 import net.postchain.ethereum.contracts.ERC20Token
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -25,6 +28,54 @@ interface EventProcessor {
 abstract class BaseEventProcessor(
     val blockQueries: BlockQueries
 ) : EventProcessor
+
+class L2TestEventProcessor(
+    blockQueries: BlockQueries
+) : BaseEventProcessor(blockQueries) {
+
+    private val ds = EthereumL2DigestSystem(KECCAK256)
+
+    private var lastBlock = 0
+
+    override fun shutdown() {
+        return
+    }
+
+    override fun getEventData(): List<Array<Gtv>> {
+        val out = mutableListOf<Array<Gtv>>()
+        val start = lastBlock+1
+        for (i in start..start+10) {
+            lastBlock++
+            out.add(generateData(i.toLong(), i))
+        }
+        return out
+    }
+
+    override fun getEventDataAtBlockHeight(height: BigInteger): List<Array<Gtv>> {
+        val out = mutableListOf<Array<Gtv>>()
+        for (i in 1..10) {
+            out.add(generateData(height.toLong(), i))
+        }
+        return out
+    }
+
+    override fun isValidEventData(ops: Array<OpData>): Boolean {
+        return true
+    }
+
+    private fun generateData(height: Long, i: Int): Array<Gtv> {
+        val blockHash = ds.digest(BigInteger.valueOf(i.toLong()).toByteArray()).toHex()
+        val transactionHash = ds.digest(BigInteger.valueOf((100 - i).toLong()).toByteArray()).toHex()
+        val contractAddress = ds.digest(BigInteger.valueOf(999L).toByteArray()).toHex()
+        val from = ds.digest(BigInteger.valueOf(1L).toByteArray()).toHex()
+        val to = ds.digest(BigInteger.valueOf(2L).toByteArray()).toHex()
+        return arrayOf(
+            gtv(height), gtv(blockHash), gtv(transactionHash),
+            gtv(i.toLong()), gtv(EventEncoder.encode(ERC20Token.TRANSFER_EVENT)),
+            gtv(contractAddress), gtv(from), gtv(to), gtv(BigInteger.valueOf(i.toLong()))
+        )
+    }
+}
 
 class EthereumEventProcessor(
     url: String,
