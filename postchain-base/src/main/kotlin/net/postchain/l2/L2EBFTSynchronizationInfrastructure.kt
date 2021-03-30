@@ -5,7 +5,6 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.data.BaseBlockchainConfiguration
-import net.postchain.base.l2.L2BlockchainConfiguration
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainEngine
@@ -24,6 +23,7 @@ import net.postchain.ebft.message.Message
 import net.postchain.ebft.worker.ReadOnlyWorker
 import net.postchain.ebft.worker.ValidatorWorker
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.network.CommunicationManager
 import net.postchain.network.netty2.NettyConnectorFactory
 import net.postchain.network.x.DefaultXCommunicationManager
@@ -54,7 +54,7 @@ class L2EBFTSynchronizationInfrastructure(
         processName: BlockchainProcessName,
         engine: BlockchainEngine
     ): BlockchainProcess {
-        val blockchainConfig = engine.getConfiguration() as L2BlockchainConfiguration // TODO: [et]: Resolve type cast
+        val blockchainConfig = engine.getConfiguration() as GTXBlockchainConfiguration // TODO: [et]: Resolve type cast
         val layer2 = blockchainConfig.configData.getLayer2()
         val unregisterBlockchainDiagnosticData: () -> Unit = {
             blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
