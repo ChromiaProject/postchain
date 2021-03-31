@@ -80,7 +80,7 @@ class DefaultXConnectionManagerTest {
                 .also { it.connectChain(chainPeerConfig, false, mock()) }
 
         // Then
-        verify(chainPeerConfig, times(5)).chainID
+        verify(chainPeerConfig, times(4)).chainID
         verify(chainPeerConfig, times(2 + 1)).blockchainRID
         verify(chainPeerConfig, times(2)).commConfiguration
         verify(communicationConfig, never()).networkNodes
