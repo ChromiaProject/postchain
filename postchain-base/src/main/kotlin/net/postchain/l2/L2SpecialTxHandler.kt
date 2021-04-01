@@ -5,6 +5,7 @@ import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
 import net.postchain.core.Transaction
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.*
 
 const val OP_ETH_EVENT = "__eth_event"
@@ -36,6 +37,7 @@ class L2SpecialTxHandler(
             val data = proc.getEventData()
             val block = data.first
             if (block.isNotEmpty()) {
+                b.addOperation("nop", arrayOf(gtv(System.currentTimeMillis())))
                 b.addOperation(OP_ETH_BLOCK, block)
             }
             val events = data.second
