@@ -10,13 +10,18 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.OpData
+import okhttp3.OkHttpClient
 import org.web3j.abi.EventEncoder
 import org.web3j.protocol.Web3j
+import org.web3j.protocol.Web3jService
 import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.http.HttpService
+import org.web3j.protocol.ipc.UnixIpcService
+import org.web3j.protocol.ipc.WindowsIpcService
 import org.web3j.tx.ClientTransactionManager
 import org.web3j.tx.gas.DefaultGasProvider
 import java.math.BigInteger
+import java.util.concurrent.TimeUnit
 
 interface EventProcessor {
     fun shutdown()
@@ -43,8 +48,8 @@ class L2TestEventProcessor(
 
     override fun getEventData(): List<Array<Gtv>> {
         val out = mutableListOf<Array<Gtv>>()
-        val start = lastBlock+1
-        for (i in start..start+10) {
+        val start = lastBlock + 1
+        for (i in start..start + 10) {
             lastBlock++
             out.add(generateData(i.toLong(), i))
         }
@@ -83,13 +88,20 @@ class EthereumEventProcessor(
     blockQueries: BlockQueries
 ) : BaseEventProcessor(blockQueries) {
 
-    private val web3c: Web3Connector = Web3Connector(Web3j.build(HttpService(url)), contractAddress)
-    private val contract: ERC20Token = ERC20Token.load(
-        web3c.contractAddress,
-        web3c.web3j,
-        ClientTransactionManager(web3c.web3j, "0x0"),
-        DefaultGasProvider()
-    )
+    private var web3c: Web3Connector
+    private var contract: ERC20Token
+
+    init {
+        val web3jConfig = Web3jConfig()
+        val web3j = Web3j.build(web3jConfig.buildService(url))
+        web3c = Web3Connector(web3j, contractAddress)
+        contract = ERC20Token.load(
+            web3c.contractAddress,
+            web3c.web3j,
+            ClientTransactionManager(web3c.web3j, "0x0"),
+            DefaultGasProvider()
+        )
+    }
 
     override fun shutdown() {
         web3c.shutdown()
@@ -163,5 +175,34 @@ class EthereumEventProcessor(
                 }
             )
         return out
+    }
+}
+
+class Web3jConfig {
+    fun buildService(clientAddress: String?): Web3jService {
+        val web3jService: Web3jService
+        if (clientAddress == null || clientAddress == "") {
+            web3jService = HttpService(createOkHttpClient())
+        } else if (clientAddress.startsWith("http")) {
+            web3jService = HttpService(clientAddress, createOkHttpClient(), false)
+        } else if (System.getProperty("os.name").toLowerCase().startsWith("win")) {
+            web3jService = WindowsIpcService(clientAddress)
+        } else {
+            web3jService = UnixIpcService(clientAddress)
+        }
+        return web3jService
+    }
+
+    private fun createOkHttpClient(): OkHttpClient {
+        val builder: OkHttpClient.Builder = OkHttpClient.Builder()
+        configureTimeouts(builder)
+        return builder.build()
+    }
+
+    private fun configureTimeouts(builder: OkHttpClient.Builder) {
+        val tos = 300L
+        builder.connectTimeout(tos, TimeUnit.SECONDS)
+        builder.readTimeout(tos, TimeUnit.SECONDS) // Sets the socket timeout too
+        builder.writeTimeout(tos, TimeUnit.SECONDS)
     }
 }
