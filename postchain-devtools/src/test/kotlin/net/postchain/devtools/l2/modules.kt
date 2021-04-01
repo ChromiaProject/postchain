@@ -6,16 +6,18 @@ import net.postchain.core.TxEContext
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
 import net.postchain.gtx.ExtOpData
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXSchemaManager
 import net.postchain.gtx.SimpleGTXModule
 import org.apache.commons.dbutils.QueryRunner
-import org.apache.commons.dbutils.handlers.ScalarHandler
+import org.apache.commons.dbutils.handlers.MapListHandler
+import java.math.BigInteger
 
 private val r = QueryRunner()
 
-private val nullableLongReader = ScalarHandler<Long?>()
+private val mapListHandler = MapListHandler()
 
 private fun table_eth_event(ctx: EContext): String {
     val db = DatabaseAccess.of(ctx)
@@ -100,9 +102,15 @@ class L2TransferTestModule : SimpleGTXModule<Unit>(Unit,
         "__eth_event" to ::L2TransferOp
     ),
     mapOf("get_last_eth_block" to { _, ctx, _ ->
-        val sql = "SELECT MAX(block_number) FROM ${table_eth_event(ctx)}"
-        val value = r.query(ctx.conn, sql, nullableLongReader)
-        value?.let { gtv(it) } ?: gtv(0L)
+        val sql = "SELECT LIMIT 1 block_number, block_hash FROM ${table_eth_event(ctx)} ORDER BY block_number DESC"
+        val res = r.query(ctx.conn, sql, mapListHandler)
+        when (res.size) {
+            1 -> gtv(mutableMapOf(
+                "eth_block_height" to gtv(res[0]["block_number"] as BigInteger),
+                "eth_block_hash" to gtv(res[0]["block_hash"] as String)
+            ))
+            else -> GtvNull
+        }
     })
 ) {
     override fun initializeDB(ctx: EContext) {
