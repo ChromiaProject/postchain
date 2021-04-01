@@ -118,19 +118,20 @@ class EthereumEventProcessor(
     }
 
     override fun isValidEventData(ops: Array<OpData>): Boolean {
-        var isValid = true
+        var isValid = false
         for (op in ops) {
             if (op.opName != OP_ETH_EVENT) continue
             val height = DefaultBlockParameter.valueOf(op.args[0].asBigInteger())
             contract.transferEventFlowable(height, height)
                 .subscribe {
-                    if (it.from != op.args[6].asString()
-                        || it.to != op.args[7].asString()
-                        || it.value != op.args[8].asBigInteger()
+                    if (it.from == op.args[6].asString()
+                        && it.to == op.args[7].asString()
+                        && it.value == op.args[8].asBigInteger()
                     ) {
-                        isValid = false
+                        isValid = true
                     }
                 }
+            if (!isValid) return false
         }
         return isValid
     }
