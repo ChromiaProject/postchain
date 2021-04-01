@@ -8,6 +8,7 @@ import net.postchain.core.Transaction
 import net.postchain.gtx.*
 
 const val OP_ETH_EVENT = "__eth_event"
+const val OP_ETH_BLOCK = "__eth_block"
 
 class L2SpecialTxHandler(
     module: GTXModule,
@@ -24,15 +25,20 @@ class L2SpecialTxHandler(
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
         if (position == SpecialTransactionPosition.EthEvent) {
-            return module.getOperations().contains(OP_ETH_EVENT) && proc.getEventData().isNotEmpty()
+            return module.getOperations().contains(OP_ETH_EVENT)
         }
         return super.needsSpecialTransaction(position)
     }
 
     override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction {
         if (position == SpecialTransactionPosition.EthEvent) {
-            val events = proc.getEventData()
             val b = GTXDataBuilder(blockchainRID, arrayOf(), cs)
+            val data = proc.getEventData()
+            val block = data.first
+            if (block.isNotEmpty()) {
+                b.addOperation(OP_ETH_BLOCK, block)
+            }
+            val events = data.second
             for (event in events) {
                 b.addOperation(OP_ETH_EVENT, event)
             }
