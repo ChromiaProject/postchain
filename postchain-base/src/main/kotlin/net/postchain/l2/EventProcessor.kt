@@ -131,29 +131,28 @@ class EthereumEventProcessor(
     }
 
     override fun isValidEventData(ops: Array<OpData>): Boolean {
-        var isValid = false
+        var isValid = true
         for (op in ops) {
             if (op.opName == OP_ETH_BLOCK) {
                 val lastEthBlock =
                     web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(op.args[0].asBigInteger()), false)
                         .send()
-                if (lastEthBlock.block.hash == op.args[1].asString()) {
-                    isValid = true
+                if (lastEthBlock.block.hash != op.args[1].asString()) {
+                    isValid = false
+                    break
                 }
             }
             if (op.opName == OP_ETH_EVENT) {
-                val height = DefaultBlockParameter.valueOf(op.args[0].asBigInteger())
-                contract.transferEventFlowable(height, height)
-                    .subscribe {
-                        if (it.from == op.args[6].asString()
-                            && it.to == op.args[7].asString()
-                            && it.value == op.args[8].asBigInteger()
-                        ) {
-                            isValid = true
-                        }
-                    }
+                val tnx = web3c.web3j.ethGetTransactionReceipt(op.args[2].asString()).send()
+                val log = tnx.transactionReceipt.get().logs[0]
+                if (log.data.takeLast(64).toBigInteger(16) != op.args[8].asBigInteger()
+                    || log.topics[1].takeLast(64).takeLast(40) != op.args[6].asString().takeLast(40)
+                    || log.topics[2].takeLast(64).takeLast(40) != op.args[7].asString().takeLast(40)
+                ) {
+                    isValid = false
+                    break
+                }
             }
-            if (!isValid) return false
         }
         return isValid
     }
