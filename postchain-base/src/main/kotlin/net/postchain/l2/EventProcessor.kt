@@ -1,9 +1,9 @@
 package net.postchain.l2
 
+import mu.KLogging
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
-import net.postchain.core.BlockValidationMistake
 import net.postchain.crypto.EthereumL2DigestSystem
 import net.postchain.ethereum.contracts.ERC20Token
 import net.postchain.gtv.Gtv
@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit
 
 interface EventProcessor {
     fun shutdown()
-    fun getEventData(): List<Array<Gtv>>
+    fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>>
     fun getEventDataAtBlockHeight(height: BigInteger): List<Array<Gtv>>
     fun isValidEventData(ops: Array<OpData>): Boolean
 }
@@ -46,14 +46,14 @@ class L2TestEventProcessor(
         return
     }
 
-    override fun getEventData(): List<Array<Gtv>> {
+    override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
         val out = mutableListOf<Array<Gtv>>()
         val start = lastBlock + 1
         for (i in start..start + 10) {
             lastBlock++
             out.add(generateData(i.toLong(), i))
         }
-        return out
+        return Pair(arrayOf(), out)
     }
 
     override fun getEventDataAtBlockHeight(height: BigInteger): List<Array<Gtv>> {
@@ -103,6 +103,8 @@ class EthereumEventProcessor(
         )
     }
 
+    companion object : KLogging()
+
     override fun shutdown() {
         web3c.shutdown()
     }
@@ -122,8 +124,7 @@ class EthereumEventProcessor(
                         )
                     )
                 }, {
-                    it.printStackTrace()
-                    throw BlockValidationMistake("")
+                    logger.warn("Cannot read data from eth via web3j", it)
                 }
             )
         return out
@@ -132,31 +133,40 @@ class EthereumEventProcessor(
     override fun isValidEventData(ops: Array<OpData>): Boolean {
         var isValid = false
         for (op in ops) {
-            if (op.opName != OP_ETH_EVENT) continue
-            val height = DefaultBlockParameter.valueOf(op.args[0].asBigInteger())
-            contract.transferEventFlowable(height, height)
-                .subscribe {
-                    if (it.from == op.args[6].asString()
-                        && it.to == op.args[7].asString()
-                        && it.value == op.args[8].asBigInteger()
-                    ) {
-                        isValid = true
-                    }
+            if (op.opName == OP_ETH_BLOCK) {
+                val lastEthBlock =
+                    web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(op.args[0].asBigInteger()), false)
+                        .send()
+                if (lastEthBlock.block.hash == op.args[1].asString()) {
+                    isValid = true
                 }
+            }
+            if (op.opName == OP_ETH_EVENT) {
+                val height = DefaultBlockParameter.valueOf(op.args[0].asBigInteger())
+                contract.transferEventFlowable(height, height)
+                    .subscribe {
+                        if (it.from == op.args[6].asString()
+                            && it.to == op.args[7].asString()
+                            && it.value == op.args[8].asBigInteger()
+                        ) {
+                            isValid = true
+                        }
+                    }
+            }
             if (!isValid) return false
         }
         return isValid
     }
 
-    override fun getEventData(): List<Array<Gtv>> {
+    override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
         val out = mutableListOf<Array<Gtv>>()
         val to = web3c.web3j.ethBlockNumber().send().blockNumber.minus(BigInteger.valueOf(100L))
+        val lastEthBlock = web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(to), false).send()
         val block = blockQueries.query("get_last_eth_block", gtv(mutableMapOf())).get()
-        val from: BigInteger
-        if (block == GtvNull) {
-            from = to.minus(BigInteger.valueOf(100L))
+        val from = if (block == GtvNull) {
+            to.minus(BigInteger.valueOf(100L))
         } else {
-            from = block.asDict()["eth_block_height"]!!.asBigInteger().plus(BigInteger.ONE)
+            block.asDict()["eth_block_height"]!!.asBigInteger().plus(BigInteger.ONE)
         }
         contract
             .transferEventFlowable(DefaultBlockParameter.valueOf(from), DefaultBlockParameter.valueOf(to))
@@ -170,11 +180,11 @@ class EthereumEventProcessor(
                         )
                     )
                 }, {
-                    it.printStackTrace()
-                    throw BlockValidationMistake("")
+                    logger.warn("Cannot read data from eth via web3j", it)
                 }
             )
-        return out
+        val toBlock: Array<Gtv> = arrayOf(gtv(lastEthBlock.block.number), gtv(lastEthBlock.block.hash))
+        return Pair(toBlock, out)
     }
 }
 
