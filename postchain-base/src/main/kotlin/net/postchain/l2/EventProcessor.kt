@@ -138,9 +138,12 @@ class EthereumEventProcessor(
     override fun getEventData(): List<Array<Gtv>> {
         val out = mutableListOf<Array<Gtv>>()
         val to = web3c.web3j.ethBlockNumber().send().blockNumber.minus(BigInteger.valueOf(100L))
-        var from = blockQueries.query("get_last_eth_block", GtvNull).get().asBigInteger()
-        if (from == BigInteger.ZERO) {
+        val block = blockQueries.query("get_last_eth_block", gtv(mutableMapOf())).get()
+        val from: BigInteger
+        if (block == GtvNull) {
             from = to.minus(BigInteger.valueOf(100L))
+        } else {
+            from = block.asDict()["eth_block_height"]!!.asBigInteger().plus(BigInteger.ONE)
         }
         contract
             .transferEventFlowable(DefaultBlockParameter.valueOf(from), DefaultBlockParameter.valueOf(to))
