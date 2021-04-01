@@ -23,7 +23,7 @@ class L2SpecialTxHandler(
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
-        if (position == SpecialTransactionPosition.EthEvent) {
+        if (position == SpecialTransactionPosition.EthEvent && proc.getEventData().isNotEmpty()) {
             return module.getOperations().contains(OP_ETH_EVENT)
         }
         return super.needsSpecialTransaction(position)
