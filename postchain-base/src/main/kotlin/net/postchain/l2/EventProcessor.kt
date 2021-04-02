@@ -143,12 +143,21 @@ class EthereumEventProcessor(
                 }
             }
             if (op.opName == OP_ETH_EVENT) {
+                var isValidEvent = false
                 val tnx = web3c.web3j.ethGetTransactionReceipt(op.args[2].asString()).send()
-                val log = tnx.transactionReceipt.get().logs[0]
-                if (log.data.takeLast(64).toBigInteger(16) != op.args[8].asBigInteger()
-                    || log.topics[1].takeLast(64).takeLast(40) != op.args[6].asString().takeLast(40)
-                    || log.topics[2].takeLast(64).takeLast(40) != op.args[7].asString().takeLast(40)
-                ) {
+                val logs = tnx.transactionReceipt.get().logs
+                for (log in logs) {
+                    if (log.topics[0] == op.args[4].asString()) {
+                        if (log.data.takeLast(64).toBigInteger(16) == op.args[8].asBigInteger()
+                            && log.topics[1].takeLast(64).takeLast(40) == op.args[6].asString().takeLast(40)
+                            && log.topics[2].takeLast(64).takeLast(40) == op.args[7].asString().takeLast(40)
+                        ) {
+                            isValidEvent = true
+                            break
+                        }
+                    }
+                }
+                if (!isValidEvent) {
                     isValid = false
                     break
                 }

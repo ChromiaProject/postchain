@@ -260,9 +260,9 @@ open class BaseBlockBuilder(
         if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.EthEvent)) {
             appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.EthEvent, bctx))
         }
-        
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End))
             appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.End, bctx))
+
         return super.finalizeBlock()
     }
 
