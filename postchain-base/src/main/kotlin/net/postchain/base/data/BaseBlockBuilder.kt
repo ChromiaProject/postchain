@@ -89,10 +89,6 @@ open class BaseBlockBuilder(
                     bctx
             ))
         }
-
-        if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.EthEvent)) {
-            appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.EthEvent, bctx))
-        }
     }
 
     open fun getExtraData(): Map<String, Gtv> {
@@ -261,6 +257,10 @@ open class BaseBlockBuilder(
     }
 
     override fun finalizeBlock(): BlockHeader {
+        if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.EthEvent)) {
+            appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.EthEvent, bctx))
+        }
+        
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End))
             appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.End, bctx))
         return super.finalizeBlock()
