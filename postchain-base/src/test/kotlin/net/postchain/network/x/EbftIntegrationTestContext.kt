@@ -23,7 +23,6 @@ class EbftIntegrationTestContext(
 
     val connectionManager = DefaultXConnectionManager(
             connectorFactory,
-            config,
             EbftPacketEncoderFactory(),
             EbftPacketDecoderFactory())
 

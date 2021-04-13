@@ -30,6 +30,7 @@ interface ConfigurationDataStore {
     fun getConfigurationData(context: EContext, height: Long): ByteArray?
     fun addConfigurationData(context: EContext, height: Long, binData: ByteArray)
     fun addConfigurationData(context: EContext, height: Long, gtvData: Gtv)
+    fun setMustSyncUntil(context: EContext, brid: BlockchainRid, height: Long) : Boolean
 }
 
 interface BlockchainConfigurationFactory {

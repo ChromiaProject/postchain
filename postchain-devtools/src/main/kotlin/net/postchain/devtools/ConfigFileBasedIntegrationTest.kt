@@ -31,7 +31,7 @@ typealias IntegrationTest = ConfigFileBasedIntegrationTest
  * We should still use this class for tests when we need to test broken configuration files,
  * or when we need to do non-standard stuff, like adding one blockchain at a time.
  */
-open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
+open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
 
     protected val nodes = mutableListOf<PostchainTestNode>()
     protected val nodesNames = mutableMapOf<String, String>() // { pubKey -> Node${i} }
@@ -143,17 +143,16 @@ open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
     ): PostchainTestNode {
 
         val appConfig = createAppConfig(nodeIndex, totalNodesCount, nodeConfigFilename)
+        // Wiping of database
+        if (preWipeDatabase) {
+            StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
+        }
         val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
         val nodeConfig = nodeConfigProvider.getConfiguration()
 
         nodesNames[nodeConfig.pubKey] = "$nodeIndex"
         val blockchainConfig = readBlockchainConfig(blockchainConfigFilename)
         val chainId = nodeConfig.activeChainIds.first().toLong()
-
-        // Wiping of database
-        if (preWipeDatabase) {
-            StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
-        }
 
         // Performing setup action
         setupAction(appConfig, nodeConfig)
@@ -235,16 +234,11 @@ open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
     ): PostchainTestNode {
 
         val appConfig = createAppConfig(nodeIndex, nodeCount, nodeConfigFilename)
-        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
-
-        //require(nodeConfigProvider.getConfiguration().activeChainIds.size == blockchainConfigFilenames.size) {
-        //    "The nodes config must have the same number of active chains as the number of specified BC config files."
-        //}
-
         // Wiping of database
         if (preWipeDatabase) {
             StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
         }
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
 
         val node = PostchainTestNode(nodeConfigProvider)
                 .also { nodes.add(it) }
@@ -266,18 +260,10 @@ open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
             : AppConfig {
 
         val file = File(configFile)
-        /*
-        if (file.isFile) {
-            throw IllegalArgumentException("Node conf file on path: $configFile cannot be found.")
-        } else {
-            logger.debug("Node conf file found: $configFile")
-        }
-         */
 
         // Read first file directly via the builder
         val params = Parameters()
                 .fileBased()
-//                .setLocationStrategy(ClasspathLocationStrategy())
                 .setLocationStrategy(UniversalFileLocationStrategy())
                 .setListDelimiterHandler(DefaultListDelimiterHandler(','))
                 .setFile(file)
@@ -304,6 +290,8 @@ open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
             baseConfig.setProperty("messaging.privkey", KeyPairHelper.privKeyHex(nodeIndex))
             baseConfig.setProperty("messaging.pubkey", KeyPairHelper.pubKeyHex(nodeIndex))
         }
+
+        baseConfig.setProperty("fastsync.exit_delay", if (nodeCount == 1) 0 else 1000)
 
         val appConfig = CompositeConfiguration().apply {
             addConfiguration(configOverrides)
@@ -346,9 +334,9 @@ open class ConfigFileBasedIntegrationTest: AbstractIntegration() {
     }
 
     protected fun buildNonEmptyBlocks(fromHeight: Int, toHeight: Int) {
-        repeat(toHeight-fromHeight) { c ->
+        repeat(toHeight - fromHeight) { c ->
             val tx = nextTx()
-            buildBlock(fromHeight+1+c, tx)
+            buildBlock(fromHeight + 1 + c, tx)
         }
     }
 

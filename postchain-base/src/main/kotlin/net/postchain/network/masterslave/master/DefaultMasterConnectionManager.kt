@@ -1,9 +1,7 @@
 package net.postchain.network.masterslave.master
 
 import net.postchain.base.BlockchainRid
-import net.postchain.base.PeerCommConfiguration
 import net.postchain.config.node.NodeConfig
-import net.postchain.core.byteArrayKeyOf
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
@@ -17,13 +15,11 @@ import net.postchain.network.x.XConnectorFactory
 
 class DefaultMasterConnectionManager<PacketType>(
         connectorFactory: XConnectorFactory<PacketType>,
-        peerCommConfiguration: PeerCommConfiguration,
         packetEncoderFactory: XPacketEncoderFactory<PacketType>,
         packetDecoderFactory: XPacketDecoderFactory<PacketType>,
-        nodeConfig: NodeConfig
+        val nodeConfig: NodeConfig
 ) : DefaultXConnectionManager<PacketType>(
         connectorFactory,
-        peerCommConfiguration,
         packetEncoderFactory,
         packetDecoderFactory
 ), MasterConnectionManager, MasterConnectorEvents {
@@ -130,7 +126,6 @@ class DefaultMasterConnectionManager<PacketType>(
     }
 
     private fun buildProcessName(descriptor: MasterConnectionDescriptor): String = BlockchainProcessName(
-            peerCommConfiguration.myPeerInfo().pubKey.byteArrayKeyOf().toString(),
-            descriptor.blockchainRid
+            nodeConfig.pubKey, descriptor.blockchainRid
     ).toString()
 }

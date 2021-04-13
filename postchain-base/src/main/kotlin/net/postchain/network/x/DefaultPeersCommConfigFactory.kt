@@ -2,12 +2,19 @@ package net.postchain.network.x
 
 import net.postchain.base.*
 import net.postchain.config.node.NodeConfig
+import net.postchain.core.BlockchainConfiguration
 
 open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 
     override fun create(
             nodeConfig: NodeConfig,
-            chainId: Long,
+            blockchainConfig: BlockchainConfiguration
+    ): PeerCommConfiguration {
+        return create(nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers)
+    }
+
+    override fun create(
+            nodeConfig: NodeConfig,
             blockchainRid: BlockchainRid,
             peers: List<ByteArray>
     ): PeerCommConfiguration {
@@ -15,10 +22,11 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
         val relevantPeerMap = buildPeersMap(nodeConfig, blockchainRid, peers)
 
         return BasePeerCommConfiguration.build(
-                relevantPeerMap,
+                relevantPeerMap.values,
                 SECP256K1CryptoSystem(),
                 nodeConfig.privKeyByteArray,
-                nodeConfig.pubKeyByteArray)
+                nodeConfig.pubKeyByteArray
+        )
     }
 
     protected fun buildPeersMap(

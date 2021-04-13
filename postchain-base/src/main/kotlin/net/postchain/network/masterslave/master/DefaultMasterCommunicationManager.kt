@@ -5,8 +5,6 @@ import net.postchain.base.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.node.NodeConfig
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.EbftPacketDecoder
-import net.postchain.ebft.EbftPacketEncoder
 import net.postchain.network.masterslave.protocol.MsDataMessage
 import net.postchain.network.masterslave.protocol.MsHandshakeMessage
 import net.postchain.network.masterslave.protocol.MsMessage
@@ -52,20 +50,10 @@ class DefaultMasterCommunicationManager(
     private fun connectChainPeers(peers: List<ByteArray>) {
         logger.info { "${process()}: Connecting chain peers" }
 
-        val peersCommConfig = peersCommConfigFactory.create(
-                nodeConfig, chainId, blockchainRid, peers)
-
-        val packetEncoder = EbftPacketEncoder(peersCommConfig, blockchainRid)
-        val packetDecoder = EbftPacketDecoder(peersCommConfig)
-
-        val peersConfig = XChainPeersConfiguration(
-                chainId,
-                blockchainRid,
-                peersCommConfig,
-                { data: ByteArray, peerId: XPeerID -> consumePacket(peerId, data) },
-                packetEncoder,
-                packetDecoder
-        )
+        val peersCommConfig = peersCommConfigFactory.create(nodeConfig, blockchainRid, peers)
+        val peersConfig = XChainPeersConfiguration(chainId, blockchainRid, peersCommConfig) { data, peerId ->
+            consumePacket(peerId, data)
+        }
 
         masterConnectionManager.connectChain(peersConfig, true) { processName.toString() }
     }

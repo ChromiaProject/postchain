@@ -1,12 +1,12 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.core
+package net.postchain.base
 
-import net.postchain.base.BaseBlockEContext
-import net.postchain.base.BlockchainDependencies
-import net.postchain.base.BlockchainRid
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
+import net.postchain.core.*
+import net.postchain.core.ValidationResult.Result.OK
+import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
 
 /**
  * This class includes the bare minimum functionality required by a real block builder
@@ -42,6 +42,7 @@ abstract class AbstractBlockBuilder(
     lateinit var bctx: BlockEContext
     lateinit var initialBlockData: InitialBlockData
     var _blockData: BlockData? = null
+    var buildingNewBlock: Boolean = false
 
     /**
      * Retrieve initial block data and set block context
@@ -49,16 +50,18 @@ abstract class AbstractBlockBuilder(
      * @param partialBlockHeader might hold the header.
      */
     override fun begin(partialBlockHeader: BlockHeader?) {
-        if (finalized) {
-            ProgrammerMistake("This builder has already been used once (you must create a new builder instance)")
+        if (::initialBlockData.isInitialized) {
+            ProgrammerMistake("Attempted to begin block second time")
         }
         blockchainDependencies = buildBlockchainDependencies(partialBlockHeader)
         initialBlockData = store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
         bctx = BaseBlockEContext(
                 ectx,
+                initialBlockData.height,
                 initialBlockData.blockIID,
                 initialBlockData.timestamp,
                 blockchainDependencies!!.extractChainIdToHeightMap())
+        buildingNewBlock = partialBlockHeader != null
     }
 
     /**
@@ -116,14 +119,15 @@ abstract class AbstractBlockBuilder(
      * @throws UserMistake Happens if validation of the block header fails
      */
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
-        validateBlockHeader(blockHeader).run {
-            if (result) {
+        val validationResult = validateBlockHeader(blockHeader)
+        when (validationResult.result) {
+            OK -> {
                 store.finalizeBlock(bctx, blockHeader)
                 _blockData = BlockData(blockHeader, rawTransactions)
                 finalized = true
-            } else {
-                throw UserMistake("Invalid block header: $message")
             }
+            PREV_BLOCK_MISMATCH -> throw BadDataMistake(BadDataType.PREV_BLOCK_MISMATCH, validationResult.message)
+            else -> throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
         }
     }
 
@@ -142,8 +146,8 @@ abstract class AbstractBlockBuilder(
      * @param blockWitness The witness for the block
      * @throws ProgrammerMistake If the witness is invalid
      */
-    override fun commit(blockWitness: BlockWitness?) {
-        if (blockWitness != null && !validateWitness(blockWitness)) {
+    override fun commit(blockWitness: BlockWitness) {
+        if (!validateWitness(blockWitness)) {
             throw ProgrammerMistake("Invalid witness")
         }
         store.commitBlock(bctx, blockWitness)

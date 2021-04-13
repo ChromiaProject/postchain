@@ -29,10 +29,10 @@ class DefaultMasterSyncInfra(
     override fun init() {
         connectionManager = DefaultMasterConnectionManager(
                 NettyConnectorFactory(),
-                buildInternalPeerCommConfiguration(nodeConfig),
                 EbftPacketEncoderFactory(),
                 EbftPacketDecoderFactory(),
-                nodeConfig)
+                nodeConfig
+        )
     }
 
     override fun makeMasterBlockchainProcess(
@@ -59,7 +59,8 @@ class DefaultMasterSyncInfra(
                 blockchainRid,
                 communicationManager,
                 dataSource,
-                chainConfigsDir)
+                chainConfigsDir
+        )
     }
 
 }

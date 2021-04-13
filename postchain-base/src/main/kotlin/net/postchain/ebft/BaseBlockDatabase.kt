@@ -75,7 +75,7 @@ class BaseBlockDatabase(
                     theBlockBuilder.rollback()
                 } catch (ignore: Exception) {
                 }
-                throw UserMistake("Can't add block", exception)
+                throw exception
             } else {
                 theBlockBuilder.commit(block.witness)
             }
@@ -91,7 +91,7 @@ class BaseBlockDatabase(
                     theBlockBuilder.rollback()
                 } catch (ignore: Exception) {
                 }
-                throw UserMistake("Can't load unfinished block", exception)
+                throw exception
             } else {
                 blockBuilder = theBlockBuilder
                 witnessBuilder = blockBuilder!!.getBlockWitnessBuilder() as MultiSigBlockWitnessBuilder
@@ -145,8 +145,8 @@ class BaseBlockDatabase(
         return blockQueries.getBlockSignature(blockRID)
     }
 
-    override fun getBlockAtHeight(height: Long): Promise<BlockDataWithWitness, Exception> {
-        return blockQueries.getBlockAtHeight(height)
+    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): Promise<BlockDataWithWitness, Exception> {
+        return blockQueries.getBlockAtHeight(height, includeTransactions)
     }
 
 }

@@ -83,11 +83,6 @@ open class BaseBlockchainEngine(
                 })
     }
 
-    override fun addBlock(block: BlockDataWithWitness) {
-        val (blockBuilder, exception) = loadUnfinishedBlock(block)
-        blockBuilder.commit(block.witness)
-    }
-
     override fun loadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
         return if (useParallelDecoding)
             parallelLoadUnfinishedBlock(block)
@@ -185,11 +180,16 @@ open class BaseBlockchainEngine(
                 if (tx != null) {
                     logger.debug("$processName: Appending transaction ${tx.getRID().toHex()}")
                     TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
-                    val exception = blockBuilder.maybeAppendTransaction(tx)
-                    TimeLog.end("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
-                    if (exception != null) {
+                    if (tx.isSpecial()) {
                         rejectedTxs++
-                        transactionQueue.rejectTransaction(tx, exception)
+                        transactionQueue.rejectTransaction(tx, ProgrammerMistake("special transactions can't enter queue"))
+                        continue
+                    }
+                    val txException = blockBuilder.maybeAppendTransaction(tx)
+                    TimeLog.end("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
+                    if (txException != null) {
+                        rejectedTxs++
+                        transactionQueue.rejectTransaction(tx, txException)
                     } else {
                         acceptedTxs++
                         // tx is fine, consider stopping
