@@ -8,7 +8,6 @@ import net.postchain.StorageBuilder
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
-import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
@@ -146,7 +145,6 @@ class PostchainTestNode(
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
 
     private fun blockchainRID(process: BlockchainProcess): String {
-        return (process.getEngine().getConfiguration() as BaseBlockchainConfiguration) // TODO: [et]: Resolve type cast
-                .blockchainRid.toHex()
+        return process.getEngine().getConfiguration().blockchainRid.toHex()
     }
 }

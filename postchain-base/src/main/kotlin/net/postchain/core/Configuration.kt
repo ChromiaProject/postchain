@@ -14,6 +14,7 @@ interface BlockchainConfiguration {
     val chainID: Long
     val blockchainRid: BlockchainRid
     val signers: List<ByteArray>
+    val effectiveBlockchainRID: BlockchainRid
     val traits: Set<String>
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader

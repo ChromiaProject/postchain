@@ -50,7 +50,7 @@ class DefaultMasterCommunicationManager(
     private fun connectChainPeers(peers: List<ByteArray>) {
         logger.info { "${process()}: Connecting chain peers" }
 
-        val peersCommConfig = peersCommConfigFactory.create(nodeConfig, blockchainRid, peers)
+        val peersCommConfig = peersCommConfigFactory.create(nodeConfig, blockchainRid, peers, null)
         val peersConfig = XChainPeersConfiguration(chainId, blockchainRid, peersCommConfig) { data, peerId ->
             consumePacket(peerId, data)
         }

@@ -8,18 +8,20 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 
     override fun create(
             nodeConfig: NodeConfig,
-            blockchainConfig: BlockchainConfiguration
+            blockchainConfig: BlockchainConfiguration,
+            historicBlockchain: HistoricBlockchain?
     ): PeerCommConfiguration {
-        return create(nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers)
+        return create(nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers, historicBlockchain)
     }
 
     override fun create(
             nodeConfig: NodeConfig,
             blockchainRid: BlockchainRid,
-            peers: List<ByteArray>
+            peers: List<ByteArray>,
+            historicBlockchain: HistoricBlockchain?
     ): PeerCommConfiguration {
 
-        val relevantPeerMap = buildPeersMap(nodeConfig, blockchainRid, peers)
+        val relevantPeerMap = buildPeersMap(nodeConfig, blockchainRid, peers, historicBlockchain)
 
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
@@ -32,14 +34,22 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
     protected fun buildPeersMap(
             nodeConfig: NodeConfig,
             blockchainRid: BlockchainRid,
-            peers: List<ByteArray> // signers
+            peers: List<ByteArray>, // signers
+            historicBlockchain: HistoricBlockchain?
     ): Map<XPeerID, PeerInfo> {
         val myPeerId = XPeerID(nodeConfig.pubKeyByteArray)
         val peers0 = peers.map { XPeerID(it) }
         val peersReplicas = peers0.flatMap {
             nodeConfig.nodeReplicas[it] ?: listOf()
         }
-        val blockchainReplicas = nodeConfig.blockchainReplicaNodes[blockchainRid] ?: listOf()
+
+        val blockchainReplicas = if (historicBlockchain != null) {
+            (nodeConfig.blockchainReplicaNodes[historicBlockchain.historicBrid] ?: listOf()).union(
+                    nodeConfig.blockchainReplicaNodes[blockchainRid] ?: listOf())
+        } else {
+            nodeConfig.blockchainReplicaNodes[blockchainRid] ?: listOf()
+        }
+
         return nodeConfig.peerInfoMap.filterKeys {
             it in peers0 || it in peersReplicas || it in blockchainReplicas || it == myPeerId
         }

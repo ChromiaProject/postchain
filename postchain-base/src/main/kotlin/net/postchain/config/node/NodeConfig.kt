@@ -98,11 +98,33 @@ open class NodeConfig(val appConfig: AppConfig) {
     open val peerInfoMap: Map<XPeerID, PeerInfo> = mapOf()
     open val nodeReplicas: Map<XPeerID, List<XPeerID>> = mapOf()
     open val blockchainReplicaNodes: Map<BlockchainRid, List<XPeerID>> = mapOf()
+    open val blockchainAliases: Map<BlockchainRid, Map<BlockchainRid, Set<XPeerID>>> = getAliases()
 
     open val mustSyncUntilHeight: Map<Long, Long>? = mapOf() //mapOf<chainID, height>
 
     val fastSyncExitDelay: Long
         get() = config.getLong("fastsync.exit_delay", 60000)
+
+    val fastSyncJobTimeout: Long
+        get() = config.getLong("fastsync.job_timeout", 10000)
+
+    private fun getAliases(): Map<BlockchainRid, Map<BlockchainRid, Set<XPeerID>>> {
+        val aliases = config.subset("blockchain_aliases") ?: return emptyMap()
+        val forBrids = aliases.getKeys()
+        val result = mutableMapOf<BlockchainRid, MutableMap<BlockchainRid, MutableSet<XPeerID>>>()
+        forBrids.forEach {
+            val list = aliases.getList(String::class.java, it)
+            val map = LinkedHashMap<BlockchainRid, MutableSet<XPeerID>>()
+            list.forEach {
+                val peerAndBrid = it.split(":")
+                val peer = XPeerID(peerAndBrid[0].hexStringToByteArray())
+                val brid = BlockchainRid.buildFromHex(peerAndBrid[1])
+                map.computeIfAbsent(brid) { mutableSetOf() }.add(peer)
+            }
+            result[BlockchainRid.buildFromHex(it)] = map
+        }
+        return result
+    }
 
     /**
      * Active Chains

@@ -3,7 +3,6 @@
 package net.postchain.network.x
 
 import net.postchain.base.PeerInfo
-import net.postchain.core.Shutdownable
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 
@@ -20,7 +19,7 @@ interface XConnectorEvents {
     fun onPeerDisconnected(connection: XPeerConnection)
 }
 
-interface XConnector<PacketType> : Shutdownable {
+interface XConnector<PacketType> {
     fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>)
 
     // TODO: [et]: Two different structures for one thing (WTF - 2020/12/03)
@@ -28,6 +27,8 @@ interface XConnector<PacketType> : Shutdownable {
             peerConnectionDescriptor: XPeerConnectionDescriptor,
             peerInfo: PeerInfo,
             packetEncoder: XPacketEncoder<PacketType>)
+    fun shutdown()
+
 }
 
 interface XConnectorFactory<PacketType> {

@@ -93,7 +93,8 @@ open class ManagedBlockchainProcessManager(
         }
     }
 
-    private fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
+    // TODO: [POS-129]: 'protected open' for tests only. Change that.
+    protected open fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
         val storage = StorageBuilder.buildStorage(
                 nodeConfigProvider.getConfiguration().appConfig, NODE_ID_NA)
 
@@ -264,15 +265,26 @@ open class ManagedBlockchainProcessManager(
      *
      * @return all chainIids chain zero thinks we should run.
      */
-    private fun getBlockchainsShouldBeLaunched(): Set<Long> {
+    // TODO: [POS-129]: 'protected open' for tests only. Change that.
+    protected open fun getBlockchainsShouldBeLaunched(): Set<Long> {
         // chain-zero is always in the list
         val blockchains = mutableSetOf(CHAIN0)
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
-            dataSource.computeBlockchainList()
-                    .map { brid ->
-                        val blockchainRid = BlockchainRid(brid)
+
+            val domainBlockchainList = dataSource.computeBlockchainList().map { BlockchainRid(it) }
+            val allMyBlockchains = domainBlockchainList.toMutableList()
+
+            val locallyConfiguredReplicas = db.getBlockchainsToReplicate(ctx0, nodeConfig.pubKey)
+            locallyConfiguredReplicas.forEach {
+                if (it !in domainBlockchainList) {
+                    allMyBlockchains.add(it)
+                }
+            }
+
+            allMyBlockchains
+                    .map { blockchainRid ->
                         val chainId = db.getChainId(ctx0, blockchainRid)
                         logger.debug("Blockchain to launch: chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
                         if (chainId == null) {

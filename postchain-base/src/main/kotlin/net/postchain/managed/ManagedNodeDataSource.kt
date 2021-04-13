@@ -9,5 +9,9 @@ interface ManagedNodeDataSource : PeerInfoDataSource {
     fun computeBlockchainList(): List<ByteArray>
     fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray?
     fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray>
+    /**
+     * Looks for the nearest configuraion height strictly after parameter height. Returns
+     * null if no future configurations found or if blockchain doesn't exist.
+     */
     fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
 }
