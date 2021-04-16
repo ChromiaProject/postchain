@@ -64,8 +64,8 @@ operation __eth_event (eth_block_height: integer, eth_block_hash: text, tnx_hash
     );
 
     val eth_event_data = eth_event_data(
-        contract_address = eth_event.contract_address.to_bytes(),
-        to_address = eth_event.from_address.to_bytes(),
+        contract_address = byte_array.from_hex("000000000000000000000000" + eth_event.to_address.sub(2)),
+        to_address = byte_array.from_hex("000000000000000000000000" + eth_event.from_address.sub(2)),
         amount = eth_event.amount
     );
 
