@@ -5,7 +5,7 @@ import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
 import net.postchain.crypto.EthereumL2DigestSystem
-import net.postchain.ethereum.contracts.ERC20Token
+import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -76,7 +76,7 @@ class L2TestEventProcessor(
         val to = ds.digest(BigInteger.valueOf(2L).toByteArray()).toHex()
         return arrayOf(
             gtv(height), gtv(blockHash), gtv(transactionHash),
-            gtv(i.toLong()), gtv(EventEncoder.encode(ERC20Token.TRANSFER_EVENT)),
+            gtv(i.toLong()), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
             gtv(contractAddress), gtv(from), gtv(to), gtv(BigInteger.valueOf(i.toLong()))
         )
     }
@@ -89,13 +89,13 @@ class EthereumEventProcessor(
 ) : BaseEventProcessor(blockQueries) {
 
     private var web3c: Web3Connector
-    private var contract: ERC20Token
+    private var contract: ChrL2
 
     init {
         val web3jConfig = Web3jConfig()
         val web3j = Web3j.build(web3jConfig.buildService(url))
         web3c = Web3Connector(web3j, contractAddress)
-        contract = ERC20Token.load(
+        contract = ChrL2.load(
             web3c.contractAddress,
             web3c.web3j,
             ClientTransactionManager(web3c.web3j, "0x0"),
@@ -113,14 +113,14 @@ class EthereumEventProcessor(
         val out = mutableListOf<Array<Gtv>>()
         val blockHeight = DefaultBlockParameter.valueOf(height)
         contract
-            .transferEventFlowable(blockHeight, blockHeight)
+            .depositedEventFlowable(blockHeight, blockHeight)
             .subscribe(
                 { event ->
                     out.add(
                         arrayOf(
                             gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
-                            gtv(event.log.logIndex), gtv(EventEncoder.encode(ERC20Token.TRANSFER_EVENT)),
-                            gtv(contract.contractAddress), gtv(event.from), gtv(event.to), gtv(event.value)
+                            gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
+                            gtv(contract.contractAddress), gtv(event.owner), gtv(event.token), gtv(event.value)
                         )
                     )
                 }, {
@@ -177,14 +177,14 @@ class EthereumEventProcessor(
             block.asDict()["eth_block_height"]!!.asBigInteger().plus(BigInteger.ONE)
         }
         contract
-            .transferEventFlowable(DefaultBlockParameter.valueOf(from), DefaultBlockParameter.valueOf(to))
+            .depositedEventFlowable(DefaultBlockParameter.valueOf(from), DefaultBlockParameter.valueOf(to))
             .subscribe(
                 { event ->
                     out.add(
                         arrayOf(
                             gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
-                            gtv(event.log.logIndex), gtv(EventEncoder.encode(ERC20Token.TRANSFER_EVENT)),
-                            gtv(contract.contractAddress), gtv(event.from), gtv(event.to), gtv(event.value)
+                            gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
+                            gtv(contract.contractAddress), gtv(event.owner), gtv(event.token), gtv(event.value)
                         )
                     )
                 }, {

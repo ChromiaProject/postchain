@@ -103,7 +103,6 @@ class GtvEncoderTest {
     }
 
     @Test
-    @Ignore
     fun testSimpleEncodeGtvArrayError_Invalid_Data_Length() {
         val gtvArray = Array<Gtv>(3) {GtvNull}
         gtvArray[0] = GtvByteArray("00000000c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6".toByteArray())

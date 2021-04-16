@@ -1,0 +1,79 @@
+entity eth_block {
+    key eth_block_height: integer;
+    key eth_block_hash: text;
+}
+
+entity eth_event {
+    index eth_block;
+    tnx_hash: text;
+    log_index: integer;
+    event_signature: text;
+    contract_address: text;
+    from_address: text;
+    to_address: text;
+    amount: integer;
+}
+
+struct eth_event_data {
+    contract_address: byte_array;
+    to_address: byte_array;
+    amount: integer;
+}
+
+struct state_data {
+    state_n: integer;
+    account: eth_event_data;
+}
+
+query get_last_eth_block () { return eth_block @? {} (@sort_desc .eth_block_height, .eth_block_hash) limit 1;}
+
+operation __eth_block (eth_block_height: integer, eth_block_hash: text) {
+
+    var eth_block = eth_block @? { eth_block_height, eth_block_hash };
+
+    if (empty(eth_block)) {
+        create eth_block(
+            eth_block_height,
+            eth_block_hash
+        );
+    }
+}
+
+operation __eth_event (eth_block_height: integer, eth_block_hash: text, tnx_hash: text, log_index: integer,
+                        event_signature: text, contract_address: text,
+                        from_address: text, to_address: text, amount: integer) {
+
+    var eth_block = eth_block @? { eth_block_height, eth_block_hash };
+
+    if (empty(eth_block)) {
+        eth_block = create eth_block(
+            eth_block_height,
+            eth_block_hash
+        );
+    }
+
+    val eth_event = create eth_event(
+        eth_block,
+        tnx_hash,
+        log_index,
+        event_signature,
+        contract_address,
+        from_address,
+        to_address,
+        amount
+    );
+
+    val eth_event_data = eth_event_data(
+        contract_address = eth_event.contract_address.to_bytes(),
+        to_address = eth_event.from_address.to_bytes(),
+        amount = eth_event.amount
+    );
+
+    val state_data = state_data(
+        state_n = eth_block.eth_block_height,
+        account = eth_event_data
+    );
+
+    op_context.emit_event("l2_event", eth_event_data.to_gtv());
+    op_context.emit_event("l2_state", state_data.to_gtv());
+}
