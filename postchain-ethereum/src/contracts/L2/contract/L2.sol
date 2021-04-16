@@ -8,7 +8,7 @@ contract ChrL2 {
     bytes32 constant DICT_KEY = 0x43758C97091F5141260E8E3FD3A352A8FE106C353FCC7C9CDEEC71CEEFFDBB0F;
 
     mapping (address => mapping(ERC20 => uint256)) private _balances;
-    mapping (address => Withdraw) public _withdraw;
+    mapping (ERC20 => Withdraw) public _withdraw;
 
     struct Event {
         ERC20 token;
@@ -17,14 +17,14 @@ contract ChrL2 {
     }
 
     struct Withdraw {
-        ERC20 token;
+        address beneficiary;
         uint256 amount;
         uint256 block_number;
         bool isWithdraw;
     }
 
     event Deposited(address indexed owner, ERC20 indexed token, uint256 value);
-    event WithDraw(address indexed beneficiary, ERC20 indexed token, uint256 value);
+    event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
 
     function deposit(ERC20 token, uint256 amount) public returns (bool) {
         token.transferFrom(msg.sender, address(this), amount);
@@ -38,17 +38,23 @@ contract ChrL2 {
         address beneficiary;
         uint256 amount;
         (token, beneficiary, amount) = verifyProof(value, proof);
-        Withdraw memory data =  Withdraw(token, amount, block.number+10, false);
-        _withdraw[beneficiary] = data;
+        Withdraw storage wd = _withdraw[token];
+        wd.beneficiary = beneficiary;
+        wd.amount += amount;
+        wd.block_number = block.number + 50;
+        wd.isWithdraw = false;
+        _withdraw[token] = wd;
     }
 
-    function withdraw(address payable beneficiary) public returns (bool) {
-        Withdraw storage wd = _withdraw[beneficiary];
+    function withdraw(ERC20 token, address payable beneficiary) public returns (bool) {
+        Withdraw storage wd = _withdraw[token];
         if (!wd.isWithdraw && wd.amount > 0 && block.number >= wd.block_number) {
             wd.isWithdraw = true;
             uint value = wd.amount;
             wd.amount = 0;
-            return wd.token.transfer(beneficiary, value);
+            token.transfer(beneficiary, value);
+            emit Withdrawal(beneficiary, token, value);
+            return true;
         }
         return false;
     }
