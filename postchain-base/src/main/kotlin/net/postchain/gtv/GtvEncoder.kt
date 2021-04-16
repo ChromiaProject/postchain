@@ -33,17 +33,17 @@ object GtvEncoder {
             out = when (it) {
                 is GtvByteArray -> {
                     // TODO: temporarily strictly data validation for ease
-//                    if (it.bytearray.size != 32) {
-//                        throw IllegalArgumentException("invalid byte array length")
-//                    }
+                    if (it.bytearray.size != 32) {
+                        throw IllegalArgumentException("invalid byte array length")
+                    }
                     out.plus(it.bytearray)
                 }
                 is GtvInteger -> {
                     val num = it.asBigInteger().toString(16).padStart(64, '0').hexStringToByteArray()
                     // TODO: temporarily strictly data validation for ease
-//                    if (num.size != 32) {
-//                        throw IllegalArgumentException("invalid byte array length")
-//                    }
+                    if (num.size != 32) {
+                        throw IllegalArgumentException("invalid byte array length")
+                    }
                     out.plus(num)
                 }
                 else -> {

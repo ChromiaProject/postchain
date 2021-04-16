@@ -1,14 +1,56 @@
-pragma solidity ^0.7.4;
+// SPDX-License-Identifier: GPL-3.0-only
+pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
+import "./ERC20.sol";
 
 contract ChrL2 {
 
     bytes32 constant DICT_KEY = 0x43758C97091F5141260E8E3FD3A352A8FE106C353FCC7C9CDEEC71CEEFFDBB0F;
 
+    mapping (address => mapping(ERC20 => uint256)) private _balances;
+    mapping (address => Withdraw) public _withdraw;
+
     struct Event {
-        bytes32 root;
+        ERC20 token;
+        address beneficiary;
         uint256 amount;
-        bytes32 proof;
+    }
+
+    struct Withdraw {
+        ERC20 token;
+        uint256 amount;
+        uint256 block_number;
+        bool isWithdraw;
+    }
+
+    event Deposited(address indexed owner, ERC20 indexed token, uint256 value);
+    event WithDraw(address indexed beneficiary, ERC20 indexed token, uint256 value);
+
+    function deposit(ERC20 token, uint256 amount) public returns (bool) {
+        token.transferFrom(msg.sender, address(this), amount);
+        _balances[msg.sender][token] += amount;
+        emit Deposited(msg.sender, token, amount);
+        return true;
+    }
+
+    function withdraw_request(bytes calldata value, bytes32 proof) public {
+        ERC20 token;
+        address beneficiary;
+        uint256 amount;
+        (token, beneficiary, amount) = verifyProof(value, proof);
+        Withdraw memory data =  Withdraw(token, amount, block.number+10, false);
+        _withdraw[beneficiary] = data;
+    }
+
+    function withdraw(address payable beneficiary) public returns (bool) {
+        Withdraw storage wd = _withdraw[beneficiary];
+        if (!wd.isWithdraw && wd.amount > 0 && block.number >= wd.block_number) {
+            wd.isWithdraw = true;
+            uint value = wd.amount;
+            wd.amount = 0;
+            return wd.token.transfer(beneficiary, value);
+        }
+        return false;
     }
 
     function hashGtvIntegerLeaf(uint value) public pure returns (bytes32) {
@@ -184,13 +226,13 @@ contract ChrL2 {
         return signer;
     }
 
-    function verifyProof(bytes calldata value, bytes32 proof) public pure returns (bytes32, uint256, bytes32) {
+    function verifyProof(bytes calldata value, bytes32 proof) public pure returns (ERC20, address, uint256) {
         Event memory evt = abi.decode(value, (Event));
         bytes32 hash = keccak256(value);
         if (hash != proof) {
             revert('invalid event');
         }
-        return (evt.root, evt.amount, evt.proof);
+        return (evt.token, evt.beneficiary, evt.amount);
     }
 
     /**
