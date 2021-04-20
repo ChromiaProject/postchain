@@ -104,7 +104,12 @@ class PostchainTestNode(
     }
 
     fun getBlockchainInstance(chainId: Long = DEFAULT_CHAIN_IID): BlockchainProcess {
-        return processManager.retrieveBlockchain(chainId) as BlockchainProcess
+        val bcp = processManager.retrieveBlockchain(chainId)
+        if (bcp == null) {
+            throw IllegalArgumentException("Could not retrieve blockchain process for chain id = " + chainId);
+        } else {
+            return bcp as BlockchainProcess
+        }
     }
 
     fun retrieveBlockchain(chainId: Long = DEFAULT_CHAIN_IID): BlockchainProcess? {
@@ -120,7 +125,8 @@ class PostchainTestNode(
     }
 
     fun blockBuildingStrategy(chainId: Long = DEFAULT_CHAIN_IID): BlockBuildingStrategy {
-        return getBlockchainInstance(chainId).getEngine().getBlockBuildingStrategy()
+        var engine = getBlockchainInstance(chainId).getEngine()
+        return engine.getBlockBuildingStrategy()
     }
 
     fun networkTopology(chainId: Long = DEFAULT_CHAIN_IID): Map<String, String> {

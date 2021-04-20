@@ -37,9 +37,12 @@ class OnDemandBlockBuildingStrategy(
     }
 
     fun awaitCommitted(height: Int) {
+        logger.debug("awaitCommitted() - AWAIT, height: " + height)
         while (committedHeight < height) {
+            logger.debug("awaitCommitted() - got height: " + committedHeight + ", still waiting for " + height)
             blocks.take()
         }
+        logger.debug("awaitCommitted() - Done waiting, height: " + height)
     }
 
     override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean {

@@ -11,7 +11,7 @@ import java.lang.Thread.sleep
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ForkTest : ManagedModeTest() {
+class ForkTestNightly : ManagedModeTest() {
 
     @Test
     fun testSyncManagedBlockchain() {
@@ -264,9 +264,7 @@ class ForkTest : ManagedModeTest() {
 
 
     private fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
-        System.out.println("+++++ AWAIT nodes " + nodeSet.size + ", chain: " + nodeSet.chain + ", height: " + atLeastHeight)
         nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
-        System.out.println("+++++ DONE WAITING nodes " + nodeSet.size + ", chain: " + nodeSet.chain + ", height: " + atLeastHeight)
     }
 
     private fun makeFork(): Pair<NodeSet, NodeSet> {
