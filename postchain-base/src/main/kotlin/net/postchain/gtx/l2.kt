@@ -8,6 +8,7 @@ import net.postchain.base.encodeSignatureWithV
 import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.common.data.KECCAK256
+import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
 import net.postchain.core.MultiSigBlockWitness
 import net.postchain.crypto.EthereumL2DigestSystem
@@ -26,7 +27,7 @@ class L2OpsGTXModule : SimpleGTXModule<Unit>(
 fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val argsDict = args as GtvDictionary
     val blockHeight = argsDict["blockHeight"]!!.asInteger()
-    val eventHash = argsDict["eventHash"]!!.asByteArray()
+    val eventHash = argsDict["eventHash"]!!.asString().hexStringToByteArray()
     val db = DatabaseAccess.of(ctx)
     val blockHeader = blockHeaderData(db, ctx, blockHeight)
     val blockWitness = blockWitnessData(db, ctx, blockHeight)

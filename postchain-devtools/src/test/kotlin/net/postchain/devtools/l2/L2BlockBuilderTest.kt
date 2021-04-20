@@ -428,7 +428,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (pos in 0..3) {
             val args = gtv(
                 "blockHeight" to gtv(currentBlockHeight),
-                "eventHash" to gtv(leafs[pos])
+                "eventHash" to gtv(leafs[pos].toHex())
             )
             val gtvProof = node.getBlockchainInstance().getEngine().getBlockQueries().query(
                 "get_event_merkle_proof",
