@@ -12,6 +12,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
 import net.postchain.core.MultiSigBlockWitness
 import net.postchain.crypto.EthereumL2DigestSystem
+import net.postchain.crypto.SECP256K1Keccak
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 
@@ -92,7 +93,7 @@ private fun blockWitnessData(
     val signatures = witness.getSignatures().map {
         gtv(
             "sig" to GtvByteArray(encodeSignatureWithV(blockRid, it.subjectID, it.data)),
-            "pubkey" to GtvByteArray(it.subjectID)
+            "pubkey" to GtvByteArray(SECP256K1Keccak.getEthereumAddress(it.subjectID))
         )
     }
     return GtvArray(signatures.toTypedArray())
