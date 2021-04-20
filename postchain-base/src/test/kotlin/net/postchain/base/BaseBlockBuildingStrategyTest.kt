@@ -20,7 +20,7 @@ class BaseBlockBuildingStrategyTest {
     @Test
     fun test_before_POS131() {
         // Mock
-        val strategyData: Gtv = mock() {
+        val strategyData: Gtv = mock {
             on { get(eq("maxblocktime")) } doReturn GtvFactory.gtv(2000L)
             on { get(eq("blockdelay")) } doReturn GtvFactory.gtv(2000L)
             on { get(eq("maxblocktransactions")) } doReturn GtvFactory.gtv(100L)
@@ -51,7 +51,8 @@ class BaseBlockBuildingStrategyTest {
         }
     }
 
-    @Test @Ignore
+    @Test
+    @Ignore
     fun test_after_POS131() {
         // Mock
         val strategyData: Gtv = mock() {

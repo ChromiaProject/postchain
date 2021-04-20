@@ -13,7 +13,7 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
-import net.postchain.devtools.argumentCaptor2
+import net.postchain.network.Utils
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
@@ -33,8 +33,8 @@ class IntNettyConnector2PeersCommunicationIT {
 
     @Before
     fun setUp() {
-        peerInfo1 = PeerInfo("localhost", 3331, byteArrayOf(0, 0, 0, 1))
-        peerInfo2 = PeerInfo("localhost", 3332, byteArrayOf(0, 0, 0, 2))
+        peerInfo1 = PeerInfo("localhost", Utils.findFreePort(), byteArrayOf(0, 0, 0, 1))
+        peerInfo2 = PeerInfo("localhost", Utils.findFreePort(), byteArrayOf(0, 0, 0, 2))
 
         // Creating
         context1 = IntTestContext(peerInfo1, arrayOf(peerInfo1, peerInfo2))

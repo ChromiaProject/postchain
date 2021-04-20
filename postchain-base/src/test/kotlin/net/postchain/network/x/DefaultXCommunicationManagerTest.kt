@@ -7,6 +7,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
 import com.nhaarman.mockitokotlin2.*
 import net.postchain.base.*
+import net.postchain.network.Utils
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import org.junit.Before
@@ -27,9 +28,8 @@ class DefaultXCommunicationManagerTest {
 
     @Before
     fun setUp() {
-        // TODO: [et]: Make dynamic ports
-        peerInfo1 = PeerInfo("localhost", 3331, pubKey1)
-        peerInfo2 = PeerInfo("localhost", 3332, pubKey2)
+        peerInfo1 = PeerInfo("localhost", Utils.findFreePort(), pubKey1)
+        peerInfo2 = PeerInfo("localhost", Utils.findFreePort(), pubKey2)
     }
 
     @Test

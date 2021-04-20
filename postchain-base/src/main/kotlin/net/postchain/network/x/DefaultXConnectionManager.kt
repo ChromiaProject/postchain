@@ -39,7 +39,7 @@ open class DefaultXConnectionManager<PacketType>(
 
     override fun shutdown() {
         connector?.shutdown()
-        peersConnectionStrategy.shutdown()
+        if (::peersConnectionStrategy.isInitialized) peersConnectionStrategy.shutdown()
         synchronized(this) {
             isShutDown = true
             chains.forEach { (_, chain) ->
