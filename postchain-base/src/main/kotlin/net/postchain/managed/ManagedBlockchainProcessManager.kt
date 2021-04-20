@@ -50,7 +50,7 @@ open class ManagedBlockchainProcessManager(
         nodeDiagnosticContext
 ) {
 
-    protected lateinit var dataSource: ManagedNodeDataSource
+    protected open lateinit var dataSource: ManagedNodeDataSource
     private var lastPeerListVersion: Long? = null
     protected val CHAIN0 = 0L
     protected var loggedChains: Array<Set<Long>> = emptyArray()
@@ -109,8 +109,11 @@ open class ManagedBlockchainProcessManager(
             blockchainConfig.makeBlockQueries(storage)
         }
 
-        return GTXManagedNodeDataSource(blockQueries, nodeConfigProvider.getConfiguration())
+        return createDataSource(blockQueries)
     }
+
+    protected open fun createDataSource(blockQueries: BlockQueries) =
+            BaseManagedNodeDataSource(blockQueries, nodeConfigProvider.getConfiguration())
 
     /**
      * @return a [RestartHandler] which is a lambda (This lambda will be called by the Engine after each block

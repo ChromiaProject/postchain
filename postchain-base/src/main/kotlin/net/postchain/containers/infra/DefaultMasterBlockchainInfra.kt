@@ -7,10 +7,10 @@ import net.postchain.containers.api.MasterApiInfra
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.DirectoryDataSource
 import java.nio.file.Path
 
-class DefaultMasterBlockchainInfra(
+open class DefaultMasterBlockchainInfra(
         nodeConfigProvider: NodeConfigurationProvider,
         private val masterSyncInfra: MasterSyncInfra,
         private val masterApiInfra: MasterApiInfra,
@@ -26,7 +26,7 @@ class DefaultMasterBlockchainInfra(
             processName: BlockchainProcessName,
             chainId: Long,
             blockchainRid: BlockchainRid,
-            dataSource: ManagedNodeDataSource,
+            dataSource: DirectoryDataSource,
             chainConfigsDir: Path
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(

@@ -11,7 +11,7 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.network.x.XPeerID
 import java.time.Instant
 
-open class GTXManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeConfig) : ManagedNodeDataSource {
+open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeConfig) : ManagedNodeDataSource {
     override fun getPeerInfos(): Array<PeerInfo> {
         // TODO: [POS-90]: Implement correct error processing
         val res = queries.query("nm_get_peer_infos", buildArgs())

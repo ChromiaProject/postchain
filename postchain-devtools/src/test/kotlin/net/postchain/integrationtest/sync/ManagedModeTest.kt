@@ -39,6 +39,9 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     val mockDataSources = mutableMapOf<Int, MockManagedNodeDataSource>()
 
+    /**
+     * Create a set of signers and replicas for the given chainID.
+     */
     inner class NodeSet(val chain: Long, val signers: Set<Int>, val replicas: Set<Int>) {
         val size: Int = signers.size + replicas.size
         fun contains(i: Int) = signers.contains(i) || replicas.contains(i)
@@ -100,10 +103,14 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     fun setupDataSources(nodeSet: NodeSet) {
         for (i in 0 until nodeSet.size) {
-            val dataSource = MockManagedNodeDataSource(i)
+            val dataSource = createMockDataSource(i)
             mockDataSources.put(i, dataSource)
         }
         addBlockchainConfiguration(nodeSet, null, 0)
+    }
+
+    open fun createMockDataSource(nodeIndex: Int): MockManagedNodeDataSource {
+        return MockManagedNodeDataSource(nodeIndex)
     }
 
     fun newBlockchainConfiguration(nodeSet: NodeSet, historicChain: Long?, height: Long, excludeChain0Nodes: Set<Int> = setOf()) {
@@ -113,7 +120,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         buildBlock(c0.remove(excludeChain0Nodes))
     }
 
-    protected fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
+    protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
         val pm = nodes[index].processManager as TestManagedBlockchainProcessManager
         pm.awaitStarted(chainId, atLeastHeight)
     }
@@ -182,6 +189,25 @@ open class ManagedModeTest : AbstractSyncTest() {
         override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
             return OnDemandBlockBuildingStrategy(configData, this, blockQueries, txQueue)
         }
+    }
+
+
+    protected fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
+        nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
+    }
+
+    private var chainId: Long = 1
+    fun startNewBlockchain(signers: Set<Int>, replicas: Set<Int>, historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf(), waitForRestart: Boolean = true): NodeSet {
+        assertTrue(signers.intersect(replicas).isEmpty())
+        val maxIndex = c0.all().size
+        signers.forEach { assertTrue(it < maxIndex ) }
+        replicas.forEach { assertTrue(it < maxIndex) }
+        val c = NodeSet(chainId++, signers, replicas)
+        newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
+        // Await blockchain started on all relevant nodes
+        if (waitForRestart)
+            awaitChainRestarted(c, -1)
+        return c
     }
 }
 
@@ -310,7 +336,7 @@ fun chainIidOf(brid: BlockchainRid): Long {
 typealias Key = Pair<BlockchainRid, Long>
 
 
-class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
+open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
     // Brid -> (height -> Pair<BlockchainConfiguration, NodeSet>)
     private val bridToConfs: MutableMap<BlockchainRid, MutableMap<Long, BlockchainConfiguration>> = mutableMapOf()
     private val chainToNodeSet: MutableMap<BlockchainRid, NodeSet> = mutableMapOf()

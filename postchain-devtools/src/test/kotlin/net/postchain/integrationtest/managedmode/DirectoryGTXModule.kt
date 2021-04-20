@@ -11,7 +11,7 @@ import net.postchain.gtx.GTXModule
 import net.postchain.util.TestKLogging
 
 
-open class ClusterGTXModule : GTXModule {
+open class DirectoryGTXModule : GTXModule {
     companion object : TestKLogging(LogLevel.DEBUG)
 
     //    val conf: Unit
@@ -19,7 +19,7 @@ open class ClusterGTXModule : GTXModule {
     val querymap: Map<String, (Unit, EContext, Gtv) -> Gtv> = mapOf(
             "nm_get_containers" to ::queryGetContainersToRun,
             "nm_get_blockchains_for_container" to ::queryGetBlockchainsForContainer,
-            "nm_get_resource_limit" to ::queryGetResourceLimitForContainer
+            "nm_get_container_limits" to ::queryGetResourceLimitForContainer
     )
 
     override fun makeTransactor(opData: ExtOpData): Transactor {

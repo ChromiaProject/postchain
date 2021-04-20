@@ -7,7 +7,7 @@ import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.DirectoryDataSource
 import java.nio.file.Path
 
 interface MasterSyncInfra : SynchronizationInfrastructure {
@@ -16,7 +16,7 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
             processName: BlockchainProcessName,
             chainId: Long,
             blockchainRid: BlockchainRid,
-            dataSource: ManagedNodeDataSource,
+            dataSource: DirectoryDataSource,
             chainConfigsDir: Path
     ): ContainerBlockchainProcess
 

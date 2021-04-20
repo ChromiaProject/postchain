@@ -10,13 +10,13 @@ import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.infra.MasterBlockchainInfra
+import net.postchain.core.BlockQueries
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.managed.ManagedBlockchainProcessManager
-import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.*
 import java.nio.file.Path
 
-class ContainerManagedBlockchainProcessManager(
+open class ContainerManagedBlockchainProcessManager(
         private val masterBlockchainInfra: MasterBlockchainInfra,
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
@@ -40,6 +40,9 @@ class ContainerManagedBlockchainProcessManager(
     private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
     private val containerProcesses = mutableMapOf<Long, ContainerBlockchainProcess>()
     private val lock = Any()
+
+    override fun createDataSource(blockQueries: BlockQueries) =
+            BaseDirectoryDataSource(blockQueries, nodeConfigProvider.getConfiguration())
 
     override fun startBlockchain(chainId: Long): BlockchainRid? {
         return if (chainId == CHAIN0) {
@@ -83,7 +86,7 @@ class ContainerManagedBlockchainProcessManager(
             val (containerDir, chainConfigsDir) = containerInitializer.createContainerWorkingDir(chainId)
 
             // Creating process
-            val process = createProcess(chainId, dataSource, chainConfigsDir).apply { state = ProcessState.STARTING }
+            val process = createProcess(chainId, dataSource as DirectoryDataSource, chainConfigsDir).apply { state = ProcessState.STARTING }
             containerProcesses[chainId] = process
             logChain("startContainerChain", process)
 
@@ -154,7 +157,7 @@ class ContainerManagedBlockchainProcessManager(
     // Just for tests
     private fun m(message: String) = "\t" + message
 
-    private fun createProcess(chainId: Long, dataSource: ManagedNodeDataSource, chainConfigsDir: Path): ContainerBlockchainProcess {
+    private fun createProcess(chainId: Long, dataSource: DirectoryDataSource, chainConfigsDir: Path): ContainerBlockchainProcess {
         val brid = withReadConnection(storage, chainId) { ctx ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
         }

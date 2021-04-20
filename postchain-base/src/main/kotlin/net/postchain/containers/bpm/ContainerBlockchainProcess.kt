@@ -5,7 +5,7 @@ import net.postchain.base.BlockchainRid
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.NameService
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.masterslave.master.MasterCommunicationManager
 import java.nio.file.Path
 import java.util.*
@@ -35,7 +35,7 @@ class DefaultContainerBlockchainProcess(
         override val chainId: Long,
         override val blockchainRid: BlockchainRid,
         private val communicationManager: MasterCommunicationManager,
-        private val dataSource: ManagedNodeDataSource,
+        private val dataSource: DirectoryDataSource,
         private val chainConfigsDir: Path,
         override var state: ProcessState = ProcessState.UNDEFINED,
         override var containerId: String? = null

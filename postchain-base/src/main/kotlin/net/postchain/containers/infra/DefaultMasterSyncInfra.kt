@@ -11,7 +11,7 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
-import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.masterslave.master.DefaultMasterCommunicationManager
 import net.postchain.network.masterslave.master.DefaultMasterConnectionManager
 import net.postchain.network.masterslave.master.MasterConnectionManager
@@ -39,7 +39,7 @@ class DefaultMasterSyncInfra(
             processName: BlockchainProcessName,
             chainId: Long,
             blockchainRid: BlockchainRid,
-            dataSource: ManagedNodeDataSource,
+            dataSource: DirectoryDataSource,
             chainConfigsDir: Path
     ): ContainerBlockchainProcess {
 

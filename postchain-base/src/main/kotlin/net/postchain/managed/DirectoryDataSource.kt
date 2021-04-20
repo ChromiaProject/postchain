@@ -2,7 +2,7 @@ package net.postchain.managed
 
 import net.postchain.base.BlockchainRid
 
-interface ClusterDataSource : ManagedNodeDataSource {
+interface DirectoryDataSource : ManagedNodeDataSource {
 
     /**
      * I'm a node, unique to this cluster. What containers should I run?
@@ -18,4 +18,5 @@ interface ClusterDataSource : ManagedNodeDataSource {
      * What is the resource limits for this container?
      */
     fun getResourceLimitForContainer(containerID: String): Map<String, Long>?
+
 }

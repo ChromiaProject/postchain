@@ -11,7 +11,7 @@ import net.postchain.core.BlockchainProcessManager
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 
-class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
+open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
 
     override fun makeBlockchainInfrastructure(
             nodeConfigProvider: NodeConfigurationProvider,

@@ -5,11 +5,14 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockQueries
 import net.postchain.gtv.GtvFactory
 
-class ClusterDataSourceKotlin(queries: BlockQueries, nodeConfig: NodeConfig) : GTXManagedNodeDataSource(queries, nodeConfig), ClusterDataSource {
+class BaseDirectoryDataSource(queries: BlockQueries, nodeConfig: NodeConfig) : BaseManagedNodeDataSource(queries, nodeConfig), DirectoryDataSource {
 
 
     override fun getContainersToRun(): List<String>? {
-        val res = queries.query("nm_get_containers", buildArgs()).get()
+        val res = queries.query("nm_get_containers",
+                buildArgs("pubkey" to GtvFactory.gtv(nodeConfig.pubKeyByteArray))
+        ).get()
+
         return res.asArray().map { it.asString() }
     }
 
@@ -24,7 +27,7 @@ class ClusterDataSourceKotlin(queries: BlockQueries, nodeConfig: NodeConfig) : G
 
     override fun getResourceLimitForContainer(containerID: String): Map<String, Long>? {
         val queryReply = queries.query(
-                "nm_get_resource_limit",
+                "nm_get_container_limits",
                 buildArgs("container_id" to GtvFactory.gtv(containerID))
         ).get().asDict()
         val resList = queryReply.map { it.key to it.value.asInteger() }.toMap()
@@ -60,25 +63,3 @@ class ClusterDataSourceKotlin(queries: BlockQueries, nodeConfig: NodeConfig) : G
 //        return mapOf(BlockchainRid.EMPTY_RID to emptyList())
 //    }
 }
-
-//entity cluster { key name; }
-//
-//entity cluster_node {
-//    key node; // node can be assigned only to a single cluster;
-//    index cluster;
-//}
-//
-//entity container {
-//    index cluster;
-//    key name;
-//}
-//
-//entity container_resource_limits {
-//    key container;
-//    cpu: integer;
-//    storage: integer;
-//}
-//
-//entity blockchain_container {
-//    key blockchain; index container;
-//}

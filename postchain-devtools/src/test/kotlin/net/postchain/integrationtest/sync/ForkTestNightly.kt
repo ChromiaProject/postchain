@@ -262,11 +262,6 @@ class ForkTestNightly : ManagedModeTest() {
         return propertyMap
     }
 
-
-    private fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
-        nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
-    }
-
     private fun makeFork(): Pair<NodeSet, NodeSet> {
         val c1 = basicSystem()
         val c2 = startNewBlockchain(setOf(0), setOf(1), c1.chain)
@@ -294,20 +289,6 @@ class ForkTestNightly : ManagedModeTest() {
         chainNew.all().forEach {
             Assert.assertFalse(expectedBlockRid!!.contentEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get()!!))
         }
-    }
-
-    private var chainId: Long = 1
-    fun startNewBlockchain(signers: Set<Int>, replicas: Set<Int>, historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf(), waitForRestart: Boolean = true): NodeSet {
-        assertTrue(signers.intersect(replicas).isEmpty())
-        val maxIndex = c0.all().size
-        signers.forEach { assertTrue(it < maxIndex ) }
-        replicas.forEach { assertTrue(it < maxIndex) }
-        val c = NodeSet(chainId++, signers, replicas)
-        newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
-        // Await blockchain started on all relevant nodes
-        if (waitForRestart)
-            awaitChainRestarted(c, -1)
-        return c
     }
 
     /**
