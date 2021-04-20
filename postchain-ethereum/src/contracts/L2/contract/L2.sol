@@ -5,7 +5,9 @@ import "./ERC20.sol";
 
 contract ChrL2 {
 
-    bytes32 constant DICT_KEY = 0x43758C97091F5141260E8E3FD3A352A8FE106C353FCC7C9CDEEC71CEEFFDBB0F;
+    bytes32 constant L2_EVENT_KEY = 0xAB03EA7D0AE6A717BB98A842BE5A9C3F2EF72DB64FE3EBD0CA94A273CB48664F;
+
+    bytes32 constant L2_STATE_KEY = 0x26E2F7D1C76B8BDA307F6E648531CF9CCB6270CAD92D17D5F937881229DD9776;
 
     mapping (address => mapping(ERC20 => uint256)) private _balances;
     mapping (ERC20 => Withdraw) public _withdraw;
@@ -107,7 +109,7 @@ contract ChrL2 {
     }
 
     function hashBlockHeader(bytes32 blockchainRid, bytes32 previousBlockRid, bytes32 merkleRootHashHashedLeaf,
-        uint timestamp, uint height, bytes32 dependeciesHashedLeaf, bytes calldata l2RootHash) public pure returns (bytes32) {
+        uint timestamp, uint height, bytes32 dependeciesHashedLeaf, bytes32 l2RootEvent, bytes32 l2RootState) public pure returns (bytes32) {
 
         bytes32 node12 = sha256(abi.encodePacked(
                 uint8(0x00),
@@ -127,10 +129,22 @@ contract ChrL2 {
                 dependeciesHashedLeaf
             ));
 
+        bytes32 l2event = sha256(abi.encodePacked(
+                uint8(0x00),
+                L2_EVENT_KEY,
+                hashGtvBytes32Leaf(l2RootEvent)
+            ));
+
+        bytes32 l2state = sha256(abi.encodePacked(
+                uint8(0x00),
+                L2_STATE_KEY,
+                hashGtvBytes32Leaf(l2RootState)
+            ));
+
         bytes32 node78 = sha256(abi.encodePacked(
                 uint8(0x8), // Gtv merkle tree dict prefix
-                DICT_KEY,
-                hashGtvBytes64Leaf(l2RootHash)
+                l2event,
+                l2state
             ));
 
         bytes32 node1234 = sha256(abi.encodePacked(
