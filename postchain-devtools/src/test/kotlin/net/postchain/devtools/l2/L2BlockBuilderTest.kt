@@ -274,7 +274,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
             assertEquals(stateRoot.toHex(), l2StateRoot.toHex())
 
-            val l2RootState = gtvProof["blockHeader"]!!.asArray()[6].asDict()["l2RootState"]!!.asByteArray()
+            val l2RootState = gtvProof["blockHeader"]!!.asArray()[7].asDict()["l2RootState"]!!.asByteArray()
             assertEquals(stateRoot.toHex(), l2RootState.toHex())
 
             val accountState = gtvProof["accountState"]!!.asArray()
@@ -325,7 +325,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
             assertEquals(stateRoot.toHex(), l2StateRoot2.toHex())
 
-            val l2RootState = gtvProof["blockHeader"]!!.asArray()[6].asDict()["l2RootState"]!!.asByteArray()
+            val l2RootState = gtvProof["blockHeader"]!!.asArray()[7].asDict()["l2RootState"]!!.asByteArray()
             assertEquals(stateRoot.toHex(), l2RootState.toHex())
 
             val accountState = gtvProof["accountState"]!!.asArray()
@@ -441,7 +441,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             val eventRoot = getMerkleProof(proofs, pos, leafs[pos])
             assertEquals(eventRoot.toHex(), eventRootHash.toHex())
 
-            val l2RootEvent = gtvProof["blockHeader"]!!.asArray()[6].asDict()["l2RootEvent"]!!.asByteArray()
+            val l2RootEvent = gtvProof["blockHeader"]!!.asArray()[7].asDict()["l2RootEvent"]!!.asByteArray()
             assertEquals(eventRoot.toHex(), l2RootEvent.toHex())
 
             val eventData = gtvProof["eventData"]!!.asArray()
