@@ -1,10 +1,7 @@
 package net.postchain.gtx
 
-import net.postchain.base.BaseBlockHeader
-import net.postchain.base.BaseBlockWitness
-import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.encodeSignatureWithV
 import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.common.data.KECCAK256
@@ -15,6 +12,7 @@ import net.postchain.crypto.EthereumL2DigestSystem
 import net.postchain.crypto.SECP256K1Keccak
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 
 class L2OpsGTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf(
@@ -79,8 +77,19 @@ private fun blockHeaderData(
     ctx: EContext,
     blockHeight: Long
 ): Gtv {
+    val merkleHashCalculator = GtvMerkleHashCalculator(BlockchainRidFactory.cryptoSystem)
     val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
-    return BaseBlockHeader(db.getBlockHeader(ctx, blockRid), SECP256K1CryptoSystem()).blockHeaderRec.toGtv()
+    val bh = BaseBlockHeader(db.getBlockHeader(ctx, blockRid), SECP256K1CryptoSystem()).blockHeaderRec
+    return gtv(
+        bh.gtvBlockchainRid,
+        gtv(blockRid),
+        bh.gtvPreviousBlockRid,
+        gtv(bh.gtvMerkleRootHash.merkleHash(merkleHashCalculator)),
+        bh.gtvTimestamp,
+        bh.gtvHeight,
+        gtv(bh.gtvDependencies.merkleHash(merkleHashCalculator)),
+        bh.gtvExtra
+    )
 }
 
 private fun blockWitnessData(
