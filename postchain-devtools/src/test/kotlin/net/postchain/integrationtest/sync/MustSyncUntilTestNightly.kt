@@ -7,10 +7,10 @@ import org.junit.Test
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
-/* One signer, two replica nodes. After one block, node 0 (signer is turned off).
- * Node 1 (a replica) is wiped. Need node 2 (the other replica) to be able to sync.
+/* Two signers, no replica nodes.
+ * After two blocks, Node 0 is wiped and starts to sync (from node 1)
  */
-class MustSyncUntilTest : AbstractSyncTest() {
+class MustSyncUntilTestNightly : AbstractSyncTest() {
 
     private companion object : KLogging()
 
@@ -22,14 +22,16 @@ class MustSyncUntilTest : AbstractSyncTest() {
     val syncNodeIndex = 0
 
 
-    /* Try to synchronize to a height that does not yet exist.
-    Check height explicitly for sync node, to assert that it has height = syncUntilHeight
+    /**  Try to synchronize Node 0 to a height that does not exist.
+     * Only 2 blocks are synced (to height 1). But Node 0 will not leave synchronizer until height 3 is reached.
+     * Thus try block will time out.
+     * In catch we check that we have not reached height 3, but only blocksToSynch-1 = 2-1 = 1
     */
     @Test
     fun testSyncUntilNonExistingHeight() {
         mustSyncUntil = 3L
         try {
-            Awaitility.await().atMost(9, TimeUnit.SECONDS).until {
+            Awaitility.await().atMost(15, TimeUnit.SECONDS).until {
                 runSyncTest(signers, replicas, setOf(syncNodeIndex), setOf(), blocksToSync)
                 true
             }
@@ -39,7 +41,7 @@ class MustSyncUntilTest : AbstractSyncTest() {
         }
     }
 
-    // Assert when height mustSyncUntil exist.
+    // Asserts when height mustSyncUntil is reached.
     @Test
     fun testSyncUntilHeight() {
         mustSyncUntil = 1L
