@@ -6,9 +6,8 @@ object Utils {
 
     fun findFreePort(): Int {
         return ServerSocket(0).use {
-            it.reuseAddress
+            it.reuseAddress = true
             it.localPort
         }
     }
-
 }
