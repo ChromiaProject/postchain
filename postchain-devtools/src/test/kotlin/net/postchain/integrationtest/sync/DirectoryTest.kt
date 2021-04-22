@@ -19,12 +19,15 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedNodeDataSource
 import org.apache.commons.configuration2.Configuration
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 
 class DirectoryTest : ManagedModeTest() {
+
+    @Ignore
     @Test
     fun dummy() {
         startDirectory()
