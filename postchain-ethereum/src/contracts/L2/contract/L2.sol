@@ -18,6 +18,18 @@ contract ChrL2 {
         uint256 amount;
     }
 
+    struct BlockHeaderData {
+        bytes32 blockchainRid;
+        bytes32 blockRid;
+        bytes32 previousBlockRid;
+        bytes32 merkleRootHashHashedLeaf;
+        uint timestamp;
+        uint height;
+        bytes32 dependeciesHashedLeaf;
+        bytes32 l2RootEvent;
+        bytes32 l2RootState;
+    }
+
     struct Withdraw {
         address beneficiary;
         uint256 amount;
@@ -26,6 +38,7 @@ contract ChrL2 {
     }
 
     event Deposited(address indexed owner, ERC20 indexed token, uint256 value);
+    event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
 
     function deposit(ERC20 token, uint256 amount) public returns (bool) {
@@ -35,17 +48,30 @@ contract ChrL2 {
         return true;
     }
 
-    function withdraw_request(bytes calldata value, bytes32 proof) public {
-        ERC20 token;
-        address beneficiary;
-        uint256 amount;
-        (token, beneficiary, amount) = verifyProof(value, proof);
+    function withdraw_request(bytes calldata _event, bytes32 _hash,
+        bytes calldata blockHeader,
+        bytes[] calldata sigs, address[] calldata signers,
+        bytes32[] calldata merkleProofs, uint position) public {
+
+        _verify(_hash, blockHeader, sigs, signers, merkleProofs, position);
+        (ERC20 token, address beneficiary, uint256 amount) = verifyEventHash(_event, _hash);
         Withdraw storage wd = _withdraw[token];
         wd.beneficiary = beneficiary;
         wd.amount += amount;
         wd.block_number = block.number + 50;
         wd.isWithdraw = false;
         _withdraw[token] = wd;
+        emit WithdrawRequest(beneficiary, token, amount);
+    }
+
+    function _verify(bytes32 _hash,
+        bytes calldata blockHeader,
+        bytes[] calldata sigs, address[] calldata signers,
+        bytes32[] calldata merkleProofs, uint position) internal pure {
+
+        (bytes32 blockRid, bytes32 eventRoot, ) = verifyBlockHeader(blockHeader);
+        if (!verifyBlockSig(blockRid, sigs, signers)) revert("block signature is invalid");
+        if (!verifyMerkleProof(merkleProofs, _hash, position, eventRoot)) revert("invalid event merkle proof");
     }
 
     function withdraw(ERC20 token, address payable beneficiary) public returns (bool) {
@@ -108,37 +134,38 @@ contract ChrL2 {
             ));
     }
 
-    function hashBlockHeader(bytes32 blockchainRid, bytes32 previousBlockRid, bytes32 merkleRootHashHashedLeaf,
-        uint timestamp, uint height, bytes32 dependeciesHashedLeaf, bytes32 l2RootEvent, bytes32 l2RootState) public pure returns (bytes32) {
+    function verifyBlockHeader(bytes calldata blockHeader) public pure returns (bytes32, bytes32, bytes32) {
+
+        BlockHeaderData memory header = abi.decode(blockHeader, (BlockHeaderData));
 
         bytes32 node12 = sha256(abi.encodePacked(
                 uint8(0x00),
-                hashGtvBytes32Leaf(blockchainRid),
-                hashGtvBytes32Leaf(previousBlockRid)
+                hashGtvBytes32Leaf(header.blockchainRid),
+                hashGtvBytes32Leaf(header.previousBlockRid)
             ));
 
         bytes32 node34 = sha256(abi.encodePacked(
                 uint8(0x00),
-                merkleRootHashHashedLeaf,
-                hashGtvIntegerLeaf(timestamp)
+                header.merkleRootHashHashedLeaf,
+                hashGtvIntegerLeaf(header.timestamp)
             ));
 
         bytes32 node56 = sha256(abi.encodePacked(
                 uint8(0x00),
-                hashGtvIntegerLeaf(height),
-                dependeciesHashedLeaf
+                hashGtvIntegerLeaf(header.height),
+                header.dependeciesHashedLeaf
             ));
 
         bytes32 l2event = sha256(abi.encodePacked(
                 uint8(0x00),
                 L2_EVENT_KEY,
-                hashGtvBytes32Leaf(l2RootEvent)
+                hashGtvBytes32Leaf(header.l2RootEvent)
             ));
 
         bytes32 l2state = sha256(abi.encodePacked(
                 uint8(0x00),
                 L2_STATE_KEY,
-                hashGtvBytes32Leaf(l2RootState)
+                hashGtvBytes32Leaf(header.l2RootState)
             ));
 
         bytes32 node78 = sha256(abi.encodePacked(
@@ -159,11 +186,14 @@ contract ChrL2 {
                 node78
             ));
 
-        return sha256(abi.encodePacked(
+        bytes32 blockRid = sha256(abi.encodePacked(
                 uint8(0x7), // Gtv merkle tree Array Root Node prefix
                 node1234,
                 node5678
             ));
+
+        if (blockRid != header.blockRid) revert("invalid block header");
+        return (blockRid, header.l2RootEvent, header.l2RootState);
     }
 
     function verifyBlockSig(bytes32 message, bytes[] calldata sigs, address[] calldata signers) public pure returns (bool) {
@@ -246,10 +276,10 @@ contract ChrL2 {
         return signer;
     }
 
-    function verifyProof(bytes calldata value, bytes32 proof) public pure returns (ERC20, address, uint256) {
-        Event memory evt = abi.decode(value, (Event));
-        bytes32 hash = keccak256(value);
-        if (hash != proof) {
+    function verifyEventHash(bytes calldata _event, bytes32 _hash) public pure returns (ERC20, address, uint256) {
+        Event memory evt = abi.decode(_event, (Event));
+        bytes32 hash = keccak256(_event);
+        if (hash != _hash) {
             revert('invalid event');
         }
         return (evt.token, evt.beneficiary, evt.amount);
