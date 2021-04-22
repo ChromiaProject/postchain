@@ -28,7 +28,7 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val blockHeight = argsDict["blockHeight"]!!.asInteger()
     val eventHash = argsDict["eventHash"]!!.asString().hexStringToByteArray()
     val db = DatabaseAccess.of(ctx)
-    val blockHeader = blockHeaderData(db, ctx, blockHeight)
+    val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
     val eventInfo = db.getEvent(ctx, blockHeight, eventHash) ?: return GtvNull
     val eventData = eventData(eventInfo)
@@ -37,7 +37,7 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val gtvProofs = proofs.map { gtv(it) }.toTypedArray()
     return gtv(
         "eventData" to eventData,
-        "blockHeader" to blockHeader,
+        "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
         "merkleProofs" to GtvArray(gtvProofs)
     )
@@ -48,7 +48,7 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val blockHeight = argsDict["blockHeight"]!!.asInteger()
     val accountNumber = argsDict["accountNumber"]!!.asInteger()
     val db = DatabaseAccess.of(ctx)
-    val blockHeader = blockHeaderData(db, ctx, blockHeight)
+    val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
     val accountState = accountState(db.getAccountState(ctx, blockHeight, accountNumber))
     val snapshot = SnapshotPageStore(ctx, 2, EthereumL2DigestSystem(KECCAK256))
@@ -56,7 +56,7 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val gtvProofs = proofs.map { gtv(it) }.toTypedArray()
     return gtv(
         "accountState" to accountState,
-        "blockHeader" to blockHeader,
+        "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
         "merkleProofs" to GtvArray(gtvProofs)
     )
@@ -88,7 +88,8 @@ private fun blockHeaderData(
         bh.gtvTimestamp,
         bh.gtvHeight,
         gtv(bh.gtvDependencies.merkleHash(merkleHashCalculator)),
-        bh.gtvExtra
+        bh.gtvExtra["l2RootEvent"]!!,
+        bh.gtvExtra["l2RootState"]!!
     )
 }
 
