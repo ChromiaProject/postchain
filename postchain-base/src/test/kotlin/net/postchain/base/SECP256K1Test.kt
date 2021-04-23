@@ -75,4 +75,20 @@ class SECP256K1Test {
         val actual1 = encodeSignatureWithV(merkleRoot, pubKey1, signature1.data)
         assertTrue(expected1.contentEquals(actual1))
     }
+
+    @Test
+    fun testEncodeSigWithV2() {
+        val blockRid = "335ddc617b75753c84873901784329c30ffe614cfcf1ce429a38c058545a8081".hexStringToByteArray()
+        val pubkey = "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57".hexStringToByteArray()
+        val privkey = "3132333435363738393031323334353637383930313233343536373839303131".hexStringToByteArray()
+        val sig = BaseBlockWitness.fromBytes("00000001000000210350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f570000004007ee39dc862beec666afa8221f79bac64492adca1cff0612ade8ef7b0e5f1f91bf934cce597f846ee7d7899bed8da494a971a3c9dda3e0d8c15109d32b297c00".hexStringToByteArray()).getSignatures()[0].data
+
+        val cs = SECP256K1CryptoSystem()
+        val sm = cs.buildSigMaker(pubkey, privkey)
+        val sigc = sm.signDigest(blockRid).data
+        assertTrue(sig.contentEquals(sigc))
+
+        val sigv = encodeSignatureWithV(blockRid, pubkey, sig)
+        assertTrue(sig.contentEquals(sigv))
+    }
 }

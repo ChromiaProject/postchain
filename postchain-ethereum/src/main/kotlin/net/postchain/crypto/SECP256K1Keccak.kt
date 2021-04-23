@@ -4,6 +4,7 @@ import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import net.postchain.utils.Hashes
 import net.postchain.utils.Numeric
+import org.spongycastle.math.ec.custom.sec.SecP256K1Curve
 import org.spongycastle.asn1.x9.X9ECParameters
 import org.spongycastle.crypto.ec.CustomNamedCurves
 import org.spongycastle.crypto.params.ECDomainParameters
@@ -59,14 +60,14 @@ object SECP256K1Keccak {
         val i = BigInteger.valueOf((recId / 2).toLong())
         val x = r.add(i.multiply(n))
 
-        if (x >= CURVE.order) {
+        if (x >= SecP256K1Curve.q) {
             // Cannot have point co-ordinates larger than this as everything takes place modulo Q.
             return null
         }
 
         // Compressed keys require you to know an extra bit of data about the y-coord as there are two possibilities.
         // So it's encoded in the recId.
-        val R = decompressKey(x, recId and 1 == 1)
+        val R = decompressKey(x, (recId and 1) == 1)
         if (!R.multiply(n).isInfinity) {
             // If nR != point at infinity, then recId (i.e. v) is invalid
             return null
@@ -84,7 +85,7 @@ object SECP256K1Keccak {
         // We can find the additive inverse by subtracting e from zero then taking the mod. For example the additive
         // inverse of 3 modulo 11 is 8 because 3 + 8 mod 11 = 0, and -3 mod 11 = 8.
         //
-        val e = BigInteger(1, message)
+        val e = BigInteger(message)
         val eInv = BigInteger.ZERO.subtract(e).mod(n)
         val rInv = r.modInverse(n)
         val srInv = rInv.multiply(s).mod(n)
@@ -95,7 +96,7 @@ object SECP256K1Keccak {
 
             // For Ethereum we don't use first byte of the key
             val full = q.getEncoded(false)
-            full.takeLast(full.size - 1).toByteArray()
+            full.takeLast(64).toByteArray()
         } catch (e: Exception) {
             null
         }
