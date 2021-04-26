@@ -27,10 +27,11 @@ open class DefaultMasterBlockchainInfra(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
-            chainConfigsDir: Path
+            chainConfigsDir: Path,
+            restApiPort: Int
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(
-                processName, chainId, blockchainRid, dataSource, chainConfigsDir
+                processName, chainId, blockchainRid, dataSource, chainConfigsDir, restApiPort
         ).also(masterApiInfra::connectContainerProcess)
     }
 }

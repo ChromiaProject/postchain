@@ -33,7 +33,7 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         return containerDir to containerChainConfigsDir
     }
 
-    override fun createContainerNodeConfig(process: ContainerBlockchainProcess, containerDir: Path) {
+    override fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path) {
         // Cloning original nodeConfig
         val config = ConfigurationUtils.cloneConfiguration(nodeConfig.appConfig.config)
 
@@ -41,7 +41,8 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         config.setProperty("configuration.provider.node", NodeConfigProviders.File.name.toLowerCase())
         config.setProperty("infrastructure", Infrastructure.EbftContainerSlave.get())
 
-        val scheme = NameService.databaseSchema(nodeConfig, process.chainId, process.blockchainRid)
+//        val scheme = NameService.databaseSchema(nodeConfig, container.chainId, container.blockchainRid)
+        val scheme = NameService.extendedContainerName(nodeConfig.pubKey, container.containerName)
         config.setProperty("database.schema", scheme)
 
         config.setProperty("containerChains.masterHost", nodeConfig.masterHost)

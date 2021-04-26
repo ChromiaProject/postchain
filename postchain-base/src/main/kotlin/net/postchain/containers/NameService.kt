@@ -11,6 +11,11 @@ object NameService {
         return "postchain-slavenode-$node-container$containerName"
     }
 
+    //TODO: or some other container unique integer
+    fun containerRestAPIPort(nodeConfig: NodeConfig, containerName: String): Int {
+        return nodeConfig.restApiPort + containerName.toInt()
+    }
+
     fun databaseSchema(nodeConfig: NodeConfig, chainId: Long, blockchainRid: BlockchainRid): String {
         return "${nodeConfig.appConfig.databaseSchema}_${NameHelper.peerName(nodeConfig.pubKey)}" +
                 "_${blockchainRid.toShortHex()}_${chainId}"

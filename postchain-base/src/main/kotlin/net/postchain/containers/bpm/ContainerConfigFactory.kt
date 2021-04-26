@@ -5,6 +5,7 @@ import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.NameService
+import net.postchain.containers.NameService.containerRestAPIPort
 import java.nio.file.Path
 
 object ContainerConfigFactory {
@@ -18,7 +19,8 @@ object ContainerConfigFactory {
 
         // Rest API port binding
         val containerPort = "${nodeConfig.restApiPort}/tcp"
-        val hostPort = container.restApiPort
+        val hostPort = containerRestAPIPort(nodeConfig, container.containerName)
+
         val portBindings = mapOf(containerPort to listOf(PortBinding.of("0.0.0.0", hostPort)))
         // TODO: [POS-129]: Implement random port selection
 //        val portBindings = mapOf("$containerPort/tcp" to listOf(PortBinding.randomPort("0.0.0.0")))

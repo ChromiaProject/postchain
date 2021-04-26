@@ -13,6 +13,7 @@ interface ContainerBlockchainProcess {
     val processName: BlockchainProcessName
     val chainId: Long
     val blockchainRid: BlockchainRid
+    val restApiPort: Int
 
     fun transferConfigsToContainer()
 }
@@ -22,6 +23,7 @@ class DefaultContainerBlockchainProcess(
         override val processName: BlockchainProcessName,
         override val chainId: Long,
         override val blockchainRid: BlockchainRid,
+        override val restApiPort: Int,
         private val communicationManager: MasterCommunicationManager,
         private val dataSource: DirectoryDataSource,
         private val chainConfigsDir: Path

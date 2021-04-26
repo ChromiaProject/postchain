@@ -17,7 +17,8 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
-            chainConfigsDir: Path
+            chainConfigsDir: Path,
+            restApiPort: Int
     ): ContainerBlockchainProcess
 
 }

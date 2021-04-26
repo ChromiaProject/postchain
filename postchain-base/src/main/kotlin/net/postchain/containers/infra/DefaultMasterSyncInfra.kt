@@ -40,7 +40,8 @@ class DefaultMasterSyncInfra(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
-            chainConfigsDir: Path
+            chainConfigsDir: Path,
+            restApiPort: Int
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -57,6 +58,7 @@ class DefaultMasterSyncInfra(
                 processName,
                 chainId,
                 blockchainRid,
+                restApiPort,
                 communicationManager,
                 dataSource,
                 chainConfigsDir

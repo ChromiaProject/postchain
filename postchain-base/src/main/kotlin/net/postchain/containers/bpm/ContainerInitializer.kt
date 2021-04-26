@@ -12,6 +12,6 @@ interface ContainerInitializer {
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun createContainerNodeConfig(process: ContainerBlockchainProcess, containerDir: Path)
+    fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path)
 
 }
