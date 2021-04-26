@@ -37,6 +37,11 @@ class DirectoryTest : ManagedModeTest() {
     }
 
 //    System providers create a ‘system’ cluster which includes ‘system’ nodes and has a ‘system’ naked container which will run the directory.
+    /**
+     * MockDirectoryDataSource is populated with two containers and n0, n1 are block builders for both no replicas.
+     * startManagedSystem() starts bc0 in system container.
+     * startNewBlockchain() should start bc1 in cont1 container
+     */
     fun startDirectory() {
     //Create system cluster with system nodes n0, n1
     //Create naked system container
@@ -171,6 +176,15 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
             return listOf(chainRidOf(0))
         }
 //        return listOf()
+    }
+
+    override fun getContainerForBlockchain(brid: BlockchainRid): String? {
+        if (brid == chainRidOf(1)) {
+            return "cont1"
+        }
+        else {
+            return "system"
+        }
     }
 
     override fun getResourceLimitForContainer(containerID: String): Map<String, Long>? {

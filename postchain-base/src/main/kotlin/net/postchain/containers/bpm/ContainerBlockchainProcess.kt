@@ -3,30 +3,18 @@ package net.postchain.containers.bpm
 import mu.KLogging
 import net.postchain.base.BlockchainRid
 import net.postchain.config.node.NodeConfig
-import net.postchain.containers.NameService
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.masterslave.master.MasterCommunicationManager
 import java.nio.file.Path
 import java.util.*
-import kotlin.concurrent.timer
-
-enum class ProcessState {
-    UNDEFINED, STARTING, RUNNING, STOPPING
-}
 
 interface ContainerBlockchainProcess {
     val processName: BlockchainProcessName
     val chainId: Long
     val blockchainRid: BlockchainRid
-    val containerName: String
-    var state: ProcessState
-    val restApiPort: Int
-    var containerId: String?
 
     fun transferConfigsToContainer()
-    fun start()
-    fun stop()
 }
 
 class DefaultContainerBlockchainProcess(
@@ -36,15 +24,11 @@ class DefaultContainerBlockchainProcess(
         override val blockchainRid: BlockchainRid,
         private val communicationManager: MasterCommunicationManager,
         private val dataSource: DirectoryDataSource,
-        private val chainConfigsDir: Path,
-        override var state: ProcessState = ProcessState.UNDEFINED,
-        override var containerId: String? = null
+        private val chainConfigsDir: Path
 ) : ContainerBlockchainProcess {
 
     companion object : KLogging()
 
-    override val containerName: String = NameService.containerName(nodeConfig.pubKey, chainId, blockchainRid)
-    override val restApiPort: Int = nodeConfig.restApiPort + 10 * chainId.toInt() // TODO: [POS-129]: Change this
     private lateinit var configTimer: Timer // TODO: [POS-129]: Implement shared config timer
     private var lastHeight = -1L
 
@@ -69,22 +53,6 @@ class DefaultContainerBlockchainProcess(
                 logger.info("Config file dumped: $configPath")
                 lastHeight = height
             }
-        }
-    }
-
-    override fun start() {
-        state = ProcessState.RUNNING
-        // TODO: [POS-129]: Calc period basing on blockchain-config.maxblocktime param
-        configTimer = timer(name = "timer-$processName", period = 1000L) {
-            transferConfigsToContainer()
-        }
-    }
-
-    override fun stop() {
-        state = ProcessState.STOPPING
-        if (this::configTimer.isInitialized) {
-            configTimer.cancel()
-            configTimer.purge()
         }
     }
 }

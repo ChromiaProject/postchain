@@ -9,7 +9,7 @@ import java.nio.file.Path
 
 object ContainerConfigFactory {
 
-    fun createConfig(nodeConfig: NodeConfig, process: ContainerBlockchainProcess, containerCwd: Path): ContainerConfig {
+    fun createConfig(nodeConfig: NodeConfig, container: PostchainContainer, containerCwd: Path): ContainerConfig {
         // -v $containerCwd:/opt/chromaway/postchain/target \
         val volume = HostConfig.Bind
                 .from(containerCwd.toString())
@@ -18,7 +18,7 @@ object ContainerConfigFactory {
 
         // Rest API port binding
         val containerPort = "${nodeConfig.restApiPort}/tcp"
-        val hostPort = process.restApiPort
+        val hostPort = container.restApiPort
         val portBindings = mapOf(containerPort to listOf(PortBinding.of("0.0.0.0", hostPort)))
         // TODO: [POS-129]: Implement random port selection
 //        val portBindings = mapOf("$containerPort/tcp" to listOf(PortBinding.randomPort("0.0.0.0")))

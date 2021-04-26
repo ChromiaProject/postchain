@@ -25,6 +25,10 @@ class BaseDirectoryDataSource(queries: BlockQueries, nodeConfig: NodeConfig) : B
         return res.asArray().map { BlockchainRid(it.asByteArray()) }
     }
 
+    override fun getContainerForBlockchain(brid: BlockchainRid): String? {
+        TODO("Not yet implemented")
+    }
+
     override fun getResourceLimitForContainer(containerID: String): Map<String, Long>? {
         val queryReply = queries.query(
                 "nm_get_container_limits",
@@ -33,33 +37,4 @@ class BaseDirectoryDataSource(queries: BlockQueries, nodeConfig: NodeConfig) : B
         val resList = queryReply.map { it.key to it.value.asInteger() }.toMap()
         return resList
     }
-
-
-//    override fun getPeerListVersion(): Long {
-//        return 0L
-//    }
-//
-//    override fun computeBlockchainList(): List<ByteArray> {
-//        return emptyList()
-//    }
-//
-//    override fun getConfiguration(blockchainRIDRaw: ByteArray, height: Long): ByteArray? {
-//        return null
-//    }
-//
-//    override fun findNextConfigurationHeight(blockchainRIDRaw: ByteArray, height: Long): Long? {
-//        return null
-//    }
-//
-//    override fun getPeerInfos(): Array<PeerInfo> {
-//        return arrayOf(PeerInfo("127.0.0.1", 9900, "AAAA".hexStringToByteArray(), Instant.EPOCH))
-//    }
-//
-//    override fun getNodeReplicaMap(): Map<XPeerID, List<XPeerID>> {
-//        return mapOf(XPeerID(byteArrayOf(0)) to emptyList())
-//    }
-//
-//    override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<XPeerID>> {
-//        return mapOf(BlockchainRid.EMPTY_RID to emptyList())
-//    }
 }

@@ -6,9 +6,9 @@ import net.postchain.devtools.NameHelper
 
 object NameService {
 
-    fun containerName(nodePubKey: String, chainId: Long, blockchainRid: BlockchainRid): String {
+    fun extendedContainerName(nodePubKey: String, containerName: String): String {
         val node = nodePubKey.take(8)
-        return "postchain-slavenode-$node-chain$chainId-${blockchainRid.toHex().take(8)}"
+        return "postchain-slavenode-$node-container$containerName"
     }
 
     fun databaseSchema(nodeConfig: NodeConfig, chainId: Long, blockchainRid: BlockchainRid): String {
