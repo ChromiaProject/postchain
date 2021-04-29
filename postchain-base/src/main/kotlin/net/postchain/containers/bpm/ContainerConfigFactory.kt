@@ -18,7 +18,8 @@ object ContainerConfigFactory {
                 .build()
 
         // Rest API port binding
-        val containerPort = "${nodeConfig.restApiPort}/tcp"
+        val containerPort = if (nodeConfig.restApiPort > 0) "${nodeConfig.restApiPort}/tcp" else
+            "7740/tcp"
         val hostPort = containerRestAPIPort(nodeConfig, container.containerName)
 
         val portBindings = mapOf(containerPort to listOf(PortBinding.of("0.0.0.0", hostPort)))

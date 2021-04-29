@@ -32,7 +32,7 @@ class DirectoryTest : ManagedModeTest() {
     fun dummy() {
         startDirectory()
         buildBlock(c0, 0)
-        val c1 = startNewBlockchain(setOf(0, 1), setOf())
+        val c1 = startNewBlockchain(setOf(0), setOf())
         buildBlock(c1, 10)
     }
 
@@ -43,14 +43,14 @@ class DirectoryTest : ManagedModeTest() {
      * startNewBlockchain() should start bc1 in cont1 container
      */
     fun startDirectory() {
-    //Create system cluster with system nodes n0, n1
-    //Create naked system container
-    //start bc0 in system container: n0, n1 build blocks, no replicas
-    startManagedSystem(2, 0)
+        //Create system cluster with system nodes n0, n1
+        //Create naked system container
+        //start bc0 in system container: n0, n1 build blocks, no replicas
+        startManagedSystem(1, 0)
 
 
+    }
 
-}
     override fun createMockDataSource(nodeIndex: Int): MockManagedNodeDataSource {
         return MockDirectoryDataSource(nodeIndex)
     }
@@ -59,11 +59,14 @@ class DirectoryTest : ManagedModeTest() {
         val pm = nodes[index].processManager as TestContainerManagedBlockchainProcessManager
         pm.awaitStarted(chainId, atLeastHeight)
     }
+
     override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
         val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
         var className = TestDirectoryMasterInfraFactory::class.qualifiedName
         propertyMap.setProperty("infrastructure", className)
         propertyMap.setProperty("containerChains.masterPort", 9860 - nodeIndex)
+        propertyMap.setProperty("configDir", System.getProperty("user.dir"))
+        propertyMap.setProperty("subnode.database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
         return propertyMap
     }
 }
@@ -137,10 +140,12 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
         if (blockchainRid == null) {
             return null
         }
-        val process = blockchainProcesses[chainId]!!
-        val queries = process.getEngine().getBlockQueries()
-        val height = queries.getBestHeight().get()
-        lastHeightStarted[chainId] = height
+        if (chainId == 0L) { //only chain0 is run on master, all other chains in containers
+            val process = blockchainProcesses[chainId]!!
+            val queries = process.getEngine().getBlockQueries()
+            val height = queries.getBestHeight().get()
+            lastHeightStarted[chainId] = height
+        }
         return blockchainRid
     }
 
@@ -164,15 +169,14 @@ class TestMasterBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationPr
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {
     override fun getContainersToRun(): List<String>? {
 //        return listOf()
-        return listOf("system","cont1")
+        return listOf("system", "cont1")
     }
 
     //chain 0 in system container, chain1 in cont1 container.
     override fun getBlockchainsForContainer(containerID: String): List<BlockchainRid>? {
         if (containerID == "cont1") {
             return listOf(chainRidOf(1))
-        }
-        else {
+        } else {
             return listOf(chainRidOf(0))
         }
 //        return listOf()
@@ -181,8 +185,7 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
     override fun getContainerForBlockchain(brid: BlockchainRid): String? {
         if (brid == chainRidOf(1)) {
             return "cont1"
-        }
-        else {
+        } else {
             return "system"
         }
     }

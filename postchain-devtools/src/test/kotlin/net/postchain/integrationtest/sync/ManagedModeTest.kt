@@ -337,7 +337,7 @@ typealias Key = Pair<BlockchainRid, Long>
 
 
 open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
-    // Brid -> (height -> Pair<BlockchainConfiguration, NodeSet>)
+    // Brid -> (height -> BlockchainConfiguration)
     private val bridToConfs: MutableMap<BlockchainRid, MutableMap<Long, BlockchainConfiguration>> = mutableMapOf()
     private val chainToNodeSet: MutableMap<BlockchainRid, NodeSet> = mutableMapOf()
     private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<XPeerID>>()
@@ -364,7 +364,10 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
     }
 
     override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
-        TODO("Not yet implemented")
+        val brid = BlockchainRid(blockchainRidRaw)
+        val hBC = bridToConfs[brid]
+        val h = hBC?.mapNotNull { it.key to getConfiguration(blockchainRidRaw, it.key) }?.toMap()
+        return h as Map<Long, ByteArray>? ?: mapOf()
     }
 
     override fun findNextConfigurationHeight(blockchainRIDRaw: ByteArray, height: Long): Long? {

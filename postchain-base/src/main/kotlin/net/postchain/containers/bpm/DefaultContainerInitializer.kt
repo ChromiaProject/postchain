@@ -41,13 +41,18 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         config.setProperty("configuration.provider.node", NodeConfigProviders.File.name.toLowerCase())
         config.setProperty("infrastructure", Infrastructure.EbftContainerSlave.get())
 
-//        val scheme = NameService.databaseSchema(nodeConfig, container.chainId, container.blockchainRid)
-        val scheme = NameService.extendedContainerName(nodeConfig.pubKey, container.containerName)
+        val scheme = NameService.databaseSchema(nodeConfig, container.containerName)
         config.setProperty("database.schema", scheme)
 
         config.setProperty("containerChains.masterHost", nodeConfig.masterHost)
         config.setProperty("containerChains.masterPort", nodeConfig.masterPort)
 
+        //TODO: works only for linux?
+        if (config.containsKey("subnode.database.url")) {
+            config.setProperty("database.url", config.getProperty("subnode.database.url"))
+            config.clearProperty("subnode.database.url")
+            //        config.setProperty("database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
+        }
         // Adding peerInfos property as array/list
         val peerInfos = FileNodeConfigurationProvider.packPeerInfoCollection(nodeConfig.peerInfoMap.values)
         config.setProperty("peerinfos", peerInfos)

@@ -54,7 +54,7 @@ data class BlockchainRid(val data: ByteArray) {
     fun toHex() = data.toHex()
 
     fun toShortHex(): String {
-        return toHex().take(8)
+        return toHex().takeLast(8)
     }
 
     override fun equals(other: Any?): Boolean {

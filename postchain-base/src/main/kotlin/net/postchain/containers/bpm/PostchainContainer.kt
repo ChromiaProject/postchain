@@ -17,7 +17,7 @@ interface PostchainContainer {
     var containerId: String
     var blockchainProcesses: MutableSet<ContainerBlockchainProcess>
 
-    fun start(chainID: Long)
+    fun start()
     fun stop()
     val nodeContainerName: String
 }
@@ -39,7 +39,7 @@ class DefaultPostchainContainer(
     private var lastHeight = -1L
     override lateinit var containerId: String
 
-    override fun start(chainID: Long) {
+    override fun start() {
         state = ContainerState.RUNNING
         setResourceLimitsForContainer()
         // TODO: [POS-129]: Calc period basing on blockchain-config.maxblocktime param

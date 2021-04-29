@@ -29,9 +29,9 @@ class AppConfig(val config: Configuration) {
                     .configure(params)
                     .configuration
 
-            return AppConfig(configuration).apply {
-                configDir = File(configFile).absoluteFile.parent
-            }
+            configuration.setProperty("configDir", File(configFile).absoluteFile.parent)
+
+            return AppConfig(configuration)
         }
 
         fun toPropertiesFile(config: Configuration, configFile: String) {
@@ -42,8 +42,8 @@ class AppConfig(val config: Configuration) {
     /**
      * This config dir
      */
-    lateinit var configDir: String
-        private set
+    val configDir: String
+        get() = config.getString("configDir")
 
     /**
      * Configuration provider
