@@ -35,8 +35,8 @@ class DirectoryTest : ManagedModeTest() {
     fun dummy() {
         startDirectory()
         buildBlock(c0, 0)
-        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
-//        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
 //        assertCantBuildBlock(c0,1)
 //        assertCantBuildBlock(c1,-1)
 //        buildBlock(c1, 10)
