@@ -43,7 +43,6 @@ class DefaultContainerBlockchainProcess(
             logger.error("Exception in dataSource.getConfigurations(): " + e.message)
             mapOf()
         }
-
         // Dumping all chain configs to chain configs dir
         // TODO: [POS-129]: Skip already dumped configs
         val configsToDump = configs.filterKeys { it > lastHeight }

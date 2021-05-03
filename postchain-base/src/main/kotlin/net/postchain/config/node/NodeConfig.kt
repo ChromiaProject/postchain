@@ -30,12 +30,18 @@ open class NodeConfig(val appConfig: AppConfig) {
     /**
      * Container chains
      */
+    /**
+     * Used by subnode to connect to master for inter-node communication.
+     */
     val masterHost: String
         get() = config.getString("containerChains.masterHost", "localhost")
 
     val masterPort: Int
         get() = config.getInt("containerChains.masterPort", 9860)
 
+    /**
+     * Used by master
+     */
     val slaveHost: String
         get() = config.getString("containerChains.slaveHost", "localhost")
 

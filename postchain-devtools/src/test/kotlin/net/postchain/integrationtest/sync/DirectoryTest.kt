@@ -16,11 +16,14 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.EContext
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.gtv.GtvFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedNodeDataSource
 import org.apache.commons.configuration2.Configuration
 import org.junit.Ignore
 import org.junit.Test
+import java.io.File
+import java.nio.file.Paths
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
@@ -32,8 +35,11 @@ class DirectoryTest : ManagedModeTest() {
     fun dummy() {
         startDirectory()
         buildBlock(c0, 0)
-        val c1 = startNewBlockchain(setOf(0), setOf())
-        buildBlock(c1, 10)
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
+//        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+//        assertCantBuildBlock(c0,1)
+//        assertCantBuildBlock(c1,-1)
+//        buildBlock(c1, 10)
     }
 
 //    System providers create a ‘system’ cluster which includes ‘system’ nodes and has a ‘system’ naked container which will run the directory.
@@ -47,8 +53,6 @@ class DirectoryTest : ManagedModeTest() {
         //Create naked system container
         //start bc0 in system container: n0, n1 build blocks, no replicas
         startManagedSystem(1, 0)
-
-
     }
 
     override fun createMockDataSource(nodeIndex: Int): MockManagedNodeDataSource {
@@ -65,6 +69,7 @@ class DirectoryTest : ManagedModeTest() {
         var className = TestDirectoryMasterInfraFactory::class.qualifiedName
         propertyMap.setProperty("infrastructure", className)
         propertyMap.setProperty("containerChains.masterPort", 9860 - nodeIndex)
+        propertyMap.setProperty("containerChains.masterHost", "172.17.0.1")
         propertyMap.setProperty("configDir", System.getProperty("user.dir"))
         propertyMap.setProperty("subnode.database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
         return propertyMap
@@ -167,6 +172,22 @@ class TestMasterBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationPr
 }
 
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {
+
+    protected fun readConfigurationGtvFile(blockchainGtvConfigFile: String): ByteArray {
+        val configFile = File(blockchainGtvConfigFile)
+        var data: ByteArray
+            data = configFile.readBytes()
+            // try to decode to ensure data is valid
+            GtvFactory.decodeGtv(data)
+        return data
+    }
+
+    override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
+        val bcConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/e2e/chain-city/00.gtv"
+        val data = readConfigurationGtvFile(bcConfigFile)
+        return mapOf(0L to data)
+    }
+
     override fun getContainersToRun(): List<String>? {
 //        return listOf()
         return listOf("system", "cont1")
@@ -183,7 +204,7 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
     }
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String? {
-        if (brid == chainRidOf(1)) {
+        if ((brid == chainRidOf(1)) or (brid == chainRidOf(2))) {
             return "cont1"
         } else {
             return "system"
