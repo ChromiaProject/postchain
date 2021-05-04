@@ -2,7 +2,6 @@ package net.postchain.containers.bpm
 
 import mu.KLogging
 import net.postchain.config.node.NodeConfig
-import net.postchain.containers.NameService
 import net.postchain.managed.DirectoryDataSource
 import java.util.*
 import kotlin.concurrent.timer
@@ -15,6 +14,7 @@ interface PostchainContainer {
     var state: ContainerState
     var containerId: String
     var blockchainProcesses: MutableSet<ContainerBlockchainProcess>
+    var resourceLimits: Map<String, Long>?
 
     fun contains(chainId: Long): Boolean
     fun getChains(): Set<Long>
@@ -33,6 +33,9 @@ class DefaultPostchainContainer(
 
     companion object : KLogging()
 
+    override var resourceLimits: Map<String, Long>?
+        get() = dataSource.getResourceLimitForContainer(nodeContainerName)
+        set(value) {}
 //    override val nodeContainerName: String = NameService.extendedContainerName(nodeConfig.pubKey, directoryContainerName)
 //override val restApiPort: Int = nodeConfig.restApiPort + 10 * chainId.toInt() // TODO: [POS-129]: Change this
 //    override val restApiPort: Int = nodeConfig.restApiPort + containerName.toInt() // TODO: [POS-129]: Change this
@@ -48,7 +51,6 @@ class DefaultPostchainContainer(
 
     override fun start() {
         state = ContainerState.RUNNING
-        setResourceLimitsForContainer()
         // TODO: [POS-129]: Calc period basing on blockchain-config.maxblocktime param
         configTimer = timer(name = "timer-$nodeContainerName", period = 1000L) {
             blockchainProcesses.forEach{ it.transferConfigsToContainer()}
@@ -60,12 +62,6 @@ class DefaultPostchainContainer(
         if (this::configTimer.isInitialized) {
             configTimer.cancel()
             configTimer.purge()
-        }
-    }
-    private fun setResourceLimitsForContainer() {
-        val limits = dataSource.getResourceLimitForContainer(nodeContainerName)
-        if (limits != null) {
-            limits.forEach { s, l ->  } //TODO:transfer limits to docker.
         }
     }
 }

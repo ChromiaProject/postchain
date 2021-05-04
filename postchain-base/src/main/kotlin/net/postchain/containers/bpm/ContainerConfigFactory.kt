@@ -39,6 +39,9 @@ object ContainerConfigFactory {
                 .appendBinds(volume)
                 .portBindings(portBindings)
                 .publishAllPorts(true)
+                .memory(container.resourceLimits?.get("ram"))
+//                .cpuPeriod(container.limits?.get("cpu"))
+//                .cpuQuota()
                 .build()
 
         return ContainerConfig.builder()
