@@ -30,16 +30,18 @@ import java.util.concurrent.LinkedBlockingQueue
 
 class DirectoryTest : ManagedModeTest() {
 
+    /**
+     * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1, c2
+     * is run ijh container "cont1" by the subnode. c1 and c2 have the same blockchain configuration. Since master and subnode see different brids,
+     * waitForRestart is set to false whe c1 is started, else we get stuck on that row.
+     */
     @Ignore
     @Test
     fun dummy() {
-        startDirectory()
+        startManagedSystem(1, 0)
         buildBlock(c0, 0)
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
         val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
-//        assertCantBuildBlock(c0,1)
-//        assertCantBuildBlock(c1,-1)
-//        buildBlock(c1, 10)
     }
 
 //    System providers create a ‘system’ cluster which includes ‘system’ nodes and has a ‘system’ naked container which will run the directory.
@@ -48,12 +50,12 @@ class DirectoryTest : ManagedModeTest() {
      * startManagedSystem() starts bc0 in system container.
      * startNewBlockchain() should start bc1 in cont1 container
      */
-    fun startDirectory() {
-        //Create system cluster with system nodes n0, n1
-        //Create naked system container
-        //start bc0 in system container: n0, n1 build blocks, no replicas
-        startManagedSystem(1, 0)
-    }
+//    fun startDirectory() {
+//        //Create system cluster with system nodes n0, n1
+//        //Create naked system container
+//        //start bc0 in system container: n0, n1 build blocks, no replicas
+//        startManagedSystem(1, 0)
+//    }
 
     override fun createMockDataSource(nodeIndex: Int): MockManagedNodeDataSource {
         return MockDirectoryDataSource(nodeIndex)

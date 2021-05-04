@@ -19,9 +19,9 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
     // Just for tests
     private fun m(message: String) = "\t" + message
 
-    override fun createContainerWorkingDir(chainId: Long): Pair<Path, Path> {
+    override fun createContainerWorkingDir(chainId: Long, containerName: String): Pair<Path, Path> {
         // Creating current working dir (target)
-        val containerDir = Paths.get(nodeConfig.appConfig.configDir, "containers", chainId.toString())
+        val containerDir = Paths.get(nodeConfig.appConfig.configDir, "containers", containerName)
         val containerChainConfigsDir = containerDir.resolve("blockchains${File.separator}$chainId")
         if (containerChainConfigsDir.toFile().exists()) {
             logger.info(m("Container chain dir exists: $containerChainConfigsDir"))

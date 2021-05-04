@@ -88,12 +88,14 @@ open class ContainerManagedBlockchainProcessManager(
 
     private fun startContainerChain(chainId: Long): BlockchainRid? {
         val (ds, brid, containerName) = containerNameFromDataSource(chainId)
+        if (containerName == null) return null
+
         return try {
             // Creating working dir
-            val (containerDir, chainConfigsDir) = containerInitializer.createContainerWorkingDir(chainId)
+            val (containerDir, chainConfigsDir) = containerInitializer.createContainerWorkingDir(chainId, containerName)
 
             //Create container (with containerBlockchainProcess) if not exist. Also transfer configs
-            val container = containerName?.let { findChainContainer(it) }
+            val container = containerName.let { findChainContainer(it) }
             if (container != null) {
                 logger.info(m("startContainer: Container $containerName already exists: ${container.id()}"))
                 //container exist, but chainID is new. Does postchainContainer exist? If not, add it:
@@ -108,19 +110,19 @@ open class ContainerManagedBlockchainProcessManager(
                     )
                     postchainContainers.add(currentContainer)
                 }
-                if (containerBlockchainProcessMissing(currentContainer, chainId)) {
+                if (!containerBlockchainProcessExists(currentContainer, chainId)) {
                     val restAPIPort = containerRestAPIPort(nodeConfig, containerName)
                     val containerBlockchainProcess = createBlockchainProcess(chainId, ds, chainConfigsDir, restAPIPort)
 
                     // Creating chain configs
-                    containerBlockchainProcess.transferConfigsToContainer() //TODO: Note needed here?
+                    containerBlockchainProcess.transferConfigsToContainer()
                     postchainContainers.find { it.containerName == containerName }!!.blockchainProcesses.add(containerBlockchainProcess)
                 }
             } else { //new docker container, new postchainContainer, new chainID
                 logger.info(m("startContainer: Container $containerName is being created"))
                 val newPostchainContainer = createPostchainContainer(
                         chainId, ds,
-                        containerDir, chainConfigsDir, containerName!!, false
+                        containerDir, chainConfigsDir, containerName, false
                 )
                 // Creating nodeConfig for container node
                 containerInitializer.createContainerNodeConfig(newPostchainContainer, containerDir)
@@ -152,7 +154,7 @@ open class ContainerManagedBlockchainProcessManager(
         return Triple(ds, brid, containerName)
     }
 
-    private fun containerBlockchainProcessMissing(currentContainer: PostchainContainer, chainId: Long): Boolean {
+    private fun containerBlockchainProcessExists(currentContainer: PostchainContainer, chainId: Long): Boolean {
         return currentContainer.blockchainProcesses.any { it.chainId == chainId }
     }
 
@@ -170,7 +172,7 @@ open class ContainerManagedBlockchainProcessManager(
                 dockerClient.stopContainer(currentContainer.containerId, 10)
                 logger.info(m("stopContainerChain: Container $containerName stopped"))
             } else
-                logger.info(m("stopContainerChain: Blockchain $chainId stopped but container $containerName not empty ( => not stopped)"))
+                logger.info(m("stopContainerChain: Blockchain $chainId stopped but container $containerName not empty ( container => not stopped)"))
 
         } else {
             logger.error(m("stopContainerChain: Can't stop container ${containerName}, does not exist"))
@@ -205,14 +207,13 @@ open class ContainerManagedBlockchainProcessManager(
         val containerBlockchainProcess = createBlockchainProcess(chainId, dataSource, chainConfigsDir, restApiPort)
 
 
-
         val postchainContainer = DefaultPostchainContainer(nodeConfig, mutableSetOf(containerBlockchainProcess), dataSource,
                 ContainerState.STARTING, containerName)
 
+        // Creating chain configs
+        containerBlockchainProcess.transferConfigsToContainer()
 
         if (!dockerContainerExists) {
-            // Creating chain configs
-            containerBlockchainProcess.transferConfigsToContainer()
             val config = ContainerConfigFactory.createConfig(nodeConfig, postchainContainer, containerDir)
             postchainContainer.containerId = dockerClient.createContainer(config, containerName).id().toString()
         } else {
@@ -239,18 +240,19 @@ open class ContainerManagedBlockchainProcessManager(
         return all.find { it.names()?.contains("/$containerName") ?: false } // Prefix /
     }
 
-//    f [ "$( docker container inspect -f '{{.State.Running}}' $container_name )" == "true" ]; then ...
+    //    f [ "$( docker container inspect -f '{{.State.Running}}' $container_name )" == "true" ]; then ...
     private fun startContainer(containerName: String) {
-    val currentContainer = postchainContainers.find { it.containerName == containerName }
-    logger.info(m("startContainerChain: Container ${containerName} is starting up"))
+        val currentContainer = postchainContainers.find { it.containerName == containerName }
+        logger.info(m("startContainerChain: Container ${containerName} is starting up"))
 
-    val h = dockerClient.inspectContainer(currentContainer!!.containerId)
-    if (!h.state().running()) {
-        dockerClient.startContainer(currentContainer.containerId)
-        currentContainer.start()
+        val h = dockerClient.inspectContainer(currentContainer!!.containerId)
+        if (!h.state().running()) {
+            dockerClient.startContainer(currentContainer.containerId)
+            currentContainer.start()
+        }
+        logger.info(m("startContainerChain: Container ${containerName} is running"))
     }
-    logger.info(m("startContainerChain: Container ${containerName} is running"))
-}
+
     override fun getLaunchedBlockchains(): Set<Long> {
         return super.getLaunchedBlockchains() + startingOrRunningProcesses()
     }

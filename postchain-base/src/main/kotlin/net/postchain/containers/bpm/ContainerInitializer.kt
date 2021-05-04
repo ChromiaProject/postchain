@@ -7,7 +7,7 @@ interface ContainerInitializer {
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun createContainerWorkingDir(chainId: Long): Pair<Path, Path>
+    fun createContainerWorkingDir(chainId: Long, containerName: String): Pair<Path, Path>
 
     /**
      * TODO: [POS-129]: Add kdoc
