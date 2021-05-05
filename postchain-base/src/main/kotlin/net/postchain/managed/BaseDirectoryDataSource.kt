@@ -37,4 +37,8 @@ class BaseDirectoryDataSource(queries: BlockQueries, nodeConfig: NodeConfig) : B
         val resList = queryReply.map { it.key to it.value.asInteger() }.toMap()
         return resList
     }
+
+    override fun setRamLimitForContainer(containerID: String, ramLimit: Long) {
+        TODO("Will not be used")
+    }
 }

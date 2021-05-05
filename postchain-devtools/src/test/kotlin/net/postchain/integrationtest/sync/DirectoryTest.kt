@@ -1,5 +1,7 @@
 package net.postchain.integrationtest.sync
 
+import com.spotify.docker.client.DefaultDockerClient
+import com.spotify.docker.client.DockerClient
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
@@ -22,9 +24,11 @@ import net.postchain.managed.ManagedNodeDataSource
 import org.apache.commons.configuration2.Configuration
 import org.junit.Ignore
 import org.junit.Test
+import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
+import kotlin.test.assertEquals
 
 class DirectoryTest : ManagedModeTest() {
 
@@ -64,7 +68,30 @@ class DirectoryTest : ManagedModeTest() {
         //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
         // Instead, whait with tear-down to see chains are started in the container:
         Thread.sleep(49000)
+    }
 
+    @Test
+    fun testRamResourceLimit() {
+        val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
+        var listc = dockerClient.listContainers()
+        listc.forEach { dockerClient.stopContainer(it.id(), 0)
+            dockerClient.removeContainer(it.id())
+        }
+        startManagedSystem(1, 0)
+        buildBlock(c0, 0)
+        val ramLimit = 7000000L
+        //update dataSource with limit value. This is used when contianer is created (getResourceLimitForContainer)
+        dataSource(0).setRamLimitForContainer("cont1", ramLimit)
+        startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+        sleep(10000) //we must wait a bit to ensure that container has been created.
+        listc = dockerClient.listContainers()
+        println("number of containers: " + listc.size)
+        val res = dockerClient.inspectContainer(listc[0].id())
+        assertEquals(ramLimit, res.hostConfig()?.memory())
+    }
+
+    private fun dataSource(nodeIndex: Int): MockDirectoryDataSource {
+        return mockDataSources[nodeIndex] as MockDirectoryDataSource
     }
 
 //    System providers create a ‘system’ cluster which includes ‘system’ nodes and has a ‘system’ naked container which will run the directory.
@@ -207,6 +234,8 @@ class TestMasterBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationPr
 
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {
 
+    var ram = 7000000L*1000L
+
     override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
         val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return mapOf()
         var confs = mutableMapOf<Long, ByteArray>()
@@ -220,7 +249,6 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
     }
 
     override fun getContainersToRun(): List<String>? {
-//        return listOf()
         return listOf("system", "cont1", "cont3")
     }
 
@@ -247,8 +275,13 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
 
     override fun getResourceLimitForContainer(containerID: String): Map<String, Long>? {
         if (containerID == "cont1") {
-            return mapOf("storage" to 10L, "ram" to 10L, "cpu" to 10L)
+            return mapOf("storage" to 10L, "ram" to ram, "cpu" to 10L)
         }
         return mapOf() //no limits for naked system container.
+    }
+    override fun setRamLimitForContainer(containerID: String, ramLimit: Long) {
+        if (containerID == "cont1") {
+            ram = ramLimit
+        }
     }
 }

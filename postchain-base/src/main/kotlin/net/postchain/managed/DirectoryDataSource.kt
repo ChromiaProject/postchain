@@ -20,4 +20,6 @@ interface DirectoryDataSource : ManagedNodeDataSource {
      */
     fun getResourceLimitForContainer(containerID: String): Map<String, Long>?
 
+    fun setRamLimitForContainer(containerID: String, ramLimit: Long)
+
 }
