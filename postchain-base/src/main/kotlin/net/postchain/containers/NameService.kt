@@ -11,11 +11,6 @@ object NameService {
         return "postchain-slavenode-$node-container$containerName"
     }
 
-    //TODO: or some other container unique integer
-    fun containerRestAPIPort(nodeConfig: NodeConfig, containerName: String): Int {
-        return nodeConfig.restApiPort + 10 //containerName.toInt()
-    }
-
     fun databaseSchema(nodeConfig: NodeConfig, containerName: String): String {
         return "${nodeConfig.appConfig.databaseSchema}_${NameHelper.peerName(nodeConfig.pubKey)}" +
                 "_$containerName"

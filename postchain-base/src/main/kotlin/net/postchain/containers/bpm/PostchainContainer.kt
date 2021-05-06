@@ -17,6 +17,8 @@ interface PostchainContainer {
     var containerId: String
     var blockchainProcesses: MutableSet<ContainerBlockchainProcess>
 
+    fun contains(chainId: Long): Boolean
+    fun getChains(): Set<Long>
     fun start()
     fun stop()
     val nodeContainerName: String
@@ -38,6 +40,16 @@ class DefaultPostchainContainer(
     private lateinit var configTimer: Timer // TODO: [POS-129]: Implement shared config timer
     private var lastHeight = -1L
     override lateinit var containerId: String
+
+    override fun contains(chainId: Long): Boolean {
+        return (blockchainProcesses.any { it.chainId == chainId })
+    }
+
+    override fun getChains(): Set<Long> {
+        val result = setOf<Long>()
+        blockchainProcesses.forEach { result.plus(it.chainId) }
+        return result
+    }
 
     override fun start() {
         state = ContainerState.RUNNING

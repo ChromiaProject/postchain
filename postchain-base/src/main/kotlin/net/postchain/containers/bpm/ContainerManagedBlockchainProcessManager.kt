@@ -9,12 +9,13 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.containers.NameService.containerRestAPIPort
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.BlockQueries
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.managed.*
+import net.postchain.managed.BaseDirectoryDataSource
+import net.postchain.managed.DirectoryDataSource
+import net.postchain.managed.ManagedBlockchainProcessManager
 import java.nio.file.Path
 
 open class ContainerManagedBlockchainProcessManager(
@@ -46,7 +47,7 @@ open class ContainerManagedBlockchainProcessManager(
             BaseDirectoryDataSource(blockQueries, nodeConfigProvider.getConfiguration())
 
     private fun chainIdInContainers(chainId: Long): Boolean {
-        postchainContainers.forEach { if (it.blockchainProcesses.any { blockchainProcess -> blockchainProcess.chainId == chainId }) return true }
+        postchainContainers.forEach { if (it.contains(chainId)) return true }
         return false
     }
 
@@ -111,8 +112,7 @@ open class ContainerManagedBlockchainProcessManager(
                     postchainContainers.add(currentContainer)
                 }
                 if (!containerBlockchainProcessExists(currentContainer, chainId)) {
-                    val restAPIPort = containerRestAPIPort(nodeConfig, containerName)
-                    val containerBlockchainProcess = createBlockchainProcess(chainId, ds, chainConfigsDir, restAPIPort)
+                    val containerBlockchainProcess = createBlockchainProcess(chainId, ds, chainConfigsDir)
 
                     // Creating chain configs
                     containerBlockchainProcess.transferConfigsToContainer()
@@ -202,9 +202,7 @@ open class ContainerManagedBlockchainProcessManager(
                                          containerName: String,
                                          dockerContainerExists: Boolean): PostchainContainer {
 
-        val restApiPort = containerRestAPIPort(nodeConfig, containerName)
-
-        val containerBlockchainProcess = createBlockchainProcess(chainId, dataSource, chainConfigsDir, restApiPort)
+        val containerBlockchainProcess = createBlockchainProcess(chainId, dataSource, chainConfigsDir)
 
 
         val postchainContainer = DefaultPostchainContainer(nodeConfig, mutableSetOf(containerBlockchainProcess), dataSource,
@@ -225,13 +223,13 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
 
-    private fun createBlockchainProcess(chainId: Long, dataSource: DirectoryDataSource, chainConfigsDir: Path, restApiPort: Int): ContainerBlockchainProcess {
+    private fun createBlockchainProcess(chainId: Long, dataSource: DirectoryDataSource, chainConfigsDir: Path): ContainerBlockchainProcess {
         val brid = withReadConnection(storage, chainId) { ctx ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
         }
         val processName = BlockchainProcessName(nodeConfig.pubKey, brid)
         return masterBlockchainInfra.makeMasterBlockchainProcess(
-                processName, chainId, brid, dataSource, chainConfigsDir, restApiPort
+                processName, chainId, brid, dataSource, chainConfigsDir, nodeConfig.subnodeRestApiPort
         )
     }
 
@@ -262,7 +260,7 @@ open class ContainerManagedBlockchainProcessManager(
             it.state == ContainerState.STARTING || it.state == ContainerState.RUNNING
         }
         val result = setOf<Long>()
-        activeContainers.forEach { postchainContainer -> postchainContainer.blockchainProcesses.forEach { result.plus(it.chainId) } }
+        activeContainers.forEach { result.plus(it.getChains()) }
         return result
     }
 }

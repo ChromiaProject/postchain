@@ -5,7 +5,6 @@ import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.NameService
-import net.postchain.containers.NameService.containerRestAPIPort
 import java.nio.file.Path
 
 object ContainerConfigFactory {
@@ -17,12 +16,22 @@ object ContainerConfigFactory {
                 .to("/opt/chromaway/postchain/target")
                 .build()
 
-        // Rest API port binding
-        val containerPort = if (nodeConfig.restApiPort > 0) "${nodeConfig.restApiPort}/tcp" else
-            "7740/tcp"
-        val hostPort = containerRestAPIPort(nodeConfig, container.containerName)
+        /**
+         * Rest API port binding.
+         * If nodeConfig.restApiPost == -1 => no communication with API => no binding needed.
+         * If nodeConfig.restApiPost > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
+         * control here and know that it is always free.
+         * DockerPort must be container specific and cannot be -1 or 0 (at least not allowed in Ubuntu.)
+         * Unprivileged port space: [1025,2^16-1]
+         */
 
-        val portBindings = mapOf(containerPort to listOf(PortBinding.of("0.0.0.0", hostPort)))
+        //Likely to be a unique port but not 100% guarantee.
+        val dockerPort = "${container.containerName.hashCode() % (65535-1025) + 1025}/tcp"
+
+        val portBindings = if (nodeConfig.restApiPort > -1) {
+            mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", nodeConfig.subnodeRestApiPort)))
+        } else mapOf()
+
         // TODO: [POS-129]: Implement random port selection
 //        val portBindings = mapOf("$containerPort/tcp" to listOf(PortBinding.randomPort("0.0.0.0")))
 
@@ -36,7 +45,7 @@ object ContainerConfigFactory {
         return ContainerConfig.builder()
                 .image(NameService.containerImage())
                 .hostConfig(hostConfig)
-                .exposedPorts(containerPort)
+                .exposedPorts(dockerPort)
                 .build()
     }
 

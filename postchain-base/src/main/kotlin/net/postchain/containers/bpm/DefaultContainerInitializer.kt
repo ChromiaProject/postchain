@@ -47,6 +47,13 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         config.setProperty("containerChains.masterHost", nodeConfig.masterHost)
         config.setProperty("containerChains.masterPort", nodeConfig.masterPort)
 
+        /**
+         * If nodeConfig.restApiPost > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
+         * control here and know that it is always free.
+         * If -1, no API communication => subnodeRestApiPort=restApiPost
+         */
+        if (nodeConfig.restApiPort > -1) config.setProperty("api.port", nodeConfig.subnodeRestApiPort)
+
         //TODO: works only for linux?
         if (config.containsKey("subnode.database.url")) {
             config.setProperty("database.url", config.getProperty("subnode.database.url"))

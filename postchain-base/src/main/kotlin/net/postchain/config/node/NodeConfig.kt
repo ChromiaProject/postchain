@@ -30,6 +30,8 @@ open class NodeConfig(val appConfig: AppConfig) {
     /**
      * Container chains
      */
+    val subnodeRestApiPort: Int
+        get() = config.getInt("containerChains.api.port", 7740)
     /**
      * Used by subnode to connect to master for inter-node communication.
      */
