@@ -71,7 +71,7 @@ class DirectoryTest : ManagedModeTest() {
     }
 
     @Test
-    fun testRamResourceLimit() {
+    fun testResourceLimits() {
         val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
         var listc = dockerClient.listContainers()
         listc.forEach { dockerClient.stopContainer(it.id(), 0)
@@ -80,14 +80,16 @@ class DirectoryTest : ManagedModeTest() {
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
         val ramLimit = 7000000L
+        val cpuQuotaLimit = 90000L
         //update dataSource with limit value. This is used when contianer is created (getResourceLimitForContainer)
-        dataSource(0).setRamLimitForContainer("cont1", ramLimit)
+        dataSource(0).setLimitsForContainer("cont1", ramLimit, cpuQuotaLimit)
         startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
         sleep(10000) //we must wait a bit to ensure that container has been created.
         listc = dockerClient.listContainers()
         println("number of containers: " + listc.size)
         val res = dockerClient.inspectContainer(listc[0].id())
         assertEquals(ramLimit, res.hostConfig()?.memory())
+        assertEquals(cpuQuotaLimit, res.hostConfig()?.cpuQuota())
     }
 
     private fun dataSource(nodeIndex: Int): MockDirectoryDataSource {
@@ -201,21 +203,16 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
         if (blockchainRid == null) {
             return null
         }
-        if (chainId == 0L) { //only chain0 is run on master, all other chains in containers. We do not have their heights.
+        if (chainId == 0L) { //only chain0 is run on master, all other chains in containers
             val process = blockchainProcesses[chainId]!!
             val queries = process.getEngine().getBlockQueries()
             val height = queries.getBestHeight().get()
             lastHeightStarted[chainId] = height
-//        } else {
-//            containerChainStarted.putIfAbsent(chainId, true)
         }
         return blockchainRid
     }
 
     fun awaitStarted(chainId: Long, atLeastHeight: Long) {
-//        while (containerChainStarted.get(chainId) != null) {
-//            Thread.sleep(10)
-//        }
         while (lastHeightStarted.get(chainId) ?: -2L < atLeastHeight) {
             Thread.sleep(10)
         }
@@ -235,6 +232,7 @@ class TestMasterBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationPr
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {
 
     var ram = 7000000L*1000L
+    var cpu = 100000L
 
     override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
         val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return mapOf()
@@ -279,9 +277,10 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
         }
         return mapOf() //no limits for naked system container.
     }
-    override fun setRamLimitForContainer(containerID: String, ramLimit: Long) {
+    override fun setLimitsForContainer(containerID: String, ramLimit: Long, cpuQuota: Long) {
         if (containerID == "cont1") {
             ram = ramLimit
+            cpu = cpuQuota
         }
     }
 }

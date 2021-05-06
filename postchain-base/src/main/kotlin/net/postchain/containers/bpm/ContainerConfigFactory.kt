@@ -34,14 +34,17 @@ object ContainerConfigFactory {
 
 
 
+        /**
+        $ docker run -it --cpu-period=100000 --cpu-quota=50000 ubuntu /bin/bash.
+         Here we leave cpu-period to its default value (100 ms) and control cpu-quota via the dataSource.
+         */
         // Host config
         val hostConfig = HostConfig.builder()
                 .appendBinds(volume)
                 .portBindings(portBindings)
                 .publishAllPorts(true)
                 .memory(container.resourceLimits?.get("ram"))
-//                .cpuPeriod(container.limits?.get("cpu"))
-//                .cpuQuota()
+                .cpuQuota(container.resourceLimits?.get("cpu"))
                 .build()
 
         return ContainerConfig.builder()

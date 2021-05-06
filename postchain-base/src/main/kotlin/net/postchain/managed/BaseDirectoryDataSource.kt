@@ -38,7 +38,7 @@ class BaseDirectoryDataSource(queries: BlockQueries, nodeConfig: NodeConfig) : B
         return resList
     }
 
-    override fun setRamLimitForContainer(containerID: String, ramLimit: Long) {
+    override fun setLimitsForContainer(containerID: String, ramLimit: Long, cpuQuotaLimit: Long) {
         TODO("Will not be used")
     }
 }
