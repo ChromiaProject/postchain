@@ -96,11 +96,11 @@ open class ContainerManagedBlockchainProcessManager(
             val (containerDir, chainConfigsDir) = containerInitializer.createContainerWorkingDir(chainId, containerName)
 
             //Create container (with containerBlockchainProcess) if not exist. Also transfer configs
-            val container = containerName.let { findChainContainer(it) }
+            val container = containerName.let { findDockerContainer(it) }
             if (container != null) {
                 logger.info(m("startContainer: Container $containerName already exists: ${container.id()}"))
                 //container exist, but chainID is new. Does postchainContainer exist? If not, add it:
-                val existingPostchainContainer = postchainContainers.find { it.containerName == containerName }
+                val existingPostchainContainer = getPostchainContainer(containerName)
                 val currentContainer: PostchainContainer
                 if (existingPostchainContainer != null) {
                     currentContainer = existingPostchainContainer
@@ -116,7 +116,7 @@ open class ContainerManagedBlockchainProcessManager(
 
                     // Creating chain configs
                     containerBlockchainProcess.transferConfigsToContainer()
-                    postchainContainers.find { it.containerName == containerName }!!.blockchainProcesses.add(containerBlockchainProcess)
+                    currentContainer.blockchainProcesses.add(containerBlockchainProcess)
                 }
             } else { //new docker container, new postchainContainer, new chainID
                 logger.info(m("startContainer: Container $containerName is being created"))
@@ -136,9 +136,9 @@ open class ContainerManagedBlockchainProcessManager(
         } catch (e: Exception) {
             // TODO: [POS-129]: Improve error handling/logging
             logger.info("", e)
-            val currentContainer = postchainContainers.find { it.containerName == containerName }
+            val currentContainer = getPostchainContainer(containerName)
             if (currentContainer != null) {
-                postchainContainers.find { it.containerName == containerName }!!.stop()
+                currentContainer.stop()
             }
             postchainContainers.remove(currentContainer)
             null
@@ -158,16 +158,16 @@ open class ContainerManagedBlockchainProcessManager(
         return currentContainer.blockchainProcesses.any { it.chainId == chainId }
     }
 
-    //TODO:Stop blockchain process and stop container? I suppose we do not want to do that now with more than one bc process per container
+    //Blockchain process is removed, but container is only stopped if it is empty. It might hold other bcs.
     private fun stopContainerChain(chainId: Long) {
         //remove process from postchainContainer.
         val (_, _, containerName) = containerNameFromDataSource(chainId)
-        val currentContainer = postchainContainers.find { it.containerName == containerName }
+        val currentContainer = getPostchainContainer(containerName)
         if (currentContainer != null) {
-            postchainContainers.find { it.containerName == containerName }!!.blockchainProcesses.removeIf { it.chainId == chainId }
+            currentContainer.blockchainProcesses.removeIf { it.chainId == chainId }
             //If container now has no BCProcesses left, stop docker container.
-            if (postchainContainers.find { it.containerName == containerName }!!.blockchainProcesses.isEmpty()) {
-                postchainContainers.find { it.containerName == containerName }!!.stop()
+            if (currentContainer.blockchainProcesses.isEmpty()) {
+                currentContainer.stop()
                 logger.info(m("stopContainerChain: Container $containerName is stopping"))
                 dockerClient.stopContainer(currentContainer.containerId, 10)
                 logger.info(m("stopContainerChain: Container $containerName stopped"))
@@ -215,10 +215,9 @@ open class ContainerManagedBlockchainProcessManager(
             val config = ContainerConfigFactory.createConfig(nodeConfig, postchainContainer, containerDir)
             postchainContainer.containerId = dockerClient.createContainer(config, containerName).id().toString()
         } else {
-            postchainContainer.containerId = findChainContainer(containerName)!!.id()
+            postchainContainer.containerId = findDockerContainer(containerName)!!.id()
         }
         // TODO: [POS-129]: Handle the case when containerId is null
-//        return postchainContainer.apply { containerId = containerId }
         return postchainContainer
     }
 
@@ -233,14 +232,14 @@ open class ContainerManagedBlockchainProcessManager(
         )
     }
 
-    private fun findChainContainer(containerName: String): Container? {
+    private fun findDockerContainer(containerName: String): Container? {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         return all.find { it.names()?.contains("/$containerName") ?: false } // Prefix /
     }
 
     //    f [ "$( docker container inspect -f '{{.State.Running}}' $container_name )" == "true" ]; then ...
     private fun startContainer(containerName: String) {
-        val currentContainer = postchainContainers.find { it.containerName == containerName }
+        val currentContainer = getPostchainContainer(containerName)
         logger.info(m("startContainerChain: Container ${containerName} is starting up"))
 
         val h = dockerClient.inspectContainer(currentContainer!!.containerId)
@@ -250,6 +249,9 @@ open class ContainerManagedBlockchainProcessManager(
         }
         logger.info(m("startContainerChain: Container ${containerName} is running"))
     }
+
+    private fun getPostchainContainer(containerName: String?) =
+            postchainContainers.find { it.containerName == containerName }
 
     override fun getLaunchedBlockchains(): Set<Long> {
         return super.getLaunchedBlockchains() + startingOrRunningProcesses()
