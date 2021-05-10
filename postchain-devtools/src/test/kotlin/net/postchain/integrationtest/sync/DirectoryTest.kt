@@ -34,6 +34,11 @@ class DirectoryTest : ManagedModeTest() {
      * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1, c2
      * is run ijh container "cont1" by the subnode. c1 and c2 have the same blockchain configuration. Since master and subnode see different brids,
      * waitForRestart is set to false whe c1 is started, else we get stuck on that row.
+     *
+     * Did you make changes i slave code? Copy jar-dependecies file to
+     * postchain-distribution/src/main/postchain-slavenode/docker/scripts/bin/postchain-base-3.3.1-SNAPSHOT-jar-with-dependencies.jar
+     * and run (in that directory):
+     * docker build -t chromaway/postchain-slavenode:3.3.1 .
      */
     @Ignore
     @Test
@@ -41,7 +46,11 @@ class DirectoryTest : ManagedModeTest() {
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
-        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
+        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+        //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
+        // Instead, whait with tear-down to see chains are started in the container:
+        Thread.sleep(19000)
+
     }
 
 //    System providers create a ‘system’ cluster which includes ‘system’ nodes and has a ‘system’ naked container which will run the directory.
@@ -74,6 +83,8 @@ class DirectoryTest : ManagedModeTest() {
         propertyMap.setProperty("containerChains.masterHost", "172.17.0.1")
         propertyMap.setProperty("configDir", System.getProperty("user.dir"))
         propertyMap.setProperty("subnode.database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
+        propertyMap.setProperty("brid.chainid.1", chainRidOf(1).toHex())
+        propertyMap.setProperty("brid.chainid.2", chainRidOf(2).toHex())
         return propertyMap
     }
 }
@@ -142,21 +153,27 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
     }
 
     var lastHeightStarted = ConcurrentHashMap<Long, Long>()
+//    val containerChainStarted = ConcurrentHashMap<Long, Boolean>()
     override fun startBlockchain(chainId: Long): BlockchainRid? {
         val blockchainRid = super.startBlockchain(chainId)
         if (blockchainRid == null) {
             return null
         }
-        if (chainId == 0L) { //only chain0 is run on master, all other chains in containers
+        if (chainId == 0L) { //only chain0 is run on master, all other chains in containers. We do not have their heights.
             val process = blockchainProcesses[chainId]!!
             val queries = process.getEngine().getBlockQueries()
             val height = queries.getBestHeight().get()
             lastHeightStarted[chainId] = height
+//        } else {
+//            containerChainStarted.putIfAbsent(chainId, true)
         }
         return blockchainRid
     }
 
     fun awaitStarted(chainId: Long, atLeastHeight: Long) {
+//        while (containerChainStarted.get(chainId) != null) {
+//            Thread.sleep(10)
+//        }
         while (lastHeightStarted.get(chainId) ?: -2L < atLeastHeight) {
             Thread.sleep(10)
         }
@@ -177,7 +194,7 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
 
     protected fun readConfigurationGtvFile(blockchainGtvConfigFile: String): ByteArray {
         val configFile = File(blockchainGtvConfigFile)
-        var data: ByteArray
+        val data: ByteArray
             data = configFile.readBytes()
             // try to decode to ensure data is valid
             GtvFactory.decodeGtv(data)

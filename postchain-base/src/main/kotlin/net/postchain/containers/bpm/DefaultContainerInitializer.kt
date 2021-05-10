@@ -1,6 +1,7 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
+import net.postchain.base.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.FileNodeConfigurationProvider
 import net.postchain.config.node.NodeConfig

@@ -261,8 +261,6 @@ open class ContainerManagedBlockchainProcessManager(
         val activeContainers = postchainContainers.filter {
             it.state == ContainerState.STARTING || it.state == ContainerState.RUNNING
         }
-        val result = setOf<Long>()
-        activeContainers.forEach { result.plus(it.getChains()) }
-        return result
+        return activeContainers.flatMap { it.getChains() }.toSet()
     }
 }

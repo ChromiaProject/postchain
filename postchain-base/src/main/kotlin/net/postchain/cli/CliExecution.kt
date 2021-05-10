@@ -42,11 +42,22 @@ object CliExecution {
             givenDependencies: List<BlockchainRelatedInfo> = listOf()
     ): BlockchainRid {
 
+        /**
+         * If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
+         */
+        fun getBrid(): BlockchainRid {
+            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+            val keyString = "brid.chainid." + chainId.toString()
+            val brid = if (appConfig.config.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.config.getString(keyString)) else
+                BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            return brid
+        }
+
         return runStorageCommand(nodeConfigFile, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
 
             fun init(): BlockchainRid {
-                val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+                val brid = getBrid()
                 db.initializeBlockchain(ctx, brid)
                 DependenciesValidator.validateBlockchainRids(ctx, givenDependencies)
                 BaseConfigurationDataStore.addConfigurationData(ctx, 0, blockchainConfig)

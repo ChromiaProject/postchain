@@ -45,11 +45,7 @@ class DefaultPostchainContainer(
         return (blockchainProcesses.any { it.chainId == chainId })
     }
 
-    override fun getChains(): Set<Long> {
-        val result = setOf<Long>()
-        blockchainProcesses.forEach { result.plus(it.chainId) }
-        return result
-    }
+    override fun getChains(): Set<Long> = blockchainProcesses.map { it.chainId }.toSet()
 
     override fun start() {
         state = ContainerState.RUNNING
