@@ -4,7 +4,7 @@ package net.postchain.network.netty2
 
 import assertk.assert
 import assertk.assertions.isIn
-import assertk.isContentEqualTo
+import net.postchain.devtools.isContentEqualTo
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.times
@@ -13,7 +13,6 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
-import net.postchain.devtools.argumentCaptor2
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
