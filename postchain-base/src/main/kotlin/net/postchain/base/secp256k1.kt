@@ -100,7 +100,7 @@ fun secp256k1_sign(digest: ByteArray, privateKeyBytes: ByteArray): ByteArray {
     val privKey = ECPrivateKeyParameters(privateKey, CURVE)
     signer.init(true, privKey)
     val components = signer.generateSignature(digest)
-    if (components[0] <= HALF_CURVE_ORDER) {
+    if (components[1] > HALF_CURVE_ORDER) {
         // canonicalize low S
         components[1] = CURVE.n.subtract(components[1])
     }
