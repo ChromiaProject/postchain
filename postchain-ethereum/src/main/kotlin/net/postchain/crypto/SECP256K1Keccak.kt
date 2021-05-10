@@ -4,13 +4,14 @@ import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import net.postchain.utils.Hashes
 import net.postchain.utils.Numeric
-import org.spongycastle.math.ec.custom.sec.SecP256K1Curve
 import org.spongycastle.asn1.x9.X9ECParameters
+import org.spongycastle.asn1.x9.X9IntegerConverter
 import org.spongycastle.crypto.ec.CustomNamedCurves
 import org.spongycastle.crypto.params.ECDomainParameters
 import org.spongycastle.math.ec.ECAlgorithms
 import org.spongycastle.math.ec.ECCurve
 import org.spongycastle.math.ec.ECPoint
+import org.spongycastle.math.ec.custom.sec.SecP256K1Curve
 import java.math.BigInteger
 
 object SECP256K1Keccak {
@@ -110,17 +111,9 @@ object SECP256K1Keccak {
      * @return Uncompressed public key
      */
     private fun decompressKey(xBN: BigInteger, yBit: Boolean): ECPoint {
-        val x = CURVE.fromBigInteger(xBN)
-        val alpha = x.multiply(x.square().add(CURVE.a)).add(CURVE.b)
-        val beta = alpha.sqrt() ?: throw IllegalArgumentException("Invalid point compression")
-        val ecPoint: ECPoint
-        val nBeta = beta.toBigInteger()
-        if (nBeta.testBit(0) == yBit) {
-            ecPoint = CURVE.createPoint(x.toBigInteger(), nBeta);
-        } else {
-            val y = CURVE.fromBigInteger(CURVE.order.subtract(nBeta))
-            ecPoint = CURVE.createPoint(x.toBigInteger(), y.toBigInteger())
-        }
-        return ecPoint
+        val x9 = X9IntegerConverter()
+        val compEnc: ByteArray = x9.integerToBytes(xBN, 1 + x9.getByteLength(CURVE_PARAMS.curve))
+        compEnc[0] = (if (yBit) 0x03 else 0x02).toByte()
+        return CURVE_PARAMS.curve.decodePoint(compEnc)
     }
 }
