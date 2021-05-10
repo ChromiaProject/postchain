@@ -9,7 +9,6 @@ import net.postchain.gtx.gtxml.GTXMLTransactionParser
 import net.postchain.gtx.gtxml.TransactionContext
 import org.junit.Test
 import java.nio.ByteBuffer
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SECP256K1Test {
@@ -42,7 +41,7 @@ class SECP256K1Test {
         assertTrue((expected0).contentEquals(actual0))
 
         val expected1 = decompressKey(pubKey1)
-        val actual1 = SECP256K1Keccak.ecrecover(1, merkleRoot, sig1[0], sig1[1])!!
+        val actual1 = SECP256K1Keccak.ecrecover(0, merkleRoot, sig1[0], sig1[1])!!
         assertTrue((expected1).contentEquals(actual1))
     }
 
@@ -72,7 +71,7 @@ class SECP256K1Test {
         val actual0 = encodeSignatureWithV(merkleRoot, pubKey0, signature0.data)
         assertTrue(expected0.contentEquals(actual0))
 
-        val expected1 = encodeSignature(sig1[0], sig1[1], 28)
+        val expected1 = encodeSignature(sig1[0], sig1[1], 27)
         val actual1 = encodeSignatureWithV(merkleRoot, pubKey1, signature1.data)
         assertTrue(expected1.contentEquals(actual1))
     }

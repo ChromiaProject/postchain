@@ -22,7 +22,7 @@ import java.security.SecureRandom
 
 // signing code taken from bitcoinj ECKey
 
-val CURVE_PARAMS = CustomNamedCurves.getByName("secp256k1")
+val CURVE_PARAMS = CustomNamedCurves.getByName("secp256k1")!!
 val CURVE = ECDomainParameters(CURVE_PARAMS.curve, CURVE_PARAMS.g, CURVE_PARAMS.n, CURVE_PARAMS.h)
 val HALF_CURVE_ORDER: BigInteger = CURVE_PARAMS.n.shiftRight(1)
 
