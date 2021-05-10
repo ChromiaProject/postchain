@@ -74,7 +74,9 @@ class DirectoryTest : ManagedModeTest() {
     fun testResourceLimits() {
         val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
         var listc = dockerClient.listContainers()
-        listc.forEach { dockerClient.stopContainer(it.id(), 0)
+        listc.forEach {
+            println("removing existing container: " + it.id())
+            dockerClient.stopContainer(it.id(), 0)
             dockerClient.removeContainer(it.id())
         }
         startManagedSystem(1, 0)
@@ -231,7 +233,7 @@ class TestMasterBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationPr
 
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {
 
-    var ram = 7000000L*1000L
+    var ram = 7000000L * 1000L
     var cpu = 100000L
 
     override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
@@ -273,10 +275,11 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
 
     override fun getResourceLimitForContainer(containerID: String): Map<String, Long>? {
         if (containerID == "cont1") {
-            return mapOf("storage" to 10L, "ram" to ram, "cpu" to 10L)
+            return mapOf("storage" to 10L, "ram" to ram, "cpu" to cpu)
         }
         return mapOf() //no limits for naked system container.
     }
+
     override fun setLimitsForContainer(containerID: String, ramLimit: Long, cpuQuota: Long) {
         if (containerID == "cont1") {
             ram = ramLimit
