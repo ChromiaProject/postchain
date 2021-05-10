@@ -1,7 +1,8 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package assertk
+package net.postchain.devtools
 
+import assertk.Assert
 import assertk.assertions.support.fail
 
 // TODO: [et]: See postchain-common/test module

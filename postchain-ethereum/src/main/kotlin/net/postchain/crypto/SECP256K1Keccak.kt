@@ -85,7 +85,7 @@ object SECP256K1Keccak {
         // We can find the additive inverse by subtracting e from zero then taking the mod. For example the additive
         // inverse of 3 modulo 11 is 8 because 3 + 8 mod 11 = 0, and -3 mod 11 = 8.
         //
-        val e = BigInteger(message)
+        val e = BigInteger(1, message)
         val eInv = BigInteger.ZERO.subtract(e).mod(n)
         val rInv = r.modInverse(n)
         val srInv = rInv.multiply(s).mod(n)
