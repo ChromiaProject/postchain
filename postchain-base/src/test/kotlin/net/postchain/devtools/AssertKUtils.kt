@@ -1,7 +1,8 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package assertk
+package net.postchain.devtools
 
+import assertk.Assert
 import assertk.assertions.support.fail
 
 // TODO: [et]: See postchain-common/test module
@@ -12,7 +13,7 @@ import assertk.assertions.support.fail
  */
 fun Assert<ByteArray>.isContentEqualTo(expected: ByteArray) {
     if (actual.contentEquals(expected)) return
-    fail(expected, actual)
+    this.fail(expected, actual)
 }
 
 /**
@@ -21,5 +22,5 @@ fun Assert<ByteArray>.isContentEqualTo(expected: ByteArray) {
  */
 fun <T> Assert<Array<out T>>.isContentEqualTo(expected: Array<out T>) {
     if (actual.contentEquals(expected)) return
-    fail(expected, actual)
+    this.fail(expected, actual)
 }

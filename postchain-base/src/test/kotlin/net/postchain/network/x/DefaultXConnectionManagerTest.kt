@@ -4,7 +4,7 @@ package net.postchain.network.x
 
 import assertk.assert
 import assertk.assertions.isEmpty
-import assertk.isContentEqualTo
+import net.postchain.devtools.isContentEqualTo
 import com.nhaarman.mockitokotlin2.*
 import net.postchain.base.*
 import net.postchain.core.ProgrammerMistake

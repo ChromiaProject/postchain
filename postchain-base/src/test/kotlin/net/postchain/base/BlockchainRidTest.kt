@@ -5,7 +5,7 @@ package net.postchain.base
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEqualTo
-import assertk.isContentEqualTo
+import net.postchain.devtools.isContentEqualTo
 import net.postchain.common.hexStringToByteArray
 import org.junit.Test
 
