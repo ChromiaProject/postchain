@@ -1,7 +1,6 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.FileNodeConfigurationProvider
 import net.postchain.config.node.NodeConfig
@@ -42,7 +41,7 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         config.setProperty("configuration.provider.node", NodeConfigProviders.File.name.toLowerCase())
         config.setProperty("infrastructure", Infrastructure.EbftContainerSlave.get())
 
-        val scheme = NameService.databaseSchema(nodeConfig, container.containerName)
+        val scheme = NameService.databaseSchema(nodeConfig, container.nodeContainerName)
         config.setProperty("database.schema", scheme)
 
         config.setProperty("containerChains.masterHost", nodeConfig.masterHost)

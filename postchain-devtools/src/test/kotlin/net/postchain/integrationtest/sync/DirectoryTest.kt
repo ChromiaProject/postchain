@@ -32,8 +32,7 @@ class DirectoryTest : ManagedModeTest() {
 
     /**
      * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1, c2
-     * is run ijh container "cont1" by the subnode. c1 and c2 have the same blockchain configuration. Since master and subnode see different brids,
-     * waitForRestart is set to false whe c1 is started, else we get stuck on that row.
+     * is run ijh container "cont1" by the subnode. c1 and c2 have the same blockchain configuration.
      *
      * Did you make changes i slave code? Copy jar-dependecies file to
      * postchain-distribution/src/main/postchain-slavenode/docker/scripts/bin/postchain-base-3.3.1-SNAPSHOT-jar-with-dependencies.jar
@@ -47,9 +46,26 @@ class DirectoryTest : ManagedModeTest() {
         buildBlock(c0, 0)
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
         val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont3
         //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
         // Instead, whait with tear-down to see chains are started in the container:
-        Thread.sleep(19000)
+        Thread.sleep(29000)
+
+    }
+
+
+    /**
+     * More than one node. Docker port, container name and directory for files must be node specific.
+     */
+    @Ignore
+    @Test
+    fun multipleNodes() {
+        startManagedSystem(2, 0)
+        buildBlock(c0, 0)
+        val c1 = startNewBlockchain(setOf(0, 1), setOf(), waitForRestart = false)
+        //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
+        // Instead, whait with tear-down to see chains are started in the container:
+        Thread.sleep(49000)
 
     }
 
@@ -85,6 +101,7 @@ class DirectoryTest : ManagedModeTest() {
         propertyMap.setProperty("subnode.database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
         propertyMap.setProperty("brid.chainid.1", chainRidOf(1).toHex())
         propertyMap.setProperty("brid.chainid.2", chainRidOf(2).toHex())
+        propertyMap.setProperty("brid.chainid.3", chainRidOf(3).toHex())
         return propertyMap
     }
 }
@@ -209,13 +226,15 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
 
     override fun getContainersToRun(): List<String>? {
 //        return listOf()
-        return listOf("system", "cont1")
+        return listOf("system", "cont1", "cont3")
     }
 
-    //chain 0 in system container, chain1 in cont1 container.
+    //chain 0 in system container, chain1-2 in cont1 container. chain3 in cont3 container.
     override fun getBlockchainsForContainer(containerID: String): List<BlockchainRid>? {
         if (containerID == "cont1") {
-            return listOf(chainRidOf(1))
+            return listOf(chainRidOf(1), chainRidOf(2))
+        } else if (containerID == "cont3") {
+            return listOf(chainRidOf(3))
         } else {
             return listOf(chainRidOf(0))
         }
@@ -225,6 +244,8 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
     override fun getContainerForBlockchain(brid: BlockchainRid): String? {
         if ((brid == chainRidOf(1)) or (brid == chainRidOf(2))) {
             return "cont1"
+        } else if (brid == chainRidOf(3)) {
+            return "cont3"
         } else {
             return "system"
         }

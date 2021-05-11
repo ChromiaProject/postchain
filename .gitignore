@@ -13,3 +13,4 @@ postchain-base/start.sh
 logs
 postchain-distribution/lib
 *.jar
+/postchain-devtools/containers/

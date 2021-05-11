@@ -12,7 +12,6 @@ enum class ContainerState {
 }
 
 interface PostchainContainer {
-    val containerName: String
     var state: ContainerState
     var containerId: String
     var blockchainProcesses: MutableSet<ContainerBlockchainProcess>
@@ -29,12 +28,12 @@ class DefaultPostchainContainer(
         override var blockchainProcesses: MutableSet<ContainerBlockchainProcess>,
         private val dataSource: DirectoryDataSource,
         override var state: ContainerState = ContainerState.UNDEFINED,
-        override val containerName: String
+        override val nodeContainerName: String
 ) : PostchainContainer {
 
     companion object : KLogging()
 
-    override val nodeContainerName: String = NameService.extendedContainerName(nodeConfig.pubKey, containerName)
+//    override val nodeContainerName: String = NameService.extendedContainerName(nodeConfig.pubKey, directoryContainerName)
 //override val restApiPort: Int = nodeConfig.restApiPort + 10 * chainId.toInt() // TODO: [POS-129]: Change this
 //    override val restApiPort: Int = nodeConfig.restApiPort + containerName.toInt() // TODO: [POS-129]: Change this
     private lateinit var configTimer: Timer // TODO: [POS-129]: Implement shared config timer
@@ -51,7 +50,7 @@ class DefaultPostchainContainer(
         state = ContainerState.RUNNING
         setResourceLimitsForContainer()
         // TODO: [POS-129]: Calc period basing on blockchain-config.maxblocktime param
-        configTimer = timer(name = "timer-$containerName", period = 1000L) {
+        configTimer = timer(name = "timer-$nodeContainerName", period = 1000L) {
             blockchainProcesses.forEach{ it.transferConfigsToContainer()}
         }
     }
@@ -64,7 +63,7 @@ class DefaultPostchainContainer(
         }
     }
     private fun setResourceLimitsForContainer() {
-        val limits = dataSource.getResourceLimitForContainer(containerName)
+        val limits = dataSource.getResourceLimitForContainer(nodeContainerName)
         if (limits != null) {
             limits.forEach { s, l ->  } //TODO:transfer limits to docker.
         }

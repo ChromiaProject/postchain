@@ -74,7 +74,7 @@ class DefaultMasterConnectionManager<PacketType>(
     @Synchronized
     override fun onSlaveConnected(descriptor: MasterConnectionDescriptor, connection: MsConnection): MsMessageHandler? {
         val processName = buildProcessName(descriptor)
-        logger.info { "$processName: Slave node connected: blockchainRid: ${descriptor.blockchainRid}" }
+        logger.info { "$processName: Slave node connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
 
         val chain = slaveChains[descriptor.blockchainRid]
         return when {
@@ -84,13 +84,13 @@ class DefaultMasterConnectionManager<PacketType>(
                 null
             }
             chain.connection != null -> {
-                logger.debug { "$processName: Slave node already connected: blockchainRid = ${descriptor.blockchainRid}" }
+                logger.debug { "$processName: Slave node already connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 chain.connection?.close() // Close old connection here and store a new one
                 chain.connection = connection
                 chain.config.messageHandler
             }
             else -> {
-                logger.debug { "$processName: Slave node connected: blockchainRid = ${descriptor.blockchainRid}" }
+                logger.debug { "$processName: Slave node connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 chain.connection = connection
                 chain.config.messageHandler
             }
@@ -100,12 +100,12 @@ class DefaultMasterConnectionManager<PacketType>(
     @Synchronized
     override fun onSlaveDisconnected(descriptor: MasterConnectionDescriptor, connection: MsConnection) {
         val processName = buildProcessName(descriptor)
-        logger.debug { "$processName: Slave node disconnected: blockchainRid = ${descriptor.blockchainRid}" }
+        logger.debug { "$processName: Slave node disconnected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
 
         val chain = slaveChains[descriptor.blockchainRid]
         if (chain == null) {
             connection.close()
-            logger.warn("$processName: Slave chain not found by blockchainRid = ${descriptor.blockchainRid}")
+            logger.warn("$processName: Slave chain not found by blockchainRid = ${descriptor.blockchainRid.toShortHex()}")
         } else {
             if (chain.connection !== connection) {
                 connection.close()
