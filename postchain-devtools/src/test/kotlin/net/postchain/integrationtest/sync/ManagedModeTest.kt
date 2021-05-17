@@ -17,10 +17,9 @@ import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.currentHeight
 import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvArray
-import net.postchain.gtv.GtvByteArray
-import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.*
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.integrationtest.sync.ManagedModeTest.NodeSet
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
@@ -76,11 +75,8 @@ open class ManagedModeTest : AbstractSyncTest() {
         }
 
         mockDataSources.forEach {
-            val data = TestBlockchainConfigurationData()
-            data.setValue(BaseBlockchainConfigurationData.KEY_SIGNERS, GtvArray(signerGtvs.toTypedArray()))
-            if (historicChain != null) {
-                data.setValue(BaseBlockchainConfigurationData.KEY_HISTORIC_BRID, GtvByteArray(chainRidOf(historicChain).data))
-            }
+            val data = populateDataDict(signerGtvs, historicChain)
+
             val pubkey = if (nodeSet.chain == 0L) {
                 if (it.key < nodeSet.signers.size) {
                     KeyPairHelper.pubKey(it.key)
@@ -97,8 +93,32 @@ open class ManagedModeTest : AbstractSyncTest() {
             val sigMaker = cryptoSystem.buildSigMaker(pubkey, privkey)
             val confData = BaseBlockchainConfigurationData(data.getDict(), context, sigMaker)
             val bcConf = TestBlockchainConfiguration(confData)
-            it.value.addConf(brid, height, bcConf, nodeSet)
+            it.value.addConf(brid, height, bcConf, nodeSet, GtvEncoder.encodeGtv(data.getDict()))
         }
+    }
+
+    private fun populateDataDict(signerGtvs: MutableList<GtvByteArray>, historicChain: Long?): TestBlockchainConfigurationData {
+        val data = TestBlockchainConfigurationData()
+        data.setValue(BaseBlockchainConfigurationData.KEY_SIGNERS, GtvArray(signerGtvs.toTypedArray()))
+        if (historicChain != null) {
+            data.setValue(BaseBlockchainConfigurationData.KEY_HISTORIC_BRID, GtvByteArray(chainRidOf(historicChain).data))
+        }
+        // BBS is not required, but KEY_CONFIGURATIONFACTORY and KEY_GTX/KEY_GTX_MODULES are mandatory.
+        val bbsName = GtvFactory.gtv(BaseBlockBuildingStrategy::class.java.name)
+        //            val bbsName = GtvFactory.gtv(OnDemandBlockBuildingStrategy.javaClass.name)
+        val bbs = mapOf("blockdelay" to GtvInteger(5000),
+                "maxblocktime" to GtvInteger(5000),
+                "maxblocktransactions" to GtvInteger(500),
+                BaseBlockchainConfigurationData.KEY_BLOCKSTRATEGY_NAME to bbsName)
+        data.setValue(BaseBlockchainConfigurationData.KEY_BLOCKSTRATEGY, GtvFactory.gtv(bbs))
+        //
+        //            data.setValue(BaseBlockchainConfigurationData.KEY_CONFIGURATIONFACTORY, GtvString("net.postchain.devtools.testinfra.TestBlockchainConfigurationFactory"))
+        data.setValue(BaseBlockchainConfigurationData.KEY_CONFIGURATIONFACTORY, GtvString(GTXBlockchainConfigurationFactory::class.java.name))
+
+        val gtx = mapOf(BaseBlockchainConfigurationData.KEY_GTX_MODULES to GtvArray(arrayOf(GtvString(StandardOpsGTXModule::class.java.name))))
+        //            val gtx = mapOf(BaseBlockchainConfigurationData.KEY_GTX_MODULES to GtvString("net.postchain.configurations.GTXTestModule"))
+        data.setValue(BaseBlockchainConfigurationData.KEY_GTX, GtvFactory.gtv(gtx))
+        return data
     }
 
     fun setupDataSources(nodeSet: NodeSet) {
@@ -337,8 +357,8 @@ typealias Key = Pair<BlockchainRid, Long>
 
 
 open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
-    // Brid -> (height -> BlockchainConfiguration)
-    private val bridToConfs: MutableMap<BlockchainRid, MutableMap<Long, BlockchainConfiguration>> = mutableMapOf()
+    // Brid -> (height -> Pair(BlockchainConfiguration, binaryBlockchainConfig)
+    val bridToConfs: MutableMap<BlockchainRid, MutableMap<Long, Pair<BlockchainConfiguration, ByteArray>>> = mutableMapOf()
     private val chainToNodeSet: MutableMap<BlockchainRid, NodeSet> = mutableMapOf()
     private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<XPeerID>>()
 
@@ -350,6 +370,7 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         return chainToNodeSet.filterValues { it.contains(nodeIndex) }.keys.map { it.data }
     }
 
+    //Does not return the real blockchain configuration byteArray
     override fun getConfiguration(blockchainRIDRaw: ByteArray, height: Long): ByteArray? {
         val l = bridToConfs[BlockchainRid(blockchainRIDRaw)] ?: return null
         var conf: ByteArray? = null
@@ -427,12 +448,13 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
 
     fun getConf(bytes: ByteArray): BlockchainConfiguration? {
         val key = toKey(bytes)
-        return bridToConfs[key.first]?.get(key.second)
+
+        return bridToConfs[key.first]?.get(key.second)?.first
     }
 
-    fun addConf(rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, nodeSet: NodeSet) {
+    fun addConf(rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, nodeSet: NodeSet, rawBcConf: ByteArray) {
         val confs = bridToConfs.computeIfAbsent(rid) { sortedMapOf() }
-        if (confs!!.put(height, conf) != null) {
+        if (confs!!.put(height, Pair(conf, rawBcConf)) != null) {
             throw IllegalArgumentException("Setting blockchain configuraion for height that already has a configuration")
         }
         chainToNodeSet.put(chainRidOf(nodeSet.chain), nodeSet)

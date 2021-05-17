@@ -22,8 +22,6 @@ import net.postchain.managed.ManagedNodeDataSource
 import org.apache.commons.configuration2.Configuration
 import org.junit.Ignore
 import org.junit.Test
-import java.io.File
-import java.nio.file.Paths
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
@@ -32,7 +30,7 @@ class DirectoryTest : ManagedModeTest() {
 
     /**
      * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1, c2
-     * is run ijh container "cont1" by the subnode. c1 and c2 have the same blockchain configuration.
+     * is run in container "cont1" by the subnode.
      *
      * Did you make changes i slave code? Copy jar-dependecies file to
      * postchain-distribution/src/main/postchain-slavenode/docker/scripts/bin/postchain-base-3.3.1-SNAPSHOT-jar-with-dependencies.jar
@@ -170,7 +168,7 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
     }
 
     var lastHeightStarted = ConcurrentHashMap<Long, Long>()
-//    val containerChainStarted = ConcurrentHashMap<Long, Boolean>()
+    //    val containerChainStarted = ConcurrentHashMap<Long, Boolean>()
     override fun startBlockchain(chainId: Long): BlockchainRid? {
         val blockchainRid = super.startBlockchain(chainId)
         if (blockchainRid == null) {
@@ -209,19 +207,16 @@ class TestMasterBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationPr
 
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {
 
-    protected fun readConfigurationGtvFile(blockchainGtvConfigFile: String): ByteArray {
-        val configFile = File(blockchainGtvConfigFile)
-        val data: ByteArray
-            data = configFile.readBytes()
-            // try to decode to ensure data is valid
-            GtvFactory.decodeGtv(data)
-        return data
-    }
-
     override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
-        val bcConfigFile = Paths.get(".").toAbsolutePath().normalize().toString() + "/src/test/resources/e2e/chain-city/00.gtv"
-        val data = readConfigurationGtvFile(bcConfigFile)
-        return mapOf(0L to data)
+        val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return mapOf()
+        var confs = mutableMapOf<Long, ByteArray>()
+        for (entry in l) {
+            val data = entry.value.second
+            // try to decode to ensure data is valid
+            val entireBcConf = GtvFactory.decodeGtv(data).asDict()
+            confs.put(entry.key, data)
+        }
+        return confs
     }
 
     override fun getContainersToRun(): List<String>? {
@@ -238,7 +233,6 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
         } else {
             return listOf(chainRidOf(0))
         }
-//        return listOf()
     }
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String? {

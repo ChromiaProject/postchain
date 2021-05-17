@@ -1,7 +1,6 @@
 package net.postchain.containers
 
 import net.postchain.config.node.NodeConfig
-import net.postchain.devtools.NameHelper
 
 object NameService {
 
@@ -11,7 +10,7 @@ object NameService {
     }
 
     fun databaseSchema(nodeConfig: NodeConfig, nodeContainerName: String): String {
-        return "$nodeConfig.appConfig.databaseSchema" +
+        return "${nodeConfig.appConfig.databaseSchema}" +
                 "_$nodeContainerName"
     }
 
