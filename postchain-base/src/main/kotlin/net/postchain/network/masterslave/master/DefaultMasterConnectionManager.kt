@@ -115,13 +115,13 @@ class DefaultMasterConnectionManager<PacketType>(
         }
     }
 
-    @Synchronized
     override fun shutdown() {
         super.shutdown()
 
-        slaveChains.values.forEach { it.connection?.close() }
-        slaveChains.clear()
-
+        synchronized(this) {
+            slaveChains.values.forEach { it.connection?.close() }
+            slaveChains.clear()
+        }
         masterConnector.shutdown()
     }
 

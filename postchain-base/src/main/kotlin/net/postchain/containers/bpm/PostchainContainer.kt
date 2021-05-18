@@ -29,18 +29,15 @@ class DefaultPostchainContainer(
         override var blockchainProcesses: MutableSet<ContainerBlockchainProcess>,
         private val dataSource: DirectoryDataSource,
         override var state: ContainerState = ContainerState.UNDEFINED,
-        val containerName: Map<String, String?>
+        val containerNames: Map<String, String?>
 ) : PostchainContainer {
 
     companion object : KLogging()
 
-    override var resourceLimits: Map<String, Long>?
-        //NB: Resources are found per directoryContainerName, not nodeContainerName
-        get() = dataSource.getResourceLimitForContainer(directoryContainerName)
-        set(value) {}
-
-    override val directoryContainerName = containerName["directory"]!!
-    override val nodeContainerName = containerName["node"]!!
+    override val directoryContainerName = containerNames["directory"]!!
+    override val nodeContainerName = containerNames["node"]!!
+    //NB: Resources are per directoryContainerName, not nodeContainerName
+    override var resourceLimits = dataSource.getResourceLimitForContainer(directoryContainerName)
 
     private lateinit var configTimer: Timer // TODO: [POS-129]: Implement shared config timer
     private var lastHeight = -1L

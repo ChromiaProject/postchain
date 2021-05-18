@@ -67,18 +67,18 @@ class DirectoryTest : ManagedModeTest() {
         val c1 = startNewBlockchain(setOf(0, 1), setOf(), waitForRestart = false)
         //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
         // Instead, whait with tear-down to see chains are started in the container:
-        Thread.sleep(49000)
+        Thread.sleep(29000)
     }
 
     @Test
     fun testResourceLimits() {
         val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
         var listc = dockerClient.listContainers()
-        listc.forEach {
-            println("removing existing container: " + it.id())
-            dockerClient.stopContainer(it.id(), 0)
-            dockerClient.removeContainer(it.id())
-        }
+//        listc.forEach {
+//            println("removing existing container: " + it.id())
+//            dockerClient.stopContainer(it.id(), 0)
+//            dockerClient.removeContainer(it.id())
+//        }
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
         val ramLimit = 7000000L
