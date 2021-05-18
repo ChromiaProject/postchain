@@ -199,6 +199,7 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
     }
 
     var lastHeightStarted = ConcurrentHashMap<Long, Long>()
+
     //    val containerChainStarted = ConcurrentHashMap<Long, Boolean>()
     override fun startBlockchain(chainId: Long): BlockchainRid? {
         val blockchainRid = super.startBlockchain(chainId)
