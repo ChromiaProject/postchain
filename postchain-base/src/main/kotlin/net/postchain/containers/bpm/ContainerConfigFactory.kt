@@ -45,6 +45,10 @@ object ContainerConfigFactory {
                 .publishAllPorts(true)
                 .memory(container.resourceLimits?.get("ram"))
                 .cpuQuota(container.resourceLimits?.get("cpu"))
+//                .storageOpt(mapOf("dm.basesize" to "3G"))
+//                .storageOpt(mapOf("size" to "3G"))
+//                .storageOpt(mapOf("overlay2.size" to "3G"))
+//                .storageOpt(container.resourceLimits?.get("storage"))
                 .build()
 
         return ContainerConfig.builder()
