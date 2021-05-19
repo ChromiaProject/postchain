@@ -10,6 +10,7 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.ProgrammerMistake
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
+import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import java.util.concurrent.CountDownLatch
@@ -138,5 +139,13 @@ class HistoricChainWorker(val workerContext: WorkerContext,
         fastSynchronizer.shutdown()
         done.await()
         workerContext.shutdown()
+    }
+
+    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
+        TODO("POS-163: Not yet implemented")
+    }
+
+    override fun checkHeartbeat(): Boolean {
+        TODO("POS-163: Not yet implemented")
     }
 }

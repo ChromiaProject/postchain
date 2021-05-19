@@ -24,15 +24,15 @@ enum class NodeState {
  * @param height The hight of the next block to be built. Ie current committed
  * height + 1
  */
-class NodeStatus (var height: Long, var serial: Long) {
+class NodeStatus(var height: Long, var serial: Long) {
 
     var state: NodeState = NodeState.WaitBlock
     var round: Long = 0  // PBFT: view-number
-    var blockRID : ByteArray? = null
+    var blockRID: ByteArray? = null
 
     var revolting: Boolean = false // PBFT: VIEW-CHANGE (?)
 
-    constructor (): this(0, -1)
+    constructor () : this(0, -1)
 }
 
 interface BlockDatabase {
@@ -64,18 +64,20 @@ object DoNothingIntent : BlockIntent() {
         return "DNI"
     }
 }
+
 object CommitBlockIntent : BlockIntent() {
     override fun toString(): String {
         return "CBI"
     }
 }
+
 object BuildBlockIntent : BlockIntent() {
     override fun toString(): String {
         return "BBI"
     }
 }
 
-class FetchBlockAtHeightIntent(val height: Long): BlockIntent() {
+class FetchBlockAtHeightIntent(val height: Long) : BlockIntent() {
     override fun equals(other: Any?): Boolean {
         if (!super.equals(other)) return false
         if (other !is FetchBlockAtHeightIntent) return false
@@ -111,7 +113,7 @@ class FetchUnfinishedBlockIntent(val blockRID: ByteArray) : BlockIntent() {
 }
 
 
-data class FetchCommitSignatureIntent(val blockRID: ByteArray, val nodes: Array<Int>): BlockIntent() {
+data class FetchCommitSignatureIntent(val blockRID: ByteArray, val nodes: Array<Int>) : BlockIntent() {
     override fun equals(other: Any?): Boolean {
         if (!super.equals(other)) return false
         if (this === other) return true
@@ -128,9 +130,10 @@ data class FetchCommitSignatureIntent(val blockRID: ByteArray, val nodes: Array<
 
 interface BlockManager {
     var currentBlock: BlockData?
+    var lastBlockTimestamp: Long?
     fun onReceivedUnfinishedBlock(block: BlockData)
     fun onReceivedBlockAtHeight(block: BlockDataWithWitness, height: Long)
-    fun isProcessing(): Boolean
+    fun processBlockIntent(): BlockIntent
     fun getBlockIntent(): BlockIntent
 }
 
@@ -147,7 +150,7 @@ interface StatusManager {
     fun primaryIndex(): Int
     fun onStatusUpdate(nodeIndex: Int, status: NodeStatus) // STATUS message from another node
     fun fastForwardHeight(height: Long): Boolean
-    fun onHeightAdvance(height: Long):Boolean // a complete block was received from other peers, go forward
+    fun onHeightAdvance(height: Long): Boolean // a complete block was received from other peers, go forward
     fun onCommittedBlock(blockRID: ByteArray) // when block committed to the database
     fun onReceivedBlock(blockRID: ByteArray, mySignature: Signature): Boolean // received block was validated by BlockManager/DB
     fun onBuiltBlock(blockRID: ByteArray, mySignature: Signature): Boolean // block built by BlockManager/BlockDatabase (on a primary node)

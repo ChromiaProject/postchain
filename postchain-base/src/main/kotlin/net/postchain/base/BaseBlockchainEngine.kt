@@ -77,7 +77,9 @@ open class BaseBlockchainEngine(
                     val blockBuilder = it as AbstractBlockBuilder
                     transactionQueue.removeAll(blockBuilder.transactions)
                     strategy.blockCommitted(blockBuilder.getBlockData())
-                    if (restartHandler()) {
+
+                    val blockTimestamp = (it.getBlockData().header as BaseBlockHeader).timestamp
+                    if (restartHandler(blockTimestamp)) {
                         closed = true
                     }
                 })

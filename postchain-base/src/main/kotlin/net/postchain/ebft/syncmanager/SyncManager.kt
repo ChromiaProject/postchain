@@ -2,6 +2,9 @@
 
 package net.postchain.ebft.syncmanager
 
-interface SyncManager {
+import net.postchain.ebft.heartbeat.HeartbeatListener
+
+interface SyncManager : HeartbeatListener {
     fun update()
 }
+

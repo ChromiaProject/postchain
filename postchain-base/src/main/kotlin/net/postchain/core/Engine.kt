@@ -3,6 +3,7 @@
 package net.postchain.core
 
 import net.postchain.base.BlockchainRid
+import net.postchain.ebft.heartbeat.HeartbeatListener
 
 interface Shutdownable {
     fun shutdown()
@@ -27,7 +28,7 @@ interface BlockchainEngine : Shutdownable {
     fun getConfiguration(): BlockchainConfiguration
 }
 
-interface BlockchainProcess {
+interface BlockchainProcess : HeartbeatListener {
     fun getEngine(): BlockchainEngine
     fun shutdown()
 }
@@ -39,5 +40,5 @@ interface BlockchainProcessManager : Shutdownable, Synchronizable {
 }
 
 // A return value of "true" means a restart is needed.
-typealias RestartHandler = () -> Boolean
+typealias RestartHandler = (blockTimestamp: Long) -> Boolean
 
