@@ -83,7 +83,7 @@ class DirectoryTestNightly : ManagedModeTest() {
         //update dataSource with limit value. This is used when contianer is created (getResourceLimitForContainer)
         dataSource(0).setLimitsForContainer("cont1", ramLimit, cpuQuotaLimit)
         startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
-        sleep(20000) //we must wait a bit to ensure that container has been created.
+        sleep(30000) //we must wait a bit to ensure that container has been created.
         listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         println("number of containers: " + listc.size)
         val res = dockerClient.inspectContainer(listc[0].id())
