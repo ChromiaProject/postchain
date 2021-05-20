@@ -10,7 +10,7 @@ import net.postchain.base.*
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.network.Utils
+import net.postchain.common.Utils
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 import org.apache.commons.lang3.reflect.FieldUtils

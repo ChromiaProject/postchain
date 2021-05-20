@@ -10,7 +10,7 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
-import net.postchain.network.Utils
+import net.postchain.common.Utils
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await

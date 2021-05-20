@@ -3,6 +3,7 @@ package net.postchain.containers.bpm
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
+import net.postchain.common.Utils
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.NameService
 import java.nio.file.Path
@@ -22,17 +23,16 @@ object ContainerConfigFactory {
          * If nodeConfig.restApiPost > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
          * control here and know that it is always free.
          * DockerPort must be both node and container specific and cannot be -1 or 0 (at least not allowed in Ubuntu.)
-         * Unprivileged port space: [1025,2^16-1]
+         * Therefore use radom port selection
          */
 
-        //Likely to be a unique port but not 100% guarantee.
-        val dockerPort = "${container.nodeContainerName.hashCode() % (65535-1025) + 1025}/tcp"
-        // TODO: [POS-129]: Implement random port selection
+        // TODO: Likely to be a unique port but not 100% guarantee.
+        // Also not 100% sure that port is still free when connection is made
+        // Should we use something even more sophisticated?
+        val dockerPort = "${Utils.findFreePort()}/tcp"
         val portBindings = if (nodeConfig.restApiPort > -1) {
             mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", nodeConfig.subnodeRestApiPort)))
         } else mapOf()
-
-
 
         /**
         $ docker run -it --cpu-period=100000 --cpu-quota=50000 ubuntu /bin/bash.

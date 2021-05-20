@@ -11,7 +11,7 @@ import com.nhaarman.mockitokotlin2.verify
 import net.postchain.base.*
 import net.postchain.devtools.argumentCaptor2
 import net.postchain.ebft.message.GetBlockAtHeight
-import net.postchain.network.Utils
+import net.postchain.common.Utils
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await

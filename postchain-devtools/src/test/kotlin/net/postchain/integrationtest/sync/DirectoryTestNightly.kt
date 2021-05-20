@@ -41,6 +41,7 @@ class DirectoryTestNightly : ManagedModeTest() {
      * and run (in postchain2/postchain-distribution/src/main/postchain-slavenode/docker) where Dockerfile is found:
      * docker build -t chromaway/postchain-slavenode:3.3.1 .
      */
+    @Ignore
     @Test
     fun dummy() {
         startManagedSystem(1, 0)
@@ -57,6 +58,7 @@ class DirectoryTestNightly : ManagedModeTest() {
     /**
      * More than one node. Docker port, container name and directory for files must be node specific.
      */
+    @Ignore
     @Test
     fun multipleNodes() {
         startManagedSystem(2, 0)
@@ -67,6 +69,7 @@ class DirectoryTestNightly : ManagedModeTest() {
         Thread.sleep(20000)
     }
 
+    @Ignore
     @Test
     fun testResourceLimits() {
         val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
@@ -83,7 +86,7 @@ class DirectoryTestNightly : ManagedModeTest() {
         //update dataSource with limit value. This is used when contianer is created (getResourceLimitForContainer)
         dataSource(0).setLimitsForContainer("cont1", ramLimit, cpuQuotaLimit)
         startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
-        sleep(30000) //we must wait a bit to ensure that container has been created.
+        sleep(20000) //we must wait a bit to ensure that container has been created.
         listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         println("number of containers: " + listc.size)
         val res = dockerClient.inspectContainer(listc[0].id())

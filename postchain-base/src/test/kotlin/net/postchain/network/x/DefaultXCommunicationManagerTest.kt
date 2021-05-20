@@ -7,7 +7,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
 import com.nhaarman.mockitokotlin2.*
 import net.postchain.base.*
-import net.postchain.network.Utils
+import net.postchain.common.Utils
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import org.junit.Before
