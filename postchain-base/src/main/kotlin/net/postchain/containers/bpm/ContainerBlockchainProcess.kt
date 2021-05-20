@@ -4,12 +4,14 @@ import mu.KLogging
 import net.postchain.base.BlockchainRid
 import net.postchain.config.node.NodeConfig
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.heartbeat.HeartbeatEvent
+import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.masterslave.master.MasterCommunicationManager
 import java.nio.file.Path
 import java.util.*
 
-interface ContainerBlockchainProcess {
+interface ContainerBlockchainProcess : HeartbeatListener {
     val processName: BlockchainProcessName
     val chainId: Long
     val blockchainRid: BlockchainRid
@@ -33,6 +35,14 @@ class DefaultContainerBlockchainProcess(
 
     private lateinit var configTimer: Timer // TODO: [POS-129]: Implement shared config timer
     private var lastHeight = -1L
+
+    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
+        communicationManager.sendHeartbeatToSlave(heartbeatEvent)
+    }
+
+    override fun checkHeartbeat(): Boolean {
+        return true // We don't check heartbeat here in a master process
+    }
 
     @Synchronized
     override fun transferConfigsToContainer() {

@@ -106,9 +106,7 @@ open class ContainerManagedBlockchainProcessManager(
                     currentContainer = existingPostchainContainer
                 } else {
                     currentContainer = createPostchainContainer(
-                            chainId, ds,
-                            containerDir, chainConfigsDir, nodeContainerName, true
-                    )
+                            chainId, ds, containerDir, chainConfigsDir, nodeContainerName, true)
                     postchainContainers.add(currentContainer)
                 }
                 if (!containerBlockchainProcessExists(currentContainer, chainId)) {
@@ -137,9 +135,7 @@ open class ContainerManagedBlockchainProcessManager(
             // TODO: [POS-129]: Improve error handling/logging
             logger.info("", e)
             val currentContainer = getPostchainContainer(nodeContainerName)
-            if (currentContainer != null) {
-                currentContainer.stop()
-            }
+            currentContainer?.stop()
             postchainContainers.remove(currentContainer)
             null
         }
@@ -166,7 +162,11 @@ open class ContainerManagedBlockchainProcessManager(
 
         val currentContainer = getPostchainContainer(nodeContainerName)
         if (currentContainer != null) {
-            currentContainer.blockchainProcesses.removeIf { it.chainId == chainId }
+            val process = currentContainer.blockchainProcesses.find { it.chainId == chainId }
+            if (process != null) {
+                heartbeatManager.removeListener(process)
+                currentContainer.blockchainProcesses.remove(process)
+            }
             //If container now has no BCProcesses left, stop docker container.
             if (currentContainer.blockchainProcesses.isEmpty()) {
                 currentContainer.stop()
@@ -206,7 +206,6 @@ open class ContainerManagedBlockchainProcessManager(
 
         val containerBlockchainProcess = createBlockchainProcess(chainId, dataSource, chainConfigsDir)
 
-
         val postchainContainer = DefaultPostchainContainer(nodeConfig, mutableSetOf(containerBlockchainProcess), dataSource,
                 ContainerState.STARTING, nodeContainerName)
 
@@ -229,9 +228,10 @@ open class ContainerManagedBlockchainProcessManager(
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
         }
         val processName = BlockchainProcessName(nodeConfig.pubKey, brid)
-        return masterBlockchainInfra.makeMasterBlockchainProcess(
-                processName, chainId, brid, dataSource, chainConfigsDir, nodeConfig.subnodeRestApiPort
-        )
+        val process = masterBlockchainInfra.makeMasterBlockchainProcess(
+                processName, chainId, brid, dataSource, chainConfigsDir, nodeConfig.subnodeRestApiPort)
+        heartbeatManager.addListener(process)
+        return process
     }
 
     private fun findDockerContainer(containerName: String): Container? {
