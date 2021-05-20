@@ -33,14 +33,14 @@ class Chromia0BlockchainProcessManager(
         if (chainId == 0L)
             return baseHandler
         else {
-            return {
+            return { blockTimestamp: Long ->
                 try {
                     anchorLastBlock(chainId)
                 } catch (e: Exception) {
                     logger.error("Error when anchoring ${e.toString()}")
                     e.printStackTrace()
                 }
-                baseHandler()
+                baseHandler(blockTimestamp)
             }
         }
     }
@@ -77,5 +77,4 @@ class Chromia0BlockchainProcessManager(
             }
         }
     }
-
 }

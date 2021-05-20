@@ -3,6 +3,7 @@
 package net.postchain.ebft
 
 import mu.KLogging
+import net.postchain.base.BaseBlockHeader
 import net.postchain.common.toHex
 import net.postchain.core.BlockBuildingStrategy
 import net.postchain.core.BlockData
@@ -15,22 +16,25 @@ import nl.komponents.kovenant.Promise
  */
 class BaseBlockManager(
         private val processName: BlockchainProcessName,
-        val blockDB: BlockDatabase,
-        val statusManager: StatusManager,
+        private val blockDB: BlockDatabase,
+        private val statusManager: StatusManager,
         val blockStrategy: BlockBuildingStrategy
 ) : BlockManager {
 
     @Volatile
-    var processing = false
+    private var processing = false
     @Volatile
-    var intent: BlockIntent = DoNothingIntent
+    private var intent: BlockIntent = DoNothingIntent
+
+    // Will be set to non-null value after the first block-db operation.
+    override var lastBlockTimestamp: Long? = null
 
     companion object : KLogging()
 
     @Volatile
     override var currentBlock: BlockData? = null
 
-    protected fun <RT> runDBOp(op: () -> Promise<RT, Exception>, onSuccess: (RT) -> Unit, onFailure: (Exception) -> Unit = {}) {
+    private fun <RT> runDBOp(op: () -> Promise<RT, Exception>, onSuccess: (RT) -> Unit, onFailure: (Exception) -> Unit = {}) {
         if (!processing) {
             synchronized(statusManager) {
                 processing = true
@@ -61,6 +65,7 @@ class BaseBlockManager(
                 }, { signature ->
                     if (statusManager.onReceivedBlock(block.header.blockRID, signature)) {
                         currentBlock = block
+                        lastBlockTimestamp = blockTimestamp(block)
                     }
                 }, { exception ->
                     logger.error("$processName: Can't parse unfinished block ${theIntent.blockRID.toHex()}: " +
@@ -79,6 +84,7 @@ class BaseBlockManager(
                 }, {
                     if (statusManager.onHeightAdvance(height + 1)) {
                         currentBlock = null
+                        lastBlockTimestamp = blockTimestamp(block)
                     }
                 }, { exception ->
                     logger.error("$processName: Can't parse received block ${block.header.blockRID.toHex()} " +
@@ -89,7 +95,7 @@ class BaseBlockManager(
     }
 
     // this is called only in getBlockIntent which is synchronized on status manager
-    protected fun update() {
+    private fun update() {
         if (processing) return
         val blockIntent = statusManager.getBlockIntent()
         intent = DoNothingIntent
@@ -104,6 +110,7 @@ class BaseBlockManager(
                     blockDB.commitBlock(statusManager.commitSignatures)
                 }, {
                     statusManager.onCommittedBlock(currentBlock!!.header.blockRID)
+                    lastBlockTimestamp = blockTimestamp(currentBlock!!)
                     currentBlock = null
                 }, { exception ->
                     logger.error("$processName: Can't commit block ${currentBlock!!.header.blockRID.toHex()}: " +
@@ -129,6 +136,7 @@ class BaseBlockManager(
                     val signature = blockAndSignature.second
                     if (statusManager.onBuiltBlock(block.header.blockRID, signature)) {
                         currentBlock = block
+                        lastBlockTimestamp = blockTimestamp(block)
                     }
                 }, { exception ->
                     // TODO: POS-111: Put `blockRID` to log message
@@ -140,15 +148,14 @@ class BaseBlockManager(
         }
     }
 
-
-    override fun isProcessing(): Boolean {
-        return processing
-    }
-
-    override fun getBlockIntent(): BlockIntent {
+    override fun processBlockIntent(): BlockIntent {
         synchronized(statusManager) {
             update()
         }
         return intent
     }
+
+    override fun getBlockIntent(): BlockIntent = intent
+
+    private fun blockTimestamp(block: BlockData) = (block.header as BaseBlockHeader).timestamp
 }

@@ -9,7 +9,6 @@ import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify
 import net.postchain.base.*
-import net.postchain.devtools.argumentCaptor2
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.Utils
 import net.postchain.network.x.XPeerConnection
