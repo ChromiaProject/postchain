@@ -3,6 +3,7 @@ package net.postchain.network.masterslave.protocol
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.network.masterslave.protocol.MsMessageType.*
 
 object MsCodec {
 
@@ -27,9 +28,14 @@ object MsCodec {
         val brid = gtv[3].asByteArray()
         val data = gtv[4].asByteArray()
 
-        return when (type) {
-            0 -> MsHandshakeMessage(brid, data)
-            else -> MsDataMessage(src, dst, brid, data)
+        if (type >= MsMessageType.values().size) {
+            throw UnsupportedOperationException("Unknown MsMessage type: $type")
+        }
+
+        return when (MsMessageType.values()[type]) {
+            HandshakeMessage -> MsHandshakeMessage(brid, data)
+            DataMessage -> MsDataMessage(src, dst, brid, data)
+            HeartbeatMessage -> MsHeartbeatMessage(brid, data)
         }
     }
 }

@@ -3,6 +3,7 @@ package net.postchain.network.masterslave.protocol
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.network.masterslave.protocol.MsMessageType.*
 
 /**
  * MsMessages are used in master-slave communication to let slave nodes
@@ -39,6 +40,14 @@ interface MsMessage {
     val payload: ByteArray
 }
 
+/**
+ * MeMessage Types Enum class
+ */
+enum class MsMessageType {
+    HandshakeMessage,
+    DataMessage,
+    HeartbeatMessage
+}
 
 /**
  * A handshake ms-message which is sent by a slave to master to establish connection.
@@ -48,7 +57,7 @@ class MsHandshakeMessage(
         override val blockchainRid: ByteArray,
         override val payload: ByteArray
 ) : MsMessage {
-    override val type = 0
+    override val type = HandshakeMessage.ordinal
     override val source: ByteArray = byteArrayOf()
     override val destination: ByteArray = byteArrayOf()
     val peers: List<ByteArray> = decodePeers(payload)
@@ -78,5 +87,21 @@ class MsDataMessage(
         override val blockchainRid: ByteArray,
         override val payload: ByteArray
 ) : MsMessage {
-    override val type = 1
+    override val type = DataMessage.ordinal
+}
+
+/**
+ * Heartbeat message.
+ */
+class MsHeartbeatMessage(
+        override val blockchainRid: ByteArray,
+        override val payload: ByteArray
+) : MsMessage {
+    override val type = HeartbeatMessage.ordinal
+    override val source: ByteArray = byteArrayOf()
+    override val destination: ByteArray = byteArrayOf()
+    val timestamp: Long = GtvDecoder.decodeGtv(payload).asInteger()
+
+    constructor(blockchainRid: ByteArray, blockTimestamp: Long)
+            : this(blockchainRid, GtvEncoder.encodeGtv(GtvFactory.gtv(blockTimestamp)))
 }

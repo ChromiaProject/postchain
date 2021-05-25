@@ -5,8 +5,10 @@ import net.postchain.base.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.node.NodeConfig
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.network.masterslave.protocol.MsDataMessage
 import net.postchain.network.masterslave.protocol.MsHandshakeMessage
+import net.postchain.network.masterslave.protocol.MsHeartbeatMessage
 import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.x.PeersCommConfigFactory
 import net.postchain.network.x.XChainPeersConfiguration
@@ -26,6 +28,12 @@ class DefaultMasterCommunicationManager(
     override fun init() {
         val slaveChainConfig = SlaveChainConfig(chainId, blockchainRid, ::consumeSlavePacket)
         masterConnectionManager.connectSlaveChain(processName, slaveChainConfig)
+    }
+
+    override fun sendHeartbeatToSlave(heartbeatEvent: HeartbeatEvent) {
+        logger.trace("${process()}: Sending a heartbeat packet to slave node: blockchainRid: ${blockchainRid.toShortHex()} ")
+        val message = MsHeartbeatMessage(blockchainRid.data, heartbeatEvent.timestamp)
+        masterConnectionManager.sendPacketToSlave(message)
     }
 
     private fun consumeSlavePacket(message: MsMessage) {
@@ -51,9 +59,8 @@ class DefaultMasterCommunicationManager(
         logger.info { "${process()}: Connecting chain peers" }
 
         val peersCommConfig = peersCommConfigFactory.create(nodeConfig, blockchainRid, peers, null)
-        val peersConfig = XChainPeersConfiguration(chainId, blockchainRid, peersCommConfig) { data, peerId ->
-            consumePacket(peerId, data)
-        }
+        val packetHandler = { data: ByteArray, peerId: XPeerID -> consumePacket(peerId, data) }
+        val peersConfig = XChainPeersConfiguration(chainId, blockchainRid, peersCommConfig, packetHandler)
 
         masterConnectionManager.connectChain(peersConfig, true) { processName.toString() }
     }
