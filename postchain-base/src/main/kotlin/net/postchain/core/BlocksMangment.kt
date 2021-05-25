@@ -52,6 +52,7 @@ interface BlockStore {
 interface BlockQueries {
     fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception>
     fun getBestHeight(): Promise<Long, Exception>
+    fun getLastBlockTimestamp(): Promise<Long, Exception>
     fun getBlockRid(height: Long): Promise<ByteArray?, Exception>
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): Promise<BlockDataWithWitness?, Exception>
     fun getBlockHeader(blockRID: ByteArray): Promise<BlockHeader, Exception>

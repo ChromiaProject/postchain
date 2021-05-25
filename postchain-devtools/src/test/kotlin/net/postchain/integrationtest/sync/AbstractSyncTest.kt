@@ -116,7 +116,9 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 "messaging.pubkey" to peerInfo.pubKey.toHex(),
                 "messaging.privkey" to privKey.toHex(),
                 "fastsync.exit_delay" to 2000, // All tests are multinode, see FastSyncParameters.exitDelay
-                "api.port" to "-1"))
+                "api.port" to "-1",
+                "heartbeat.enabled" to false
+        ))
     }
 
     private fun createNodesFromSystemSetup(

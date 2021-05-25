@@ -8,6 +8,8 @@ import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.core.*
 import net.postchain.core.BlockHeader
 import net.postchain.ebft.BlockDatabase
+import net.postchain.ebft.heartbeat.HeartbeatEvent
+import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.message.*
 import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.worker.WorkerContext
@@ -92,19 +94,22 @@ data class FastSyncParameters(var resurrectDrainedTime: Long = 10000,
 class FastSynchronizer(private val workerContext: WorkerContext,
                        val blockDatabase: BlockDatabase,
                        val params: FastSyncParameters
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
+) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager),
+        HeartbeatListener {
+    private var heartbeat: HeartbeatEvent? = null
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
     private val jobs = TreeMap<Long, Job>()
     private val peerStatuses = PeerStatuses(params)
     private var lastJob: Job? = null
+    private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
 
     // This is the communication mechanism from the async commitBlock callback to main loop
     private val finishedJobs = LinkedBlockingQueue<Job>()
 
     companion object : KLogging()
 
-    var blockHeight: Long = workerContext.engine.getBlockQueries().getBestHeight().get()
+    var blockHeight: Long = blockQueries.getBestHeight().get()
         private set
 
     inner class Job(val height: Long, var peerId: XPeerID) {
@@ -141,13 +146,18 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     fun syncUntil(exitCondition: () -> Boolean) {
         try {
             blockHeight = blockQueries.getBestHeight().get()
+            lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             debug("Start fastsync at height $blockHeight")
             while (!shutdown.get() && !exitCondition()) {
-                refillJobs()
-                processMessages()
-                processDoneJobs()
-                processStaleJobs()
-                sleep(params.loopInteval)
+                if (checkHeartbeat()) {
+                    refillJobs()
+                    processMessages(exitCondition)
+                    processDoneJobs()
+                    processStaleJobs()
+                    sleep(params.loopInteval)
+                } else {
+                    sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
+                }
             }
         } catch (e: BadDataMistake) {
             error("Fatal error, shutting down blockchain for safety reasons. Needs manual investigation.", e)
@@ -202,7 +212,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         val timeout = System.currentTimeMillis() + params.exitDelay
         trace("exitDelay: ${params.exitDelay}")
         syncUntil {
-            val syncableCount = peerStatuses.getSyncable(blockHeight+1).intersect(configuredPeers).size
+            val syncableCount = peerStatuses.getSyncable(blockHeight + 1).intersect(configuredPeers).size
             timeout < System.currentTimeMillis() && syncableCount == 0 && blockHeight >= params.mustSyncUntilHeight
         }
     }
@@ -348,7 +358,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
      * concurrently.
      */
     private fun refillJobs() {
-        (jobs.size until params.parallelism).forEach {
+        (jobs.size until params.parallelism).forEach { _ ->
             if (!startNextJob()) {
                 // There are no peers to talk to
                 return
@@ -539,6 +549,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         val p = blockDatabase.addBlock(job.block!!)
         p.success { _ ->
             finishedJobs.add(job)
+            lastBlockTimestamp = (job.header!! as BaseBlockHeader).timestamp
         }
         p.fail {
             // We got an invalid block from peer. Let's blacklist this
@@ -549,8 +560,15 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         }
     }
 
-    private fun processMessages() {
+    private fun processMessages(exitCondition: () -> Boolean) {
         for (packet in communicationManager.getPackets()) {
+            // We do heartbeat check for each network message because
+            // communicationManager.getPackets() might give a big portion of messages.
+            while (!checkHeartbeat()) {
+                if (shutdown.get() || exitCondition()) return
+                sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
+            }
+
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
@@ -566,13 +584,24 @@ class FastSynchronizer(private val workerContext: WorkerContext,
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
                     is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
-                    is Status -> peerStatuses.statusReceived(peerId, message.height-1)
+                    is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
                     else -> trace("Unhandled type ${message} from peer $peerId")
                 }
             } catch (e: Exception) {
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
             }
         }
+    }
+
+    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
+        heartbeat = heartbeatEvent
+    }
+
+    // Heartbeat check is failed if there is no registered heartbeat event.
+    override fun checkHeartbeat(): Boolean {
+        if (!workerContext.nodeConfig.heartbeat) return true
+        if (heartbeat == null) return false
+        return lastBlockTimestamp - heartbeat!!.timestamp < workerContext.nodeConfig.heartbeatTimeout
     }
 }
 

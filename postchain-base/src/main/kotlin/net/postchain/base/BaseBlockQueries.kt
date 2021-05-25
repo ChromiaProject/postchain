@@ -71,6 +71,12 @@ open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfi
         }
     }
 
+    override fun getLastBlockTimestamp(): Promise<Long, Exception> {
+        return runOp {
+            blockStore.getLastBlockTimestamp(it)
+        }
+    }
+
     /**
      * Retrieve the full list of transactions from the given block RID
      *

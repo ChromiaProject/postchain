@@ -64,6 +64,17 @@ open class NodeConfig(val appConfig: AppConfig) {
 
 
     /**
+     * Heartbeat
+     */
+    val heartbeat: Boolean
+        get() = config.getBoolean("heartbeat.enabled", true)
+    val heartbeatTimeout: Long
+        get() = config.getLong("heartbeat.timeout", 60_000L)
+    val heartbeatSleepTimeout: Long
+        get() = config.getLong("heartbeat.sleep_timeout", 500L)
+
+
+    /**
      * Pub/Priv keys
      */
     val privKey: String

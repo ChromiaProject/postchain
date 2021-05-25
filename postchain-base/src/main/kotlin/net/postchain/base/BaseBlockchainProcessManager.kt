@@ -13,6 +13,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
+import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -37,6 +38,7 @@ open class BaseBlockchainProcessManager(
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
+    protected val heartbeatManager = DefaultHeartbeatManager()
 
     companion object : KLogging()
 
@@ -122,7 +124,9 @@ open class BaseBlockchainProcessManager(
                             }
                         }
 
-                        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
+                        val process = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
+                        blockchainProcesses[chainId] = process
+                        heartbeatManager.addListener(process)
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                         logger.info("$processName: Blockchain has been started: chainId: $chainId")
@@ -156,6 +160,7 @@ open class BaseBlockchainProcessManager(
             logger.info("[${nodeName()}]: Stopping of Blockchain: chainId: $chainId")
 
             blockchainProcesses.remove(chainId)?.also {
+                heartbeatManager.removeListener(it)
                 it.shutdown()
             }
 

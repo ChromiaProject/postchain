@@ -9,6 +9,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.heartbeat.HeartbeatEvent
 
 class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
     override fun getEngine(): BlockchainEngine {
@@ -18,6 +19,11 @@ class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
     override fun shutdown() {
         _engine.shutdown()
     }
+
+    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
+    }
+
+    override fun checkHeartbeat(): Boolean = true
 }
 
 

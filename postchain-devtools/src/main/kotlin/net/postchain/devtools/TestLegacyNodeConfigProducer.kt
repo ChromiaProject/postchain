@@ -44,6 +44,7 @@ object TestLegacyNodeConfigProducer {
         setConfInfrastructure(systemSetup.confInfrastructure, baseConfig)
         setApiPort(nodeSetup, baseConfig, systemSetup.needRestApi)
         setKeys(nodeSetup, baseConfig)
+        setHeartbeat(baseConfig)
 
         return baseConfig
     }
@@ -131,5 +132,9 @@ object TestLegacyNodeConfigProducer {
 
         baseConfig.setProperty("messaging.privkey", nodeConf.privKeyHex)
         baseConfig.setProperty("messaging.pubkey", nodeConf.pubKeyHex)
+    }
+
+    fun setHeartbeat(baseConfig: PropertiesConfiguration) {
+        baseConfig.setProperty("heartbeat.enabled", false)
     }
 }
