@@ -23,7 +23,6 @@ import kotlin.concurrent.thread
  */
 class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProcess {
 
-    private var heartbeat: HeartbeatEvent? = null
     private lateinit var updateLoop: Thread
     private val shutdown = AtomicBoolean(false)
 
@@ -77,7 +76,7 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
         updateLoop = thread(name = "updateLoop-${workerContext.processName}") {
             while (!shutdown.get()) {
                 try {
-                    if (checkHeartbeat()) {
+                    if (workerContext.heartbeatChecker.checkHeartbeat(getLastBlockTimestamp())) {
                         syncManager.update()
                         Thread.sleep(20)
                     } else {
@@ -104,23 +103,14 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-        heartbeat = heartbeatEvent
-        // Pass a heartbeat event to SyncManager to check heartbeat for
-        // each network message because communicationManager.getPackets()
-        // might give a big portion of messages (see syncManager.dispatchMessages()).
-        // SyncManager is internal HeartbeatListener (not registered at HeartbeatManager).
-        syncManager.onHeartbeat(heartbeatEvent)
+        workerContext.heartbeatChecker.onHeartbeat(heartbeatEvent)
     }
 
-    // 1. Heartbeat check is failed if there is no registered heartbeat event.
-    // 2. The field blockManager.lastBlockTimestamp will be set to non-null value
-    // after the first block db operation. So we read lastBlockTimestamp value from db
-    // until blockManager.lastBlockTimestamp is non-null.
-    override fun checkHeartbeat(): Boolean {
-        if (!workerContext.nodeConfig.heartbeat) return true
-        if (heartbeat == null) return false
-        val lastBlockTimestamp = blockManager.lastBlockTimestamp
+    private fun getLastBlockTimestamp(): Long {
+        // The field blockManager.lastBlockTimestamp will be set to non-null value
+        // after the first block db operation. So we read lastBlockTimestamp value from db
+        // until blockManager.lastBlockTimestamp is non-null.
+        return blockManager.lastBlockTimestamp
                 ?: getEngine().getBlockQueries().getLastBlockTimestamp().get()
-        return lastBlockTimestamp - heartbeat!!.timestamp < workerContext.nodeConfig.heartbeatTimeout
     }
 }

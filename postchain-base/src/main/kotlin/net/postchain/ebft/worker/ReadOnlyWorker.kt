@@ -14,7 +14,6 @@ import kotlin.concurrent.thread
 class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProcess {
 
     private val fastSynchronizer: FastSynchronizer
-
     private val done = CountDownLatch(1)
 
     init {
@@ -41,10 +40,6 @@ class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProce
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-        // Pass a heartbeat event to FastSynchronizer.
-        // It is internal HeartbeatListener (not registered at HeartbeatManager).
-        fastSynchronizer.onHeartbeat(heartbeatEvent)
+        workerContext.heartbeatChecker.onHeartbeat(heartbeatEvent)
     }
-
-    override fun checkHeartbeat(): Boolean = true
 }

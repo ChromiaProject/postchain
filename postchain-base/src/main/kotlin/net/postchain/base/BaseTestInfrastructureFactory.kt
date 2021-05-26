@@ -22,8 +22,6 @@ class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
     }
-
-    override fun checkHeartbeat(): Boolean = true
 }
 
 

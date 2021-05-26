@@ -12,6 +12,7 @@ import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticProperty.BLOCKCHAIN
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.heartbeat.DefaultHeartbeatChecker
 import net.postchain.ebft.message.Message
 import net.postchain.ebft.worker.HistoricChainWorker
 import net.postchain.ebft.worker.ReadOnlyWorker
@@ -61,11 +62,13 @@ open class EBFTSynchronizationInfrastructure(
         }
 
         val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchain)
+        val heartbeatChecker = DefaultHeartbeatChecker(nodeConfig)
         val workerContext = WorkerContext(
                 processName, blockchainConfig.signers, engine,
                 blockchainConfig.configData.context.nodeID,
                 buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration),
                 peerCommConfiguration,
+                heartbeatChecker,
                 nodeConfig,
                 unregisterBlockchainDiagnosticData
         )
@@ -94,9 +97,14 @@ open class EBFTSynchronizationInfrastructure(
                 }
                 val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, it)
 
-                WorkerContext(processName, blockchainConfig.signers,
-                        engine, blockchainConfig.configData.context.nodeID, histCommManager, historicPeerCommConfiguration,
-                        nodeConfig, unregisterBlockchainDiagnosticData)
+                WorkerContext(
+                        processName, blockchainConfig.signers, engine,
+                        blockchainConfig.configData.context.nodeID,
+                        histCommManager,
+                        historicPeerCommConfiguration,
+                        heartbeatChecker,
+                        nodeConfig,
+                        unregisterBlockchainDiagnosticData)
 
             }
             HistoricChainWorker(workerContext, historicBlockchain)

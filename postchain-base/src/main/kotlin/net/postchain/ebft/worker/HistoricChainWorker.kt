@@ -39,7 +39,8 @@ class HistoricChainWorker(val workerContext: WorkerContext,
     private val done = CountDownLatch(1)
     private val shutdown = AtomicBoolean(false)
 
-    companion object: KLogging()
+    companion object : KLogging()
+
     init {
         val blockDatabase = BaseBlockDatabase(
                 getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
@@ -124,13 +125,13 @@ class HistoricChainWorker(val workerContext: WorkerContext,
         while (!shutdown.get()) {
             val historicBlock = historicQueries.getBlockAtHeight(++newBestHeight).get()
             if (historicBlock == null) {
-                logger.debug("Done cross syncing ${newBestHeight-startHeight-1} blocks locally from blockchain ${historicBlockchain.historicBrid}")
+                logger.debug("Done cross syncing ${newBestHeight - startHeight - 1} blocks locally from blockchain ${historicBlockchain.historicBrid}")
                 return
             }
             logger.trace("Cross syncing block ${historicBlock.header.blockRID.toHex()} at height $newBestHeight from blockchain ${historicBlockchain.historicBrid}")
             newBlockDatabase.addBlock(historicBlock).get()
         }
-        logger.debug("Shutdown cross syncing ${newBestHeight-startHeight} blocks locally from blockchain ${historicBlockchain.historicBrid}")
+        logger.debug("Shutdown cross syncing ${newBestHeight - startHeight} blocks locally from blockchain ${historicBlockchain.historicBrid}")
     }
 
     override fun shutdown() {
@@ -142,10 +143,6 @@ class HistoricChainWorker(val workerContext: WorkerContext,
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-        TODO("POS-163: Not yet implemented")
-    }
-
-    override fun checkHeartbeat(): Boolean {
-        TODO("POS-163: Not yet implemented")
+        workerContext.heartbeatChecker.onHeartbeat(heartbeatEvent)
     }
 }
