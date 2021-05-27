@@ -126,7 +126,9 @@ open class ManagedBlockchainProcessManager(
          * A: If we have new peers we will need to restart the node (or update the peer connections somehow).
          * B: If not, we just check with chain zero what chains we need and run those.
          */
-        fun restartHandlerChain0(): Boolean {
+        fun restartHandlerChain0(blockTimestamp: Long): Boolean {
+            // Sending heartbeat to other chains
+            heartbeatManager.beat(blockTimestamp)
 
             // Preloading blockchain configuration
             preloadChain0Configuration()
@@ -172,10 +174,10 @@ open class ManagedBlockchainProcessManager(
             }
         }
 
-        fun wrappedRestartHandler(): Boolean {
+        fun wrappedRestartHandler(blockTimestamp: Long): Boolean {
             return try {
                 synchronized(synchronizer) {
-                    if (chainId == CHAIN0) restartHandlerChain0() else restartHandlerChainN()
+                    if (chainId == CHAIN0) restartHandlerChain0(blockTimestamp) else restartHandlerChainN()
                 }
             } catch (e: Exception) {
                 logger.error("Exception in restart handler: $e")

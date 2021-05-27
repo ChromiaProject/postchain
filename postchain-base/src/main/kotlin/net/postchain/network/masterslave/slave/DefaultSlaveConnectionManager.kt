@@ -6,10 +6,12 @@ import net.postchain.base.PeerInfo
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.ProgrammerMistake
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.network.masterslave.MsConnection
 import net.postchain.network.masterslave.MsMessageHandler
 import net.postchain.network.masterslave.protocol.MsCodec
 import net.postchain.network.masterslave.protocol.MsDataMessage
+import net.postchain.network.masterslave.protocol.MsHeartbeatMessage
 import net.postchain.network.masterslave.slave.netty.NettySlaveConnector
 import net.postchain.network.x.LazyPacket
 import net.postchain.network.x.XChainPeersConfiguration
@@ -36,7 +38,10 @@ class DefaultSlaveConnectionManager(
     private class Chain(val config: XChainPeersConfiguration) {
         val peers: List<ByteArray> = (config.commConfiguration as SlavePeerCommConfig).peers
         val msMessageHandler: MsMessageHandler = { msg ->
-            config.packetHandler(msg.payload, XPeerID(msg.source))
+            when (msg) {
+                is MsHeartbeatMessage -> config.heartbeatHandler(HeartbeatEvent(msg.timestamp))
+                else -> config.packetHandler(msg.payload, XPeerID(msg.source))
+            }
         }
         var connection: MsConnection? = null
     }
