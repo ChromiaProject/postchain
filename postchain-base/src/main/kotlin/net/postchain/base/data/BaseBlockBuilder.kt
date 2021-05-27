@@ -168,7 +168,7 @@ open class BaseBlockBuilder(
      *  @throws ProgrammerMistake Invalid BlockWitness implementation
      */
     override fun validateWitness(blockWitness: BlockWitness): Boolean {
-        if (!(blockWitness is MultiSigBlockWitness)) {
+        if (blockWitness !is MultiSigBlockWitness) {
             throw ProgrammerMistake("Invalid BlockWitness impelmentation.")
         }
         val witnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, _blockData!!.header, subjects, getBFTRequiredSignatureCount(subjects.size))
@@ -270,6 +270,9 @@ open class BaseBlockBuilder(
         if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End) && !haveSpecialEndTransaction)
             throw BlockValidationMistake("End special transaction is missing")
         super.finalizeAndValidate(blockHeader)
+
+        // Need to call this method to invoke finalize() method of L2 Implementation
+        getExtraData()
     }
 
     private fun checkSpecialTransaction(tx: Transaction) {
