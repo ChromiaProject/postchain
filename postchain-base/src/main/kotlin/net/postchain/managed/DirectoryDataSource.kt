@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.base.BlockchainRid
+import net.postchain.containers.infra.ContainerResourceType
 
 interface DirectoryDataSource : ManagedNodeDataSource {
 
@@ -18,7 +19,7 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     /**
      * What is the resource limits for this container?
      */
-    fun getResourceLimitForContainer(containerID: String): Map<String, Long>?
+    fun getResourceLimitForContainer(containerID: String): Map<ContainerResourceType, Long>?
 
     fun setLimitsForContainer(containerID: String, ramLimit: Long, cpuQuota: Long)
 

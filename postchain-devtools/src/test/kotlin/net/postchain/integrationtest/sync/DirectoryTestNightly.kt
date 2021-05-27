@@ -30,6 +30,10 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.test.assertEquals
 
+const val firstContainerName = "cont1" //for chain 1, 2
+const val secondContainerName = "cont3" //for chain 3
+
+
 class DirectoryTestNightly : ManagedModeTest() {
 
     /**
@@ -43,7 +47,7 @@ class DirectoryTestNightly : ManagedModeTest() {
      */
     @Ignore
     @Test
-    fun dummy() {
+    fun testMultipleChains() {
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
@@ -51,7 +55,7 @@ class DirectoryTestNightly : ManagedModeTest() {
         val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont3
         //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
         // Instead, whait with tear-down to see chains are started in the container:
-        Thread.sleep(20000)
+        sleep(20_000L)
     }
 
 
@@ -60,13 +64,13 @@ class DirectoryTestNightly : ManagedModeTest() {
      */
     @Ignore
     @Test
-    fun multipleNodes() {
+    fun testMultipleNodes() {
         startManagedSystem(2, 0)
         buildBlock(c0, 0)
         val c1 = startNewBlockchain(setOf(0, 1), setOf(), waitForRestart = false)
         //TODO: waitForRestart does not work since we do not have access to heights of chains run on subnodes.
         // Instead, whait with tear-down to see chains are started in the container:
-        Thread.sleep(20000)
+        sleep(20_000)
     }
 
     @Ignore
@@ -75,18 +79,20 @@ class DirectoryTestNightly : ManagedModeTest() {
         val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
         var listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         listc.forEach {
-            println("removing existing container: " + it.id())
-            dockerClient.stopContainer(it.id(), 0)
-            dockerClient.removeContainer(it.id())
+            if (it.names()?.get(0)?.contains(Regex(firstContainerName))!!) {
+                println("removing existing container: " + it.names())
+                dockerClient.stopContainer(it.id(), 0)
+                dockerClient.removeContainer(it.id())
+            }
         }
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
-        val ramLimit = 7000000L
-        val cpuQuotaLimit = 90000L
+        val ramLimit = 7000_000L
+        val cpuQuotaLimit = 90_000L
         //update dataSource with limit value. This is used when contianer is created (getResourceLimitForContainer)
-        dataSource(0).setLimitsForContainer("cont1", ramLimit, cpuQuotaLimit)
+        dataSource(0).setLimitsForContainer(firstContainerName, ramLimit, cpuQuotaLimit)
         startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
-        sleep(20000) //we must wait a bit to ensure that container has been created.
+        sleep(20_000) //we must wait a bit to ensure that container has been created.
         listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         println("number of containers: " + listc.size)
         val res = dockerClient.inspectContainer(listc[0].id())
@@ -250,14 +256,14 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
     }
 
     override fun getContainersToRun(): List<String>? {
-        return listOf("system", "cont1", "cont3")
+        return listOf("system", firstContainerName, secondContainerName)
     }
 
     //chain 0 in system container, chain1-2 in cont1 container. chain3 in cont3 container.
     override fun getBlockchainsForContainer(containerID: String): List<BlockchainRid>? {
-        if (containerID == "cont1") {
+        if (containerID == firstContainerName) {
             return listOf(chainRidOf(1), chainRidOf(2))
-        } else if (containerID == "cont3") {
+        } else if (containerID == secondContainerName) {
             return listOf(chainRidOf(3))
         } else {
             return listOf(chainRidOf(0))
@@ -266,23 +272,24 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String? {
         if ((brid == chainRidOf(1)) or (brid == chainRidOf(2))) {
-            return "cont1"
+            return firstContainerName
         } else if (brid == chainRidOf(3)) {
-            return "cont3"
+            return secondContainerName
         } else {
             return "system"
         }
     }
 
-    override fun getResourceLimitForContainer(containerID: String): Map<String, Long>? {
-        if (containerID == "cont1") {
-            return mapOf("storage" to 10L, "ram" to ram, "cpu" to cpu)
+    override fun getResourceLimitForContainer(containerID: String): Map<ContainerResourceType, Long>? {
+        if (containerID == firstContainerName) {
+            return mapOf(ContainerResourceType.STORAGE to 10L, ContainerResourceType.RAM to ram,
+                    ContainerResourceType.CPU to cpu)
         }
         return mapOf() //no limits for naked system container.
     }
 
     override fun setLimitsForContainer(containerID: String, ramLimit: Long, cpuQuota: Long) {
-        if (containerID == "cont1") {
+        if (containerID == firstContainerName) {
             ram = ramLimit
             cpu = cpuQuota
         }

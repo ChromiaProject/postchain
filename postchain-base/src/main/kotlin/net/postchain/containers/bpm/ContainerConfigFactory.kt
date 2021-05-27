@@ -6,6 +6,7 @@ import com.spotify.docker.client.messages.PortBinding
 import net.postchain.common.Utils
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.NameService
+import net.postchain.containers.infra.ContainerResourceType
 import java.nio.file.Path
 
 object ContainerConfigFactory {
@@ -43,8 +44,8 @@ object ContainerConfigFactory {
                 .appendBinds(volume)
                 .portBindings(portBindings)
                 .publishAllPorts(true)
-                .memory(container.resourceLimits?.get("ram"))
-                .cpuQuota(container.resourceLimits?.get("cpu"))
+                .memory(container.resourceLimits?.get(ContainerResourceType.RAM))
+                .cpuQuota(container.resourceLimits?.get(ContainerResourceType.CPU))
 //                .storageOpt(mapOf("dm.basesize" to "3G"))
 //                .storageOpt(mapOf("size" to "3G"))
 //                .storageOpt(mapOf("overlay2.size" to "3G"))

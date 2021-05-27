@@ -90,14 +90,14 @@ open class ContainerManagedBlockchainProcessManager(
     private fun startContainerChain(chainId: Long): BlockchainRid? {
         val (ds, brid, containerNames) = containerNamesFromDataSource(chainId)
         if (containerNames["directory"] == null) return null
-        val nodeContainerName = containerNames["node"]!!
+        val nodeContainerName = containerNames["node"]!! //if directoryContainerName is non-null, so is nodeContainerName
 
         return try {
             // Creating working dir
             val (containerDir, chainConfigsDir) = containerInitializer.createContainerWorkingDir(chainId, nodeContainerName)
 
             //Create container (with containerBlockchainProcess) if not exist. Also transfer configs
-            val container = nodeContainerName.let { findDockerContainer(it) }
+            val container = findDockerContainer(nodeContainerName)
             if (container != null) {
                 logger.info(m("startContainer: Container $nodeContainerName already exists: ${container.id()}"))
                 //container exist, but chainID is new. Does postchainContainer exist? If not, add it:

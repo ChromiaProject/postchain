@@ -2,6 +2,7 @@ package net.postchain.containers.bpm
 
 import mu.KLogging
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.infra.ContainerResourceType
 import net.postchain.managed.DirectoryDataSource
 import java.util.*
 import kotlin.concurrent.timer
@@ -14,7 +15,7 @@ interface PostchainContainer {
     var state: ContainerState
     var containerId: String
     var blockchainProcesses: MutableSet<ContainerBlockchainProcess>
-    var resourceLimits: Map<String, Long>?
+    var resourceLimits: Map<ContainerResourceType, Long>?
 
     fun contains(chainId: Long): Boolean
     fun getChains(): Set<Long>
