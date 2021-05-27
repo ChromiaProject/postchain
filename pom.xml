@@ -65,7 +65,7 @@
             <artifactId>junit</artifactId>
         </dependency>
 
-        <!-- Logging -->
+    <!-- Logging -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>

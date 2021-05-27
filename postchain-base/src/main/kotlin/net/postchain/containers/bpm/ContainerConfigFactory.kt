@@ -13,7 +13,9 @@ object ContainerConfigFactory {
 
     fun createConfig(nodeConfig: NodeConfig, container: PostchainContainer, containerCwd: Path): ContainerConfig {
         // -v $containerCwd:/opt/chromaway/postchain/target \
+//        val data_volume =  DockerAPI.create_volume('tmpfs','100mb')
         val volume = HostConfig.Bind
+//                .from(data_volume)
                 .from(containerCwd.toString())
                 .to("/opt/chromaway/postchain/target")
                 .build()
