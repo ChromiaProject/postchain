@@ -11,6 +11,10 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.network.x.XPeerID
 import java.time.Instant
 
+object NMAPiCache {
+    var apiVersion : Long? = null
+}
+
 class GTXManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeConfig) : ManagedNodeDataSource {
     override fun getPeerInfos(): Array<PeerInfo> {
         // TODO: [POS-90]: Implement correct error processing
@@ -68,8 +72,15 @@ class GTXManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeCo
         return GtvFactory.gtv(*args)
     }
 
+    private fun getNMApiVersion() : Long {
+        if (NMAPiCache.apiVersion == null) {
+            NMAPiCache.apiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger()
+        }
+        return NMAPiCache.apiVersion!!
+    }
+
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
-        val nm_api_version = queries.query("nm_api_version", buildArgs()).get().asInteger()
+        val nm_api_version = getNMApiVersion()
         if (nm_api_version == 1L) {
             return mapOf()
         } else {
