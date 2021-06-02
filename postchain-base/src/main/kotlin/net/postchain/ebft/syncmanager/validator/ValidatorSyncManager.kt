@@ -41,9 +41,16 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var processingIntentDeadline = 0L
     private var lastStatusLogged: Long
     private val processName = workerContext.processName
-    private var useFastSyncAlgorithm: Boolean = true
+    private var useFastSyncAlgorithm: Boolean = getUseFastSyncInitValue(blockchainConfiguration.chainID)
 
-    companion object : KLogging()
+    companion object : KLogging() {
+
+        private val useFastSyncInitValue: MutableMap<Long, Boolean> = mutableMapOf()
+
+        fun getUseFastSyncInitValue(chainId: Long): Boolean {
+            return useFastSyncInitValue.putIfAbsent(chainId, false) ?: true
+        }
+    }
 
     private val fastSynchronizer: FastSynchronizer
 
