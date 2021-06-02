@@ -10,10 +10,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.network.x.XPeerID
 import java.time.Instant
-
-object NMAPiCache {
-    var apiVersion : Long? = null
-}
+import net.postchain.managed.NMApiCache.apiVersion
 
 class GTXManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeConfig) : ManagedNodeDataSource {
     override fun getPeerInfos(): Array<PeerInfo> {
@@ -73,10 +70,10 @@ class GTXManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeCo
     }
 
     private fun getNMApiVersion() : Long {
-        if (NMAPiCache.apiVersion == null) {
-            NMAPiCache.apiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger()
+        if (apiVersion == null) {
+            apiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger()
         }
-        return NMAPiCache.apiVersion!!
+        return apiVersion!!
     }
 
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
