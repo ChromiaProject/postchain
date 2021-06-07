@@ -21,7 +21,7 @@ class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
         return _engine
     }
 
-    override fun shutdown() {
+    override fun shutdown(restart: Boolean) {
         shutdownDebug("Begin")
         _engine.shutdown()
         shutdownDebug("End")

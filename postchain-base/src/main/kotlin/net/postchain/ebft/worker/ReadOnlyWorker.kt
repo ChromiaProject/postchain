@@ -39,7 +39,7 @@ class ReadOnlyWorker(val workerContext: WorkerContext) : BlockchainProcess {
 
     fun getHeight(): Long = fastSynchronizer.blockHeight
 
-    override fun shutdown() {
+    override fun shutdown(restart: Boolean) {
         shutdownDebug("Begin")
         fastSynchronizer.shutdown()
         blockDatabase.stop()

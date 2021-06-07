@@ -90,9 +90,9 @@ class ValidatorWorker(val workerContext: WorkerContext) : BlockchainProcess {
     /**
      * Stop the postchain node
      */
-    override fun shutdown() {
+    override fun shutdown(restart: Boolean) {
         shutdowDebug("Begin")
-        syncManager.shutdown()
+        syncManager.shutdown(restart)
         shutdown.set(true)
         updateLoop.join()
         blockDatabase.stop()

@@ -42,7 +42,7 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
     }
 
     fun stopBlockchain(chainId: Long) {
-        processManager.stopBlockchain(chainId, buildBbDebug(chainId) )
+        processManager.stopBlockchain(chainId, buildBbDebug(chainId), false)
     }
 
     override fun shutdown() {

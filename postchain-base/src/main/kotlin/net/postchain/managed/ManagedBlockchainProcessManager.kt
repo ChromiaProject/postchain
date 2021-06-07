@@ -226,7 +226,7 @@ open class ManagedBlockchainProcessManager(
                     .filter { retrieveBlockchain(it) != null }
                     .forEach {
                         reloadAllInfo("Stopping blockchain", it)
-                        stopBlockchain(it, bTrace)
+                        stopBlockchain(it, bTrace, false)
                     }
         }
     }
@@ -265,7 +265,7 @@ open class ManagedBlockchainProcessManager(
                     .filter { retrieveBlockchain(it) != null }
                     .forEach {
                         ssaInfo("Stopping blockchain", it)
-                        stopBlockchain(it, bTrace)
+                        stopBlockchain(it, bTrace, false)
                     }
             ssaTrace("End", bTrace)
         }

@@ -31,13 +31,13 @@ interface BlockchainEngine : Shutdownable {
 
 interface BlockchainProcess {
     fun getEngine(): BlockchainEngine
-    fun shutdown()
+    fun shutdown(restart: Boolean)
 }
 
 interface BlockchainProcessManager : Shutdownable, Synchronizable {
     fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid?
     fun retrieveBlockchain(chainId: Long): BlockchainProcess?
-    fun stopBlockchain(chainId: Long, bTrace: BlockTrace?)
+    fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean)
 }
 
 // A return value of "true" means a restart is needed.
