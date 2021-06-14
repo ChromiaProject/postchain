@@ -19,18 +19,13 @@ import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.EContext
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.e2e.tools.KGenericContainer
 import net.postchain.gtv.GtvFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedNodeDataSource
 import org.apache.commons.configuration2.Configuration
 import org.junit.Ignore
 import org.junit.Test
-import org.testcontainers.containers.GenericContainer
-import org.testcontainers.images.builder.ImageFromDockerfile
 import java.lang.Thread.sleep
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
@@ -40,85 +35,28 @@ const val firstContainerName = "cont1" //for chain 1, 2
 const val secondContainerName = "cont3" //for chain 3
 
 
-class DirectoryE2ET : ManagedModeTest() {
+class DirectoryIT : ManagedModeTest() {
 
     /**
      * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1, c2
      * is run in container "cont1" by the subnode.
      *
-     * Did you make changes i slave code? Copy jar-dependecies file to
-     * postchain-distribution/src/main/postchain-slavenode/docker/scripts/bin/postchain-base-3.3.1-SNAPSHOT-jar-with-dependencies.jar
+     * Did you make changes i slave code? Copy jar-dependecies (postchain-base-3.3.1-SNAPSHOT-jar-with-dependencies.jar and rellr-0.10.3-jar-with-dependencies.jar) file to
+     * postchain-distribution/src/main/postchain-slavenode/docker/scripts/bin/
      * and run (in postchain2/postchain-distribution/src/main/postchain-slavenode/docker) where Dockerfile is found:
      * docker build -t chromaway/postchain-slavenode:3.3.1 .
      *
-     * Now instead of the above, we will create a docker image with org.testcontainers.containers.ImageFromDockerfile.
-     * DOCKER_IMAGE_TAG = "chromaway/postchain-slavenode:3.3.1"
      */
 
-    val RESOURCE_PATH = "/home/linnea/hack/cw/postchain2/postchain-distribution/src/main/postchain-slavenode/docker/"
-    val IMAGE_NAME = "chromaway/postchain-slavenode:3.3.1"
-    // rule {
-//    @Rule
-//    var cont = GenericContainer<String>(
-//            ImageFromDockerfile(IMAGE_NAME, false)
-//            .withFileFromPath(".", Path.of(RESOURCE_PATH))
-//    )
-//
-//    var im =  ImageFromDockerfile(IMAGE_NAME, false).withFileFromPath(".", Path.of(RESOURCE_PATH))
-//
 
-
-//    @Test
-//    fun kalle() {
-//        val a: GenericContainer<KGenericContainer> = KGenericContainer("").withFil
-
-/*
-new GenericContainer(
-        new ImageFromDockerfile()
-                .withDockerfileFromBuilder(builder ->
-                        builder
-                                .from("alpine:3.2")
-                                .run("apk add --update nginx")
-                                .cmd("nginx", "-g", "daemon off;")
-                                .build()))
-                .withExposedPorts(80);
-*/
-//    }
-
-    @Ignore
-    @Test
-    fun testCreateContainer() {
-
-//        var redis: GenericContainer<*>? = GenericContainer<KGenericContainer>(DockerImageName("redis:5.0.3-alpine"))
-//                .withExposedPorts(6379)
-
-        var im =  ImageFromDockerfile(IMAGE_NAME, false).withFileFromPath(".", Path.of(RESOURCE_PATH))
-        val container = GenericContainer<KGenericContainer>(im)
-        container.start()
-    }
-
-    @Ignore
-    @Test
-    fun testWithGenericContainer() {
-        val workingDir = Paths.get("src", "main", "postchain-slavenode", "docker").toString()
-        val x = KGenericContainer("chromaway/postchain-slavenode:3.3.1")
-                .withWorkingDirectory(workingDir)
-//                .withNetwork(Network.newNetwork())
-//                .withNetworkAliases("network3_subnode")
-                .withExposedPorts(7740)
-//                .withEnv(ENV_POSTCHAIN_DB_URL, postgresUrl)
-                .withEnv("ENV_NODE", "subnode")
-    }
-
-
-    @Ignore
+//    @Ignore
     @Test
     fun testMultipleChains() {
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
-        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
-        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont3
+//        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+//        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont3
         //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
         // Instead, whait with tear-down to see chains are started in the container:
         sleep(20_000L)

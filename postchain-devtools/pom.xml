@@ -10,6 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>postchain-devtools</artifactId>
     <name>Postchain Dev Tools</name>
+    <packaging>docker</packaging>
 
     <properties>
         <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
@@ -39,12 +40,10 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
-            <version>${kotlin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
-            <version>${kotlin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -133,10 +132,16 @@
                     </properties>
                     <includes>
                         <include>**/*Test.java</include>
-                        <include>**/*IT.java</include>
+<!--                        <include>**/*IT.java</include>-->
                         <!--                        <include>**/*Nightly.java</include>-->
                         <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
                     </includes>
+                    <excludes>
+                        <exclude>**/*IT.*</exclude>
+                    </excludes>
+                    <!-- skips surefire tests without skipping failsafe tests.
+         Property value seems to magically default to false -->
+                    <skipTests>${skip.surefire.tests}</skipTests>
                 </configuration>
             </plugin>
 
@@ -182,10 +187,79 @@
                 </executions>
             </plugin>
 
+            <!-- Docker image in integration tests -->
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>chromaway/postchain-slavenode:3.3.1</name>
+                            <build>
+                                <assemblies>
+                                    <assembly>
+<!--                                        <name>postchain-base-3.3.1-SNAPSHOT-jar-with-dependencies</name>-->
+                                        <descriptorRef>artifact-with-dependencies</descriptorRef>
+<!--                                        <targetDir>/scripts/bin</targetDir>-->
+                                    </assembly>
+<!--                                    <assembly>-->
+<!--                                        <name>rellr-0.10.3-jar-with-dependencies</name>-->
+<!--                                        <descriptorRef>artifact-with-dependencies</descriptorRef>-->
+<!--&lt;!&ndash;                                        <targetDir>/scriptdir/bin</targetDir>&ndash;&gt;-->
+<!--                                    </assembly>-->
+                                </assemblies>
+                                <dockerFileDir>${project.basedir}/src/main/docker</dockerFileDir>
+                                <filter>@</filter>
+                            </build>
+                        </image>
+                    </images>
+                </configuration>
+                <!-- Connect start/stop to pre- and
+       post-integration-test phase, respectively if you want to start
+       your docker containers during integration tests -->
+                <executions>
+                    <execution>
+                        <id>start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <!-- "build" should be used to create the images with the artifact -->
+                            <goal>build</goal>
+                            <!-- <goal>start</goal> -->
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
     <profiles>
+        <profile>
+            <id>failsafe</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>${maven.failsafe.plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+<!--            <dependencies>-->
+<!--                <dependency>-->
+<!--                    <groupId>net.postchain.rell</groupId>-->
+<!--                    <artifactId>rellr</artifactId>-->
+<!--                    <version>0.10.3</version>-->
+<!--                </dependency>-->
+<!--            </dependencies>-->
+        </profile>
         <profile>
             <id>ci</id>
             <build>
