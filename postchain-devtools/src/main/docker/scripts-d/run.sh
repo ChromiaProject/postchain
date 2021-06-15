@@ -36,7 +36,7 @@ then
     echo $f
   done
 
-	echo "Deleting the database...dfgsdsd"
+	echo "Deleting the database..."
 	scripts/postchain.sh wipe-db -nc target/node-config.properties
 
 #  echo "Adding my peer-info..."

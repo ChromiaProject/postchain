@@ -131,14 +131,10 @@
                         </property>
                     </properties>
                     <includes>
-                        <include>**/*Test.java</include>
-<!--                        <include>**/*IT.java</include>-->
-                        <!--                        <include>**/*Nightly.java</include>-->
+                        <include>**/*Nightly.java</include>
+                        <include>**/*E2ET.*</include>
                         <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
                     </includes>
-                    <excludes>
-                        <exclude>**/*IT.*</exclude>
-                    </excludes>
                     <!-- skips surefire tests without skipping failsafe tests.
          Property value seems to magically default to false -->
                     <skipTests>${skip.surefire.tests}</skipTests>
@@ -199,15 +195,8 @@
                             <build>
                                 <assemblies>
                                     <assembly>
-<!--                                        <name>postchain-base-3.3.1-SNAPSHOT-jar-with-dependencies</name>-->
                                         <descriptorRef>artifact-with-dependencies</descriptorRef>
-<!--                                        <targetDir>/scripts/bin</targetDir>-->
                                     </assembly>
-<!--                                    <assembly>-->
-<!--                                        <name>rellr-0.10.3-jar-with-dependencies</name>-->
-<!--                                        <descriptorRef>artifact-with-dependencies</descriptorRef>-->
-<!--&lt;!&ndash;                                        <targetDir>/scriptdir/bin</targetDir>&ndash;&gt;-->
-<!--                                    </assembly>-->
                                 </assemblies>
                                 <dockerFileDir>${project.basedir}/src/main/docker</dockerFileDir>
                                 <filter>@</filter>

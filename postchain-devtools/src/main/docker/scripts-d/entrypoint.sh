@@ -4,14 +4,5 @@
 set -eu
 . ./env.sh
 
-# just sh
-#sh
-
-# Deploying chain-zero dapp
-if [ $BUILD_RELL_DAPP = "true" ]
-then
-	sh ./deploy.sh
-fi
-
 # Launching a node
 sh ./run.sh
