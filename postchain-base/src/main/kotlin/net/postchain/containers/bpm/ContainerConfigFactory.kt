@@ -29,9 +29,8 @@ object ContainerConfigFactory {
          * Therefore use radom port selection
          */
 
-        // TODO: Likely to be a unique port but not 100% guarantee.
+        // Likely to be a unique port but not 100% guarantee.
         // Also not 100% sure that port is still free when connection is made
-        // Should we use something even more sophisticated?
         val dockerPort = "${Utils.findFreePort()}/tcp"
         val portBindings = if (nodeConfig.restApiPort > -1) {
             mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", nodeConfig.subnodeRestApiPort)))
