@@ -3,6 +3,8 @@
 package net.postchain.containers.infra
 
 import net.postchain.base.BlockchainRid
+import net.postchain.base.BlockchainRidFactory.cryptoSystem
+import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
@@ -31,6 +33,7 @@ class DefaultMasterSyncInfra(
                 NettyConnectorFactory(),
                 EbftPacketEncoderFactory(),
                 EbftPacketDecoderFactory(),
+                SECP256K1CryptoSystem(),
                 nodeConfig
         )
     }

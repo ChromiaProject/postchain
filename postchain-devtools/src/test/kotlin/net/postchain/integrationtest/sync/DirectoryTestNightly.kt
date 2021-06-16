@@ -17,6 +17,7 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.EContext
+import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvFactory
 import net.postchain.managed.DirectoryDataSource
@@ -184,7 +185,7 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
         return testDataSource
     }
 
-    override fun getBlockchainsShouldBeLaunched(): Set<Long> {
+    override fun retrieveBlockchainsToLaunch(): Set<Long> {
         val result = mutableListOf<Long>()
         testDataSource.computeBlockchainList().forEach {
             val brid = BlockchainRid(it)
@@ -207,8 +208,8 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
     var lastHeightStarted = ConcurrentHashMap<Long, Long>()
 
     //    val containerChainStarted = ConcurrentHashMap<Long, Boolean>()
-    override fun startBlockchain(chainId: Long): BlockchainRid? {
-        val blockchainRid = super.startBlockchain(chainId)
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
+        val blockchainRid = super.startBlockchain(chainId, bTrace)
         if (blockchainRid == null) {
             return null
         }

@@ -10,6 +10,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
+import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
 
 /**
@@ -29,11 +30,17 @@ import net.postchain.debug.NodeDiagnosticContext
  * chain zero, the changes will spread to all nodes the normal way (via EBFT). We still have to restart a chain
  * every time somebody updates its config.
  *
- * A great deal of work in this class has to do with the [RestartHandler], which is usually called after a block
- * has been build to see if we need to upgrade anything about the chain's configuration.
- *
  * Most of the logic in this class is about the case when we need to check chain zero itself, and the most serious
  * case is when the peer list of the chain zero has changed (in this case restarting chains will not be enough).
+ *
+ * Sync of restart
+ * ---------------
+ * A great deal of work in this class has to do with the [RestartHandler], which is usually called after a block
+ * has been build to see if we need to upgrade anything about the chain's configuration.
+ * Since ProcMan doesn't like to do many important things at once, we block (=synchorize) in the beginning of
+ * "wrappedRestartHandler()", and only let go after we are done. If there are errors somewhere else in the code,
+ * we will see threads deadlock waiting for the lock in wrappedRestartHandler() (see test [ForkTestNightly]
+ * "testAliasesManyLevels()" for an example that (used to cause) deadlock).
  *
  * Doc: see the /doc/postchain_ManagedModeFlow.graphml (created with yEd)
  *
@@ -60,11 +67,11 @@ open class ManagedBlockchainProcessManager(
     /**
      * Check if this is the "chain zero" and if so we need to set the dataSource in a few objects before we go on.
      */
-    override fun startBlockchain(chainId: Long): BlockchainRid? {
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
         if (chainId == CHAIN0) {
             initManagedEnvironment()
         }
-        return super.startBlockchain(chainId)
+        return super.startBlockchain(chainId, bTrace)
     }
 
     private fun initManagedEnvironment() {
@@ -119,14 +126,17 @@ open class ManagedBlockchainProcessManager(
      * @return a [RestartHandler] which is a lambda (This lambda will be called by the Engine after each block
      *          has been committed.)
      */
-    override fun restartHandler(chainId: Long): RestartHandler {
+    override fun buildRestartHandler(chainId: Long): RestartHandler {
 
         /**
          * If the chain we are checking is the chain zero itself, we must verify if the list of peers have changed.
          * A: If we have new peers we will need to restart the node (or update the peer connections somehow).
          * B: If not, we just check with chain zero what chains we need and run those.
+         *
+         * @return "true" if a restart was needed
          */
-        fun restartHandlerChain0(blockTimestamp: Long): Boolean {
+        fun restartHandlerChain0(blockTimestamp: Long, bTrace: BlockTrace?): Boolean {
+            wrTrace("chain0 begin", chainId, bTrace)
             // Sending heartbeat to other chains
             heartbeatManager.beat(blockTimestamp)
 
@@ -135,21 +145,23 @@ open class ManagedBlockchainProcessManager(
 
             // Checking out for a peers set changes
             val peerListVersion = dataSource.getPeerListVersion()
-            val peersChanged = (lastPeerListVersion != null) && (lastPeerListVersion != peerListVersion)
+            val doReload = (lastPeerListVersion != null) && (lastPeerListVersion != peerListVersion)
             lastPeerListVersion = peerListVersion
 
-            return if (peersChanged) {
+            return if (doReload) {
                 logger.info { "Reloading of blockchains are required" }
-                restartBlockchains(restartChain0 = true, restartChainN = true)
+                wrTrace("chain0 Reloading of blockchains are required", chainId, bTrace)
+                reloadBlockchainsAsync(bTrace)
                 true
 
             } else {
+                wrTrace("about to restart chain0", chainId, bTrace)
                 // Checking out for a chain0 configuration changes
-                val config0Changed = withReadConnection(storage, CHAIN0) { eContext ->
+                val reloadChain0 = withReadConnection(storage, CHAIN0) { eContext ->
                     blockchainConfigProvider.needsConfigurationChange(eContext, CHAIN0)
                 }
-                restartBlockchains(restartChain0 = config0Changed, restartChainN = false)
-                config0Changed
+                startStopBlockchainsAsync(reloadChain0, bTrace)
+                reloadChain0
             }
         }
 
@@ -160,29 +172,36 @@ open class ManagedBlockchainProcessManager(
          *
          * @param chainId is the chain we should check (cannot be chain zero).
          */
-        fun restartHandlerChainN(): Boolean {
+        fun restartHandlerChainN(bTrace: BlockTrace?): Boolean {
             // Checking out for a chain configuration changes
+            wrTrace("chainN, begin", chainId, bTrace)
             val reloadConfig = withReadConnection(storage, chainId) { eContext ->
                 (blockchainConfigProvider.needsConfigurationChange(eContext, chainId))
             }
 
             return if (reloadConfig) {
-                startBlockchainAsync(chainId)
+                wrTrace("chainN, restart needed", chainId, bTrace)
+                reloadBlockchainConfigAsync(chainId, bTrace)
                 true
             } else {
+                wrTrace("chainN, no restart", chainId, bTrace)
                 false
             }
         }
 
-        fun wrappedRestartHandler(blockTimestamp: Long): Boolean {
+        fun wrappedRestartHandler(blockTimestamp: Long, bTrace: BlockTrace?): Boolean {
             return try {
+                wrTrace("Before", chainId, bTrace)
                 synchronized(synchronizer) {
-                    if (chainId == CHAIN0) restartHandlerChain0(blockTimestamp) else restartHandlerChainN()
+                    wrTrace("Sync", chainId, bTrace)
+                    val x = if (chainId == 0L) restartHandlerChain0(blockTimestamp, bTrace) else restartHandlerChainN(bTrace)
+                    wrTrace("After", chainId, bTrace)
+                    x
                 }
             } catch (e: Exception) {
                 logger.error("Exception in restart handler: $e")
                 e.printStackTrace()
-                startBlockchainAsync(chainId)
+                reloadBlockchainConfigAsync(chainId, bTrace)
                 true // let's hope restarting a blockchain fixes the problem
             }
         }
@@ -191,46 +210,94 @@ open class ManagedBlockchainProcessManager(
     }
 
     /**
-     * TODO: [POS-129] Clarify this doc
-     * Stops launched blockchains that shouldn't be launched.
-     * Restarts launched blockchains that should be restarted (see [restartChainN]).
-     * Starts blockchains that should be launched but are stopped.
-     * Process a state of chain0 according to value of [restartChain0]
+     * Restart all chains. Begin with chain zero.
      */
-    private fun restartBlockchains(restartChain0: Boolean, restartChainN: Boolean) {
-        val launched = getLaunchedBlockchains().minus(CHAIN0)
-        val shouldBeLaunched = getBlockchainsShouldBeLaunched().minus(CHAIN0)
-        val toStart = shouldBeLaunched - launched
-        val toStop = launched - shouldBeLaunched
-        val toRestart = if (restartChainN) launched intersect shouldBeLaunched else emptySet()
-        logChains(restartChain0, toStart, toStop, toRestart)
+    private fun reloadBlockchainsAsync(bTrace: BlockTrace?) {
+        executor.submit {
+            reloadAllDebug("Begin", bTrace)
+            val toLaunch = retrieveBlockchainsToLaunch()
+            val launched = blockchainProcesses.keys
+            logChains(toLaunch, launched, true)
 
-        if (restartChain0) {
-            startBlockchainAsync(CHAIN0)
+            // Starting blockchains: at first chain0, then the rest
+            reloadAllInfo("Launching blockchain", 0)
+            startBlockchain(0L, bTrace)
+
+            // Launching new blockchains except blockchain 0
+            toLaunch.filter { it != 0L }
+                    .forEach {
+                        reloadAllInfo("Launching blockchain", it)
+                        startBlockchain(it, bTrace)
+                    }
+
+            // Stopping launched blockchains
+            launched.filterNot(toLaunch::contains)
+                    .filter { retrieveBlockchain(it) != null }
+                    .forEach {
+                        reloadAllInfo("Stopping blockchain", it)
+                        stopBlockchain(it, bTrace)
+                    }
         }
-
-        toStop.forEach(::stopBlockchainAsync)
-        toRestart.forEach(::startBlockchainAsync)
-        toStart.forEach(::startBlockchainAsync)
     }
 
-    private fun logChains(restartChain0: Boolean, toStart: Set<Long>, toStop: Set<Long>, toRestart: Set<Long>) {
-        if (logger.isInfoEnabled /*isDebugEnabled*/) {
-            val toStart0 = if (restartChain0 && CHAIN0 !in toStart) toStart.plus(CHAIN0) else toStart
+    /**
+     * Only the chains in the [toLaunch] list should run. Any old chains not in this list must be stopped.
+     * Note: any chains not in the new config for this node should actually also be deleted, but not impl yet.
+     *
+     * @param toLaunch the chains to run
+     * @param launched is the old chains. Maybe stop some of them.
+     * @param reloadChain0 is true if the chain zero must be restarted.
+     */
+    private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
+        executor.submit {
+            ssaTrace("Begin", bTrace)
+            val toLaunch = retrieveBlockchainsToLaunch()
+            val launched = blockchainProcesses.keys
+            logChains(toLaunch, launched, reloadChain0)
 
-            val loggedChainsNew = arrayOf(toStart0, toStop, toRestart)
-            if (!loggedChains.contentDeepEquals(loggedChainsNew)) {
-                logger.info /*debug*/ {
-                    val pubKey = nodeConfigProvider.getConfiguration().pubKey
-                    val peerInfos = nodeConfigProvider.getConfiguration().peerInfoMap
-                    "pubKey: $pubKey" +
-                            ", peerInfos: ${peerInfos.keys.toTypedArray().contentToString()}" +
-                            ", chains to start: [${toStart0.joinToString()}]" +
-                            ", chains to stop: [${toStop.joinToString()}]" +
-                            ", chains to restart: [${toRestart.joinToString()}]"
-                }
+            // Launching blockchain 0
+            if (reloadChain0) {
+                ssaInfo("Reloading of blockchai 0 is required, launching it", 0L)
+                startBlockchain(0L, bTrace)
+            }
 
-                loggedChains = loggedChainsNew
+            // Launching new blockchains except blockchain 0
+            toLaunch.filter { it != 0L }
+                    .filter { retrieveBlockchain(it) == null }
+                    .forEach {
+                        ssaInfo("Launching blockchain", it)
+                        startBlockchain(it, bTrace)
+                    }
+
+            // Stopping launched blockchains
+            launched.filterNot(toLaunch::contains)
+                    .filter { retrieveBlockchain(it) != null }
+                    .forEach {
+                        ssaInfo("Stopping blockchain", it)
+                        stopBlockchain(it, bTrace)
+                    }
+            ssaTrace("End", bTrace)
+        }
+        }
+
+    private fun reloadBlockchainConfigAsync(chainId: Long, bTrace: BlockTrace?) {
+        executor.submit {
+            startBlockchain(chainId, bTrace)
+        }
+    }
+
+    private fun logChains(toLaunch: Set<Long>, launched: Set<Long>, reloadChain0: Boolean = false) {
+        // FYI: Message for testing only. It can be deleted later.
+        if (/*logger.isInfoEnabled*/ logger.isDebugEnabled) {
+            val toLaunch0 = if (reloadChain0 && CHAIN0 !in toLaunch) toLaunch.plus(0L) else toLaunch
+
+            logger./*info*/ debug {
+                val pubKey = nodeConfigProvider.getConfiguration().pubKey
+                val peerInfos = nodeConfigProvider.getConfiguration().peerInfoMap
+                "pubKey: $pubKey" +
+                        ", peerInfos: ${peerInfos.keys.toTypedArray().contentToString()}" +
+                        ", chains to launch: ${toLaunch0.toTypedArray().contentDeepToString()}" +
+                        ", chains launched: ${launched.toTypedArray().contentDeepToString()}"
             }
         }
     }
@@ -270,52 +337,87 @@ open class ManagedBlockchainProcessManager(
      *
      * @return all chainIids chain zero thinks we should run.
      */
-    // TODO: [POS-129]: 'protected open' for tests only. Change that.
-    protected open fun getBlockchainsShouldBeLaunched(): Set<Long> {
+    protected open fun retrieveBlockchainsToLaunch(): Set<Long> {
+        retrieveDebug("Begin")
         // chain-zero is always in the list
         val blockchains = mutableSetOf(CHAIN0)
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
 
-            val domainBlockchainList = dataSource.computeBlockchainList().map { BlockchainRid(it) }
-            val allMyBlockchains = domainBlockchainList.toMutableList()
-
-            val locallyConfiguredReplicas = db.getBlockchainsToReplicate(ctx0, nodeConfig.pubKey)
-            locallyConfiguredReplicas.forEach {
-                if (it !in domainBlockchainList) {
-                    allMyBlockchains.add(it)
+            val locallyConfiguredReplicas = nodeConfig.blockchainsToReplicate
+            val domainBlockchainSet = dataSource.computeBlockchainList().map { BlockchainRid(it) } .toSet()
+            val allMyBlockchains = domainBlockchainSet.union(locallyConfiguredReplicas)
+            allMyBlockchains.map { blockchainRid ->
+                val chainId = db.getChainId(ctx0, blockchainRid)
+                retrieveTrace( "launch chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
+                if (chainId == null) {
+                    val newChainId = db.getMaxChainId(ctx0)
+                            ?.let { maxOf(it + 1, 100) }
+                            ?: 100
+                    withReadWriteConnection(storage, newChainId) { newCtx ->
+                        db.initializeBlockchain(newCtx, blockchainRid)
+                    }
+                    newChainId
+                } else {
+                    chainId
                 }
+            }.filter { it != CHAIN0 }.forEach {
+                blockchains.add(it)
             }
-
-            allMyBlockchains
-                    .map { blockchainRid ->
-                        val chainId = db.getChainId(ctx0, blockchainRid)
-                        logger.debug("Blockchain to launch: chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
-                        if (chainId == null) {
-                            val newChainId = db.getMaxChainId(ctx0)
-                                    ?.let { maxOf(it + 1, 100) }
-                                    ?: 100
-                            withReadWriteConnection(storage, newChainId) { newCtx ->
-                                db.initializeBlockchain(newCtx, blockchainRid)
-                            }
-                            newChainId
-                        } else {
-                            chainId
-                        }
-                    }
-                    .filter { it != CHAIN0 }
-                    .forEach {
-                        blockchains.add(it)
-                    }
             true
         }
-
-        return blockchains
+        retrieveDebug("End, restart: ${blockchains.size}.")
+        return blockchains.toSet()
     }
 
     protected open fun getLaunchedBlockchains(): Set<Long> {
         return blockchainProcesses.keys
     }
 
+    // ----------------------------------------------
+    // To cut down on boilerplate logging in code
+    // ----------------------------------------------
+    // Start Stop Async BC
+    private fun ssaTrace(str: String, bTrace: BlockTrace?) {
+        if (logger.isTraceEnabled) {
+            logger.trace("${nodeName()}: startStopBlockchainsAsync() -- $str: block causing the start-n-stop async: $bTrace")
+        }
+    }
+    private fun ssaInfo(str: String, chainId: Long) {
+        if (logger.isInfoEnabled) {
+            logger.info("[${nodeName()}]: startStopBlockchainsAsync() - $str: chainId: $chainId")
+        }
+    }
+
+    //  wrappedRestartHandler()
+    private fun wrTrace(str: String, chainId: Long, bTrace: BlockTrace?) {
+        if (logger.isTraceEnabled) {
+            logger.trace("[${nodeName()}]: wrappedRestartHandler() -- $str: chainId: $chainId, block causing handler to run: $bTrace")
+        }
+    }
+
+    // reloadBlockchainsAsync()
+    private fun reloadAllDebug(str: String, bTrace: BlockTrace?) {
+        if (logger.isDebugEnabled) {
+            logger.debug("${nodeName()}: reloadBlockchainsAsync() -- $str: block causing full reload: $bTrace")
+        }
+    }
+    private fun reloadAllInfo(str: String, chainId: Long) {
+        if (logger.isDebugEnabled) {
+            logger.debug("${nodeName()}: reloadBlockchainsAsync() -- $str: chainId: $chainId")
+        }
+    }
+
+    // retrieveBlockchainsToLaunch()()
+    protected fun retrieveTrace(str: String) {
+        if (logger.isTraceEnabled) {
+            logger.trace("retrieveBlockchainsToLaunch() -- $str ")
+        }
+    }
+    protected fun retrieveDebug(str: String) {
+        if (logger.isDebugEnabled) {
+            logger.debug("retrieveBlockchainsToLaunch() -- $str ")
+        }
+    }
 }

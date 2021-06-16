@@ -11,6 +11,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.BlockQueries
+import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.BaseDirectoryDataSource
@@ -51,9 +52,9 @@ open class ContainerManagedBlockchainProcessManager(
         return false
     }
 
-    override fun startBlockchain(chainId: Long): BlockchainRid? {
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
         return if (chainId == CHAIN0) {
-            super.startBlockchain(chainId)
+            super.startBlockchain(chainId, bTrace)
         } else {
             synchronized(lock) {
                 if (chainIdInContainers(chainId)) {
@@ -71,9 +72,9 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    override fun stopBlockchain(chainId: Long) {
+    override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?) {
         if (chainId == CHAIN0) {
-            super.stopBlockchain(chainId)
+            super.stopBlockchain(chainId, bTrace)
         } else {
             synchronized(lock) {
                 if (chainIdInContainers(chainId)) {
@@ -187,7 +188,7 @@ open class ContainerManagedBlockchainProcessManager(
 
     override fun shutdown() {
         startingOrRunningProcesses()
-                .forEach { stopBlockchain(it) }
+                .forEach { it -> stopBlockchain(it, bTrace = null) }
         super.shutdown()
     }
 

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.3.1-SNAPSHOT</version>
+        <version>3.3.2-SNAPSHOT</version>
     </parent>
     <artifactId>postchain-base</artifactId>
     <packaging>jar</packaging>
@@ -276,6 +276,9 @@
                             <archive>
                                 <manifest>
                                     <mainClass>net.postchain.AppKt</mainClass>
+                                    <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
+                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                                 </manifest>
                                 <manifestEntries>
                                     <Class-Path>backend.jar</Class-Path>

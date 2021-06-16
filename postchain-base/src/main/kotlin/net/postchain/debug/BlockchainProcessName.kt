@@ -5,7 +5,7 @@ package net.postchain.debug
 import net.postchain.base.BlockchainRid
 import net.postchain.devtools.NameHelper
 
-class BlockchainProcessName(val pubKey: String, val blockchainRid: BlockchainRid) {
+data class BlockchainProcessName(val pubKey: String, val blockchainRid: BlockchainRid) {
 
     override fun toString(): String = NameHelper.blockchainProcessName(pubKey, blockchainRid)
 

@@ -11,6 +11,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
+import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.OnDemandBlockBuildingStrategy
@@ -26,6 +27,7 @@ import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.x.XPeerID
 import org.apache.commons.configuration2.Configuration
+import java.lang.IllegalStateException
 import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -123,6 +125,9 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     fun setupDataSources(nodeSet: NodeSet) {
         for (i in 0 until nodeSet.size) {
+            if (!nodeSet.contains(i)) {
+                throw IllegalStateException("We don't have node nr: " + i)
+            }
             val dataSource = createMockDataSource(i)
             mockDataSources.put(i, dataSource)
         }
@@ -142,7 +147,7 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
         val pm = nodes[index].processManager as TestManagedBlockchainProcessManager
-        pm.awaitStarted(chainId, atLeastHeight)
+        pm.awaitStarted(index, chainId, atLeastHeight)
     }
 
     fun restartNodeClean(index: Int, nodeSet: NodeSet, atLeastHeight: Long) {
@@ -160,7 +165,9 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
     fun awaitHeight(nodeSet: NodeSet, height: Long) {
+        awaitLog("========= AWAIT ALL ${nodeSet.size} NODES chain:  ${nodeSet.chain}, height:  $height")
         awaitHeight(nodeSet.nodes(), nodeSet.chain, height)
+        awaitLog("========= DONE AWAIT ALL ${nodeSet.size} NODES chain: ${nodeSet.chain}, height: $height")
     }
 
     fun assertCantBuildBlock(nodeSet: NodeSet, height: Long) {
@@ -212,7 +219,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
 
-    protected fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
+    protected open fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
         nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
     }
 
@@ -261,6 +268,9 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
 
 class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSource) :
         BlockchainConfigurationProvider {
+
+    companion object: KLogging()
+
     override fun getConfiguration(eContext: EContext, chainId: Long): ByteArray? {
         val db = DatabaseAccess.of(eContext)
         val height = db.getLastBlockHeight(eContext)
@@ -272,6 +282,7 @@ class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSou
         val height = dba.getLastBlockHeight(eContext)
         val blockchainRid = chainRidOf(chainId)
         val nextConfigHeight = mockDataSource.findNextConfigurationHeight(blockchainRid.data, height)
+        logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight")
         return (nextConfigHeight != null) && (nextConfigHeight == height + 1)
     }
 }
@@ -296,23 +307,30 @@ class TestManagedBlockchainProcessManager(blockchainInfrastructure: BlockchainIn
         blockchainConfigProvider,
         nodeDiagnosticContext) {
 
+    companion object : KLogging()
+
     private val blockchainStarts = ConcurrentHashMap<Long, BlockingQueue<Long>>()
 
     override fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
         return testDataSource
     }
 
-    override fun getBlockchainsShouldBeLaunched(): Set<Long> {
+    /**
+     * Overriding the original method, so that we now, instead of checking the DB for what
+     * BCs to launch we instead
+     */
+    override fun retrieveBlockchainsToLaunch(): Set<Long> {
         val result = mutableListOf<Long>()
         testDataSource.computeBlockchainList().forEach {
             val brid = BlockchainRid(it)
             val chainIid = chainIidOf(brid)
             result.add(chainIid)
+            retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")
             withReadWriteConnection(storage, chainIid) { newCtx ->
                 DatabaseAccess.of(newCtx).initializeBlockchain(newCtx, brid)
             }
-            val i = 0
         }
+        retrieveDebug("NOTE TEST! - End, restart: ${result.size} ")
         return result.toSet()
     }
 
@@ -322,9 +340,19 @@ class TestManagedBlockchainProcessManager(blockchainInfrastructure: BlockchainIn
         }
     }
 
+    // Marks the BC height directly after the last BC restart.
+    // (The ACTUAL BC height will often proceed beyond this height, but we don't track that here)
     var lastHeightStarted = ConcurrentHashMap<Long, Long>()
-    override fun startBlockchain(chainId: Long): BlockchainRid? {
-        val blockchainRid = super.startBlockchain(chainId)
+
+    /**
+     * Overriding the original startBlockchain() and adding extra logic for measuring restarts.
+     *
+     * (This method will run for for every new height where we have a new BC configuration,
+     * b/c the BC will get restarted before the configuration can be used.
+     * Every time this method runs the [lastHeightStarted] gets updated with the restart height.)
+     */
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
+        val blockchainRid = super.startBlockchain(chainId, bTrace)
         if (blockchainRid == null) {
             return null
         }
@@ -335,10 +363,33 @@ class TestManagedBlockchainProcessManager(blockchainInfrastructure: BlockchainIn
         return blockchainRid
     }
 
-    fun awaitStarted(chainId: Long, atLeastHeight: Long) {
+    /**
+     * Awaits a start/restart of a BC.
+     *
+     * @param nodeIndex the node we should wait for
+     * @param chainId the chain we should wait for
+     * @param atLeastHeight the height we should wait for. Note that this height MUST be a height where we have a
+     *           new BC configuration kicking in, because that's when the BC will be restarted.
+     *           Example: if a new BC config starts at height 10, then we should put [atLeastHeight] to 9.
+     */
+    fun awaitStarted(nodeIndex: Int, chainId: Long, atLeastHeight: Long) {
+        awaitDebug("++++++ AWAIT node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
         while (lastHeightStarted.get(chainId) ?: -2L < atLeastHeight) {
             sleep(10)
         }
+        awaitDebug("++++++ WAIT OVER! node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
+    }
+}
+
+val awaitDebugLog = false
+
+/**
+ * Sometimes we want to monitor how long we are waiting and WHAT we are weighting for, then we can turn on this flag.
+ * Using System.out to separate this from "real" logs
+ */
+fun awaitDebug(dbg: String) {
+    if (awaitDebugLog) {
+        System.out.println("TEST: $dbg")
     }
 }
 
@@ -456,6 +507,8 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         val confs = bridToConfs.computeIfAbsent(rid) { sortedMapOf() }
         if (confs!!.put(height, Pair(conf, rawBcConf)) != null) {
             throw IllegalArgumentException("Setting blockchain configuraion for height that already has a configuration")
+        } else {
+            awaitDebug("### NEW BC CONFIG for chain: ${nodeSet.chain} (bc rid: ${rid.toShortHex()}) at height: $height")
         }
         chainToNodeSet.put(chainRidOf(nodeSet.chain), nodeSet)
     }

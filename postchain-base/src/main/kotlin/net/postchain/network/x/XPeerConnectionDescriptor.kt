@@ -3,7 +3,9 @@
 package net.postchain.network.x
 
 import net.postchain.base.BlockchainRid
+import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.IdentPacketInfo
 
 enum class Direction {
@@ -34,4 +36,13 @@ class XPeerConnectionDescriptor(
     fun isOutgoing(): Boolean {
         return dir == Direction.OUTGOING
     }
+
+    /**
+     * Returns a convenient string of the format "[03B2:94]/[00:03]" to put into the logs.
+     *                                            (Node id) (BC RID)
+     */
+    fun loggingPrefix(peerId: XPeerID): String = BlockchainProcessName(
+            peerId.toString(),
+            blockchainRid
+    ).toString()
 }

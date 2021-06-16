@@ -9,19 +9,19 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
     override fun create(
             nodeConfig: NodeConfig,
             blockchainConfig: BlockchainConfiguration,
-            historicBlockchain: HistoricBlockchain?
+            historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration {
-        return create(nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers, historicBlockchain)
+        return create(nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers, historicBlockchainContext)
     }
 
     override fun create(
             nodeConfig: NodeConfig,
             blockchainRid: BlockchainRid,
             peers: List<ByteArray>,
-            historicBlockchain: HistoricBlockchain?
+            historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration {
 
-        val relevantPeerMap = buildPeersMap(nodeConfig, blockchainRid, peers, historicBlockchain)
+        val relevantPeerMap = buildPeersMap(nodeConfig, blockchainRid, peers, historicBlockchainContext)
 
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
@@ -35,7 +35,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
             nodeConfig: NodeConfig,
             blockchainRid: BlockchainRid,
             peers: List<ByteArray>, // signers
-            historicBlockchain: HistoricBlockchain?
+            historicBlockchainContext: HistoricBlockchainContext?
     ): Map<XPeerID, PeerInfo> {
         val myPeerId = XPeerID(nodeConfig.pubKeyByteArray)
         val peers0 = peers.map { XPeerID(it) }
@@ -43,8 +43,8 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
             nodeConfig.nodeReplicas[it] ?: listOf()
         }
 
-        val blockchainReplicas = if (historicBlockchain != null) {
-            (nodeConfig.blockchainReplicaNodes[historicBlockchain.historicBrid] ?: listOf()).union(
+        val blockchainReplicas = if (historicBlockchainContext != null) {
+            (nodeConfig.blockchainReplicaNodes[historicBlockchainContext.historicBrid] ?: listOf()).union(
                     nodeConfig.blockchainReplicaNodes[blockchainRid] ?: listOf())
         } else {
             nodeConfig.blockchainReplicaNodes[blockchainRid] ?: listOf()

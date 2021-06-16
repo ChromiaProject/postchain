@@ -74,7 +74,7 @@ class DefaultXConnectionManagerTest {
 
         // When
         val connectionManager = DefaultXConnectionManager(
-            connectorFactory, packetEncoderFactory, packetDecoderFactory
+            connectorFactory, packetEncoderFactory, packetDecoderFactory, SECP256K1CryptoSystem()
         )
             .also { it.connectChain(chainPeerConfig, false, mock()) }
 
@@ -102,7 +102,7 @@ class DefaultXConnectionManagerTest {
 
         // When
         val connectionManager = DefaultXConnectionManager(
-            connectorFactory, packetEncoderFactory, packetDecoderFactory
+            connectorFactory, packetEncoderFactory, packetDecoderFactory, SECP256K1CryptoSystem()
         )
 
         try {
@@ -137,7 +137,7 @@ class DefaultXConnectionManagerTest {
 
         // When
         val connectionManager = DefaultXConnectionManager(
-            connectorFactory, packetEncoderFactory, packetDecoderFactory
+            connectorFactory, packetEncoderFactory, packetDecoderFactory, SECP256K1CryptoSystem()
         )
             .also { it.connectChain(chainPeerConfig, true, mock()) }
 
@@ -166,7 +166,7 @@ class DefaultXConnectionManagerTest {
 
         // When / Then exception
         DefaultXConnectionManager(
-            connectorFactory, mock(), mock()
+            connectorFactory, mock(), mock(), SECP256K1CryptoSystem()
         ).apply {
             connectChain(chainPeerConfig, false, mock()) // Without connecting to peers
             connectChainPeer(1, unknownPeerInfo.peerId())
@@ -194,7 +194,7 @@ class DefaultXConnectionManagerTest {
 
         // When
         val connectionManager = DefaultXConnectionManager(
-            connectorFactory, packetEncoderFactory, packetDecoderFactory
+            connectorFactory, packetEncoderFactory, packetDecoderFactory, SECP256K1CryptoSystem()
         )
             .apply {
                 connectChain(chainPeerConfig, false, mock()) // Without connecting to peers
@@ -226,7 +226,7 @@ class DefaultXConnectionManagerTest {
 
         // When
         val connectionManager = DefaultXConnectionManager(
-            connectorFactory, packetEncoderFactory, packetDecoderFactory
+            connectorFactory, packetEncoderFactory, packetDecoderFactory, SECP256K1CryptoSystem()
         ).apply {
             connectChain(chainPeerConfig, true, mock()) // Auto connect all peers
 
@@ -281,7 +281,7 @@ class DefaultXConnectionManagerTest {
 
         // When
         val connectionManager = DefaultXConnectionManager(
-            connectorFactory, packetEncoderFactory, packetDecoderFactory
+            connectorFactory, packetEncoderFactory, packetDecoderFactory, SECP256K1CryptoSystem()
         ).apply {
             connectChain(chainPeerConfig, true, mock()) // With autoConnect
 
@@ -355,7 +355,7 @@ class DefaultXConnectionManagerTest {
 
         // When
         val connectionManager = DefaultXConnectionManager(
-            connectorFactory, packetEncoderFactory, packetDecoderFactory
+            connectorFactory, packetEncoderFactory, packetDecoderFactory, SECP256K1CryptoSystem()
         ).apply {
             connectChain(chainPeerConfig, true, mock()) // With autoConnect
 
@@ -381,7 +381,7 @@ class DefaultXConnectionManagerTest {
         emptyManager().broadcastPacket({ byteArrayOf() }, 1)
     }
 
-    private fun emptyManager() = DefaultXConnectionManager(connectorFactory, mock(), mock())
+    private fun emptyManager() = DefaultXConnectionManager(connectorFactory, mock(), mock(), SECP256K1CryptoSystem())
 
     private fun emptyCommConf(): PeerCommConfiguration {
         return mock {
@@ -408,7 +408,7 @@ class DefaultXConnectionManagerTest {
 
         // When
         val connectionManager = DefaultXConnectionManager(
-            connectorFactory, packetEncoderFactory, packetDecoderFactory
+            connectorFactory, packetEncoderFactory, packetDecoderFactory, SECP256K1CryptoSystem()
         ).apply {
             connectChain(chainPeerConfig, true, mock()) // With autoConnect
 

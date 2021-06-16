@@ -1,6 +1,7 @@
 package net.postchain.network.masterslave.master
 
 import net.postchain.base.BlockchainRid
+import net.postchain.base.CryptoSystem
 import net.postchain.config.node.NodeConfig
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.XPacketDecoderFactory
@@ -17,11 +18,13 @@ class DefaultMasterConnectionManager<PacketType>(
         connectorFactory: XConnectorFactory<PacketType>,
         packetEncoderFactory: XPacketEncoderFactory<PacketType>,
         packetDecoderFactory: XPacketDecoderFactory<PacketType>,
+        cryptoSystem: CryptoSystem,
         val nodeConfig: NodeConfig
 ) : DefaultXConnectionManager<PacketType>(
         connectorFactory,
         packetEncoderFactory,
-        packetDecoderFactory
+        packetDecoderFactory,
+        cryptoSystem
 ), MasterConnectionManager, MasterConnectorEvents {
 
     private class SlaveChain(val config: SlaveChainConfig) {

@@ -2,6 +2,7 @@
 
 package net.postchain.ebft.worker
 
+import mu.KLogging
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.ebft.BaseBlockDatabase
@@ -13,13 +14,18 @@ import kotlin.concurrent.thread
 
 class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProcess {
 
+    companion object : KLogging()
+
+    override fun getEngine() = workerContext.engine
+
     private val fastSynchronizer: FastSynchronizer
 
     private val done = CountDownLatch(1)
 
+    private val blockDatabase = BaseBlockDatabase(
+            getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
+
     init {
-        val blockDatabase = BaseBlockDatabase(
-                getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
 
         val params = FastSyncParameters()
         params.jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout
@@ -32,12 +38,22 @@ class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProce
         }
     }
 
-    override fun getEngine() = workerContext.engine
+    fun getHeight(): Long = fastSynchronizer.blockHeight
 
     override fun shutdown() {
+        shutdownDebug("Begin")
         fastSynchronizer.shutdown()
+        blockDatabase.stop()
+        shutdownDebug("Wait for \"done\"")
         done.await()
         workerContext.shutdown()
+        shutdownDebug("End")
+    }
+
+    private fun shutdownDebug(str: String) {
+        if (logger.isDebugEnabled) {
+            logger.debug("${workerContext.processName}: shutdown() - $str.")
+        }
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {

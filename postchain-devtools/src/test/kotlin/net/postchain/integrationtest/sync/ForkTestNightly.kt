@@ -7,6 +7,7 @@ import net.postchain.network.x.XPeerID
 import org.apache.commons.configuration2.Configuration
 import org.junit.Assert
 import org.junit.Test
+import org.junit.Ignore
 import java.lang.Thread.sleep
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -129,6 +130,12 @@ class ForkTestNightly : ManagedModeTest() {
         assertCantBuildBlock(c2, 11)
     }
 
+    /**
+     * The chart at doc/ForkTestNightly_recursiveFork.graphml (or .png) to understand how the
+     * chain1's and chain2's configurations relate.
+     * (chain3 isn't on the pic, but it starts out as a chain1 fork and moves to be a chain2 fork at height 19.
+     *  Rather tricky IMO)
+     */
     @Test
     fun testRecursiveFork() {
         val (c1, c2) = makeFork()
@@ -140,7 +147,9 @@ class ForkTestNightly : ManagedModeTest() {
         buildBlock(c1, 17)
         awaitHeight(c2_15, 17)
         awaitHeight(c3, 17)
-        val c2_19 = addBlockchainConfiguration(c2_15, 19, setOf(2), setOf(1), null)
+
+        // From height 19 chain2 is standalone (=is no longer a fork of chain1).
+        val c2_19 = addBlockchainConfiguration(c2_15, 19, setOf(2), setOf(0, 1), null)
         val c3_19 = addBlockchainConfiguration(c3, 19, setOf(2), setOf(0), c2_19.chain)
         buildBlock(c1, 20)
         awaitChainRestarted(c2_19, 18)
@@ -149,6 +158,8 @@ class ForkTestNightly : ManagedModeTest() {
         awaitHeight(c3_19, 19)
         assertEqualAtHeight(c2_19, c3_19, 19)
         assertNotEqualAtHeight(c1, c3_19, 19)
+
+        // From height 21 chain3 is standalone (=is no longer a fork of chain2).
         val c3_21 = addBlockchainConfiguration(c3_19, 21, setOf(0), setOf(), null)
         buildBlock(c2_19, 22)
         awaitChainRestarted(c3_21, 20)
@@ -157,8 +168,9 @@ class ForkTestNightly : ManagedModeTest() {
     }
 
     @Test
-    fun testAliases() {
-        extraNodeProperties[0] = mapOf("blockchain_aliases.${chainRidOf(1)}" to listOf(alias(1,2)))
+    fun testAncestors() {
+        extraNodeProperties[0] = mapOf("blockchain_ancestors.${chainRidOf(3)}"
+                to listOf(ancestor(1,2)))
         val (c1, c2) = makeFork() // c1 and c2 both consist of node index 0 (signer) and 1 (replica)
         dataSources(c1).forEach {
             it.value.delBlockchain(chainRidOf(c1.chain))
@@ -169,14 +181,141 @@ class ForkTestNightly : ManagedModeTest() {
         assertEqualAtHeight(c2, c3, 10)
     }
 
+    /**
+     * (This test originated from a discussion with alex)
+     * What should happen if we at some point use an ancestor over the network, but later move it to the local node.
+     * This test is three steps, and they are described graphically so look at the pictures:
+     *
+     * doc/blockchain_ancestor_usage_step1.png to ...step3
+     *
+     * ------- ------- -------------- ------- -----
+     *                  Signing
+     * NodeId  NodeHex  Chains        Replica Ancestor
+     * ------- -------- ------------- ------- -----
+     * 0       70       0
+     * 1       8F       1             0
+     * 2       94       2             0       Chain2 has Chain1 ancestor
+     * 3       5D       3,(2),(4)
+     * ------- -------- ------------- ------- ------
+     *
+     * Test
+     * This tests that we can sync from a chain via ancestor (chain2 is ancestor for chain1) AND that we can
+     * also run that chain locally and sync locally (from chain2 as an ancestor for chain1).
+     *
+     * Note:
+     * To do this successfully we must do the different steps in succession, we cannot for example do step1 and step2
+     * in parallel, since ConnMgr will not allow us to connect to the same chain  (chain2 on Node2) using different names.
+     */
+    @Ignore // Incomplete test, never worked and probably incorrect setup.
     @Test
-    fun testAliasesManyLevels() {
+    fun testAncestorNetworkThenLocally() {
+        extraNodeProperties[0] = mapOf("blockchain_ancestors.${chainRidOf(3)}" to listOf(ancestor(2,2)))
+
+        startManagedSystem(4, 0)
+
+        awaitLog("++++++++++++++ Begin Ancestor Network then Locally ++++++++++++++")
+
+        val c1 = startNewBlockchain(setOf(1), setOf(0), null)
+        buildBlock(c1, 10)
+        val chains = mutableMapOf(1 to c1)
+
+        // Add chain2 on Node2
+        val c2 = startNewBlockchain(setOf(2), setOf(0), c1.chain)
+        buildBlock(c0) // trigger blockchain changes
+        buildBlock(c2, 10)
+        awaitHeight(c2, 10)
+        chains[2] = c2
+
+        // ============
+        // Step 1 - sync Chain3 remote via Chain2 (=ancestor for Chain1)
+        // ============
+        // -- Shutdown Node1, so that it will be impossible to get chain1 blocks from Node1
+        nodes[1].shutdown()
+
+        // -- Create chain 3 on Node3
+        val c3 = startNewBlockchain(setOf(3), setOf(), c1.chain)
+        buildBlock(c0) // trigger blockchain changes
+        buildBlock(c3, 10)
+        awaitHeight(c3, 10)
+        assertEqualAtHeight(c2, c3, 10)
+        chains[3] = c3
+
+        // ============
+        // Step 2 - copy chain2 Node2 -> Node3
+        // ============
+        val c2_node3 = addBlockchainConfiguration(c2, 10, setOf(3), setOf(), null)
+        buildBlock(c0) // trigger blockchain changes
+        buildBlock(c2_node3, 20)
+        awaitHeight(c2_node3,  20)
+        assertEqualAtHeight(c2_node3, c2, 10)
+
+        // ============
+        // Step 3 - sync Chain4 locally via Chain2 (=ancestor for Chain1)
+        // ============
+        // -- Shutdown Node2, so that it will be impossible to get chain2 blocks from Node2
+        nodes[2].shutdown()
+
+        // -- Sync Chain4 from Chain2 locally on Node3
+        val c4 = startNewBlockchain(setOf(3), setOf(), c1.chain)
+        buildBlock(c0) // trigger blockchain changes
+        buildBlock(c4, 10)
+        awaitHeight(c4, 10)
+        assertEqualAtHeight(c3, c4, 10)
+        chains[4] = c4
+
+        awaitLog("++++++++++++++ End Ancestor Network then Locally ++++++++++++++")
+    }
+
+    /**
+     * This is a pretty brutal test, runs many nodes and chains.
+     *
+     * ============
+     * Setup
+     * ============
+     * When reading logs you might find this map describing what chains run on what node useful:
+     *
+     * ------- ------- ------------- -----
+     *                  Signing       Replica
+     * NodeId  NodeHex  Chains        Chains
+     * ------- -------- ------------- -----
+     * 0       70       0
+     * 1       8F       1,2,3,4,(5?)
+     * 2       94       2,3,4,(5?)
+     * 3       5D       3,4,(5?)
+     * 4       D1       4,(5?)
+     * 5       68                     5 (replica at all heights)
+     * 6       E4
+     * ------- -------- ------------- -----
+     *
+     * NOTE: Node 1-5 are all signers for chain 5, but at different heights.
+     *
+     * ============
+     * Testing
+     * ============
+     * Chain 5 is started after all the other chains have been built, so
+     * the actual test is to observe in chain 5 will manage to get blocks or not.
+     *
+     * The core idea of this test is to see if chain 5 can fetch the early blocks
+     * (via the ancestors) despite node 1 and 2 being down.
+     * (To be clear, node 3,4 and 5 must fetch blocks 1-19 from the ancestors on node 4.
+     * since the original masters of chain 1 and 2 are down)
+     *
+     * ============
+     * NOTE
+     * ============
+     * This test also tests that we won't get deadlock when we restart a chain that's being copied via [HistoricChainWorker].
+     * This is a side effect of this test, that has been very valuable during debugging of deadlocks
+     *
+     */
+    @Test
+    fun testAncestorsManyLevels() {
+        // ancestors for chain 5 are 3 and 4
         extraNodeProperties[5] = mapOf(
-                "blockchain_aliases.${chainRidOf(1)}" to listOf(alias(3,3)),
-                "blockchain_aliases.${chainRidOf(2)}" to listOf(alias(4,4),alias(3,3)))
+                "blockchain_ancestors.${chainRidOf(5)}" to listOf(ancestor(4, 4)))
 
         startManagedSystem(7, 0)
 
+        awaitLog("++++++++++++++ Begin Ancestor Many Levels ++++++++++++++")
         val c1 = startNewBlockchain(setOf(1), setOf(), null)
         buildBlock(c1, 10)
         // Chain id is same as node id, for example node 3 is the final signer of chain 3
@@ -185,8 +324,11 @@ class ForkTestNightly : ManagedModeTest() {
             val c = startNewBlockchain(setOf(1), setOf(), c1.chain)
             chains[node] = c
             for (config in 2..node) {
+                // Node 4 will get chain 4, Node 3 will get chain 3,4, Node 2 will get all chains
                 val configHeight = 10L * (config-1)
                 val chainConfig = if (config == node) {
+                    // For Node 2, BC 2 will be the "original" (unforked chain),
+                    // Node 3 will have the "original" for BC 3 etc.
                     addBlockchainConfiguration(c, configHeight, setOf(config), setOf(), null)
                 } else {
                     addBlockchainConfiguration(c, configHeight, setOf(config), setOf(), config.toLong())
@@ -207,13 +349,22 @@ class ForkTestNightly : ManagedModeTest() {
         // historicBrid) source for the blocks is unavailable
         nodes[1].shutdown()
         nodes[2].shutdown()
+        awaitLog("++++++++++++++ Begin Ancestor Many Levels ACTUAL test ++++++++++++++")
 
         val c4 = chains[4]!!
+
+        // -----------------
+        // Chain5
+        // -----------------
+        // Chain5 will have different signers for every 10 blocks, AND new historic chain for every 10 blocks
+        // so this is a really tricky test!
         val c5 = startNewBlockchain(setOf(1), setOf(5), c1.chain, setOf(1, 2), false)
         addBlockchainConfiguration(c5, 10, setOf(2), setOf(5), 2L, setOf(1, 2))
         addBlockchainConfiguration(c5, 20, setOf(3), setOf(5), 3L, setOf(1, 2))
         addBlockchainConfiguration(c5, 30, setOf(4), setOf(5), 4L, setOf(1, 2))
+        // In the last step, where Node5 signs blocks above 40, we no longer consider this a fork
         val c5_5 = addBlockchainConfiguration(c5, 40, setOf(5), setOf(), null, setOf(1, 2))
+
         buildBlock(c0.remove(setOf(1, 2)))
         awaitChainRestarted(c5_5, 39)
         buildBlock(c5_5, 40)
@@ -251,7 +402,7 @@ class ForkTestNightly : ManagedModeTest() {
 //        sleep(1000000000)
 //    }
 
-    private fun alias(index: Int, blockchain: Long): String {
+    private fun ancestor(index: Int, blockchain: Long): String {
         return "${XPeerID(KeyPairHelper.pubKey(index))}:${chainRidOf(blockchain)}"
     }
 
@@ -260,6 +411,13 @@ class ForkTestNightly : ManagedModeTest() {
         val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
         extraNodeProperties[nodeIndex]?.forEach { key, value -> propertyMap.setProperty(key, value) }
         return propertyMap
+    }
+
+
+    override fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
+        awaitLog("========= AWAIT ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
+        nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
+        awaitLog("========= DONE WAITING ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
     }
 
     private fun makeFork(): Pair<NodeSet, NodeSet> {

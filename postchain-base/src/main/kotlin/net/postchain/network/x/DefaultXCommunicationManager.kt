@@ -31,11 +31,16 @@ class DefaultXCommunicationManager<PacketType>(
     private var inboundPackets = mutableListOf<Pair<XPeerID, PacketType>>()
     private var heartbeatListener: HeartbeatListener? = null
 
+    var connected = false
+
+    @Synchronized
     override fun init() {
+        if (connected) return
         val packetHandler = { data: ByteArray, peerId: XPeerID -> consumePacket(peerId, data) }
         val heartbeatHandler = { event: HeartbeatEvent -> heartbeatListener?.onHeartbeat(event) ?: Unit }
         val peerConfig = XChainPeersConfiguration(chainId, blockchainRid, config, packetHandler, heartbeatHandler)
         connectionManager.connectChain(peerConfig, true) { processName.toString() }
+        connected = true
     }
 
     @Synchronized
@@ -79,8 +84,11 @@ class DefaultXCommunicationManager<PacketType>(
         }
     }
 
+    @Synchronized
     override fun shutdown() {
+        if (!connected) return
         connectionManager.disconnectChain(chainId) { processName.toString() }
+        connected = false
     }
 
     private fun consumePacket(peerId: XPeerID, packet: ByteArray) {
