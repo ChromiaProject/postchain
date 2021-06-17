@@ -5,14 +5,17 @@ package net.postchain.gtx
 import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.base.icmf.IcmfPumpStation
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
 import nl.komponents.kovenant.Promise
 
-open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationData, val module: GTXModule)
-    : BaseBlockchainConfiguration(configData) {
+open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationData,
+                                      val module: GTXModule,
+                                      pumpStation: IcmfPumpStation? = null )
+    : BaseBlockchainConfiguration(configData, pumpStation) {
     private val txFactory = GTXTransactionFactory(
             effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize())
     private val specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem,

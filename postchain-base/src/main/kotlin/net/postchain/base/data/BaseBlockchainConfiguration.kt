@@ -3,11 +3,15 @@
 package net.postchain.base.data
 
 import net.postchain.base.*
+import net.postchain.base.icmf.IcmfMessagePipe
+import net.postchain.base.icmf.IcmfPumpStation
 import net.postchain.core.*
 import net.postchain.getBFTRequiredSignatureCount
 
-open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurationData)
-    : BlockchainConfiguration {
+open class BaseBlockchainConfiguration(
+        val configData: BaseBlockchainConfigurationData,
+        val pumpStation: IcmfPumpStation? = null // Only some chains (like anchoring) will have a pump station.
+        ): BlockchainConfiguration {
 
     override val traits = setOf<String>()
     val cryptoSystem = SECP256K1CryptoSystem()
@@ -18,6 +22,10 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
     val signers = configData.getSigners()
 
     val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
+
+    // ICMF specific
+    val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
+    val icmfPipes = ArrayList<IcmfMessagePipe>()
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
         return BaseBlockHeader(rawBlockHeader, cryptoSystem)
@@ -46,12 +54,14 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
     }
 
     open fun getSpecialTxHandler(): SpecialTransactionHandler {
-        return NullSpecialTransactionHandler()
+        return specialTransactionHandler
     }
 
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
-        return BaseBlockBuilder(
+        val anchorProc: TxEventSink? = null
+
+        val bb = BaseBlockBuilder(
                 effectiveBlockchainRID,
                 cryptoSystem,
                 ctx,
@@ -64,6 +74,11 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
                 effectiveBlockchainRID != blockchainRid,
                 configData.getMaxBlockSize(),
                 configData.getMaxBlockTransactions())
+
+        // Every block will have an anchoring chain to report to
+        bb.installEventProcessor("anchor", anchorProc!!)
+
+        return bb
     }
 
     /**
@@ -110,5 +125,10 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
 
         return ctor.newInstance(configData, this, blockQueries, txQueue) as BlockBuildingStrategy
     }
+
+    fun addMessagePipe(pipe: IcmfMessagePipe) {
+        icmfPipes.add(pipe)
+    }
+
 }
 

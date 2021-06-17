@@ -64,11 +64,22 @@ open class BaseBlockBuilder(
         return gtvArr.merkleHash(calc)
     }
 
+    /**
+     * Adds an [TxEventSink] to this block builder.
+     */
     fun installEventProcessor(type: String, sink: TxEventSink) {
         if (type in eventProcessors) throw ProgrammerMistake("Conflicting event processors in block builder, type ${type}")
         eventProcessors[type] = sink
     }
 
+    /**
+     * Will send the given "data" to the correct event sink.
+     *
+     * @param ctxt is just the context
+     * @param type is the [TxEventSink] we want to send data to, if this sink isn't found, throw exception, b/c we do
+     *             not want these messages to accidentally get lost.
+     * @param data is the data we should send to the [TxEventSink]
+     */
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         when (val proc = eventProcessors[type]) {
             null -> throw ProgrammerMistake("Event sink for ${type} not found")
