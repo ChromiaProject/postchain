@@ -234,22 +234,16 @@ open class BaseBlockchainProcessManager(
     // ----------------------------------------------
     // To cut down on boilerplate logging in code
     // ----------------------------------------------
-    fun isThisATest() = insideATest
-    fun setToTest() {
-        this.insideATest = true
-    }
-
-    /**
-     * For some reason KLogger doesn't work inside the restart handler, that's why we do System.out.
-     */
     protected fun testDebug(str: String) {
-        if (isThisATest()) {
-            System.out.println("RestartHandler: $str")
+        if (logger.isDebugEnabled) {
+            logger.debug(str)
         }
+
     }
     protected fun testDebug(str: String, bTrace: BlockTrace?) {
-        if (isThisATest()) {
-            System.out.println("RestartHandler: $str, block causing this: $bTrace")
+        testDebug(str)
+        if (logger.isTraceEnabled) {
+            logger.trace("$str, block causing this: $bTrace")
         }
     }
 
