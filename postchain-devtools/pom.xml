@@ -191,7 +191,7 @@
                 <configuration>
                     <images>
                         <image>
-                            <name>chromaway/postchain-slavenode:3.3.1</name>
+                            <name>chromaway/postchain-slavenode:3.3.2</name>
                             <build>
                                 <assemblies>
                                     <assembly>
