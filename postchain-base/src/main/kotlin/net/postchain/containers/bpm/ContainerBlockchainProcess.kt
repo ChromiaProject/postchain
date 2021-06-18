@@ -40,10 +40,6 @@ class DefaultContainerBlockchainProcess(
         communicationManager.sendHeartbeatToSlave(heartbeatEvent)
     }
 
-    override fun checkHeartbeat(): Boolean {
-        return true // We don't check heartbeat here in a master process
-    }
-
     @Synchronized
     override fun transferConfigsToContainer() {
         // Retrieving configs from dataSource/chain0
