@@ -10,7 +10,7 @@ pipelines:
         script:
           - export TESTCONTAINERS_RYUK_DISABLED=true
           - mvn -e -B -P ci clean install
-	      - cd ./postchain-devtools
+	      - cd postchain-devtools
 	      - mvn verify -Pfailsafe -Dskip.surefire.tests
         services:
           - postgres
