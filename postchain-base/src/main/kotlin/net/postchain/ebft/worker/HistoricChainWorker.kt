@@ -292,11 +292,7 @@ class HistoricChainWorker(val workerContext: WorkerContext,
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-        TODO("POS-163: Not yet implemented")
-    }
-
-    override fun checkHeartbeat(): Boolean {
-        TODO("POS-163: Not yet implemented")
+        workerContext.heartbeatChecker.onHeartbeat(heartbeatEvent)
     }
 
     // ----------------------------------------------

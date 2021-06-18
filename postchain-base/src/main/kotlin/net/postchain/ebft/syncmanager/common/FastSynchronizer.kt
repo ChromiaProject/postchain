@@ -6,11 +6,10 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.core.*
+import net.postchain.core.BlockHeader
 import net.postchain.debug.BlockTrace
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
-import net.postchain.ebft.heartbeat.HeartbeatEvent
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.message.*
 import net.postchain.ebft.message.BlockData
@@ -101,9 +100,7 @@ data class FastSyncParameters(var resurrectDrainedTime: Long = 10000,
 class FastSynchronizer(private val workerContext: WorkerContext,
                        val blockDatabase: BlockDatabase,
                        val params: FastSyncParameters
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager),
-        HeartbeatListener {
-    private var heartbeat: HeartbeatEvent? = null
+) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
     private val jobs = TreeMap<Long, Job>()
@@ -143,7 +140,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             syncDebug("Start", blockHeight)
             lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (!shutdown.get() && !exitCondition()) {
-                if (checkHeartbeat()) {
+                if (workerContext.heartbeatChecker.checkHeartbeat(lastBlockTimestamp)) {
                     refillJobs()
                     processMessages(exitCondition)
                     processDoneJobs()
@@ -641,7 +638,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            while (!checkHeartbeat()) {
+            while (!workerContext.heartbeatChecker.checkHeartbeat(lastBlockTimestamp)) {
                 if (shutdown.get() || exitCondition()) return
                 sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
             }
@@ -668,17 +665,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
             }
         }
-    }
-
-    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-        heartbeat = heartbeatEvent
-    }
-
-    // Heartbeat check is failed if there is no registered heartbeat event.
-    override fun checkHeartbeat(): Boolean {
-        if (!workerContext.nodeConfig.heartbeat) return true
-        if (heartbeat == null) return false
-        return lastBlockTimestamp - heartbeat!!.timestamp < workerContext.nodeConfig.heartbeatTimeout
     }
 
     // -------------
@@ -760,4 +746,3 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     }
 
 }
-
