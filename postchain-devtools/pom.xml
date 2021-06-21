@@ -223,7 +223,7 @@
 
         </profile>
         <profile>
-            <id>ci</id>
+            <id>ci-devtools</id>
             <build>
                 <plugins>
                     <plugin>

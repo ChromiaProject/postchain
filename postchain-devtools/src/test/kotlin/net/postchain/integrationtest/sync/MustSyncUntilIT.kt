@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 /* Two signers, no replica nodes.
  * After two blocks, Node 0 is wiped and starts to sync (from node 1)
  */
-class MustSyncUntilTestNightly : AbstractSyncTest() {
+class MustSyncUntilIT : AbstractSyncTest() {
 
     private companion object : KLogging()
 

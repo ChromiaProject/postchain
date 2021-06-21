@@ -326,10 +326,10 @@
                 <version>${maven.surefire.plugin.version}</version>
                 <configuration>
                     <properties>
-                        <property>
+                        <!--<property>
                             <name>listener</name>
                             <value>net.postchain.maven.surefire.PrintCurrentTestRunListener</value>
-                        </property>
+                        </property>-->
                     </properties>
                     <!-- skips surefire tests without skipping failsafe tests.
          Property value seems to magically default to false -->
