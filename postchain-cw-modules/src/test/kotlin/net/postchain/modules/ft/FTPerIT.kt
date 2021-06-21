@@ -13,10 +13,9 @@ import org.junit.Assert
 import org.junit.Test
 import kotlin.system.measureNanoTime
 
-val testBlockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
 val myCS = SECP256K1CryptoSystem()
 
-class FTPerfTestNightly : FTIntegrationTest() {
+class FTPerIT : FTIntegrationTest() {
 
     fun make1000Transactions(): List<ByteArray> {
         val accUtil = AccountUtil(testBlockchainRID, myCS)

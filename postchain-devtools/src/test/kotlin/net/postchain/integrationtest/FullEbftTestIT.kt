@@ -9,7 +9,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(JUnitParamsRunner::class)
-class FullEbftTestNightly : FullEbftTestNightlyCore() {
+class FullEbftTestIT : FullEbftTestNightlyCore() {
 
     @Test
     @Parameters(

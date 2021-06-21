@@ -15,7 +15,7 @@ import net.postchain.modules.esplix_r4.computeMessageID
 import org.junit.Assert
 import org.junit.Test
 
-class EsplixIntegrationTest : IntegrationTestSetup() {
+class EsplixIT : IntegrationTestSetup() {
 
     val myCS = SECP256K1CryptoSystem()
 

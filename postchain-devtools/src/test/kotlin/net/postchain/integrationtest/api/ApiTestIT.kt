@@ -35,7 +35,7 @@ import org.skyscreamer.jsonassert.JSONCompareMode
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ApiIntegrationTestNightly : IntegrationTestSetup() {
+class ApiTestIT : IntegrationTestSetup() {
 
     private val gson = JsonTools.buildGson()
     private var txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
