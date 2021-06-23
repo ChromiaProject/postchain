@@ -403,7 +403,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     override fun getEvent(ctx: EContext, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
         val sql = """SELECT * FROM (SELECT block_height, hash, data, 
             RANK() OVER (ORDER BY event_iid) rank_number 
-            FROM ${tableEvents(ctx)} 
+            FROM ${tableEvents(ctx, "l2")} 
             WHERE block_height = ?) x WHERE hash = ?"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
         if (rows.isEmpty()) return null
@@ -417,7 +417,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getAccountState(ctx: EContext, height: Long, state_n: Long): DatabaseAccess.AccountState? {
-        val sql = """SELECT block_height, state_n, data FROM ${tableStates(ctx)} WHERE block_height <= ? AND state_n = ?"""
+        val sql = """SELECT block_height, state_n, data FROM ${tableStates(ctx, "l2")} WHERE block_height <= ? AND state_n = ?"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, state_n)
         if (rows.isEmpty()) return null
         val data = rows.first()
