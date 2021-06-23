@@ -100,7 +100,7 @@ class EthereumL2Implementation(
         val data = GtvEncoder.simpleEncodeGtv(evt)
         val hash = ds.digest(data)
         events.add(hash)
-        store.writeEvent(bctx, hash, data)
+        store.writeEvent(bctx, "l2", hash, data)
     }
 
     /**
@@ -112,6 +112,6 @@ class EthereumL2Implementation(
         val data = GtvEncoder.simpleEncodeGtv(state)
         val hash = ds.digest(data)
         states[state_n] = hash
-        store.writeState(bctx, state_n, data)
+        store.writeState(bctx, "l2", state_n, data)
     }
 }

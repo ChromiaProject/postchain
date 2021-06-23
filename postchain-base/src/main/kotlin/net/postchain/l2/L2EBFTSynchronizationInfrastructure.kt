@@ -1,10 +1,7 @@
 package net.postchain.l2
 
 import mu.KLogging
-import net.postchain.base.BasePeerCommConfiguration
-import net.postchain.base.BlockchainRid
-import net.postchain.base.PeerCommConfiguration
-import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.l2.L2BlockchainConfiguration
 import net.postchain.config.node.NodeConfig
@@ -55,7 +52,8 @@ class L2EBFTSynchronizationInfrastructure(
 
     override fun makeBlockchainProcess(
         processName: BlockchainProcessName,
-        engine: BlockchainEngine
+        engine: BlockchainEngine,
+        historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration() as L2BlockchainConfiguration // TODO: [et]: Resolve type cast
         val layer2 = blockchainConfig.configData.getLayer2()
@@ -78,7 +76,7 @@ class L2EBFTSynchronizationInfrastructure(
         )
 
         return if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
-            registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_VALIDATOR)
+            registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_SIGNER)
             ValidatorWorker(workerContext)
         } else {
             registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_REPLICA)
