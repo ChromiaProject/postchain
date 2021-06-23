@@ -7,7 +7,7 @@ import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
 
 enum class SpecialTransactionPosition {
-    Begin, End, EthEvent
+    Begin, End
 }
 
 interface SpecialTransactionHandler {
@@ -16,7 +16,7 @@ interface SpecialTransactionHandler {
     fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, ectx: BlockEContext): Boolean
 }
 
-open class NullSpecialTransactionHandler : SpecialTransactionHandler {
+class NullSpecialTransactionHandler : SpecialTransactionHandler {
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
         return false
     }

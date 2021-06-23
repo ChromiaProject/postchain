@@ -7,7 +7,7 @@ import net.postchain.core.EContext
 import net.postchain.core.Transaction
 import java.sql.Connection
 
-class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
+ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun isSavepointSupported(): Boolean = true
 
@@ -44,8 +44,9 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
      */
     override fun cmdCreateTableEvent(ctx: EContext, prefix: String): String {
         return "CREATE TABLE ${tableEvents(ctx, prefix)}" +
-                " (event_iid BIGSERIAL PRIMARY KEY," +
-                " block_height BIGINT NOT NULL, " +
+                " (" +
+                "block_height BIGINT NOT NULL, " +
+                "position BIGING NOT NULL," +
                 " hash BYTEA NOT NULL," +
                 " data BYTEA NOT NULL)"
     }
@@ -69,22 +70,6 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " level INTEGER NOT NULL, " +
                 " left_index BIGINT NOT NULL, " +
                 " child_hashes BYTEA NOT NULL)"
-    }
-
-    override fun cmdCreateTableEvent(ctx: EContext): String {
-        return "CREATE TABLE ${tableEvents(ctx, "l2")}" +
-                " (event_iid BIGSERIAL PRIMARY KEY," +
-                " block_height BIGINT NOT NULL, " +
-                " hash BYTEA NOT NULL," +
-                " data BYTEA NOT NULL)"
-    }
-
-    override fun cmdCreateTableState(ctx: EContext): String {
-        return "CREATE TABLE ${tableStates(ctx, "l2")}" +
-                " (state_iid BIGSERIAL PRIMARY KEY," +
-                " block_height BIGINT NOT NULL, " +
-                " state_n BIGINT NOT NULL, " +
-                " data BYTEA NOT NULL)"
     }
 
     override fun cmdCreateTableBlockchains(): String {
@@ -146,17 +131,9 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 "VALUES (?, ?, ?, ?)"
     }
 
-    override fun cmdInsertPages(ctx: EContext, name: String): String {
+    override fun cmdInsertPage(ctx: EContext, name: String): String {
         return "INSERT INTO ${tablePages(ctx, name)} (block_height, level, left_index, child_hashes) " +
                 "VALUES (?, ?, ?, ?)"
-    }
-
-    override fun cmdInsertEvents(ctx: EContext): String {
-        return "INSERT INTO ${tableEvents(ctx, "l2")} (block_height, hash, data) " + "VALUES (?, ?, ?)"
-    }
-
-    override fun cmdInsertStates(ctx: EContext): String {
-        return "INSERT INTO ${tableStates(ctx, "l2")} (block_height, state_n, data) " + "VALUES (?, ?, ?)"
     }
 
     override fun cmdInsertConfiguration(ctx: EContext): String {
@@ -187,15 +164,15 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
      * @param ctx is the context
      * @param prefix is what the state will be used for, for example "l2" or "icmf"
      */
-    override fun cmdInsertEvents(ctx: EContext, prefix: String): String {
-        return "INSERT INTO ${tableEvents(ctx, prefix)} (block_height, hash, data) " + "VALUES (?, ?, ?)"
+    override fun cmdInsertEvent(ctx: EContext, prefix: String): String {
+        return "INSERT INTO ${tableEvents(ctx, prefix)} (block_height, hash, data) " + "VALUES (?, ?,  ?, ?)"
     }
 
     /**
      * @param ctx is the context
      * @param prefix is what the state will be used for, for example "l2"
      */
-    override fun cmdInsertStates(ctx: EContext, prefix: String): String {
+    override fun cmdInsertState(ctx: EContext, prefix: String): String {
         return "INSERT INTO ${tableStates(ctx, prefix)} (block_height, state_n, data) " + "VALUES (?, ?, ?)"
     }
 

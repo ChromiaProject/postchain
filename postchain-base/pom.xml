@@ -40,12 +40,6 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-ethereum</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
             <version>${kotlin.version}</version>
@@ -161,19 +155,6 @@
             <groupId>org.openmuc</groupId>
             <artifactId>jasn1-compiler</artifactId>
             <version>1.10.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.web3j</groupId>
-            <artifactId>core</artifactId>
-            <version>4.8.4</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp -->
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-            <version>4.9.1</version>
         </dependency>
 
         <!-- Test dependencies -->

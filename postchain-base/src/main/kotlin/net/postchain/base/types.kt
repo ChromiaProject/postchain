@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
@@ -78,17 +79,26 @@ open class BaseTxEContext(
     val tx: Transaction
 ) : BlockEContext by bectx, TxEContext {
     val events = mutableListOf<Pair<String, Gtv>>()
+    val eventSink = bectx.getInterface(TxEventSink::class.java)!!
 
     override fun emitEvent(type: String, data: Gtv) {
-        events.add(Pair(type, data))
+        if (type.startsWith("!")) {
+            eventSink.processEmittedEvent(this, type, data)
+        } else {
+            events.add(Pair(type, data))
+        }
     }
 
     override fun done() {
         if (events.isNotEmpty()) {
-            val eventSink = bectx.getInterface(TxEventSink::class.java)!!
             for (e in events) {
                 eventSink.processEmittedEvent(this, e.first, e.second)
             }
         }
     }
+}
+
+interface BaseBlockBuilderExtension {
+    fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder)
+    fun finalize(): Map<String, Gtv>
 }

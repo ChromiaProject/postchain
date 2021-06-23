@@ -1,6 +1,9 @@
-package net.postchain.base.snapshot
+package net.postchain.crypto
 
-import net.postchain.crypto.DigestSystem
+import net.postchain.base.snapshot.DigestSystem
+import net.postchain.base.snapshot.EventPageStore
+import net.postchain.base.snapshot.Page
+import net.postchain.base.snapshot.SnapshotPageStore
 
 class TestSnapshotPageStore(
     levelsPerPage: Int,

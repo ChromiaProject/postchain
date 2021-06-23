@@ -54,20 +54,16 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
-    protected abstract fun cmdCreateTableEvent(ctx: EContext): String
-    protected abstract fun cmdCreateTableState(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
 
     // --- Insert ---
     protected abstract fun cmdInsertTransactions(ctx: EContext): String
-    protected abstract fun cmdInsertPages(ctx: EContext, name: String): String
-    protected abstract fun cmdInsertEvents(ctx: EContext): String
-    protected abstract fun cmdInsertStates(ctx: EContext): String
+    protected abstract fun cmdInsertPage(ctx: EContext, name: String): String
     protected abstract fun cmdInsertConfiguration(ctx: EContext): String
-    protected abstract fun cmdInsertEvents(ctx: EContext, prefix: String): String
-    protected abstract fun cmdInsertStates(ctx: EContext, prefix: String): String
+    protected abstract fun cmdInsertEvent(ctx: EContext, prefix: String): String
+    protected abstract fun cmdInsertState(ctx: EContext, prefix: String): String
     protected abstract fun cmdPruneEvents(ctx: EContext, prefix: String): String
     protected abstract fun cmdPruneStates(ctx: EContext, prefix: String): String
     abstract fun cmdCreateTableGtxModuleVersion(ctx: EContext): String
@@ -344,12 +340,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
-    override fun insertEvent(ctx: EContext, prefix: String, height: Long, hash: Hash, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertEvents(ctx, prefix), height, hash, data)
+    override fun insertEvent(ctx: EContext, prefix: String, height: Long, position: Long,  hash: Hash, data: ByteArray) {
+        queryRunner.update(ctx.conn, cmdInsertEvent(ctx, prefix), height, position, hash, data)
     }
 
     override fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertStates(ctx, prefix), height, state_n, data)
+        queryRunner.update(ctx.conn, cmdInsertState(ctx, prefix), height, state_n, data)
     }
 
     override fun pruneEvents(ctx: EContext, prefix: String, heightMustBeHigherThan: Long) {
@@ -363,12 +359,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
 
-
-    // --- Init App ----
-    // L2
     override fun insertPage(ctx: EContext, name: String, page: Page) {
         val childHashes = page.childHashes.fold(ByteArray(0)) {total, item -> total.plus(item)}
-        queryRunner.update(ctx.conn, cmdInsertPages(ctx, name), page.blockHeight, page.level, page.left, childHashes)
+        queryRunner.update(ctx.conn, cmdInsertPage(ctx, name), page.blockHeight, page.level, page.left, childHashes)
     }
 
     /**
@@ -398,42 +391,6 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {
         val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height <= ?"
         return queryRunner.query(ctx.conn, sql, intRes, height)
-    }
-
-    override fun getEvent(ctx: EContext, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
-        val sql = """SELECT * FROM (SELECT block_height, hash, data, 
-            RANK() OVER (ORDER BY event_iid) rank_number 
-            FROM ${tableEvents(ctx, "l2")} 
-            WHERE block_height = ?) x WHERE hash = ?"""
-        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
-        if (rows.isEmpty()) return null
-        val data = rows.first()
-        return DatabaseAccess.EventInfo(
-            (data["rank_number"] as Long) - 1,
-            data["block_height"] as Long,
-            data["hash"] as Hash,
-            data["data"] as ByteArray
-        )
-    }
-
-    override fun getAccountState(ctx: EContext, height: Long, state_n: Long): DatabaseAccess.AccountState? {
-        val sql = """SELECT block_height, state_n, data FROM ${tableStates(ctx, "l2")} WHERE block_height <= ? AND state_n = ?"""
-        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, state_n)
-        if (rows.isEmpty()) return null
-        val data = rows.first()
-        return DatabaseAccess.AccountState(
-            data["block_height"] as Long,
-            data["state_n"] as Long,
-            data["data"] as ByteArray
-        )
-    }
-
-    override fun insertEvent(ctx: EContext, height: Long, hash: Hash, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertEvents(ctx), height, hash, data)
-    }
-
-    override fun insertState(ctx: EContext, height: Long, state_n: Long, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertStates(ctx), height, state_n, data)
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
@@ -491,18 +448,6 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
         // TODO: [POS-147]: temporarily here, might init in other place for L2
         // L2 tables
-        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "snapshot"))
-        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "event"))
-        queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx))
-        queryRunner.update(ctx.conn, cmdCreateTableState(ctx))
-
-        // TODO: [POS-128]: Temporal solution
-        val indexCreated = tableExists(ctx.conn, tableTransactions(ctx))
-        if (!indexCreated) {
-            val sql = "CREATE INDEX ${tableName(ctx, "transactions_block_iid_idx")} " +
-                    "ON ${tableTransactions(ctx)}(block_iid)"
-            queryRunner.update(ctx.conn, sql)
-        }
 
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"

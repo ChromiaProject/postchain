@@ -18,12 +18,13 @@ class LeafStore {
      *
      * @param blockEContext is the context (including block height)
      * @param prefix is what the state will be used for, for example "l2" or "icmf"
+     * @param position position of event in block (e.g. 0 is for first event, etc)
      * @param hash is the hash of the data
      * @param data is the binary data
      */
-    fun writeEvent(blockEContext: BlockEContext, prefix: String, hash: Hash, data: ByteArray) {
+    fun writeEvent(blockEContext: BlockEContext, prefix: String, position: Long, hash: Hash, data: ByteArray) {
         val db = DatabaseAccess.of(blockEContext)
-        db.insertEvent(blockEContext, prefix, blockEContext.height, hash, data)
+        db.insertEvent(blockEContext, prefix, blockEContext.height, position, hash, data)
     }
 
     /**

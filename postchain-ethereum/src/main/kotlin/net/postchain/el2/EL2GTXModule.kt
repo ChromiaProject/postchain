@@ -1,4 +1,6 @@
-package net.postchain.gtx
+// Copyright (c) 2021 ChromaWay AB. See README for license information.
+
+package net.postchain.el2
 
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
@@ -10,17 +12,29 @@ import net.postchain.core.EContext
 import net.postchain.core.MultiSigBlockWitness
 import net.postchain.crypto.EthereumL2DigestSystem
 import net.postchain.crypto.SECP256K1Keccak
+import net.postchain.crypto.encodeSignatureWithV
+import net.postchain.el2.l2.EL2SpecialTxExtension
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtx.GTXSpecialTxExtension
+import net.postchain.gtx.SimpleGTXModule
 
-class L2OpsGTXModule : SimpleGTXModule<Unit>(
+class EL2GTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf(
         "get_event_merkle_proof" to ::eventMerkleProofQuery,
         "get_account_state_merkle_proof" to ::accountStateMerkleProofQuery
     )
 ) {
-    override fun initializeDB(ctx: EContext) {}
+    override fun initializeDB(ctx: EContext) {
+        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "snapshot"))
+        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "event"))
+    }
+
+    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
+        return listOf(EL2SpecialTxExtension())
+    }
+
 }
 
 fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
@@ -30,7 +44,7 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val db = DatabaseAccess.of(ctx)
     val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
-    val eventInfo = db.getEvent(ctx, blockHeight, eventHash) ?: return GtvNull
+    val eventInfo = db.getEvent(ctx, "el2", blockHeight, eventHash) ?: return GtvNull
     val eventData = eventData(eventInfo)
     val event = EventPageStore(ctx, 2, EthereumL2DigestSystem(KECCAK256))
     val proofs = event.getMerkleProof(blockHeight, eventInfo.pos)
@@ -50,7 +64,7 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val db = DatabaseAccess.of(ctx)
     val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
-    val accountState = accountState(db.getAccountState(ctx, blockHeight, accountNumber))
+    val accountState = accountState(db.getAccountState(ctx, "el2", blockHeight, accountNumber))
     val snapshot = SnapshotPageStore(ctx, 2, EthereumL2DigestSystem(KECCAK256))
     val proofs = snapshot.getMerkleProof(blockHeight, accountNumber)
     val gtvProofs = proofs.map { gtv(it) }.toTypedArray()

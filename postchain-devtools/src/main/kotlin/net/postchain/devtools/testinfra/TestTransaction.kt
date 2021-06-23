@@ -21,10 +21,6 @@ open class TestTransaction(
         return false
     }
 
-    override fun isL2(): Boolean {
-        return false
-    }
-
     override fun apply(ctx: TxEContext): Boolean {
         return good
     }
