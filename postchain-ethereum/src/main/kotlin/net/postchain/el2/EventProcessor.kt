@@ -1,4 +1,4 @@
-package net.postchain.l2
+package net.postchain.el2.l2
 
 import mu.KLogging
 import net.postchain.common.data.KECCAK256

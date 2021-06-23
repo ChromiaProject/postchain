@@ -7,7 +7,6 @@ import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.TreeHasher
 import net.postchain.core.EContext
-import net.postchain.crypto.DigestSystem
 import java.util.*
 
 class Page(

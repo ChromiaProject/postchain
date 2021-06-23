@@ -1,9 +1,8 @@
-package net.postchain.l2
+package net.postchain.el2.l2
 
 import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
-import net.postchain.base.l2.L2BlockchainConfiguration
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainEngine
@@ -22,6 +21,7 @@ import net.postchain.ebft.message.Message
 import net.postchain.ebft.worker.ReadOnlyWorker
 import net.postchain.ebft.worker.ValidatorWorker
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.network.CommunicationManager
 import net.postchain.network.netty2.NettyConnectorFactory
 import net.postchain.network.x.DefaultXCommunicationManager
@@ -29,6 +29,13 @@ import net.postchain.network.x.DefaultXConnectionManager
 import net.postchain.network.x.XConnectionManager
 import net.postchain.network.x.XPeerID
 
+data class EVML2Config (val url: String)
+
+fun BaseBlockchainConfigurationData.getEL2Data() {
+    this.data["evm_l2"]
+}
+
+/*
 class L2EBFTSynchronizationInfrastructure(
     val nodeConfigProvider: NodeConfigurationProvider,
     val nodeDiagnosticContext: NodeDiagnosticContext
@@ -55,7 +62,7 @@ class L2EBFTSynchronizationInfrastructure(
         engine: BlockchainEngine,
         historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
-        val blockchainConfig = engine.getConfiguration() as L2BlockchainConfiguration // TODO: [et]: Resolve type cast
+        val blockchainConfig = engine.getConfiguration() as GTXBlockchainConfiguration // TODO: [et]: Resolve type cast
         val layer2 = blockchainConfig.configData.getLayer2()
         val unregisterBlockchainDiagnosticData: () -> Unit = {
             blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
@@ -152,4 +159,4 @@ class L2EBFTSynchronizationInfrastructure(
             processName
         ).apply { init() }
     }
-}
+}*/

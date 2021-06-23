@@ -1,4 +1,4 @@
-// Copyright (c) 2020 ChromaWay AB. See README for license information.
+// Copyright (c) 2021 ChromaWay AB. See README for license information.
 
 package net.postchain.base
 
@@ -9,8 +9,8 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.l2.L2SpecialTxHandler
-import net.postchain.l2.L2TestEventProcessor
+import net.postchain.el2.l2.L2SpecialTxHandler
+import net.postchain.el2.l2.L2TestEventProcessor
 
 class TestL2BlockchainProcess(private val _engine: BlockchainEngine) : BlockchainProcess {
     override fun getEngine(): BlockchainEngine {

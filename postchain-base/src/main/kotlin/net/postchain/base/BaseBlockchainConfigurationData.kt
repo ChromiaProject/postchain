@@ -46,10 +46,6 @@ class BaseBlockchainConfigurationData(
         return data[KEY_BLOCKSTRATEGY]
     }
 
-    fun getLayer2(): Gtv? {
-        return data[KEY_L2]
-    }
-
     // default is 26 MiB
     fun getMaxBlockSize(): Long {
         val stratDict = data[KEY_BLOCKSTRATEGY]
@@ -95,8 +91,6 @@ class BaseBlockchainConfigurationData(
         const val KEY_DEPENDENCIES = "dependencies"
 
         const val KEY_HISTORIC_BRID = "historic_brid"
-
-        const val KEY_L2 = "layer_2"
     }
 
     private fun resolveNodeID(nodeID: Int): Int {

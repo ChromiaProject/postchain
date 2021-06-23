@@ -38,6 +38,7 @@ open class BaseBlockBuilder(
         val subjects: Array<ByteArray>,
         val blockSigMaker: SigMaker,
         val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
+        val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
         val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
         val maxBlockTransactions: Long = 100
@@ -89,10 +90,20 @@ open class BaseBlockBuilder(
                     bctx
             ))
         }
+        for (x in extensions) x.init(this.bctx, this)
     }
 
-    open fun getExtraData(): Map<String, Gtv> {
-        return mapOf()
+    open fun finalizeExtensions(): Map<String, Gtv> {
+        val m = mutableMapOf<String, Gtv>()
+        for (x in extensions) {
+            for (kv in x.finalize()) {
+                if (kv.key in m) {
+                    throw BlockValidationMistake("Block builder extensions clash: ${kv.key}")
+                }
+                m.put(kv.key, kv.value)
+            }
+        }
+        return m
     }
 
     /**
@@ -104,7 +115,7 @@ open class BaseBlockBuilder(
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, getExtraData())
+        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, finalizeExtensions())
     }
 
     /**
@@ -257,9 +268,6 @@ open class BaseBlockBuilder(
     }
 
     override fun finalizeBlock(): BlockHeader {
-        if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.EthEvent)) {
-            appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.EthEvent, bctx))
-        }
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End))
             appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.End, bctx))
 
@@ -272,7 +280,8 @@ open class BaseBlockBuilder(
         super.finalizeAndValidate(blockHeader)
 
         // Need to call this method to invoke finalize() method of L2 Implementation
-        getExtraData()
+        // TODO: validate returned values!
+        finalizeExtensions()
     }
 
     private fun checkSpecialTransaction(tx: Transaction) {
@@ -298,12 +307,6 @@ open class BaseBlockBuilder(
         } else {
             if (expectBeginTx) {
                 throw BlockValidationMistake("First transaction must be special transaction")
-            }
-        }
-
-        if (tx.isL2()) {
-            if (!specialTxHandler.validateSpecialTransaction(SpecialTransactionPosition.EthEvent, tx, bctx)) {
-                throw BlockValidationMistake("Special transaction validation failed")
             }
         }
     }

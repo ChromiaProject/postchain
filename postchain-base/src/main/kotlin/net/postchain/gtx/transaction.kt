@@ -46,10 +46,6 @@ class GTXTransaction (
         return ops.any { it.isSpecial() }
     }
 
-    override fun isL2(): Boolean {
-        return ops.any { it.isL2() }
-    }
-
     override fun isCorrect(): Boolean {
         if (isChecked) return true
 

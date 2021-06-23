@@ -47,7 +47,7 @@ class BaseBlockBuilderValidationTest {
     val bctx = BaseBlockEContext(ctx, 0, 1, 10, mapOf(), dummyEventSink)
     val bbb = BaseBlockBuilder(BlockchainRid.buildRepeat(0), cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
-            subjects, sigMaker, listOf(), false)
+            subjects, sigMaker, listOf(), listOf(), false)
 
     @Test
     fun validateBlockHeader_valid() {

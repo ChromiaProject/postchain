@@ -4,8 +4,6 @@ package net.postchain.base
 
 import net.postchain.common.data.Hash
 import net.postchain.core.Signature
-import net.postchain.crypto.SECP256K1Keccak
-import net.postchain.gtx.EMPTY_SIGNATURE
 import org.spongycastle.crypto.digests.SHA256Digest
 import org.spongycastle.crypto.ec.CustomNamedCurves
 import org.spongycastle.crypto.params.ECDomainParameters
@@ -133,25 +131,7 @@ fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
     return digest.digest(Q.multiply(d).normalize().getEncoded(true))
 }
 
-/**
- * @param hash signed message
- * @param pubKey compress public key
- * @param signature signature without v
- * @return signature with v to run ecrecover properly on ethereum solidity smart contract
- */
-fun encodeSignatureWithV(hash: ByteArray, pubKey: ByteArray, signature: ByteArray): ByteArray {
-    val pub = decompressKey(pubKey)
-    val sig = secp256k1_decodeSignature(signature)
-    val pub0 = SECP256K1Keccak.ecrecover(0, hash, sig[0], sig[1])
-    if (Arrays.areEqual(pub0, pub)) {
-        return encodeSignature(sig[0], sig[1], 27)
-    }
-    val pub1 = SECP256K1Keccak.ecrecover(1, hash, sig[0], sig[1])
-    if (Arrays.areEqual(pub1, pub)) {
-        return encodeSignature(sig[0], sig[1], 28)
-    }
-    return EMPTY_SIGNATURE
-}
+
 
 /**
  * @param pubKey public key

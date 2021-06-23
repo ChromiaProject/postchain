@@ -41,7 +41,7 @@ class BaseBlockBuilderTest {
     val signer = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
     val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
-            subjects, signer, listOf(), false)
+            subjects, signer, listOf(),  listOf(), false)
 
     @Test
     fun invalidMonotoneTimestamp() {

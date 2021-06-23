@@ -15,10 +15,6 @@ class ErrorTransaction(id: Int, private val applyThrows: Boolean, private val is
         return false
     }
 
-    override fun isL2(): Boolean {
-        return false
-    }
-
     override fun apply(ctx: TxEContext): Boolean {
         if (applyThrows) throw UserMistake("Thrown from apply()")
         return true

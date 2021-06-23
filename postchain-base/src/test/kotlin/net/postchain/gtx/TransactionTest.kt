@@ -26,7 +26,6 @@ fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
 class GTXTransactionTest {
     class DummyOperation : Transactor {
         override fun isSpecial() = false
-        override fun isL2() = false
         override fun isCorrect() = true
         override fun apply(ctx: TxEContext) = true
     }

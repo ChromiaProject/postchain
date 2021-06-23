@@ -13,10 +13,6 @@ interface Transactor {
     // they can only be appended directly by blockchain engine
     fun isSpecial(): Boolean
 
-    // L2 transactions cannot be added to a transaction queue,
-    // they can only be appended directly by blockchain engine
-    fun isL2(): Boolean
-
     fun isCorrect(): Boolean
     fun apply(ctx: TxEContext): Boolean
 }

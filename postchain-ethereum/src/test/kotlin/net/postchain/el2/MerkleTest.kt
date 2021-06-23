@@ -1,12 +1,15 @@
-package net.postchain.base.snapshot
+// Copyright (c) 2021 ChromaWay AB. See README for license information.
+
+package net.postchain.crypto
 
 import junit.framework.TestCase
+import net.postchain.base.snapshot.TestEventPageStore
+import net.postchain.base.snapshot.TestSnapshotPageStore
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.crypto.EthereumL2DigestSystem
 import java.math.BigInteger
 import java.util.*
 import kotlin.test.Test

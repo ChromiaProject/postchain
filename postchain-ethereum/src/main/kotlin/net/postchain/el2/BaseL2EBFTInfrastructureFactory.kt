@@ -1,4 +1,4 @@
-package net.postchain.l2
+package net.postchain.el2.l2
 
 import net.postchain.base.BaseApiInfrastructure
 import net.postchain.base.BaseBlockchainInfrastructure
