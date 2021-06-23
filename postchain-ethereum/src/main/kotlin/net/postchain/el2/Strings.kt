@@ -1,4 +1,4 @@
-package net.postchain.utils
+package net.postchain.el2
 
 class Strings {
     companion object {

@@ -1,9 +1,7 @@
-package net.postchain.crypto
+package net.postchain.el2
 
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
-import net.postchain.utils.Hashes
-import net.postchain.utils.Numeric
 import org.spongycastle.asn1.x9.X9ECParameters
 import org.spongycastle.asn1.x9.X9IntegerConverter
 import org.spongycastle.crypto.ec.CustomNamedCurves

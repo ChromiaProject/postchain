@@ -1,4 +1,4 @@
-package net.postchain.el2.l2
+package net.postchain.el2
 
 import org.web3j.protocol.Web3j
 

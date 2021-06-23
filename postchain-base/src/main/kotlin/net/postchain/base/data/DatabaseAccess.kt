@@ -82,6 +82,8 @@ interface DatabaseAccess {
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 
     // Event and State
+    fun createPageTable(ctx: EContext, prefix: String)
+    fun createLeafTable(ctx: EContext, prefix: String)
     fun insertEvent(ctx: EContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
     fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): EventInfo?
     fun pruneEvents(ctx: EContext, prefix: String, height: Long)

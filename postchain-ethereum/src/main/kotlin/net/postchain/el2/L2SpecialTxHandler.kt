@@ -1,4 +1,4 @@
-package net.postchain.el2.l2
+package net.postchain.el2
 
 import net.postchain.base.BlockchainRid
 import net.postchain.base.CryptoSystem
@@ -23,8 +23,6 @@ class EL2SpecialTxExtension : GTXSpecialTxExtension {
     }
 
     override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) = Unit
-
-    override fun getName(): String = "EL2SpecialTxExtension"
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
         return (position == SpecialTransactionPosition.Begin)

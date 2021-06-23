@@ -25,7 +25,7 @@ import net.postchain.network.x.XConnectionManager
 import net.postchain.network.x.XPeerID
 
 @Suppress("JoinDeclarationAndAssignment")
-class EBFTSynchronizationInfrastructure(
+open class EBFTSynchronizationInfrastructure(
         val nodeConfigProvider: NodeConfigurationProvider,
         val nodeDiagnosticContext: NodeDiagnosticContext
 ) : SynchronizationInfrastructure {
