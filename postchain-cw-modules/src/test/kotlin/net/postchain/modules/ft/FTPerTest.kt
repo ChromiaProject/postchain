@@ -15,7 +15,7 @@ import kotlin.system.measureNanoTime
 
 val myCS = SECP256K1CryptoSystem()
 
-class FTPerIT : FTIntegrationTest() {
+class FTPerTest : FTIntegrationTest() {
 
     fun make1000Transactions(): List<ByteArray> {
         val accUtil = AccountUtil(testBlockchainRID, myCS)

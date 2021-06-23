@@ -14,8 +14,6 @@
 
     <properties>
         <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
-        <mockito.version>2.23.0</mockito.version>
-        <mockito-kotlin.version>2.1.0</mockito-kotlin.version>
         <assertk.version>0.10</assertk.version>
     </properties>
 
@@ -200,55 +198,27 @@
             </plugin>
         </plugins>
     </build>
-
     <profiles>
         <profile>
-            <id>failsafe</id>
+            <!-- Cannot add this listener in parent pom (as long as it is not located on top  level), so adding it here
+             to the ci profile instead. Most tests are in devtools anyway -->
+            <id>ci</id>
             <build>
                 <plugins>
                     <plugin>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>${maven.failsafe.plugin.version}</version>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>integration-test</goal>
-                                    <goal>verify</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-
-        </profile>
-        <profile>
-            <id>ci-devtools</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>${maven.surefire.plugin.version}</version>
                         <configuration>
                             <properties>
                                 <property>
                                     <name>listener</name>
-                                    <value>net.postchain.maven.surefire.PrintCurrentTestRunListener</value>
+                                    <value>net.postchain.maven.failsafe.PrintCurrentTestRunListener</value>
                                 </property>
                             </properties>
-                            <includes>
-                                <include>**/*Test.java</include>
-                                <include>**/*IT.java</include>
-                                <include>**/*Nightly.java</include>
-                                <include>**/*E2ET.*</include>
-                                <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
-                            </includes>
                         </configuration>
                     </plugin>
                 </plugins>
             </build>
         </profile>
     </profiles>
-
 </project>

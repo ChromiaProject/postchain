@@ -19,8 +19,6 @@
         <assertk.version>0.10</assertk.version>
         <rest-assured.version>3.1.1</rest-assured.version>
         <httpclient.version>4.5.3</httpclient.version>
-        <mockito.version>2.23.0</mockito.version>
-        <mockito-kotlin.version>2.1.0</mockito-kotlin.version>
 
         <executable-classifier>jar-with-dependencies</executable-classifier>
     </properties>
