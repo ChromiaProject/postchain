@@ -1,4 +1,4 @@
-package net.postchain.crypto
+package net.postchain.el2
 
 import org.spongycastle.jce.provider.BouncyCastleProvider
 import java.security.MessageDigest

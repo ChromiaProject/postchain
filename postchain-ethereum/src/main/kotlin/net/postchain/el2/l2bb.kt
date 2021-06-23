@@ -1,6 +1,6 @@
 // Copyright (c) 2021 ChromaWay AB. See README for license information.
 
-package net.postchain.base.l2
+package net.postchain.el2
 
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockBuilder

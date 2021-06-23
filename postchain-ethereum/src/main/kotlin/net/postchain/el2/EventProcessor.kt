@@ -1,10 +1,9 @@
-package net.postchain.el2.l2
+package net.postchain.el2
 
 import mu.KLogging
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
-import net.postchain.crypto.EthereumL2DigestSystem
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv

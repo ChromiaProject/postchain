@@ -1,7 +1,6 @@
-package net.postchain.utils
+package net.postchain.el2
 
 import net.postchain.common.data.KECCAK256
-import net.postchain.crypto.MessageDigestFactory
 import java.nio.charset.StandardCharsets
 
 

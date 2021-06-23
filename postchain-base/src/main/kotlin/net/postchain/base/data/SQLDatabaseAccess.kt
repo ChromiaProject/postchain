@@ -388,6 +388,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return Page(height, level, left, childHashes)
     }
 
+    override fun createPageTable(ctx: EContext, prefix: String) {
+        queryRunner.update(cmdCreateTablePage(ctx, prefix))
+    }
+
+    override fun createLeafTable(ctx: EContext, prefix: String) {
+        queryRunner.update(cmdCreateTableEvent(ctx, prefix))
+    }
+
     override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {
         val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height <= ?"
         return queryRunner.query(ctx.conn, sql, intRes, height)

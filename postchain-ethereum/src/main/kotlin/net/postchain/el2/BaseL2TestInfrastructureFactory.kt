@@ -1,16 +1,18 @@
 // Copyright (c) 2021 ChromaWay AB. See README for license information.
 
-package net.postchain.base
+package net.postchain.el2
 
-import net.postchain.base.l2.L2BlockchainConfiguration
+import net.postchain.base.BaseApiInfrastructure
+import net.postchain.base.BaseBlockchainInfrastructure
+import net.postchain.base.BaseBlockchainProcessManager
+import net.postchain.base.HistoricBlockchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.el2.l2.L2SpecialTxHandler
-import net.postchain.el2.l2.L2TestEventProcessor
+import net.postchain.gtx.GTXBlockchainConfiguration
 
 class TestL2BlockchainProcess(private val _engine: BlockchainEngine) : BlockchainProcess {
     override fun getEngine(): BlockchainEngine {
@@ -22,7 +24,6 @@ class TestL2BlockchainProcess(private val _engine: BlockchainEngine) : Blockchai
     }
 }
 
-
 class TestL2SynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun makeBlockchainProcess(
@@ -31,7 +32,9 @@ class TestL2SynchronizationInfrastructure : SynchronizationInfrastructure {
         historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val proc = L2TestEventProcessor(engine.getBlockQueries())
-        ((engine.getConfiguration() as L2BlockchainConfiguration).getSpecialTxHandler() as L2SpecialTxHandler).useEventProcessor(proc)
+        val gtxModule = (engine.getConfiguration() as GTXBlockchainConfiguration).module
+        val ext = gtxModule.getSpecialTxExtensions()[0]
+        (ext as EL2SpecialTxExtension).useEventProcessor(proc)
         return TestL2BlockchainProcess(engine)
     }
 

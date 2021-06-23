@@ -10,15 +10,12 @@ import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
 import net.postchain.core.MultiSigBlockWitness
-import net.postchain.crypto.EthereumL2DigestSystem
-import net.postchain.crypto.SECP256K1Keccak
-import net.postchain.crypto.encodeSignatureWithV
-import net.postchain.el2.l2.EL2SpecialTxExtension
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
+import org.apache.commons.dbutils.QueryRunner
 
 class EL2GTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf(
@@ -26,9 +23,14 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
         "get_account_state_merkle_proof" to ::accountStateMerkleProofQuery
     )
 ) {
+    var queryRunner = QueryRunner()
+
     override fun initializeDB(ctx: EContext) {
-        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "snapshot"))
-        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, "event"))
+        val dba = DatabaseAccess.of(ctx)
+        dba.createPageTable(ctx,"el2_event")
+        dba.createPageTable(ctx,"el2_snapshot")
+        dba.createLeafTable(ctx, "el2_event")
+        dba.createLeafTable(ctx, "el2_snapshot")
     }
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {

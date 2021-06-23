@@ -18,7 +18,6 @@ import kotlin.math.log
 
 interface GTXSpecialTxExtension {
     fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem)
-    fun getName(): String
     fun getRelevantOps(): Set<String>
     fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean
     fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData>
@@ -39,11 +38,8 @@ class GTXBESpecialTxExtension: GTXSpecialTxExtension {
 
     override fun getRelevantOps() = _relevantOps
 
-    override fun getName(): String = "GTXStdSpecialTxExtension"
-
     override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         val ops = module.getOperations()
-        val myOps = mutableListOf<String>()
         if (OP_BEGIN_BLOCK in ops) {
             wantBegin = true
             _relevantOps.add(OP_BEGIN_BLOCK)
@@ -152,7 +148,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                     if (idx >= operations.size) break
                 }
                 if (!ext.validateSpecialOperations(position, ectx, selectesOps)) {
-                    logger.warn("Validation failed in special handler ${ext.getName()}")
+                    logger.warn("Validation failed in special handler ${ext.javaClass.name}")
                     return false
                 }
             }
