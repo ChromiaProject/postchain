@@ -69,7 +69,7 @@ class PostchainTestNode(
 
         return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
-            logger.debug("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}")
+            logger.debug("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toShortHex()}")
             DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
             BaseConfigurationDataStore.addConfigurationData(eContext, 0, blockchainConfig)
             brid

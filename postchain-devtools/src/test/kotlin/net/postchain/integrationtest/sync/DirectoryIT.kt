@@ -41,11 +41,6 @@ class DirectoryIT : ManagedModeTest() {
      * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1, c2
      * is run in container "cont1" by the subnode.
      *
-     * Did you make changes i slave code? Copy jar-dependecies (postchain-base-3.3.1-SNAPSHOT-jar-with-dependencies.jar and rellr-0.10.3-jar-with-dependencies.jar) file to
-     * postchain-distribution/src/main/postchain-slavenode/docker/scripts/bin/
-     * and run (in postchain2/postchain-distribution/src/main/postchain-slavenode/docker) where Dockerfile is found:
-     * docker build -t chromaway/postchain-slavenode:3.3.1 .
-     *
      */
 
 
@@ -137,7 +132,7 @@ class DirectoryIT : ManagedModeTest() {
         propertyMap.setProperty("containerChains.masterPort", 9860 - nodeIndex)
         propertyMap.setProperty("containerChains.masterHost", "172.17.0.1")
         propertyMap.setProperty("configDir", System.getProperty("user.dir"))
-        propertyMap.setProperty("subnode.database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
+        propertyMap.setProperty("subnode.database.url", "jdbc:postgresql://localhost:5432/postchain")
         propertyMap.setProperty("brid.chainid.1", chainRidOf(1).toHex())
         propertyMap.setProperty("brid.chainid.2", chainRidOf(2).toHex())
         propertyMap.setProperty("brid.chainid.3", chainRidOf(3).toHex())
