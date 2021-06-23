@@ -27,7 +27,8 @@ class TestL2SynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun makeBlockchainProcess(
         processName: BlockchainProcessName,
-        engine: BlockchainEngine
+        engine: BlockchainEngine,
+        historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val proc = L2TestEventProcessor(engine.getBlockQueries())
         ((engine.getConfiguration() as L2BlockchainConfiguration).getSpecialTxHandler() as L2SpecialTxHandler).useEventProcessor(proc)

@@ -13,7 +13,6 @@ import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
 import net.postchain.gtv.merkle.proof.ProofNodeGtvDictHead
 import kotlin.math.pow
-import net.postchain.common.data.Hash
 
 
 /**

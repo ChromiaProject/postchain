@@ -6,7 +6,6 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.common.data.Hash
 import net.postchain.base.snapshot.Page
-import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
