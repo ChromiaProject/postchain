@@ -30,7 +30,6 @@ fi
 
 # allow the container to be started with `--user`
 if [ "$1" = 'postgres' ] && [ "$(id -u)" = '0' ]; then
-  echo "[ \"$(id -u)\" = '0' ] is TRUE"
 	mkdir -p "$PGDATA"
 	chown -R postgres "$PGDATA"
 	chmod 700 "$PGDATA"
@@ -41,15 +40,12 @@ if [ "$1" = 'postgres' ] && [ "$(id -u)" = '0' ]; then
 
 	# Create the transaction log directory before initdb is run (below) so the directory is owned by the correct user
 	if [ "$POSTGRES_INITDB_XLOGDIR" ]; then
-	  echo "POSTGRES_INITDB_XLOGDIR"
 		mkdir -p "$POSTGRES_INITDB_XLOGDIR"
 		chown -R postgres "$POSTGRES_INITDB_XLOGDIR"
 		chmod 700 "$POSTGRES_INITDB_XLOGDIR"
 	fi
 
-	echo "exec gosu postgres BASH_SOURCE?"
 	exec gosu postgres bash "$BASH_SOURCE" "$@"
-	echo "exec gosu postgres BASH_SOURCE!"
 fi
 
 if [ "$1" = 'postgres' ]; then
