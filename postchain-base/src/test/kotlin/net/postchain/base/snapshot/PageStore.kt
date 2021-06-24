@@ -1,4 +1,6 @@
-package net.postchain.el2
+// Copyright (c) 2021 ChromaWay AB. See README for license information.
+
+package net.postchain.base.snapshot
 
 import net.postchain.base.snapshot.DigestSystem
 import net.postchain.base.snapshot.EventPageStore

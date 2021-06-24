@@ -42,3 +42,4 @@ interface CryptoSystem {
     fun makeVerifier(): Verifier
     fun getRandomBytes(size: Int): ByteArray
 }
+

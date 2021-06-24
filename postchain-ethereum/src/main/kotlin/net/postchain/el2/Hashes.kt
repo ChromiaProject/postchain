@@ -1,5 +1,6 @@
 package net.postchain.el2
 
+import net.postchain.base.MessageDigestFactory
 import net.postchain.common.data.KECCAK256
 import java.nio.charset.StandardCharsets
 

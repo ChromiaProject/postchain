@@ -1,6 +1,6 @@
 // Copyright (c) 2021 ChromaWay AB. See README for license information.
 
-package net.postchain.el2
+package net.postchain.base.snapshot
 
 import junit.framework.TestCase
 import net.postchain.common.data.EMPTY_HASH
@@ -15,7 +15,7 @@ import kotlin.test.Test
 class MerkleTest : TestCase() {
 
     private val leafHashes = TreeMap<Long, Hash>()
-    private val ds = EthereumL2DigestSystem(KECCAK256)
+    private val ds = SimpleDigestSystem(KECCAK256)
 
     private lateinit var snapshot: TestSnapshotPageStore
     private lateinit var event: TestEventPageStore
