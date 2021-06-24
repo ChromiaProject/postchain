@@ -5,6 +5,7 @@ package net.postchain.el2
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.snapshot.EventPageStore
+import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
@@ -34,7 +35,7 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf(EthereumL2Implementation(EthereumL2DigestSystem(KECCAK256), 3))
+        return listOf(EthereumL2Implementation(SimpleDigestSystem(KECCAK256), 3))
     }
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
@@ -52,7 +53,7 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
     val eventInfo = db.getEvent(ctx, "el2", blockHeight, eventHash) ?: return GtvNull
     val eventData = eventData(eventInfo)
-    val event = EventPageStore(ctx, 2, EthereumL2DigestSystem(KECCAK256))
+    val event = EventPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
     val proofs = event.getMerkleProof(blockHeight, eventInfo.pos)
     val gtvProofs = proofs.map { gtv(it) }.toTypedArray()
     return gtv(
@@ -71,7 +72,7 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
     val accountState = accountState(db.getAccountState(ctx, "el2", blockHeight, accountNumber))
-    val snapshot = SnapshotPageStore(ctx, 2, EthereumL2DigestSystem(KECCAK256))
+    val snapshot = SnapshotPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
     val proofs = snapshot.getMerkleProof(blockHeight, accountNumber)
     val gtvProofs = proofs.map { gtv(it) }.toTypedArray()
     return gtv(

@@ -31,24 +31,4 @@ fun encodeSignatureWithV(hash: ByteArray, pubKey: ByteArray, signature: ByteArra
     return EMPTY_SIGNATURE
 }
 
-class EthereumL2DigestSystem(override val algorithm: String) : DigestSystem {
-
-    private val md = MessageDigestFactory.create(algorithm)
-
-    override fun hash(left: Hash, right: Hash): Hash {
-        if (left.size != HASH_LENGTH || right.size != HASH_LENGTH)
-            throw InvalidParameterException("invalid hash length")
-        return when {
-            left.contentEquals(EMPTY_HASH) && right.contentEquals(EMPTY_HASH) -> EMPTY_HASH
-            left.contentEquals(EMPTY_HASH) -> digest(right)
-            right.contentEquals(EMPTY_HASH) -> digest(left)
-            else -> digest(left.plus(right))
-        }
-    }
-
-    override fun digest(data: ByteArray): Hash {
-        return md.digest(data)
-    }
-
-}
 

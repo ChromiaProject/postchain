@@ -1,6 +1,7 @@
 package net.postchain.el2
 
 import mu.KLogging
+import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
@@ -37,7 +38,7 @@ class L2TestEventProcessor(
     blockQueries: BlockQueries
 ) : BaseEventProcessor(blockQueries) {
 
-    private val ds = EthereumL2DigestSystem(KECCAK256)
+    private val ds = SimpleDigestSystem(KECCAK256)
 
     private var lastBlock = 0
 

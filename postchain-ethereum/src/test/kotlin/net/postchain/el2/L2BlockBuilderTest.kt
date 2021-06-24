@@ -4,6 +4,7 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
@@ -29,7 +30,7 @@ val myCS = SECP256K1CryptoSystem()
 
 class L2BlockBuilderTest : IntegrationTestSetup() {
 
-    private val ds = EthereumL2DigestSystem(KECCAK256)
+    private val ds = SimpleDigestSystem(KECCAK256)
 
     fun makeL2EventOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)

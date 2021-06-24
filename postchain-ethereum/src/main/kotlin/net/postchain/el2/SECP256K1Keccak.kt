@@ -1,5 +1,6 @@
 package net.postchain.el2
 
+import net.postchain.base.MessageDigestFactory
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import org.spongycastle.asn1.x9.X9ECParameters
