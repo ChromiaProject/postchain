@@ -33,6 +33,10 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
         dba.createLeafTable(ctx, "el2_snapshot")
     }
 
+    override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
+        return listOf(EthereumL2Implementation(EthereumL2DigestSystem(KECCAK256), 3))
+    }
+
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
         return listOf(EL2SpecialTxExtension())
     }
