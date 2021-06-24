@@ -4,6 +4,8 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.StorageBuilder
+import net.postchain.base.icmf.IcmfDispatcher
+import net.postchain.base.icmf.IcmfPumpStation
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
@@ -42,6 +44,10 @@ open class BaseBlockchainProcessManager(
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
+
+    // ICMF
+    protected val icmfDispatcher = IcmfDispatcher()
+    protected val icmfPumpStation = IcmfPumpStation()
 
     // For DEBUG only
     var insideATest = false
@@ -89,7 +95,7 @@ open class BaseBlockchainProcessManager(
                         val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
                         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
-                        val x: RestartHandler = buildRestartHandler(chainId)
+                        val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
                         val engine = blockchainInfrastructure.makeBlockchainEngine( processName, blockchainConfig, x)
                         startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
@@ -117,7 +123,12 @@ open class BaseBlockchainProcessManager(
                                             ?: emptyMap())
                                 } else null
 
-                        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
+                        val process = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
+                        blockchainProcesses[chainId] = process
+                        val pipes = icmfPumpStation.maybeConnect(process)
+                        for (pipe in pipes) {
+                            icmfDispatcher.addMessagePipe(pipe)
+                        }
 
                         startInfoDebug("Blockchain has been started", processName, chainId, bTrace)
                         blockchainConfig.blockchainRid
@@ -182,13 +193,17 @@ open class BaseBlockchainProcessManager(
     /**
      * Checks for configuration changes, and then does a async reboot of the given chain.
      *
-     * @param chainId - the chain we should build the [RestartHandler] for
-     * @return a newly created [RestartHandler]. This method will be much more complex is
+     * @param chainId - the chain we should build the [AfterCommitHandler] for
+     * @return a newly created [AfterCommitHandler]. This method will be much more complex is
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
-    protected open fun buildRestartHandler(chainId: Long): RestartHandler {
-         val foo: (BlockTrace?) -> Boolean = { bTrace ->
+    protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+        val foo: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
             testDebug("BaseBlockchainProcessManager's (normal) restart of: $chainId", bTrace)
+
+            // After block commit we trigger ICMF pipes for this chain's new height
+            icmfDispatcher.triggerPipes(chainId, height)
+
             val doRestart = withReadConnection(storage, chainId) { eContext ->
                 blockchainConfigProvider.needsConfigurationChange(eContext, chainId)
             }

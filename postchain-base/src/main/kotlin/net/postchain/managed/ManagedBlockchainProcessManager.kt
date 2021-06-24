@@ -35,7 +35,7 @@ import net.postchain.debug.NodeDiagnosticContext
  *
  * Sync of restart
  * ---------------
- * A great deal of work in this class has to do with the [RestartHandler], which is usually called after a block
+ * A great deal of work in this class has to do with the [AfterCommitHandler], which is usually called after a block
  * has been build to see if we need to upgrade anything about the chain's configuration.
  * Since ProcMan doesn't like to do many important things at once, we block (=synchorize) in the beginning of
  * "wrappedRestartHandler()", and only let go after we are done. If there are errors somewhere else in the code,
@@ -117,10 +117,10 @@ open class ManagedBlockchainProcessManager(
     }
 
     /**
-     * @return a [RestartHandler] which is a lambda (This lambda will be called by the Engine after each block
+     * @return a [AfterCommitHandler] which is a lambda (This lambda will be called by the Engine after each block
      *          has been committed.)
      */
-    override fun buildRestartHandler(chainId: Long): RestartHandler {
+    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
 
         /**
          * If the chain we are checking is the chain zero itself, we must verify if the list of peers have changed.

@@ -44,10 +44,10 @@ open class BaseBlockchainEngine(
     private lateinit var blockQueries: BlockQueries
     private var initialized = false
     private var closed = false
-    private var restartHandlerInternal: (BlockTrace?) -> Boolean = {
+    private var afterCommitHandlerInternal: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
         false
     }
-    private var restartHandler: RestartHandler = restartHandlerInternal
+    private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
 
     override fun isRunning() = !closed
 
@@ -60,8 +60,8 @@ open class BaseBlockchainEngine(
         initialized = true
     }
 
-    override fun setRestartHandler(handler: RestartHandler) {
-        restartHandler = handler
+    override fun setAfterCommitHandler(handler: AfterCommitHandler) {
+        afterCommitHandler = handler
     }
 
     override fun getTransactionQueue(): TransactionQueue {
@@ -96,7 +96,9 @@ open class BaseBlockchainEngine(
                     val blockBuilder = it as AbstractBlockBuilder
                     transactionQueue.removeAll(blockBuilder.transactions)
                     strategy.blockCommitted(blockBuilder.getBlockData())
-                    if (restartHandler(blockBuilder.getBTrace())) { // This is a big reason for BTrace to exist
+                    if (afterCommitHandler(
+                            blockBuilder.getBTrace(), // This is a big reason for BTrace to exist
+                            blockBuilder.bctx.height)) {
                         closed = true
                     }
                     afterLog("End", it.getBTrace())
@@ -253,6 +255,7 @@ open class BaseBlockchainEngine(
         } catch (e: Exception) {
             exception = e
         }
+        buildLog("End")
 
         return blockBuilder to exception
     }
@@ -309,10 +312,11 @@ open class BaseBlockchainEngine(
     }
 
     private fun buildLog(str: String) {
-        if (logger.isTraceEnabled) {
-            logger.trace { "$processName buildBlock() -- $str" }
+        if (logger.isDebugEnabled) {
+            logger.debug { "$processName buildBlock() -- $str" }
         }
     }
+
     private fun buildLog(str: String, bTrace: BlockTrace?) {
         if (logger.isTraceEnabled) {
             logger.trace { "$processName buildBlock() -- $str, for block: $bTrace" }

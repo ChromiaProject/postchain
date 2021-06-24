@@ -70,9 +70,9 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainEngine(
-            processName: BlockchainProcessName,
-            configuration: BlockchainConfiguration,
-            restartHandler: RestartHandler
+        processName: BlockchainProcessName,
+        configuration: BlockchainConfiguration,
+        afterCommitHandler: AfterCommitHandler
     ): BaseBlockchainEngine {
 
         val storage = StorageBuilder.buildStorage(
@@ -85,7 +85,7 @@ open class BaseBlockchainInfrastructure(
 
         return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue)
                 .apply {
-                    setRestartHandler(restartHandler)
+                    setAfterCommitHandler(afterCommitHandler)
                     initialize()
                 }
     }

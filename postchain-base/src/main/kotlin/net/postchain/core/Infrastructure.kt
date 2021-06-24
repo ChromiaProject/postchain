@@ -28,9 +28,9 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(
-            processName: BlockchainProcessName,
-            configuration: BlockchainConfiguration,
-            restartHandler: (BlockTrace?) -> Boolean
+        processName: BlockchainProcessName,
+        configuration: BlockchainConfiguration,
+        afterCommitHandler: (BlockTrace?, Long) -> Boolean
     ): BlockchainEngine
 
 }

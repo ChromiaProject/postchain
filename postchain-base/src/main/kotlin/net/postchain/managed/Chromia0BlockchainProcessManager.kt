@@ -10,7 +10,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.ByteArrayKey
-import net.postchain.core.RestartHandler
+import net.postchain.core.AfterCommitHandler
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvArray
@@ -59,8 +59,8 @@ class Chromia0BlockchainProcessManager(
         }
     }
 
-    override fun buildRestartHandler(chainId: Long): RestartHandler {
-        val baseHandler = super.buildRestartHandler(chainId)
+    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+        val baseHandler = super.buildAfterCommitHandler(chainId)
         if (chainId == 0L)
             return baseHandler
         else {

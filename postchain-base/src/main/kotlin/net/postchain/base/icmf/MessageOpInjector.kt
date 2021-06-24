@@ -8,6 +8,7 @@ class MessageOpInjector(val pumpStation: IcmfPumpStation) {
      * @param "max" is the maximum number of messages we want to return
      * @return messages from the queue
      */
+    /*
     fun pullMessages(max: Int): List<IcmfMessage> {
         val retList = ArrayList<IcmfMessage>()
         var messagesToPull = max
@@ -18,4 +19,5 @@ class MessageOpInjector(val pumpStation: IcmfPumpStation) {
 
         return retList
     }
+     */
 }

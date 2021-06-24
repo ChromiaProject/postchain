@@ -84,6 +84,8 @@ interface DatabaseAccess {
     // Event and State
     fun insertEvent(ctx: EContext, prefix: String, height: Long, hash: Hash, data: ByteArray)
     fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): EventInfo?
+    fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
+    fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun pruneEvents(ctx: EContext, prefix: String, height: Long)
     fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray)
     fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): AccountState?

@@ -3,7 +3,6 @@
 package net.postchain.base.data
 
 import net.postchain.base.*
-import net.postchain.base.icmf.IcmfMessagePipe
 import net.postchain.base.icmf.IcmfPumpStation
 import net.postchain.core.*
 import net.postchain.getBFTRequiredSignatureCount
@@ -25,7 +24,6 @@ open class BaseBlockchainConfiguration(
 
     // ICMF specific
     val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
-    val icmfPipes = ArrayList<IcmfMessagePipe>()
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
         return BaseBlockHeader(rawBlockHeader, cryptoSystem)
@@ -125,10 +123,5 @@ open class BaseBlockchainConfiguration(
 
         return ctor.newInstance(configData, this, blockQueries, txQueue) as BlockBuildingStrategy
     }
-
-    fun addMessagePipe(pipe: IcmfMessagePipe) {
-        icmfPipes.add(pipe)
-    }
-
 }
 

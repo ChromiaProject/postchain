@@ -18,6 +18,8 @@ import java.time.Instant
 
 abstract class SQLDatabaseAccess : DatabaseAccess {
 
+    val PREFIX_ICMF: String = "icmf"
+
     protected fun tableMeta(): String = "meta"
     protected fun tableBlockchains(): String = "blockchains"
     protected fun tablePeerinfos(): String = "peerinfos"
@@ -307,6 +309,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     // ---- Event and State ----
 
+    /**
+     * Fetch one event that matches the given hash (if height is correct)
+     */
     override fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
         val sql = """SELECT * FROM (SELECT block_height, hash, data, 
             RANK() OVER (ORDER BY event_iid) rank_number 
@@ -314,13 +319,55 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             WHERE block_height = ?) x WHERE hash = ?"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
         if (rows.isEmpty()) return null
-        val data = rows.first()
+        val data = rows.first() // Should there be more than one?
         return DatabaseAccess.EventInfo(
                 (data["rank_number"] as Long) - 1,
                 data["block_height"] as Long,
                 data["hash"] as Hash,
                 data["data"] as ByteArray
         )
+    }
+
+    /**
+     * Fetch ALL events from the given height
+     */
+    override fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
+        val sql = """SELECT block_height, hash, data, 
+            FROM ${tableEvents(ctx, prefix)} 
+            WHERE block_height = ?
+            ORDER BY event_iid
+            LIMIT ? """
+
+        return getEventList(ctx, blockHeight, sql)
+    }
+
+    /**
+     * Fetch ALL events above the given height
+     */
+    override fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
+        val sql = """SELECT block_height, hash, data, 
+            RANK() OVER (ORDER BY event_iid) rank_number 
+            FROM ${tableEvents(ctx, prefix)} 
+            WHERE block_height > ?
+            LIMIT ? """
+
+        return getEventList(ctx, blockHeight, sql)
+    }
+
+    private fun getEventList(ctx: EContext, blockHeight: Long, sql: String, maxEventsLimit: Int = 1000): List<DatabaseAccess.EventInfo> {
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, maxEventsLimit)
+        return if (rows.isEmpty()) {
+            ArrayList<DatabaseAccess.EventInfo>()
+        } else {
+            rows.map { data ->
+                DatabaseAccess.EventInfo(
+                    (data["rank_number"] as Long) - 1,
+                    data["block_height"] as Long,
+                    data["hash"] as Hash,
+                    data["data"] as ByteArray
+                )
+            }
+        }
     }
 
     override fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): DatabaseAccess.AccountState? {
@@ -417,6 +464,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val blockIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "blocks_timestamp_idx")} " +
                 "ON ${tableBlocks(ctx)}(timestamp)"
         queryRunner.update(ctx.conn, blockIndex)
+
+        // ICMF specific event (for anchoring etc)
+        queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx, PREFIX_ICMF))
 
         if (!initialized) {
             // Inserting chainId -> blockchainRid
