@@ -73,6 +73,17 @@ class BaseBlockchainConfigurationData(
         return gtxDict?.get(KEY_GTX_TX_SIZE)?.asInteger() ?: 25 * 1024 * 1024
     }
 
+    fun getSyncInfrastructureName(): String? {
+        return data[KEY_SYNC]?.asString()
+    }
+
+    fun getSyncInfrastructureExtensions(): List<String> {
+        val e = data[KEY_SYNC_EXT]
+        if (e != null) {
+            return e.asArray().map { it.asString() }
+        } else return listOf()
+    }
+
     companion object {
 
         const val KEY_BLOCKSTRATEGY = "blockstrategy"
@@ -91,6 +102,9 @@ class BaseBlockchainConfigurationData(
         const val KEY_DEPENDENCIES = "dependencies"
 
         const val KEY_HISTORIC_BRID = "historic_brid"
+
+        const val KEY_SYNC = "sync"
+        const val KEY_SYNC_EXT = "sync_ext"
     }
 
     private fun resolveNodeID(nodeID: Int): Int {

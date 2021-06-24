@@ -16,7 +16,7 @@ import net.postchain.gtv.GtvFactory
 
 open class BaseBlockchainInfrastructure(
         private val nodeConfigProvider: NodeConfigurationProvider,
-        val synchronizationInfrastructure: SynchronizationInfrastructure,
+        val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
         val apiInfrastructure: ApiInfrastructure,
         val nodeDiagnosticContext: NodeDiagnosticContext
 ) : BlockchainInfrastructure {
@@ -25,15 +25,22 @@ open class BaseBlockchainInfrastructure(
     val blockSigMaker: SigMaker
     val subjectID: ByteArray
 
+    val syncInfraCache = mutableMapOf<String, SynchronizationInfrastructure>()
+    val syncInfraExtCache = mutableMapOf<String, SynchronizationInfrastructureExtension>()
+
     init {
         val privKey = nodeConfigProvider.getConfiguration().privKeyByteArray
         val pubKey = secp256k1_derivePubKey(privKey)
         blockSigMaker = cryptoSystem.buildSigMaker(pubKey, privKey)
         subjectID = pubKey
+        syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
     }
 
     override fun shutdown() {
-        synchronizationInfrastructure.shutdown()
+        for (infra in syncInfraCache.values)
+            infra.shutdown()
+        for (ext in syncInfraExtCache.values)
+            ext.shutdown()
         apiInfrastructure.shutdown()
     }
 
@@ -89,10 +96,44 @@ open class BaseBlockchainInfrastructure(
                 }
     }
 
-    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine,
-                                       historicBlockchainContext: HistoricBlockchainContext?): BlockchainProcess {
-        return synchronizationInfrastructure.makeBlockchainProcess(processName, engine, historicBlockchainContext)
-                .also(apiInfrastructure::connectProcess)
+    fun getSynchronizationInfrastucture(name: String?): SynchronizationInfrastructure {
+        if (name == null) return defaultSynchronizationInfrastructure
+        val full_name = if (name == "ebft") "net.postchain.ebft.EBFTSynchronizationInfrastructure" else name
+        if (full_name in syncInfraCache) return syncInfraCache[full_name]!!
+        val iClass = Class.forName(full_name)
+        val ctor = iClass.getConstructor(
+                NodeConfigurationProvider::class.java,
+                NodeDiagnosticContext::class.java)
+        val infra = ctor.newInstance(nodeConfigProvider, nodeDiagnosticContext) as SynchronizationInfrastructure
+        syncInfraCache[full_name] = infra
+        return infra
     }
 
+    fun getSynchronizationInfrastuctureExtension(name: String): SynchronizationInfrastructureExtension {
+        if (name in syncInfraCache) return syncInfraExtCache[name]!!
+        val iClass = Class.forName(name)
+        val ctor = iClass.getConstructor(
+                NodeConfigurationProvider::class.java,
+                NodeDiagnosticContext::class.java)
+        val infra = ctor.newInstance(nodeConfigProvider, nodeDiagnosticContext) as SynchronizationInfrastructureExtension
+        syncInfraExtCache[name] = infra
+        return infra
+    }
+
+    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine,
+                                       historicBlockchainContext: HistoricBlockchainContext?): BlockchainProcess {
+        val conf = engine.getConfiguration()
+        val synchronizationInfrastructure = getSynchronizationInfrastucture(
+                if (conf is BaseBlockchainConfiguration) conf.configData.getSyncInfrastructureName()
+                else null
+        )
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, historicBlockchainContext)
+        if (conf is BaseBlockchainConfiguration) {
+            for (extName in conf.configData.getSyncInfrastructureExtensions()) {
+                getSynchronizationInfrastuctureExtension(extName).connectProcess(process)
+            }
+        }
+        apiInfrastructure.connectProcess(process)
+        return process
+    }
 }

@@ -5,6 +5,7 @@ import net.postchain.base.*
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
+import net.postchain.core.SynchronizationInfrastructureExtension
 
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
@@ -21,17 +22,13 @@ fun BaseBlockchainConfigurationData.getEL2Data() {
 }
 
 
-class L2EBFTSynchronizationInfrastructure(
+class EL2SynchronizationInfrastructureExtension(
     nodeConfigProvider: NodeConfigurationProvider,
     nodeDiagnosticContext: NodeDiagnosticContext
-) : EBFTSynchronizationInfrastructure(nodeConfigProvider, nodeDiagnosticContext) {
+) : SynchronizationInfrastructureExtension {
 
-    override fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        historicBlockchainContext: HistoricBlockchainContext?
-    ): BlockchainProcess {
-        val process = super.makeBlockchainProcess(processName, engine, historicBlockchainContext)
+    override fun connectProcess(process: BlockchainProcess) {
+        val engine = process.getEngine()
         val cfg = engine.getConfiguration()
         if (cfg is GTXBlockchainConfiguration) {
             val ext = cfg.module.getSpecialTxExtensions().find { it is EL2SpecialTxExtension }
@@ -58,7 +55,7 @@ class L2EBFTSynchronizationInfrastructure(
                  */
             }
         }
-
-        return process
     }
+
+    override fun shutdown() {}
 }

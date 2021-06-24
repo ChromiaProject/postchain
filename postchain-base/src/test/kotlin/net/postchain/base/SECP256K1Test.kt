@@ -1,3 +1,5 @@
+// Copyright (c) 2021 ChromaWay AB. See README for license information.
+
 package net.postchain.base
 
 import junit.framework.TestCase
