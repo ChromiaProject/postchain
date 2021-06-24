@@ -22,18 +22,10 @@ interface SynchronizationInfrastructure : Shutdownable {
         engine: BlockchainEngine,
         historicBlockchainContext: HistoricBlockchainContext? = null
     ): BlockchainProcess
+}
 
-    /**
-     * Call this hook upon blockchain process restart.
-     * Note: responsible for keeping track of the two BC process sync modes (normal sync and fastsync)
-     */
-    fun restartBlockchainProcess(process: BlockchainProcess)
-
-    /**
-     * Call this hook before blockchain process is killed.
-     * Note: responsible for keeping track of the two BC process sync modes (normal sync and fastsync)
-     */
-    fun exitBlockchainProcess(process: BlockchainProcess)
+interface SynchronizationInfrastructureExtension: Shutdownable {
+    fun connectProcess(process: BlockchainProcess)
 }
 
 interface BlockchainInfrastructure : SynchronizationInfrastructure {
@@ -75,9 +67,7 @@ interface InfrastructureFactory {
 
 enum class Infrastructures(val secondName: String) {
     BaseEbft("base/ebft"),
-    BaseL2Ebft("base/l2ebft"),
-    BaseTest("base/test"),
-    BaseL2Test("base/l2test")
+    BaseTest("base/test")
 }
 
 interface InfrastructureFactoryProvider {
