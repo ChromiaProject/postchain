@@ -2,6 +2,7 @@ package net.postchain.el2
 
 import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.base.getEthereumAddress
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.base.snapshot.SimpleDigestSystem
@@ -283,7 +284,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             assertEquals(accountState[1].asInteger(), pos.toLong())
 
             val pubkey = gtvProof["blockWitness"]!!.asArray()[0].asDict()["pubkey"]!!.asByteArray()
-            assertEquals(pubkey.toHex(), SECP256K1Keccak.getEthereumAddress(node.pubKey.hexStringToByteArray()).toHex())
+            assertEquals(pubkey.toHex(), getEthereumAddress(node.pubKey.hexStringToByteArray()).toHex())
         }
 
         val l = 16L
@@ -333,7 +334,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             assertEquals(accountState[1].asInteger(), pos.toLong())
 
             val pubkey = gtvProof["blockWitness"]!!.asArray()[0].asDict()["pubkey"]!!.asByteArray()
-            assertEquals(pubkey.toHex(), SECP256K1Keccak.getEthereumAddress(node.pubKey.hexStringToByteArray()).toHex())
+            assertEquals(pubkey.toHex(), getEthereumAddress(node.pubKey.hexStringToByteArray()).toHex())
         }
     }
 
@@ -451,7 +452,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             assertTrue(eventData[2].asByteArray().contentEquals(leafs[pos]))
 
             val pubkey = gtvProof["blockWitness"]!!.asArray()[0].asDict()["pubkey"]!!.asByteArray()
-            assertEquals(pubkey.toHex(), SECP256K1Keccak.getEthereumAddress(node.pubKey.hexStringToByteArray()).toHex())
+            assertEquals(pubkey.toHex(), getEthereumAddress(node.pubKey.hexStringToByteArray()).toHex())
         }
 
         val l = 16L
