@@ -1,4 +1,4 @@
-package net.postchain.crypto
+package net.postchain.el2
 
 import junit.framework.TestCase
 import net.postchain.common.hexStringToByteArray

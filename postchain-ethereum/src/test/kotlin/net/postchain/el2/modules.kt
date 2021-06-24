@@ -1,4 +1,4 @@
-package net.postchain.devtools.l2
+package net.postchain.el2
 
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext

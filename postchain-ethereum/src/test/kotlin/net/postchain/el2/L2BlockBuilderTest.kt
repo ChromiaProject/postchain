@@ -1,6 +1,7 @@
-package net.postchain.devtools.l2
+package net.postchain.el2
 
 import net.postchain.base.BlockchainRid
+import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.data.EMPTY_HASH
@@ -9,12 +10,9 @@ import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.Transaction
-import net.postchain.crypto.EthereumL2DigestSystem
-import net.postchain.crypto.SECP256K1Keccak
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
-import net.postchain.devtools.gtx.myCS
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -26,6 +24,8 @@ import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+
+val myCS = SECP256K1CryptoSystem()
 
 class L2BlockBuilderTest : IntegrationTestSetup() {
 

@@ -1,4 +1,4 @@
-package net.postchain.crypto
+package net.postchain.el2
 
 import net.postchain.base.snapshot.DigestSystem
 import net.postchain.base.snapshot.EventPageStore
