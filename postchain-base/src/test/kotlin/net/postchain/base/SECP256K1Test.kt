@@ -1,6 +1,8 @@
 package net.postchain.base
 
+import junit.framework.TestCase
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -69,7 +71,6 @@ class SECP256K1Test {
         val signature1 = sigMaker1.signDigest(merkleRoot)
         val sig1 = secp256k1_decodeSignature(signature1.data)
 
-        /*
         val expected0 = signature0.data.plus(ByteBuffer.allocate(1).put("1b".hexStringToByteArray()).array())
         val actual0 = encodeSignatureWithV(merkleRoot, pubKey0, signature0.data)
         assertTrue(expected0.contentEquals(actual0))
@@ -77,10 +78,8 @@ class SECP256K1Test {
         val expected1 = encodeSignature(sig1[0], sig1[1], 27)
         val actual1 = encodeSignatureWithV(merkleRoot, pubKey1, signature1.data)
         assertTrue(expected1.contentEquals(actual1))
-
-         */
     }
-/*
+
     @Test
     fun testEncodeSigWithV2() {
         val blockRid = "335ddc617b75753c84873901784329c30ffe614cfcf1ce429a38c058545a8081".hexStringToByteArray()
@@ -94,5 +93,22 @@ class SECP256K1Test {
         val sigv = encodeSignatureWithV(blockRid, pubkey, sm.signDigest(blockRid).data)
 
         assertTrue(sigc.contentEquals(sigv))
-    }*/
+    }
+
+    @Test
+    fun testGetEthereumAddress1() {
+        val pubkey = "02e8bc920faad314f9859dd94d8ba0e62888f35ae572e1ebf80912033670b3e793".hexStringToByteArray()
+        val address = getEthereumAddress(pubkey)
+        val expected = "f4A8c3ef8a8968DA1680e22F289Fe0d5360755b4".hexStringToByteArray()
+        TestCase.assertTrue(expected.contentEquals(address))
+    }
+
+    @Test
+    fun testToChecksumAddress() {
+        val pubkey = "039562c20fffe6f1b2f62565978da44fd25eae3703492c869deb105f83259df6b0".hexStringToByteArray()
+        val address = getEthereumAddress(pubkey)
+        val checksumAddress = toChecksumAddress(address.toHex())
+        val expected = "0x17d2C9EAb8d3BeDf39497c1A176eaEedfc3075CB"
+        TestCase.assertEquals(expected, checksumAddress)
+    }
 }
