@@ -1,10 +1,8 @@
 // Copyright (c) 2021 ChromaWay AB. See README for license information.
 
-package net.postchain.crypto
+package net.postchain.el2
 
 import junit.framework.TestCase
-import net.postchain.base.snapshot.TestEventPageStore
-import net.postchain.base.snapshot.TestSnapshotPageStore
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
