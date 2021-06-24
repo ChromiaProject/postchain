@@ -124,7 +124,7 @@ private fun blockWitnessData(
     val signatures = witness.getSignatures().map {
         gtv(
             "sig" to GtvByteArray(encodeSignatureWithV(blockRid, it.subjectID, it.data)),
-            "pubkey" to GtvByteArray(SECP256K1Keccak.getEthereumAddress(it.subjectID))
+            "pubkey" to GtvByteArray(getEthereumAddress(it.subjectID))
         )
     }
     return GtvArray(signatures.toTypedArray())
