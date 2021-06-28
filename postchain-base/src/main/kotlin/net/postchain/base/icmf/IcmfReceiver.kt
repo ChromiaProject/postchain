@@ -28,7 +28,7 @@ class IcmfReceiver {
      * @param targetChainIid is the target chain we want to check updates for
      * @return a mutable list of pipes (yeah, this is unsafe, but don't wanna make a defensive copy)
      */
-    fun getPipesForChain(targetChainIid: Long): MutableList<IcmfPipe> {
+    fun getPipesForChain(targetChainIid: Long): List<IcmfPipe> {
         return getListOrAddIfNotExists(targetChainIid)
     }
 

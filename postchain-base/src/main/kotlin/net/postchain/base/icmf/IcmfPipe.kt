@@ -8,7 +8,7 @@ import java.util.*
  * Transports new-block-height-messages in a "pipe", asynchronously.
  *
  * Heights will be pushed into the pipe by one party [IcmfDispatcher], and extracted from the "other end"
- * by another party [IcmfPumpStation] when the receiving party is ready (this way it's asynchronous)
+ * by another party [IcmfReceiver] when the receiving party is ready (this way it's asynchronous)
  *
  * Note: re lost messages:
  * If server goes down we lose messages, but it shouldn't matter since we'll only get a gap in the block height

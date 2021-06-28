@@ -332,11 +332,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      * Fetch ALL events from the given height
      */
     override fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
-        val sql = """SELECT block_height, hash, data, 
+        val sql = """SELECT block_height, hash, data, event_iid
             FROM ${tableEvents(ctx, prefix)} 
             WHERE block_height = ?
-            ORDER BY event_iid
-            LIMIT ? """
+            ORDER BY event_iid """
 
         return getEventList(ctx, blockHeight, sql)
     }
@@ -345,15 +344,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      * Fetch ALL events above the given height
      */
     override fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
-        val sql = """SELECT block_height, hash, data, 
-            RANK() OVER (ORDER BY event_iid) rank_number 
+        val sql = """SELECT block_height, hash, data, event_iid
             FROM ${tableEvents(ctx, prefix)} 
             WHERE block_height > ?
+            ORDER BY event_iid
             LIMIT ? """
 
         return getEventList(ctx, blockHeight, sql)
     }
 
+    /**
+     * NOTE: We dont' bother to set "pos" so it starts from 0, we just use the event_iid raw.
+     *       In this case the important thing is the SORTING of the events, not the exact pos number.
+     */
     private fun getEventList(ctx: EContext, blockHeight: Long, sql: String, maxEventsLimit: Int = 1000): List<DatabaseAccess.EventInfo> {
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, maxEventsLimit)
         return if (rows.isEmpty()) {
@@ -361,7 +364,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         } else {
             rows.map { data ->
                 DatabaseAccess.EventInfo(
-                    (data["rank_number"] as Long) - 1,
+                    data["event_iid"] as Long,
                     data["block_height"] as Long,
                     data["hash"] as Hash,
                     data["data"] as ByteArray
