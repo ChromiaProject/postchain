@@ -88,7 +88,7 @@ open class BaseBlockchainProcessManager(
         return synchronized(synchronizer) {
             try {
                 startDebug("Begin by stopping blockchain", chainId, bTrace)
-                stopBlockchain(chainId, bTrace)
+                stopBlockchain(chainId, bTrace, true)
 
                 startInfo("Starting of blockchain", chainId)
                 withReadWriteConnection(storage, chainId) { eContext ->
@@ -102,7 +102,7 @@ open class BaseBlockchainProcessManager(
                         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
                         val x: RestartHandler = buildRestartHandler(chainId)
-                        val engine = blockchainInfrastructure.makeBlockchainEngine( processName, blockchainConfig, x)
+                        val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
                         startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
                         /*
@@ -160,11 +160,16 @@ open class BaseBlockchainProcessManager(
      *
      * @param chainId is the chain to be stopped.
      */
-    override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?) {
+    override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
         synchronized(synchronizer) {
             stopInfoDebug("Stopping of Blockchain", chainId, bTrace)
 
             blockchainProcesses.remove(chainId)?.also {
+                if (restart) {
+                    blockchainInfrastructure.restartBlockchainProcess(it)
+                } else {
+                    blockchainInfrastructure.exitBlockchainProcess(it)
+                }
                 heartbeatManager.removeListener(it)
                 it.shutdown()
             }
@@ -183,7 +188,10 @@ open class BaseBlockchainProcessManager(
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
 
-        blockchainProcesses.forEach { it.value.shutdown() }
+        blockchainProcesses.forEach {
+            blockchainInfrastructure.exitBlockchainProcess(it.value)
+            it.value.shutdown()
+        }
         blockchainProcesses.clear()
 
         blockchainProcessesLoggers.forEach { (_, t) ->
@@ -263,6 +271,7 @@ open class BaseBlockchainProcessManager(
             System.out.println("RestartHandler: $str")
         }
     }
+
     protected fun testDebug(str: String, bTrace: BlockTrace?) {
         if (isThisATest()) {
             System.out.println("RestartHandler: $str, block causing this: $bTrace")
@@ -288,6 +297,7 @@ open class BaseBlockchainProcessManager(
             logger.debug("[${nodeName()}]: startBlockchain() -- $str: chainId: $chainId $extraStr")
         }
     }
+
     private fun startDebug(str: String, processName: BlockchainProcessName, chainId: Long, bTrace: BlockTrace?) {
         if (logger.isDebugEnabled) {
             val extraStr = if (bTrace != null) {
@@ -298,16 +308,19 @@ open class BaseBlockchainProcessManager(
             logger.debug("$processName: startBlockchain() -- $str: chainId: $chainId $extraStr")
         }
     }
+
     private fun startInfo(str: String, chainId: Long) {
         if (logger.isInfoEnabled) {
             logger.info("[${nodeName()}]: startBlockchain() - $str: chainId: $chainId")
         }
     }
+
     private fun startInfo(str: String, processName: BlockchainProcessName, chainId: Long) {
         if (logger.isInfoEnabled) {
             logger.info("$processName: stopBlockchain() - $str: chainId: $chainId")
         }
     }
+
     private fun startInfoDebug(str: String, processName: BlockchainProcessName, chainId: Long, bTrace: BlockTrace?) {
         startInfo(str, processName, chainId)
         startDebug(str, processName, chainId, bTrace)
@@ -319,11 +332,13 @@ open class BaseBlockchainProcessManager(
             logger.debug("[${nodeName()}]: stopBlockchain() -- $str: chainId: $chainId, block causing the start: $bTrace")
         }
     }
+
     private fun stopInfo(str: String, chainId: Long) {
         if (logger.isInfoEnabled) {
             logger.info("[${nodeName()}]: stopBlockchain() - $str: chainId: $chainId")
         }
     }
+
     private fun stopInfoDebug(str: String, chainId: Long, bTrace: BlockTrace?) {
         stopInfo(str, chainId)
         stopDebug(str, chainId, bTrace)

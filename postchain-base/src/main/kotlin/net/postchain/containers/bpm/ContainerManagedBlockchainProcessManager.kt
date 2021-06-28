@@ -72,22 +72,6 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?) {
-        if (chainId == CHAIN0) {
-            super.stopBlockchain(chainId, bTrace)
-        } else {
-            synchronized(lock) {
-                if (chainIdInContainers(chainId)) {
-                    logger.info(m("stopBlockchain: Chain $chainId is stopping"))
-                    stopContainerChain(chainId)
-                    logger.info(m("stopBlockchain: Chain $chainId stopped"))
-                } else {
-                    logger.warn(m("stopBlockchain: Chain $chainId (already) stopped"))
-                }
-            }
-        }
-    }
-
     private fun startContainerChain(chainId: Long): BlockchainRid? {
         val (ds, brid, containerNames) = containerNamesFromDataSource(chainId)
         if (containerNames["directory"] == null) return null

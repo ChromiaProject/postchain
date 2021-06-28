@@ -21,7 +21,8 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val peerCommConfiguration: PeerCommConfiguration,
                     val heartbeatChecker: HeartbeatChecker,
                     val nodeConfig: NodeConfig,
-                    val onShutdown: () -> Unit
+                    val onShutdown: () -> Unit,
+                    val startWithFastSync: Boolean = true // for ValidatorWorker
 ) {
     fun shutdown() {
         engine.shutdown()

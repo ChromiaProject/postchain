@@ -42,13 +42,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var processingIntentDeadline = 0L
     private var lastStatusLogged: Long
     private val processName = workerContext.processName
-    private var useFastSyncAlgorithm: Boolean = true
+    private var useFastSyncAlgorithm: Boolean
+    private val fastSynchronizer: FastSynchronizer
     private val shutdown = AtomicBoolean(false)
 
-
     companion object : KLogging()
-
-    private val fastSynchronizer: FastSynchronizer
 
     init {
         this.currentTimeout = defaultTimeout
@@ -60,14 +58,17 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         params.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
         params.jobTimeout = nodeConfig.fastSyncJobTimeout
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
+
+        // Init useFastSyncAlgorithm
+        val lastHeight = blockQueries.getBestHeight().get()
+        useFastSyncAlgorithm = when {
+            lastHeight < params.mustSyncUntilHeight -> true
+            else -> workerContext.startWithFastSync
+        }
     }
 
-    //    private val nodes = communicationManager.peers().map { XPeerID(it.pubKey) }
     private val signersIds = workerContext.signers.map { XPeerID(it) }
-
     private fun indexOfValidator(peerId: XPeerID): Int = signersIds.indexOf(peerId)
-    //        return nodes.indexOf(peerID)
-
     private fun validatorAtIndex(index: Int): XPeerID = signersIds[index]
 
     /**

@@ -32,6 +32,7 @@ open class EBFTSynchronizationInfrastructure(
     val nodeConfig get() = nodeConfigProvider.getConfiguration()
     lateinit var connectionManager: XConnectionManager
     private val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<String, () -> Any>>()
+    private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
 
     init {
         this.init() // TODO: [POS-129]: Redesign this call
@@ -69,7 +70,8 @@ open class EBFTSynchronizationInfrastructure(
                 peerCommConfiguration,
                 heartbeatChecker,
                 nodeConfig,
-                unregisterBlockchainDiagnosticData
+                unregisterBlockchainDiagnosticData,
+                getStartWithFastSyncValue(blockchainConfig.chainID)
         )
 
         /*
@@ -124,6 +126,20 @@ open class EBFTSynchronizationInfrastructure(
                 }
             }
         }
+    }
+
+    override fun exitBlockchainProcess(process: BlockchainProcess) {
+        val chainID = process.getEngine().getConfiguration().chainID
+        startWithFastSync.remove(chainID) // remove status when process is gone
+    }
+
+    override fun restartBlockchainProcess(process: BlockchainProcess) {
+        var fastSyncStatus = true
+        val chainID = process.getEngine().getConfiguration().chainID
+        if (process is ValidatorWorker) {
+            fastSyncStatus = process.isInFastSyncMode()
+        }
+        startWithFastSync[chainID] = fastSyncStatus
     }
 
     @Deprecated("POS-90")
@@ -233,5 +249,9 @@ open class EBFTSynchronizationInfrastructure(
                 DiagnosticProperty.BLOCKCHAIN_NODE_TYPE.prettyName to { nodeType.prettyName },
                 DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT.prettyName to getCurrentHeight
         )
+    }
+
+    private fun getStartWithFastSyncValue(chainId: Long): Boolean {
+        return startWithFastSync[chainId] ?: true
     }
 }
