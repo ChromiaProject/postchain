@@ -209,7 +209,7 @@
                             <properties>
                                 <property>
                                     <name>listener</name>
-                                    <value>net.postchain.maven.failsafe.PrintCurrentTestRunListener</value>
+                                    <value>net.postchain.maven.surefire.PrintCurrentTestRunListener</value>
                                 </property>
                             </properties>
                         </configuration>

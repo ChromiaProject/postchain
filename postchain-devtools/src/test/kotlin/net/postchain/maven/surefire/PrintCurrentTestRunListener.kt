@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.maven.failsafe
+package net.postchain.maven.surefire
 
 import org.junit.runner.Description
 import org.junit.runner.Result
