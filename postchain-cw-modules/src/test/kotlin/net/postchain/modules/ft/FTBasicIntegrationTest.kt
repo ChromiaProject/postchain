@@ -10,7 +10,7 @@ import net.postchain.gtv.make_gtv_gson
 import org.junit.Assert
 import org.junit.Test
 
-class FTBasicTest : FTIntegrationTest() {
+class FTBasicIntegrationTest : FTIntegrationTest() {
 
     @Test
     fun testEverything() {

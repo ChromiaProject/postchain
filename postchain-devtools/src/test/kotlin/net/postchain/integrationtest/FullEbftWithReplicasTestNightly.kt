@@ -10,7 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(JUnitParamsRunner::class)
-class FullEbftWithReplicasIT : FullEbftTestNightlyCore() {
+class FullEbftWithReplicasTestNightly : FullEbftTestNightlyCore() {
 
     @Ignore // TODO: [et]: Fix this tests
     @Test

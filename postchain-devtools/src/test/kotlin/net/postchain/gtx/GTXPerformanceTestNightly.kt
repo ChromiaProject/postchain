@@ -23,7 +23,7 @@ import org.junit.runner.RunWith
 import kotlin.system.measureNanoTime
 
 @RunWith(JUnitParamsRunner::class)
-class GTXPerformanceIT : IntegrationTestSetup() {
+class GTXPerformanceTestNightly : IntegrationTestSetup() {
 
     companion object : KLogging()
 

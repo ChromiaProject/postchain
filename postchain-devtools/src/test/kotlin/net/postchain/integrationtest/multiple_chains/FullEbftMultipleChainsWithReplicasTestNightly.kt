@@ -22,7 +22,7 @@ import org.junit.runner.RunWith
 import kotlin.test.assertNotNull
 
 @RunWith(JUnitParamsRunner::class)
-class FullEbftMultipleChainsWithReplicasIT : ConfigFileBasedIntegrationTest() {
+class FullEbftMultipleChainsWithReplicasTestNightly : ConfigFileBasedIntegrationTest() {
 
     companion object : KLogging()
 
