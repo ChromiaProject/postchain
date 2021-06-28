@@ -36,7 +36,7 @@ class IcmfPipe(
 
     @Synchronized
     fun pullHeight(): Long? {
-        return list.first
+        return list.pollFirst()
     }
 
     @Synchronized
