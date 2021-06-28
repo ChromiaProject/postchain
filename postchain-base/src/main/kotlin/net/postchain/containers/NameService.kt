@@ -15,5 +15,5 @@ object NameService {
     }
 
     // TODO: [POS-129]: Redesign this
-    fun containerImage() = "chromaway/postchain-slavenode:3.3.2"
+    fun containerImage() = "chromaway/postchain-slavenode:3.3.3"
 }
