@@ -37,6 +37,14 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
 
+    fun isInFastSyncMode(): Boolean {
+        return syncManager.isInFastSync()
+    }
+
+    override fun getEngine(): BlockchainEngine {
+        return workerContext.engine
+    }
+
     init {
         val bestHeight = getEngine().getBlockQueries().getBestHeight().get()
         statusManager = BaseStatusManager(
@@ -92,8 +100,6 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
             }
         }
     }
-
-    override fun getEngine(): BlockchainEngine = workerContext.engine
 
     /**
      * Stop the postchain node

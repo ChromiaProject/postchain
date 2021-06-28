@@ -8,16 +8,33 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 
+/**
+ * Responsible blockchain process lifecycle, i.e. creating, exiting and restarting blockchain processes.
+ */
 interface SynchronizationInfrastructure : Shutdownable {
 
     fun init()
 
+    /**
+     * This is how a blockchain process get created.
+     */
     fun makeBlockchainProcess(
-            processName: BlockchainProcessName,
-            engine: BlockchainEngine,
-            historicBlockchainContext: HistoricBlockchainContext? = null
+        processName: BlockchainProcessName,
+        engine: BlockchainEngine,
+        historicBlockchainContext: HistoricBlockchainContext? = null
     ): BlockchainProcess
 
+    /**
+     * Call this hook upon blockchain process restart.
+     * Note: responsible for keeping track of the two BC process sync modes (normal sync and fastsync)
+     */
+    fun restartBlockchainProcess(process: BlockchainProcess)
+
+    /**
+     * Call this hook before blockchain process is killed.
+     * Note: responsible for keeping track of the two BC process sync modes (normal sync and fastsync)
+     */
+    fun exitBlockchainProcess(process: BlockchainProcess)
 }
 
 interface BlockchainInfrastructure : SynchronizationInfrastructure {
