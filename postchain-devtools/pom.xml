@@ -10,7 +10,6 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>postchain-devtools</artifactId>
     <name>Postchain Dev Tools</name>
-    <packaging>docker</packaging>
 
     <properties>
         <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
@@ -104,7 +103,7 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
-            <version>1.15.3</version>
+            <version>1.12.5</version>
             <scope>test</scope>
         </dependency>
 
@@ -112,7 +111,6 @@
 
     <build>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -154,44 +152,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- Docker image in integration tests -->
-            <plugin>
-                <groupId>io.fabric8</groupId>
-                <artifactId>docker-maven-plugin</artifactId>
-                <version>${docker.maven.plugin.version}</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <images>
-                        <image>
-                            <name>chromaway/postchain-slavenode:3.3.3</name>
-                            <build>
-                                <assemblies>
-                                    <assembly>
-                                        <descriptorRef>artifact-with-dependencies</descriptorRef>
-                                    </assembly>
-                                </assemblies>
-                                <dockerFileDir>${project.basedir}/src/main/docker</dockerFileDir>
-                                <filter>@</filter>
-                            </build>
-                        </image>
-                    </images>
-                </configuration>
-                <!-- Connect start/stop to pre- and
-       post-integration-test phase, respectively if you want to start
-       your docker containers during integration tests -->
-                <executions>
-                    <execution>
-                        <id>start</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <!-- "build" should be used to create the images with the artifact -->
-                            <goal>build</goal>
-                            <!-- <goal>start</goal> -->
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
     </build>
 
@@ -214,19 +174,9 @@
                             </properties>
                         </configuration>
                     </plugin>
-                    <plugin>
-                        <artifactId>maven-failsafe-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>integration-test</goal>
-                                    <goal>verify</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
                 </plugins>
             </build>
         </profile>
     </profiles>
+
 </project>

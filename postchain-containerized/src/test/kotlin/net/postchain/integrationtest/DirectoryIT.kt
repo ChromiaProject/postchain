@@ -1,4 +1,4 @@
-package net.postchain.integrationtest.sync
+package net.postchain.integrationtest
 
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
@@ -19,6 +19,7 @@ import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.EContext
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.devtools.*
 import net.postchain.gtv.GtvFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedNodeDataSource

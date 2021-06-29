@@ -43,9 +43,9 @@ ENV POSTGRES_PASSWORD=postchain
 
 
 # Scripts
-ADD ./scripts/ /opt/chromaway/postchain/scripts/
+ADD scripts /opt/chromaway/postchain/scripts/
 ADD ./scripts-d/* /opt/chromaway/postchain/
-ADD ./env.sh /opt/chromaway/postchain/env.sh
+ADD env.sh /opt/chromaway/postchain/env.sh
 ADD ./maven/ /opt/chromaway/postchain/scripts/
 
 

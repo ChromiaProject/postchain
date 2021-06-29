@@ -1,4 +1,4 @@
-package net.postchain.integrationtest.sync
+package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.api.rest.infra.BaseApiInfrastructure
@@ -13,26 +13,22 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.devtools.KeyPairHelper
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
-import net.postchain.devtools.currentHeight
+import net.postchain.devtools.ManagedModeTest.NodeSet
 import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.*
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
-import net.postchain.integrationtest.sync.ManagedModeTest.NodeSet
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.x.XPeerID
 import org.apache.commons.configuration2.Configuration
-import java.lang.IllegalStateException
 import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
-import kotlin.test.assertTrue
+
 
 open class ManagedModeTest : AbstractSyncTest() {
 
@@ -174,7 +170,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         buildBlockNoWait(nodeSet.nodes(), nodeSet.chain, height)
         sleep(1000)
         nodeSet.nodes().forEach {
-            assertTrue(it.blockQueries(nodeSet.chain).getBestHeight().get() < height)
+            if (it.blockQueries(nodeSet.chain).getBestHeight().get() >= height) throw RuntimeException("assertCantBuildBlock: Can build block")
         }
     }
 
@@ -225,10 +221,14 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     private var chainId: Long = 1
     fun startNewBlockchain(signers: Set<Int>, replicas: Set<Int>, historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf(), waitForRestart: Boolean = true): NodeSet {
-        assertTrue(signers.intersect(replicas).isEmpty())
+        if (signers.intersect(replicas).isNotEmpty()) throw IllegalArgumentException("a node cannot be both signer and replica")
         val maxIndex = c0.all().size
-        signers.forEach { assertTrue(it < maxIndex ) }
-        replicas.forEach { assertTrue(it < maxIndex) }
+        signers.forEach {
+            if (it >= maxIndex) throw IllegalArgumentException("bad signer index")
+        }
+        replicas.forEach {
+            if (it >= maxIndex) throw IllegalArgumentException("bad replica index")
+        }
         val c = NodeSet(chainId++, signers, replicas)
         newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
         // Await blockchain started on all relevant nodes
@@ -269,7 +269,7 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
 class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSource) :
         BlockchainConfigurationProvider {
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     override fun getConfiguration(eContext: EContext, chainId: Long): ByteArray? {
         val db = DatabaseAccess.of(eContext)
