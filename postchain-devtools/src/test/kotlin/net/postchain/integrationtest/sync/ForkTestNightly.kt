@@ -13,7 +13,7 @@ import org.junit.Ignore
 import java.lang.Thread.sleep
 import kotlin.test.assertEquals
 
-class ForkTestIT : ManagedModeTest() {
+class ForkTestNightly : ManagedModeTest() {
 
     @Test
     fun testSyncManagedBlockchain() {
