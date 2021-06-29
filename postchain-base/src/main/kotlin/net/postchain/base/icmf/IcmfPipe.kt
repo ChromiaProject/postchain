@@ -18,24 +18,26 @@ class IcmfPipe(
     val sourceChainIid: Long,
     val targetChainIid: Long
 ) {
-    private val list: LinkedList<Long> = LinkedList()
+    private val list: LinkedList<IcmfPackage> = LinkedList()
 
     @Synchronized
-    fun pushHeight(newHeight: Long) {
+    fun pushHeight(newPkg: IcmfPackage) {
+        val newHeight = newPkg.height
         // We expect heights to be pushed in the correct order
         if (!isEmpty()) {
-            for (oldHeight in list) {
+            for (oldPkg in list) {
+                val oldHeight = oldPkg.height
                 if (oldHeight >= newHeight) {
-                    throw IllegalStateException("Why did we push height: $newHeight when we have $oldHeight in the pipe?")
+                    throw IllegalStateException("Why did we push height: $newPkg when we have $oldPkg in the pipe?")
                 }
             }
         }
-        list.addLast(newHeight) // Since we pull the first we put new messages last
+        list.addLast(newPkg) // Since we pull the first we put new package last
     }
 
 
     @Synchronized
-    fun pullHeight(): Long? {
+    fun pullHeight(): IcmfPackage? {
         return list.pollFirst()
     }
 

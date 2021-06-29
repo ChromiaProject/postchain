@@ -42,7 +42,8 @@ class IcmfDispatcher {
                 logger.debug("triggerPipes() -- trigger chain: $sourceChainIid for height: $height with ${pipes.size} pipes")
             }
             for (pipe in pipes) {
-                pipe.pushHeight(height)
+                val pkg = IcmfPackage.build(height) // TODO: should add messages
+                pipe.pushHeight(pkg)
             }
         }
     }
