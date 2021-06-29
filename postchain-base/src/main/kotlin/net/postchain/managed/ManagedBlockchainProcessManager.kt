@@ -180,11 +180,17 @@ open class ManagedBlockchainProcessManager(
             }
         }
 
-        fun wrappedRestartHandler(bTrace: BlockTrace?): Boolean {
+        /**
+         * Wrapping the [AfterCommitHandler] in a try-catch.
+         */
+        fun wrappedAfterCommitHandler(bTrace: BlockTrace?, blockHeight: Long): Boolean {
             return try {
                 wrTrace("Before", chainId, bTrace)
                 synchronized(synchronizer) {
                     wrTrace("Sync", chainId, bTrace)
+                    // After block commit we trigger ICMF pipes for this chain's new height
+                    icmfDispatcher.triggerPipes(chainId, blockHeight)
+
                     val x = if (chainId == 0L) restartHandlerChain0(bTrace) else restartHandlerChainN(bTrace)
                     wrTrace("After", chainId, bTrace)
                     x
@@ -197,7 +203,7 @@ open class ManagedBlockchainProcessManager(
             }
         }
 
-        return ::wrappedRestartHandler
+        return ::wrappedAfterCommitHandler
     }
 
     /**

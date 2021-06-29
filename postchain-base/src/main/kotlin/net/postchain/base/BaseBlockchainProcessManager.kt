@@ -191,7 +191,9 @@ open class BaseBlockchainProcessManager(
     }
 
     /**
-     * Checks for configuration changes, and then does a async reboot of the given chain.
+     * Define what actions should be taken after block commit. In our case:
+     * 1) alerts ICMF about new block height,
+     * 2) checks for configuration changes, and then does a async reboot of the given chain.
      *
      * @param chainId - the chain we should build the [AfterCommitHandler] for
      * @return a newly created [AfterCommitHandler]. This method will be much more complex is
