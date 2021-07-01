@@ -9,9 +9,9 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 
 class BaseBlockchainConfigurationData(
-        val data: GtvDictionary,
-        partialContext: BlockchainContext,
-        val blockSigMaker: SigMaker
+    val data: GtvDictionary,
+    partialContext: BlockchainContext,
+    val blockSigMaker: SigMaker
 ) {
 
     val context: BlockchainContext
@@ -19,10 +19,10 @@ class BaseBlockchainConfigurationData(
 
     init {
         context = BaseBlockchainContext(
-                partialContext.blockchainRID,
-                resolveNodeID(partialContext.nodeID),
-                partialContext.chainID,
-                partialContext.nodeRID)
+            partialContext.blockchainRID,
+            resolveNodeID(partialContext.nodeID),
+            partialContext.chainID,
+            partialContext.nodeRID)
     }
 
     fun getSigners(): List<ByteArray> {
@@ -73,6 +73,19 @@ class BaseBlockchainConfigurationData(
         return gtxDict?.get(KEY_GTX_TX_SIZE)?.asInteger() ?: 25 * 1024 * 1024
     }
 
+    fun getSyncInfrastructureName(): String? {
+        return data[KEY_SYNC]?.asString()
+    }
+
+    fun getSyncInfrastructureExtensions(): List<String> {
+        val e = data[KEY_SYNC_EXT]
+        return if (e != null) {
+            e.asArray().map { it.asString() }
+        } else {
+            listOf()
+        }
+    }
+
     companion object {
 
         const val KEY_BLOCKSTRATEGY = "blockstrategy"
@@ -91,6 +104,9 @@ class BaseBlockchainConfigurationData(
         const val KEY_DEPENDENCIES = "dependencies"
 
         const val KEY_HISTORIC_BRID = "historic_brid"
+
+        const val KEY_SYNC = "sync"
+        const val KEY_SYNC_EXT = "sync_ext"
     }
 
     private fun resolveNodeID(nodeID: Int): Int {
@@ -99,8 +115,8 @@ class BaseBlockchainConfigurationData(
                 NODE_ID_READ_ONLY
             } else {
                 getSigners()
-                        .indexOfFirst { it.contentEquals(subjectID) }
-                        .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
+                    .indexOfFirst { it.contentEquals(subjectID) }
+                    .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
             }
         } else {
             nodeID

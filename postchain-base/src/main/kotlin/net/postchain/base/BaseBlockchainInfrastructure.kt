@@ -15,25 +15,32 @@ import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
 open class BaseBlockchainInfrastructure(
-        private val nodeConfigProvider: NodeConfigurationProvider,
-        val synchronizationInfrastructure: SynchronizationInfrastructure,
-        val apiInfrastructure: ApiInfrastructure,
-        val nodeDiagnosticContext: NodeDiagnosticContext
+    private val nodeConfigProvider: NodeConfigurationProvider,
+    val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
+    val apiInfrastructure: ApiInfrastructure,
+    val nodeDiagnosticContext: NodeDiagnosticContext
 ) : BlockchainInfrastructure {
 
     val cryptoSystem = SECP256K1CryptoSystem()
     val blockSigMaker: SigMaker
     val subjectID: ByteArray
 
+    val syncInfraCache = mutableMapOf<String, SynchronizationInfrastructure>()
+    val syncInfraExtCache = mutableMapOf<String, SynchronizationInfrastructureExtension>()
+
     init {
         val privKey = nodeConfigProvider.getConfiguration().privKeyByteArray
         val pubKey = secp256k1_derivePubKey(privKey)
         blockSigMaker = cryptoSystem.buildSigMaker(pubKey, privKey)
         subjectID = pubKey
+        syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
     }
 
     override fun shutdown() {
-        synchronizationInfrastructure.shutdown()
+        for (infra in syncInfraCache.values)
+            infra.shutdown()
+        for (ext in syncInfraExtCache.values)
+            ext.shutdown()
         apiInfrastructure.shutdown()
     }
 
@@ -90,18 +97,63 @@ open class BaseBlockchainInfrastructure(
                 }
     }
 
-    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine,
-                                       historicBlockchainContext: HistoricBlockchainContext?): BlockchainProcess {
-        return synchronizationInfrastructure.makeBlockchainProcess(processName, engine, historicBlockchainContext)
-                .also(apiInfrastructure::connectProcess)
+    fun getSynchronizationInfrastucture(name: String?): SynchronizationInfrastructure {
+        if (name == null) return defaultSynchronizationInfrastructure
+        val full_name = if (name == "ebft") "net.postchain.ebft.EBFTSynchronizationInfrastructure" else name
+        if (full_name in syncInfraCache) return syncInfraCache[full_name]!!
+        val infra = getInstanceByClassName(name) as SynchronizationInfrastructure
+        syncInfraCache[full_name] = infra
+        return infra
+    }
+
+    fun getSynchronizationInfrastuctureExtension(name: String): SynchronizationInfrastructureExtension {
+        if (name in syncInfraCache) return syncInfraExtCache[name]!!
+        val infra = getInstanceByClassName(name) as SynchronizationInfrastructureExtension
+        syncInfraExtCache[name] = infra
+        return infra
+    }
+
+    /**
+     * Will dynamically create an instance from the given class name (with the constructor params nodeConfigParam
+     * and nodeDiagnosticCtx).
+     *
+     * @param className is the full name of the class to create an instance from
+     * @return the instance as a [Shutdownable]
+     */
+    private fun getInstanceByClassName(className: String): Shutdownable {
+        val iClass = Class.forName(className)
+        val ctor = iClass.getConstructor(
+            NodeConfigurationProvider::class.java,
+            NodeDiagnosticContext::class.java
+        )
+        return ctor.newInstance(nodeConfigProvider, nodeDiagnosticContext) as Shutdownable
+    }
+
+    override fun makeBlockchainProcess(
+        processName: BlockchainProcessName, engine: BlockchainEngine,
+        historicBlockchainContext: HistoricBlockchainContext?
+    ): BlockchainProcess {
+        val conf = engine.getConfiguration()
+        val synchronizationInfrastructure = getSynchronizationInfrastucture(
+            if (conf is BaseBlockchainConfiguration) conf.configData.getSyncInfrastructureName()
+            else null
+        )
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, historicBlockchainContext)
+        if (conf is BaseBlockchainConfiguration) {
+            for (extName in conf.configData.getSyncInfrastructureExtensions()) {
+                getSynchronizationInfrastuctureExtension(extName).connectProcess(process)
+            }
+        }
+        apiInfrastructure.connectProcess(process)
+        return process
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {
-        synchronizationInfrastructure.exitBlockchainProcess(process)
+        defaultSynchronizationInfrastructure.exitBlockchainProcess(process)
     }
 
     override fun restartBlockchainProcess(process: BlockchainProcess) {
-        synchronizationInfrastructure.restartBlockchainProcess(process)
+        defaultSynchronizationInfrastructure.restartBlockchainProcess(process)
     }
 
 }

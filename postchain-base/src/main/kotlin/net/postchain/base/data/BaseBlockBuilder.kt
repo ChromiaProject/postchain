@@ -37,6 +37,7 @@ open class BaseBlockBuilder(
         val subjects: Array<ByteArray>,
         val blockSigMaker: SigMaker,
         val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
+        val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
         val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
         val maxBlockTransactions: Long = 100
@@ -90,6 +91,19 @@ open class BaseBlockBuilder(
         }
     }
 
+    open fun finalizeExtensions(): Map<String, Gtv> {
+        val m = mutableMapOf<String, Gtv>()
+        for (x in extensions) {
+            for (kv in x.finalize()) {
+                if (kv.key in m) {
+                    throw BlockValidationMistake("Block builder extensions clash: ${kv.key}")
+                }
+                m[kv.key] = kv.value
+            }
+        }
+        return m
+    }
+
     /**
      * Create block header from initial block data
      *
@@ -99,7 +113,7 @@ open class BaseBlockBuilder(
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp)
+        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, finalizeExtensions())
     }
 
     /**
@@ -263,6 +277,10 @@ open class BaseBlockBuilder(
         if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End) && !haveSpecialEndTransaction)
             throw BadDataMistake(BadDataType.BAD_BLOCK,"End special transaction is missing")
         super.finalizeAndValidate(blockHeader)
+
+        // Need to call this method to invoke finalize() method of L2 Implementation
+        // TODO: validate returned values!
+        finalizeExtensions()
     }
 
     private fun checkSpecialTransaction(tx: Transaction) {

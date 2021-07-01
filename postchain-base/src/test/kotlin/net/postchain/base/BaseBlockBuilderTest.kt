@@ -41,13 +41,13 @@ class BaseBlockBuilderTest {
     val signer = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
     val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
-            subjects, signer, listOf(), false)
+        subjects, signer, listOf(),  listOf(), false)
 
     @Test
     fun invalidMonotoneTimestamp() {
         val timestamp = 1L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
         assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
@@ -57,7 +57,7 @@ class BaseBlockBuilderTest {
     fun invalidMonotoneTimestampEquals() {
         val timestamp = 10L
         val blockData = InitialBlockData(myBlockchainRid,2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
         assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
@@ -67,7 +67,7 @@ class BaseBlockBuilderTest {
     fun validMonotoneTimestamp() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid,2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp)
+        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
         assertEquals(OK, bbb.validateBlockHeader(header).result)
