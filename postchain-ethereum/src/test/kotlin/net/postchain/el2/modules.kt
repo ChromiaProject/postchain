@@ -33,7 +33,7 @@ class L2EventOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     override fun apply(ctx: TxEContext): Boolean {
         ctx.emitEvent(
-            "l2_event",
+            "el2_event",
             gtv(
                 GtvInteger(data.args[0].asInteger()),
                 GtvByteArray(data.args[1].asByteArray())
@@ -53,7 +53,7 @@ class L2StateOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     override fun apply(ctx: TxEContext): Boolean {
         ctx.emitEvent(
-            "l2_state",
+            "el2_state",
             gtv(
                 gtv(data.args[0].asInteger()),
                 gtv(
@@ -85,20 +85,20 @@ class L2TransferOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
     }
 }
 
-class L2TestModule : SimpleGTXModule<Unit>(Unit,
+class EL2TestModule : SimpleGTXModule<Unit>(Unit,
     mapOf(
-        "l2_event" to ::L2EventOp,
-        "l2_state" to ::L2StateOp
+        "el2_event" to ::L2EventOp,
+        "el2_state" to ::L2StateOp
     ),
     mapOf()
 ) {
     override fun initializeDB(ctx: EContext) {}
 }
 
-class L2TransferTestModule : SimpleGTXModule<Unit>(Unit,
+class EL2TransferTestModule : SimpleGTXModule<Unit>(Unit,
     mapOf(
-        "l2_event" to ::L2EventOp,
-        "l2_state" to ::L2StateOp,
+        "el2_event" to ::L2EventOp,
+        "el2_state" to ::L2StateOp,
         "__eth_event" to ::L2TransferOp
     ),
     mapOf("get_last_eth_block" to { _, ctx, _ ->

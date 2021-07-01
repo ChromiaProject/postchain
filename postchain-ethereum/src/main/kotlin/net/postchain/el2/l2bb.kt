@@ -24,8 +24,8 @@ class EthereumL2Implementation(
     lateinit var snapshot: SnapshotPageStore
     lateinit var event: EventPageStore
 
-    val events = mutableListOf<Hash>()
-    val states = TreeMap<Long, Hash>()
+    private val events = mutableListOf<Hash>()
+    private val states = TreeMap<Long, Hash>()
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         when (type) {

@@ -58,7 +58,7 @@ open class BaseBlockBuilder(
      *
      * @return The Merkle tree root hash
      */
-    fun computeMerkleRootHash(): ByteArray {
+    private fun computeMerkleRootHash(): ByteArray {
         val digests = rawTransactions.map { txFactory.decodeTransaction(it).getHash() }
 
         val gtvArr = gtv(digests.map { gtv(it) })
@@ -83,6 +83,7 @@ open class BaseBlockBuilder(
             throw UserMistake("Cannot build new blocks in historic mode (check configuration)")
         }
         super.begin(partialBlockHeader)
+        for (x in extensions) x.init(this.bctx, this)
         if (buildingNewBlock
                 && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.Begin)) {
             appendTransaction(specialTxHandler.createSpecialTransaction(
@@ -90,7 +91,6 @@ open class BaseBlockBuilder(
                     bctx
             ))
         }
-        for (x in extensions) x.init(this.bctx, this)
     }
 
     open fun finalizeExtensions(): Map<String, Gtv> {
@@ -100,7 +100,7 @@ open class BaseBlockBuilder(
                 if (kv.key in m) {
                     throw BlockValidationMistake("Block builder extensions clash: ${kv.key}")
                 }
-                m.put(kv.key, kv.value)
+                m[kv.key] = kv.value
             }
         }
         return m
@@ -304,11 +304,13 @@ open class BaseBlockBuilder(
                 throw BlockValidationMistake("Special transaction validation failed")
             }
             haveSpecialEndTransaction = true
-        } else {
-            if (expectBeginTx) {
-                throw BlockValidationMistake("First transaction must be special transaction")
-            }
         }
+        // TODO: this validation is not properly in general
+//        else {
+//            if (expectBeginTx) {
+//                throw BlockValidationMistake("First transaction must be special transaction")
+//            }
+//        }
     }
 
     override fun appendTransaction(tx: Transaction) {

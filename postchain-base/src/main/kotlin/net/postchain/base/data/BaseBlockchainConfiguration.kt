@@ -50,7 +50,7 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
     }
 
     open fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf();
+        return listOf()
     }
 
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {

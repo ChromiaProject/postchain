@@ -36,7 +36,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     fun makeL2EventOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
         b.addOperation(
-            "l2_event",
+            "el2_event",
             arrayOf(
                 gtv(num),
                 gtv(ds.digest(BigInteger.valueOf(num).toByteArray()))
@@ -50,7 +50,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     fun makeL2StateOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
         b.addOperation(
-            "l2_state",
+            "el2_state",
             arrayOf(
                 gtv(num),
                 gtv(num),
@@ -139,13 +139,13 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val x = makeNOPGTX(bcRid)
         enqueueTx(x)
 
-        // Tx: L2 Event Op
-        val validTx2 = enqueueTx(makeL2EventOp(bcRid, 1L))!!
-        validTxs.add(validTx2)
-
-        // Tx: L2 Account State Op
-        val validTx3 = enqueueTx(makeL2StateOp(bcRid, 2L))!!
-        validTxs.add(validTx3)
+//        // Tx: L2 Event Op
+//        val validTx2 = enqueueTx(makeL2EventOp(bcRid, 1L))!!
+//        validTxs.add(validTx2)
+//
+//        // Tx: L2 Account State Op
+//        val validTx3 = enqueueTx(makeL2StateOp(bcRid, 2L))!!
+//        validTxs.add(validTx3)
 
         // -------------------------
         // Build it
@@ -194,7 +194,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
     @Test
     fun testL2UpdateSnapshot() {
-        configOverrides.setProperty("infrastructure", "base/l2test")
+        configOverrides.setProperty("infrastructure", "base/test")
         val nodes = createNodes(1, "/net/postchain/el2/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
@@ -340,7 +340,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
     @Test
     fun testL2EventAndUpdateSnapshot() {
-        configOverrides.setProperty("infrastructure", "base/l2test")
+        configOverrides.setProperty("infrastructure", "base/test")
         val nodes = createNodes(1, "/net/postchain/el2/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
