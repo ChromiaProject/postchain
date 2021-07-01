@@ -2,6 +2,7 @@
 
 package net.postchain.ebft.worker
 
+import mu.KLogging
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.ebft.BaseBlockDatabase
@@ -10,11 +11,9 @@ import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 
-/**
- * A blockchain instance replica worker
- * @property updateLoop the main thread
- */
 class ReadOnlyWorker(val workerContext: WorkerContext) : BlockchainProcess {
+
+    companion object : KLogging()
 
     override fun getEngine() = workerContext.engine
 
@@ -22,22 +21,37 @@ class ReadOnlyWorker(val workerContext: WorkerContext) : BlockchainProcess {
 
     private val done = CountDownLatch(1)
 
+    private val blockDatabase = BaseBlockDatabase(
+            getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
+
     init {
-        val blockDatabase = BaseBlockDatabase(
-                getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
+
+        val params = FastSyncParameters()
+        params.jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout
 
         fastSynchronizer = FastSynchronizer(workerContext,
-                blockDatabase,
-                FastSyncParameters())
+                blockDatabase, params)
         thread(name = "replicaSync-${workerContext.processName}") {
             fastSynchronizer.syncUntilShutdown()
             done.countDown()
         }
     }
 
+    fun getHeight(): Long = fastSynchronizer.blockHeight
+
     override fun shutdown() {
+        shutdownDebug("Begin")
         fastSynchronizer.shutdown()
+        blockDatabase.stop()
+        shutdownDebug("Wait for \"done\"")
         done.await()
         workerContext.shutdown()
+        shutdownDebug("End")
+    }
+
+    private fun shutdownDebug(str: String) {
+        if (logger.isDebugEnabled) {
+            logger.debug("${workerContext.processName}: shutdown() - $str.")
+        }
     }
 }

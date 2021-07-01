@@ -7,7 +7,7 @@ import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
 import net.postchain.api.rest.controller.Model
 import net.postchain.base.*
-import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
@@ -39,12 +39,25 @@ class PostchainTestNode(
         testStorage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO, preWipeDatabase)
         pubKey = nodeConfig.pubKey
         isInitialized = true
+
+        // We don't have specific test classes for Proc Man
+        // But some test debugging cannot really be done the normal way so we need this strange looking thing
+        when (processManager) {
+            is BaseBlockchainProcessManager -> {
+                processManager.setToTest()
+            }
+            is ManagedBlockchainProcessManager -> {
+                processManager.setToTest()
+            }
+        }
     }
 
     companion object : KLogging() {
         const val SYSTEM_CHAIN_IID = 0L
         const val DEFAULT_CHAIN_IID = 1L
     }
+
+    override fun isThisATest() = true
 
     fun addBlockchain(chainSetup: BlockchainSetup) {
         addBlockchain(chainSetup.chainId.toLong(), chainSetup.bcGtv)
@@ -145,7 +158,6 @@ class PostchainTestNode(
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
 
     private fun blockchainRID(process: BlockchainProcess): String {
-        return (process.getEngine().getConfiguration() as BaseBlockchainConfiguration) // TODO: [et]: Resolve type cast
-                .blockchainRid.toHex()
+        return process.getEngine().getConfiguration().blockchainRid.toHex()
     }
 }

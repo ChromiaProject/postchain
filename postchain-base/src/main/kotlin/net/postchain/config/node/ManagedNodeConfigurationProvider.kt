@@ -2,7 +2,10 @@
 
 package net.postchain.config.node
 
-import net.postchain.base.*
+import net.postchain.base.BlockchainRid
+import net.postchain.base.PeerInfo
+import net.postchain.base.Storage
+import net.postchain.base.peerId
 import net.postchain.config.app.AppConfig
 import net.postchain.core.ByteArrayKey
 import net.postchain.network.x.XPeerID
@@ -29,6 +32,7 @@ class ManagedNodeConfigurationProvider(
             // nodeReplicas: for making a node a full clone of another node
             override val nodeReplicas = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
             override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
+            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig, pubKey)
             override val mustSyncUntilHeight = getSyncUntilHeight(appConfig)
         }
     }
@@ -92,7 +96,7 @@ class ManagedNodeConfigurationProvider(
         if (b == null) {
             return a
         }
-        return setOf(*a.toTypedArray(), *b.toTypedArray()).toList()
+        return a.toSet().union(b).toList()
     }
 
     override fun getSyncUntilHeight(appConfig: AppConfig): Map<Long, Long> {
@@ -126,6 +130,6 @@ class ManagedNodeConfigurationProvider(
         if (b == null) {
             return a
         }
-        return maxOf(a,b)
+        return maxOf(a, b)
     }
 }

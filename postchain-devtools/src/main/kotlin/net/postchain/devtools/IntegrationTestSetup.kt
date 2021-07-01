@@ -41,6 +41,25 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     companion object : KLogging()
 
+    val awaitDebugLog = false
+
+    /**
+     * If we want to monitor how long we are waiting and WHAT we are waiting for, then we can turn on this flag.
+     *
+     * NOTE: The reason we do simple System Out is because running multiple nodes with a common logfile
+     * and enforced waiting is a situation unique for tests, so it's better if these "logs" look different from "real" logs.
+     */
+    fun awaitLog(dbg: String) {
+        if (awaitDebugLog) {
+            System.out.println("TEST: $dbg")
+        }
+    }
+
+    // For important test info we always want to log
+    fun testLog(dbg: String) {
+        System.out.println("TEST: $dbg")
+    }
+
     @After
     override fun tearDown() {
         try {
@@ -228,18 +247,35 @@ open class IntegrationTestSetup : AbstractIntegration() {
     fun createPeerInfos(nodeCount: Int): Array<PeerInfo> = createPeerInfosWithReplicas(nodeCount, 0)
 
     protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
+        buildBlock(nodes, chainId, toHeight, *txs)
+    }
+
+    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
+        buildBlockNoWait(nodes, chainId, toHeight, *txs)
+        awaitHeight(nodes, chainId, toHeight)
+    }
+
+    protected fun buildBlockNoWait(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
         nodes.forEach {
             it.enqueueTxs(chainId, *txs)
         }
         nodes.forEach {
             it.buildBlocksUpTo(chainId, toHeight)
         }
-        awaitHeight(chainId, toHeight)
     }
 
     protected fun awaitHeight(chainId: Long, height: Long) {
+        awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
+        awaitHeight(nodes, chainId, height)
+        awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
+    }
+
+    protected fun awaitHeight(nodes: List<PostchainTestNode>, chainId: Long, height: Long) {
         nodes.forEach {
+            awaitLog("++++++ AWAIT node RID: ${PeerNameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
             it.awaitHeight(chainId, height)
+            awaitLog("++++++ WAIT OVER node RID: ${PeerNameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
         }
     }
+
 }

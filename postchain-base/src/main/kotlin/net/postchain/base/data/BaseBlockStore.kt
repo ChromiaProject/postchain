@@ -4,7 +4,7 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.merkle.Hash
+import net.postchain.common.data.Hash
 import net.postchain.core.*
 
 /**
@@ -44,13 +44,12 @@ class BaseBlockStore : BlockStore {
 
     override fun addTransaction(bctx: BlockEContext, tx: Transaction): TxEContext {
         val txIid = DatabaseAccess.of(bctx).insertTransaction(bctx, tx)
-        return BaseTxEContext(bctx, txIid)
+        return BaseTxEContext(bctx, txIid, tx)
     }
 
     override fun finalizeBlock(bctx: BlockEContext, bh: BlockHeader) {
         DatabaseAccess.of(bctx).finalizeBlock(bctx, bh)
     }
-
 
     override fun commitBlock(bctx: BlockEContext, w: BlockWitness) {
         DatabaseAccess.of(bctx).commitBlock(bctx, w)
