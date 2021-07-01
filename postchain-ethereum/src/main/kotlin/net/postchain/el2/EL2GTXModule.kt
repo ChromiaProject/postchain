@@ -24,14 +24,15 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
         "get_account_state_merkle_proof" to ::accountStateMerkleProofQuery
     )
 ) {
-    var queryRunner = QueryRunner()
+    var r = QueryRunner()
 
     override fun initializeDB(ctx: EContext) {
-        val dba = DatabaseAccess.of(ctx)
-        dba.createPageTable(ctx,"el2_event")
-        dba.createPageTable(ctx,"el2_snapshot")
-        dba.createLeafTable(ctx, "el2_event")
-        dba.createLeafTable(ctx, "el2_snapshot")
+//        r.update()
+//        val dba = DatabaseAccess.of(ctx)
+//        dba.createPageTable(ctx,"el2_event")
+//        dba.createPageTable(ctx,"el2_snapshot")
+//        dba.createLeafTable(ctx, "el2_event")
+//        dba.createLeafTable(ctx, "el2_snapshot")
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {

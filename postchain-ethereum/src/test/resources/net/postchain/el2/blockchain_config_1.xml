@@ -35,7 +35,10 @@
         * Normal Gtx: GTXBlockchainConfigurationFactory
         * L2: L2BlockchainConfigurationFactory
         -->
-        <string>net.postchain.base.l2.L2BlockchainConfigurationFactory</string>
+        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+    </entry>
+    <entry key="sync_ext">
+        <array><string>net.postchain.el2.EL2TestSynchronizationInfrastructureExtension</string></array>
     </entry>
     <entry key="signers">
         <array>
@@ -55,8 +58,9 @@
                 <array>
                     <string>net.postchain.configurations.GTXTestModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
-                    <string>net.postchain.devtools.l2.L2TransferTestModule</string>
-                    <string>net.postchain.gtx.L2OpsGTXModule</string>
+                    <string>net.postchain.el2.EL2TestModule</string>
+                    <string>net.postchain.el2.EL2GTXModule</string>
+                    <string>net.postchain.el2.EL2TransferTestModule</string>
                 </array>
             </entry>
         </dict>

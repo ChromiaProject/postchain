@@ -4,15 +4,13 @@ import net.postchain.base.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
-import net.postchain.core.Transaction
-import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.*
 
 const val OP_ETH_EVENT = "__eth_event"
 const val OP_ETH_BLOCK = "__eth_block"
 
 class EL2SpecialTxExtension : GTXSpecialTxExtension {
-
+    var needL2Tnx: Boolean = false
     private val rops = setOf(OP_ETH_BLOCK, OP_ETH_EVENT)
     override fun getRelevantOps() = rops
 
@@ -22,10 +20,17 @@ class EL2SpecialTxExtension : GTXSpecialTxExtension {
         proc = processor
     }
 
-    override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) = Unit
+    override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) {
+        if (module.getOperations().contains(OP_ETH_EVENT)) {
+            needL2Tnx = true
+        }
+    }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
-        return (position == SpecialTransactionPosition.Begin)
+        return when (position) {
+            SpecialTransactionPosition.Begin -> needL2Tnx
+            SpecialTransactionPosition.End -> false
+        }
     }
 
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {

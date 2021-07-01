@@ -29,7 +29,7 @@ class GTXBESpecialTxExtension: GTXSpecialTxExtension {
     var wantBegin: Boolean = false
     var wantEnd: Boolean = false
 
-    val _relevantOps = mutableSetOf<String>()
+    private val _relevantOps = mutableSetOf<String>()
 
     companion object {
         const val OP_BEGIN_BLOCK = "__begin_block"
@@ -98,7 +98,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                                val factory: GTXTransactionFactory
 ) : SpecialTransactionHandler {
 
-    val extensions: List<GTXSpecialTxExtension> = module.getSpecialTxExtensions()
+    private val extensions: List<GTXSpecialTxExtension> = module.getSpecialTxExtensions()
 
     companion object : KLogging()
 
@@ -107,7 +107,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         for (x in extensions) {
             x.init(module, blockchainRID, cs)
             for (op in x.getRelevantOps()) {
-                if (op in opSet) throw ProgrammerMistake("Overlapping op: ${op}")
+                if (op in opSet) throw ProgrammerMistake("Overlapping op: $op")
                 opSet.add(op)
             }
         }
@@ -154,20 +154,20 @@ open class GTXSpecialTxHandler(val module: GTXModule,
             }
         }
 
-        if (idx == operations.size) {
-            return true
+        return if (idx == operations.size) {
+            true
         } else if (idx == operations.size - 1) {
             if (operations[idx].opName == "nop") { // nop is allowed as last operation
-                return true
+                true
             } else {
                 logger.warn("Unprocessed special op: ${operations[idx].opName}")
-                return false
+                false
             }
         } else {
             val opNames = operations.slice(IntRange(idx, operations.size)).map { it.opName }
-                    .joinToString()
+                .joinToString()
             logger.warn("Too many operations in special transaction: $opNames")
-            return false
+            false
         }
     }
 }

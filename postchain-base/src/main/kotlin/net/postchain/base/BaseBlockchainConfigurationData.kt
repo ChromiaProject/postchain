@@ -79,9 +79,11 @@ class BaseBlockchainConfigurationData(
 
     fun getSyncInfrastructureExtensions(): List<String> {
         val e = data[KEY_SYNC_EXT]
-        if (e != null) {
-            return e.asArray().map { it.asString() }
-        } else return listOf()
+        return if (e != null) {
+            e.asArray().map { it.asString() }
+        } else {
+            listOf()
+        }
     }
 
     companion object {
