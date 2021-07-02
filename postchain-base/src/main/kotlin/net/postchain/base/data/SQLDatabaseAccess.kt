@@ -27,12 +27,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
-    protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
-    protected fun tableEvents(ctx: EContext): String = tableName(ctx, "events")
-    protected fun tableStates(ctx: EContext): String = tableName(ctx, "states")
     protected fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
-    protected fun tableEvents(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_events")
-    protected fun tableStates(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_states")
+    protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
+    protected fun tableEventLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_event_leafs")
+    protected fun tableStateLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_state_leafs")
 
     fun tableGtxModuleVersion(ctx: EContext): String = tableName(ctx, "gtx_module_version")
 
@@ -53,8 +51,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableConfigurations(ctx: EContext): String
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
-    protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
+    protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
 
@@ -315,7 +313,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     override fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
         val sql = """SELECT * FROM (SELECT block_height, hash, data, 
             RANK() OVER (ORDER BY event_iid) rank_number 
-            FROM ${tableEvents(ctx, prefix)} 
+            FROM ${tableEventLeafs(ctx, prefix)} 
             WHERE block_height = ?) x WHERE hash = ?"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
         if (rows.isEmpty()) return null
@@ -329,7 +327,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): DatabaseAccess.AccountState? {
-        val sql = """SELECT block_height, state_n, data FROM ${tableStates(ctx, prefix)} WHERE block_height <= ? AND state_n = ?"""
+        val sql = """SELECT block_height, state_n, data FROM ${tableStateLeafs(ctx, prefix)} WHERE block_height <= ? AND state_n = ?"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, state_n)
         if (rows.isEmpty()) return null
         val data = rows.first()
@@ -392,8 +390,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, prefix))
     }
 
-    override fun createLeafTable(ctx: EContext, prefix: String) {
+    override fun createEventLeafTable(ctx: EContext, prefix: String) {
         queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx, prefix))
+    }
+
+    override fun createStateLeafTable(ctx: EContext, prefix: String) {
+        queryRunner.update(ctx.conn, cmdCreateTableState(ctx, prefix))
     }
 
     override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {
@@ -412,7 +414,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             val sql = "SELECT value FROM ${tableMeta()} WHERE key='version'"
             val version = queryRunner.query(connection, sql, ScalarHandler<String>()).toInt()
             if (version < expectedDbVersion) {
-                logger.info("Current version ${version} is lower than expectedVersion ${expectedDbVersion}")
+                logger.info("Current version $version is lower than expectedVersion ${expectedDbVersion}")
                 queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
                 queryRunner.update(connection, cmdCreateTableMustSyncUntil())
 
