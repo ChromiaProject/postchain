@@ -389,11 +389,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun createPageTable(ctx: EContext, prefix: String) {
-        queryRunner.update(cmdCreateTablePage(ctx, prefix))
+        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, prefix))
     }
 
     override fun createLeafTable(ctx: EContext, prefix: String) {
-        queryRunner.update(cmdCreateTableEvent(ctx, prefix))
+        queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx, prefix))
     }
 
     override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {

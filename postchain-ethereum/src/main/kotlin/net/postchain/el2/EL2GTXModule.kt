@@ -16,7 +16,6 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
-import org.apache.commons.dbutils.QueryRunner
 
 class EL2GTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf(
@@ -24,15 +23,12 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
         "get_account_state_merkle_proof" to ::accountStateMerkleProofQuery
     )
 ) {
-    var r = QueryRunner()
-
     override fun initializeDB(ctx: EContext) {
-//        r.update()
-//        val dba = DatabaseAccess.of(ctx)
-//        dba.createPageTable(ctx,"el2_event")
-//        dba.createPageTable(ctx,"el2_snapshot")
-//        dba.createLeafTable(ctx, "el2_event")
-//        dba.createLeafTable(ctx, "el2_snapshot")
+        val dba = DatabaseAccess.of(ctx)
+        dba.createPageTable(ctx,"el2_event")
+        dba.createPageTable(ctx,"el2_snapshot")
+        dba.createLeafTable(ctx, "el2_event")
+        dba.createLeafTable(ctx, "el2_snapshot")
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
