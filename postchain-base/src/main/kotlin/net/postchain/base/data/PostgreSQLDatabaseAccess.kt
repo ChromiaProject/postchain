@@ -161,7 +161,7 @@ import java.sql.Connection
      * @param prefix is what the state will be used for, for example "el2" or "icmf"
      */
     override fun cmdInsertEvent(ctx: EContext, prefix: String): String {
-        return "INSERT INTO ${tableEventLeafs(ctx, prefix)} (block_height, position, data) " + "VALUES (?, ?,  ?, ?)"
+        return "INSERT INTO ${tableEventLeafs(ctx, prefix)} (block_height, position, hash, data) " + "VALUES (?, ?,  ?, ?)"
     }
 
     /**
