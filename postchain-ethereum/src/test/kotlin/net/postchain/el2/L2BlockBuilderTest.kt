@@ -22,6 +22,7 @@ import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXDataBuilder
 import org.junit.Assert
+import org.junit.Ignore
 import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -93,6 +94,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         return b.serialize()
     }
 
+    @Ignore
     @Test
     fun testL2BuildBlock() {
         configOverrides.setProperty("infrastructure", "base/test")
@@ -192,6 +194,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         Assert.assertEquals("\"true\"", value.get())
     }
 
+    @Ignore
     @Test
     fun testL2UpdateSnapshot() {
         configOverrides.setProperty("infrastructure", "base/test")
@@ -338,6 +341,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         }
     }
 
+    @Ignore
     @Test
     fun testL2EventAndUpdateSnapshot() {
         configOverrides.setProperty("infrastructure", "base/test")
