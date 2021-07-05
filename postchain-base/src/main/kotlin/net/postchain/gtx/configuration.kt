@@ -17,10 +17,8 @@ open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationDat
                                       pumpStation: IcmfPumpStation? = null )
     : BaseBlockchainConfiguration(configData, pumpStation) {
     private val txFactory = GTXTransactionFactory(
-            effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize())
-    private val specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem,
-            txFactory
-    )
+        effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize())
+    private lateinit var specTxHandler: GTXSpecialTxHandler
 
     companion object : KLogging()
 
@@ -37,6 +35,9 @@ open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationDat
         logger.debug("Running initialize DB of class GTXBlockchainConfiguration")
         GTXSchemaManager.initializeDB(ctx)
         module.initializeDB(ctx)
+        specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem,
+            txFactory
+        )
     }
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {

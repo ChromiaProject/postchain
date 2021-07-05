@@ -3,7 +3,7 @@
 package net.postchain
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
@@ -38,11 +38,11 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
     }
 
     fun startBlockchain(chainId: Long): BlockchainRid? {
-        return processManager.startBlockchain(chainId, buildBbDebug(chainId) )
+        return processManager.startBlockchain(chainId, buildBbDebug(chainId))
     }
 
     fun stopBlockchain(chainId: Long) {
-        processManager.stopBlockchain(chainId, buildBbDebug(chainId) )
+        processManager.stopBlockchain(chainId, buildBbDebug(chainId))
     }
 
     override fun shutdown() {

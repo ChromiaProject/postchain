@@ -45,8 +45,8 @@ class IcmfPipe(
     @Synchronized
     fun pull(): IcmfPackage? {
         val first = list.pollFirst()
-        val height = first.height
-
+        // TODO: Validate with DB?
+        return first
     }
 
     @Synchronized

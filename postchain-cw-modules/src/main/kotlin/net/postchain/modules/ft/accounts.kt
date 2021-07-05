@@ -2,7 +2,7 @@
 
 package net.postchain.modules.ft
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv

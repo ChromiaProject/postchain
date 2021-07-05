@@ -22,8 +22,13 @@ open class BaseBlockchainConfiguration(
 
     val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
 
-    // ICMF specific
-    val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
+    // Infrastructure settings
+    override val syncInfrastructureName = DynamicClassName.build(configData.getSyncInfrastructureName())
+    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.getSyncInfrastructureExtensions())
+
+    val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler() // TODO
+
+
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
         return BaseBlockHeader(rawBlockHeader, cryptoSystem)
@@ -55,6 +60,10 @@ open class BaseBlockchainConfiguration(
         return specialTransactionHandler
     }
 
+    open fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
+        return listOf()
+    }
+
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
         val anchorProc: TxEventSink? = null
@@ -69,6 +78,7 @@ open class BaseBlockchainConfiguration(
                 signers.toTypedArray(),
                 configData.blockSigMaker,
                 bcRelatedInfosDependencyList,
+                makeBBExtensions(),
                 effectiveBlockchainRID != blockchainRid,
                 configData.getMaxBlockSize(),
                 configData.getMaxBlockTransactions())

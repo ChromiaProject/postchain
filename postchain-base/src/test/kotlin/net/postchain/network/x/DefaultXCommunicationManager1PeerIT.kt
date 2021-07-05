@@ -4,6 +4,7 @@ package net.postchain.network.x
 
 import assertk.assert
 import assertk.assertions.isEmpty
+import net.postchain.core.BlockchainRid
 import net.postchain.base.*
 import net.postchain.core.UserMistake
 import org.awaitility.Awaitility.await

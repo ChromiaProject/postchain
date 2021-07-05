@@ -82,7 +82,7 @@ open class BaseBlockchainProcessManager(
         return synchronized(synchronizer) {
             try {
                 startDebug("Begin by stopping blockchain", chainId, bTrace)
-                stopBlockchain(chainId, bTrace)
+                stopBlockchain(chainId, bTrace, true)
 
                 startInfo("Starting of blockchain", chainId)
                 withReadWriteConnection(storage, chainId) { eContext ->
@@ -156,11 +156,16 @@ open class BaseBlockchainProcessManager(
      *
      * @param chainId is the chain to be stopped.
      */
-    override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?) {
+    override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
         synchronized(synchronizer) {
             stopInfoDebug("Stopping of Blockchain", chainId, bTrace)
 
             blockchainProcesses.remove(chainId)?.also {
+                if (restart) {
+                    blockchainInfrastructure.restartBlockchainProcess(it)
+                } else {
+                    blockchainInfrastructure.exitBlockchainProcess(it)
+                }
                 it.shutdown()
             }
             stopInfoDebug("Stopping blockchain, shutdown complete", chainId, bTrace)
@@ -178,7 +183,10 @@ open class BaseBlockchainProcessManager(
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
 
-        blockchainProcesses.forEach {it.value.shutdown()}
+        blockchainProcesses.forEach {
+            blockchainInfrastructure.exitBlockchainProcess(it.value)
+            it.value.shutdown()
+        }
         blockchainProcesses.clear()
 
         blockchainProcessesLoggers.forEach { (_, t) ->
@@ -228,7 +236,7 @@ open class BaseBlockchainProcessManager(
     private fun logPeerTopology(chainId: Long) {
         // TODO: [et]: Fix links to EBFT entities
         val topology = ((blockchainInfrastructure as BaseBlockchainInfrastructure)
-                .synchronizationInfrastructure as? EBFTSynchronizationInfrastructure)
+                .defaultSynchronizationInfrastructure as? EBFTSynchronizationInfrastructure)
                 ?.connectionManager?.getPeersTopology(chainId)
                 ?.mapKeys {
                     peerName(it.key)
@@ -257,6 +265,7 @@ open class BaseBlockchainProcessManager(
         }
 
     }
+
     protected fun testDebug(str: String, bTrace: BlockTrace?) {
         testDebug(str)
         if (logger.isTraceEnabled) {
@@ -283,6 +292,7 @@ open class BaseBlockchainProcessManager(
             logger.debug("[${nodeName()}]: startBlockchain() -- $str: chainId: $chainId $extraStr")
         }
     }
+
     private fun startDebug(str: String, processName: BlockchainProcessName, chainId: Long, bTrace: BlockTrace?) {
         if (logger.isDebugEnabled) {
             val extraStr = if (bTrace != null) {
@@ -293,16 +303,19 @@ open class BaseBlockchainProcessManager(
             logger.debug("$processName: startBlockchain() -- $str: chainId: $chainId $extraStr")
         }
     }
+
     private fun startInfo(str: String, chainId: Long) {
         if (logger.isInfoEnabled) {
             logger.info("[${nodeName()}]: startBlockchain() - $str: chainId: $chainId")
         }
     }
+
     private fun startInfo(str: String, processName: BlockchainProcessName, chainId: Long) {
         if (logger.isInfoEnabled) {
             logger.info("$processName: stopBlockchain() - $str: chainId: $chainId")
         }
     }
+
     private fun startInfoDebug(str: String, processName: BlockchainProcessName, chainId: Long, bTrace: BlockTrace?) {
         startInfo(str, processName, chainId)
         startDebug(str, processName, chainId, bTrace)
@@ -314,11 +327,13 @@ open class BaseBlockchainProcessManager(
             logger.debug("[${nodeName()}]: stopBlockchain() -- $str: chainId: $chainId, block causing the start: $bTrace")
         }
     }
+
     private fun stopInfo(str: String, chainId: Long) {
         if (logger.isInfoEnabled) {
             logger.info("[${nodeName()}]: stopBlockchain() - $str: chainId: $chainId")
         }
     }
+
     private fun stopInfoDebug(str: String, chainId: Long, bTrace: BlockTrace?) {
         stopInfo(str, chainId)
         stopDebug(str, chainId, bTrace)

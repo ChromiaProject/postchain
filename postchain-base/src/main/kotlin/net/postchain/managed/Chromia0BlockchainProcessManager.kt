@@ -64,16 +64,16 @@ class Chromia0BlockchainProcessManager(
         if (chainId == 0L)
             return baseHandler
         else {
-            return {
-                rhTrace("Begin", chainId, it)
+            return { bTrace: BlockTrace?, height: Long ->
+                rhTrace("Begin", chainId, bTrace)
                 try {
                     anchorLastBlock(chainId)
-                    rhTrace("Anchored", chainId, it)
+                    rhTrace("Anchored", chainId, bTrace)
                 } catch (e: Exception) {
                     logger.error("Error when anchoring $e", e)
                     e.printStackTrace()
                 }
-                baseHandler(it)
+                baseHandler(bTrace, height)
             }
         }
     }
