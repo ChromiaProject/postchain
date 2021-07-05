@@ -2,7 +2,7 @@
 
 package net.postchain.modules.esplix_r4
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule

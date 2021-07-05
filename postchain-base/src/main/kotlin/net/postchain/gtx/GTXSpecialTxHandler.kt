@@ -3,7 +3,7 @@
 package net.postchain.gtx
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition

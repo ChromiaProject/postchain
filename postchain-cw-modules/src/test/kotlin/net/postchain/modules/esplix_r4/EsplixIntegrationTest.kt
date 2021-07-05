@@ -2,7 +2,7 @@
 
 package net.postchain.devtools.modules.esplix
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.toHex
 import net.postchain.devtools.IntegrationTestSetup

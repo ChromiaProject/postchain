@@ -4,6 +4,7 @@ package net.postchain.config.node
 
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.core.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.network.x.XPeerID
 

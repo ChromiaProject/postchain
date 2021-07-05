@@ -3,6 +3,7 @@
 package net.postchain.base
 
 import net.postchain.common.data.Hash
+import net.postchain.core.BlockchainRid
 import net.postchain.core.BlockHeader
 import net.postchain.core.InitialBlockData
 import org.junit.Assert.*

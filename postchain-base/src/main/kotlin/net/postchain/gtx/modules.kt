@@ -4,7 +4,7 @@ package net.postchain.gtx
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.UserMistake

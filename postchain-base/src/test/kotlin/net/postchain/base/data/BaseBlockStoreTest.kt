@@ -3,7 +3,7 @@
 package net.postchain.base.data
 
 import net.postchain.base.BaseEContext
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.EContext
 import org.easymock.EasyMock.*

@@ -3,6 +3,7 @@
 package net.postchain.base
 
 import net.postchain.core.BlockchainContext
+import net.postchain.core.BlockchainRid
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.gtv.Gtv
