@@ -1,6 +1,5 @@
 package net.postchain.el2
 
-import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.getEthereumAddress
 import net.postchain.base.gtv.BlockHeaderData
@@ -11,6 +10,7 @@ import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.core.BlockchainRid
 import net.postchain.core.Transaction
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper

@@ -1,7 +1,7 @@
 package net.postchain.integrationtest.sync
 
 import net.postchain.StorageBuilder
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess

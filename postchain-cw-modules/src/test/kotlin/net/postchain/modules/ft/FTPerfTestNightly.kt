@@ -2,7 +2,7 @@
 
 package net.postchain.modules.ft
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey

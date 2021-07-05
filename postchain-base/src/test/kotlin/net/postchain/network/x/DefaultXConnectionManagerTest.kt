@@ -7,6 +7,7 @@ import assertk.assertions.isEmpty
 import net.postchain.devtools.isContentEqualTo
 import com.nhaarman.mockitokotlin2.*
 import net.postchain.base.*
+import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.debug.BlockchainProcessName

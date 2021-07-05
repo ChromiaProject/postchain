@@ -1,6 +1,6 @@
 package net.postchain.el2
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext

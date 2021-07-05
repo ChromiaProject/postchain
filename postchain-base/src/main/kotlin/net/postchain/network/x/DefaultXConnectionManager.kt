@@ -3,7 +3,7 @@
 package net.postchain.network.x
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId

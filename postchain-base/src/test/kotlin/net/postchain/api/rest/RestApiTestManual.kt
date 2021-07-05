@@ -3,7 +3,7 @@
 package net.postchain.api.rest
 
 import io.restassured.RestAssured.given
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.RestTools
 import net.postchain.common.toHex

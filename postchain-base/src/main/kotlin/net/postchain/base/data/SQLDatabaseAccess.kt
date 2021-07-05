@@ -2,7 +2,7 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.common.data.Hash
 import net.postchain.base.snapshot.Page

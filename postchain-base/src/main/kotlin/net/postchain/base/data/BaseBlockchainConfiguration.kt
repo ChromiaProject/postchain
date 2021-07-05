@@ -19,6 +19,10 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
 
     val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
 
+    // Infrastructure settings
+    override val syncInfrastructureName = DynamicClassName.build(configData.getSyncInfrastructureName())
+    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.getSyncInfrastructureExtensions())
+
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
         return BaseBlockHeader(rawBlockHeader, cryptoSystem)
     }

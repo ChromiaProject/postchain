@@ -3,7 +3,7 @@
 package net.postchain.gtx
 
 import net.postchain.StorageBuilder
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.withWriteConnection
 import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFactory.gtv

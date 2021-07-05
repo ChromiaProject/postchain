@@ -3,15 +3,16 @@
 package net.postchain.base
 
 import net.postchain.core.BlockchainContext
+import net.postchain.core.BlockchainRid
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 
 class BaseBlockchainConfigurationData(
-        val data: GtvDictionary,
-        partialContext: BlockchainContext,
-        val blockSigMaker: SigMaker
+    val data: GtvDictionary,
+    partialContext: BlockchainContext,
+    val blockSigMaker: SigMaker
 ) {
 
     val context: BlockchainContext
@@ -19,10 +20,10 @@ class BaseBlockchainConfigurationData(
 
     init {
         context = BaseBlockchainContext(
-                partialContext.blockchainRID,
-                resolveNodeID(partialContext.nodeID),
-                partialContext.chainID,
-                partialContext.nodeRID)
+            partialContext.blockchainRID,
+            resolveNodeID(partialContext.nodeID),
+            partialContext.chainID,
+            partialContext.nodeRID)
     }
 
     fun getSigners(): List<ByteArray> {
@@ -115,8 +116,8 @@ class BaseBlockchainConfigurationData(
                 NODE_ID_READ_ONLY
             } else {
                 getSigners()
-                        .indexOfFirst { it.contentEquals(subjectID) }
-                        .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
+                    .indexOfFirst { it.contentEquals(subjectID) }
+                    .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
             }
         } else {
             nodeID

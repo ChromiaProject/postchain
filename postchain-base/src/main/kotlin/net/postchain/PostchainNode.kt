@@ -3,7 +3,7 @@
 package net.postchain
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
