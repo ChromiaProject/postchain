@@ -15,15 +15,15 @@ import java.util.*
  * sequence and next time a block is built we will take the missing block too
  */
 class IcmfPipe(
-    val sourceChainIid: Long,
-    val targetChainIid: Long
+    val sourceChainIid: Long, // Where packages coming from
+    val targetChainIid: Long  // Where packages are going
 ) {
     private val list: LinkedList<IcmfPackage> = LinkedList()
 
     @Synchronized
-    fun pushHeight(newPkg: IcmfPackage) {
+    fun push(newPkg: IcmfPackage) {
         val newHeight = newPkg.height
-        // We expect heights to be pushed in the correct order
+        // We expect packages (from blocks) to be pushed in the correct order
         if (!isEmpty()) {
             for (oldPkg in list) {
                 val oldHeight = oldPkg.height
@@ -36,9 +36,17 @@ class IcmfPipe(
     }
 
 
+    /**
+     * Regarding persistence:
+     *
+     * Currently we always fetch packages from DB, since we might have suffered a restart and the in memory data might
+     * not be 100% correct. (Task for the future: only fetch from DB when we have reason to believe data got lost).
+     */
     @Synchronized
-    fun pullHeight(): IcmfPackage? {
-        return list.pollFirst()
+    fun pull(): IcmfPackage? {
+        val first = list.pollFirst()
+        val height = first.height
+
     }
 
     @Synchronized

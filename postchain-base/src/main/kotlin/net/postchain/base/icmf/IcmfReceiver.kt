@@ -23,13 +23,20 @@ class IcmfReceiver {
     }
 
     /**
-     * Return new heights
+     * Return all pipes for the given chain that have new data
      *
      * @param targetChainIid is the target chain we want to check updates for
      * @return a mutable list of pipes (yeah, this is unsafe, but don't wanna make a defensive copy)
      */
     fun getPipesForChain(targetChainIid: Long): List<IcmfPipe> {
-        return getListOrAddIfNotExists(targetChainIid)
+        val allPipes = getListOrAddIfNotExists(targetChainIid)
+        val dataPipes = ArrayList<IcmfPipe>()
+        for (pipe in allPipes) {
+            if (!pipe.isEmpty()) {
+                dataPipes.add(pipe)
+            }
+        }
+        return dataPipes
     }
 
     /**

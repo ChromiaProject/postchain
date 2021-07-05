@@ -43,7 +43,7 @@ class IcmfDispatcher {
             }
             for (pipe in pipes) {
                 val pkg = IcmfPackage.build(height) // TODO: should add messages
-                pipe.pushHeight(pkg)
+                pipe.push(pkg)
             }
         }
     }
