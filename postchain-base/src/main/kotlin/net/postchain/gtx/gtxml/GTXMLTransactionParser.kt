@@ -2,7 +2,7 @@
 
 package net.postchain.gtx.gtxml
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SigMaker
 import net.postchain.base.gtxml.OperationsType

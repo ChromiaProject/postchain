@@ -5,6 +5,7 @@ package net.postchain.network.x
 import assertk.assert
 import assertk.assertions.containsExactly
 import net.postchain.base.*
+import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.ebft.message.GetBlockAtHeight
 import org.awaitility.Awaitility.await

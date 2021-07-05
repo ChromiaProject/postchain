@@ -2,19 +2,22 @@
 
 package net.postchain.base
 
+import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import java.sql.Connection
 
-class ConfirmationProofMaterial(val txHash: ByteArrayKey,
-                                val txHashes: Array<ByteArrayKey>,
-                                val header: ByteArray,
-                                val witness: ByteArray)
+class ConfirmationProofMaterial(
+    val txHash: ByteArrayKey,
+    val txHashes: Array<ByteArrayKey>,
+    val header: ByteArray,
+    val witness: ByteArray
+)
 
 open class BaseAppContext(
-        override val conn: Connection,
-        private val dbAccess: DatabaseAccess
+    override val conn: Connection,
+    private val dbAccess: DatabaseAccess
 ) : AppContext {
 
     override fun <T> getInterface(c: Class<T>): T? {
@@ -25,10 +28,10 @@ open class BaseAppContext(
 }
 
 open class BaseEContext(
-        override val conn: Connection,
-        override val chainID: Long,
-        override val nodeID: Int,
-        private val dbAccess: DatabaseAccess
+    override val conn: Connection,
+    override val chainID: Long,
+    override val nodeID: Int,
+    private val dbAccess: DatabaseAccess
 ) : EContext {
 
     override fun <T> getInterface(c: Class<T>): T? {
@@ -43,12 +46,12 @@ interface TxEventSink {
 }
 
 open class BaseBlockEContext(
-        val ectx: EContext,
-        override val height: Long,
-        override val blockIID: Long,
-        override val timestamp: Long,
-        val dependencyHeightMap: Map<Long, Long>,
-        val txEventSink: TxEventSink
+    val ectx: EContext,
+    override val height: Long,
+    override val blockIID: Long,
+    override val timestamp: Long,
+    val dependencyHeightMap: Map<Long, Long>,
+    val txEventSink: TxEventSink
 ) : EContext by ectx, BlockEContext {
 
 
@@ -66,28 +69,36 @@ open class BaseBlockEContext(
      */
     override fun getChainDependencyHeight(chainID: Long): Long {
         return dependencyHeightMap[chainID]
-                ?: throw IllegalArgumentException("The blockchain with chain ID: $chainID is not a dependency")
+            ?: throw IllegalArgumentException("The blockchain with chain ID: $chainID is not a dependency")
     }
 }
 
 open class BaseTxEContext(
-        val bectx: BlockEContext,
-        override val txIID: Long,
-        val tx: Transaction
-) : BlockEContext by bectx, TxEContext
-{
+    val bectx: BlockEContext,
+    override val txIID: Long,
+    val tx: Transaction
+) : BlockEContext by bectx, TxEContext {
     val events = mutableListOf<Pair<String, Gtv>>()
+    val eventSink = bectx.getInterface(TxEventSink::class.java)!!
 
     override fun emitEvent(type: String, data: Gtv) {
-        events.add(Pair(type, data))
+        if (type.startsWith("!")) {
+            eventSink.processEmittedEvent(this, type, data)
+        } else {
+            events.add(Pair(type, data))
+        }
     }
 
     override fun done() {
-        if (!events.isEmpty()) {
-            val eventSink = bectx.getInterface(TxEventSink::class.java)!!
+        if (events.isNotEmpty()) {
             for (e in events) {
                 eventSink.processEmittedEvent(this, e.first, e.second)
             }
         }
     }
+}
+
+interface BaseBlockBuilderExtension {
+    fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder)
+    fun finalize(): Map<String, Gtv>
 }

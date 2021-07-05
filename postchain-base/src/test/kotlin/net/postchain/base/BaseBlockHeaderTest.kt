@@ -3,6 +3,7 @@
 package net.postchain.base
 
 import net.postchain.common.data.Hash
+import net.postchain.core.BlockchainRid
 import net.postchain.core.BlockHeader
 import net.postchain.core.InitialBlockData
 import org.junit.Assert.*
@@ -58,7 +59,7 @@ class BaseBlockHeaderTest {
         val timestamp = 10000L + height
         val dependencies = createBlockchainDependencies()
         val blockData = InitialBlockData(blockchainRid, blockIID, chainId, prevBlockRid, height, timestamp, dependencies)
-        return BaseBlockHeader.make(SECP256K1CryptoSystem(), blockData, rootHash, timestamp)
+        return BaseBlockHeader.make(SECP256K1CryptoSystem(), blockData, rootHash, timestamp, mapOf())
     }
 
     private fun createBlockchainDependencies(): Array<Hash?>? {
