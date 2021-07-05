@@ -97,8 +97,9 @@ open class BaseBlockchainInfrastructure(
                 }
     }
 
-    fun getSynchronizationInfrastucture(name: String?): SynchronizationInfrastructure {
-        if (name == null) return defaultSynchronizationInfrastructure
+    fun getSynchronizationInfrastucture(dynClassName: DynamicClassName?): SynchronizationInfrastructure {
+        if (dynClassName == null) return defaultSynchronizationInfrastructure
+        val name = dynClassName.className
         val full_name = if (name == "ebft") "net.postchain.ebft.EBFTSynchronizationInfrastructure" else name
         if (full_name in syncInfraCache) return syncInfraCache[full_name]!!
         val infra = getInstanceByClassName(name) as SynchronizationInfrastructure
@@ -106,7 +107,8 @@ open class BaseBlockchainInfrastructure(
         return infra
     }
 
-    fun getSynchronizationInfrastuctureExtension(name: String): SynchronizationInfrastructureExtension {
+    fun getSynchronizationInfrastuctureExtension(dynClassName: DynamicClassName): SynchronizationInfrastructureExtension {
+        val name = dynClassName.className
         if (name in syncInfraCache) return syncInfraExtCache[name]!!
         val infra = getInstanceByClassName(name) as SynchronizationInfrastructureExtension
         syncInfraExtCache[name] = infra
@@ -134,13 +136,10 @@ open class BaseBlockchainInfrastructure(
         historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val conf = engine.getConfiguration()
-        val synchronizationInfrastructure = getSynchronizationInfrastucture(
-            if (conf is BaseBlockchainConfiguration) conf.configData.getSyncInfrastructureName()
-            else null
-        )
+        val synchronizationInfrastructure = getSynchronizationInfrastucture(conf.syncInfrastructureName)
         val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, historicBlockchainContext)
         if (conf is BaseBlockchainConfiguration) {
-            for (extName in conf.configData.getSyncInfrastructureExtensions()) {
+            for (extName in conf.syncInfrastructureExtensionNames) {
                 getSynchronizationInfrastuctureExtension(extName).connectProcess(process)
             }
         }
