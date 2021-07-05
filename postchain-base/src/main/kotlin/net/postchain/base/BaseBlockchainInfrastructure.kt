@@ -136,4 +136,12 @@ open class BaseBlockchainInfrastructure(
         apiInfrastructure.connectProcess(process)
         return process
     }
+
+    override fun exitBlockchainProcess(process: BlockchainProcess) {
+        defaultSynchronizationInfrastructure.exitBlockchainProcess(process)
+    }
+
+    override fun restartBlockchainProcess(process: BlockchainProcess) {
+        defaultSynchronizationInfrastructure.restartBlockchainProcess(process)
+    }
 }
