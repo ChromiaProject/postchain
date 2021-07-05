@@ -11,6 +11,7 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 import kotlin.math.log
@@ -125,6 +126,10 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                     b.addOperation(o.opName, o.args)
                 }
             }
+        }
+        if (b.operations.isEmpty()) {
+            // no extension emitted an operation - add nop
+            b.addOperation("nop", arrayOf(GtvFactory.gtv(cs.getRandomBytes(32))))
         }
         return factory.decodeTransaction(b.serialize())
     }
