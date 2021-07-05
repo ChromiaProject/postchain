@@ -6,11 +6,10 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
 import com.nhaarman.mockitokotlin2.*
-import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
+import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
-import net.postchain.devtools.argumentCaptor2
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await

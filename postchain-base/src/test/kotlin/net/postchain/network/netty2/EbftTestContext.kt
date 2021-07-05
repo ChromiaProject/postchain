@@ -5,8 +5,8 @@ package net.postchain.network.netty2
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.doReturn
 import com.nhaarman.mockitokotlin2.mock
-import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
+import net.postchain.core.BlockchainRid
 import net.postchain.ebft.EbftPacketDecoder
 import net.postchain.ebft.EbftPacketEncoder
 import net.postchain.ebft.message.Message

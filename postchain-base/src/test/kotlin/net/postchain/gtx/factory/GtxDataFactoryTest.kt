@@ -2,8 +2,8 @@
 
 package net.postchain.gtx.factory
 
-import net.postchain.base.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.BlockchainRid
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv

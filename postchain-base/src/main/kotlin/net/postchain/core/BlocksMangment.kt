@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.base.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.debug.BlockTrace
 import net.postchain.gtv.Gtv

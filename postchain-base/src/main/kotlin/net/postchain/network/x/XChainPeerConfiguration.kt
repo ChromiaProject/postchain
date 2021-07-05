@@ -2,8 +2,8 @@
 
 package net.postchain.network.x
 
-import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
+import net.postchain.core.BlockchainRid
 
 open class XChainPeerConfiguration(
         val chainID: Long,

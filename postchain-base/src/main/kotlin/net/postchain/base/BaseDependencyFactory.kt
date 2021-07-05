@@ -2,6 +2,7 @@ package net.postchain.base
 
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainRid
 import net.postchain.gtv.*
 
 object BaseDependencyFactory {

@@ -2,11 +2,7 @@
 
 package net.postchain.client.core
 
-import net.postchain.base.BlockchainRid
-import net.postchain.client.core.ConcretePostchainClient
-import net.postchain.client.core.DefaultSigner
-import net.postchain.client.core.PostchainClient
-import net.postchain.client.core.PostchainNodeResolver
+import net.postchain.core.BlockchainRid
 
 object PostchainClientFactory {
 

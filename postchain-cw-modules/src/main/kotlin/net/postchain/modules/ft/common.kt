@@ -2,8 +2,8 @@
 
 package net.postchain.modules.ft
 
-import net.postchain.base.BlockchainRid
 import net.postchain.base.CryptoSystem
+import net.postchain.core.BlockchainRid
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.Gtv

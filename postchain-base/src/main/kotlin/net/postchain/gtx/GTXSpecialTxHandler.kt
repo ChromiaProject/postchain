@@ -3,17 +3,16 @@
 package net.postchain.gtx
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
+import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
-import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
-import kotlin.math.log
 
 
 interface GTXSpecialTxExtension {
@@ -25,7 +24,7 @@ interface GTXSpecialTxExtension {
                                   bctx: BlockEContext, ops: List<OpData>): Boolean
 }
 
-class GTXBESpecialTxExtension: GTXSpecialTxExtension {
+class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
     var wantBegin: Boolean = false
     var wantEnd: Boolean = false
 
@@ -125,6 +124,10 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                     b.addOperation(o.opName, o.args)
                 }
             }
+        }
+        if (b.operations.isEmpty()) {
+            // no extension emitted an operation - add nop
+            b.addOperation("nop", arrayOf(GtvFactory.gtv(cs.getRandomBytes(32))))
         }
         return factory.decodeTransaction(b.serialize())
     }

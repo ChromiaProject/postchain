@@ -5,9 +5,9 @@ package net.postchain.client.core
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import net.postchain.api.rest.json.JsonFactory
-import net.postchain.base.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.core.BlockchainRid
 import net.postchain.core.TransactionStatus.*
 import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv

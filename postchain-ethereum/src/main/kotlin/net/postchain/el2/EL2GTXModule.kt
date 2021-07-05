@@ -27,12 +27,12 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
     var r = QueryRunner()
 
     override fun initializeDB(ctx: EContext) {
-//        r.update()
-//        val dba = DatabaseAccess.of(ctx)
-//        dba.createPageTable(ctx,"el2_event")
-//        dba.createPageTable(ctx,"el2_snapshot")
-//        dba.createLeafTable(ctx, "el2_event")
-//        dba.createLeafTable(ctx, "el2_snapshot")
+        //r.update
+        //val dba = DatabaseAccess.of(ctx)
+        //dba.createPageTable(ctx,"el2_event")
+        //dba.createPageTable(ctx,"el2_snapshot")
+        //dba.createEventLeafTable(ctx, "el2")
+        //dba.createStateLeafTable(ctx, "el2")
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {

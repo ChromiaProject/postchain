@@ -6,7 +6,11 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
 import com.nhaarman.mockitokotlin2.*
-import net.postchain.base.*
+import net.postchain.base.NetworkNodes
+import net.postchain.base.PeerCommConfiguration
+import net.postchain.base.PeerInfo
+import net.postchain.base.peerId
+import net.postchain.core.BlockchainRid
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import org.junit.Before

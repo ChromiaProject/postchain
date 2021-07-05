@@ -3,17 +3,16 @@
 package net.postchain.network.x
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.toHex
+import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.PeerNameHelper.peerName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
-import java.lang.IllegalStateException
 
 class DefaultXConnectionManager<PacketType>(
         private val connectorFactory: XConnectorFactory<PacketType>,

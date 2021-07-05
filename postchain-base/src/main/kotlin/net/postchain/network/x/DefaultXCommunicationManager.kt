@@ -3,11 +3,11 @@
 package net.postchain.network.x
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.toHex
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.PeerNameHelper.peerName
 import net.postchain.network.CommunicationManager

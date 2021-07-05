@@ -2,8 +2,7 @@
 
 package net.postchain.network.x
 
-import net.postchain.base.BlockchainRid
-import net.postchain.base.peerId
+import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.IdentPacketInfo

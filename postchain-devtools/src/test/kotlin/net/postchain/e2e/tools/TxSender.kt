@@ -1,12 +1,12 @@
 package net.postchain.e2e.tools
 
-import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.BlockchainRid
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString

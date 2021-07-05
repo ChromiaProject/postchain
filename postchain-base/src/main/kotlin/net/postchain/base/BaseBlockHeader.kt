@@ -56,13 +56,16 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
          * @param iBlockData Initial block data including previous block identifier, timestamp and height
          * @param rootHash Merkle tree root hash
          * @param timestamp timestamp
+         * @param extraData
          * @return Serialized block header
          */
-        @JvmStatic fun make(cryptoSystem: CryptoSystem,
-                            iBlockData: InitialBlockData,
-                            rootHash: ByteArray,
-                            timestamp: Long,
-                            extraData: Map<String, Gtv>
+        @JvmStatic
+        fun make(
+            cryptoSystem: CryptoSystem,
+            iBlockData: InitialBlockData,
+            rootHash: ByteArray,
+            timestamp: Long,
+            extraData: Map<String, Gtv>
         ): BaseBlockHeader {
             val gtvBhd = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, rootHash, timestamp, extraData)
 
@@ -98,7 +101,11 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
      */
     /* TODO
     fun validateMerklePath(merklePath: MerklePath, targetTxHash: ByteArray): Boolean {
+        return validateMerklePath(cryptoSystem, merklePath, targetTxHash, blockHeaderRec.getMerkleRootHash())
+    }
      */
+
+
 }
 
 

@@ -5,10 +5,10 @@ package net.postchain.devtools
 import com.google.gson.GsonBuilder
 import mu.KLogging
 import net.postchain.StorageBuilder
-import net.postchain.base.BlockchainRid
 import net.postchain.base.gtxml.TestType
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
+import net.postchain.core.BlockchainRid
 import net.postchain.core.NODE_ID_TODO
 import net.postchain.core.UserMistake
 import net.postchain.core.byteArrayKeyOf

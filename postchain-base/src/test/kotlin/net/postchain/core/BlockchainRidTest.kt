@@ -1,12 +1,12 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base
+package net.postchain.core
 
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEqualTo
-import net.postchain.devtools.isContentEqualTo
 import net.postchain.common.hexStringToByteArray
+import net.postchain.devtools.isContentEqualTo
 import org.junit.Test
 
 class BlockchainRidTest {

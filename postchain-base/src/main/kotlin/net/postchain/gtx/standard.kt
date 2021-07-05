@@ -9,7 +9,6 @@ import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
 /**
@@ -141,12 +140,19 @@ fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
 
 
 class StandardOpsGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(
-        GtxNop.OP_NAME to ::GtxNop,
-        GtxTimeB.OP_NAME to ::GtxTimeB
+    GtxNop.OP_NAME to ::GtxNop,
+    GtxTimeB.OP_NAME to ::GtxTimeB
 ), mapOf(
-        "last_block_info" to ::lastBlockInfoQuery,
-        "tx_confirmation_time" to ::txConfirmationTime
-        )
+    "last_block_info" to ::lastBlockInfoQuery,
+    "tx_confirmation_time" to ::txConfirmationTime
+)
 ) {
+    private val stxs = mutableListOf<GTXSpecialTxExtension>(
+        GTXAutoSpecialTxExtension() // We put the Auto Extension here, since all "real" configurations will import StandardOps and thus get correct blocks
+    )
+
+    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = stxs.toList()
+
     override fun initializeDB(ctx: EContext) {}
+
 }

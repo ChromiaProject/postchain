@@ -8,11 +8,10 @@ import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify
-import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
+import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
-import net.postchain.devtools.argumentCaptor2
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await

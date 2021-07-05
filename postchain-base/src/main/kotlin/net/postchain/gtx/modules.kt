@@ -4,7 +4,7 @@ package net.postchain.gtx
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.UserMistake
@@ -81,6 +81,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
 
     override fun getSpecialTxExtensions() = _specialTxExtensions
 
+
     override fun makeTransactor(opData: ExtOpData): Transactor {
         if (opData.opName in opmap) {
             return opmap[opData.opName]!!.makeTransactor(opData)
@@ -112,7 +113,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         }
         val _opmap = mutableMapOf<String, GTXModule>()
         val _qmap = mutableMapOf<String, GTXModule>()
-        val _stxs = mutableListOf<GTXSpecialTxExtension>(GTXBESpecialTxExtension())
+        val _stxs = mutableListOf<GTXSpecialTxExtension>()
         for (m in modules) {
             for (op in m.getOperations()) {
                 if (!allowOverrides && op in _opmap) throw UserMistake("Duplicated operation")
@@ -130,5 +131,4 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         _queries = qmap.keys
         _specialTxExtensions = _stxs.toList()
     }
-
 }

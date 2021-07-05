@@ -3,7 +3,6 @@
 package net.postchain.gtx
 
 import net.postchain.base.BaseBlockBuilderExtension
-import net.postchain.base.BlockchainRid
 import net.postchain.core.*
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv

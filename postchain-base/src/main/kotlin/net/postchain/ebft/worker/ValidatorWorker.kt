@@ -36,6 +36,10 @@ open class ValidatorWorker(
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
 
+    fun isInFastSyncMode(): Boolean {
+        return syncManager.isInFastSync()
+    }
+
     override fun getEngine(): BlockchainEngine {
         return workerContext.engine
     }

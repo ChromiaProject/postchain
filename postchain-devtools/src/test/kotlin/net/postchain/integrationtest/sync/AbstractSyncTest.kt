@@ -1,7 +1,6 @@
 package net.postchain.integrationtest.sync
 
 import net.postchain.StorageBuilder
-import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
@@ -11,6 +10,7 @@ import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.AppContext
+import net.postchain.core.BlockchainRid
 import net.postchain.core.NODE_ID_NA
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper

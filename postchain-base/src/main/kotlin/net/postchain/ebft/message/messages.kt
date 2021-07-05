@@ -2,10 +2,10 @@
 
 package net.postchain.ebft.message
 
-import net.postchain.base.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
 import net.postchain.gtv.*
 

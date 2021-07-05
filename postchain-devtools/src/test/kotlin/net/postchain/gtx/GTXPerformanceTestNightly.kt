@@ -5,14 +5,12 @@ package net.postchain.gtx
 import junitparams.JUnitParamsRunner
 import junitparams.Parameters
 import mu.KLogging
-import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.configurations.GTXTestModule
+import net.postchain.core.BlockchainRid
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
-import net.postchain.devtools.PostchainTestNode
 import net.postchain.ebft.worker.ValidatorWorker
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv

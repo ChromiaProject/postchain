@@ -2,7 +2,7 @@
 
 package net.postchain.gtx
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper.privKey
@@ -11,7 +11,6 @@ import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

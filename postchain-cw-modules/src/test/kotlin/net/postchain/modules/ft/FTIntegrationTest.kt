@@ -2,8 +2,8 @@
 
 package net.postchain.devtools.modules.ft
 
-import net.postchain.base.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.core.BlockchainRid
 import net.postchain.core.Transaction
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper.privKey

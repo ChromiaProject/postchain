@@ -2,8 +2,8 @@
 
 package net.postchain.config.node
 
-import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
+import net.postchain.core.BlockchainRid
 import net.postchain.network.x.XPeerID
 
 interface PeerInfoDataSource {

@@ -4,7 +4,11 @@ package net.postchain.network.x
 
 import assertk.assert
 import assertk.assertions.containsExactly
-import net.postchain.base.*
+import net.postchain.base.BasePeerCommConfiguration
+import net.postchain.base.PeerInfo
+import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.base.secp256k1_derivePubKey
+import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.ebft.message.GetBlockAtHeight
 import org.awaitility.Awaitility.await

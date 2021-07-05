@@ -321,6 +321,6 @@ open class BaseBlockBuilder(
         } else if (transactions.size >= maxBlockTransactions) {
             throw BlockValidationMistake("Number of transactions exceeds max $maxBlockTransactions transactions in block")
         }
-        blockSize +=  tx.getRawData().size
+        blockSize += tx.getRawData().size
     }
 }
