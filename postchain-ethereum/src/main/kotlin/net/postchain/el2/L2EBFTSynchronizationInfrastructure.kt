@@ -13,6 +13,7 @@ import net.postchain.debug.DpNodeType
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.*
 import net.postchain.gtx.GTXBlockchainConfiguration
+import java.util.*
 
 
 data class EVML2Config (val url: String)
@@ -31,10 +32,18 @@ class EL2SynchronizationInfrastructureExtension(
         val engine = process.getEngine()
         val cfg = engine.getConfiguration()
         if (cfg is GTXBlockchainConfiguration) {
-            val ext = cfg.module.getSpecialTxExtensions().find { it is EL2SpecialTxExtension }
-            if (ext != null && ext is EL2SpecialTxExtension) {
-                val blockchainConfig =
-                    engine.getConfiguration() as GTXBlockchainConfiguration // TODO: [et]: Resolve type cast
+//            val ext = cfg.module.getSpecialTxExtensions().find { it is EL2SpecialTxExtension }
+            val exs = cfg.module.getSpecialTxExtensions()
+            var el2Ext: EL2SpecialTxExtension? = null
+            for (ext in exs) {
+                if (ext is EL2SpecialTxExtension) {
+                    el2Ext = ext
+                    break
+                }
+            }
+            if (el2Ext != null) {
+//                val blockchainConfig =
+//                    engine.getConfiguration() as GTXBlockchainConfiguration // TODO: [et]: Resolve type cast
 //                val layer2 = blockchainConfig.configData.getLayer2()
 //                val unregisterBlockchainDiagnosticData: () -> Unit = {
 //                    blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
@@ -54,10 +63,7 @@ class EL2SynchronizationInfrastructureExtension(
                     "0x7210Dc2415440ac067B2647E035a94aA9c8BDAd8",
                     engine.getBlockQueries()
                 )
-                val txExtensions = blockchainConfig.module.getSpecialTxExtensions()
-                for (te in txExtensions) {
-                    if (te is EL2SpecialTxExtension) te.useEventProcessor(eventProcessor)
-                }
+                el2Ext.useEventProcessor(eventProcessor)
             }
         }
     }

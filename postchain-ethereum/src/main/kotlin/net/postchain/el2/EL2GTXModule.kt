@@ -56,12 +56,15 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val eventData = eventData(eventInfo)
     val event = EventPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
     val proofs = event.getMerkleProof(blockHeight, eventInfo.pos)
-    val gtvProofs = proofs.map { gtv(it) }.toTypedArray()
+    var gtvProofs: List<GtvByteArray> = listOf()
+    for (proof in proofs) {
+        gtvProofs = gtvProofs.plus(gtv(proof))
+    }
     return gtv(
         "eventData" to eventData,
         "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
-        "merkleProofs" to GtvArray(gtvProofs)
+        "merkleProofs" to GtvArray(gtvProofs.toTypedArray())
     )
 }
 
@@ -75,12 +78,15 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val accountState = accountState(db.getAccountState(ctx, "el2", blockHeight, accountNumber))
     val snapshot = SnapshotPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
     val proofs = snapshot.getMerkleProof(blockHeight, accountNumber)
-    val gtvProofs = proofs.map { gtv(it) }.toTypedArray()
+    var gtvProofs: List<GtvByteArray> = listOf()
+    for (proof in proofs) {
+        gtvProofs = gtvProofs.plus(gtv(proof))
+    }
     return gtv(
         "accountState" to accountState,
         "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
-        "merkleProofs" to GtvArray(gtvProofs)
+        "merkleProofs" to GtvArray(gtvProofs.toTypedArray())
     )
 }
 
@@ -122,11 +128,14 @@ private fun blockWitnessData(
 ): Gtv {
     val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
     val witness = BaseBlockWitness.fromBytes(db.getWitnessData(ctx, blockRid)) as MultiSigBlockWitness
-    val signatures = witness.getSignatures().map {
-        gtv(
-            "sig" to GtvByteArray(encodeSignatureWithV(blockRid, it.subjectID, it.data)),
-            "pubkey" to GtvByteArray(getEthereumAddress(it.subjectID))
+    var sigs = listOf<Gtv>()
+    val signatures = witness.getSignatures()
+        for (s in signatures) {
+            sigs = sigs.plus(gtv(
+            "sig" to GtvByteArray(encodeSignatureWithV(blockRid, s.subjectID, s.data)),
+            "pubkey" to GtvByteArray(getEthereumAddress(s.subjectID))
+            )
         )
     }
-    return GtvArray(signatures.toTypedArray())
+    return GtvArray(sigs.toTypedArray())
 }
