@@ -74,6 +74,6 @@ operation __eth_event (eth_block_height: integer, eth_block_hash: text, tnx_hash
         account = eth_event_data
     );
 
-    op_context.emit_event("l2_event", eth_event_data.to_gtv());
-    op_context.emit_event("l2_state", state_data.to_gtv());
+    op_context.emit_event("el2_event", eth_event_data.to_gtv());
+    op_context.emit_event("el2_state", state_data.to_gtv());
 }

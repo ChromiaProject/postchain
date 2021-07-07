@@ -59,8 +59,8 @@ class EL2SynchronizationInfrastructureExtension(
 //
 //                val contractAddress = layer2?.get("contract_address")?.asString() ?: "0x0"
                 val eventProcessor = EthereumEventProcessor(
-                    "https://goerli.infura.io/v3/6e8d7fef09c9485daac48699bea64f66",
-                    "0x7210Dc2415440ac067B2647E035a94aA9c8BDAd8",
+                    "https://rinkeby.infura.io/v3/dd30c7e83e574688a429a72d2965c8e5",
+                    "0xcaF05a52A7bf133A5dbEb1F12efb1B7375153455",
                     engine.getBlockQueries()
                 )
                 el2Ext.useEventProcessor(eventProcessor)
