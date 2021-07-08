@@ -69,7 +69,7 @@ abstract class AbstractBlockBuilder(
                 blockchainDependencies!!.extractChainIdToHeightMap(),
                 this
         )
-        buildingNewBlock = partialBlockHeader != null
+        buildingNewBlock = partialBlockHeader == null
         beginLog("End")
     }
 
