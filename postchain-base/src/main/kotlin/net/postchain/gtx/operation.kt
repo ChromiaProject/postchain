@@ -2,6 +2,7 @@
 
 package net.postchain.gtx
 
+import mu.KLogging
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
 import net.postchain.core.UserMistake
@@ -44,3 +45,26 @@ fun gtxOP(applyF: (TxEContext) -> Boolean, isCorrectF: () -> Boolean): (Unit, Ex
         SimpleGTXOperation(data, applyF, isCorrectF)
     }
 }
+
+/**
+ * A Special operation, i.e. not created by a user.
+ */
+class GtxSpecialOperation(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
+
+    companion object : KLogging() {
+    }
+
+    override fun apply(ctx: TxEContext): Boolean {
+        return true // TODO: Olle (what to do?)
+    }
+
+    override fun isCorrect(): Boolean {
+        return true // TODO: Olle (what to do?)
+    }
+
+    override fun isSpecial(): Boolean {
+        return true // At least this should be obvious
+    }
+
+}
+

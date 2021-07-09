@@ -9,7 +9,6 @@ import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
 /**
@@ -139,13 +138,20 @@ fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
     )
 }
 
-
+/**
+ * Module that should be included in all "normal" DApp modules.
+ */
 class StandardOpsGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(
     GtxNop.OP_NAME to ::GtxNop,
-    GtxTimeB.OP_NAME to ::GtxTimeB
+    GtxTimeB.OP_NAME to ::GtxTimeB,
+    // Extend the operation list with extension
+    // TODO: Should this be done in some dynamic manner or?
+    GTXAutoSpecialTxExtension.OP_BEGIN_BLOCK to ::GtxSpecialOperation,
+    GTXAutoSpecialTxExtension.OP_END_BLOCK to ::GtxSpecialOperation
 ), mapOf(
     "last_block_info" to ::lastBlockInfoQuery,
     "tx_confirmation_time" to ::txConfirmationTime
+    // TODO: Should we map something here for the Aut extension?
 )
 ) {
     private val stxs = mutableListOf<GTXSpecialTxExtension>(

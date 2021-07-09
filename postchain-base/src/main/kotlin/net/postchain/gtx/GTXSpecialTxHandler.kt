@@ -3,18 +3,16 @@
 package net.postchain.gtx
 
 import mu.KLogging
-import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
+import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
-import kotlin.math.log
 
 
 interface GTXSpecialTxExtension {
@@ -26,6 +24,9 @@ interface GTXSpecialTxExtension {
                                   bctx: BlockEContext, ops: List<OpData>): Boolean
 }
 
+/**
+ * Auto TX adds "__begin_block" and "__end_block" to the block.
+ */
 class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
     var wantBegin: Boolean = false
     var wantEnd: Boolean = false
