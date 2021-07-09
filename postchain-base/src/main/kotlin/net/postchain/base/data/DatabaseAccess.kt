@@ -111,6 +111,9 @@ interface DatabaseAccess {
     fun getMustSyncUntil(ctx: AppContext): Map<Long, Long>
     fun getChainIds(ctx: AppContext): Map<BlockchainRid, Long>
 
+    //To be able to create optional tables (mandatory tables are not "creatable")
+    fun createOptionalEventLeafTable(ctx: EContext, prefix: String)
+
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {
             return ctx.getInterface(DatabaseAccess::class.java)

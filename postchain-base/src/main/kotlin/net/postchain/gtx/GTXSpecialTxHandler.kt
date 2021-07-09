@@ -10,13 +10,14 @@ import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
-import kotlin.math.log
 
-
+/**
+ * The "special transaction" is a transaction not created by the user, but by the system itself.
+ * Since we don't get these transactions from any external party, we extend this interface to create them.
+ */
 interface GTXSpecialTxExtension {
     fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem)
     fun getRelevantOps(): Set<String>
@@ -26,6 +27,12 @@ interface GTXSpecialTxExtension {
                                   bctx: BlockEContext, ops: List<OpData>): Boolean
 }
 
+/**
+ * This extension adds "begin" and "end" to the block, which how a block should be constructed.
+ *
+ * Note: This extension is called "auto" because it's always needed (so technically not extending the protocol,
+ * but part of it, but the extension mechanism is the cleanest way to add extra TXs).
+ */
 class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
     var wantBegin: Boolean = false
     var wantEnd: Boolean = false
@@ -93,6 +100,9 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
     }
 }
 
+/**
+ *
+ */
 open class GTXSpecialTxHandler(val module: GTXModule,
                                val blockchainRID: BlockchainRid,
                                val cs: CryptoSystem,

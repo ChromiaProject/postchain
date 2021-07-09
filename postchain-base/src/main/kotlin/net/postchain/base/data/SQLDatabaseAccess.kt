@@ -52,6 +52,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
+
+    // Optional Tables
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
 
@@ -467,9 +469,6 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val blockIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "blocks_timestamp_idx")} " +
                 "ON ${tableBlocks(ctx)}(timestamp)"
         queryRunner.update(ctx.conn, blockIndex)
-
-        // ICMF specific event (for anchoring etc)
-        queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx, PREFIX_ICMF))
 
         if (!initialized) {
             // Inserting chainId -> blockchainRid
