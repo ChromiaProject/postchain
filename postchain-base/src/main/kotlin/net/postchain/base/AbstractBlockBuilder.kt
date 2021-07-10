@@ -3,14 +3,12 @@
 package net.postchain.base
 
 import mu.KLogging
-import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.OK
 import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
 import net.postchain.debug.BlockTrace
-import net.postchain.gtv.Gtv
 
 /**
  * This class includes the bare minimum functionality required by a real block builder
@@ -63,16 +61,17 @@ abstract class AbstractBlockBuilder(
             ProgrammerMistake("Attempted to begin block second time")
         }
         blockchainDependencies = buildBlockchainDependencies(partialBlockHeader)
-        initialBlockData = store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
+        initialBlockData =
+            store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
         bctx = BaseBlockEContext(
-                ectx,
-                initialBlockData.height,
-                initialBlockData.blockIID,
-                initialBlockData.timestamp,
-                blockchainDependencies!!.extractChainIdToHeightMap(),
-                this
+            ectx,
+            initialBlockData.height,
+            initialBlockData.blockIID,
+            initialBlockData.timestamp,
+            blockchainDependencies!!.extractChainIdToHeightMap(),
+            this
         )
-        buildingNewBlock = partialBlockHeader != null
+        buildingNewBlock = partialBlockHeader == null // If we have a header this must be an old block we are loading
         beginLog("End")
     }
 

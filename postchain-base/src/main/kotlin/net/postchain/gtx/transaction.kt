@@ -43,7 +43,9 @@ class GTXTransaction (
     }
 
     override fun isSpecial(): Boolean {
-        return ops.any { it.isSpecial() }
+        return ops.any {
+            it.isSpecial()
+        }
     }
 
     override fun isCorrect(): Boolean {

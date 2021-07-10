@@ -17,10 +17,15 @@ open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationDat
                                       pumpStation: IcmfPumpStation? = null )
     : BaseBlockchainConfiguration(configData, pumpStation) {
     private val txFactory = GTXTransactionFactory(
-        effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize())
+        effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize()
+    )
     private lateinit var specTxHandler: GTXSpecialTxHandler
 
     companion object : KLogging()
+
+    override fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
+        return module.makeBlockBuilderExtensions()
+    }
 
     override fun getTransactionFactory(): TransactionFactory {
         return txFactory

@@ -3,11 +3,11 @@
 package net.postchain.gtx
 
 import mu.KLogging
-import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
+import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
 import net.postchain.gtv.GtvFactory
@@ -15,8 +15,11 @@ import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 
 /**
- * The "special transaction" is a transaction not created by the user, but by the system itself.
- * Since we don't get these transactions from any external party, we extend this interface to create them.
+ * Holds various info regarding special TXs used by an extension, when a Spec TX is needed and how to create Spec TX etc.
+ *
+ * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
+ * (examples: BBB Ext and Sync Ext).
+ * To see how it all goes together, see: doc/extension_classes.graphml
  */
 interface GTXSpecialTxExtension {
     fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem)
@@ -46,6 +49,10 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
 
     override fun getRelevantOps() = _relevantOps
 
+    /**
+     * (Alex:) We only add the "__begin_.." and "__end.." if they are used by the Rell programmer writing the module,
+     * so we must check the module for these operations before we know if they are relevant.
+     */
     override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         val ops = module.getOperations()
         if (OP_BEGIN_BLOCK in ops) {
