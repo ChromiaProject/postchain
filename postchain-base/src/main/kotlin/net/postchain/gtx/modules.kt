@@ -24,10 +24,14 @@ interface GTXModuleFactory {
     fun makeModule(config: Gtv, blockchainRID: BlockchainRid): GTXModule
 }
 
+/**
+ * This template/dummy class provides simple implementations for everything except "initializeDB()"
+ * (It's up to sub-classes to override whatever they need)
+ */
 abstract class SimpleGTXModule<ConfT>(
-        val conf: ConfT,
-        val opmap: Map<String, (ConfT, ExtOpData) -> Transactor>,
-        val querymap: Map<String, (ConfT, EContext, Gtv) -> Gtv>
+    val conf: ConfT,
+    val opmap: Map<String, (ConfT, ExtOpData) -> Transactor>,
+    val querymap: Map<String, (ConfT, EContext, Gtv) -> Gtv>
 ) : GTXModule {
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {

@@ -139,23 +139,21 @@ fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
 }
 
 /**
- * Module that should be included in all "normal" DApp modules.
+ * Module that should be included in the [CompositeGTXModule] of all "normal/real world" DApp modules.
+ * It holds some standard things that are very useful, bordering on mandatory.
  */
 class StandardOpsGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(
     GtxNop.OP_NAME to ::GtxNop,
-    GtxTimeB.OP_NAME to ::GtxTimeB,
-    // Extend the operation list with extension
-    // TODO: Should this be done in some dynamic manner or?
-    GTXAutoSpecialTxExtension.OP_BEGIN_BLOCK to ::GtxSpecialOperation,
-    GTXAutoSpecialTxExtension.OP_END_BLOCK to ::GtxSpecialOperation
+    GtxTimeB.OP_NAME to ::GtxTimeB
 ), mapOf(
     "last_block_info" to ::lastBlockInfoQuery,
     "tx_confirmation_time" to ::txConfirmationTime
-    // TODO: Should we map something here for the Aut extension?
 )
 ) {
     private val stxs = mutableListOf<GTXSpecialTxExtension>(
-        GTXAutoSpecialTxExtension() // We put the Auto Extension here, since all "real" configurations will import StandardOps and thus get correct blocks
+        // We put the Auto Extension here, since it's sort of "standard" (and anyways all "real life" configurations
+        // will import StandardOps and  thus get access to this extension).
+        GTXAutoSpecialTxExtension()
     )
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = stxs.toList()

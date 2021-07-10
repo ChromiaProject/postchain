@@ -35,7 +35,7 @@ The idea is that this config should be the simplest possible to build real block
         <dict>
             <entry key="modules">
                 <array>
-                    <string>net.postchain.configurations.GTXTestModule</string>
+                    <string>net.postchain.specialtx.SpecialTxTestGTXModule</string>
                     <!-- Must have Standard Ops since it will create the Special TXs we need to test -->
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>

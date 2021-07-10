@@ -53,23 +53,28 @@ class GTXTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
     }
 }
 
+/**
+ * A simple module that has its own table where it can store and read things. Useful for testing all the way down to DB.
+ *
+ * TODO: (Olle) Is it used for testing in prod? If it is only used for internal testing it be moved to test, right?
+ */
 class GTXTestModule : SimpleGTXModule<Unit>(Unit,
-        mapOf("gtx_test" to ::GTXTestOp),
-        mapOf("gtx_test_get_value" to { u, ctxt, args ->
-            val txRID = (args as GtvDictionary).get("txRID")
-                    ?: throw UserMistake("No txRID property supplied")
+    mapOf("gtx_test" to ::GTXTestOp),
+    mapOf("gtx_test_get_value" to { u, ctxt, args ->
+        val txRID = (args as GtvDictionary).get("txRID")
+            ?: throw UserMistake("No txRID property supplied")
 
-            val sql = """
+        val sql = """
                 SELECT value FROM ${table_gtx_test_value(ctxt)} g
                 INNER JOIN ${table_transactions(ctxt)} t ON g.tx_iid=t.tx_iid
                 WHERE t.tx_rid = ?
             """.trimIndent()
-            val value = r.query(ctxt.conn, sql, nullableStringReader, txRID.asByteArray(true))
-            if (value == null)
-                GtvNull
-            else
-                gtv(value)
-        })
+        val value = r.query(ctxt.conn, sql, nullableStringReader, txRID.asByteArray(true))
+        if (value == null)
+            GtvNull
+        else
+            gtv(value)
+    })
 ) {
     override fun initializeDB(ctx: EContext) {
         val moduleName = this::class.qualifiedName!!
