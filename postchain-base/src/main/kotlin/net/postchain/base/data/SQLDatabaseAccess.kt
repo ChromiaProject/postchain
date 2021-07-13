@@ -455,9 +455,6 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateTableTransactions(ctx))
         queryRunner.update(ctx.conn, cmdCreateTableConfigurations(ctx))
 
-        // TODO: [POS-147]: temporarily here, might init in other place for L2
-        // L2 tables
-
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"
         queryRunner.update(ctx.conn, txIndex)
