@@ -113,8 +113,8 @@ private fun blockHeaderData(
         bh.gtvTimestamp,
         bh.gtvHeight,
         gtv(bh.gtvDependencies.merkleHash(merkleHashCalculator)),
-        bh.gtvExtra["l2RootEvent"]!!,
-        bh.gtvExtra["l2RootState"]!!
+        bh.gtvExtra["el2RootEvent"]!!,
+        bh.gtvExtra["el2RootState"]!!
     )
 }
 
