@@ -278,10 +278,13 @@ open class BaseBlockBuilder(
         if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End) && !haveSpecialEndTransaction)
             throw BlockValidationMistake("End special transaction is missing")
         super.finalizeAndValidate(blockHeader)
-
-        // Need to call this method to invoke finalize() method of L2 Implementation
-        // TODO: validate returned values!
-        finalizeExtensions()
+        val extraData = finalizeExtensions()
+        val header = blockHeader as BaseBlockHeader
+        extraData.forEach { (k, v) ->
+            if (!header.blockHeaderRec.gtvExtra[k]!!.asByteArray().contentEquals(v.asByteArray())) {
+                throw BlockValidationMistake("block extra data is not valid")
+            }
+        }
     }
 
     private fun checkSpecialTransaction(tx: Transaction) {
