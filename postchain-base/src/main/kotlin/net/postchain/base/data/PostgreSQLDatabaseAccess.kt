@@ -43,7 +43,7 @@ import java.sql.Connection
      * @param prefix is what the events will be used for, for example "el2" or "icmf"
      */
     override fun cmdCreateTableEvent(ctx: EContext, prefix: String): String {
-        return "CREATE TABLE ${tableEventLeafs(ctx, prefix)}" +
+        return "CREATE TABLE IF NOT EXISTS ${tableEventLeafs(ctx, prefix)}" +
                 " (" +
                 " block_height BIGINT NOT NULL," +
                 " position BIGINT NOT NULL," +
@@ -52,7 +52,7 @@ import java.sql.Connection
     }
 
      override fun cmdCreateTableState(ctx: EContext, prefix: String): String {
-         return "CREATE TABLE ${tableStateLeafs(ctx, prefix)}" +
+         return "CREATE TABLE IF NOT EXISTS ${tableStateLeafs(ctx, prefix)}" +
                  " (state_iid BIGSERIAL PRIMARY KEY," +
                  " block_height BIGINT NOT NULL, " +
                  " state_n BIGINT NOT NULL, " +
@@ -60,7 +60,7 @@ import java.sql.Connection
      }
 
     override fun cmdCreateTablePage(ctx: EContext, name: String): String {
-        return "CREATE TABLE ${tablePages(ctx, name)}" +
+        return "CREATE TABLE IF NOT EXISTS ${tablePages(ctx, name)}" +
                 " (${name}_page_iid BIGSERIAL PRIMARY KEY," +
                 " block_height BIGINT NOT NULL, " +
                 " level INTEGER NOT NULL, " +
