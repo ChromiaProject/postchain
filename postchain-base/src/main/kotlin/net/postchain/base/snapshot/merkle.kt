@@ -81,7 +81,7 @@ open class EventPageStore(
     ctx: EContext?,
     levelsPerPage: Int,
     ds: DigestSystem
-) : BasePageStore("el2_event", ctx, levelsPerPage, ds) {
+) : BasePageStore("sys.x.el2_event", ctx, levelsPerPage, ds) {
 
     fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
@@ -118,7 +118,7 @@ open class SnapshotPageStore(
     ctx: EContext?,
     levelsPerPage: Int,
     ds: DigestSystem
-) : BasePageStore("el2_snapshot", ctx, levelsPerPage, ds) {
+) : BasePageStore("sys.x.el2_snapshot", ctx, levelsPerPage, ds) {
 
     fun updateSnapshot(blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage

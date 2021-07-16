@@ -17,6 +17,8 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 
+const val PREFIX: String = "sys.x.el2"
+
 class EL2GTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf(
         "get_event_merkle_proof" to ::eventMerkleProofQuery,
@@ -26,10 +28,10 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
 
     override fun initializeDB(ctx: EContext) {
         val dba = DatabaseAccess.of(ctx)
-        dba.createPageTable(ctx,"el2_event")
-        dba.createPageTable(ctx,"el2_snapshot")
-        dba.createEventLeafTable(ctx, "el2")
-        dba.createStateLeafTable(ctx, "el2")
+        dba.createPageTable(ctx,"${PREFIX}_event")
+        dba.createPageTable(ctx,"${PREFIX}_snapshot")
+        dba.createEventLeafTable(ctx, PREFIX)
+        dba.createStateLeafTable(ctx, PREFIX)
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
@@ -49,7 +51,7 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val db = DatabaseAccess.of(ctx)
     val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
-    val eventInfo = db.getEvent(ctx, "el2", blockHeight, eventHash) ?: return GtvNull
+    val eventInfo = db.getEvent(ctx, PREFIX, blockHeight, eventHash) ?: return GtvNull
     val eventData = eventData(eventInfo)
     val event = EventPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
     val proofs = event.getMerkleProof(blockHeight, eventInfo.pos)
@@ -72,7 +74,7 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val db = DatabaseAccess.of(ctx)
     val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
-    val accountState = accountState(db.getAccountState(ctx, "el2", blockHeight, accountNumber))
+    val accountState = accountState(db.getAccountState(ctx, PREFIX, blockHeight, accountNumber))
     val snapshot = SnapshotPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
     val proofs = snapshot.getMerkleProof(blockHeight, accountNumber)
     var gtvProofs: List<GtvByteArray> = listOf()

@@ -61,7 +61,7 @@ import java.sql.Connection
 
     override fun cmdCreateTablePage(ctx: EContext, name: String): String {
         return "CREATE TABLE IF NOT EXISTS ${tablePages(ctx, name)}" +
-                " (${name}_page_iid BIGSERIAL PRIMARY KEY," +
+                " (page_iid BIGSERIAL PRIMARY KEY," +
                 " block_height BIGINT NOT NULL, " +
                 " level INTEGER NOT NULL, " +
                 " left_index BIGINT NOT NULL, " +
