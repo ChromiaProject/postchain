@@ -11,6 +11,8 @@ contract ChrL2 {
 
     mapping (address => mapping(ERC20 => uint256)) private _balances;
     mapping (ERC20 => Withdraw) public _withdraw;
+    address[] public directoryNodes;
+    address[] public appNodes;
 
     struct Event {
         ERC20 token;
@@ -25,7 +27,7 @@ contract ChrL2 {
         bytes32 merkleRootHashHashedLeaf;
         uint timestamp;
         uint height;
-        bytes32 dependeciesHashedLeaf;
+        bytes32 dependenciesHashedLeaf;
         bytes32 l2RootEvent;
         bytes32 l2RootState;
     }
@@ -41,6 +43,55 @@ contract ChrL2 {
     event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
 
+    function updateDirectoryNodes(bytes32 hash, bytes[] calldata sigs, address[] calldata _directoryNodes) public returns (bool) {
+        if (!_isValidNodes(hash, _directoryNodes)) return false;
+        uint BFTRequiredNum = _calculateBFTRequiredNum(directoryNodes.length);
+        if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) return false;
+        for (uint i = 0; i < directoryNodes.length; i++) {
+            directoryNodes.pop();
+        }
+        directoryNodes = _directoryNodes;
+        return true;
+    }
+
+    function updateAppNodes(bytes32 hash, bytes[] calldata sigs, address[] calldata _appNodes) public returns (bool) {
+        if (!_isValidNodes(hash, _appNodes)) return false;
+        uint BFTRequiredNum = _calculateBFTRequiredNum(directoryNodes.length);
+        if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) return false;
+        for (uint i = 0; i < appNodes.length; i++) {
+            appNodes.pop();
+        }
+        appNodes = _appNodes;
+        return true;
+    }
+
+    function _isValidNodes(bytes32 hash, address[] memory nodes) internal pure returns (bool) {
+        return true;
+    }
+
+    function _isValidSignatures(uint requiredSignature, bytes32 hash, bytes[] calldata signatures, address[] storage signers) internal pure returns (bool) {
+        uint _actualSignature = 0;
+        address[] memory _signers = signers;
+        for (uint i = 0; i < signatures.length; i++) {
+            for (uint k = 0; k < _signers.length; k++) {
+                if (_isValidSignature(hash, signatures[i], _signers[k])) {
+                    _actualSignature++;
+                    delete _signers[k];
+                    break;
+                }
+            }
+        }
+        return (_actualSignature >= requiredSignature);
+    }
+
+    function _isValidSignature(bytes32 hash, bytes calldata signature, address signer) internal pure returns (bool) {
+        return recover(hash, signature) == signer;
+    }
+
+    function _calculateBFTRequiredNum(uint total) internal pure returns (uint) {
+        return (total - (total - 1) / 3);
+    }
+
     function deposit(ERC20 token, uint256 amount) public returns (bool) {
         token.transferFrom(msg.sender, address(this), amount);
         _balances[msg.sender][token] += amount;
@@ -50,10 +101,12 @@ contract ChrL2 {
 
     function withdraw_request(bytes calldata _event, bytes32 _hash,
         bytes calldata blockHeader,
-        bytes[] calldata sigs, address[] calldata signers,
-        bytes32[] calldata merkleProofs, uint position) public {
+        bytes[] calldata sigs,
+        bytes32[] calldata merkleProofs,
+        uint position
+    ) public {
 
-        _verify(_hash, blockHeader, sigs, signers, merkleProofs, position);
+        _verify(_hash, blockHeader, sigs, merkleProofs, position);
         (ERC20 token, address beneficiary, uint256 amount) = verifyEventHash(_event, _hash);
         Withdraw storage wd = _withdraw[token];
         wd.beneficiary = beneficiary;
@@ -66,11 +119,13 @@ contract ChrL2 {
 
     function _verify(bytes32 _hash,
         bytes calldata blockHeader,
-        bytes[] calldata sigs, address[] calldata signers,
-        bytes32[] calldata merkleProofs, uint position) internal pure {
+        bytes[] calldata sigs,
+        bytes32[] calldata merkleProofs,
+        uint position
+    ) internal view {
 
         (bytes32 blockRid, bytes32 eventRoot, ) = verifyBlockHeader(blockHeader);
-        if (!verifyBlockSig(blockRid, sigs, signers)) revert("block signature is invalid");
+        if (!_isValidSignatures(_calculateBFTRequiredNum(appNodes.length), blockRid, sigs, appNodes)) revert("block signature is invalid");
         if (!verifyMerkleProof(merkleProofs, _hash, position, eventRoot)) revert("invalid event merkle proof");
     }
 
@@ -153,7 +208,7 @@ contract ChrL2 {
         bytes32 node56 = sha256(abi.encodePacked(
                 uint8(0x00),
                 hashGtvIntegerLeaf(header.height),
-                header.dependeciesHashedLeaf
+                header.dependenciesHashedLeaf
             ));
 
         bytes32 l2event = sha256(abi.encodePacked(
@@ -194,25 +249,6 @@ contract ChrL2 {
 
         if (blockRid != header.blockRid) revert("invalid block header");
         return (blockRid, header.l2RootEvent, header.l2RootState);
-    }
-
-    function verifyBlockSig(bytes32 message, bytes[] calldata sigs, address[] calldata signers) public pure returns (bool) {
-
-        if (sigs.length != signers.length) {
-            return false;
-        }
-        for (uint i = 0; i < sigs.length; i++) {
-            // Check the signature (r, s, v) length
-            if (sigs[i].length != 65) {
-                return false;
-            }
-
-            if (recover(message, sigs[i]) != signers[i]) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     /**
