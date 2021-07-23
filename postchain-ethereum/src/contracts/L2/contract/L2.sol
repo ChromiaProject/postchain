@@ -44,7 +44,7 @@ contract ChrL2 {
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
 
     function updateDirectoryNodes(bytes32 hash, bytes[] calldata sigs, address[] calldata _directoryNodes) public returns (bool) {
-        if (!_isValidNodes(hash, _directoryNodes)) return false;
+        if (!isValidNodes(hash, _directoryNodes)) return false;
         uint BFTRequiredNum = _calculateBFTRequiredNum(directoryNodes.length);
         if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) return false;
         for (uint i = 0; i < directoryNodes.length; i++) {
@@ -55,7 +55,7 @@ contract ChrL2 {
     }
 
     function updateAppNodes(bytes32 hash, bytes[] calldata sigs, address[] calldata _appNodes) public returns (bool) {
-        if (!_isValidNodes(hash, _appNodes)) return false;
+        if (!isValidNodes(hash, _appNodes)) return false;
         uint BFTRequiredNum = _calculateBFTRequiredNum(directoryNodes.length);
         if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) return false;
         for (uint i = 0; i < appNodes.length; i++) {
@@ -65,8 +65,32 @@ contract ChrL2 {
         return true;
     }
 
-    function _isValidNodes(bytes32 hash, address[] memory nodes) internal pure returns (bool) {
-        return true;
+    function isValidNodes(bytes32 hash, address[] memory nodes) public pure returns (bool) {
+        uint len = upperPowerOfTwo(nodes.length);
+        bytes32[] memory _nodes = new bytes32[](len);
+        for (uint i = 0; i < nodes.length; i++) {
+            _nodes[i] = keccak256(abi.encodePacked(nodes[i]));
+        }
+        for (uint i = nodes.length; i < len; i++) {
+            _nodes[i] = 0x0;
+        }
+        return merkleRoot(_nodes) == hash;
+    }
+
+    function merkleRoot(bytes32[] memory nodes) public pure returns (bytes32) {
+        if (nodes.length == 1) return nodes[0];
+        uint len = nodes.length/2;
+        bytes32[] memory _nodes = new bytes32[](len);
+        for (uint i = 0; i < len; i++) {
+            _nodes[i] = sha3Hash(nodes[i*2], nodes[i*2+1]);
+        }
+        return merkleRoot(_nodes);
+    }
+
+    function upperPowerOfTwo(uint x) public pure returns (uint) {
+        uint p = 1;
+        while (p < x) p <<= 1;
+        return p;
     }
 
     function _isValidSignatures(uint requiredSignature, bytes32 hash, bytes[] calldata signatures, address[] storage signers) internal pure returns (bool) {
