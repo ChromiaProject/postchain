@@ -43,7 +43,7 @@ contract ChrL2 {
     event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
 
-    function updateDirectoryNodes(bytes32 hash, bytes[] calldata sigs, address[] calldata _directoryNodes) public returns (bool) {
+    function updateDirectoryNodes(bytes32 hash, bytes[] memory sigs, address[] memory _directoryNodes) public returns (bool) {
         if (!isValidNodes(hash, _directoryNodes)) return false;
         uint BFTRequiredNum = _calculateBFTRequiredNum(directoryNodes.length);
         if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) return false;
@@ -54,7 +54,7 @@ contract ChrL2 {
         return true;
     }
 
-    function updateAppNodes(bytes32 hash, bytes[] calldata sigs, address[] calldata _appNodes) public returns (bool) {
+    function updateAppNodes(bytes32 hash, bytes[] memory sigs, address[] memory _appNodes) public returns (bool) {
         if (!isValidNodes(hash, _appNodes)) return false;
         uint BFTRequiredNum = _calculateBFTRequiredNum(directoryNodes.length);
         if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) return false;
@@ -93,7 +93,7 @@ contract ChrL2 {
         return p;
     }
 
-    function _isValidSignatures(uint requiredSignature, bytes32 hash, bytes[] calldata signatures, address[] storage signers) internal view returns (bool) {
+    function _isValidSignatures(uint requiredSignature, bytes32 hash, bytes[] memory signatures, address[] memory signers) internal pure returns (bool) {
         uint _actualSignature = 0;
         for (uint i = 0; i < signatures.length; i++) {
             for (uint k = 0; k < signers.length; k++) {
@@ -106,8 +106,10 @@ contract ChrL2 {
         return (_actualSignature >= requiredSignature);
     }
 
-    function _isValidSignature(bytes32 hash, bytes calldata signature, address signer) internal pure returns (bool) {
-        return recover(hash, signature) == signer;
+    function _isValidSignature(bytes32 hash, bytes memory signature, address signer) internal pure returns (bool) {
+        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+        bytes32 prefixedProof = keccak256(abi.encodePacked(prefix, hash));
+        return (recover(prefixedProof, signature) == signer || recover(hash, signature) == signer);
     }
 
     function _calculateBFTRequiredNum(uint total) internal pure returns (uint) {
@@ -308,14 +310,14 @@ contract ChrL2 {
             v := byte(0, mload(add(signature, 0x60)))
         }
 
-        return recover(hash, v, r, s);
+        return _ecrecover(hash, v, r, s);
     }
 
     /**
      * @dev Overload of {ECDSA-recover-bytes32-bytes-} that receives the `v`,
      * `r` and `s` signature fields separately.
      */
-    function recover(bytes32 hash, uint8 v, bytes32 r, bytes32 s) public pure returns (address) {
+    function _ecrecover(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal pure returns (address) {
         // EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
         // unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines
         // the valid range for s in (281): 0 < s < secp256k1n ÷ 2 + 1, and for v in (282): v ∈ {27, 28}. Most
