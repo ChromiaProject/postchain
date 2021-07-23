@@ -93,14 +93,12 @@ contract ChrL2 {
         return p;
     }
 
-    function _isValidSignatures(uint requiredSignature, bytes32 hash, bytes[] calldata signatures, address[] storage signers) internal pure returns (bool) {
+    function _isValidSignatures(uint requiredSignature, bytes32 hash, bytes[] calldata signatures, address[] storage signers) internal view returns (bool) {
         uint _actualSignature = 0;
-        address[] memory _signers = signers;
         for (uint i = 0; i < signatures.length; i++) {
-            for (uint k = 0; k < _signers.length; k++) {
-                if (_isValidSignature(hash, signatures[i], _signers[k])) {
+            for (uint k = 0; k < signers.length; k++) {
+                if (_isValidSignature(hash, signatures[i], signers[k])) {
                     _actualSignature++;
-                    delete _signers[k];
                     break;
                 }
             }
@@ -113,6 +111,7 @@ contract ChrL2 {
     }
 
     function _calculateBFTRequiredNum(uint total) internal pure returns (uint) {
+        if (total == 0) return 0;
         return (total - (total - 1) / 3);
     }
 
