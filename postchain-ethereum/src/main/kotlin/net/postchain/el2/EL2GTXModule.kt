@@ -35,7 +35,7 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf(EthereumL2Implementation(SimpleDigestSystem(KECCAK256), 3))
+        return listOf(EthereumL2Implementation(SimpleDigestSystem(KECCAK256), 2))
     }
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {

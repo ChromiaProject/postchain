@@ -8,6 +8,10 @@ import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvNull
 import java.math.BigInteger
 import java.util.*
 import kotlin.test.Test
@@ -350,6 +354,22 @@ class MerkleTest : TestCase() {
         val expected = getMerkleProof(proofs, pos.toInt(), leafs[pos.toInt()])
 
         assertEquals(4, proofs.size)
+        assertEquals(expected.toHex(), root.toHex())
+    }
+
+    fun testGetMerkleProofForEvent_RealData() {
+        val leafs = arrayListOf<Hash>()
+        val data = GtvFactory.gtv(GtvFactory.gtv("000000000000000000000000e35487517b1bee0e22daf706a82f1d3d1fd963fd".hexStringToByteArray()),
+            GtvFactory.gtv("000000000000000000000000e105ba42b66d08ac7ca7fc48c583599044a6dab3".hexStringToByteArray()),
+            GtvFactory.gtv(300L)
+        )
+        leafs.add(ds.digest(GtvEncoder.simpleEncodeGtv(data)))
+        val pos = 0L
+        val root = event.writeEventTree(0, leafs)
+        val proofs = event.getMerkleProof(0, pos)
+        val expected = getMerkleProof(proofs, pos.toInt(), leafs[pos.toInt()])
+
+        assertEquals(2, proofs.size)
         assertEquals(expected.toHex(), root.toHex())
     }
 
