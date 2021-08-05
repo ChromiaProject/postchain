@@ -7,6 +7,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.heartbeat.HeartbeatChecker
 
 interface SynchronizationInfrastructure : Shutdownable {
 
@@ -15,9 +16,11 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
+            heartbeatChecker: HeartbeatChecker,
             historicBlockchain: HistoricBlockchain? = null
     ): BlockchainProcess
 
+    fun makeHeartbeatChecker(chainId: Long): HeartbeatChecker
 }
 
 interface BlockchainInfrastructure : SynchronizationInfrastructure {

@@ -24,7 +24,6 @@ class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProce
         params.jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout
 
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
-        workerContext.communicationManager.setHeartbeatListener(this)
         thread(name = "replicaSync-${workerContext.processName}") {
             fastSynchronizer.syncUntilShutdown()
             done.countDown()

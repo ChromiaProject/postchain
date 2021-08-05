@@ -36,6 +36,8 @@ object MsCodec {
             HandshakeMessage -> MsHandshakeMessage(brid, data)
             DataMessage -> MsDataMessage(src, dst, brid, data)
             HeartbeatMessage -> MsHeartbeatMessage(brid, data)
+            GetBlockchainConfig -> MsGetBlockchainConfigMessage(brid)
+            BlockchainConfig -> MsBlockchainConfigMessage(brid, 0L, data) // TODO: [et]: Fix it
         }
     }
 }

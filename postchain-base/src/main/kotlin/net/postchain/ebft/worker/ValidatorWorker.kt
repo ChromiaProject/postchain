@@ -63,8 +63,6 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
 
         statusManager.recomputeStatus()
 
-        workerContext.communicationManager.setHeartbeatListener(this)
-
         startUpdateLoop(syncManager)
     }
 

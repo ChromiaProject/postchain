@@ -46,7 +46,9 @@ interface MsMessage {
 enum class MsMessageType {
     HandshakeMessage,
     DataMessage,
-    HeartbeatMessage
+    HeartbeatMessage,
+    GetBlockchainConfig,
+    BlockchainConfig,
 }
 
 /**
@@ -105,3 +107,29 @@ class MsHeartbeatMessage(
     constructor(blockchainRid: ByteArray, blockTimestamp: Long)
             : this(blockchainRid, GtvEncoder.encodeGtv(GtvFactory.gtv(blockTimestamp)))
 }
+
+/**
+ * A GetBlockchainConfig message which wraps the whole p2p-message.
+ */
+class MsGetBlockchainConfigMessage(
+        override val blockchainRid: ByteArray
+) : MsMessage {
+    override val type = GetBlockchainConfig.ordinal
+    override val source: ByteArray = byteArrayOf()              // TODO: [POS-164]: Remove
+    override val destination: ByteArray = byteArrayOf()         // TODO: [POS-164]: Remove
+    override val payload: ByteArray = byteArrayOf()             // TODO: [POS-164]: Remove
+}
+
+/**
+ * A BlockchainConfig message which wraps the whole p2p-message.
+ */
+class MsBlockchainConfigMessage(
+        override val blockchainRid: ByteArray,
+        val height: Long,
+        override val payload: ByteArray
+) : MsMessage {
+    override val type = BlockchainConfig.ordinal
+    override val source: ByteArray = byteArrayOf()              // TODO: [POS-164]: Remove
+    override val destination: ByteArray = byteArrayOf()         // TODO: [POS-164]: Remove
+}
+

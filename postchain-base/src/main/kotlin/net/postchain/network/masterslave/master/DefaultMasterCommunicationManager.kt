@@ -6,6 +6,7 @@ import net.postchain.common.toHex
 import net.postchain.config.node.NodeConfig
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
+import net.postchain.network.masterslave.MsMessageHandler
 import net.postchain.network.masterslave.protocol.MsDataMessage
 import net.postchain.network.masterslave.protocol.MsHandshakeMessage
 import net.postchain.network.masterslave.protocol.MsHeartbeatMessage
@@ -26,7 +27,7 @@ class DefaultMasterCommunicationManager(
     companion object : KLogging()
 
     override fun init() {
-        val slaveChainConfig = SlaveChainConfig(chainId, blockchainRid, ::consumeSlavePacket)
+        val slaveChainConfig = SlaveChainConfig(chainId, blockchainRid, slavePacketConsumer())
         masterConnectionManager.connectSlaveChain(processName, slaveChainConfig)
     }
 
@@ -36,21 +37,25 @@ class DefaultMasterCommunicationManager(
         masterConnectionManager.sendPacketToSlave(message)
     }
 
-    private fun consumeSlavePacket(message: MsMessage) {
-        logger.trace("${process()}: Receiving a message from slave: blockchainRid = ${blockchainRid.toShortHex()}")
+    private fun slavePacketConsumer(): MsMessageHandler {
+        return object : MsMessageHandler {
+            override fun onMessage(message: MsMessage) {
+                logger.trace("${process()}: Receiving a message from slave: blockchainRid = ${blockchainRid.toShortHex()}")
 
-        when (message) {
-            is MsHandshakeMessage -> {
-                disconnectChainPeers()
-                connectChainPeers(message.peers)
-            }
+                when (message) {
+                    is MsHandshakeMessage -> {
+                        disconnectChainPeers()
+                        connectChainPeers(message.peers)
+                    }
 
-            is MsDataMessage -> {
-                masterConnectionManager.sendPacket(
-                        { message.payload },
-                        chainId,
-                        XPeerID(message.destination)
-                )
+                    is MsDataMessage -> {
+                        masterConnectionManager.sendPacket(
+                                { message.payload },
+                                chainId,
+                                XPeerID(message.destination)
+                        )
+                    }
+                }
             }
         }
     }

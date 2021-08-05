@@ -6,12 +6,12 @@ import net.postchain.base.PeerInfo
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.ProgrammerMistake
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.network.masterslave.MsConnection
 import net.postchain.network.masterslave.MsMessageHandler
 import net.postchain.network.masterslave.protocol.MsCodec
 import net.postchain.network.masterslave.protocol.MsDataMessage
-import net.postchain.network.masterslave.protocol.MsHeartbeatMessage
+import net.postchain.network.masterslave.protocol.MsGetBlockchainConfigMessage
+import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.slave.netty.NettySlaveConnector
 import net.postchain.network.x.LazyPacket
 import net.postchain.network.x.XChainPeersConfiguration
@@ -24,7 +24,10 @@ import kotlin.concurrent.schedule
  * [SlaveConnectionManager] has only one connection; it's connection to
  * [net.postchain.network.masterslave.master.MasterConnectionManager] of master node.
  */
-interface SlaveConnectionManager : XConnectionManager
+interface SlaveConnectionManager : XConnectionManager {
+    fun setMsMessageHandler(chainId: Long, handler: MsMessageHandler)
+    fun requestBlockchainConfig(chainId: Long)
+}
 
 
 class DefaultSlaveConnectionManager(
@@ -34,21 +37,23 @@ class DefaultSlaveConnectionManager(
     companion object : KLogging()
 
     private val slaveConnector = NettySlaveConnector(this)
+    private val chains = mutableMapOf<Long, Chain>()
+    private val msMessageHandlers = mutableMapOf<Long, MsMessageHandler>()
+    private val reconnectionTimer = Timer("Reconnection timer")
+    private var isShutDown = false
 
-    private class Chain(val config: XChainPeersConfiguration) {
+    private class Chain(val config: XChainPeersConfiguration, msMessageHandlerSupplier: (Long) -> MsMessageHandler?) {
         val peers: List<ByteArray> = (config.commConfiguration as SlavePeerCommConfig).peers
-        val msMessageHandler: MsMessageHandler = { msg ->
-            when (msg) {
-                is MsHeartbeatMessage -> config.heartbeatHandler(HeartbeatEvent(msg.timestamp))
-                else -> config.packetHandler(msg.payload, XPeerID(msg.source))
+        val msMessageHandler: MsMessageHandler = object : MsMessageHandler {
+            override fun onMessage(message: MsMessage) {
+                when (message) {
+                    is MsDataMessage -> config.packetHandler(message.payload, XPeerID(message.source))
+                    else -> msMessageHandlerSupplier(config.chainId)?.onMessage(message)
+                }
             }
         }
         var connection: MsConnection? = null
     }
-
-    private val chains = mutableMapOf<Long, Chain>()
-    private val reconnectionTimer = Timer("Reconnection timer")
-    private var isShutDown = false
 
     @Synchronized
     override fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String) {
@@ -62,7 +67,7 @@ class DefaultSlaveConnectionManager(
                 disconnectChain(chainPeersConfig.chainId, loggingPrefix)
             }
 
-            val chain = Chain(chainPeersConfig)
+            val chain = Chain(chainPeersConfig) { chainId -> msMessageHandlers[chainId] }
             chains[chainPeersConfig.chainId] = chain
             connectToMaster(chain)
 
@@ -201,6 +206,20 @@ class DefaultSlaveConnectionManager(
 
             // Reconnecting to the Master
             reconnect(chain)
+        }
+    }
+
+    override fun setMsMessageHandler(chainId: Long, handler: MsMessageHandler) {
+        msMessageHandlers[chainId] = handler
+    }
+
+    override fun requestBlockchainConfig(chainId: Long) {
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
+        if (chain.connection != null) {
+            val message = MsGetBlockchainConfigMessage(chain.config.blockchainRid.data)
+            chain.connection?.sendPacket { MsCodec.encode(message) }
+        } else {
+            logger.error("${logger(chain)}: Can't send packet to master node blockchainRid = ${chain.config.blockchainRid}")
         }
     }
 

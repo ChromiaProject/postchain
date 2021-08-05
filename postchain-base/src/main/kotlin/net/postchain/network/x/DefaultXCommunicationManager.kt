@@ -10,8 +10,6 @@ import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.ebft.heartbeat.HeartbeatEvent
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.network.CommunicationManager
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
@@ -29,12 +27,11 @@ class DefaultXCommunicationManager<PacketType>(
     companion object : KLogging()
 
     private var inboundPackets = mutableListOf<Pair<XPeerID, PacketType>>()
-    private var heartbeatListener: HeartbeatListener? = null
 
     override fun init() {
-        val packetHandler = { data: ByteArray, peerId: XPeerID -> consumePacket(peerId, data) }
-        val heartbeatHandler = { event: HeartbeatEvent -> heartbeatListener?.onHeartbeat(event) ?: Unit }
-        val peerConfig = XChainPeersConfiguration(chainId, blockchainRid, config, packetHandler, heartbeatHandler)
+        val peerConfig = XChainPeersConfiguration(chainId, blockchainRid, config) { data, peerId ->
+            consumePacket(peerId, data)
+        }
         connectionManager.connectChain(peerConfig, true) { processName.toString() }
     }
 
@@ -102,9 +99,5 @@ class DefaultXCommunicationManager<PacketType>(
                 logger.error("Error when receiving message from peer $peerId", e)
             }
         }
-    }
-
-    override fun setHeartbeatListener(listener: HeartbeatListener) {
-        heartbeatListener = listener
     }
 }

@@ -48,12 +48,12 @@ class NettyMasterConnection : ChannelInboundHandlerAdapter(), MsConnection {
             is MsHandshakeMessage -> {
                 connectionDescriptor = MasterConnectionDescriptor.createFromHandshake(message)
                 onConnectedHandler?.invoke(connectionDescriptor!!, this)
-                messageHandler?.invoke(message)
+                messageHandler?.onMessage(message)
             }
 
             is MsDataMessage -> {
                 if (connectionDescriptor != null) {
-                    messageHandler?.invoke(message)
+                    messageHandler?.onMessage(message)
                 }
             }
         }

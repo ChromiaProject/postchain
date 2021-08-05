@@ -60,7 +60,7 @@ class NettySlaveConnection(
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         val bytes = Transport.unwrapMessage(msg as ByteBuf)
         val message = MsCodec.decode(bytes)
-        messageHandler?.invoke(message)
+        messageHandler?.onMessage(message)
         msg.release()
     }
 

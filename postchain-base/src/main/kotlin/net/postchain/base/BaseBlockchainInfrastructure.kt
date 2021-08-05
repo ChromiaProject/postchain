@@ -11,6 +11,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.heartbeat.HeartbeatChecker
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
@@ -92,10 +93,19 @@ open class BaseBlockchainInfrastructure(
                 }
     }
 
-    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine,
-                                       historicBlockchain: HistoricBlockchain?): BlockchainProcess {
-        return synchronizationInfrastructure.makeBlockchainProcess(processName, engine, historicBlockchain)
-                .also(apiInfrastructure::connectProcess)
+    override fun makeBlockchainProcess(
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            heartbeatChecker: HeartbeatChecker,
+            historicBlockchain: HistoricBlockchain?
+    ): BlockchainProcess {
+        return synchronizationInfrastructure.makeBlockchainProcess(
+                processName, engine, heartbeatChecker, historicBlockchain
+        ).also(apiInfrastructure::connectProcess)
+    }
+
+    override fun makeHeartbeatChecker(chainId: Long): HeartbeatChecker {
+        return synchronizationInfrastructure.makeHeartbeatChecker(chainId)
     }
 
 }

@@ -14,6 +14,8 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
+import net.postchain.ebft.heartbeat.HeartbeatChecker
+import net.postchain.ebft.heartbeat.RemoteConfigChecker
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -124,7 +126,8 @@ open class BaseBlockchainProcessManager(
                             }
                         }
 
-                        val process = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
+                        val process = blockchainInfrastructure.makeBlockchainProcess(
+                                processName, engine, buildHeartbeatChecker(chainId), histConf)
                         blockchainProcesses[chainId] = process
                         heartbeatManager.addListener(process)
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
@@ -208,6 +211,24 @@ open class BaseBlockchainProcessManager(
 
             doRestart
         }
+    }
+
+    protected fun buildHeartbeatChecker(chainId: Long): HeartbeatChecker {
+        val heartbeatChecker = blockchainInfrastructure.makeHeartbeatChecker(chainId)
+
+        if (heartbeatChecker is RemoteConfigChecker) { // nodeConfig.remoteConfigEnabled
+            heartbeatChecker.remoteConfigConsumer = { height, remoteConfig ->
+                val details = "chainId: $chainId, height: $height, remote config length: ${remoteConfig.size}"
+                logger.debug { "Remote config is going to be stored: $details" }
+                withWriteConnection(storage, chainId) { ctx ->
+                    BaseConfigurationDataStore.addConfigurationData(ctx, height, remoteConfig)
+                    true
+                }
+                logger.debug { "Remote config stored: $details" }
+            }
+        }
+
+        return heartbeatChecker
     }
 
     private fun nodeName(): String {

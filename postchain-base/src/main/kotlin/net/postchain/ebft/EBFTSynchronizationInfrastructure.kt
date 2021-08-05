@@ -13,6 +13,7 @@ import net.postchain.debug.DiagnosticProperty.BLOCKCHAIN
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.DefaultHeartbeatChecker
+import net.postchain.ebft.heartbeat.HeartbeatChecker
 import net.postchain.ebft.message.Message
 import net.postchain.ebft.worker.HistoricChainWorker
 import net.postchain.ebft.worker.ReadOnlyWorker
@@ -41,8 +42,7 @@ open class EBFTSynchronizationInfrastructure(
         connectionManager = DefaultXConnectionManager(
                 NettyConnectorFactory(),
                 EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory()
-        )
+                EbftPacketDecoderFactory())
 
         addBlockchainDiagnosticProperty()
     }
@@ -54,6 +54,7 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
+            heartbeatChecker: HeartbeatChecker,
             historicBlockchain: HistoricBlockchain?
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration() as BaseBlockchainConfiguration // TODO: [et]: Resolve type cast
@@ -62,7 +63,6 @@ open class EBFTSynchronizationInfrastructure(
         }
 
         val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchain)
-        val heartbeatChecker = DefaultHeartbeatChecker(nodeConfig)
         val workerContext = WorkerContext(
                 processName, blockchainConfig.signers, engine,
                 blockchainConfig.configData.context.nodeID,
@@ -107,6 +107,7 @@ open class EBFTSynchronizationInfrastructure(
                         unregisterBlockchainDiagnosticData)
 
             }
+            registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_HISTORIC_REPLICA)
             HistoricChainWorker(workerContext, historicBlockchain)
         } else if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
             registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_VALIDATOR)
@@ -115,6 +116,10 @@ open class EBFTSynchronizationInfrastructure(
             registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_REPLICA)
             ReadOnlyWorker(workerContext)
         }
+    }
+
+    override fun makeHeartbeatChecker(chainId: Long): HeartbeatChecker {
+        return DefaultHeartbeatChecker(nodeConfig)
     }
 
     @Deprecated("POS-90")

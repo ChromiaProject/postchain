@@ -33,14 +33,14 @@ open class NodeConfig(val appConfig: AppConfig) {
     val subnodeRestApiPort: Int
         get() = config.getInt("containerChains.api.port", 7740)
 
-//     Used by subnode to connect to master for inter-node communication.
+    // Used by subnode to connect to master for inter-node communication.
     val masterHost: String
         get() = config.getString("containerChains.masterHost", "localhost")
 
     val masterPort: Int
         get() = config.getInt("containerChains.masterPort", 9860)
 
-//     Used by master
+    // Used by master
     val slaveHost: String
         get() = config.getString("containerChains.slaveHost", "localhost")
 
@@ -64,14 +64,33 @@ open class NodeConfig(val appConfig: AppConfig) {
 
 
     /**
-     * Heartbeat
+     * Heartbeat and RemoteConfig (for Subnode only)
      */
-    val heartbeat: Boolean
+    // Enables/disables heartbeat check
+    val heartbeatEnabled: Boolean
         get() = config.getBoolean("heartbeat.enabled", true)
+
+    // Heartbeat check is failed if there is no heartbeat event registered for the last
+    // `max(maxBlockTime, heartbeatTimeout)` ms
     val heartbeatTimeout: Long
         get() = config.getLong("heartbeat.timeout", 60_000L)
+
+    // BlockchainProcess sleeps for `heartbeatSleepTimeout` ms after every failed Heartbeat check
     val heartbeatSleepTimeout: Long
         get() = config.getLong("heartbeat.sleep_timeout", 500L)
+
+    // Enables/disables remote config check
+    val remoteConfigEnabled: Boolean
+        get() = config.getBoolean("remote_config.enabled", true)
+
+    // Remote config is requested every `max(maxBlockTime, remoteConfigRequestInterval)` ms
+    val remoteConfigRequestInterval: Long
+        get() = config.getLong("remote_config.request_interval", 20_000L)
+
+    // Remote config check is failed if there is no remote config response registered for the last
+    // `max(maxBlockTime, remoteConfigTimeout)` ms
+    val remoteConfigTimeout: Long
+        get() = config.getLong("remote_config.request_timeout", 60_000L)
 
 
     /**
