@@ -97,15 +97,23 @@ open class BaseBlockchainInfrastructure(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
             heartbeatChecker: HeartbeatChecker,
-            historicBlockchain: HistoricBlockchain?
+            historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         return synchronizationInfrastructure.makeBlockchainProcess(
-                processName, engine, heartbeatChecker, historicBlockchain
+                processName, engine, heartbeatChecker, historicBlockchainContext
         ).also(apiInfrastructure::connectProcess)
     }
 
     override fun makeHeartbeatChecker(chainId: Long): HeartbeatChecker {
         return synchronizationInfrastructure.makeHeartbeatChecker(chainId)
+    }
+
+    override fun exitBlockchainProcess(process: BlockchainProcess) {
+        synchronizationInfrastructure.exitBlockchainProcess(process)
+    }
+
+    override fun restartBlockchainProcess(process: BlockchainProcess) {
+        synchronizationInfrastructure.restartBlockchainProcess(process)
     }
 
 }

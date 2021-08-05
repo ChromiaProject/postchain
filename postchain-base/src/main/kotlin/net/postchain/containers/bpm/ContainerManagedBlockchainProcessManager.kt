@@ -11,6 +11,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.BlockQueries
+import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.BaseDirectoryDataSource
@@ -51,9 +52,9 @@ open class ContainerManagedBlockchainProcessManager(
         return false
     }
 
-    override fun startBlockchain(chainId: Long): BlockchainRid? {
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
         return if (chainId == CHAIN0) {
-            super.startBlockchain(chainId)
+            super.startBlockchain(chainId, bTrace)
         } else {
             synchronized(lock) {
                 if (chainIdInContainers(chainId)) {
@@ -71,32 +72,17 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    override fun stopBlockchain(chainId: Long) {
-        if (chainId == CHAIN0) {
-            super.stopBlockchain(chainId)
-        } else {
-            synchronized(lock) {
-                if (chainIdInContainers(chainId)) {
-                    logger.info(m("stopBlockchain: Chain $chainId is stopping"))
-                    stopContainerChain(chainId)
-                    logger.info(m("stopBlockchain: Chain $chainId stopped"))
-                } else {
-                    logger.warn(m("stopBlockchain: Chain $chainId (already) stopped"))
-                }
-            }
-        }
-    }
-
     private fun startContainerChain(chainId: Long): BlockchainRid? {
-        val (ds, brid, nodeContainerName) = containerNameFromDataSource(chainId)
-        if (nodeContainerName == null) return null
+        val (ds, brid, containerNames) = containerNamesFromDataSource(chainId)
+        if (containerNames["directory"] == null) return null
+        val nodeContainerName = containerNames["node"]!! //if directoryContainerName is non-null, so is nodeContainerName
 
         return try {
             // Creating working dir
             val (containerDir, chainConfigsDir) = containerInitializer.createContainerWorkingDir(chainId, nodeContainerName)
 
             //Create container (with containerBlockchainProcess) if not exist. Also transfer configs
-            val container = nodeContainerName.let { findDockerContainer(it) }
+            val container = findDockerContainer(nodeContainerName)
             if (container != null) {
                 logger.info(m("startContainer: Container $nodeContainerName already exists: ${container.id()}"))
                 //container exist, but chainID is new. Does postchainContainer exist? If not, add it:
@@ -106,7 +92,8 @@ open class ContainerManagedBlockchainProcessManager(
                     currentContainer = existingPostchainContainer
                 } else {
                     currentContainer = createPostchainContainer(
-                            chainId, ds, containerDir, chainConfigsDir, nodeContainerName, true)
+                            chainId, ds, containerDir, chainConfigsDir, containerNames, true
+                    )
                     postchainContainers.add(currentContainer)
                 }
                 if (!containerBlockchainProcessExists(currentContainer, chainId)) {
@@ -120,7 +107,7 @@ open class ContainerManagedBlockchainProcessManager(
                 logger.info(m("startContainer: Container $nodeContainerName is being created"))
                 val newPostchainContainer = createPostchainContainer(
                         chainId, ds,
-                        containerDir, chainConfigsDir, nodeContainerName, false
+                        containerDir, chainConfigsDir, containerNames, false
                 )
                 // Creating nodeConfig for container node (node specific)
                 containerInitializer.createContainerNodeConfig(newPostchainContainer, containerDir)
@@ -141,14 +128,15 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    private fun containerNameFromDataSource(chainId: Long): Triple<DirectoryDataSource, BlockchainRid, String?> {
+    private fun containerNamesFromDataSource(chainId: Long): Triple<DirectoryDataSource, BlockchainRid, Map<String, String?>> {
         val ds = dataSource as DirectoryDataSource
         val brid = withReadConnection(storage, chainId) { ctx ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
         }
         val directoryContainerName = ds.getContainerForBlockchain(brid)
-        val nodeContainerName = nodeConfig.pubKey.take(4) + directoryContainerName
-        return Triple(ds, brid, nodeContainerName)
+        val nodeContainerName = directoryContainerName?.let { nodeConfig.pubKey.take(4) + "container" + it }
+        val containerName = mapOf("directory" to directoryContainerName, "node" to nodeContainerName)
+        return Triple(ds, brid, containerName)
     }
 
     private fun containerBlockchainProcessExists(currentContainer: PostchainContainer, chainId: Long): Boolean {
@@ -158,7 +146,8 @@ open class ContainerManagedBlockchainProcessManager(
     //Blockchain process is removed, but container is only stopped if it is empty. It might hold other bcs.
     private fun stopContainerChain(chainId: Long) {
         //remove process from postchainContainer.
-        val (_, _, nodeContainerName) = containerNameFromDataSource(chainId)
+        val (_, _, containerName) = containerNamesFromDataSource(chainId)
+        val nodeContainerName = containerName["node"]
 
         val currentContainer = getPostchainContainer(nodeContainerName)
         if (currentContainer != null) {
@@ -183,7 +172,7 @@ open class ContainerManagedBlockchainProcessManager(
 
     override fun shutdown() {
         startingOrRunningProcesses()
-                .forEach { stopBlockchain(it) }
+                .forEach { it -> stopBlockchain(it, bTrace = null) }
         super.shutdown()
     }
 
@@ -201,22 +190,22 @@ open class ContainerManagedBlockchainProcessManager(
 
     private fun createPostchainContainer(chainId: Long, dataSource: DirectoryDataSource, containerDir: Path,
                                          chainConfigsDir: Path,
-                                         nodeContainerName: String,
+                                         containerNames: Map<String, String?>,
                                          dockerContainerExists: Boolean): PostchainContainer {
 
         val containerBlockchainProcess = createBlockchainProcess(chainId, dataSource, chainConfigsDir)
 
         val postchainContainer = DefaultPostchainContainer(nodeConfig, mutableSetOf(containerBlockchainProcess), dataSource,
-                ContainerState.STARTING, nodeContainerName)
+                ContainerState.STARTING, containerNames)
 
         // Creating chain configs
         containerBlockchainProcess.transferConfigsToContainer()
 
         if (!dockerContainerExists) {
             val config = ContainerConfigFactory.createConfig(nodeConfig, postchainContainer, containerDir)
-            postchainContainer.containerId = dockerClient.createContainer(config, postchainContainer.nodeContainerName).id().toString()
+            postchainContainer.containerId = dockerClient.createContainer(config, containerNames["node"]).id().toString()
         } else {
-            postchainContainer.containerId = findDockerContainer(nodeContainerName)!!.id()
+            postchainContainer.containerId = findDockerContainer(containerNames["node"]!!)!!.id()
         }
         // TODO: [POS-129]: Handle the case when containerId is null
         return postchainContainer

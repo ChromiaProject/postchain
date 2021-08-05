@@ -10,6 +10,10 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
 import java.nio.file.Path
 
+enum class ContainerResourceType {
+    RAM, CPU, STORAGE
+}
+
 interface MasterSyncInfra : SynchronizationInfrastructure {
 
     fun makeMasterBlockchainProcess(

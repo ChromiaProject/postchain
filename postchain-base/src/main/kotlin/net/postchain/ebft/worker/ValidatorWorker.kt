@@ -2,6 +2,7 @@
 
 package net.postchain.ebft.worker
 
+import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
@@ -23,6 +24,9 @@ import kotlin.concurrent.thread
  */
 class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProcess {
 
+    companion object : KLogging()
+
+    private var heartbeat: HeartbeatEvent? = null
     private lateinit var updateLoop: Thread
     private val shutdown = AtomicBoolean(false)
 
@@ -32,6 +36,14 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
     val networkAwareTxQueue: NetworkAwareTxQueue
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
+
+    fun isInFastSyncMode(): Boolean {
+        return syncManager.isInFastSync()
+    }
+
+    override fun getEngine(): BlockchainEngine {
+        return workerContext.engine
+    }
 
     init {
         val bestHeight = getEngine().getBlockQueries().getBestHeight().get()
@@ -81,23 +93,43 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
                         Thread.sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    startUpdateErr("Failing to update", e)
                 }
             }
         }
     }
 
-    override fun getEngine(): BlockchainEngine = workerContext.engine
-
     /**
      * Stop the postchain node
      */
     override fun shutdown() {
+        shutdowDebug("Begin")
         syncManager.shutdown()
         shutdown.set(true)
         updateLoop.join()
         blockDatabase.stop()
         workerContext.shutdown()
+        shutdowDebug("End")
+    }
+
+    // --------
+    // Logging
+    // --------
+
+    private fun shutdowDebug(str: String) {
+        if (logger.isDebugEnabled) {
+            logger.debug("${workerContext.processName} shutdown() - $str")
+        }
+    }
+
+    private fun startUpdateLog(str: String) {
+        if (logger.isTraceEnabled) {
+            logger.trace("${workerContext.processName} startUpdateLoop() -- $str")
+        }
+    }
+
+    private fun startUpdateErr(str: String, e: Exception) {
+        logger.error("${workerContext.processName} startUpdateLoop() -- $str", e)
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {

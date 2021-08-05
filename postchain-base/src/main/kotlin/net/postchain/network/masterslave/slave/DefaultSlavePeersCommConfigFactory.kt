@@ -1,6 +1,6 @@
 package net.postchain.network.masterslave.slave
 
-import net.postchain.base.HistoricBlockchain
+import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.config.node.NodeConfig
@@ -12,10 +12,11 @@ class DefaultSlavePeersCommConfigFactory : DefaultPeersCommConfigFactory() {
     override fun create(
             nodeConfig: NodeConfig,
             blockchainConfig: BlockchainConfiguration,
-            historicBlockchain: HistoricBlockchain?
+            historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration {
 
-        val relevantPeerMap = buildPeersMap(nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers, historicBlockchain)
+        val relevantPeerMap = buildPeersMap(nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers,
+                historicBlockchainContext)
 
         return DefaultSlavePeerCommConfig.build(
                 relevantPeerMap,

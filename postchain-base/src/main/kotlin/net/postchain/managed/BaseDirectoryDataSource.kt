@@ -2,6 +2,7 @@ package net.postchain.managed
 
 import net.postchain.base.BlockchainRid
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.infra.ContainerResourceType
 import net.postchain.core.BlockQueries
 import net.postchain.gtv.GtvFactory
 
@@ -29,12 +30,16 @@ class BaseDirectoryDataSource(queries: BlockQueries, nodeConfig: NodeConfig) : B
         TODO("Not yet implemented")
     }
 
-    override fun getResourceLimitForContainer(containerID: String): Map<String, Long>? {
+    override fun getResourceLimitForContainer(containerID: String): Map<ContainerResourceType, Long>? {
         val queryReply = queries.query(
                 "nm_get_container_limits",
                 buildArgs("container_id" to GtvFactory.gtv(containerID))
         ).get().asDict()
-        val resList = queryReply.map { it.key to it.value.asInteger() }.toMap()
+        val resList = queryReply.map { ContainerResourceType.valueOf(it.key.toUpperCase()) to it.value.asInteger() }.toMap()
         return resList
+    }
+
+    override fun setLimitsForContainer(containerID: String, ramLimit: Long, cpuQuota: Long) {
+        TODO("Will not be used")
     }
 }

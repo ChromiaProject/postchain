@@ -4,6 +4,7 @@ package net.postchain.core
 
 import net.postchain.base.BlockchainRid
 import net.postchain.ebft.heartbeat.HeartbeatListener
+import net.postchain.debug.BlockTrace
 
 interface Shutdownable {
     fun shutdown()
@@ -17,6 +18,7 @@ interface Synchronizable {
  * Blockchain engine used for building and adding new blocks
  */
 interface BlockchainEngine : Shutdownable {
+    fun isRunning(): Boolean
     fun initialize()
     fun setRestartHandler(restartHandler: RestartHandler)
 
@@ -34,11 +36,11 @@ interface BlockchainProcess : HeartbeatListener {
 }
 
 interface BlockchainProcessManager : Shutdownable, Synchronizable {
-    fun startBlockchain(chainId: Long): BlockchainRid?
+    fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid?
     fun retrieveBlockchain(chainId: Long): BlockchainProcess?
-    fun stopBlockchain(chainId: Long)
+    fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean = false)
 }
 
 // A return value of "true" means a restart is needed.
-typealias RestartHandler = (blockTimestamp: Long) -> Boolean
+typealias RestartHandler = (blockTimestamp: Long, BlockTrace?) -> Boolean
 

@@ -7,7 +7,7 @@ import assertk.assertions.containsExactly
 import net.postchain.base.*
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.ebft.message.GetBlockAtHeight
-import net.postchain.network.Utils
+import net.postchain.common.Utils
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.After

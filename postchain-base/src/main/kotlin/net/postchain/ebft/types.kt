@@ -5,7 +5,9 @@ package net.postchain.ebft
 import net.postchain.core.BlockData
 import net.postchain.core.BlockDataWithWitness
 import net.postchain.core.Signature
+import net.postchain.debug.BlockTrace
 import nl.komponents.kovenant.Promise
+import java.lang.RuntimeException
 import java.util.*
 
 interface ErrContext {
@@ -35,15 +37,20 @@ class NodeStatus(var height: Long, var serial: Long) {
     constructor () : this(0, -1)
 }
 
+typealias CompletionPromise = Promise<Unit, java.lang.Exception>
+
 interface BlockDatabase {
-    fun addBlock(block: BlockDataWithWitness): Promise<Unit, Exception> // add a complete block after the current one
+    fun getQueuedBlockCount(): Int
+    fun addBlock(block: BlockDataWithWitness, dependsOn: CompletionPromise?, bTrace: BlockTrace?): CompletionPromise // add a complete block after the current one
     fun loadUnfinishedBlock(block: BlockData): Promise<Signature, Exception> // returns block signature if successful
-    fun commitBlock(signatures: Array<Signature?>): Promise<Unit, Exception>
+    fun commitBlock(signatures: Array<Signature?>): CompletionPromise
     fun buildBlock(): Promise<Pair<BlockData, Signature>, Exception>
 
     fun verifyBlockSignature(s: Signature): Boolean
     fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception>
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): Promise<BlockDataWithWitness?, Exception>
+
+    fun setBlockTrace(blockTrace: BlockTrace) // Only debugging
 }
 
 sealed class BlockIntent {
@@ -161,3 +168,5 @@ interface StatusManager {
     fun getCommitSignature(): Signature?
 }
 
+class BDBAbortException(val block: BlockDataWithWitness, val prev: CompletionPromise):
+        RuntimeException("BlockDatabase aborted execution of an addBlock task because previous task failed")

@@ -5,6 +5,7 @@ package net.postchain.network.x
 import com.nhaarman.mockitokotlin2.mock
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
+import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.ebft.EbftPacketDecoder
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoder
@@ -24,7 +25,8 @@ class EbftIntegrationTestContext(
     val connectionManager = DefaultXConnectionManager(
             connectorFactory,
             EbftPacketEncoderFactory(),
-            EbftPacketDecoderFactory())
+            EbftPacketDecoderFactory(),
+            SECP256K1CryptoSystem())
 
     val communicationManager = DefaultXCommunicationManager(
             connectionManager,

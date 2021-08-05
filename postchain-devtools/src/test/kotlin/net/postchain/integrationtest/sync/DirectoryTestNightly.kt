@@ -1,5 +1,7 @@
 package net.postchain.integrationtest.sync
 
+import com.spotify.docker.client.DefaultDockerClient
+import com.spotify.docker.client.DockerClient
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
@@ -15,6 +17,7 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.EContext
+import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvFactory
 import net.postchain.managed.DirectoryDataSource
@@ -22,11 +25,17 @@ import net.postchain.managed.ManagedNodeDataSource
 import org.apache.commons.configuration2.Configuration
 import org.junit.Ignore
 import org.junit.Test
+import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
+import kotlin.test.assertEquals
 
-class DirectoryTest : ManagedModeTest() {
+const val firstContainerName = "cont1" //for chain 1, 2
+const val secondContainerName = "cont3" //for chain 3
+
+
+class DirectoryTestNightly : ManagedModeTest() {
 
     /**
      * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1, c2
@@ -34,12 +43,12 @@ class DirectoryTest : ManagedModeTest() {
      *
      * Did you make changes i slave code? Copy jar-dependecies file to
      * postchain-distribution/src/main/postchain-slavenode/docker/scripts/bin/postchain-base-3.3.1-SNAPSHOT-jar-with-dependencies.jar
-     * and run (in that directory):
+     * and run (in postchain2/postchain-distribution/src/main/postchain-slavenode/docker) where Dockerfile is found:
      * docker build -t chromaway/postchain-slavenode:3.3.1 .
      */
     @Ignore
     @Test
-    fun dummy() {
+    fun testMultipleChains() {
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
@@ -47,8 +56,7 @@ class DirectoryTest : ManagedModeTest() {
         val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont3
         //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
         // Instead, whait with tear-down to see chains are started in the container:
-        Thread.sleep(29000)
-
+        sleep(20_000L)
     }
 
 
@@ -57,14 +65,44 @@ class DirectoryTest : ManagedModeTest() {
      */
     @Ignore
     @Test
-    fun multipleNodes() {
+    fun testMultipleNodes() {
         startManagedSystem(2, 0)
         buildBlock(c0, 0)
         val c1 = startNewBlockchain(setOf(0, 1), setOf(), waitForRestart = false)
-        //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
+        //TODO: waitForRestart does not work since we do not have access to heights of chains run on subnodes.
         // Instead, whait with tear-down to see chains are started in the container:
-        Thread.sleep(49000)
+        sleep(20_000)
+    }
 
+    @Ignore
+    @Test
+    fun testResourceLimits() {
+        val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
+        var listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+        listc.forEach {
+            if (it.names()?.get(0)?.contains(Regex(firstContainerName))!!) {
+                println("removing existing container: " + it.names())
+                dockerClient.stopContainer(it.id(), 0)
+                dockerClient.removeContainer(it.id())
+            }
+        }
+        startManagedSystem(1, 0)
+        buildBlock(c0, 0)
+        val ramLimit = 7000_000L
+        val cpuQuotaLimit = 90_000L
+        //update dataSource with limit value. This is used when contianer is created (getResourceLimitForContainer)
+        dataSource(0).setLimitsForContainer(firstContainerName, ramLimit, cpuQuotaLimit)
+        startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+        sleep(20_000) //we must wait a bit to ensure that container has been created.
+        listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+        println("number of containers: " + listc.size)
+        val res = dockerClient.inspectContainer(listc[0].id())
+        assertEquals(ramLimit, res.hostConfig()?.memory())
+        assertEquals(cpuQuotaLimit, res.hostConfig()?.cpuQuota())
+    }
+
+    private fun dataSource(nodeIndex: Int): MockDirectoryDataSource {
+        return mockDataSources[nodeIndex] as MockDirectoryDataSource
     }
 
 //    System providers create a ‘system’ cluster which includes ‘system’ nodes and has a ‘system’ naked container which will run the directory.
@@ -147,7 +185,7 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
         return testDataSource
     }
 
-    override fun getBlockchainsShouldBeLaunched(): Set<Long> {
+    override fun retrieveBlockchainsToLaunch(): Set<Long> {
         val result = mutableListOf<Long>()
         testDataSource.computeBlockchainList().forEach {
             val brid = BlockchainRid(it)
@@ -168,27 +206,23 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
     }
 
     var lastHeightStarted = ConcurrentHashMap<Long, Long>()
+
     //    val containerChainStarted = ConcurrentHashMap<Long, Boolean>()
-    override fun startBlockchain(chainId: Long): BlockchainRid? {
-        val blockchainRid = super.startBlockchain(chainId)
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
+        val blockchainRid = super.startBlockchain(chainId, bTrace)
         if (blockchainRid == null) {
             return null
         }
-        if (chainId == 0L) { //only chain0 is run on master, all other chains in containers. We do not have their heights.
+        if (chainId == 0L) { //only chain0 is run on master, all other chains in containers
             val process = blockchainProcesses[chainId]!!
             val queries = process.getEngine().getBlockQueries()
             val height = queries.getBestHeight().get()
             lastHeightStarted[chainId] = height
-//        } else {
-//            containerChainStarted.putIfAbsent(chainId, true)
         }
         return blockchainRid
     }
 
     fun awaitStarted(chainId: Long, atLeastHeight: Long) {
-//        while (containerChainStarted.get(chainId) != null) {
-//            Thread.sleep(10)
-//        }
         while (lastHeightStarted.get(chainId) ?: -2L < atLeastHeight) {
             Thread.sleep(10)
         }
@@ -207,6 +241,9 @@ class TestMasterBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationPr
 
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {
 
+    var ram = 7000000L * 1000L
+    var cpu = 100000L
+
     override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
         val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return mapOf()
         var confs = mutableMapOf<Long, ByteArray>()
@@ -220,15 +257,14 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
     }
 
     override fun getContainersToRun(): List<String>? {
-//        return listOf()
-        return listOf("system", "cont1", "cont3")
+        return listOf("system", firstContainerName, secondContainerName)
     }
 
     //chain 0 in system container, chain1-2 in cont1 container. chain3 in cont3 container.
     override fun getBlockchainsForContainer(containerID: String): List<BlockchainRid>? {
-        if (containerID == "cont1") {
+        if (containerID == firstContainerName) {
             return listOf(chainRidOf(1), chainRidOf(2))
-        } else if (containerID == "cont3") {
+        } else if (containerID == secondContainerName) {
             return listOf(chainRidOf(3))
         } else {
             return listOf(chainRidOf(0))
@@ -237,18 +273,26 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String? {
         if ((brid == chainRidOf(1)) or (brid == chainRidOf(2))) {
-            return "cont1"
+            return firstContainerName
         } else if (brid == chainRidOf(3)) {
-            return "cont3"
+            return secondContainerName
         } else {
             return "system"
         }
     }
 
-    override fun getResourceLimitForContainer(containerID: String): Map<String, Long>? {
-        if (containerID == "cont1") {
-            return mapOf("storage" to 10L, "ram" to 10L, "cpu" to 10L)
+    override fun getResourceLimitForContainer(containerID: String): Map<ContainerResourceType, Long>? {
+        if (containerID == firstContainerName) {
+            return mapOf(ContainerResourceType.STORAGE to 10L, ContainerResourceType.RAM to ram,
+                    ContainerResourceType.CPU to cpu)
         }
         return mapOf() //no limits for naked system container.
+    }
+
+    override fun setLimitsForContainer(containerID: String, ramLimit: Long, cpuQuota: Long) {
+        if (containerID == firstContainerName) {
+            ram = ramLimit
+            cpu = cpuQuota
+        }
     }
 }

@@ -6,7 +6,7 @@ import assertk.assert
 import assertk.assertions.isEmpty
 import net.postchain.base.*
 import net.postchain.core.UserMistake
-import net.postchain.network.Utils
+import net.postchain.common.Utils
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.Test

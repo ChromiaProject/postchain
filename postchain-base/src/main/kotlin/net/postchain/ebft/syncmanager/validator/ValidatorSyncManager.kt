@@ -42,12 +42,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var processingIntentDeadline = 0L
     private var lastStatusLogged: Long
     private val processName = workerContext.processName
-    private var useFastSyncAlgorithm: Boolean = true
+    private var useFastSyncAlgorithm: Boolean
+    private val fastSynchronizer: FastSynchronizer
     private val shutdown = AtomicBoolean(false)
 
     companion object : KLogging()
-
-    private val fastSynchronizer: FastSynchronizer
 
     init {
         this.currentTimeout = defaultTimeout
@@ -59,14 +58,17 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         params.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
         params.jobTimeout = nodeConfig.fastSyncJobTimeout
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
+
+        // Init useFastSyncAlgorithm
+        val lastHeight = blockQueries.getBestHeight().get()
+        useFastSyncAlgorithm = when {
+            lastHeight < params.mustSyncUntilHeight -> true
+            else -> workerContext.startWithFastSync
+        }
     }
 
-    //    private val nodes = communicationManager.peers().map { XPeerID(it.pubKey) }
     private val signersIds = workerContext.signers.map { XPeerID(it) }
-
     private fun indexOfValidator(peerId: XPeerID): Int = signersIds.indexOf(peerId)
-    //        return nodes.indexOf(peerID)
-
     private fun validatorAtIndex(index: Int): XPeerID = signersIds[index]
 
     /**
@@ -147,6 +149,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                 is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
                                 is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
                                 is Transaction -> handleTransaction(nodeIndex, message)
+                                is BlockHeader -> {
+                                    // TODO: This might happen because we've already exited FastSync but other nodes
+                                    //  are still responding to our old requests. For this case this is harmless.
+                                }
+
 
                                 else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                             }
@@ -302,6 +309,36 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         processingIntentDeadline = Date().time + currentTimeout
     }
 
+
+    /**
+     * Log status of all nodes including their latest block RID and if they have the signature or not
+     */
+    private fun logFastSyncStatus(currentBlockHeight: Long) {
+        if (logger.isDebugEnabled) {
+            val smIntent = statusManager.getBlockIntent()
+            val bmIntent = blockManager.getBlockIntent()
+            val primary = if (statusManager.isMyNodePrimary()) {
+                "I'm primary, "
+            } else {
+                "(prim = ${statusManager.primaryIndex()}),"
+            }
+            logger.debug("$processName: (Fast sync) Height: $currentBlockHeight. My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent")
+        }
+        for ((idx, ns) in statusManager.nodeStatuses.withIndex()) {
+            val blockRID = ns.blockRID
+            val haveSignature = statusManager.commitSignatures[idx] != null
+            if (logger.isDebugEnabled) {
+                logger.debug {
+                    "$processName: (Fast sync) node:$idx he:${ns.height} ro:${ns.round} st:${ns.state}" +
+                            (if (ns.revolting) " R" else "") +
+                            " blockRID:${blockRID?.toHex() ?: "null"}" +
+                            " havesig:$haveSignature"
+                }
+            }
+        }
+    }
+
+
     /**
      * Log status of all nodes including their latest block RID and if they have the signature or not
      */
@@ -342,13 +379,15 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     override fun update() {
         if (useFastSyncAlgorithm) {
+            logger.debug("$processName Using fast sync") // Doesn't happen very often
             fastSynchronizer.syncUntilResponsiveNodesDrained()
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions
             useFastSyncAlgorithm = false
-            statusManager.fastForwardHeight(blockQueries.getBestHeight().get())
-            blockManager.lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
+            val currentBlockHeight = blockQueries.getBestHeight().get()
+            statusManager.fastForwardHeight(currentBlockHeight)
             blockManager.currentBlock = null
+            logFastSyncStatus(currentBlockHeight)
         } else {
             synchronized(statusManager) {
                 // Process all messages from peers, one at a time. Some
@@ -390,6 +429,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         // after the first block db operation. So we read lastBlockTimestamp value from db
         // until blockManager.lastBlockTimestamp is non-null.
         return blockManager.lastBlockTimestamp ?: blockQueries.getLastBlockTimestamp().get()
+    }
+
+    fun getHeight(): Long {
+        return if (useFastSyncAlgorithm) fastSynchronizer.blockHeight
+        else nodeStateTracker.blockHeight
     }
 
     fun isInFastSync(): Boolean {

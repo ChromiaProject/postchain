@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import mu.KLogging
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
@@ -13,12 +14,26 @@ import net.postchain.ebft.heartbeat.HeartbeatChecker
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 
 class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
+
+    companion object : KLogging()
+
+    // Need this stuff to make this test class look a bit "normal"
+    val processName: BlockchainProcessName = BlockchainProcessName("?", _engine.getConfiguration().blockchainRid)
+
     override fun getEngine(): BlockchainEngine {
         return _engine
     }
 
     override fun shutdown() {
+        shutdownDebug("Begin")
         _engine.shutdown()
+        shutdownDebug("End")
+    }
+
+    private fun shutdownDebug(str: String) {
+        if (logger.isDebugEnabled) {
+            logger.debug("$processName: shutdown() - $str.")
+        }
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
@@ -30,7 +45,12 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun init() = Unit
 
-    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatChecker: HeartbeatChecker, historicBlockchain: HistoricBlockchain?): BlockchainProcess {
+    override fun makeBlockchainProcess(
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            heartbeatChecker: HeartbeatChecker,
+            historicBlockchainContext: HistoricBlockchainContext?
+    ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }
 
@@ -40,6 +60,9 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
             override fun checkHeartbeat(timestamp: Long): Boolean = true
         }
     }
+
+    override fun exitBlockchainProcess(process: BlockchainProcess) = Unit
+    override fun restartBlockchainProcess(process: BlockchainProcess) = Unit
 
     override fun shutdown() = Unit
 }

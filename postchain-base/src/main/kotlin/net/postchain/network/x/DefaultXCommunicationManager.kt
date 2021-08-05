@@ -28,11 +28,16 @@ class DefaultXCommunicationManager<PacketType>(
 
     private var inboundPackets = mutableListOf<Pair<XPeerID, PacketType>>()
 
+    var connected = false
+
+    @Synchronized
     override fun init() {
+        if (connected) return
         val peerConfig = XChainPeersConfiguration(chainId, blockchainRid, config) { data, peerId ->
             consumePacket(peerId, data)
         }
         connectionManager.connectChain(peerConfig, true) { processName.toString() }
+        connected = true
     }
 
     @Synchronized
@@ -76,8 +81,11 @@ class DefaultXCommunicationManager<PacketType>(
         }
     }
 
+    @Synchronized
     override fun shutdown() {
+        if (!connected) return
         connectionManager.disconnectChain(chainId) { processName.toString() }
+        connected = false
     }
 
     private fun consumePacket(peerId: XPeerID, packet: ByteArray) {
