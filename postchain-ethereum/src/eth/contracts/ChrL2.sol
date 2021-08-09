@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity >=0.6.0 <=0.8.6;
 pragma experimental ABIEncoderV2;
-import "./ERC20.sol";
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract ChrL2 {
 
@@ -9,7 +10,7 @@ contract ChrL2 {
 
     bytes32 constant L2_STATE_KEY = 0x04A48CDA5CE81FF2A97A9E2C0F521C2853258D6DDBA62190D3F0A2523B09C4B0;
 
-    mapping (address => mapping(ERC20 => uint256)) private _balances;
+    mapping (address => mapping(ERC20 => uint256)) public _balances;
     mapping (ERC20 => Withdraw) public _withdraw;
     address[] public directoryNodes;
     address[] public appNodes;
@@ -44,9 +45,9 @@ contract ChrL2 {
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
 
     function updateDirectoryNodes(bytes32 hash, bytes[] memory sigs, address[] memory _directoryNodes) public returns (bool) {
-        if (!isValidNodes(hash, _directoryNodes)) return false;
+        if (!isValidNodes(hash, _directoryNodes)) revert("ChrL2: Invalid directory node");
         uint BFTRequiredNum = _calculateBFTRequiredNum(directoryNodes.length);
-        if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) return false;
+        if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) revert("ChrL2: Not enough require signature");
         for (uint i = 0; i < directoryNodes.length; i++) {
             directoryNodes.pop();
         }
@@ -55,9 +56,9 @@ contract ChrL2 {
     }
 
     function updateAppNodes(bytes32 hash, bytes[] memory sigs, address[] memory _appNodes) public returns (bool) {
-        if (!isValidNodes(hash, _appNodes)) return false;
+        if (!isValidNodes(hash, _appNodes)) revert("ChrL2: Invalid app node");
         uint BFTRequiredNum = _calculateBFTRequiredNum(directoryNodes.length);
-        if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) return false;
+        if (!_isValidSignatures(BFTRequiredNum, hash, sigs, directoryNodes)) revert("ChrL2: Not enough require signature");
         for (uint i = 0; i < appNodes.length; i++) {
             appNodes.pop();
         }
@@ -133,6 +134,7 @@ contract ChrL2 {
 
         _verify(_hash, blockHeader, sigs, merkleProofs, position);
         (ERC20 token, address beneficiary, uint256 amount) = verifyEventHash(_event, _hash);
+        require(amount <= _balances[beneficiary][token], "ChrL2: Not enough amount");
         Withdraw storage wd = _withdraw[token];
         wd.beneficiary = beneficiary;
         wd.amount += amount;
@@ -156,10 +158,12 @@ contract ChrL2 {
 
     function withdraw(ERC20 token, address payable beneficiary) public returns (bool) {
         Withdraw storage wd = _withdraw[token];
+        require(wd.amount <= _balances[beneficiary][token], "ChrL2: Not enough ammount to withdraw");
         if (!wd.isWithdraw && wd.amount > 0 && block.number >= wd.block_number) {
             wd.isWithdraw = true;
             uint value = wd.amount;
             wd.amount = 0;
+            _balances[beneficiary][token] -= value;
             token.transfer(beneficiary, value);
             emit Withdrawal(beneficiary, token, value);
             return true;
