@@ -32,7 +32,7 @@ class DefaultMasterCommunicationManager(
     }
 
     override fun sendHeartbeatToSlave(heartbeatEvent: HeartbeatEvent) {
-        logger.trace("${process()}: Sending a heartbeat packet to slave node: blockchainRid: ${blockchainRid.toShortHex()} ")
+        logger.trace("${process()}: Sending a heartbeat packet to subnode: blockchainRid: ${blockchainRid.toShortHex()} ")
         val message = MsHeartbeatMessage(blockchainRid.data, heartbeatEvent.timestamp)
         masterConnectionManager.sendPacketToSlave(message)
     }
@@ -85,7 +85,7 @@ class DefaultMasterCommunicationManager(
                 packet)
 
         logger.trace("${process()}: Sending the packet from peer: ${peerId.byteArray.toHex()} " +
-                "to slave node: blockchainRid: ${blockchainRid.toShortHex()} ")
+                "to subnode: blockchainRid: ${blockchainRid.toShortHex()} ")
         masterConnectionManager.sendPacketToSlave(message)
     }
 

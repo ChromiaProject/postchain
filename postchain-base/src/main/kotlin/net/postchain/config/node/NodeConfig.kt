@@ -12,6 +12,10 @@ import org.apache.commons.configuration2.Configuration
 
 open class NodeConfig(val appConfig: AppConfig) {
 
+    companion object {
+        const val DEFAULT_PORT: Int = 9870
+    }
+
     private val config: Configuration
         get() = appConfig.config
 
@@ -30,6 +34,8 @@ open class NodeConfig(val appConfig: AppConfig) {
     /**
      * Container chains
      */
+    val containerImage: String
+        get() = config.getString("containerChains.dockerImage", "chromaway/postchain-subnode:latest")
     val subnodeRestApiPort: Int
         get() = config.getInt("containerChains.api.port", 7740)
 
@@ -132,7 +138,7 @@ open class NodeConfig(val appConfig: AppConfig) {
      */
     open val peerInfoMap: Map<XPeerID, PeerInfo> = mapOf()
 
-    // list of replicas for a given node
+    // List of replicas for a given node
     open val nodeReplicas: Map<XPeerID, List<XPeerID>> = mapOf()
     open val blockchainReplicaNodes: Map<BlockchainRid, List<XPeerID>> = mapOf()
     open val blockchainsToReplicate: Set<BlockchainRid> = setOf()
@@ -140,6 +146,7 @@ open class NodeConfig(val appConfig: AppConfig) {
 
     open val mustSyncUntilHeight: Map<Long, Long>? = mapOf() //mapOf<chainID, height>
 
+    // FastSync
     val fastSyncExitDelay: Long
         get() = config.getLong("fastsync.exit_delay", 60000)
 

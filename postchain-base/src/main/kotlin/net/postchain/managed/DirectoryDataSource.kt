@@ -14,7 +14,7 @@ interface DirectoryDataSource : ManagedNodeDataSource {
      * Which blockchains to run in which container?
      */
     fun getBlockchainsForContainer(containerID: String): List<BlockchainRid>?
-    fun getContainerForBlockchain(brid: BlockchainRid): String?
+    fun getContainerForBlockchain(brid: BlockchainRid): String
 
     /**
      * What is the resource limits for this container?

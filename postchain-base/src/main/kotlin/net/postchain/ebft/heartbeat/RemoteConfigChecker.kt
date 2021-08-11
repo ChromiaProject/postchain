@@ -30,6 +30,12 @@ class RemoteConfigChecker(
         debug { "DefaultHeartbeatChecker.checkHeartbeat(timestamp) = $superCheck" }
         if (!superCheck) return false
 
+        // If remote config check is disabled, consider it as always passed
+        if (!nodeConfig.remoteConfigEnabled) {
+            debug { "RemoteConfig check passed due to: nodeConfig.remote_config.enabled = ${nodeConfig.remoteConfigEnabled}" }
+            return true
+        }
+
         // Check remote config
         val intervalCheck = timestamp - responseTimestamp > nodeConfig.remoteConfigRequestInterval
         val details = "timestamp ($timestamp) - responseTimestamp ($responseTimestamp) " +

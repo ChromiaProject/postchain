@@ -11,12 +11,8 @@ class FileNodeConfigurationProvider(private val appConfig: AppConfig) : NodeConf
 
     companion object {
 
-        fun packPeerInfo(peerInfo: PeerInfo): String {
-            return "${peerInfo.host};${peerInfo.port};${peerInfo.pubKey.toHex()}"
-        }
-
         fun packPeerInfoCollection(peerInfos: Collection<PeerInfo>): List<String> {
-            return peerInfos.map { packPeerInfo(it) }
+            return peerInfos.map { "${it.host};${it.port};${it.pubKey.toHex()}" }
         }
 
         fun unpackPeerInfo(str: String): PeerInfo {

@@ -32,7 +32,7 @@ open class DefaultHeartbeatChecker(val nodeConfig: NodeConfig) : HeartbeatChecke
     override fun checkHeartbeat(timestamp: Long): Boolean {
         // If heartbeat check is disabled, consider it as always passed
         if (!nodeConfig.heartbeatEnabled) {
-            debug { "Heartbeat check passed due to: nodeConfig.heartbeat = ${nodeConfig.heartbeatEnabled}" }
+            debug { "Heartbeat check passed due to: nodeConfig.heartbeat.enabled = ${nodeConfig.heartbeatEnabled}" }
             return true
         }
 

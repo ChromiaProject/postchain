@@ -7,3 +7,4 @@ set -eu
 . ./env.sh
 
 docker rmi -f $IMAGE:$VER
+docker rmi -f $IMAGE:latest

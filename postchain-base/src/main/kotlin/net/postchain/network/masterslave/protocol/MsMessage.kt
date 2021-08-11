@@ -6,7 +6,7 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.network.masterslave.protocol.MsMessageType.*
 
 /**
- * MsMessages are used in master-slave communication to let slave nodes
+ * MsMessages are used in master-slave communication to let subnodes
  * communicate with the p2p-network through the master node.
  *
  * For [MsHandshakeMessage] payload is a peers list for the master to establish connections with.

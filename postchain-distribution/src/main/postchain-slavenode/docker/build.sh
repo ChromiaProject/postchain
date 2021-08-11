@@ -3,4 +3,4 @@
 set -eu
 . ./env.sh
 
-docker build . -t $IMAGE:$VER
+docker build . -t $IMAGE:$VER -t $IMAGE:latest

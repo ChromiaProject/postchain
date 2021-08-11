@@ -271,7 +271,7 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
         }
     }
 
-    override fun getContainerForBlockchain(brid: BlockchainRid): String? {
+    override fun getContainerForBlockchain(brid: BlockchainRid): String {
         if ((brid == chainRidOf(1)) or (brid == chainRidOf(2))) {
             return firstContainerName
         } else if (brid == chainRidOf(3)) {
