@@ -8,7 +8,7 @@ import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.masterslave.master.MasterCommunicationManager
-import java.nio.file.Path
+import java.io.File
 import java.util.*
 
 interface ContainerBlockchainProcess : HeartbeatListener {
@@ -28,7 +28,7 @@ class DefaultContainerBlockchainProcess(
         override val restApiPort: Int,
         private val communicationManager: MasterCommunicationManager,
         private val dataSource: DirectoryDataSource,
-        private val chainConfigsDir: Path
+        private val containerChainDir: ContainerChainDir
 ) : ContainerBlockchainProcess {
 
     companion object : KLogging()
@@ -55,9 +55,9 @@ class DefaultContainerBlockchainProcess(
         if (configsToDump.isNotEmpty()) {
             logger.info("Number of chain configs to dump: ${configsToDump.size}")
             configs.filterKeys { it > lastHeight }.forEach { (height, config) ->
-                val configPath = chainConfigsDir.resolve("$height.gtv")
-                configPath.toFile().writeBytes(config) // TODO: [POS-129]: Add exceptions handling
-                logger.info("Config file dumped: $configPath")
+                val filename = containerChainDir.resolveChainFilename("$height.gtv")
+                File(filename).writeBytes(config) // TODO: [POS-129]: Add exceptions handling
+                logger.info("Config file dumped: $filename")
                 lastHeight = height
             }
         }

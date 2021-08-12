@@ -7,14 +7,13 @@ import net.postchain.common.Utils
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.NameService
 import net.postchain.containers.infra.ContainerResourceType
-import java.nio.file.Path
 
 object ContainerConfigFactory {
 
-    fun createConfig(nodeConfig: NodeConfig, container: PostchainContainer, containerCwd: Path): ContainerConfig {
+    fun createConfig(nodeConfig: NodeConfig, container: PostchainContainer, containerChainDir: ContainerChainDir): ContainerConfig {
         // -v $containerCwd:/opt/chromaway/postchain/target \
         val volume = HostConfig.Bind
-                .from(containerCwd.toString())
+                .from(containerChainDir.containerDir.toString())
                 .to("/opt/chromaway/postchain/target")
                 .build()
 

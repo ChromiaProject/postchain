@@ -55,6 +55,7 @@ class RemoteConfigCheckerTest {
         val nodeConfig: NodeConfig = mock {
             on { heartbeatEnabled } doReturn (true)
             on { heartbeatTimeout } doReturn 20_000L
+            on { remoteConfigEnabled } doReturn (true)
             on { remoteConfigRequestInterval } doReturn 10_000L
             on { remoteConfigTimeout } doReturn 20_000L
         }

@@ -14,6 +14,10 @@ interface DirectoryDataSource : ManagedNodeDataSource {
      * Which blockchains to run in which container?
      */
     fun getBlockchainsForContainer(containerID: String): List<BlockchainRid>?
+
+    /**
+     * TODO: [POS-164]: Provide a KDoc
+     */
     fun getContainerForBlockchain(brid: BlockchainRid): String
 
     /**

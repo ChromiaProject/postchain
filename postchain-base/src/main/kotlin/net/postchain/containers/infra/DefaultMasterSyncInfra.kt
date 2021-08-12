@@ -7,6 +7,7 @@ import net.postchain.base.BlockchainRidFactory.cryptoSystem
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.ContainerBlockchainProcess
+import net.postchain.containers.bpm.ContainerChainDir
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
@@ -43,7 +44,7 @@ class DefaultMasterSyncInfra(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
-            chainConfigsDir: Path,
+            containerChainDir: ContainerChainDir,
             restApiPort: Int
     ): ContainerBlockchainProcess {
 
@@ -64,7 +65,7 @@ class DefaultMasterSyncInfra(
                 restApiPort,
                 communicationManager,
                 dataSource,
-                chainConfigsDir
+                containerChainDir
         )
     }
 
