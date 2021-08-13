@@ -32,6 +32,18 @@ declare module "hardhat/types/runtime" {
       name: "TestToken",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TestToken__factory>;
+    getContractFactory(
+      name: "EC",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.EC__factory>;
+    getContractFactory(
+      name: "Hash",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Hash__factory>;
+    getContractFactory(
+      name: "MerkleProof",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MerkleProof__factory>;
 
     // default types
     getContractFactory(

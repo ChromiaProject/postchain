@@ -26,19 +26,12 @@ interface ChrL2Interface extends ethers.utils.Interface {
     "appNodes(uint256)": FunctionFragment;
     "deposit(address,uint256)": FunctionFragment;
     "directoryNodes(uint256)": FunctionFragment;
-    "hashGtvBytes32Leaf(bytes32)": FunctionFragment;
-    "hashGtvBytes64Leaf(bytes)": FunctionFragment;
-    "hashGtvIntegerLeaf(uint256)": FunctionFragment;
     "isValidNodes(bytes32,address[])": FunctionFragment;
-    "merkleRoot(bytes32[])": FunctionFragment;
-    "recover(bytes32,bytes)": FunctionFragment;
-    "sha3Hash(bytes32,bytes32)": FunctionFragment;
     "updateAppNodes(bytes32,bytes[],address[])": FunctionFragment;
     "updateDirectoryNodes(bytes32,bytes[],address[])": FunctionFragment;
     "upperPowerOfTwo(uint256)": FunctionFragment;
     "verifyBlockHeader(bytes)": FunctionFragment;
     "verifyEventHash(bytes,bytes32)": FunctionFragment;
-    "verifyMerkleProof(bytes32[],bytes32,uint256,bytes32)": FunctionFragment;
     "withdraw(address,address)": FunctionFragment;
     "withdraw_request(bytes,bytes32,bytes,bytes[],bytes32[],uint256)": FunctionFragment;
   };
@@ -61,32 +54,8 @@ interface ChrL2Interface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "hashGtvBytes32Leaf",
-    values: [BytesLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "hashGtvBytes64Leaf",
-    values: [BytesLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "hashGtvIntegerLeaf",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "isValidNodes",
     values: [BytesLike, string[]]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "merkleRoot",
-    values: [BytesLike[]]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "recover",
-    values: [BytesLike, BytesLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "sha3Hash",
-    values: [BytesLike, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "updateAppNodes",
@@ -107,10 +76,6 @@ interface ChrL2Interface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "verifyEventHash",
     values: [BytesLike, BytesLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "verifyMerkleProof",
-    values: [BytesLike[], BytesLike, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "withdraw",
@@ -137,24 +102,9 @@ interface ChrL2Interface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "hashGtvBytes32Leaf",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "hashGtvBytes64Leaf",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "hashGtvIntegerLeaf",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "isValidNodes",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "merkleRoot", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "recover", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "sha3Hash", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "updateAppNodes",
     data: BytesLike
@@ -173,10 +123,6 @@ interface ChrL2Interface extends ethers.utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "verifyEventHash",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "verifyMerkleProof",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
@@ -271,43 +217,11 @@ export class ChrL2 extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[string]>;
 
-    hashGtvBytes32Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
-
-    hashGtvBytes64Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
-
-    hashGtvIntegerLeaf(
-      value: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
-
     isValidNodes(
       hash: BytesLike,
       nodes: string[],
       overrides?: CallOverrides
     ): Promise<[boolean]>;
-
-    merkleRoot(
-      nodes: BytesLike[],
-      overrides?: CallOverrides
-    ): Promise<[string]>;
-
-    recover(
-      hash: BytesLike,
-      signature: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
-
-    sha3Hash(
-      left: BytesLike,
-      right: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
 
     updateAppNodes(
       hash: BytesLike,
@@ -338,14 +252,6 @@ export class ChrL2 extends BaseContract {
       _hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string, string, BigNumber]>;
-
-    verifyMerkleProof(
-      proofs: BytesLike[],
-      leaf: BytesLike,
-      position: BigNumberish,
-      root: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
 
     withdraw(
       token: string,
@@ -395,40 +301,11 @@ export class ChrL2 extends BaseContract {
     overrides?: CallOverrides
   ): Promise<string>;
 
-  hashGtvBytes32Leaf(
-    value: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<string>;
-
-  hashGtvBytes64Leaf(
-    value: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<string>;
-
-  hashGtvIntegerLeaf(
-    value: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>;
-
   isValidNodes(
     hash: BytesLike,
     nodes: string[],
     overrides?: CallOverrides
   ): Promise<boolean>;
-
-  merkleRoot(nodes: BytesLike[], overrides?: CallOverrides): Promise<string>;
-
-  recover(
-    hash: BytesLike,
-    signature: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<string>;
-
-  sha3Hash(
-    left: BytesLike,
-    right: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<string>;
 
   updateAppNodes(
     hash: BytesLike,
@@ -459,14 +336,6 @@ export class ChrL2 extends BaseContract {
     _hash: BytesLike,
     overrides?: CallOverrides
   ): Promise<[string, string, BigNumber]>;
-
-  verifyMerkleProof(
-    proofs: BytesLike[],
-    leaf: BytesLike,
-    position: BigNumberish,
-    root: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
 
   withdraw(
     token: string,
@@ -516,40 +385,11 @@ export class ChrL2 extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>;
 
-    hashGtvBytes32Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>;
-
-    hashGtvBytes64Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>;
-
-    hashGtvIntegerLeaf(
-      value: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>;
-
     isValidNodes(
       hash: BytesLike,
       nodes: string[],
       overrides?: CallOverrides
     ): Promise<boolean>;
-
-    merkleRoot(nodes: BytesLike[], overrides?: CallOverrides): Promise<string>;
-
-    recover(
-      hash: BytesLike,
-      signature: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>;
-
-    sha3Hash(
-      left: BytesLike,
-      right: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>;
 
     updateAppNodes(
       hash: BytesLike,
@@ -580,14 +420,6 @@ export class ChrL2 extends BaseContract {
       _hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string, string, BigNumber]>;
-
-    verifyMerkleProof(
-      proofs: BytesLike[],
-      leaf: BytesLike,
-      position: BigNumberish,
-      root: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
 
     withdraw(
       token: string,
@@ -657,41 +489,9 @@ export class ChrL2 extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    hashGtvBytes32Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    hashGtvBytes64Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    hashGtvIntegerLeaf(
-      value: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     isValidNodes(
       hash: BytesLike,
       nodes: string[],
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    merkleRoot(
-      nodes: BytesLike[],
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    recover(
-      hash: BytesLike,
-      signature: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    sha3Hash(
-      left: BytesLike,
-      right: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -722,14 +522,6 @@ export class ChrL2 extends BaseContract {
     verifyEventHash(
       _event: BytesLike,
       _hash: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    verifyMerkleProof(
-      proofs: BytesLike[],
-      leaf: BytesLike,
-      position: BigNumberish,
-      root: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -778,41 +570,9 @@ export class ChrL2 extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    hashGtvBytes32Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    hashGtvBytes64Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    hashGtvIntegerLeaf(
-      value: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     isValidNodes(
       hash: BytesLike,
       nodes: string[],
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    merkleRoot(
-      nodes: BytesLike[],
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    recover(
-      hash: BytesLike,
-      signature: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    sha3Hash(
-      left: BytesLike,
-      right: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -843,14 +603,6 @@ export class ChrL2 extends BaseContract {
     verifyEventHash(
       _event: BytesLike,
       _hash: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    verifyMerkleProof(
-      proofs: BytesLike[],
-      leaf: BytesLike,
-      position: BigNumberish,
-      root: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 

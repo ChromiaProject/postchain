@@ -1,7 +1,9 @@
 import { ethers } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { TestToken__factory, ChrL2__factory } from "../typechain";
+import { TestToken__factory, ChrL2__factory, EC, EC__factory, MerkleProof__factory, Hash__factory } from "../typechain";
+import { ChrL2LibraryAddresses } from "../typechain/factories/ChrL2__factory";
+import { MerkleProofLibraryAddresses } from "../typechain/factories/MerkleProof__factory";
 
 chai.use(solidity);
 const { expect } = chai;
@@ -9,6 +11,10 @@ const { expect } = chai;
 describe("ChrL2", () => {
     let tokenAddress: string;
     let chrL2Address: string;
+    let merkleAddress: string;
+    let hasherAddress: string;
+    let chrL2Interface: ChrL2LibraryAddresses;
+    let merkleProofInterface: MerkleProofLibraryAddresses;
 
     beforeEach(async () => {
         const [deployer] = await ethers.getSigners();
@@ -17,7 +23,21 @@ describe("ChrL2", () => {
         tokenAddress = tokenContract.address;
         expect(await tokenContract.totalSupply()).to.eq(0);
 
-        const chrl2Factory = new ChrL2__factory(deployer);
+        const ecFactory = new EC__factory(deployer);
+        const ec = await ecFactory.deploy();
+        const hashFactory = new Hash__factory(deployer);
+        const hasher = await hashFactory.deploy()
+        hasherAddress = hasher.address;
+        merkleProofInterface = {"__$d42deddc843410a175fce5315eff8fddf4$__": hasherAddress}
+        const merkleFactory = new MerkleProof__factory(merkleProofInterface, deployer);
+        const merkle = await merkleFactory.deploy();
+        merkleAddress = merkle.address;
+        chrL2Interface = {
+            "__$2a5a34f5712a9d42d5a557457b5485a829$__": ec.address,
+            "__$d42deddc843410a175fce5315eff8fddf4$__": hasherAddress,
+            "__$fc40fc502169a2ee9db1b4670a1c17e7ae$__": merkleAddress,
+        }
+        const chrl2Factory = new ChrL2__factory(chrL2Interface, deployer);
         const chrL2Contract = await chrl2Factory.deploy();
         chrL2Address = chrL2Contract.address;
     });
@@ -27,32 +47,32 @@ describe("ChrL2", () => {
 
             it("Non-empty node sha3 hash function", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);                
-                expect(await chrL2Instance.sha3Hash("0x24860e5aba544f2344ca0f3b285c33e7b442e2f2c6d47d4b70dddce79df17f20", 
-                                                    "0x6d8f6f192029b21aedeaa1107974ea6f21c17e071e0ad1268cef4bf16e72772d"))
+                const hashInstance = new Hash__factory(everyone).attach(hasherAddress);
+                expect(await hashInstance.hash("0x24860e5aba544f2344ca0f3b285c33e7b442e2f2c6d47d4b70dddce79df17f20", 
+                                                "0x6d8f6f192029b21aedeaa1107974ea6f21c17e071e0ad1268cef4bf16e72772d"))
                                                     .to.eq("0x0cf42c3b43ad0c84c02c3e553520261b5650ece5ed65bb79a07592f586637f6a");
             })
     
             it("Right empty node sha3 hash function", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);                
-                expect(await chrL2Instance.sha3Hash("0x6c5efa1707c93140989e0f95b9a0b8616e0c8ef51392617bf9c917aff96ef769", 
+                const hashInstance = new Hash__factory(everyone).attach(hasherAddress);
+                expect(await hashInstance.hash("0x6c5efa1707c93140989e0f95b9a0b8616e0c8ef51392617bf9c917aff96ef769", 
                                                     "0x0000000000000000000000000000000000000000000000000000000000000000"))
                                                     .to.eq("0x48febd01a647789e62260070b31361f1b12a0fe90bc7ebb700b511b12b9ca410");
             })
     
             it("Left empty node sha3 hash function", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);                
-                expect(await chrL2Instance.sha3Hash("0x0000000000000000000000000000000000000000000000000000000000000000", 
+                const hashInstance = new Hash__factory(everyone).attach(hasherAddress);
+                expect(await hashInstance.hash("0x0000000000000000000000000000000000000000000000000000000000000000", 
                                                     "0x6c5efa1707c93140989e0f95b9a0b8616e0c8ef51392617bf9c917aff96ef769"))
                                                     .to.eq("0x48febd01a647789e62260070b31361f1b12a0fe90bc7ebb700b511b12b9ca410");
             })
 
             it("All empty node", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);                
-                expect(await chrL2Instance.sha3Hash("0x0000000000000000000000000000000000000000000000000000000000000000", 
+                const hashInstance = new Hash__factory(everyone).attach(hasherAddress);
+                expect(await hashInstance.hash("0x0000000000000000000000000000000000000000000000000000000000000000", 
                                                     "0x0000000000000000000000000000000000000000000000000000000000000000"))
                                                     .to.eq("0x0000000000000000000000000000000000000000000000000000000000000000");                
             })
@@ -61,9 +81,9 @@ describe("ChrL2", () => {
         describe("Merkle Proof", async () => {
             it("Verify valid merkle proof properly", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);
+                const merkleInstance = new MerkleProof__factory(merkleProofInterface, everyone).attach(merkleAddress);
 
-                expect(await chrL2Instance.verifyMerkleProof(["0x57abe736cc8dcd7497b22ba39c7c2009088136d479e23cb7d1526751995832d6", 
+                expect(await merkleInstance.verify(["0x57abe736cc8dcd7497b22ba39c7c2009088136d479e23cb7d1526751995832d6", 
                                                             "0xd103842c6a7267b533021131520f29734b4cd2256ea3851aa963339c9d763904"], 
                                                             "0xcb91922c1d21bea083e4c8689dcd0e8af187e672e8aa63a7af4032971318f7f3", 
                                                             0, 
@@ -72,9 +92,9 @@ describe("ChrL2", () => {
 
             it("Invalid merkle proof", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);
+                const merkleInstance = new MerkleProof__factory(merkleProofInterface, everyone).attach(merkleAddress);
 
-                expect(await chrL2Instance.verifyMerkleProof(["0x57abe736cc8dcd7497b22ba39c7c2009088136d479e23cb7d1526751995832d6", 
+                expect(await merkleInstance.verify(["0x57abe736cc8dcd7497b22ba39c7c2009088136d479e23cb7d1526751995832d6", 
                                                             "0xd103842c6a7267b533021131520f29734b4cd2256ea3851aa963339c9d763904"], 
                                                             "0xcb91922c1d21bea083e4c8689dcd0e8af187e672e8aa63a7af4032971318f7f3", 
                                                             1, 
@@ -86,7 +106,7 @@ describe("ChrL2", () => {
             const eventData = "0x000000000000000000000000E35487517B1BEE0E22DAF706A82F1D3D1FD963FD000000000000000000000000E105BA42B66D08AC7CA7FC48C583599044A6DAB30000000000000000000000000000000000000000000000000000000000000064";            
             it("Verify and encode event properly", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);
+                const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
                 const hash = "0xCB91922C1D21BEA083E4C8689DCD0E8AF187E672E8AA63A7AF4032971318F7F3";
                 const event = await chrL2Instance.verifyEventHash(eventData, hash);
 
@@ -97,7 +117,7 @@ describe("ChrL2", () => {
 
             it("Invalid Event", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);
+                const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
                 const hash = "0xCB91922C1D21BEA083E4C8689DCD0E8AF187E672E8AA63A7AF4032971318F7F2";
 
                 await expect(chrL2Instance.verifyEventHash(eventData, hash)).to.be.revertedWith("invalid event");
@@ -110,7 +130,7 @@ describe("ChrL2", () => {
 
             it("Verify and encode block header properly", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);
+                const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
                 
                 const header = await chrL2Instance.verifyBlockHeader(blockHeaderData);
                 expect(header[0]).to.eq("0x9ea417e3fda249c7dc8d617ccee67726bc37b33db92c62fa3bda367085a47e36");
@@ -120,7 +140,7 @@ describe("ChrL2", () => {
 
             it("Invalid block header", async () => {
                 const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(everyone).attach(chrL2Address);
+                const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
                 
                 await expect(chrL2Instance.verifyBlockHeader(invalidBlockHeaderData)).to.be.revertedWith("invalid block header");
             })
@@ -136,7 +156,7 @@ describe("ChrL2", () => {
             await tokenInstance.mint(user.address, toMint);
             expect(await tokenInstance.totalSupply()).to.eq(toMint);
 
-            const chrL2Instance = new ChrL2__factory(user).attach(chrL2Address);
+            const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address);
             const toDeposit = ethers.utils.parseEther("100");
             const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
             await tokenApproveInstance.approve(chrL2Address, toDeposit);
@@ -151,7 +171,7 @@ describe("ChrL2", () => {
     describe("Nodes", async () => {
         it("Invalid directory node: invalid input data", async () => {
             const [anyone] = await ethers.getSigners();
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address);
+            const chrL2Instance = new ChrL2__factory(chrL2Interface, anyone).attach(chrL2Address);
 
             // Directory Nodes
             await expect(chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdd", 
@@ -162,7 +182,7 @@ describe("ChrL2", () => {
 
         it("Invalid directory node: not enough signature", async () => {
             const [anyone] = await ethers.getSigners();
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address);
+            const chrL2Instance = new ChrL2__factory(chrL2Interface, anyone).attach(chrL2Address);
 
             // Directory Nodes
             await chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdc", 
@@ -177,7 +197,7 @@ describe("ChrL2", () => {
 
         it("Invalid app node: invalid input data", async () => {
             const [anyone] = await ethers.getSigners();
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address);
+            const chrL2Instance = new ChrL2__factory(chrL2Interface, anyone).attach(chrL2Address);
 
             // App Nodes
             await expect(chrL2Instance.updateAppNodes("0x7fcc39140a3e49a5950393cbe3d7e063adb8ede85106a1a7f3e3e610585d1c5b", 
@@ -192,7 +212,7 @@ describe("ChrL2", () => {
 
         it("Invalid app node: not enough signature", async () => {
             const [anyone] = await ethers.getSigners();
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address);
+            const chrL2Instance = new ChrL2__factory(chrL2Interface, anyone).attach(chrL2Address);
 
             // Directory Nodes
             await chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdc", 
@@ -212,7 +232,7 @@ describe("ChrL2", () => {
 
         it("Update directory & app node(s) successfully", async () => {
             const [anyone] = await ethers.getSigners();
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address);
+            const chrL2Instance = new ChrL2__factory(chrL2Interface, anyone).attach(chrL2Address);
 
             // Directory Nodes
             await chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdc", 
