@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./utils/cryptography/Hash.sol";
 import "./utils/cryptography/ECDSA.sol";
 import "./utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./ERC20.sol";
 
 contract ChrL2 {
     using EC for bytes32;

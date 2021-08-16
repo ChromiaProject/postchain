@@ -48,7 +48,7 @@ library Hash {
         remainingValue = value;
         for (uint8 i = 1; i <= nbytes; i++) {
             uint8 v = uint8(remainingValue & 0xFF);
-            b[nbytes - i] = byte(v);
+            b[nbytes - i] = bytes1(v);
             remainingValue = remainingValue >> 8;
         }
 
