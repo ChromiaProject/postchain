@@ -20,6 +20,9 @@ contract ChrL2 {
     address[] public directoryNodes;
     address[] public appNodes;
 
+    // Each postchain event will be used to claim only one time.
+    mapping (bytes32 => bool) private _events;
+
     struct Event {
         ERC20 token;
         address beneficiary;
@@ -126,6 +129,7 @@ contract ChrL2 {
         bytes32[] calldata merkleProofs,
         uint position
     ) public {
+        require(_events[_hash] == false, "ChrL2: event hash was already used");
         _verify(_hash, blockHeader, sigs, merkleProofs, position);
         (ERC20 token, address beneficiary, uint256 amount) = verifyEventHash(_event, _hash);
         require(amount <= _balances[beneficiary][token], "ChrL2: Not enough amount");
@@ -135,6 +139,7 @@ contract ChrL2 {
         wd.block_number = block.number + 50;
         wd.isWithdraw = false;
         _withdraw[token] = wd;
+        _events[_hash] = true; // mark the event hash was already used.
         emit WithdrawRequest(beneficiary, token, amount);
     }
 
