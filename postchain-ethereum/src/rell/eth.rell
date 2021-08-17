@@ -15,6 +15,10 @@ entity eth_event {
 }
 
 struct eth_event_data {
+    eth_block_height: integer;
+    eth_block_hash: byte_array;
+    tnx_hash: byte_array;
+    log_index: integer;
     contract_address: byte_array;
     to_address: byte_array;
     amount: integer;
@@ -64,6 +68,10 @@ operation __eth_event (eth_block_height: integer, eth_block_hash: text, tnx_hash
     );
 
     val eth_event_data = eth_event_data(
+        eth_block_height = eth_event.eth_block.eth_block_height,
+        eth_block_hash = byte_array.from_hex(eth_event.eth_block.eth_block_hash.sub(2)),
+        tnx_hash = byte_array.from_hex(eth_event.tnx_hash.sub(2)),
+        log_index = eth_event.log_index,
         contract_address = byte_array.from_hex("000000000000000000000000" + eth_event.to_address.sub(2)),
         to_address = byte_array.from_hex("000000000000000000000000" + eth_event.from_address.sub(2)),
         amount = eth_event.amount

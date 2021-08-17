@@ -103,11 +103,11 @@ describe("ChrL2", () => {
         })
 
         describe("Event", async () => {
-            const eventData = "0x000000000000000000000000E35487517B1BEE0E22DAF706A82F1D3D1FD963FD000000000000000000000000E105BA42B66D08AC7CA7FC48C583599044A6DAB30000000000000000000000000000000000000000000000000000000000000064";            
+            const eventData = "0x00000000000000000000000000000000000000000000000000000000008B5463A5DA3885FA76D16B0D94736C15DCAAD73532E9116B12614237D33893E22535222DAE52863A41F7F407A10B09974F0289D7F9091CF3BDC47B5522623F20894275000000000000000000000000000000000000000000000000000000000000000F000000000000000000000000E35487517B1BEE0E22DAF706A82F1D3D1FD963FD000000000000000000000000E105BA42B66D08AC7CA7FC48C583599044A6DAB30000000000000000000000000000000000000000000000000000000000000064";            
             it("Verify and encode event properly", async () => {
                 const [everyone] = await ethers.getSigners();
                 const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
-                const hash = "0xCB91922C1D21BEA083E4C8689DCD0E8AF187E672E8AA63A7AF4032971318F7F3";
+                const hash = "0xA2F926169126C8311BF98B017D3DA669C02B1FEA6CB4732C6D46506AA473C199";
                 const event = await chrL2Instance.verifyEventHash(eventData, hash);
 
                 expect(event[0]).to.eq("0xE35487517B1BEE0E22DAF706a82F1d3d1fd963FD");
@@ -118,7 +118,7 @@ describe("ChrL2", () => {
             it("Invalid Event", async () => {
                 const [everyone] = await ethers.getSigners();
                 const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
-                const hash = "0xCB91922C1D21BEA083E4C8689DCD0E8AF187E672E8AA63A7AF4032971318F7F2";
+                const hash = "0xA2F926169126C8311BF98B017D3DA669C02B1FEA6CB4732C6D46506AA473C100";
 
                 await expect(chrL2Instance.verifyEventHash(eventData, hash)).to.be.revertedWith("invalid event");
             })

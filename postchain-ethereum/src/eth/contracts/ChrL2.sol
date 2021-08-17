@@ -24,6 +24,10 @@ contract ChrL2 {
     mapping (bytes32 => bool) private _events;
 
     struct Event {
+        uint256 blockNumber;
+        bytes32 blockHash;
+        bytes32 tnxHash;
+        uint256 logIndex;
         ERC20 token;
         address beneficiary;
         uint256 amount;
