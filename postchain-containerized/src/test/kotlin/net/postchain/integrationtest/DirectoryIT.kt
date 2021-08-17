@@ -35,7 +35,10 @@ import kotlin.test.assertEquals
 const val firstContainerName = "cont1" //for chain 1, 2
 const val secondContainerName = "cont3" //for chain 3
 
-
+/**
+ * For the tests below, a docker image is needed. It can be build with e.g:  `mvn (clean) verify -Dskip.surefire.tests`
+ *
+ */
 class DirectoryIT : ManagedModeTest() {
 
     /**
@@ -43,9 +46,6 @@ class DirectoryIT : ManagedModeTest() {
      * is run in container "cont1" by the subnode.
      *
      */
-
-
-//    @Ignore
     @Test
     fun testMultipleChains() {
         startManagedSystem(1, 0)
@@ -54,13 +54,13 @@ class DirectoryIT : ManagedModeTest() {
 //        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
 //        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont3
         //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
-        // Instead, whait with tear-down to see chains are started in the container:
+        // Instead, whait (sleep) before tear-down to see chains are started in the container:
         sleep(20_000L)
     }
 
 
     /**
-     * More than one node. Docker port, container name and directory for files must be node specific.
+     * With more than one node, docker port, container name and directory for files must be node specific.
      */
     @Ignore
     @Test
@@ -73,6 +73,9 @@ class DirectoryIT : ManagedModeTest() {
         sleep(20_000)
     }
 
+    /**
+     * Assert that ram and cpu limits can be set on the container
+     */
     @Ignore
     @Test
     fun testResourceLimits() {
@@ -89,7 +92,7 @@ class DirectoryIT : ManagedModeTest() {
         buildBlock(c0, 0)
         val ramLimit = 7000_000L
         val cpuQuotaLimit = 90_000L
-        //update dataSource with limit value. This is used when contianer is created (getResourceLimitForContainer)
+        //update dataSource with limit value. This is used when container is created (getResourceLimitForContainer)
         dataSource(0).setLimitsForContainer(firstContainerName, ramLimit, cpuQuotaLimit)
         startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
         sleep(20_000) //we must wait a bit to ensure that container has been created.
@@ -240,8 +243,8 @@ class TestMasterBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationPr
 
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {
 
-    var ram = 7000000L * 1000L
-    var cpu = 100000L
+    var ram = 7000_000_000L
+    var cpu = 100_000L
 
     override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
         val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return mapOf()
