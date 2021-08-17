@@ -83,7 +83,7 @@ open class NodeConfig(val appConfig: AppConfig) {
 
     // BlockchainProcess sleeps for `heartbeatSleepTimeout` ms after every failed Heartbeat check
     val heartbeatSleepTimeout: Long
-        get() = config.getLong("heartbeat.sleep_timeout", 500L)
+        get() = config.getLong("heartbeat.sleep_timeout", 5_000L)
 
     // Enables/disables remote config check
     val remoteConfigEnabled: Boolean

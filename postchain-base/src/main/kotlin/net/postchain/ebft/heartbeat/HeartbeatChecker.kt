@@ -19,36 +19,44 @@ interface HeartbeatChecker {
     fun checkHeartbeat(timestamp: Long): Boolean
 }
 
+open class Chain0HeartbeatChecker() : HeartbeatChecker {
+    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) = Unit
+    override fun checkHeartbeat(timestamp: Long) = true
+}
+
 open class DefaultHeartbeatChecker(val nodeConfig: NodeConfig) : HeartbeatChecker {
 
     companion object : KLogging()
+    private val resultLogger = ResultLogger()
 
     protected var heartbeat: HeartbeatEvent? = null
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
         heartbeat = heartbeatEvent
+        debug { "Heartbeat event registered: $heartbeat" }
     }
 
     override fun checkHeartbeat(timestamp: Long): Boolean {
         // If heartbeat check is disabled, consider it as always passed
         if (!nodeConfig.heartbeatEnabled) {
-            debug { "Heartbeat check passed due to: nodeConfig.heartbeat.enabled = ${nodeConfig.heartbeatEnabled}" }
-            return true
+            return resultLogger.log(1 to true, logger) {
+                "Heartbeat check passed due to: nodeConfig.heartbeat.enabled = ${nodeConfig.heartbeatEnabled}"
+            }
         }
 
         // Heartbeat check is failed if there is no heartbeat event registered
         if (heartbeat == null) {
-            debug { "Heartbeat check failed: no heartbeat event registered" }
-            return false
+            return resultLogger.log(2 to false, logger) {
+                "Heartbeat check failed: no heartbeat event registered"
+            }
         }
 
         val res = timestamp - heartbeat!!.timestamp < nodeConfig.heartbeatTimeout
-        debug {
+        return resultLogger.log(3 to res, logger) {
             "Heartbeat check result: $res (" +
                     "timestamp ($timestamp) - heartbeat.timestamp (${heartbeat!!.timestamp}) " +
                     "< nodeConfig.heartbeatTimeout (${nodeConfig.heartbeatTimeout}))"
         }
-        return res
     }
 
     protected fun debug(msg: () -> Any?) {
