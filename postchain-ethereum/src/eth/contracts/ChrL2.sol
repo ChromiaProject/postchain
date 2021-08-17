@@ -16,7 +16,7 @@ contract ChrL2 {
     bytes32 constant L2_STATE_KEY = 0x04A48CDA5CE81FF2A97A9E2C0F521C2853258D6DDBA62190D3F0A2523B09C4B0;
 
     mapping (address => mapping(ERC20 => uint256)) public _balances;
-    mapping (ERC20 => Withdraw) public _withdraw;
+    mapping (bytes32 => Withdraw) public _withdraw;
     address[] public directoryNodes;
     address[] public appNodes;
 
@@ -42,6 +42,7 @@ contract ChrL2 {
     }
 
     struct Withdraw {
+        ERC20 token;
         address beneficiary;
         uint256 amount;
         uint256 block_number;
@@ -133,12 +134,13 @@ contract ChrL2 {
         _verify(_hash, blockHeader, sigs, merkleProofs, position);
         (ERC20 token, address beneficiary, uint256 amount) = verifyEventHash(_event, _hash);
         require(amount <= _balances[beneficiary][token], "ChrL2: Not enough amount");
-        Withdraw storage wd = _withdraw[token];
+        Withdraw storage wd = _withdraw[_hash];
+        wd.token = token;
         wd.beneficiary = beneficiary;
         wd.amount += amount;
         wd.block_number = block.number + 50;
         wd.isWithdraw = false;
-        _withdraw[token] = wd;
+        _withdraw[_hash] = wd;
         _events[_hash] = true; // mark the event hash was already used.
         emit WithdrawRequest(beneficiary, token, amount);
     }
@@ -154,19 +156,18 @@ contract ChrL2 {
         if (!merkleProofs.verify(_hash, position, eventRoot)) revert("invalid event merkle proof");
     }
 
-    function withdraw(ERC20 token, address payable beneficiary) public returns (bool) {
-        Withdraw storage wd = _withdraw[token];
-        require(wd.amount <= _balances[beneficiary][token], "ChrL2: Not enough ammount to withdraw");
-        if (!wd.isWithdraw && wd.amount > 0 && block.number >= wd.block_number) {
-            wd.isWithdraw = true;
-            uint value = wd.amount;
-            wd.amount = 0;
-            _balances[beneficiary][token] -= value;
-            token.transfer(beneficiary, value);
-            emit Withdrawal(beneficiary, token, value);
-            return true;
-        }
-        return false;
+    function withdraw(bytes32 _hash, address payable beneficiary) public {
+        Withdraw storage wd = _withdraw[_hash];
+        require(wd.beneficiary == beneficiary, "ChrL2: no fund for the beneficiary");
+        require(wd.block_number <= block.number, "ChrL2: no mature enough to withdraw the fund");
+        require(wd.isWithdraw == false, "ChrL2: fund was already claimed");
+        require(wd.amount > 0 && wd.amount <= _balances[beneficiary][wd.token], "ChrL2: Not enough amount to withdraw");
+        wd.isWithdraw = true;
+        uint value = wd.amount;
+        wd.amount = 0;
+        _balances[beneficiary][wd.token] -= value;
+        wd.token.transfer(beneficiary, value);
+        emit Withdrawal(beneficiary, wd.token, value);
     }
 
     function verifyBlockHeader(bytes calldata blockHeader) public pure returns (bytes32, bytes32, bytes32) {

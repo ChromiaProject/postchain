@@ -22,7 +22,7 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 interface ChrL2Interface extends ethers.utils.Interface {
   functions: {
     "_balances(address,address)": FunctionFragment;
-    "_withdraw(address)": FunctionFragment;
+    "_withdraw(bytes32)": FunctionFragment;
     "appNodes(uint256)": FunctionFragment;
     "deposit(address,uint256)": FunctionFragment;
     "directoryNodes(uint256)": FunctionFragment;
@@ -32,7 +32,7 @@ interface ChrL2Interface extends ethers.utils.Interface {
     "upperPowerOfTwo(uint256)": FunctionFragment;
     "verifyBlockHeader(bytes)": FunctionFragment;
     "verifyEventHash(bytes,bytes32)": FunctionFragment;
-    "withdraw(address,address)": FunctionFragment;
+    "withdraw(bytes32,address)": FunctionFragment;
     "withdraw_request(bytes,bytes32,bytes,bytes[],bytes32[],uint256)": FunctionFragment;
   };
 
@@ -40,7 +40,10 @@ interface ChrL2Interface extends ethers.utils.Interface {
     functionFragment: "_balances",
     values: [string, string]
   ): string;
-  encodeFunctionData(functionFragment: "_withdraw", values: [string]): string;
+  encodeFunctionData(
+    functionFragment: "_withdraw",
+    values: [BytesLike]
+  ): string;
   encodeFunctionData(
     functionFragment: "appNodes",
     values: [BigNumberish]
@@ -79,7 +82,7 @@ interface ChrL2Interface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "withdraw",
-    values: [string, string]
+    values: [BytesLike, string]
   ): string;
   encodeFunctionData(
     functionFragment: "withdraw_request",
@@ -193,10 +196,11 @@ export class ChrL2 extends BaseContract {
     ): Promise<[BigNumber]>;
 
     _withdraw(
-      arg0: string,
+      arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<
-      [string, BigNumber, BigNumber, boolean] & {
+      [string, string, BigNumber, BigNumber, boolean] & {
+        token: string;
         beneficiary: string;
         amount: BigNumber;
         block_number: BigNumber;
@@ -254,7 +258,7 @@ export class ChrL2 extends BaseContract {
     ): Promise<[string, string, BigNumber]>;
 
     withdraw(
-      token: string,
+      _hash: BytesLike,
       beneficiary: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
@@ -277,10 +281,11 @@ export class ChrL2 extends BaseContract {
   ): Promise<BigNumber>;
 
   _withdraw(
-    arg0: string,
+    arg0: BytesLike,
     overrides?: CallOverrides
   ): Promise<
-    [string, BigNumber, BigNumber, boolean] & {
+    [string, string, BigNumber, BigNumber, boolean] & {
+      token: string;
       beneficiary: string;
       amount: BigNumber;
       block_number: BigNumber;
@@ -338,7 +343,7 @@ export class ChrL2 extends BaseContract {
   ): Promise<[string, string, BigNumber]>;
 
   withdraw(
-    token: string,
+    _hash: BytesLike,
     beneficiary: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
@@ -361,10 +366,11 @@ export class ChrL2 extends BaseContract {
     ): Promise<BigNumber>;
 
     _withdraw(
-      arg0: string,
+      arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<
-      [string, BigNumber, BigNumber, boolean] & {
+      [string, string, BigNumber, BigNumber, boolean] & {
+        token: string;
         beneficiary: string;
         amount: BigNumber;
         block_number: BigNumber;
@@ -422,10 +428,10 @@ export class ChrL2 extends BaseContract {
     ): Promise<[string, string, BigNumber]>;
 
     withdraw(
-      token: string,
+      _hash: BytesLike,
       beneficiary: string,
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<void>;
 
     withdraw_request(
       _event: BytesLike,
@@ -474,7 +480,7 @@ export class ChrL2 extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    _withdraw(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+    _withdraw(arg0: BytesLike, overrides?: CallOverrides): Promise<BigNumber>;
 
     appNodes(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -526,7 +532,7 @@ export class ChrL2 extends BaseContract {
     ): Promise<BigNumber>;
 
     withdraw(
-      token: string,
+      _hash: BytesLike,
       beneficiary: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
@@ -550,7 +556,7 @@ export class ChrL2 extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     _withdraw(
-      arg0: string,
+      arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -607,7 +613,7 @@ export class ChrL2 extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     withdraw(
-      token: string,
+      _hash: BytesLike,
       beneficiary: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
