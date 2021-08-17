@@ -37,9 +37,16 @@ object ContainerConfigFactory {
         } else mapOf()
 
         /**
+         * CPU:
         $ docker run -it --cpu-period=100000 --cpu-quota=50000 ubuntu /bin/bash.
          Here we leave cpu-period to its default value (100 ms) and control cpu-quota via the dataSource.
+
+        STORAGE: Limited Storage quota with bind mount:
+        You can’t use Docker CLI commands to directly manage bind mounts.
+        $ docker run -d -it --name devtest \
+        --mount type=bind,source="$(pwd)"/target,target=/app ubuntu /bin/bash
          */
+
         // Host config
         val hostConfig = HostConfig.builder()
                 .appendBinds(volume)
