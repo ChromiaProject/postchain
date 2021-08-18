@@ -3,7 +3,10 @@ package net.postchain.network.masterslave
 import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.x.LazyPacket
 
-typealias MsMessageHandler = (message: MsMessage) -> Unit
+interface MsMessageHandler {
+    fun onMessage(message: MsMessage)
+}
+
 
 interface MsConnection {
     fun accept(handler: MsMessageHandler)

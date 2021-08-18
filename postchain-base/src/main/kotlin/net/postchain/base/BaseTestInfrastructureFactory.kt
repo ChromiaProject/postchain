@@ -2,14 +2,15 @@
 
 package net.postchain.base
 
-import net.postchain.api.rest.infra.BaseApiInfrastructure
 import mu.KLogging
+import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.heartbeat.HeartbeatChecker
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 
 class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
@@ -42,15 +43,26 @@ class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
 
 class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
-    override fun init() {}
+    override fun init() = Unit
 
-    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine, historicBlockchainContext: HistoricBlockchainContext?): BlockchainProcess {
+    override fun makeBlockchainProcess(
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            heartbeatChecker: HeartbeatChecker,
+            historicBlockchainContext: HistoricBlockchainContext?
+    ): BlockchainProcess {
         return TestBlockchainProcess(engine)
+    }
+
+    override fun makeHeartbeatChecker(chainId: Long): HeartbeatChecker {
+        return object : HeartbeatChecker {
+            override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) = Unit
+            override fun checkHeartbeat(timestamp: Long): Boolean = true
+        }
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) = Unit
     override fun restartBlockchainProcess(process: BlockchainProcess) = Unit
-
 
     override fun shutdown() = Unit
 }

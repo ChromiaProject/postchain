@@ -19,6 +19,7 @@ enum class DiagnosticProperty(val prettyName: String) {
 }
 
 enum class DpNodeType(val prettyName: String) {
-    NODE_TYPE_SIGNER("signer"),
-    NODE_TYPE_REPLICA("replica")
+    NODE_TYPE_VALIDATOR("Validator"),
+    NODE_TYPE_REPLICA("Replica"),
+    NODE_TYPE_HISTORIC_REPLICA("Historic Replica")
 }

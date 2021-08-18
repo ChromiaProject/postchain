@@ -5,6 +5,7 @@ import net.postchain.base.BlockchainRid
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.api.MasterApiInfra
 import net.postchain.containers.bpm.ContainerBlockchainProcess
+import net.postchain.containers.bpm.ContainerChainDir
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.DirectoryDataSource
@@ -27,11 +28,11 @@ open class DefaultMasterBlockchainInfra(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
-            chainConfigsDir: Path,
+            containerChainDir: ContainerChainDir,
             restApiPort: Int
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(
-                processName, chainId, blockchainRid, dataSource, chainConfigsDir, restApiPort
+                processName, chainId, blockchainRid, dataSource, containerChainDir, restApiPort
         ).also(masterApiInfra::connectContainerProcess)
     }
 }

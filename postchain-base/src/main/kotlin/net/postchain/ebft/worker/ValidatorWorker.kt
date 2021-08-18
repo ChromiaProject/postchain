@@ -26,7 +26,6 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
 
     companion object : KLogging()
 
-    private var heartbeat: HeartbeatEvent? = null
     private lateinit var updateLoop: Thread
     private val shutdown = AtomicBoolean(false)
 
@@ -63,7 +62,8 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
 
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
-        syncManager = ValidatorSyncManager(workerContext,
+        syncManager = ValidatorSyncManager(
+                workerContext,
                 statusManager,
                 blockManager,
                 blockDatabase,
@@ -74,8 +74,6 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
                 workerContext.communicationManager)
 
         statusManager.recomputeStatus()
-
-        workerContext.communicationManager.setHeartbeatListener(this)
 
         startUpdateLoop(syncManager)
     }
@@ -92,7 +90,10 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
                         syncManager.update()
                         Thread.sleep(20)
                     } else {
-                        Thread.sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
+                        val timeout = workerContext.nodeConfig.heartbeatSleepTimeout
+                        logger.warn { "Heartbeat check failed: sleep for $timeout ms" }
+                        Thread.sleep(timeout)
+                        logger.info { "Heartbeat check resumed" }
                     }
                 } catch (e: Exception) {
                     startUpdateErr("Failing to update", e)

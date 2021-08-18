@@ -1,5 +1,6 @@
 package net.postchain.ebft.heartbeat
 
+import mu.KLogging
 import net.postchain.config.node.NodeConfig
 
 interface HeartbeatChecker {
@@ -16,24 +17,51 @@ interface HeartbeatChecker {
      * it returns false, otherwise true.
      */
     fun checkHeartbeat(timestamp: Long): Boolean
-
 }
 
-class DefaultHeartbeatChecker(val nodeConfig: NodeConfig) : HeartbeatChecker {
+open class Chain0HeartbeatChecker() : HeartbeatChecker {
+    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) = Unit
+    override fun checkHeartbeat(timestamp: Long) = true
+}
 
-    private var heartbeat: HeartbeatEvent? = null
+open class DefaultHeartbeatChecker(val nodeConfig: NodeConfig) : HeartbeatChecker {
+
+    companion object : KLogging()
+    private val resultLogger = ResultLogger()
+
+    protected var heartbeat: HeartbeatEvent? = null
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
         heartbeat = heartbeatEvent
+        debug { "Heartbeat event registered: $heartbeat" }
     }
 
     override fun checkHeartbeat(timestamp: Long): Boolean {
-        // If heartbeat check is switched off, consider it as passed
-        if (!nodeConfig.heartbeat) return true
+        // If heartbeat check is disabled, consider it as always passed
+        if (!nodeConfig.heartbeatEnabled) {
+            return resultLogger.log(1 to true, logger) {
+                "Heartbeat check passed due to: nodeConfig.heartbeat.enabled = ${nodeConfig.heartbeatEnabled}"
+            }
+        }
 
-        // Heartbeat check is failed if there is no registered heartbeat event.
-        if (heartbeat == null) return false
+        // Heartbeat check is failed if there is no heartbeat event registered
+        if (heartbeat == null) {
+            return resultLogger.log(2 to false, logger) {
+                "Heartbeat check failed: no heartbeat event registered"
+            }
+        }
 
-        return timestamp - heartbeat!!.timestamp < nodeConfig.heartbeatTimeout
+        val res = timestamp - heartbeat!!.timestamp < nodeConfig.heartbeatTimeout
+        return resultLogger.log(3 to res, logger) {
+            "Heartbeat check result: $res (" +
+                    "timestamp ($timestamp) - heartbeat.timestamp (${heartbeat!!.timestamp}) " +
+                    "< nodeConfig.heartbeatTimeout (${nodeConfig.heartbeatTimeout}))"
+        }
+    }
+
+    protected fun debug(msg: () -> Any?) {
+        if (logger.isDebugEnabled) {
+            logger.debug(msg)
+        }
     }
 }

@@ -7,4 +7,5 @@ set -eu
 
 #copy ..\..\..\..\target\postchain-slavenode-?.?.?-SNAPSHOT-dist.tar.gz .
 cp ../../../../../postchain-base/target/postchain-base-?.?.?-SNAPSHOT-jar-with-dependencies.jar ./scripts/bin/
+cp ../../../../../../rellr/target/rellr-*.*.*-jar-with-dependencies.jar ./scripts/bin/
 

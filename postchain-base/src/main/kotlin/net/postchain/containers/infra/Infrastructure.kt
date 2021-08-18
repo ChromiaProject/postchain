@@ -4,11 +4,11 @@ package net.postchain.containers.infra
 
 import net.postchain.base.BlockchainRid
 import net.postchain.containers.bpm.ContainerBlockchainProcess
+import net.postchain.containers.bpm.ContainerChainDir
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
-import java.nio.file.Path
 
 enum class ContainerResourceType {
     RAM, CPU, STORAGE
@@ -21,7 +21,7 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
-            chainConfigsDir: Path,
+            containerChainDir: ContainerChainDir,
             restApiPort: Int
     ): ContainerBlockchainProcess
 

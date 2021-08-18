@@ -2,7 +2,6 @@
 
 package net.postchain.network
 
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.network.x.XPeerID
 
 interface CommunicationManager<PacketType> {
@@ -22,6 +21,5 @@ interface CommunicationManager<PacketType> {
      * were no peers available, null is returned.
      */
     fun sendToRandomPeer(packet: PacketType, amongPeers: Set<XPeerID>): XPeerID?
-    fun setHeartbeatListener(listener: HeartbeatListener)
     fun shutdown()
 }
