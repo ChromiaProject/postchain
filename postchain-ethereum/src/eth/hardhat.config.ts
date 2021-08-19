@@ -16,6 +16,7 @@ import "solidity-coverage";
 
 import "./tasks/clean";
 import "./tasks/accounts";
+import "./tasks/deployers/chrl2";
 
 const chainIds = {
   ganache: 1337,

@@ -7,7 +7,8 @@
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
-    "coverage": "npx hardhat coverage --temp artifacts --network coverage"
+    "coverage": "npx hardhat coverage --temp artifacts --network coverage",
+    "deploy": "npx hardhat deploy:ChrL2"
   },
   "author": "",
   "license": "MIT",

@@ -35,7 +35,7 @@ Run the Mocha tests:
 $ yarn test
 ```
 
-### Deploy contract to netowrk (requires Mnemonic and infura API key)
+### Deploy contract to network (requires Mnemonic and infura API key)
 
 ```
 npx hardhat run --network rinkeby ./scripts/deploy.ts
