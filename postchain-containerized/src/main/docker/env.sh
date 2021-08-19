@@ -3,6 +3,7 @@
 set -eu
 
 export IMAGE=chromaway/postchain-subnode
-export VER=latest
+export VER=3.4.0
 
-export LOG_DIR=/opt/chromaway/postchain/target/logs
+export TARGET_DIR=target
+export LOG_DIR=/opt/chromaway/postchain/$TARGET_DIR/logs

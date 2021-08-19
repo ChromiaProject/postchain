@@ -50,6 +50,7 @@ class DirectoryIT : ManagedModeTest() {
     fun testMultipleChains() {
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
+//        c0.nodes()[1].blockQueries(c0.chain).getBestHeight().get()
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
 //        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
 //        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont3
@@ -140,6 +141,8 @@ class DirectoryIT : ManagedModeTest() {
         propertyMap.setProperty("brid.chainid.1", chainRidOf(1).toHex())
         propertyMap.setProperty("brid.chainid.2", chainRidOf(2).toHex())
         propertyMap.setProperty("brid.chainid.3", chainRidOf(3).toHex())
+//        propertyMap.setProperty("heartbeat.enabled", true) No need for this. They are overritten in DefaultContainerInitializer anyway
+//        propertyMap.setProperty("remote_config.enabled", true) No need for this. They are overritten in DefaultContainerInitializer anyway
         return propertyMap
     }
 }
