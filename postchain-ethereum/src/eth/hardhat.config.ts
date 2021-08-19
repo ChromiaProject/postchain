@@ -8,16 +8,14 @@ import { HardhatUserConfig } from "hardhat/types";
 import { NetworkUserConfig } from "hardhat/types";
 
 import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
+import 'hardhat-typechain';
+import 'temp-hardhat-etherscan';
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
+import '@tenderly/hardhat-tenderly';
 
 import "hardhat-gas-reporter";
-import "@nomiclabs/hardhat-etherscan";
 import "solidity-coverage";
-
-import "./tasks/clean";
-import "./tasks/accounts";
 
 const chainIds = {
   ganache: 1337,
@@ -36,7 +34,7 @@ const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
 
 // Prevent to load scripts before compilation and typechain
 if (!SKIP_LOAD) {
-  ['deployers'].forEach(
+  ['dev', 'misc'].forEach(
     (folder) => {
       const tasksPath = path.join(__dirname, 'tasks', folder);
       fs.readdirSync(tasksPath)
