@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "clean": "npx hardhat clean",
-    "compile": "npx hardhat compile",
+    "clean": "SKIP_LOAD=true npx hardhat clean",
+    "compile": "SKIP_LOAD=true npx hardhat compile",
     "test": "npx hardhat test",
     "coverage": "npx hardhat coverage --temp artifacts --network coverage",
     "deploy": "npx hardhat deploy:ChrL2"
