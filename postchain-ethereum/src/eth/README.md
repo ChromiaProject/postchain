@@ -42,6 +42,12 @@ Run the Mocha tests:
 $ yarn test
 ```
 
+Run test with gas report
+
+```sh
+$ REPORT_GAS=true yarn test
+```
+
 Run test with solidity coverage report
 
 ```sh
@@ -50,8 +56,8 @@ $ yarn coverage
 
 ### Deploy ChrL2 contract to a network (requires Mnemonic, infura API and Etherscan API key)
 
-```
-yarn deploy --network rinkeby --verify
+```sh
+$ yarn deploy --network rinkeby --verify
 ```
 
 ### Added plugins
