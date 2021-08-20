@@ -34,7 +34,7 @@ task("deploy:ChrL2")
 
     if (verify) {
         // We need to wait a little bit to verify the contract after deployment
-        delay(12000);
+        delay(50000);
         await hre.run("verify:verify", {
             address: chrL2.address,
             libraries: {
