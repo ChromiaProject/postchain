@@ -19,6 +19,13 @@ Before running any command, make sure to install dependencies:
 $ yarn install
 ```
 
+
+### Clean
+
+```sh
+$ yarn clean
+```
+
 ### Compile
 
 Compile the smart contracts with Hardhat:
@@ -35,16 +42,16 @@ Run the Mocha tests:
 $ yarn test
 ```
 
-### Deploy contract to network (requires Mnemonic and infura API key)
+Run test with solidity coverage report
+
+```sh
+$ yarn coverage
+```
+
+### Deploy ChrL2 contract to a network (requires Mnemonic, infura API and Etherscan API key)
 
 ```
-npx hardhat run --network rinkeby ./scripts/deploy.ts
-```
-
-### Validate a contract with etherscan (requires API key)
-
-```
-npx hardhat verify --network <network> <DEPLOYED_CONTRACT_ADDRESS> "Constructor argument 1"
+yarn deploy --network rinkeby --verify
 ```
 
 ### Added plugins
