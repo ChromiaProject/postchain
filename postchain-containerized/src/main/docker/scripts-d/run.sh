@@ -7,7 +7,7 @@ set -eu
 
 date '+%Y %b %d %H:%M'
 
-ALREADY_INITED=$TARGET_DIR/.initialized
+ALREADY_INITED=.initialized
 
 if [ ! -e $ALREADY_INITED ]
 then
