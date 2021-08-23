@@ -2,9 +2,9 @@ import { task } from "hardhat/config";
 import {ChrL2, ChrL2__factory, MerkleProof, MerkleProof__factory, Hash, Hash__factory, EC, EC__factory} from "../../typechain";
 
 task("deploy:ChrL2")
+  .addOptionalParam('directory', 'derectory node')
+  .addOptionalParam('app', 'app node')
   .addFlag('verify', 'Verify contracts at Etherscan')
-  .addParam('directory', 'directory nodes')
-  .addParam('app', 'app nodes')
   .setAction(async ({ verify, directory, app}, hre) => {
     // deploy hash lib
     const hashFactory: Hash__factory = await hre.ethers.getContractFactory("Hash");
@@ -30,18 +30,20 @@ task("deploy:ChrL2")
             MerkleProof: merkleProof.address,
         }
     });
-    const chrL2: ChrL2 = <ChrL2>await chrL2Factory.deploy(directory, app);
+    const directoryNode = directory === undefined ? [] : getNodes(directory);
+    const appNode = app === undefined ? [] : getNodes(app);
+    const chrL2: ChrL2 = <ChrL2>await chrL2Factory.deploy(directoryNode, appNode);
     await chrL2.deployed();
     console.log("ChrL2 deployed to: ", chrL2.address);
 
     if (verify) {
         // We need to wait a little bit to verify the contract after deployment
-        delay(50000);
+        await delay(30000);
         await hre.run("verify:verify", {
             address: chrL2.address,
             constructorArguments: [
-                directory,
-                app
+                directoryNode,
+                appNode
             ],
             libraries: {
                 EC: ec.address,
@@ -54,4 +56,8 @@ task("deploy:ChrL2")
 
 function delay(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getNodes(nodes: string) {
+    return nodes.split(',');
 }
