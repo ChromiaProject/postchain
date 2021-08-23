@@ -10,10 +10,8 @@ object MsCodec {
     fun encode(message: MsMessage): ByteArray {
         val gtv = GtvFactory.gtv(
                 GtvFactory.gtv(message.type.toLong()),
-                GtvFactory.gtv(message.source),
-                GtvFactory.gtv(message.destination),
                 GtvFactory.gtv(message.blockchainRid),
-                GtvFactory.gtv(message.payload)
+                message.getPayload()
         )
 
         return GtvEncoder.encodeGtv(gtv)
@@ -21,23 +19,21 @@ object MsCodec {
 
     fun decode(bytes: ByteArray): MsMessage {
         val gtv = GtvDecoder.decodeGtv(bytes)
-
         val type = gtv[0].asInteger().toInt()
-        val src = gtv[1].asByteArray()
-        val dst = gtv[2].asByteArray()
-        val brid = gtv[3].asByteArray()
-        val data = gtv[4].asByteArray()
+        val brid = gtv[1].asByteArray()
+        val payload = gtv[2]
 
         if (type >= MsMessageType.values().size) {
             throw UnsupportedOperationException("Unknown MsMessage type: $type")
         }
 
         return when (MsMessageType.values()[type]) {
-            HandshakeMessage -> MsHandshakeMessage(brid, data)
-            DataMessage -> MsDataMessage(src, dst, brid, data)
-            HeartbeatMessage -> MsHeartbeatMessage(brid, data)
-            GetBlockchainConfig -> MsGetBlockchainConfigMessage(brid)
-            BlockchainConfig -> MsBlockchainConfigMessage(brid, 0L, data) // TODO: [et]: Fix it
+            HandshakeMessage -> MsHandshakeMessage(brid, payload)
+            DataMessage -> MsDataMessage(brid, payload)
+            HeartbeatMessage -> MsHeartbeatMessage(brid, payload)
+            FindNextBlockchainConfig -> MsFindNextBlockchainConfigMessage(brid, payload)
+            NextBlockchainConfig -> MsNextBlockchainConfigMessage(brid, payload)
+            SubnodeStatus -> MsSubnodeStatusMessage(brid, payload)
         }
     }
 }

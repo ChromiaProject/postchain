@@ -12,6 +12,7 @@ import net.postchain.network.x.XPeerID
 import java.time.Instant
 
 open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeConfig) : ManagedNodeDataSource {
+
     override fun getPeerInfos(): Array<PeerInfo> {
         // TODO: [POS-90]: Implement correct error processing
         val res = queries.query("nm_get_peer_infos", buildArgs())
@@ -79,9 +80,9 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: 
     }
 
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
-        val nm_api_version = queries.query("nm_api_version", buildArgs()).get().asInteger()
-        if (nm_api_version == 1L) {
-            return mapOf()
+        val nmApiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger()
+        return if (nmApiVersion == 1L) {
+            mapOf()
         } else {
             val blockchains = computeBlockchainList()
             val heights = queries.query(
@@ -91,10 +92,8 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: 
                     ))
             ).get().asArray()
 
-            return blockchains.mapIndexed { i, brid ->
-                BlockchainRid(brid) to if (i < heights.size) {
-                    heights[i].asInteger()
-                } else -1
+            blockchains.mapIndexed { i, brid ->
+                BlockchainRid(brid) to if (i < heights.size) heights[i].asInteger() else -1
             }.toMap()
         }
     }

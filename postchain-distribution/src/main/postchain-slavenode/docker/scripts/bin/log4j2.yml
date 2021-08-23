@@ -66,4 +66,10 @@ Configuration:
       - ref: ConsoleAppender
       - ref: FileAppender
 
+    - name: net.postchain.ebft.heartbeat
+      level: debug
+      additivity: false
+      AppenderRef:
+        - ref: ConsoleAppender
+        - ref: FileAppender
 

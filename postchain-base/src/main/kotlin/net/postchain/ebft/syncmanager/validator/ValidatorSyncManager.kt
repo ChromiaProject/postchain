@@ -27,11 +27,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * The ValidatorSyncManager handles communications with our peers.
  */
-class ValidatorSyncManager(private val workerContext: WorkerContext,
-                           private val statusManager: StatusManager,
-                           private val blockManager: BlockManager,
-                           private val blockDatabase: BlockDatabase,
-                           private val nodeStateTracker: NodeStateTracker
+class ValidatorSyncManager(
+        private val workerContext: WorkerContext,
+        private val statusManager: StatusManager,
+        private val blockManager: BlockManager,
+        private val blockDatabase: BlockDatabase,
+        private val nodeStateTracker: NodeStateTracker
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager), SyncManager {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(10000, statusManager)

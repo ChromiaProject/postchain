@@ -133,9 +133,9 @@ open class EBFTSynchronizationInfrastructure(
         }
     }
 
-    override fun makeHeartbeatChecker(chainId: Long): HeartbeatChecker {
+    override fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {
         return if (chainId == 0L) Chain0HeartbeatChecker()
-        else DefaultHeartbeatChecker(nodeConfig)
+        else DefaultHeartbeatChecker(nodeConfig, chainId)
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {

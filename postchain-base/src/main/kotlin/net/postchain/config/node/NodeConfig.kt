@@ -76,6 +76,9 @@ open class NodeConfig(val appConfig: AppConfig) {
     val heartbeatEnabled: Boolean
         get() = config.getBoolean("heartbeat.enabled", true)
 
+    val heartbeatTestmode: Boolean
+        get() = config.getBoolean("heartbeat.testmode", false)
+
     // Heartbeat check is failed if there is no heartbeat event registered for the last
     // `max(maxBlockTime, heartbeatTimeout)` ms
     val heartbeatTimeout: Long
