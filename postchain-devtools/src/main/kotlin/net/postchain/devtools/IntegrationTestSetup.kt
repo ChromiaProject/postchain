@@ -72,7 +72,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
             expectedSuccessRids = mutableMapOf()
             configOverrides.clear()
             TestBlockchainRidCache.clear()
-            logger.debug("teadDown() done")
+            logger.debug("tearDown() done")
         } catch (t: Throwable) {
             logger.error("tearDown() failed", t)
         }

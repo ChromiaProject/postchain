@@ -179,4 +179,5 @@ then
 	. /circleconfig/postgres/customizations
 fi
 
+#touch /postgres_started
 exec "$@"

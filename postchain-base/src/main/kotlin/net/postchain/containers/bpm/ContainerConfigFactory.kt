@@ -25,7 +25,6 @@ object ContainerConfigFactory {
          * DockerPort must be both node and container specific and cannot be -1 or 0 (at least not allowed in Ubuntu.)
          * Therefore use random port selection
          */
-
         // Likely to be a unique port but not 100% guarantee.
         // Also not 100% sure that port is still free when connection is made
         val dockerPort = "${nodeConfig.subnodeRestApiPort}/tcp"

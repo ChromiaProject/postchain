@@ -32,8 +32,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.test.assertEquals
 
-const val firstContainerName = "cont1" //for chain 1, 2
-const val secondContainerName = "cont3" //for chain 3
+const val firstContainerName = "cont1" //for chain 1
+const val secondContainerName = "cont2" //for chain 2, 3
 
 /**
  * For the tests below, a docker image is needed. It can be build with e.g:  `mvn (clean) verify -Dskip.surefire.tests`
@@ -41,22 +41,32 @@ const val secondContainerName = "cont3" //for chain 3
  */
 class DirectoryIT : ManagedModeTest() {
 
+    @Test
+    fun testSingleChain() {
+        startManagedSystem(1, 0)
+        buildBlock(c0, 0)
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+        //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
+        // Instead, whait (sleep) before tear-down to see chains are started in the container:
+        sleep(20_000L)
+    }
     /**
-     * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1, c2
-     * is run in container "cont1" by the subnode.
+     * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1
+     * is run in container "cont1" by the subnode. c2, and c3 in cont2
      *
      */
     @Test
+    @Ignore
     fun testMultipleChains() {
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
 //        c0.nodes()[1].blockQueries(c0.chain).getBestHeight().get()
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
-//        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
-//        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont3
+        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c2 in cont2
+//        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont2
         //TODO: waitForRestart does not work since we do not have access to heights of chains run o0n subnodes.
         // Instead, whait (sleep) before tear-down to see chains are started in the container:
-        sleep(20_000L)
+        sleep(40_000L)
     }
 
 
@@ -265,21 +275,21 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
         return listOf("system", firstContainerName, secondContainerName)
     }
 
-    //chain 0 in system container, chain1-2 in cont1 container. chain3 in cont3 container.
+    //chain 0 in system container, chain1 in cont1 container. chain2 and chain3 in cont2 container.
     override fun getBlockchainsForContainer(containerID: String): List<BlockchainRid>? {
         if (containerID == firstContainerName) {
-            return listOf(chainRidOf(1), chainRidOf(2))
+            return listOf(chainRidOf(1))
         } else if (containerID == secondContainerName) {
-            return listOf(chainRidOf(3))
+            return listOf(chainRidOf(2), chainRidOf(3))
         } else {
             return listOf(chainRidOf(0))
         }
     }
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String {
-        if ((brid == chainRidOf(1)) or (brid == chainRidOf(2))) {
+        if (brid == chainRidOf(1)) {
             return firstContainerName
-        } else if (brid == chainRidOf(3)) {
+        } else if ((brid == chainRidOf(2)) or (brid == chainRidOf(3))) {
             return secondContainerName
         } else {
             return "system"

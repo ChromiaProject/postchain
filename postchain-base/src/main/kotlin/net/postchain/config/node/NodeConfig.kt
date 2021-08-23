@@ -46,7 +46,7 @@ open class NodeConfig(val appConfig: AppConfig) {
     val masterPort: Int
         get() = config.getInt("containerChains.masterPort", 9860)
 
-    // Used by master
+    // Used by master for restAPI communication with subnode
     val slaveHost: String
         get() = config.getString("containerChains.slaveHost", "localhost")
 
