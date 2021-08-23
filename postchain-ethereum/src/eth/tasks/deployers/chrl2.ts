@@ -3,7 +3,9 @@ import {ChrL2, ChrL2__factory, MerkleProof, MerkleProof__factory, Hash, Hash__fa
 
 task("deploy:ChrL2")
   .addFlag('verify', 'Verify contracts at Etherscan')
-  .setAction(async ({ verify }, hre) => {
+  .addParam('directory', 'directory nodes')
+  .addParam('app', 'app nodes')
+  .setAction(async ({ verify, directory, app}, hre) => {
     // deploy hash lib
     const hashFactory: Hash__factory = await hre.ethers.getContractFactory("Hash");
     const hash: Hash = <Hash>await hashFactory.deploy()
@@ -28,7 +30,7 @@ task("deploy:ChrL2")
             MerkleProof: merkleProof.address,
         }
     });
-    const chrL2: ChrL2 = <ChrL2>await chrL2Factory.deploy();
+    const chrL2: ChrL2 = <ChrL2>await chrL2Factory.deploy(directory, app);
     await chrL2.deployed();
     console.log("ChrL2 deployed to: ", chrL2.address);
 
@@ -37,6 +39,10 @@ task("deploy:ChrL2")
         delay(50000);
         await hre.run("verify:verify", {
             address: chrL2.address,
+            constructorArguments: [
+                directory,
+                app
+            ],
             libraries: {
                 EC: ec.address,
                 Hash: hash.address,

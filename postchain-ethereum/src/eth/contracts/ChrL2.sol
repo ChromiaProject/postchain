@@ -57,6 +57,11 @@ contract ChrL2 {
     event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
 
+    constructor(address[] memory _directoryNodes, address[] memory _appNodes) {
+        directoryNodes = _directoryNodes;
+        appNodes = _appNodes;
+    }
+
     function updateDirectoryNodes(bytes32 hash, bytes[] memory sigs, address[] memory _directoryNodes) public returns (bool) {
         if (!isValidNodes(hash, _directoryNodes)) revert("ChrL2: Invalid directory node");
         uint BFTRequiredNum = _calculateBFTRequiredNum(directoryNodes.length);
