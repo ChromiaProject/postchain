@@ -2,6 +2,7 @@
 
 package net.postchain.core
 
+import net.postchain.base.BlockchainRid
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
@@ -29,7 +30,7 @@ interface SynchronizationInfrastructure : Shutdownable {
     /**
      * Creates [HeartbeatChecker] for specific BlockchainProcess
      */
-    fun makeHeartbeatChecker(chainId: Long): HeartbeatChecker
+    fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker
 
     /**
      * Call this hook upon blockchain process restart.

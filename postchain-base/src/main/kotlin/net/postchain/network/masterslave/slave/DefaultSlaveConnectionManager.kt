@@ -10,7 +10,7 @@ import net.postchain.network.masterslave.MsConnection
 import net.postchain.network.masterslave.MsMessageHandler
 import net.postchain.network.masterslave.protocol.MsCodec
 import net.postchain.network.masterslave.protocol.MsDataMessage
-import net.postchain.network.masterslave.protocol.MsGetBlockchainConfigMessage
+import net.postchain.network.masterslave.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.slave.netty.NettySlaveConnector
 import net.postchain.network.x.LazyPacket
@@ -26,7 +26,10 @@ import kotlin.concurrent.schedule
  */
 interface SlaveConnectionManager : XConnectionManager {
     fun setMsMessageHandler(chainId: Long, handler: MsMessageHandler)
+
+    @Deprecated("POS-164")
     fun requestBlockchainConfig(chainId: Long)
+    fun sendMessageToMaster(chainId: Long, message: MsMessage)
 }
 
 
@@ -47,7 +50,7 @@ class DefaultSlaveConnectionManager(
         val msMessageHandler: MsMessageHandler = object : MsMessageHandler {
             override fun onMessage(message: MsMessage) {
                 when (message) {
-                    is MsDataMessage -> config.packetHandler(message.payload, XPeerID(message.source))
+                    is MsDataMessage -> config.packetHandler(message.xPacket, XPeerID(message.source))
                     else -> msMessageHandlerSupplier(config.chainId)?.onMessage(message)
                 }
             }
@@ -191,7 +194,7 @@ class DefaultSlaveConnectionManager(
 
     @Synchronized
     override fun onMasterDisconnected(descriptor: SlaveConnectionDescriptor, connection: MsConnection) {
-        logger.debug { "${logger(descriptor)}: Master node disconnected: blockchainRid = ${descriptor.blockchainRid}" }
+        logger.info { "${logger(descriptor)}: Master node disconnected: blockchainRid = ${descriptor.blockchainRid}" }
 
         val chain = findChainByBrid(descriptor.blockchainRid)
         if (chain == null) {
@@ -216,7 +219,16 @@ class DefaultSlaveConnectionManager(
     override fun requestBlockchainConfig(chainId: Long) {
         val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
         if (chain.connection != null) {
-            val message = MsGetBlockchainConfigMessage(chain.config.blockchainRid.data)
+            val message = MsFindNextBlockchainConfigMessage(chain.config.blockchainRid.data, 0, null)
+            chain.connection?.sendPacket { MsCodec.encode(message) }
+        } else {
+            logger.error("${logger(chain)}: Can't send packet to master node blockchainRid = ${chain.config.blockchainRid}")
+        }
+    }
+
+    override fun sendMessageToMaster(chainId: Long, message: MsMessage) {
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
+        if (chain.connection != null) {
             chain.connection?.sendPacket { MsCodec.encode(message) }
         } else {
             logger.error("${logger(chain)}: Can't send packet to master node blockchainRid = ${chain.config.blockchainRid}")
@@ -239,7 +251,7 @@ class DefaultSlaveConnectionManager(
     }
 
     private fun loggerPrefix(blockchainRid: BlockchainRid): String =
-            BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
+        BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
 
     private fun logger(descriptor: SlaveConnectionDescriptor): String = loggerPrefix(descriptor.blockchainRid)
 

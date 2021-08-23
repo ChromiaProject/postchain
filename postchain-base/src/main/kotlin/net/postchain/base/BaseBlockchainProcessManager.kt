@@ -30,10 +30,10 @@ import java.util.concurrent.TimeUnit
  * If you don't want to wait for startup you can schedule a start via a the "startBlockchainAsync()"
  */
 open class BaseBlockchainProcessManager(
-    protected val blockchainInfrastructure: BlockchainInfrastructure,
-    protected val nodeConfigProvider: NodeConfigurationProvider,
-    protected val blockchainConfigProvider: BlockchainConfigurationProvider,
-    protected val nodeDiagnosticContext: NodeDiagnosticContext
+        protected val blockchainInfrastructure: BlockchainInfrastructure,
+        protected val nodeConfigProvider: NodeConfigurationProvider,
+        protected val blockchainConfigProvider: BlockchainConfigurationProvider,
+        protected val nodeDiagnosticContext: NodeDiagnosticContext
 ) : BlockchainProcessManager {
 
     override val synchronizer = Any()
@@ -45,7 +45,7 @@ open class BaseBlockchainProcessManager(
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
-    protected val heartbeatManager = DefaultHeartbeatManager()
+    protected val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
 
     // For DEBUG only
     var insideATest = false
@@ -98,7 +98,7 @@ open class BaseBlockchainProcessManager(
                     if (configuration != null) {
 
                         val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                            configuration, eContext, NODE_ID_AUTO, chainId
+                                configuration, eContext, NODE_ID_AUTO, chainId
                         )
 
                         val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
@@ -126,17 +126,17 @@ open class BaseBlockchainProcessManager(
                          */
 
                         val histConf: HistoricBlockchainContext? =
-                            if (blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid) {
-                                val ancestors = nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
-                                HistoricBlockchainContext(
-                                    blockchainConfig.effectiveBlockchainRID, ancestors
-                                        ?: emptyMap()
-                                )
-                            } else null
+                                if (blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid) {
+                                    val ancestors = nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
+                                    HistoricBlockchainContext(
+                                            blockchainConfig.effectiveBlockchainRID, ancestors
+                                            ?: emptyMap()
+                                    )
+                                } else null
 
+                        val heartbeatChecker = buildHeartbeatChecker(chainId, blockchainConfig.blockchainRid)
                         val process = blockchainInfrastructure.makeBlockchainProcess(
-                            processName, engine, buildHeartbeatChecker(chainId), histConf
-                        )
+                                processName, engine, heartbeatChecker, histConf)
                         blockchainProcesses[chainId] = process
                         heartbeatManager.addListener(process)
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
@@ -218,7 +218,7 @@ open class BaseBlockchainProcessManager(
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
     protected open fun buildRestartHandler(chainId: Long): RestartHandler {
-        val foo: (BlockTimestamp: Long, BlockTrace?) -> Boolean = { l: Long, bTrace: BlockTrace? ->
+        return { _: Long, bTrace: BlockTrace? ->
             testDebug("BaseBlockchainProcessManager's (normal) restart of: $chainId", bTrace)
             val doRestart = withReadConnection(storage, chainId) { eContext ->
                 blockchainConfigProvider.needsConfigurationChange(eContext, chainId)
@@ -231,22 +231,15 @@ open class BaseBlockchainProcessManager(
 
             doRestart
         }
-        return foo
     }
 
-    protected fun buildHeartbeatChecker(chainId: Long): HeartbeatChecker {
-        val heartbeatChecker = blockchainInfrastructure.makeHeartbeatChecker(chainId)
+    protected fun buildHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {
+        val heartbeatChecker = blockchainInfrastructure.makeHeartbeatChecker(chainId, blockchainRid)
 
-        if (heartbeatChecker is RemoteConfigChecker) { // nodeConfig.remoteConfigEnabled
-            heartbeatChecker.remoteConfigConsumer = { height, remoteConfig ->
-                val details = "chainId: $chainId, height: $height, remote config length: ${remoteConfig.size}"
-                logger.debug { "Remote config is going to be stored: $details" }
-                withWriteConnection(storage, chainId) { ctx ->
-                    BaseConfigurationDataStore.addConfigurationData(ctx, height, remoteConfig)
-                    true
-                }
-                logger.debug { "Remote config stored: $details" }
-            }
+        // TODO: [POS-164]: Redesign this / RemoteConfigChecker
+        if (heartbeatChecker is RemoteConfigChecker) { // will be true if nodeConfig.remoteConfigEnabled
+            heartbeatChecker.blockchainConfigProvider = blockchainConfigProvider
+            heartbeatChecker.storage = storage
         }
 
         return heartbeatChecker
@@ -260,19 +253,19 @@ open class BaseBlockchainProcessManager(
     private fun logPeerTopology(chainId: Long) {
         // TODO: [et]: Fix links to EBFT entities
         val topology = ((blockchainInfrastructure as BaseBlockchainInfrastructure)
-            .synchronizationInfrastructure as? EBFTSynchronizationInfrastructure)
-            ?.connectionManager?.getPeersTopology(chainId)
-            ?.mapKeys {
-                peerName(it.key)
-            }
-            ?: emptyMap()
+                .synchronizationInfrastructure as? EBFTSynchronizationInfrastructure)
+                ?.connectionManager?.getPeersTopology(chainId)
+                ?.mapKeys {
+                    peerName(it.key)
+                }
+                ?: emptyMap()
 
         val prettyTopology = topology.mapValues {
             it.value
-                .replace("c>", "${nodeName()}>")
-                .replace("s<", "${nodeName()}<")
-                .replace("<c", "<${peerName(it.key)}")
-                .replace(">s", ">${peerName(it.key)}")
+                    .replace("c>", "${nodeName()}>")
+                    .replace("s<", "${nodeName()}<")
+                    .replace("<c", "<${peerName(it.key)}")
+                    .replace(">s", ">${peerName(it.key)}")
         }
 
         logger.trace {
@@ -293,13 +286,13 @@ open class BaseBlockchainProcessManager(
      */
     protected fun testDebug(str: String) {
         if (isThisATest()) {
-            System.out.println("RestartHandler: $str")
+            println("RestartHandler: $str")
         }
     }
 
     protected fun testDebug(str: String, bTrace: BlockTrace?) {
         if (isThisATest()) {
-            System.out.println("RestartHandler: $str, block causing this: $bTrace")
+            println("RestartHandler: $str, block causing this: $bTrace")
         }
     }
 
@@ -342,7 +335,7 @@ open class BaseBlockchainProcessManager(
 
     private fun startInfo(str: String, processName: BlockchainProcessName, chainId: Long) {
         if (logger.isInfoEnabled) {
-            logger.info("$processName: stopBlockchain() - $str: chainId: $chainId")
+            logger.info("$processName: startBlockchain() - $str: chainId: $chainId")
         }
     }
 

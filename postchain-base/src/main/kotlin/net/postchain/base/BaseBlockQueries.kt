@@ -29,11 +29,12 @@ class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witnes
  * @param chainID Blockchain identifier
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
-open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfiguration,
-                            private val storage: Storage,
-                            private val blockStore: BlockStore,
-                            private val chainId: Long,
-                            private val mySubjectId: ByteArray
+open class BaseBlockQueries(
+        private val blockchainConfiguration: BlockchainConfiguration,
+        private val storage: Storage,
+        private val blockStore: BlockStore,
+        private val chainId: Long,
+        private val mySubjectId: ByteArray
 ) : BlockQueries {
 
     companion object : KLogging()

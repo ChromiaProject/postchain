@@ -7,7 +7,6 @@ import net.postchain.core.BlockDataWithWitness
 import net.postchain.core.Signature
 import net.postchain.debug.BlockTrace
 import nl.komponents.kovenant.Promise
-import java.lang.RuntimeException
 import java.util.*
 
 interface ErrContext {
@@ -168,5 +167,5 @@ interface StatusManager {
     fun getCommitSignature(): Signature?
 }
 
-class BDBAbortException(val block: BlockDataWithWitness, val prev: CompletionPromise):
+class BDBAbortException(val block: BlockDataWithWitness, val prev: CompletionPromise) :
         RuntimeException("BlockDatabase aborted execution of an addBlock task because previous task failed")

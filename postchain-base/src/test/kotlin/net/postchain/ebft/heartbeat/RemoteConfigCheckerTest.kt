@@ -1,9 +1,10 @@
 package net.postchain.ebft.heartbeat
 
 import com.nhaarman.mockitokotlin2.*
+import net.postchain.base.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.node.NodeConfig
-import net.postchain.network.masterslave.protocol.MsBlockchainConfigMessage
+import net.postchain.network.masterslave.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.masterslave.slave.SlaveConnectionManager
 import org.junit.Test
 import kotlin.test.assertFalse
@@ -11,6 +12,7 @@ import kotlin.test.assertFalse
 class RemoteConfigCheckerTest {
 
     private val chainId = 0L
+    private val blockchainRid = BlockchainRid.ZERO_RID
     private val now = System.currentTimeMillis()
 
     @Test
@@ -19,7 +21,7 @@ class RemoteConfigCheckerTest {
             on { heartbeatEnabled } doReturn (true)
         }
         val connManager: SlaveConnectionManager = mock()
-        val sut = RemoteConfigChecker(nodeConfig, chainId, connManager)
+        val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager)
 
         // No interaction
         // ...
@@ -38,7 +40,7 @@ class RemoteConfigCheckerTest {
             on { heartbeatTimeout } doReturn 20_000L
         }
         val connManager: SlaveConnectionManager = mock()
-        val sut = RemoteConfigChecker(nodeConfig, chainId, connManager)
+        val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager)
 
         // Interaction: Register the first Heartbeat event
         sut.onHeartbeat(HeartbeatEvent(now - 30_000L))
@@ -60,8 +62,7 @@ class RemoteConfigCheckerTest {
             on { remoteConfigTimeout } doReturn 20_000L
         }
         val connManager: SlaveConnectionManager = mock()
-        val sut = RemoteConfigChecker(nodeConfig, chainId, connManager)
-                .apply { remoteConfigConsumer = { _, _ -> } }
+        val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager)
 
         // 1
         // Interaction: Register the first Heartbeat event
@@ -76,7 +77,7 @@ class RemoteConfigCheckerTest {
 
         // 2
         // Interaction (2): Then remote config received
-        val remoteConfig = MsBlockchainConfigMessage("aaaa".hexStringToByteArray(), 0L, "bbbb".hexStringToByteArray())
+        val remoteConfig = MsNextBlockchainConfigMessage("aaaa".hexStringToByteArray(), 0L, "bbbb".hexStringToByteArray())
         sut.onMessage(remoteConfig)
 
         // Assert (2): Heartbeat event registered, RemoteConfig received and RemoteConfig check PASSED

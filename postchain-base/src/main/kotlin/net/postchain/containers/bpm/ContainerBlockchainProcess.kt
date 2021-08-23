@@ -27,7 +27,7 @@ class DefaultContainerBlockchainProcess(
         override val blockchainRid: BlockchainRid,
         override val restApiPort: Int,
         private val communicationManager: MasterCommunicationManager,
-        private val dataSource: DirectoryDataSource,
+        private val dataSource: DirectoryDataSource, // TODO [POS-164]: (!)
         private val containerChainDir: ContainerChainDir
 ) : ContainerBlockchainProcess {
 

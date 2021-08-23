@@ -25,55 +25,56 @@ import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
 /**
  * Tuning parameters for FastSychronizer. All times are in ms.
  */
-data class FastSyncParameters(var resurrectDrainedTime: Long = 10000,
-                              var resurrectUnresponsiveTime: Long = 20000,
-                              /**
-                               * For tiny blocks it might make sense to increase parallelism to, eg 100,
-                               * to increase throughput by ~6x (as experienced through experiments),
-                               * but for non-trivial blockchains, this will require substantial amounts
-                               * of memory, worst case about parallelism*blocksize.
-                               *
-                               * There seems to be a sweet-spot throughput-wise at parallelism=120,
-                               * but it can come at great memory cost. We set this to 10
-                               * to be safe.
-                               *
-                               * Ultimately, this should be a configuration setting.
-                               */
-                              var parallelism: Int = 10,
-                              /**
-                               * Don't exit fastsync for at least this amount of time (ms).
-                               * This gives the connection manager some time to accumulate
-                               * connections so that the random peer selection has more
-                               * peers to chose from, to avoid exiting fastsync
-                               * prematurely because one peer is connected quicker, giving
-                               * us the impression that there is only one reachable node.
-                               *
-                               * Example: I'm A(height=-1), and B(-1),C(-1),D(0) are peers. When entering FastSync
-                               * we're only connected to B.
-                               *
-                               * * Send a GetBlockHeaderAndBlock(0) to B
-                               * * B replies with empty block header and we mark it as drained(-1).
-                               * * We conclude that we have drained all peers at -1 and exit fastsync
-                               * * C and D connections are established.
-                               *
-                               * We have exited fastsync before we had a chance to sync from C and D
-                               *
-                               * Sane values:
-                               * Replicas: not used
-                               * Signers: 60000ms
-                               * Tests with single node: 0
-                               * Tests with multiple nodes: 1000
-                               */
-                              var exitDelay: Long = 60000,
-                              var pollPeersInterval: Long = 10000,
-                              var jobTimeout: Long = 10000,
-                              var loopInterval: Long = 100,
-                              var mustSyncUntilHeight: Long = -1,
-                              var maxErrorsBeforeBlacklisting: Int = 10,
-                              /**
-                               * 10 minutes in milliseconds
-                               */
-                              var blacklistingTimeoutMs: Long = 10 * 60 * 1000)
+data class FastSyncParameters(
+        var resurrectDrainedTime: Long = 10000,
+        var resurrectUnresponsiveTime: Long = 20000,
+        /**
+         * For tiny blocks it might make sense to increase parallelism to, eg 100,
+         * to increase throughput by ~6x (as experienced through experiments),
+         * but for non-trivial blockchains, this will require substantial amounts
+         * of memory, worst case about parallelism*blocksize.
+         *
+         * There seems to be a sweet-spot throughput-wise at parallelism=120,
+         * but it can come at great memory cost. We set this to 10
+         * to be safe.
+         *
+         * Ultimately, this should be a configuration setting.
+         */
+        var parallelism: Int = 10,
+        /**
+         * Don't exit fastsync for at least this amount of time (ms).
+         * This gives the connection manager some time to accumulate
+         * connections so that the random peer selection has more
+         * peers to chose from, to avoid exiting fastsync
+         * prematurely because one peer is connected quicker, giving
+         * us the impression that there is only one reachable node.
+         *
+         * Example: I'm A(height=-1), and B(-1),C(-1),D(0) are peers. When entering FastSync
+         * we're only connected to B.
+         *
+         * * Send a GetBlockHeaderAndBlock(0) to B
+         * * B replies with empty block header and we mark it as drained(-1).
+         * * We conclude that we have drained all peers at -1 and exit fastsync
+         * * C and D connections are established.
+         *
+         * We have exited fastsync before we had a chance to sync from C and D
+         *
+         * Sane values:
+         * Replicas: not used
+         * Signers: 60000ms
+         * Tests with single node: 0
+         * Tests with multiple nodes: 1000
+         */
+        var exitDelay: Long = 60000,
+        var pollPeersInterval: Long = 10000,
+        var jobTimeout: Long = 10000,
+        var loopInterval: Long = 100,
+        var mustSyncUntilHeight: Long = -1,
+        var maxErrorsBeforeBlacklisting: Int = 10,
+        /**
+         * 10 minutes in milliseconds
+         */
+        var blacklistingTimeoutMs: Long = 10 * 60 * 1000)
 
 /**
  * This class syncs blocks from its peers by requesting <parallelism> blocks
@@ -97,9 +98,10 @@ data class FastSyncParameters(var resurrectDrainedTime: Long = 10000,
  * or so upon first start. But in tests, this can be really annoying. So tests that only runs a single node
  * should set [params.exitDelay] to 0.
  */
-class FastSynchronizer(private val workerContext: WorkerContext,
-                       val blockDatabase: BlockDatabase,
-                       val params: FastSyncParameters
+class FastSynchronizer(
+        private val workerContext: WorkerContext,
+        val blockDatabase: BlockDatabase,
+        val params: FastSyncParameters
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
@@ -625,7 +627,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         // (this is usually slow and is therefore handled via a promise).
         val p = blockDatabase.addBlock(job.block!!, addBlockCompletionPromise, bTrace)
         addBlockCompletionPromise = p
-        p.success { _ ->
+        p.success {
             finishedJobs.add(job)
             lastBlockTimestamp = (job.header!! as BaseBlockHeader).timestamp
         }

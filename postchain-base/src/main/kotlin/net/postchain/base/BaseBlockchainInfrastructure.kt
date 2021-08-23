@@ -104,8 +104,8 @@ open class BaseBlockchainInfrastructure(
         ).also(apiInfrastructure::connectProcess)
     }
 
-    override fun makeHeartbeatChecker(chainId: Long): HeartbeatChecker {
-        return synchronizationInfrastructure.makeHeartbeatChecker(chainId)
+    override fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {
+        return synchronizationInfrastructure.makeHeartbeatChecker(chainId, blockchainRid)
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {

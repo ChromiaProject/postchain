@@ -6,11 +6,9 @@ import net.postchain.common.toHex
 import net.postchain.config.node.NodeConfig
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
+import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.masterslave.MsMessageHandler
-import net.postchain.network.masterslave.protocol.MsDataMessage
-import net.postchain.network.masterslave.protocol.MsHandshakeMessage
-import net.postchain.network.masterslave.protocol.MsHeartbeatMessage
-import net.postchain.network.masterslave.protocol.MsMessage
+import net.postchain.network.masterslave.protocol.*
 import net.postchain.network.x.PeersCommConfigFactory
 import net.postchain.network.x.XChainPeersConfiguration
 import net.postchain.network.x.XPeerID
@@ -21,6 +19,7 @@ class DefaultMasterCommunicationManager(
         val blockchainRid: BlockchainRid,
         private val peersCommConfigFactory: PeersCommConfigFactory,
         private val masterConnectionManager: MasterConnectionManager,
+        private val dataSource: DirectoryDataSource,
         private val processName: BlockchainProcessName
 ) : MasterCommunicationManager {
 
@@ -40,7 +39,7 @@ class DefaultMasterCommunicationManager(
     private fun slavePacketConsumer(): MsMessageHandler {
         return object : MsMessageHandler {
             override fun onMessage(message: MsMessage) {
-                logger.trace("${process()}: Receiving a message from slave: blockchainRid = ${blockchainRid.toShortHex()}")
+                logger.debug("${process()}: Receiving a message ${message.javaClass.simpleName} from slave: blockchainRid = ${blockchainRid.toShortHex()}")
 
                 when (message) {
                     is MsHandshakeMessage -> {
@@ -50,10 +49,40 @@ class DefaultMasterCommunicationManager(
 
                     is MsDataMessage -> {
                         masterConnectionManager.sendPacket(
-                                { message.payload },
+                                { message.xPacket },
                                 chainId,
                                 XPeerID(message.destination)
                         )
+                    }
+
+                    is MsFindNextBlockchainConfigMessage -> {
+                        logger.debug { "${process()}: BlockchainConfig requested by subnode: blockchainRid: ${blockchainRid.toShortHex()}" }
+                        val nextHeight = dataSource.findNextConfigurationHeight(message.blockchainRid, message.currentHeight)
+                        val config = if (nextHeight == null) {
+                            null
+                        } else {
+                            if (message.nextHeight == null || nextHeight != message.nextHeight) {
+                                dataSource.getConfiguration(message.blockchainRid, nextHeight)
+                            } else {
+                                null // message.nextHeight != null && nextHeight == message.nextHeight
+                            }
+                        }
+
+                        val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config)
+                        masterConnectionManager.sendPacketToSlave(response)
+                        logger.debug {
+                            "${process()}: BlockchainConfig sent to subnode: " +
+                                    "blockchainRid: ${blockchainRid.toShortHex()}, " +
+                                    "nextHeight: $nextHeight, config size: ${config?.size}"
+                        }
+                    }
+
+                    is MsSubnodeStatusMessage -> {
+                        logger.debug {
+                            "${process()}: Subnode status: " +
+                                    "blockchainRid: ${BlockchainRid(message.blockchainRid).toShortHex()}, " +
+                                    "height: ${message.height}"
+                        }
                     }
                 }
             }
@@ -84,8 +113,9 @@ class DefaultMasterCommunicationManager(
                 blockchainRid.data,
                 packet)
 
-        logger.trace("${process()}: Sending the packet from peer: ${peerId.byteArray.toHex()} " +
-                "to subnode: blockchainRid: ${blockchainRid.toShortHex()} ")
+        logger.trace(
+                "${process()}: Sending the packet from peer: ${peerId.byteArray.toHex()} " +
+                        "to subnode: blockchainRid: ${blockchainRid.toShortHex()} ")
         masterConnectionManager.sendPacketToSlave(message)
     }
 

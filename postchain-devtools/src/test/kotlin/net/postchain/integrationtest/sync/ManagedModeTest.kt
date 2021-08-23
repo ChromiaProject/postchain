@@ -27,7 +27,6 @@ import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.x.XPeerID
 import org.apache.commons.configuration2.Configuration
-import java.lang.IllegalStateException
 import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -208,7 +207,7 @@ open class ManagedModeTest : AbstractSyncTest() {
 
 
     class TestBlockchainConfiguration(data: BaseBlockchainConfigurationData) :
-            BaseBlockchainConfiguration(data) {
+        BaseBlockchainConfiguration(data) {
         override fun getTransactionFactory(): TransactionFactory {
             return TestTransactionFactory()
         }
@@ -224,10 +223,15 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
     private var chainId: Long = 1
-    fun startNewBlockchain(signers: Set<Int>, replicas: Set<Int>, historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf(), waitForRestart: Boolean = true): NodeSet {
+    fun startNewBlockchain(
+            signers: Set<Int>,
+            replicas: Set<Int>,
+            historicChain: Long? = null,
+            excludeChain0Nodes: Set<Int> = setOf(),
+            waitForRestart: Boolean = true): NodeSet {
         assertTrue(signers.intersect(replicas).isEmpty())
         val maxIndex = c0.all().size
-        signers.forEach { assertTrue(it < maxIndex ) }
+        signers.forEach { assertTrue(it < maxIndex) }
         replicas.forEach { assertTrue(it < maxIndex) }
         val c = NodeSet(chainId++, signers, replicas)
         newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
@@ -241,16 +245,18 @@ open class ManagedModeTest : AbstractSyncTest() {
 class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
     lateinit var nodeConfig: NodeConfig
     lateinit var dataSource: MockManagedNodeDataSource
-    override fun makeProcessManager(nodeConfigProvider: NodeConfigurationProvider,
-                                    blockchainInfrastructure: BlockchainInfrastructure,
-                                    blockchainConfigurationProvider: BlockchainConfigurationProvider,
-                                    nodeDiagnosticContext: NodeDiagnosticContext): BlockchainProcessManager {
+    override fun makeProcessManager(
+            nodeConfigProvider: NodeConfigurationProvider,
+            blockchainInfrastructure: BlockchainInfrastructure,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            nodeDiagnosticContext: NodeDiagnosticContext): BlockchainProcessManager {
         return TestManagedBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider,
                 blockchainConfigurationProvider, nodeDiagnosticContext, dataSource)
     }
 
-    override fun makeBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationProvider,
-                                              nodeDiagnosticContext: NodeDiagnosticContext): BlockchainInfrastructure {
+    override fun makeBlockchainInfrastructure(
+            nodeConfigProvider: NodeConfigurationProvider,
+            nodeDiagnosticContext: NodeDiagnosticContext): BlockchainInfrastructure {
         nodeConfig = nodeConfigProvider.getConfiguration()
         dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
 
@@ -267,9 +273,9 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
 
 
 class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSource) :
-        BlockchainConfigurationProvider {
+    BlockchainConfigurationProvider {
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     override fun getConfiguration(eContext: EContext, chainId: Long): ByteArray? {
         val db = DatabaseAccess.of(eContext)
@@ -285,23 +291,34 @@ class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSou
         logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight")
         return (nextConfigHeight != null) && (nextConfigHeight == height + 1)
     }
+
+    override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
+        val blockchainRid = chainRidOf(eContext.chainID)
+        return mockDataSource.findNextConfigurationHeight(blockchainRid.data, height)
+    }
 }
 
 
-class TestManagedBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationProvider,
-                                          syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
-                                          nodeDiagnosticContext: NodeDiagnosticContext, val mockDataSource: MockManagedNodeDataSource) :
-        BaseBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext) {
-    override fun makeBlockchainConfiguration(rawConfigurationData: ByteArray, eContext: EContext, nodeId: Int, chainId: Long): BlockchainConfiguration {
+class TestManagedBlockchainInfrastructure(
+        nodeConfigProvider: NodeConfigurationProvider,
+        syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
+        nodeDiagnosticContext: NodeDiagnosticContext, val mockDataSource: MockManagedNodeDataSource) :
+    BaseBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext) {
+    override fun makeBlockchainConfiguration(
+            rawConfigurationData: ByteArray,
+            eContext: EContext,
+            nodeId: Int,
+            chainId: Long): BlockchainConfiguration {
         return mockDataSource.getConf(rawConfigurationData)!!
     }
 }
 
-class TestManagedBlockchainProcessManager(blockchainInfrastructure: BlockchainInfrastructure,
-                                          nodeConfigProvider: NodeConfigurationProvider,
-                                          blockchainConfigProvider: BlockchainConfigurationProvider,
-                                          nodeDiagnosticContext: NodeDiagnosticContext,
-                                          val testDataSource: ManagedNodeDataSource)
+class TestManagedBlockchainProcessManager(
+        blockchainInfrastructure: BlockchainInfrastructure,
+        nodeConfigProvider: NodeConfigurationProvider,
+        blockchainConfigProvider: BlockchainConfigurationProvider,
+        nodeDiagnosticContext: NodeDiagnosticContext,
+        val testDataSource: ManagedNodeDataSource)
     : ManagedBlockchainProcessManager(blockchainInfrastructure,
         nodeConfigProvider,
         blockchainConfigProvider,

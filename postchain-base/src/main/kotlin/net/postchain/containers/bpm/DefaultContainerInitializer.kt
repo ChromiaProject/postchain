@@ -45,8 +45,8 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         // Heartbeat and RemoteConfig
         // TODO: [POS-164]: Heartbeat and RemoteConfig
         // val defaultNodeConfig = NodeConfig(AppConfig(<empty-apache-config>))
-        config.setProperty("heartbeat.enabled", false)
-        config.setProperty("remote_config.enabled", false)
+        config.setProperty("heartbeat.enabled", nodeConfig.heartbeatEnabled)
+        config.setProperty("remote_config.enabled", nodeConfig.remoteConfigEnabled)
 
         config.setProperty("containerChains.masterHost", nodeConfig.masterHost)
         config.setProperty("containerChains.masterPort", nodeConfig.masterPort)

@@ -1,44 +1,30 @@
 package net.postchain.network.masterslave.protocol
 
-import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.*
 import net.postchain.network.masterslave.protocol.MsMessageType.*
+
+// TODO: [POS-164]: Fix kdoc
 
 /**
  * MsMessages are used in master-slave communication to let subnodes
  * communicate with the p2p-network through the master node.
  *
+ * TODO: [POS-164]: Fix kdoc
  * For [MsHandshakeMessage] payload is a peers list for the master to establish connections with.
  * For [MsDataMessage] payload is the whole p2p-message.
  */
 interface MsMessage {
 
-    /**
-     * Type of message: HandshakeMsMessage (0), DataMsMessage (1)
-     */
     val type: Int
-
-    /**
-     * A pubKey of [payload] sender peer
-     */
-    val source: ByteArray
-
-    /**
-     * A pubKey of [payload] recipient peer
-     */
-    val destination: ByteArray
-
-    /**
-     * BlockchainRid of [payload]
-     */
     val blockchainRid: ByteArray
 
-    /**
-     * Binary data of wrapped p2p-message
-     */
-    val payload: ByteArray
+    fun getPayload(): Gtv
 }
+
+private fun gtvToNullableLong(gtv: Gtv): Long? = if (gtv.isNull()) null else gtv.asInteger()
+private fun nullableLongToGtv(value: Long?): Gtv = if (value == null) GtvNull else GtvFactory.gtv(value)
+private fun gtvToNullableByteArray(gtv: Gtv): ByteArray? = if (gtv.isNull()) null else gtv.asByteArray()
+private fun nullableByteArrayToGtv(value: ByteArray?): Gtv = if (value == null) GtvNull else GtvFactory.gtv(value)
 
 /**
  * MeMessage Types Enum class
@@ -47,8 +33,9 @@ enum class MsMessageType {
     HandshakeMessage,
     DataMessage,
     HeartbeatMessage,
-    GetBlockchainConfig,
-    BlockchainConfig,
+    FindNextBlockchainConfig,
+    NextBlockchainConfig,
+    SubnodeStatus
 }
 
 /**
@@ -57,25 +44,27 @@ enum class MsMessageType {
  */
 class MsHandshakeMessage(
         override val blockchainRid: ByteArray,
-        override val payload: ByteArray
+        val peers: List<ByteArray>
 ) : MsMessage {
-    override val type = HandshakeMessage.ordinal
-    override val source: ByteArray = byteArrayOf()
-    override val destination: ByteArray = byteArrayOf()
-    val peers: List<ByteArray> = decodePeers(payload)
 
-    constructor(blockchainRid: ByteArray, peers: List<ByteArray>)
-            : this(blockchainRid, encodePeers(peers))
+    override val type = HandshakeMessage.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) :
+            this(blockchainRid, decodePeers(payload.asByteArray()))
+
+    override fun getPayload(): Gtv {
+        return GtvFactory.gtv(encodePeers(peers))
+    }
 
     companion object {
-
-        fun decodePeers(bytes: ByteArray): List<ByteArray> =
-                GtvDecoder.decodeGtv(bytes).asArray().map { it.asByteArray() }
 
         fun encodePeers(singers: List<ByteArray>): ByteArray {
             val gtv = singers.map { GtvFactory.gtv(it) }.let { GtvFactory.gtv(it) }
             return GtvEncoder.encodeGtv(gtv)
         }
+
+        fun decodePeers(bytes: ByteArray): List<ByteArray> =
+                GtvDecoder.decodeGtv(bytes).asArray().map { it.asByteArray() }
     }
 }
 
@@ -84,12 +73,28 @@ class MsHandshakeMessage(
  * A data message which wraps the whole p2p-message.
  */
 class MsDataMessage(
-        override val source: ByteArray,
-        override val destination: ByteArray,
         override val blockchainRid: ByteArray,
-        override val payload: ByteArray
+        val source: ByteArray, // A pubKey of [payload] sender peer
+        val destination: ByteArray, // A pubKey of [payload] recipient peer
+        val xPacket: ByteArray // Binary data of wrapped p2p-message
 ) : MsMessage {
+
     override val type = DataMessage.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            payload[0].asByteArray(),
+            payload[1].asByteArray(),
+            payload[2].asByteArray()
+    )
+
+    override fun getPayload(): Gtv {
+        return GtvFactory.gtv(
+                GtvFactory.gtv(source),
+                GtvFactory.gtv(destination),
+                GtvFactory.gtv(xPacket)
+        )
+    }
 }
 
 /**
@@ -97,39 +102,82 @@ class MsDataMessage(
  */
 class MsHeartbeatMessage(
         override val blockchainRid: ByteArray,
-        override val payload: ByteArray
+        val timestamp: Long
 ) : MsMessage {
     override val type = HeartbeatMessage.ordinal
-    override val source: ByteArray = byteArrayOf()
-    override val destination: ByteArray = byteArrayOf()
-    val timestamp: Long = GtvDecoder.decodeGtv(payload).asInteger()
 
-    constructor(blockchainRid: ByteArray, blockTimestamp: Long)
-            : this(blockchainRid, GtvEncoder.encodeGtv(GtvFactory.gtv(blockTimestamp)))
+    constructor(blockchainRid: ByteArray, payload: Gtv) :
+            this(blockchainRid, payload.asInteger())
+
+    override fun getPayload(): Gtv {
+        return GtvFactory.gtv(timestamp)
+    }
 }
 
 /**
  * A GetBlockchainConfig message which wraps the whole p2p-message.
  */
-class MsGetBlockchainConfigMessage(
-        override val blockchainRid: ByteArray
+class MsFindNextBlockchainConfigMessage(
+        override val blockchainRid: ByteArray,
+        val currentHeight: Long,
+        val nextHeight: Long?
 ) : MsMessage {
-    override val type = GetBlockchainConfig.ordinal
-    override val source: ByteArray = byteArrayOf()              // TODO: [POS-164]: Remove
-    override val destination: ByteArray = byteArrayOf()         // TODO: [POS-164]: Remove
-    override val payload: ByteArray = byteArrayOf()             // TODO: [POS-164]: Remove
+    override val type = FindNextBlockchainConfig.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            payload[0].asInteger(),
+            gtvToNullableLong(payload[1])
+    )
+
+    override fun getPayload(): Gtv {
+        return GtvFactory.gtv(
+                GtvFactory.gtv(currentHeight),
+                nullableLongToGtv(nextHeight)
+        )
+    }
 }
 
 /**
  * A BlockchainConfig message which wraps the whole p2p-message.
  */
-class MsBlockchainConfigMessage(
+class MsNextBlockchainConfigMessage(
         override val blockchainRid: ByteArray,
-        val height: Long,
-        override val payload: ByteArray
+        val nextHeight: Long?,
+        val rawConfig: ByteArray?
 ) : MsMessage {
-    override val type = BlockchainConfig.ordinal
-    override val source: ByteArray = byteArrayOf()              // TODO: [POS-164]: Remove
-    override val destination: ByteArray = byteArrayOf()         // TODO: [POS-164]: Remove
+    override val type = NextBlockchainConfig.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            gtvToNullableLong(payload[0]),
+            gtvToNullableByteArray(payload[1])
+    )
+
+    override fun getPayload(): Gtv {
+        return GtvFactory.gtv(
+                nullableLongToGtv(nextHeight),
+                nullableByteArrayToGtv(rawConfig)
+        )
+    }
+}
+
+/**
+ * A status message of subnode
+ */
+class MsSubnodeStatusMessage(
+        override val blockchainRid: ByteArray,
+        val height: Long
+) : MsMessage {
+    override val type = SubnodeStatus.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            payload.asInteger()
+    )
+
+    override fun getPayload(): Gtv {
+        return GtvFactory.gtv(height)
+    }
 }
 
