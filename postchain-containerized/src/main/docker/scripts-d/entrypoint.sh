@@ -7,16 +7,8 @@ set -eu
 echo "Starting postgres"
 bash postgres-entrypoint.sh postgres &
 
-
-# while [ ! -e /postgres_started ]; do
-#  sleep 1
-# done
-
-# rm /postgres_started
-
-# This is not a good solution, its just for now, so that postgres have time to finnish before postchain needs it.
-
-sleep 10
+# Wait for postgres to finnish before launching postchain
+until netstat -tulpan |grep 5432|grep LISTEN ; do sleep 0.1; done > /dev/null 2>&1
 
 # Launching a node
 echo "Launching subnode"

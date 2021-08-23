@@ -53,7 +53,6 @@ class DirectoryIT : ManagedModeTest() {
     /**
      * Directory with one signer, no replicas. Signer is signer of all three chains. c0 is run on master node and c1
      * is run in container "cont1" by the subnode. c2, and c3 in cont2
-     *
      */
     @Test
     @Ignore
@@ -90,7 +89,17 @@ class DirectoryIT : ManagedModeTest() {
     @Ignore
     @Test
     fun testResourceLimits() {
-        val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
+        startManagedSystem(1, 0)
+        buildBlock(c0, 0)
+        var ramLimit = 6_000_000_000L
+        var cpuQuotaLimit = 90_000L
+
+        //update dataSource with limit value. This is used when container is created (getResourceLimitForContainer)
+        dataSource(0).setLimitsForContainer(firstContainerName, ramLimit, cpuQuotaLimit)
+
+
+        // If container UUT already exist, remove it
+        var dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
         var listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         listc.forEach {
             if (it.names()?.get(0)?.contains(Regex(firstContainerName))!!) {
@@ -99,19 +108,17 @@ class DirectoryIT : ManagedModeTest() {
                 dockerClient.removeContainer(it.id())
             }
         }
-        startManagedSystem(1, 0)
-        buildBlock(c0, 0)
-        val ramLimit = 7000_000L
-        val cpuQuotaLimit = 90_000L
-        //update dataSource with limit value. This is used when container is created (getResourceLimitForContainer)
-        dataSource(0).setLimitsForContainer(firstContainerName, ramLimit, cpuQuotaLimit)
         startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
         sleep(20_000) //we must wait a bit to ensure that container has been created.
         listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        println("number of containers: " + listc.size)
-        val res = dockerClient.inspectContainer(listc[0].id())
-        assertEquals(ramLimit, res.hostConfig()?.memory())
-        assertEquals(cpuQuotaLimit, res.hostConfig()?.cpuQuota())
+        listc.forEach {
+            if (it.names()?.get(0)?.contains(Regex(firstContainerName))!!) {
+                val res = dockerClient.inspectContainer(it.id())
+                println("checking resource limits")
+                assertEquals(ramLimit, res.hostConfig()?.memory())
+                assertEquals(cpuQuotaLimit, res.hostConfig()?.cpuQuota())
+            }
+        }
     }
 
     private fun dataSource(nodeIndex: Int): MockDirectoryDataSource {
@@ -151,8 +158,8 @@ class DirectoryIT : ManagedModeTest() {
         propertyMap.setProperty("brid.chainid.1", chainRidOf(1).toHex())
         propertyMap.setProperty("brid.chainid.2", chainRidOf(2).toHex())
         propertyMap.setProperty("brid.chainid.3", chainRidOf(3).toHex())
-//        propertyMap.setProperty("heartbeat.enabled", true) No need for this. They are overritten in DefaultContainerInitializer anyway
-//        propertyMap.setProperty("remote_config.enabled", true) No need for this. They are overritten in DefaultContainerInitializer anyway
+        propertyMap.setProperty("heartbeat.enabled", false)
+        propertyMap.setProperty("remote_config.enabled", false)
         return propertyMap
     }
 }
