@@ -8,18 +8,18 @@ import mu.KLogger
  */
 class ResultLogger {
 
-    private var prevRes: Pair<Int, Boolean>? = null // step -> res
+    private var prevRes: Pair<Int, Boolean>? = null // step -> result
 
-    fun log(res: Pair<Int, Boolean>, logger: KLogger, msg: () -> Any): Boolean {
+    fun log(stepResult: Pair<Int, Boolean>, logger: KLogger, msg: () -> Any): Boolean {
         when {
             prevRes == null -> {
                 // Log the first result
-                prevRes = res
+                prevRes = stepResult
                 debug(logger, msg)
             }
-            prevRes != res -> {
+            prevRes != stepResult -> {
                 // Log only NEW result (another step or new result)
-                prevRes = res
+                prevRes = stepResult
                 debug(logger, msg)
             }
             else -> {
@@ -27,11 +27,11 @@ class ResultLogger {
             }
         }
 
-        return res.second
+        return stepResult.second
     }
 
-    fun registerOnly(res: Pair<Int, Boolean>) {
-        prevRes = res
+    fun registerOnly(stepResult: Pair<Int, Boolean>) {
+        prevRes = stepResult
     }
 
     private fun debug(logger: KLogger, msg: () -> Any?) {

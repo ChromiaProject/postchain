@@ -30,6 +30,15 @@ class RemoteConfigChecker(
     }
 
     override fun checkHeartbeat(timestamp: Long): Boolean {
+        // First block check
+        if (timestamp < 0) {
+            return resultLogger.log(1 to true, logger) {
+                // We should skip remote config check in this case (there no blocks).
+                // It's considered that subnode always have config for height 0
+                "$pref Heartbeat check passed due to: timestamp = $timestamp < 0"
+            }
+        }
+
         // Check heartbeat
         val superCheck = super.checkHeartbeat(timestamp)
         if (!superCheck) return false
@@ -55,6 +64,11 @@ class RemoteConfigChecker(
             }
             val message = MsFindNextBlockchainConfigMessage(blockchainRid.data, height, nextHeight)
             connectionManager.sendMessageToMaster(chainId, message)
+            debug {
+                "$pref Remote BlockchainConfig requested: " +
+                        "blockchainRid: ${blockchainRid.toShortHex()}, " +
+                        "height: $height, nextHeight: $nextHeight"
+            }
         } else {
             intervalLogger.log(3 to intervalCheck, logger) {
                 "$pref Requesting of remote BlockchainConfig is NOT required: $details"
@@ -114,4 +128,9 @@ class RemoteConfigChecker(
         }
     }
 
+    private fun debug(msg: () -> Any?) {
+        if (logger.isDebugEnabled) {
+            logger.debug(msg)
+        }
+    }
 }

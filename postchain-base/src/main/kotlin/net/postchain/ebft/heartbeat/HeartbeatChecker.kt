@@ -12,9 +12,11 @@ interface HeartbeatChecker {
 
     /**
      * Should be called by client to compare [timestamp] with registered [HeartbeatEvent].
-     * If there no registered [HeartbeatEvent] it returns false.
-     * If [timestamp] exceeds [HeartbeatEvent.timestamp] by more than [NodeConfig.heartbeatTimeout]
+     *  - If there no registered [HeartbeatEvent] it returns false.
+     *  - If [timestamp] exceeds [HeartbeatEvent.timestamp] by more than [NodeConfig.heartbeatTimeout]
      * it returns false, otherwise true.
+     *  - If [timestamp] < 0 then it's considered there are no blocks and we should return true
+     * to be able to build at least one block.
      */
     fun checkHeartbeat(timestamp: Long): Boolean
 }
@@ -38,6 +40,13 @@ open class DefaultHeartbeatChecker(val nodeConfig: NodeConfig, chainId: Long) : 
     }
 
     override fun checkHeartbeat(timestamp: Long): Boolean {
+        // First block check
+        if (timestamp < 0) {
+            return resultLogger.log(0 to true, logger) {
+                "$pref Heartbeat check passed due to: timestamp = $timestamp < 0"
+            }
+        }
+
         // If heartbeat check is disabled, consider it as always passed
         if (!nodeConfig.heartbeatEnabled) {
             return resultLogger.log(1 to true, logger) {
@@ -60,7 +69,7 @@ open class DefaultHeartbeatChecker(val nodeConfig: NodeConfig, chainId: Long) : 
         }
     }
 
-    protected fun debug(msg: () -> Any?) {
+    private fun debug(msg: () -> Any?) {
         if (logger.isDebugEnabled) {
             logger.debug(msg)
         }
