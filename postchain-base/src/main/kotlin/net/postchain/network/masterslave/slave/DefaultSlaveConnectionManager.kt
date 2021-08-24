@@ -10,7 +10,6 @@ import net.postchain.network.masterslave.MsConnection
 import net.postchain.network.masterslave.MsMessageHandler
 import net.postchain.network.masterslave.protocol.MsCodec
 import net.postchain.network.masterslave.protocol.MsDataMessage
-import net.postchain.network.masterslave.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.slave.netty.NettySlaveConnector
 import net.postchain.network.x.LazyPacket
@@ -26,9 +25,6 @@ import kotlin.concurrent.schedule
  */
 interface SlaveConnectionManager : XConnectionManager {
     fun setMsMessageHandler(chainId: Long, handler: MsMessageHandler)
-
-    @Deprecated("POS-164")
-    fun requestBlockchainConfig(chainId: Long)
     fun sendMessageToMaster(chainId: Long, message: MsMessage)
 }
 
@@ -216,16 +212,6 @@ class DefaultSlaveConnectionManager(
         msMessageHandlers[chainId] = handler
     }
 
-    override fun requestBlockchainConfig(chainId: Long) {
-        val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
-        if (chain.connection != null) {
-            val message = MsFindNextBlockchainConfigMessage(chain.config.blockchainRid.data, 0, null)
-            chain.connection?.sendPacket { MsCodec.encode(message) }
-        } else {
-            logger.error("${logger(chain)}: Can't send packet to master node blockchainRid = ${chain.config.blockchainRid}")
-        }
-    }
-
     override fun sendMessageToMaster(chainId: Long, message: MsMessage) {
         val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
         if (chain.connection != null) {
@@ -251,7 +237,7 @@ class DefaultSlaveConnectionManager(
     }
 
     private fun loggerPrefix(blockchainRid: BlockchainRid): String =
-        BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
+            BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
 
     private fun logger(descriptor: SlaveConnectionDescriptor): String = loggerPrefix(descriptor.blockchainRid)
 
