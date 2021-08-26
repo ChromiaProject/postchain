@@ -13,7 +13,7 @@ import net.postchain.network.x.PeersCommConfigFactory
 import net.postchain.network.x.XChainPeersConfiguration
 import net.postchain.network.x.XPeerID
 
-class DefaultMasterCommunicationManager(
+open class DefaultMasterCommunicationManager(
         val nodeConfig: NodeConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
@@ -36,7 +36,7 @@ class DefaultMasterCommunicationManager(
         masterConnectionManager.sendPacketToSlave(message)
     }
 
-    private fun slavePacketConsumer(): MsMessageHandler {
+    fun slavePacketConsumer(): MsMessageHandler {
         return object : MsMessageHandler {
             override fun onMessage(message: MsMessage) {
                 logger.debug("${process()}: Receiving a message ${message.javaClass.simpleName} from slave: blockchainRid = ${blockchainRid.toShortHex()}")

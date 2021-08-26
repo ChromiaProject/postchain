@@ -19,7 +19,7 @@ import net.postchain.network.masterslave.master.DefaultMasterConnectionManager
 import net.postchain.network.masterslave.master.MasterConnectionManager
 import net.postchain.network.netty2.NettyConnectorFactory
 
-class DefaultMasterSyncInfra(
+open class DefaultMasterSyncInfra(
         nodeConfigProvider: NodeConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext
 ) : EBFTSynchronizationInfrastructure(
