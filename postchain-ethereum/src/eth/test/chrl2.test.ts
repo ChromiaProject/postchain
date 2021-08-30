@@ -1,11 +1,12 @@
 import { ethers } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { TestToken__factory, ChrL2__factory, EC, EC__factory, MerkleProof__factory, Hash__factory } from "../typechain";
+import { TestToken__factory, ChrL2__factory, Postchain__factory, EC__factory, MerkleProof__factory, Hash__factory } from "../typechain";
 import { ChrL2LibraryAddresses } from "../typechain/factories/ChrL2__factory";
 import { MerkleProofLibraryAddresses } from "../typechain/factories/MerkleProof__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { keccak256 } from "ethers/lib/utils";
+import { PostchainLibraryAddresses } from "../typechain/factories/Postchain__factory";
 
 chai.use(solidity);
 const { expect } = chai;
@@ -37,10 +38,15 @@ describe("ChrL2", () => {
         const merkleFactory = new MerkleProof__factory(merkleProofInterface, deployer);
         const merkle = await merkleFactory.deploy();
         merkleAddress = merkle.address;
-        chrL2Interface = {
+        const postchainInterface: PostchainLibraryAddresses = {
             "__$2a5a34f5712a9d42d5a557457b5485a829$__": ec.address,
             "__$d42deddc843410a175fce5315eff8fddf4$__": hasherAddress,
-            "__$fc40fc502169a2ee9db1b4670a1c17e7ae$__": merkleAddress,
+            "__$fc40fc502169a2ee9db1b4670a1c17e7ae$__": merkleAddress
+        };
+        const postchainFactory = new Postchain__factory(postchainInterface, deployer);
+        const postchain = await postchainFactory.deploy();
+        chrL2Interface = {
+            "__$7e4eb5d82fde1ae3468a6b70e42858da4c$__": postchain.address
         }
         const chrl2Factory = new ChrL2__factory(chrL2Interface, deployer);
         const chrL2Contract = await chrl2Factory.deploy([directoryNodes.address], [appNodes.address]);
@@ -105,50 +111,6 @@ describe("ChrL2", () => {
                                                             "0x534a672f017938f18e96f552b0086f7e40ed416ab033ff439c89b75c85d9c638")).to.be.false;
             })
         })
-
-        describe("Event", async () => {
-            const eventData = "0x00000000000000000000000000000000000000000000000000000000008B5463A5DA3885FA76D16B0D94736C15DCAAD73532E9116B12614237D33893E22535222DAE52863A41F7F407A10B09974F0289D7F9091CF3BDC47B5522623F20894275000000000000000000000000000000000000000000000000000000000000000F000000000000000000000000E35487517B1BEE0E22DAF706A82F1D3D1FD963FD000000000000000000000000E105BA42B66D08AC7CA7FC48C583599044A6DAB30000000000000000000000000000000000000000000000000000000000000064";            
-            it("Verify and encode event properly", async () => {
-                const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
-                const hash = "0xA2F926169126C8311BF98B017D3DA669C02B1FEA6CB4732C6D46506AA473C199";
-                const event = await chrL2Instance.verifyEventHash(eventData, hash);
-
-                expect(event[0]).to.eq("0xE35487517B1BEE0E22DAF706a82F1d3d1fd963FD");
-                expect(event[1]).to.eq("0xe105Ba42B66D08Ac7Ca7FC48c583599044a6DAb3");
-                expect(event[2]).to.eq(100);
-            })
-
-            it("Invalid Event", async () => {
-                const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
-                const hash = "0xA2F926169126C8311BF98B017D3DA669C02B1FEA6CB4732C6D46506AA473C100";
-
-                await expect(chrL2Instance.verifyEventHash(eventData, hash)).to.be.revertedWith("invalid event");
-            })
-        })
-
-        describe("Block Header", async () => {
-            const blockHeaderData = "0x577e8805fda625bbb8c0fdae5debe407c9b0d1ba342bb0cbcf88bf25b05bcd4c9ea417e3fda249c7dc8d617ccee67726bc37b33db92c62fa3bda367085a47e36cded046c43f0bed220f053cc3e3976b0b026d098e34eff01b3b6332a654fdd705d1908a361d4359c2dafdbb4f134beb7b1bf77fa0ce45d965e249c92d113ab340000000000000000000000000000000000000000000000000000017aeb4872e2000000000000000000000000000000000000000000000000000000000000005e56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3534a672f017938f18e96f552b0086f7e40ed416ab033ff439c89b75c85d9c638c3a853d3a9da54943a273f348a1e8ad645fa7e8f7a148d04aa56893f6795ae4d";
-            const invalidBlockHeaderData = "0x00000000577e8805fda625bbb8c0fdae5debe407c9b0d1ba342bb0cbcf88bf25b05bcd4c9ea417e3fda249c7dc8d617ccee67726bc37b33db92c62fa3bda367085a47e36cded046c43f0bed220f053cc3e3976b0b026d098e34eff01b3b6332a654fdd705d1908a361d4359c2dafdbb4f134beb7b1bf77fa0ce45d965e249c92d113ab340000000000000000000000000000000000000000000000000000017aeb4872e2000000000000000000000000000000000000000000000000000000000000005e56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3534a672f017938f18e96f552b0086f7e40ed416ab033ff439c89b75c85d9c638c3a853d3a9da54943a273f348a1e8ad645fa7e8f7a148d04aa56893f";
-
-            it("Verify and encode block header properly", async () => {
-                const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
-                
-                const header = await chrL2Instance.verifyBlockHeader(blockHeaderData);
-                expect(header[0]).to.eq("0x9ea417e3fda249c7dc8d617ccee67726bc37b33db92c62fa3bda367085a47e36");
-                expect(header[1]).to.eq("0x534a672f017938f18e96f552b0086f7e40ed416ab033ff439c89b75c85d9c638");
-                expect(header[2]).to.eq("0xc3a853d3a9da54943a273f348a1e8ad645fa7e8f7a148d04aa56893f6795ae4d");
-            })
-
-            it("Invalid block header", async () => {
-                const [everyone] = await ethers.getSigners();
-                const chrL2Instance = new ChrL2__factory(chrL2Interface, everyone).attach(chrL2Address);
-                
-                await expect(chrL2Instance.verifyBlockHeader(invalidBlockHeaderData)).to.be.revertedWith("invalid block header");
-            })
-        })
     })
     
     describe("Deposit", async () => {
@@ -181,7 +143,7 @@ describe("ChrL2", () => {
             await expect(chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdd", 
                                                     ["0x8d3c78fb047f38e1b9a1b74f0695f0e494e5924b239c94597e3bbf9ec405bfb35ee015d470c7259be0bcfa559b6e83202f1f8dee01c01d96d2566a11a83d0f771c"], 
                                                     ["0xe105Ba42B66D08Ac7Ca7FC48c583599044a6DAb3"]))
-                    .to.be.revertedWith("ChrL2: Invalid directory node");
+                    .to.be.revertedWith("ChrL2: invalid directory node");
         })
 
         it("Invalid directory node: not enough signature", async () => {
@@ -197,7 +159,7 @@ describe("ChrL2", () => {
             await expect(chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdc", 
                                                     [],
                                                     ["0xe105Ba42B66D08Ac7Ca7FC48c583599044a6DAb3"]))
-                    .to.be.revertedWith("ChrL2: Not enough require signature");
+                    .to.be.revertedWith("ChrL2: not enough require signature");
         })
 
         it("Invalid app node: invalid input data", async () => {
@@ -212,7 +174,7 @@ describe("ChrL2", () => {
                                                     "0x75e20828B343d1fE37FAe469aB698E19c17F20b5", 
                                                     "0x1a642f0E3c3aF545E7AcBD38b07251B3990914F1"
                                                 ]))
-                    .to.be.revertedWith("ChrL2: Invalid app node");
+                    .to.be.revertedWith("ChrL2: invalid app node");
         })
 
         it("Invalid app node: not enough signature", async () => {
@@ -234,7 +196,7 @@ describe("ChrL2", () => {
                                                     "0x75e20828B343d1fE37FAe469aB698E19c17F20b5", 
                                                     "0x1a642f0E3c3aF545E7AcBD38b07251B3990914F1"
                                                 ]))
-                    .to.be.revertedWith("ChrL2: Not enough require signature");
+                    .to.be.revertedWith("ChrL2: not enough require signature");
         })
 
         it("Update directory & app node(s) successfully", async () => {
