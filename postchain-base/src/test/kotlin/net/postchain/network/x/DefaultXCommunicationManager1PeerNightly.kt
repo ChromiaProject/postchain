@@ -11,7 +11,7 @@ import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.Test
 
-class DefaultXCommunicationManager1PeerIT {
+class DefaultXCommunicationManager1PeerNightly {
 
     private val cryptoSystem = SECP256K1CryptoSystem()
     private val blockchainRid = BlockchainRid.buildRepeat(0)

@@ -395,7 +395,7 @@
                         <configuration>
                             <includes>
                                 <include>**/*Test.java</include>
-                                <include>**/*IT.java</include>
+<!--                                <include>**/*IT.java</include>  Do NOT un-comment this line. *IT is for failsafe tests (used in postchian-containerized), not for long surefire tests. For other time consuming integration tests, use postfix Nightly instead. -->
                                 <include>**/*Nightly.java</include>
                                 <include>**/*IntegrationTest.java</include>
                                 <include>**/*E2ET.*</include>
