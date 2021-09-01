@@ -213,6 +213,7 @@ describe("ChrL2", () => {
 
             await tokenInstance.mint(user.address, toMint);
             expect(await tokenInstance.totalSupply()).to.eq(toMint);
+            expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint)
 
             const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address);
             const toDeposit = ethers.utils.parseEther("100");
@@ -223,6 +224,7 @@ describe("ChrL2", () => {
                     .withArgs(user.address, tokenAddress, toDeposit);
 
             expect(await chrL2Instance._balances(user.address, tokenAddress)).to.eq(toDeposit);
+            expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
         })
     })
 
@@ -330,11 +332,15 @@ describe("ChrL2", () => {
                     await ethers.provider.send('evm_mine', []);
                 }
 
+                expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
+                expect(await chrL2Instance._balances(user.address, tokenAddress)).to.eq(toDeposit);
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
                     user.address))
                 .to.emit(chrL2Instance, "Withdrawal")
                 .withArgs(user.address, tokenAddress, toDeposit)
+                expect(await chrL2Instance._balances(user.address, tokenAddress)).to.eq(0);
+                expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint)
             }
         })
     })    
