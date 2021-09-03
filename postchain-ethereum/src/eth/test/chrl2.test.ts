@@ -273,7 +273,7 @@ describe("ChrL2", () => {
                 let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
                 let merkleRootHash = "96defe74f43fcf2d12a1844bcd7a3a7bcb0d4fa191776953dae3f1efb508d866"
                 let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
-                let timestamp = 100
+                let timestamp = 1629878444220
                 let height = 48
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
@@ -368,18 +368,17 @@ var hashGtvBytes32Leaf = function (data: BytesLike): string {
 var hashGtvIntegerLeaf = function (num: number): string {
     var result: string = ''
     let nbytes = 1
-    let remainingValue = num >> 8
+    let remainingValue = Math.trunc(num / 256)
     while (remainingValue > 0) {
         nbytes += + 1
-        remainingValue = remainingValue >> 8
+        remainingValue = Math.trunc(remainingValue / 256)
     }
     let b = new Uint8Array(nbytes)
     remainingValue = num
     for (let i = 1; i <= nbytes; i++) {
-        let v = new Uint8Array(1)
-        v[0] = remainingValue & 0xFF
-        b[nbytes - i] = v[0]
-        remainingValue = remainingValue >> 8
+        let v = remainingValue & 0xFF
+        b[nbytes - i] = v
+        remainingValue = Math.trunc(remainingValue / 256)
     }    
     result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA3, nbytes+2, 0x2, nbytes, b])
     return result
