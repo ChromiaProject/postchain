@@ -112,9 +112,9 @@ class DefaultSlaveConnectionManager(
         val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
         if (chain.connection != null) {
             val message = MsDataMessage(
+                    chain.config.blockchainRid.data,
                     nodeConfig.pubKeyByteArray,
                     peerId.byteArray,
-                    chain.config.blockchainRid.data,
                     data())
             chain.connection?.sendPacket { MsCodec.encode(message) }
         } else {

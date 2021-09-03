@@ -39,7 +39,7 @@ open class DefaultMasterCommunicationManager(
     fun slavePacketConsumer(): MsMessageHandler {
         return object : MsMessageHandler {
             override fun onMessage(message: MsMessage) {
-                logger.debug("${process()}: Receiving a message ${message.javaClass.simpleName} from slave: blockchainRid = ${blockchainRid.toShortHex()}")
+                logger.trace("${process()}: Receiving a message ${message.javaClass.simpleName} from slave: blockchainRid = ${blockchainRid.toShortHex()}")
 
                 when (message) {
                     is MsHandshakeMessage -> {
@@ -108,14 +108,15 @@ open class DefaultMasterCommunicationManager(
         logger.trace("${process()}: Receiving a packet from peer: ${peerId.byteArray.toHex()}")
 
         val message = MsDataMessage(
-                peerId.byteArray,
-                nodeConfig.pubKeyByteArray, // Can be omitted
                 blockchainRid.data,
+                peerId.byteArray,
+                nodeConfig.pubKeyByteArray, // Can be omitted?
                 packet)
 
         logger.trace(
-                "${process()}: Sending the packet from peer: ${peerId.byteArray.toHex()} " +
-                        "to subnode: blockchainRid: ${blockchainRid.toShortHex()} ")
+                "${process()}: Sending a brid ${BlockchainRid(message.blockchainRid).toShortHex()} packet " +
+                        "from peer: ${message.source.toHex()} " +
+                        "to subnode: ${message.destination.toHex()} ")
         masterConnectionManager.sendPacketToSlave(message)
     }
 
