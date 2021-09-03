@@ -56,11 +56,13 @@ const val secondContainerName = "cont2" //for chain 2, 3
  */
 class DirectoryIT : ManagedModeTest() {
 
+//    override val awaitDebugLog = true
+
     @Test
     fun testSingleChain() {
         startManagedSystem(1, 0)
-        buildBlock(c0)
-        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true) //chain1 in cont1, as defined see getContainerForBlockchain()
+        awaitHeight(c1.chain, 0)
     }
 
     /**
@@ -71,10 +73,13 @@ class DirectoryIT : ManagedModeTest() {
     @Ignore
     fun testMultipleChains() {
         startManagedSystem(1, 0)
-        buildBlock(c0, 0)
-        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
-        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //c2 in cont2
-        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //c3 in cont2
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //c1 in cont1
+        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //chain2 in cont2, as defined see getContainerForBlockchain()
+        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //chain3 in cont2
+        awaitHeight(c1.chain, 0)
+        awaitHeight(c2.chain, 0)
+        awaitHeight(c3.chain, 0)
+
     }
 
 
@@ -85,8 +90,8 @@ class DirectoryIT : ManagedModeTest() {
     @Test
     fun testMultipleNodes() {
         startManagedSystem(2, 0)
-        buildBlock(c0, 0)
         val c1 = startNewBlockchain(setOf(0, 1), setOf(), waitForRestart = true)
+        awaitHeight(c1.chain, 0)
     }
 
     /**
@@ -142,18 +147,34 @@ class DirectoryIT : ManagedModeTest() {
         return MockDirectoryDataSource(nodeIndex)
     }
 
-    override open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
+    override fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
         val pm = nodes[index].processManager as TestContainerManagedBlockchainProcessManager
-        // await subnode ready for heartbeat
+        // await subnode ready for heartbeat:
+        val sleepTime = 1_000L
         while (dataSource(index).subnodeInterceptors[chainRidOf(chainId)]?.subnodeStatus == null) {
             buildBlock(c0)
-            sleep(500L)
+            sleep(sleepTime)
         }
+        // need to continue building blocks on c0 (heartbeat) until subnode has started:
         while (dataSource(index).subnodeInterceptors[chainRidOf(chainId)]?.subnodeStatus == -2L) {
             buildBlock(c0)
-            sleep(500L)
+            sleep(sleepTime)
         }
+        //await a specific (configuration height-1)
         pm.awaitStarted(index, chainId, atLeastHeight)
+    }
+
+    override fun awaitHeight(chainId: Long, height: Long) {
+        val sleepTime = 10L
+        awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
+            for (i in nodes.indices) {
+            var h = dataSource(i).subnodeInterceptors[chainRidOf(chainId)]!!.subnodeStatus
+                while (h < height) {
+                    h = dataSource(i).subnodeInterceptors[chainRidOf(chainId)]!!.subnodeStatus
+                    sleep(sleepTime)
+                }
+        }
+        awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
     }
 
     override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
