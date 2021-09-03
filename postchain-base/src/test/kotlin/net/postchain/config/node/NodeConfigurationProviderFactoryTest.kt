@@ -16,7 +16,7 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn "legacy"
         }
-        val mockStorage = MockStorage.mock()
+        val mockStorage = MockStorage.mockAppContext()
         val sut = NodeConfigurationProviderFactory { mockStorage }
 
         assert(sut.createProvider(appConfig)).isInstanceOf(
@@ -28,7 +28,7 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn "Manual"
         }
-        val mockStorage = MockStorage.mock()
+        val mockStorage = MockStorage.mockAppContext()
         val sut = NodeConfigurationProviderFactory { mockStorage }
 
         assert(sut.createProvider(appConfig)).isInstanceOf(
@@ -40,7 +40,7 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn "Managed"
         }
-        val mockStorage = MockStorage.mock()
+        val mockStorage = MockStorage.mockAppContext()
         val sut = NodeConfigurationProviderFactory { mockStorage }
 
         assert(sut.createProvider(appConfig)).isInstanceOf(
@@ -52,7 +52,7 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn "some-unknown-provider-here"
         }
-        val mockStorage = MockStorage.mock()
+        val mockStorage = MockStorage.mockAppContext()
         val sut = NodeConfigurationProviderFactory { mockStorage }
 
         assert(sut.createProvider(appConfig)).isInstanceOf(
@@ -64,7 +64,7 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn ""
         }
-        val mockStorage = MockStorage.mock()
+        val mockStorage = MockStorage.mockAppContext()
         val sut = NodeConfigurationProviderFactory { mockStorage }
 
         assert(sut.createProvider(appConfig)).isInstanceOf(
