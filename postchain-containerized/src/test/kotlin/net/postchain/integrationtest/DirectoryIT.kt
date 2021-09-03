@@ -39,16 +39,17 @@ import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.protocol.MsSubnodeStatusMessage
 import net.postchain.network.x.PeersCommConfigFactory
 import org.apache.commons.configuration2.Configuration
-import org.junit.Ignore
 import org.junit.Test
 import java.lang.Thread.sleep
-import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.LinkedBlockingQueue
 import kotlin.test.assertEquals
 
-const val firstContainerName = "cont1" //for chain 1
-const val secondContainerName = "cont2" //for chain 2, 3
+const val firstContainerName = "cont1"
+const val secondContainerName = "cont2"
+val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
+        firstContainerName to listOf(chainRidOf(1)),
+        secondContainerName to listOf(chainRidOf(2), chainRidOf(3))
+)
 
 /**
  * For the tests below, a docker image is needed. It can be build with e.g:  `mvn (clean) verify -Dskip.surefire.tests`
@@ -61,7 +62,7 @@ class DirectoryIT : ManagedModeTest() {
     @Test
     fun testSingleChain() {
         startManagedSystem(1, 0)
-        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true) //chain1 in cont1, as defined see getContainerForBlockchain()
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true) //location defined in blockchainDistribution
         awaitHeight(c1.chain, 0)
     }
 
@@ -70,23 +71,20 @@ class DirectoryIT : ManagedModeTest() {
      * is run in container "cont1" by the subnode. c2, and c3 in cont2
      */
     @Test
-    @Ignore
     fun testMultipleChains() {
         startManagedSystem(1, 0)
-        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //c1 in cont1
-        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //chain2 in cont2, as defined see getContainerForBlockchain()
-        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //chain3 in cont2
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
+        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //location defined in blockchainDistribution
+        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //location defined in blockchainDistribution
         awaitHeight(c1.chain, 0)
         awaitHeight(c2.chain, 0)
         awaitHeight(c3.chain, 0)
-
     }
 
 
     /**
      * With more than one node, docker port, container name and directory for files must be node specific.
      */
-    @Ignore
     @Test
     fun testMultipleNodes() {
         startManagedSystem(2, 0)
@@ -97,7 +95,6 @@ class DirectoryIT : ManagedModeTest() {
     /**
      * Assert that ram and cpu limits can be set on the container
      */
-//    @Ignore
     @Test
     fun testResourceLimits() {
         startManagedSystem(1, 0)
@@ -135,14 +132,6 @@ class DirectoryIT : ManagedModeTest() {
         return mockDataSources[nodeIndex] as MockDirectoryDataSource
     }
 
-//    System providers create a ‘system’ cluster which includes ‘system’ nodes and has a ‘system’ naked container which will run the directory.
-    /**
-     * MockDirectoryDataSource is populated with two containers and n0, n1 are block builders for both no replicas.
-     * startManagedSystem() starts bc0 in system container.
-     * startNewBlockchain() should start bc1 in cont1 container
-     */
-
-
     override fun createMockDataSource(nodeIndex: Int): MockManagedNodeDataSource {
         return MockDirectoryDataSource(nodeIndex)
     }
@@ -167,19 +156,19 @@ class DirectoryIT : ManagedModeTest() {
     override fun awaitHeight(chainId: Long, height: Long) {
         val sleepTime = 10L
         awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
-            for (i in nodes.indices) {
+        for (i in nodes.indices) {
             var h = dataSource(i).subnodeInterceptors[chainRidOf(chainId)]!!.subnodeStatus
-                while (h < height) {
-                    h = dataSource(i).subnodeInterceptors[chainRidOf(chainId)]!!.subnodeStatus
-                    sleep(sleepTime)
-                }
+            while (h < height) {
+                h = dataSource(i).subnodeInterceptors[chainRidOf(chainId)]!!.subnodeStatus
+                sleep(sleepTime)
+            }
         }
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
     }
 
     override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
         val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
-        var className = TestDirectoryMasterInfraFactory::class.qualifiedName
+        val className = TestDirectoryMasterInfraFactory::class.qualifiedName
         propertyMap.setProperty("infrastructure", className)
         propertyMap.setProperty("containerChains.masterPort", 9860 - nodeIndex)
         propertyMap.setProperty("containerChains.masterHost", "172.17.0.1")
@@ -194,18 +183,18 @@ class DirectoryIT : ManagedModeTest() {
         propertyMap.setProperty("remote_config.enabled", false)
         return propertyMap
     }
-
 }
 
 class TestMasterCommunicationManager(
         nodeConfig: NodeConfig,
         chainId: Long,
         blockchainRid: BlockchainRid,
-        private val peersCommConfigFactory: PeersCommConfigFactory,
+        peersCommConfigFactory: PeersCommConfigFactory,
         private val masterConnectionManager: MasterConnectionManager,
         private val dataSource: DirectoryDataSource,
         private val processName: BlockchainProcessName
-) : DefaultMasterCommunicationManager(nodeConfig, chainId, blockchainRid, peersCommConfigFactory, masterConnectionManager, dataSource, processName) {
+) : DefaultMasterCommunicationManager(nodeConfig, chainId, blockchainRid, peersCommConfigFactory,
+        masterConnectionManager, dataSource, processName) {
     override fun init() {
 
         val testPacketConsumer = (dataSource as MockDirectoryDataSource).getSubnodeInterceptor(slavePacketConsumer(), blockchainRid)
@@ -248,7 +237,6 @@ class TestMasterSyncInfra(
                 containerChainDir
         )
     }
-
 }
 
 class TestDirectoryMasterInfraFactory : MasterManagedEbftInfraFactory() {
@@ -290,8 +278,6 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
         blockchainConfigProvider,
         nodeDiagnosticContext) {
 
-    private val blockchainStarts = ConcurrentHashMap<Long, BlockingQueue<Long>>()
-
     override fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
         return testDataSource
     }
@@ -305,7 +291,6 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
             withReadWriteConnection(storage, chainIid) { newCtx ->
                 DatabaseAccess.of(newCtx).initializeBlockchain(newCtx, brid)
             }
-            val i = 0
         }
         return result.toSet()
     }
@@ -351,7 +336,7 @@ class TestMasterBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationPr
 }
 
 class TestPacketConsumer(var subconsumer: MsMessageHandler?) : MsMessageHandler {
-   open var subnodeStatus = -2L
+    var subnodeStatus = -2L
 
     override fun onMessage(message: MsMessage) {
         // Do things used by tests
@@ -367,16 +352,11 @@ class TestPacketConsumer(var subconsumer: MsMessageHandler?) : MsMessageHandler 
                 }
             }
             is MsSubnodeStatusMessage -> {
-                if (message.blockchainRid != null)
-                    subnodeStatus =  message.height
+                subnodeStatus = message.height
             }
         }
         // Do the normal stuff
         subconsumer!!.onMessage(message)
-    }
-
-    fun isStarted(): Boolean {
-        return (subnodeStatus > -2L)
     }
 }
 
@@ -389,12 +369,12 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
 
     override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
         val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return mapOf()
-        var confs = mutableMapOf<Long, ByteArray>()
+        val confs = mutableMapOf<Long, ByteArray>()
         for (entry in l) {
             val data = entry.value.second
             // try to decode to ensure data is valid
-            val entireBcConf = GtvFactory.decodeGtv(data).asDict()
-            confs.put(entry.key, data)
+            GtvFactory.decodeGtv(data).asDict()
+            confs[entry.key] = data
         }
         return confs
     }
@@ -403,25 +383,17 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
         return listOf("system", firstContainerName, secondContainerName)
     }
 
-    //chain 0 in system container, chain1 in cont1 container. chain2 and chain3 in cont2 container.
     override fun getBlockchainsForContainer(containerID: String): List<BlockchainRid>? {
-        if (containerID == firstContainerName) {
-            return listOf(chainRidOf(1))
-        } else if (containerID == secondContainerName) {
-            return listOf(chainRidOf(2), chainRidOf(3))
-        } else {
-            return listOf(chainRidOf(0))
-        }
+        return blockchainDistribution[containerID]
     }
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String {
-        if (brid == chainRidOf(1)) {
-            return firstContainerName
-        } else if ((brid == chainRidOf(2)) or (brid == chainRidOf(3))) {
-            return secondContainerName
-        } else {
-            return "system"
+        var res = "system"
+        blockchainDistribution.forEach { containerName, bcList ->
+            val found = bcList.firstOrNull { it == brid } != null
+            if (found) res = containerName
         }
+        return res
     }
 
     override fun getResourceLimitForContainer(containerID: String): Map<ContainerResourceType, Long>? {
@@ -440,7 +412,6 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
     }
 
     fun getSubnodeInterceptor(subconsumer: MsMessageHandler, blockchainRid: BlockchainRid): TestPacketConsumer {
-
         subnodeInterceptors.put(blockchainRid, TestPacketConsumer(subconsumer)) // the real one
         return subnodeInterceptors[blockchainRid]!!
     }

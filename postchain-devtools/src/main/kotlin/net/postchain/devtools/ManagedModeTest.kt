@@ -441,12 +441,12 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
     }
 
     //Does not return the real blockchain configuration byteArray
-    override fun getConfiguration(blockchainRIDRaw: ByteArray, height: Long): ByteArray? {
-        val l = bridToConfs[BlockchainRid(blockchainRIDRaw)] ?: return null
+    override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {
+        val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return null
         var conf: ByteArray? = null
         for (entry in l) {
             if (entry.key <= height) {
-                conf = toByteArray(Key(BlockchainRid(blockchainRIDRaw), entry.key))
+                conf = toByteArray(Key(BlockchainRid(blockchainRidRaw), entry.key))
             } else {
                 return conf
             }
@@ -461,8 +461,8 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         return h as Map<Long, ByteArray>? ?: mapOf()
     }
 
-    override fun findNextConfigurationHeight(blockchainRIDRaw: ByteArray, height: Long): Long? {
-        val l = bridToConfs[BlockchainRid(blockchainRIDRaw)] ?: return null
+    override fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long? {
+        val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return null
         for (h in l.keys) {
             if (h > height) {
                 return h
@@ -487,7 +487,7 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         val result = mutableMapOf<BlockchainRid, List<XPeerID>>()
         chainToNodeSet.keys.union(extraReplicas.keys).forEach {
             val replicaSet = chainToNodeSet[it]?.replicas ?: emptySet()
-            var replicas = replicaSet.map { XPeerID(KeyPairHelper.pubKey(it)) }.toMutableSet()
+            val replicas = replicaSet.map { XPeerID(KeyPairHelper.pubKey(it)) }.toMutableSet()
             replicas.addAll(extraReplicas[it] ?: emptySet())
             result.put(it, replicas.toList())
         }
@@ -524,7 +524,7 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
 
     fun addConf(rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, nodeSet: NodeSet, rawBcConf: ByteArray) {
         val confs = bridToConfs.computeIfAbsent(rid) { sortedMapOf() }
-        if (confs!!.put(height, Pair(conf, rawBcConf)) != null) {
+        if (confs.put(height, Pair(conf, rawBcConf)) != null) {
             throw IllegalArgumentException("Setting blockchain configuraion for height that already has a configuration")
         } else {
             awaitDebug("### NEW BC CONFIG for chain: ${nodeSet.chain} (bc rid: ${rid.toShortHex()}) at height: $height")

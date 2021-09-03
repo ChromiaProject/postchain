@@ -3,11 +3,16 @@ package net.postchain.ebft.heartbeat
 import com.nhaarman.mockitokotlin2.*
 import net.postchain.base.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.MockStorage
 import net.postchain.config.node.NodeConfig
+import net.postchain.network.masterslave.protocol.MsFindNextBlockchainConfigMessage
+import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.masterslave.slave.SlaveConnectionManager
 import org.junit.Ignore
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class RemoteConfigCheckerTest {
@@ -31,7 +36,7 @@ class RemoteConfigCheckerTest {
         assertFalse(sut.checkHeartbeat(now))
 
         // Verification: no interaction with connManager
-        verify(connManager, never()).requestBlockchainConfig(any())
+        verify(connManager, never()).sendMessageToMaster(eq(chainId), any())
     }
 
     @Test
@@ -50,7 +55,7 @@ class RemoteConfigCheckerTest {
         assertFalse(sut.checkHeartbeat(now))
 
         // Verification: no interaction with connManager
-        verify(connManager, never()).requestBlockchainConfig(any())
+        verify(connManager, never()).sendMessageToMaster(eq(chainId), any())
     }
 
     @Ignore
@@ -64,7 +69,13 @@ class RemoteConfigCheckerTest {
             on { remoteConfigTimeout } doReturn 20_000L
         }
         val connManager: SlaveConnectionManager = mock()
-        val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager)
+        val mockBlockchainConfigProvider: BlockchainConfigurationProvider = mock {
+            on { findNextConfigurationHeight(any(), any()) } doReturn 0
+        }
+        val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager).apply {
+            storage = MockStorage.mockEContext(chainId)
+            blockchainConfigProvider = mockBlockchainConfigProvider
+        }
 
         // 1
         // Interaction: Register the first Heartbeat event
@@ -74,7 +85,9 @@ class RemoteConfigCheckerTest {
         assertFalse(sut.checkHeartbeat(now))
 
         // Verification: remote config requested
-        verify(connManager, times(1)).requestBlockchainConfig(eq(chainId))
+        val message = argumentCaptor<MsMessage>()
+        verify(connManager, times(1)).sendMessageToMaster(eq(chainId), message.capture())
+        assertEquals(MsFindNextBlockchainConfigMessage::class, message.firstValue::class)
 
 
         // 2
@@ -86,7 +99,8 @@ class RemoteConfigCheckerTest {
         assert(sut.checkHeartbeat(now))
 
         // Verification (2): the NEW remote config is not yet requested
-        verify(connManager, times(1)).requestBlockchainConfig(eq(chainId))
+        verify(connManager, times(1)).sendMessageToMaster(eq(chainId), message.capture())
+        assertEquals(MsFindNextBlockchainConfigMessage::class, message.secondValue::class)
 
         val future = now + 15_000L // remoteConfigRequestInterval < future < remoteConfigTimeout
         sut.onHeartbeat(HeartbeatEvent(future))
@@ -96,7 +110,8 @@ class RemoteConfigCheckerTest {
         assert(sut.checkHeartbeat(future))
 
         // Verification (3): the NEW remote config requested
-        verify(connManager, times(2)).requestBlockchainConfig(eq(chainId))
+        verify(connManager, times(2)).sendMessageToMaster(eq(chainId), message.capture())
+        assertEquals(MsFindNextBlockchainConfigMessage::class, message.thirdValue::class)
 
         val future2 = now + 25_000L // remoteConfigRequestInterval < remoteConfigTimeout < future2
         sut.onHeartbeat(HeartbeatEvent(future2))
@@ -106,7 +121,8 @@ class RemoteConfigCheckerTest {
         assertFalse(sut.checkHeartbeat(future2))
 
         // Verification (4): the NEW remote config requested
-        verify(connManager, times(3)).requestBlockchainConfig(eq(chainId))
+        verify(connManager, times(3)).sendMessageToMaster(eq(chainId), message.capture())
+        assertEquals(MsFindNextBlockchainConfigMessage::class, message.lastValue::class)
     }
 
 }
