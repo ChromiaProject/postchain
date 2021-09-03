@@ -4,7 +4,7 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.merkle.Hash
+import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.*
@@ -293,14 +293,14 @@ open class BaseBlockBuilder(
     }
 
     override fun appendTransaction(tx: Transaction) {
-        checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
-        super.appendTransaction(tx)
-        blockSize += tx.getRawData().size
-        if (blockSize >= maxBlockSize) {
+        if (blockSize + tx.getRawData().size > maxBlockSize) {
             throw BlockValidationMistake("block size exceeds max block size ${maxBlockSize} bytes")
         } else if (transactions.size >= maxBlockTransactions) {
             throw BlockValidationMistake("Number of transactions exceeds max ${maxBlockTransactions} transactions in block")
         }
+        checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
+        super.appendTransaction(tx)
+        blockSize += tx.getRawData().size
     }
 
 }

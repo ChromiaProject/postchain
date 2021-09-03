@@ -7,16 +7,13 @@ import net.postchain.common.Utils
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.NameService
 import net.postchain.containers.infra.ContainerResourceType
-import java.nio.file.Path
 
 object ContainerConfigFactory {
 
-    fun createConfig(nodeConfig: NodeConfig, container: PostchainContainer, containerCwd: Path): ContainerConfig {
+    fun createConfig(nodeConfig: NodeConfig, container: PostchainContainer, containerChainDir: ContainerChainDir): ContainerConfig {
         // -v $containerCwd:/opt/chromaway/postchain/target \
-//        val data_volume =  DockerAPI.create_volume('tmpfs','100mb')
         val volume = HostConfig.Bind
-//                .from(data_volume)
-                .from(containerCwd.toString())
+                .from(containerChainDir.containerDir.toString())
                 .to("/opt/chromaway/postchain/target")
                 .build()
 
@@ -26,21 +23,26 @@ object ContainerConfigFactory {
          * If nodeConfig.restApiPost > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
          * control here and know that it is always free.
          * DockerPort must be both node and container specific and cannot be -1 or 0 (at least not allowed in Ubuntu.)
-         * Therefore use radom port selection
+         * Therefore use random port selection
          */
-
-        // TODO: Likely to be a unique port but not 100% guarantee.
+        // Likely to be a unique port but not 100% guarantee.
         // Also not 100% sure that port is still free when connection is made
-        // Should we use something even more sophisticated?
-        val dockerPort = "${Utils.findFreePort()}/tcp"
+        val dockerPort = "${nodeConfig.subnodeRestApiPort}/tcp"
         val portBindings = if (nodeConfig.restApiPort > -1) {
-            mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", nodeConfig.subnodeRestApiPort)))
+            mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", Utils.findFreePort())))
         } else mapOf()
 
         /**
-        $ docker run -it --cpu-period=100000 --cpu-quota=50000 ubuntu /bin/bash.
-         Here we leave cpu-period to its default value (100 ms) and control cpu-quota via the dataSource.
+         * CPU:
+         * $ docker run -it --cpu-period=100000 --cpu-quota=50000 ubuntu /bin/bash.
+         * Here we leave cpu-period to its default value (100 ms) and control cpu-quota via the dataSource.
+         *
+         * STORAGE: Limited Storage quota with bind mount:
+         * You can’t use Docker CLI commands to directly manage bind mounts.
+         * $ docker run -d -it --name devtest \
+         * --mount type=bind,source="$(pwd)"/target,target=/app ubuntu /bin/bash
          */
+
         // Host config
         val hostConfig = HostConfig.builder()
                 .appendBinds(volume)
@@ -55,7 +57,7 @@ object ContainerConfigFactory {
                 .build()
 
         return ContainerConfig.builder()
-                .image(NameService.containerImage())
+                .image(NameService.containerImage(nodeConfig))
                 .hostConfig(hostConfig)
                 .exposedPorts(dockerPort)
                 .build()

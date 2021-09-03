@@ -9,7 +9,6 @@ import net.postchain.network.masterslave.MsConnection
 import net.postchain.network.masterslave.MsMessageHandler
 import net.postchain.network.masterslave.master.MasterConnectionDescriptor
 import net.postchain.network.masterslave.protocol.MsCodec
-import net.postchain.network.masterslave.protocol.MsDataMessage
 import net.postchain.network.masterslave.protocol.MsHandshakeMessage
 import net.postchain.network.netty2.Transport
 import net.postchain.network.x.LazyPacket
@@ -48,12 +47,12 @@ class NettyMasterConnection : ChannelInboundHandlerAdapter(), MsConnection {
             is MsHandshakeMessage -> {
                 connectionDescriptor = MasterConnectionDescriptor.createFromHandshake(message)
                 onConnectedHandler?.invoke(connectionDescriptor!!, this)
-                messageHandler?.invoke(message)
+                messageHandler?.onMessage(message)
             }
 
-            is MsDataMessage -> {
+            else -> {
                 if (connectionDescriptor != null) {
-                    messageHandler?.invoke(message)
+                    messageHandler?.onMessage(message)
                 }
             }
         }

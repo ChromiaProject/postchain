@@ -1,4 +1,4 @@
-package net.postchain.integrationtest.sync
+package net.postchain.devtools
 
 import net.postchain.StorageBuilder
 import net.postchain.base.BlockchainRid
@@ -12,10 +12,6 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.AppContext
 import net.postchain.core.NODE_ID_NA
-import net.postchain.devtools.IntegrationTestSetup
-import net.postchain.devtools.KeyPairHelper
-import net.postchain.devtools.PostchainTestNode
-import net.postchain.devtools.awaitHeight
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.NodeSetup

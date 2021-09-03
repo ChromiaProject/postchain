@@ -38,7 +38,7 @@ interface BlockchainProcess : HeartbeatListener {
 interface BlockchainProcessManager : Shutdownable, Synchronizable {
     fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid?
     fun retrieveBlockchain(chainId: Long): BlockchainProcess?
-    fun stopBlockchain(chainId: Long, bTrace: BlockTrace?)
+    fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean = false)
 }
 
 // A return value of "true" means a restart is needed.

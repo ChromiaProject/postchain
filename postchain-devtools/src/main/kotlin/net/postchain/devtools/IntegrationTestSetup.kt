@@ -41,7 +41,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     companion object : KLogging()
 
-    val awaitDebugLog = false
+    open val awaitDebugLog = false
 
     /**
      * If we want to monitor how long we are waiting and WHAT we are waiting for, then we can turn on this flag.
@@ -72,7 +72,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
             expectedSuccessRids = mutableMapOf()
             configOverrides.clear()
             TestBlockchainRidCache.clear()
-            logger.debug("teadDown() done")
+            logger.debug("tearDown() done")
         } catch (t: Throwable) {
             logger.error("tearDown() failed", t)
         }
@@ -264,7 +264,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
         }
     }
 
-    protected fun awaitHeight(chainId: Long, height: Long) {
+    protected open fun awaitHeight(chainId: Long, height: Long) {
         awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
         awaitHeight(nodes, chainId, height)
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")

@@ -165,7 +165,7 @@ object CliExecution {
                     // throw error
                 } else if (!allowUnknownSigners) {
                     throw BadDataMistake(BadDataType.MISSING_PEERINFO,
-                            "Signer ${nodePubkey} does not exist in peerinfos.")
+                            "Signer $nodePubkey does not exist in peerinfos.")
                 }
             }
         }

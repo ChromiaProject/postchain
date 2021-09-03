@@ -3,10 +3,10 @@
 package net.postchain.containers.infra
 
 import net.postchain.base.BlockchainRid
-import net.postchain.base.BlockchainRidFactory.cryptoSystem
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.ContainerBlockchainProcess
+import net.postchain.containers.bpm.ContainerChainDir
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
@@ -18,9 +18,8 @@ import net.postchain.network.masterslave.master.DefaultMasterCommunicationManage
 import net.postchain.network.masterslave.master.DefaultMasterConnectionManager
 import net.postchain.network.masterslave.master.MasterConnectionManager
 import net.postchain.network.netty2.NettyConnectorFactory
-import java.nio.file.Path
 
-class DefaultMasterSyncInfra(
+open class DefaultMasterSyncInfra(
         nodeConfigProvider: NodeConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext
 ) : EBFTSynchronizationInfrastructure(
@@ -43,7 +42,7 @@ class DefaultMasterSyncInfra(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
-            chainConfigsDir: Path,
+            containerChainDir: ContainerChainDir,
             restApiPort: Int
     ): ContainerBlockchainProcess {
 
@@ -53,6 +52,7 @@ class DefaultMasterSyncInfra(
                 blockchainRid,
                 peersCommConfigFactory,
                 connectionManager as MasterConnectionManager,
+                dataSource,
                 processName
         ).apply { init() }
 
@@ -64,7 +64,7 @@ class DefaultMasterSyncInfra(
                 restApiPort,
                 communicationManager,
                 dataSource,
-                chainConfigsDir
+                containerChainDir
         )
     }
 

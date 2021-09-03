@@ -6,12 +6,12 @@ import net.postchain.base.PeerInfo
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.ProgrammerMistake
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.network.masterslave.MsConnection
 import net.postchain.network.masterslave.MsMessageHandler
 import net.postchain.network.masterslave.protocol.MsCodec
 import net.postchain.network.masterslave.protocol.MsDataMessage
-import net.postchain.network.masterslave.protocol.MsHeartbeatMessage
+import net.postchain.network.masterslave.protocol.MsFindNextBlockchainConfigMessage
+import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.slave.netty.NettySlaveConnector
 import net.postchain.network.x.LazyPacket
 import net.postchain.network.x.XChainPeersConfiguration
@@ -24,7 +24,13 @@ import kotlin.concurrent.schedule
  * [SlaveConnectionManager] has only one connection; it's connection to
  * [net.postchain.network.masterslave.master.MasterConnectionManager] of master node.
  */
-interface SlaveConnectionManager : XConnectionManager
+interface SlaveConnectionManager : XConnectionManager {
+    fun setMsMessageHandler(chainId: Long, handler: MsMessageHandler)
+
+    @Deprecated("POS-164")
+    fun requestBlockchainConfig(chainId: Long)
+    fun sendMessageToMaster(chainId: Long, message: MsMessage)
+}
 
 
 class DefaultSlaveConnectionManager(
@@ -34,21 +40,23 @@ class DefaultSlaveConnectionManager(
     companion object : KLogging()
 
     private val slaveConnector = NettySlaveConnector(this)
+    private val chains = mutableMapOf<Long, Chain>()
+    private val msMessageHandlers = mutableMapOf<Long, MsMessageHandler>()
+    private val reconnectionTimer = Timer("Reconnection timer")
+    private var isShutDown = false
 
-    private class Chain(val config: XChainPeersConfiguration) {
+    private class Chain(val config: XChainPeersConfiguration, msMessageHandlerSupplier: (Long) -> MsMessageHandler?) {
         val peers: List<ByteArray> = (config.commConfiguration as SlavePeerCommConfig).peers
-        val msMessageHandler: MsMessageHandler = { msg ->
-            when (msg) {
-                is MsHeartbeatMessage -> config.heartbeatHandler(HeartbeatEvent(msg.timestamp))
-                else -> config.packetHandler(msg.payload, XPeerID(msg.source))
+        val msMessageHandler: MsMessageHandler = object : MsMessageHandler {
+            override fun onMessage(message: MsMessage) {
+                when (message) {
+                    is MsDataMessage -> config.packetHandler(message.xPacket, XPeerID(message.source))
+                    else -> msMessageHandlerSupplier(config.chainId)?.onMessage(message)
+                }
             }
         }
         var connection: MsConnection? = null
     }
-
-    private val chains = mutableMapOf<Long, Chain>()
-    private val reconnectionTimer = Timer("Reconnection timer")
-    private var isShutDown = false
 
     @Synchronized
     override fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String) {
@@ -62,7 +70,7 @@ class DefaultSlaveConnectionManager(
                 disconnectChain(chainPeersConfig.chainId, loggingPrefix)
             }
 
-            val chain = Chain(chainPeersConfig)
+            val chain = Chain(chainPeersConfig) { chainId -> msMessageHandlers[chainId] }
             chains[chainPeersConfig.chainId] = chain
             connectToMaster(chain)
 
@@ -104,9 +112,9 @@ class DefaultSlaveConnectionManager(
         val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
         if (chain.connection != null) {
             val message = MsDataMessage(
+                    chain.config.blockchainRid.data,
                     nodeConfig.pubKeyByteArray,
                     peerId.byteArray,
-                    chain.config.blockchainRid.data,
                     data())
             chain.connection?.sendPacket { MsCodec.encode(message) }
         } else {
@@ -162,22 +170,22 @@ class DefaultSlaveConnectionManager(
 
     @Synchronized
     override fun onMasterConnected(descriptor: SlaveConnectionDescriptor, connection: MsConnection): MsMessageHandler? {
-        logger.info { "${logger(descriptor)}: Master node connected: blockchainRid: ${descriptor.blockchainRid}" }
+        logger.info { "${logger(descriptor)}: Master node connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
 
         val chain = findChainByBrid(descriptor.blockchainRid)
         return when {
             chain == null -> {
-                logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid = ${descriptor.blockchainRid}")
+                logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid = ${descriptor.blockchainRid.toShortHex()}")
                 connection.close()
                 null
             }
             chain.connection != null -> {
-                logger.debug { "${logger(descriptor)}: Master node already connected: blockchainRid = ${descriptor.blockchainRid}" }
+                logger.debug { "${logger(descriptor)}: Master node already connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 // Don't close connection here, just return handler
                 chain.msMessageHandler
             }
             else -> {
-                logger.debug { "${logger(descriptor)}: Master node connected: blockchainRid = ${descriptor.blockchainRid}" }
+                logger.debug { "${logger(descriptor)}: Master node connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 chain.connection = connection
                 chain.msMessageHandler
             }
@@ -186,11 +194,11 @@ class DefaultSlaveConnectionManager(
 
     @Synchronized
     override fun onMasterDisconnected(descriptor: SlaveConnectionDescriptor, connection: MsConnection) {
-        logger.debug { "${logger(descriptor)}: Master node disconnected: blockchainRid = ${descriptor.blockchainRid}" }
+        logger.info { "${logger(descriptor)}: Master node disconnected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
 
         val chain = findChainByBrid(descriptor.blockchainRid)
         if (chain == null) {
-            logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid: ${descriptor.blockchainRid}")
+            logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid: ${descriptor.blockchainRid.toShortHex()}")
             connection.close()
         } else {
             if (chain.connection !== connection) {
@@ -201,6 +209,29 @@ class DefaultSlaveConnectionManager(
 
             // Reconnecting to the Master
             reconnect(chain)
+        }
+    }
+
+    override fun setMsMessageHandler(chainId: Long, handler: MsMessageHandler) {
+        msMessageHandlers[chainId] = handler
+    }
+
+    override fun requestBlockchainConfig(chainId: Long) {
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
+        if (chain.connection != null) {
+            val message = MsFindNextBlockchainConfigMessage(chain.config.blockchainRid.data, 0, null)
+            chain.connection?.sendPacket { MsCodec.encode(message) }
+        } else {
+            logger.error("${logger(chain)}: Can't send packet to master node blockchainRid = ${chain.config.blockchainRid}")
+        }
+    }
+
+    override fun sendMessageToMaster(chainId: Long, message: MsMessage) {
+        val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
+        if (chain.connection != null) {
+            chain.connection?.sendPacket { MsCodec.encode(message) }
+        } else {
+            logger.error("${logger(chain)}: Can't send packet to master node blockchainRid = ${chain.config.blockchainRid.toShortHex()}")
         }
     }
 
@@ -220,7 +251,7 @@ class DefaultSlaveConnectionManager(
     }
 
     private fun loggerPrefix(blockchainRid: BlockchainRid): String =
-            BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
+        BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
 
     private fun logger(descriptor: SlaveConnectionDescriptor): String = loggerPrefix(descriptor.blockchainRid)
 

@@ -1,5 +1,7 @@
 package net.postchain.ebft.heartbeat
 
+import mu.KLogging
+import net.postchain.config.node.NodeConfig
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -22,7 +24,9 @@ interface HeartbeatManager {
 }
 
 
-class DefaultHeartbeatManager : HeartbeatManager {
+class DefaultHeartbeatManager(val nodeConfig: NodeConfig) : HeartbeatManager {
+
+    companion object : KLogging()
 
     private val listeners: MutableSet<HeartbeatListener> =
             Collections.newSetFromMap(ConcurrentHashMap<HeartbeatListener, Boolean>())
@@ -35,8 +39,21 @@ class DefaultHeartbeatManager : HeartbeatManager {
         listeners.remove(listener)
     }
 
+    private var heartbeatTestmodeCounter = 0
     override fun beat(timestamp: Long) {
+        // TODO: [POS-164]: For manual test only. Delete this later
+        if (nodeConfig.heartbeatTestmode) {
+            if ((heartbeatTestmodeCounter++ / 25) % 2 == 0) {
+                logger.debug { "Heartbeat event received and skipped: timestamp $timestamp" }
+                return
+            }
+        }
+
         val event = HeartbeatEvent(timestamp)
-        listeners.forEach { it.onHeartbeat(event) }
+        logger.debug { "Heartbeat event received: timestamp $timestamp" }
+        listeners.forEach {
+            it.onHeartbeat(event)
+            logger.debug { "Heartbeat event sent: timestamp $timestamp" }
+        }
     }
 }

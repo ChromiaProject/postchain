@@ -1,6 +1,7 @@
 package net.postchain.integrationtest.sync
 
 import mu.KLogging
+import net.postchain.devtools.AbstractSyncTest
 import net.postchain.devtools.currentHeight
 import org.awaitility.Awaitility
 import org.junit.Ignore

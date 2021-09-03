@@ -19,7 +19,6 @@ class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProce
     override fun getEngine() = workerContext.engine
 
     private val fastSynchronizer: FastSynchronizer
-
     private val done = CountDownLatch(1)
 
     private val blockDatabase = BaseBlockDatabase(
@@ -31,7 +30,6 @@ class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProce
         params.jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout
 
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
-        workerContext.communicationManager.setHeartbeatListener(this)
         thread(name = "replicaSync-${workerContext.processName}") {
             fastSynchronizer.syncUntilShutdown()
             done.countDown()
@@ -57,10 +55,6 @@ class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProce
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-        // Pass a heartbeat event to FastSynchronizer.
-        // It is internal HeartbeatListener (not registered at HeartbeatManager).
-        fastSynchronizer.onHeartbeat(heartbeatEvent)
+        workerContext.heartbeatChecker.onHeartbeat(heartbeatEvent)
     }
-
-    override fun checkHeartbeat(): Boolean = true
 }

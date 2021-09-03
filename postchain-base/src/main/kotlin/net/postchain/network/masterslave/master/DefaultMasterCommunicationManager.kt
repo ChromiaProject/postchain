@@ -6,51 +6,85 @@ import net.postchain.common.toHex
 import net.postchain.config.node.NodeConfig
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
-import net.postchain.network.masterslave.protocol.MsDataMessage
-import net.postchain.network.masterslave.protocol.MsHandshakeMessage
-import net.postchain.network.masterslave.protocol.MsHeartbeatMessage
-import net.postchain.network.masterslave.protocol.MsMessage
+import net.postchain.managed.DirectoryDataSource
+import net.postchain.network.masterslave.MsMessageHandler
+import net.postchain.network.masterslave.protocol.*
 import net.postchain.network.x.PeersCommConfigFactory
 import net.postchain.network.x.XChainPeersConfiguration
 import net.postchain.network.x.XPeerID
 
-class DefaultMasterCommunicationManager(
+open class DefaultMasterCommunicationManager(
         val nodeConfig: NodeConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         private val peersCommConfigFactory: PeersCommConfigFactory,
         private val masterConnectionManager: MasterConnectionManager,
+        private val dataSource: DirectoryDataSource,
         private val processName: BlockchainProcessName
 ) : MasterCommunicationManager {
 
     companion object : KLogging()
 
     override fun init() {
-        val slaveChainConfig = SlaveChainConfig(chainId, blockchainRid, ::consumeSlavePacket)
+        val slaveChainConfig = SlaveChainConfig(chainId, blockchainRid, slavePacketConsumer())
         masterConnectionManager.connectSlaveChain(processName, slaveChainConfig)
     }
 
     override fun sendHeartbeatToSlave(heartbeatEvent: HeartbeatEvent) {
-        logger.trace("${process()}: Sending a heartbeat packet to slave node: blockchainRid: ${blockchainRid.toShortHex()} ")
+        logger.trace("${process()}: Sending a heartbeat packet to subnode: blockchainRid: ${blockchainRid.toShortHex()} ")
         val message = MsHeartbeatMessage(blockchainRid.data, heartbeatEvent.timestamp)
         masterConnectionManager.sendPacketToSlave(message)
     }
 
-    private fun consumeSlavePacket(message: MsMessage) {
-        logger.trace("${process()}: Receiving a message from slave: blockchainRid = ${blockchainRid.toShortHex()}")
+    fun slavePacketConsumer(): MsMessageHandler {
+        return object : MsMessageHandler {
+            override fun onMessage(message: MsMessage) {
+                logger.trace("${process()}: Receiving a message ${message.javaClass.simpleName} from slave: blockchainRid = ${blockchainRid.toShortHex()}")
 
-        when (message) {
-            is MsHandshakeMessage -> {
-                disconnectChainPeers()
-                connectChainPeers(message.peers)
-            }
+                when (message) {
+                    is MsHandshakeMessage -> {
+                        disconnectChainPeers()
+                        connectChainPeers(message.peers)
+                    }
 
-            is MsDataMessage -> {
-                masterConnectionManager.sendPacket(
-                        { message.payload },
-                        chainId,
-                        XPeerID(message.destination)
-                )
+                    is MsDataMessage -> {
+                        masterConnectionManager.sendPacket(
+                                { message.xPacket },
+                                chainId,
+                                XPeerID(message.destination)
+                        )
+                    }
+
+                    is MsFindNextBlockchainConfigMessage -> {
+                        logger.debug { "${process()}: BlockchainConfig requested by subnode: blockchainRid: ${blockchainRid.toShortHex()}" }
+                        val nextHeight = dataSource.findNextConfigurationHeight(message.blockchainRid, message.currentHeight)
+                        val config = if (nextHeight == null) {
+                            null
+                        } else {
+                            if (message.nextHeight == null || nextHeight != message.nextHeight) {
+                                dataSource.getConfiguration(message.blockchainRid, nextHeight)
+                            } else {
+                                null // message.nextHeight != null && nextHeight == message.nextHeight
+                            }
+                        }
+
+                        val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config)
+                        masterConnectionManager.sendPacketToSlave(response)
+                        logger.debug {
+                            "${process()}: BlockchainConfig sent to subnode: " +
+                                    "blockchainRid: ${blockchainRid.toShortHex()}, " +
+                                    "nextHeight: $nextHeight, config size: ${config?.size}"
+                        }
+                    }
+
+                    is MsSubnodeStatusMessage -> {
+                        logger.debug {
+                            "${process()}: Subnode status: " +
+                                    "blockchainRid: ${BlockchainRid(message.blockchainRid).toShortHex()}, " +
+                                    "height: ${message.height}"
+                        }
+                    }
+                }
             }
         }
     }
@@ -74,13 +108,15 @@ class DefaultMasterCommunicationManager(
         logger.trace("${process()}: Receiving a packet from peer: ${peerId.byteArray.toHex()}")
 
         val message = MsDataMessage(
-                peerId.byteArray,
-                nodeConfig.pubKeyByteArray, // Can be omitted
                 blockchainRid.data,
+                peerId.byteArray,
+                nodeConfig.pubKeyByteArray, // Can be omitted?
                 packet)
 
-        logger.trace("${process()}: Sending the packet from peer: ${peerId.byteArray.toHex()} " +
-                "to slave node: blockchainRid: ${blockchainRid.toShortHex()} ")
+        logger.trace(
+                "${process()}: Sending a brid ${BlockchainRid(message.blockchainRid).toShortHex()} packet " +
+                        "from peer: ${message.source.toHex()} " +
+                        "to subnode: ${message.destination.toHex()} ")
         masterConnectionManager.sendPacketToSlave(message)
     }
 

@@ -10,10 +10,10 @@ object NameService {
     }
 
     fun databaseSchema(nodeConfig: NodeConfig, nodeContainerName: String): String {
-        return "${nodeConfig.appConfig.databaseSchema}" +
-                "_$nodeContainerName"
+        return "${nodeConfig.appConfig.databaseSchema}_$nodeContainerName"
     }
 
-    // TODO: [POS-129]: Redesign this
-    fun containerImage() = "chromaway/postchain-slavenode:3.3.1"
+    fun containerImage(nodeConfig: NodeConfig): String {
+        return nodeConfig.containerImage
+    }
 }

@@ -8,7 +8,6 @@ import net.postchain.core.NodeStateTracker
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Signature
 import net.postchain.ebft.*
-import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.message.*
 import net.postchain.ebft.rest.contract.serialize
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
@@ -28,13 +27,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * The ValidatorSyncManager handles communications with our peers.
  */
-class ValidatorSyncManager(private val workerContext: WorkerContext,
-                           private val statusManager: StatusManager,
-                           private val blockManager: BlockManager,
-                           private val blockDatabase: BlockDatabase,
-                           private val nodeStateTracker: NodeStateTracker
+class ValidatorSyncManager(
+        private val workerContext: WorkerContext,
+        private val statusManager: StatusManager,
+        private val blockManager: BlockManager,
+        private val blockDatabase: BlockDatabase,
+        private val nodeStateTracker: NodeStateTracker
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager), SyncManager {
-    private var heartbeat: HeartbeatEvent? = null
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(10000, statusManager)
     private val statusSender = StatusSender(1000, statusManager, workerContext.communicationManager)
@@ -44,13 +43,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var processingIntentDeadline = 0L
     private var lastStatusLogged: Long
     private val processName = workerContext.processName
-    private var useFastSyncAlgorithm: Boolean = true
+    private var useFastSyncAlgorithm: Boolean
+    private val fastSynchronizer: FastSynchronizer
     private val shutdown = AtomicBoolean(false)
 
-
     companion object : KLogging()
-
-    private val fastSynchronizer: FastSynchronizer
 
     init {
         this.currentTimeout = defaultTimeout
@@ -61,18 +58,18 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         params.exitDelay = nodeConfig.fastSyncExitDelay
         params.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
         params.jobTimeout = nodeConfig.fastSyncJobTimeout
-        fastSynchronizer = FastSynchronizer(workerContext,
-                blockDatabase,
-                params
-        )
+        fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
+
+        // Init useFastSyncAlgorithm
+        val lastHeight = blockQueries.getBestHeight().get()
+        useFastSyncAlgorithm = when {
+            lastHeight < params.mustSyncUntilHeight -> true
+            else -> workerContext.startWithFastSync
+        }
     }
 
-    //    private val nodes = communicationManager.peers().map { XPeerID(it.pubKey) }
     private val signersIds = workerContext.signers.map { XPeerID(it) }
-
     private fun indexOfValidator(peerId: XPeerID): Int = signersIds.indexOf(peerId)
-    //        return nodes.indexOf(peerID)
-
     private fun validatorAtIndex(index: Int): XPeerID = signersIds[index]
 
     /**
@@ -82,7 +79,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            while (!checkHeartbeat()) {
+            while (!workerContext.heartbeatChecker.checkHeartbeat(getLastBlockTimestamp())) {
                 if (shutdown.get()) return
                 Thread.sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
             }
@@ -428,27 +425,16 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
     }
 
+    private fun getLastBlockTimestamp(): Long {
+        // The field blockManager.lastBlockTimestamp will be set to non-null value
+        // after the first block db operation. So we read lastBlockTimestamp value from db
+        // until blockManager.lastBlockTimestamp is non-null.
+        return blockManager.lastBlockTimestamp ?: blockQueries.getLastBlockTimestamp().get()
+    }
+
     fun getHeight(): Long {
         return if (useFastSyncAlgorithm) fastSynchronizer.blockHeight
         else nodeStateTracker.blockHeight
-    }
-
-    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-        heartbeat = heartbeatEvent
-        // Pass a heartbeat event to FastSynchronizer to check heartbeat in FastSync mode.
-        // FastSynchronizer is internal HeartbeatListener (not registered at HeartbeatManager).
-        fastSynchronizer.onHeartbeat(heartbeatEvent)
-    }
-
-    // 1. Heartbeat check is failed if there is no registered heartbeat event.
-    // 2. The field blockManager.lastBlockTimestamp will be set to non-null value
-    // after the first block db operation. So we read lastBlockTimestamp value from db
-    // until blockManager.lastBlockTimestamp is non-null.
-    override fun checkHeartbeat(): Boolean {
-        if (!workerContext.nodeConfig.heartbeat) return true
-        if (heartbeat == null) return false
-        val lastBlockTimestamp = blockManager.lastBlockTimestamp ?: blockQueries.getLastBlockTimestamp().get()
-        return lastBlockTimestamp - heartbeat!!.timestamp < workerContext.nodeConfig.heartbeatTimeout
     }
 
     fun isInFastSync(): Boolean {

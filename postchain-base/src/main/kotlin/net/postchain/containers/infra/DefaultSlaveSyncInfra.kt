@@ -2,10 +2,14 @@
 
 package net.postchain.containers.infra
 
+import net.postchain.base.BlockchainRid
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
+import net.postchain.ebft.heartbeat.HeartbeatChecker
+import net.postchain.ebft.heartbeat.RemoteConfigChecker
 import net.postchain.network.masterslave.slave.DefaultSlaveConnectionManager
+import net.postchain.network.masterslave.slave.SlaveConnectionManager
 import net.postchain.network.x.PeersCommConfigFactory
 
 class DefaultSlaveSyncInfra(
@@ -22,4 +26,7 @@ class DefaultSlaveSyncInfra(
         connectionManager = DefaultSlaveConnectionManager(nodeConfig)
     }
 
+    override fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {
+        return RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connectionManager as SlaveConnectionManager)
+    }
 }

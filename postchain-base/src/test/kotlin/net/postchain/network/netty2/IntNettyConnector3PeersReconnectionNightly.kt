@@ -22,9 +22,9 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Based on [IntNettyConnector3PeersCommunicationIT]
+ * Based on [IntNettyConnector3PeersCommunicationNightly]
  */
-class IntNettyConnector3PeersReconnectionIT {
+class IntNettyConnector3PeersReconnectionNightly {
 
     private val blockchainRid = BlockchainRid.buildRepeat(0x01)
     private lateinit var peerInfo1: PeerInfo
