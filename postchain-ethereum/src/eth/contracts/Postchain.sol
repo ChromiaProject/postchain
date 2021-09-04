@@ -80,7 +80,7 @@ library Postchain {
     ) public pure {
         (bytes32 blockRid, bytes32 eventRoot, ) = _verifyBlockHeader(blockHeader);
         if (!isValidSignatures(blockRid, sigs, _appNode)) revert("Postchain: block signature is invalid");
-        if (!merkleProofs.verify(_hash, position, eventRoot)) revert("Postchain: invalid event merkle proof");
+        if (!merkleProofs.verify(_hash, position, eventRoot)) revert("Postchain: invalid merkle proof");
     }
 
     function _verifyBlockHeader(bytes calldata blockHeader) internal pure returns (bytes32, bytes32, bytes32) {
