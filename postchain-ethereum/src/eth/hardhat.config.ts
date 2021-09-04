@@ -56,15 +56,14 @@ const config: HardhatUserConfig = {
         mnemonic: MNEMONIC,
       },
       chainId: chainIds.hardhat,
+      // See https://github.com/sc-forks/solidity-coverage/issues/652
+      hardfork: process.env.CODE_COVERAGE ? "berlin" : "london",
     },
     mainnet: createTestnetConfig("mainnet"),
     goerli: createTestnetConfig("goerli"),
     kovan: createTestnetConfig("kovan"),
     rinkeby: createTestnetConfig("rinkeby"),
     ropsten: createTestnetConfig("ropsten"),
-    coverage: {
-      url: "http://127.0.0.1:9999", // Coverage launches its own ganache-cli client
-    },
   },
   paths: {
     artifacts: "./artifacts",

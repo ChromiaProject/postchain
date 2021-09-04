@@ -8,7 +8,7 @@
     "compile": "cross-env TS_NODE_TRANSPILE_ONLY=true npx hardhat compile",
     "test": "npx hardhat test",
     "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
-    "coverage": "npx hardhat coverage --temp artifacts --network coverage",
+    "coverage": "cross-env CODE_COVERAGE=true hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
     "deploy": "npx hardhat deploy:ChrL2"
   },
   "author": "",
@@ -29,7 +29,7 @@
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.3.1",
     "fs-extra": "^10.0.0",
-    "hardhat": "^2.3.3",
+    "hardhat": "^2.6.0",
     "hardhat-gas-reporter": "^1.0.4",
     "prettier": "^2.3.1",
     "prettier-plugin-solidity": "^1.0.0-beta.13",
