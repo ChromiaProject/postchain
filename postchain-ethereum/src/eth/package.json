@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "clean": "SKIP_LOAD=true npx hardhat clean",
-    "compile": "SKIP_LOAD=true npx hardhat compile",
+    "clean": "cross-env TS_NODE_TRANSPILE_ONLY=true npx hardhat clean",
+    "compile": "cross-env TS_NODE_TRANSPILE_ONLY=true npx hardhat compile",
     "test": "npx hardhat test",
+    "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
     "coverage": "npx hardhat coverage --temp artifacts --network coverage",
     "deploy": "npx hardhat deploy:ChrL2"
   },
@@ -23,6 +24,7 @@
     "@types/mocha": "^8.2.2",
     "@types/node": "^15.12.2",
     "chai": "^4.3.4",
+    "cross-env": "^7.0.3",
     "dotenv": "^10.0.0",
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.3.1",

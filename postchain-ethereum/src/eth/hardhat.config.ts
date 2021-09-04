@@ -1,5 +1,3 @@
-import path from 'path';
-import fs from 'fs';
 import { config as dotenvConfig } from "dotenv";
 import { resolve } from "path";
 dotenvConfig({ path: resolve(__dirname, "./.env") });
@@ -18,6 +16,7 @@ import "solidity-coverage";
 
 import "./tasks/clean";
 import "./tasks/accounts";
+import "./tasks/deployers";
 
 const chainIds = {
   ganache: 1337,
@@ -29,24 +28,9 @@ const chainIds = {
   ropsten: 3,
 };
 
-const SKIP_LOAD = process.env.SKIP_LOAD === 'true';
 const MNEMONIC = process.env.MNEMONIC || "";
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
 const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
-
-// Prevent to load scripts before compilation and typechain
-if (!SKIP_LOAD) {
-  ['deployers'].forEach(
-    (folder) => {
-      const tasksPath = path.join(__dirname, 'tasks', folder);
-      fs.readdirSync(tasksPath)
-        .filter((pth) => pth.includes('.ts'))
-        .forEach((task) => {
-          require(`${tasksPath}/${task}`);
-        });
-    }
-  );
-}
 
 function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig {
   const url: string = "https://" + network + ".infura.io/v3/" + INFURA_API_KEY;
