@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { TestToken__factory } from "../typechain";
+import { TestToken__factory } from "../src/types";
 
 chai.use(solidity);
 const { expect } = chai;

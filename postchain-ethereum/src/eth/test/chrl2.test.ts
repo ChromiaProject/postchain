@@ -1,12 +1,12 @@
 import { ethers } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { TestToken__factory, ChrL2__factory, Postchain__factory, EC__factory, MerkleProof__factory, Hash__factory } from "../typechain";
-import { ChrL2LibraryAddresses } from "../typechain/factories/ChrL2__factory";
-import { MerkleProofLibraryAddresses } from "../typechain/factories/MerkleProof__factory";
+import { TestToken__factory, ChrL2__factory, Postchain__factory, EC__factory, MerkleProof__factory, Hash__factory } from "../src/types";
+import { ChrL2LibraryAddresses } from "../src/types/factories/ChrL2__factory";
+import { MerkleProofLibraryAddresses } from "../src/types/factories/MerkleProof__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
-import { PostchainLibraryAddresses } from "../typechain/factories/Postchain__factory";
+import { PostchainLibraryAddresses } from "../src/types/factories/Postchain__factory";
 import { ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
 

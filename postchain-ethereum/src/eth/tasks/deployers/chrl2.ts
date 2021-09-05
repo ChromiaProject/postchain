@@ -1,5 +1,5 @@
 import { task } from "hardhat/config";
-import {ChrL2, ChrL2__factory, MerkleProof, MerkleProof__factory, Hash, Hash__factory, EC, EC__factory, Postchain__factory, Postchain} from "../../typechain";
+import {ChrL2, ChrL2__factory, MerkleProof, MerkleProof__factory, Hash, Hash__factory, EC, EC__factory, Postchain__factory, Postchain} from "../../src/types";
 
 task("deploy:ChrL2")
   .addOptionalParam('directory', 'derectory node')
