@@ -20,25 +20,16 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
 interface MerkleProofInterface extends ethers.utils.Interface {
   functions: {
-    "c_0xd05a8f13(bytes32)": FunctionFragment;
     "root(bytes32[])": FunctionFragment;
     "verify(bytes32[],bytes32,uint256,bytes32)": FunctionFragment;
   };
 
-  encodeFunctionData(
-    functionFragment: "c_0xd05a8f13",
-    values: [BytesLike]
-  ): string;
   encodeFunctionData(functionFragment: "root", values: [BytesLike[]]): string;
   encodeFunctionData(
     functionFragment: "verify",
     values: [BytesLike[], BytesLike, BigNumberish, BytesLike]
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "c_0xd05a8f13",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "root", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
 
@@ -89,11 +80,6 @@ export class MerkleProof extends BaseContract {
   interface: MerkleProofInterface;
 
   functions: {
-    c_0xd05a8f13(
-      c__0xd05a8f13: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[void]>;
-
     root(nodes: BytesLike[], overrides?: CallOverrides): Promise<[string]>;
 
     verify(
@@ -104,11 +90,6 @@ export class MerkleProof extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[boolean]>;
   };
-
-  c_0xd05a8f13(
-    c__0xd05a8f13: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<void>;
 
   root(nodes: BytesLike[], overrides?: CallOverrides): Promise<string>;
 
@@ -121,11 +102,6 @@ export class MerkleProof extends BaseContract {
   ): Promise<boolean>;
 
   callStatic: {
-    c_0xd05a8f13(
-      c__0xd05a8f13: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     root(nodes: BytesLike[], overrides?: CallOverrides): Promise<string>;
 
     verify(
@@ -140,11 +116,6 @@ export class MerkleProof extends BaseContract {
   filters: {};
 
   estimateGas: {
-    c_0xd05a8f13(
-      c__0xd05a8f13: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     root(nodes: BytesLike[], overrides?: CallOverrides): Promise<BigNumber>;
 
     verify(
@@ -157,11 +128,6 @@ export class MerkleProof extends BaseContract {
   };
 
   populateTransaction: {
-    c_0xd05a8f13(
-      c__0xd05a8f13: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     root(
       nodes: BytesLike[],
       overrides?: CallOverrides

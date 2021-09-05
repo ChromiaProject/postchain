@@ -20,23 +20,14 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
 interface ECInterface extends ethers.utils.Interface {
   functions: {
-    "c_0x40f9bb3d(bytes32)": FunctionFragment;
     "recover(bytes32,bytes)": FunctionFragment;
   };
 
-  encodeFunctionData(
-    functionFragment: "c_0x40f9bb3d",
-    values: [BytesLike]
-  ): string;
   encodeFunctionData(
     functionFragment: "recover",
     values: [BytesLike, BytesLike]
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "c_0x40f9bb3d",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "recover", data: BytesLike): Result;
 
   events: {};
@@ -86,22 +77,12 @@ export class EC extends BaseContract {
   interface: ECInterface;
 
   functions: {
-    c_0x40f9bb3d(
-      c__0x40f9bb3d: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[void]>;
-
     recover(
       hash: BytesLike,
       signature: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string]>;
   };
-
-  c_0x40f9bb3d(
-    c__0x40f9bb3d: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<void>;
 
   recover(
     hash: BytesLike,
@@ -110,11 +91,6 @@ export class EC extends BaseContract {
   ): Promise<string>;
 
   callStatic: {
-    c_0x40f9bb3d(
-      c__0x40f9bb3d: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     recover(
       hash: BytesLike,
       signature: BytesLike,
@@ -125,11 +101,6 @@ export class EC extends BaseContract {
   filters: {};
 
   estimateGas: {
-    c_0x40f9bb3d(
-      c__0x40f9bb3d: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     recover(
       hash: BytesLike,
       signature: BytesLike,
@@ -138,11 +109,6 @@ export class EC extends BaseContract {
   };
 
   populateTransaction: {
-    c_0x40f9bb3d(
-      c__0x40f9bb3d: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     recover(
       hash: BytesLike,
       signature: BytesLike,

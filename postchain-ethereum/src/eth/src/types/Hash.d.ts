@@ -20,17 +20,12 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
 interface HashInterface extends ethers.utils.Interface {
   functions: {
-    "c_0x9ed2058b(bytes32)": FunctionFragment;
     "hash(bytes32,bytes32)": FunctionFragment;
     "hashGtvBytes32Leaf(bytes32)": FunctionFragment;
     "hashGtvBytes64Leaf(bytes)": FunctionFragment;
     "hashGtvIntegerLeaf(uint256)": FunctionFragment;
   };
 
-  encodeFunctionData(
-    functionFragment: "c_0x9ed2058b",
-    values: [BytesLike]
-  ): string;
   encodeFunctionData(
     functionFragment: "hash",
     values: [BytesLike, BytesLike]
@@ -48,10 +43,6 @@ interface HashInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "c_0x9ed2058b",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "hash", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "hashGtvBytes32Leaf",
@@ -113,11 +104,6 @@ export class Hash extends BaseContract {
   interface: HashInterface;
 
   functions: {
-    c_0x9ed2058b(
-      c__0x9ed2058b: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[void]>;
-
     hash(
       left: BytesLike,
       right: BytesLike,
@@ -139,11 +125,6 @@ export class Hash extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[string]>;
   };
-
-  c_0x9ed2058b(
-    c__0x9ed2058b: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<void>;
 
   hash(
     left: BytesLike,
@@ -167,11 +148,6 @@ export class Hash extends BaseContract {
   ): Promise<string>;
 
   callStatic: {
-    c_0x9ed2058b(
-      c__0x9ed2058b: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     hash(
       left: BytesLike,
       right: BytesLike,
@@ -197,11 +173,6 @@ export class Hash extends BaseContract {
   filters: {};
 
   estimateGas: {
-    c_0x9ed2058b(
-      c__0x9ed2058b: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     hash(
       left: BytesLike,
       right: BytesLike,
@@ -225,11 +196,6 @@ export class Hash extends BaseContract {
   };
 
   populateTransaction: {
-    c_0x9ed2058b(
-      c__0x9ed2058b: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     hash(
       left: BytesLike,
       right: BytesLike,

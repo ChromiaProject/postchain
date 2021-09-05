@@ -20,17 +20,12 @@ import { TypedEventFilter, TypedEvent, TypedListener } from "./commons";
 
 interface PostchainInterface extends ethers.utils.Interface {
   functions: {
-    "c_0x94e56d13(bytes32)": FunctionFragment;
     "isValidNodes(bytes32,address[])": FunctionFragment;
     "isValidSignatures(bytes32,bytes[],address[])": FunctionFragment;
     "verifyBlock(bytes32,bytes,bytes[],bytes32[],uint256,address[])": FunctionFragment;
     "verifyEvent(bytes32,bytes)": FunctionFragment;
   };
 
-  encodeFunctionData(
-    functionFragment: "c_0x94e56d13",
-    values: [BytesLike]
-  ): string;
   encodeFunctionData(
     functionFragment: "isValidNodes",
     values: [BytesLike, string[]]
@@ -55,10 +50,6 @@ interface PostchainInterface extends ethers.utils.Interface {
     values: [BytesLike, BytesLike]
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "c_0x94e56d13",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "isValidNodes",
     data: BytesLike
@@ -123,11 +114,6 @@ export class Postchain extends BaseContract {
   interface: PostchainInterface;
 
   functions: {
-    c_0x94e56d13(
-      c__0x94e56d13: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[void]>;
-
     isValidNodes(
       hash: BytesLike,
       nodes: string[],
@@ -157,11 +143,6 @@ export class Postchain extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[string, string, BigNumber]>;
   };
-
-  c_0x94e56d13(
-    c__0x94e56d13: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<void>;
 
   isValidNodes(
     hash: BytesLike,
@@ -193,11 +174,6 @@ export class Postchain extends BaseContract {
   ): Promise<[string, string, BigNumber]>;
 
   callStatic: {
-    c_0x94e56d13(
-      c__0x94e56d13: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     isValidNodes(
       hash: BytesLike,
       nodes: string[],
@@ -231,11 +207,6 @@ export class Postchain extends BaseContract {
   filters: {};
 
   estimateGas: {
-    c_0x94e56d13(
-      c__0x94e56d13: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     isValidNodes(
       hash: BytesLike,
       nodes: string[],
@@ -267,11 +238,6 @@ export class Postchain extends BaseContract {
   };
 
   populateTransaction: {
-    c_0x94e56d13(
-      c__0x94e56d13: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     isValidNodes(
       hash: BytesLike,
       nodes: string[],

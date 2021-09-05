@@ -24,7 +24,6 @@ interface ChrL2Interface extends ethers.utils.Interface {
     "_balances(address,address)": FunctionFragment;
     "_withdraw(bytes32)": FunctionFragment;
     "appNodes(uint256)": FunctionFragment;
-    "c_0xba378102(bytes32)": FunctionFragment;
     "deposit(address,uint256)": FunctionFragment;
     "directoryNodes(uint256)": FunctionFragment;
     "updateAppNodes(bytes32,bytes[],address[])": FunctionFragment;
@@ -44,10 +43,6 @@ interface ChrL2Interface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "appNodes",
     values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "c_0xba378102",
-    values: [BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "deposit",
@@ -84,10 +79,6 @@ interface ChrL2Interface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: "_balances", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "_withdraw", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "appNodes", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "c_0xba378102",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "deposit", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "directoryNodes",
@@ -183,11 +174,6 @@ export class ChrL2 extends BaseContract {
 
     appNodes(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>;
 
-    c_0xba378102(
-      c__0xba378102: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[void]>;
-
     deposit(
       token: string,
       amount: BigNumberish,
@@ -251,11 +237,6 @@ export class ChrL2 extends BaseContract {
 
   appNodes(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
 
-  c_0xba378102(
-    c__0xba378102: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<void>;
-
   deposit(
     token: string,
     amount: BigNumberish,
@@ -318,11 +299,6 @@ export class ChrL2 extends BaseContract {
     >;
 
     appNodes(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
-
-    c_0xba378102(
-      c__0xba378102: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
 
     deposit(
       token: string,
@@ -406,11 +382,6 @@ export class ChrL2 extends BaseContract {
 
     appNodes(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
 
-    c_0xba378102(
-      c__0xba378102: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     deposit(
       token: string,
       amount: BigNumberish,
@@ -467,11 +438,6 @@ export class ChrL2 extends BaseContract {
 
     appNodes(
       arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    c_0xba378102(
-      c__0xba378102: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
