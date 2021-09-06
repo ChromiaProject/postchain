@@ -99,7 +99,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
       fetchDepositedTokenInfo();
     } catch (error) {
     }
-  }, [library, tokenAddress]);
+  }, [library, tokenAddress, account]);
 
   const depositTokens = async () => {
     const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
