@@ -58,7 +58,7 @@ const TokenInfo = ({ tokenAddress }: { tokenAddress: string }) => {
       <div className="shadow stats">
         <div className="stat">
           <div className="stat-title">Total Supply</div>
-          <div className="stat-value">{formatUnits(data?.totalSupply ?? 0, 'wei')}</div>
+          <div className="stat-value">{Number(formatUnits(data?.totalSupply ?? 0, data?.decimals)).toFixed(6)}</div>
         </div>
       </div>
     </div>
@@ -76,25 +76,30 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
   const [balance, setBalance] = useState(BigNumber.from(0));
   const [deposite, setDeposit] = useState(BigNumber.from(0));
   const [amount, setAmount] = useState(0);
+  const [unit, setUnit] = useState(18);
 
   useEffect(() => {
-    const fetchDepositedTokenInfo = ({ tokenAddress }: { tokenAddress: string }) => {
+    const fetchDepositedTokenInfo = () => {
       const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
-      const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, provider) as ERC20;
+      const tokenContract = new ethers.Contract(
+        tokenAddress, 
+        ERC20TokenArtifacts.abi, 
+        provider
+      ) as ERC20;
       const chrl2 = new ethers.Contract(
         chrL2Address,
         ChrL2Artifacts.abi,
         provider
       ) as ChrL2;
       tokenContract.balanceOf(account).then(setBalance).catch();
-      chrl2._balances(account, tokenAddress)
-        .then(setDeposit).catch();
+      tokenContract.decimals().then(setUnit).catch();
+      chrl2._balances(account, tokenAddress).then(setDeposit).catch();
     };
     try {
-      fetchDepositedTokenInfo({ tokenAddress });
+      fetchDepositedTokenInfo();
     } catch (error) {
     }
-  }, [library]);
+  }, [library, tokenAddress]);
 
   const depositTokens = async () => {
     const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
@@ -109,7 +114,8 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
         ChrL2Artifacts.abi,
         provider
       ) as ChrL2;
-      const calldata = chrl2.interface.encodeFunctionData("deposit", [tokenAddress, amount])
+      const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from(10).pow(unit))
+      const calldata = chrl2.interface.encodeFunctionData("deposit", [tokenAddress, value])
       const txPrams = {
         to: chrL2Address,
         value: '0x0',
@@ -134,7 +140,8 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
         return;
       }
       const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, provider) as ERC20;
-      const calldata = tokenContract.interface.encodeFunctionData("approve", [chrL2Address, amount]);
+      const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from(10).pow(unit))
+      const calldata = tokenContract.interface.encodeFunctionData("approve", [chrL2Address, value]);
       const txPrams = {
         to: tokenAddress,
         value: '0x0',
@@ -186,11 +193,11 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
             <div className="shadow stats">
               <div className="stat">
                 <div className="stat-title">Balance</div>
-                <div className="stat-value">{formatUnits(balance, "wei")}</div>
+                <div className="stat-value">{Number(formatUnits(balance, unit)).toFixed(6)}</div>
               </div>
               <div className="stat">
                 <div className="stat-title">Deposited Ammount</div>
-                <div className="stat-value">{formatUnits(deposite, "wei")}</div>
+                <div className="stat-value">{Number(formatUnits(deposite, unit)).toFixed(6)}</div>
               </div>
               <div className="stat">
                 <div className="stat-title">New Deposite</div>
@@ -200,7 +207,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
 
             <input
               type="range"
-              max="1000"
+              max="10"
               value={amount}
               onChange={(evt) => setAmount(evt.target.valueAsNumber)}
               className="range range-accent"
