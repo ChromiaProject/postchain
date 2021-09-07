@@ -8,6 +8,17 @@ import { useQuery } from "react-query";
 import ERC20TokenArtifacts from "./artifacts/contracts/token/ERC20.sol/ERC20.json";
 import ChrL2Artifacts from "./artifacts/contracts/ChrL2.sol/ChrL2.json";
 
+import { restClient, gtxClient } from "postchain-client"
+
+const postchainURL = process.env.REACT_APP_POSTCHAIN_URL
+const blockchainRID = process.env.REACT_APP_POSTCHAIN_BRID
+const rest = restClient.createRestClient(postchainURL, blockchainRID, 5);
+const client = gtxClient.createClient(
+    rest,
+    blockchainRID,
+    []
+)
+
 interface Props {
   chrL2Address: string;
   tokenAddress: string;
@@ -59,6 +70,77 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
   const [deposite, setDeposit] = useState(BigNumber.from(0));
   const [amount, setAmount] = useState(0);
   const [unit, setUnit] = useState(18);
+  const [blkNumber, setBlkNumber] = useState(0)
+  const [eventHash, setEventHash] = useState("00000000000000000000000000000000")
+
+  const withdrawRequest = async () => {
+    const signer = library.getSigner();
+    try {
+      let event = await client.query('get_event_merkle_proof', { 'blockHeight': blkNumber, "eventHash": eventHash })
+      let data = JSON.parse(JSON.stringify(event))
+      const chrl2 = new ethers.Contract(
+        chrL2Address,
+        ChrL2Artifacts.abi,
+        library
+      )
+
+      const blockHeader = "0x" + data.blockHeader
+      const blockWitness = data.blockWitness
+      let sigs = new Array<string>(blockWitness.length)
+      for (let i = 0; i < blockWitness.length; i++) {
+        sigs[i] = "0x" + blockWitness[i].sig
+      }
+
+      const eventData = data.eventData
+      const evtPosition = eventData[1]
+      const evtHash = "0x" + eventData[2]
+      const evtData = "0x" + eventData[3]
+      const merkleProofs = data.merkleProofs
+      let proofs = new Array<string>(merkleProofs.length)
+      for (let i = 0; i < merkleProofs.length; i++) {
+        proofs[i] = "0x" + merkleProofs[i]
+      }
+      const calldata = chrl2.interface.encodeFunctionData("withdraw_request", [evtData, evtHash, blockHeader, sigs, proofs, evtPosition])
+      const txPrams = {
+        to: chrL2Address,
+        value: '0x0',
+        data: calldata
+      };
+      const transaction = await signer.sendTransaction(txPrams);
+      toast.promise(transaction.wait(), {
+        loading: `Transaction submitted. Wait for confirmation...`,
+        success: <b>Transaction confirmed!</b>,
+        error: <b>Transaction failed!.</b>,
+      });
+    } catch (error) { }
+  }
+
+  const withdraw = async () => {
+    const signer = library.getSigner();
+    try {
+      let event = await client.query('get_event_merkle_proof', { 'blockHeight': blkNumber, "eventHash": eventHash })
+      let data = JSON.parse(JSON.stringify(event))
+      const chrl2 = new ethers.Contract(
+        chrL2Address,
+        ChrL2Artifacts.abi,
+        library
+      )
+      const eventData = data.eventData
+      const evtHash = "0x" + eventData[2]
+      const calldata = chrl2.interface.encodeFunctionData("withdraw", [evtHash, account])
+      const txPrams = {
+        to: chrL2Address,
+        value: '0x0',
+        data: calldata
+      };
+      const transaction = await signer.sendTransaction(txPrams);
+      toast.promise(transaction.wait(), {
+        loading: `Transaction submitted. Wait for confirmation...`,
+        success: <b>Transaction confirmed!</b>,
+        error: <b>Transaction failed!.</b>,
+      });
+    } catch (error) { }
+  }
 
   useEffect(() => {
     const fetchDepositedTokenInfo = () => {
@@ -199,16 +281,28 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
         </div>
         <div className="divider"></div>
 
-        <div className="items-center justify-center max-w-2xl px-4 py-4 mx-auto text-xl border-orange-500 lg:flex md:flex">
-          <div className="p-2 font-semibold">
-            <a
-              href={`https://rinkeby.etherscan.io/address/${tokenAddress}`}
-              target="_blank"
-              className="px-4 py-1 ml-2 text-white bg-orange-500 rounded-full shadow focus:outline-none"
-              rel="noreferrer"
-            >
-              View Token on Etherscan
-            </a>
+        <div class="md:container md:mx-auto">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">BlockNumber</span>
+            </label>
+            <input type="number" placeholder="BlockNumber" class="input input-bordered" value={blkNumber} 
+              onChange={(evt) => setBlkNumber(evt.target.valueAsNumber)}/>
+          </div>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Event Hash</span>
+            </label>
+            <input type="text" placeholder="Event Hash" class="input input-bordered" value={eventHash} 
+              onChange={(evt) => setEventHash(evt.target.value)}/>
+          </div>
+          <div className="justify-center card-actions">
+            <button onClick={withdrawRequest} type="button" className="btn btn-outline btn-accent">
+              Withdraw Request
+            </button>
+            <button onClick={withdraw} type="button" className="btn btn-outline btn-accent">
+              Withdraw
+            </button>
           </div>
         </div>
       </div>

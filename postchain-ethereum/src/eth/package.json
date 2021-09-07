@@ -10,7 +10,8 @@
     "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
     "coverage": "cross-env CODE_COVERAGE=true hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
     "deploy": "npx hardhat deploy:ChrL2",
-    "start": "craco start"
+    "start": "craco start",
+    "build": "craco build"
   },
   "author": "",
   "license": "MIT",
@@ -56,6 +57,7 @@
     "@web3-react/walletconnect-connector": "^6.2.4",
     "autoprefixer": "^9",
     "daisyui": "^1.14.0",
+    "postchain-client": "^0.9.2",
     "postcss": "^7",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",

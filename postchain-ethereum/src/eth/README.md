@@ -68,6 +68,25 @@ Create `.env` file to config your dapp, then run below command to start the dapp
 $ yarn start
 ```
 
+### Build the DApp for production deployment
+
+```
+$ yarn build
+
+```
+
+The build folder is ready to be deployed.
+We may serve it with a static server:
+
+```
+$ yarn global add serve
+$ serve -s build
+```
+
+Find out more about deployment here:
+    https://cra.link/deployment
+
+
 Voila! Now you can access to `http://localhost:3000/` to use the dapp to interact with L2 smart contract
 
 ### Added plugins
