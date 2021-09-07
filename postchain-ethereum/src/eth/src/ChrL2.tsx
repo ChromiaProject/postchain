@@ -7,28 +7,16 @@ import { useQuery } from "react-query";
 
 import ERC20TokenArtifacts from "./artifacts/contracts/token/ERC20.sol/ERC20.json";
 import ChrL2Artifacts from "./artifacts/contracts/ChrL2.sol/ChrL2.json";
-import { ERC20 } from "./types/ERC20";
-import { ChrL2 } from "./types/ChrL2";
 
 interface Props {
   chrL2Address: string;
   tokenAddress: string;
 }
 
-declare global {
-  interface Window {
-    ethereum: ethers.providers.ExternalProvider;
-  }
-}
-
-const providerUrl = import.meta.env.VITE_PROVIDER_URL;
-
 const TokenInfo = ({ tokenAddress }: { tokenAddress: string }) => {
   const { library } = useWeb3React();
-
   const fetchTokenInfo = async () => {
-    const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
-    const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, provider) as ERC20;
+    const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library);
     const name = await tokenContract.name();
     const symbol = await tokenContract.symbol();
     const decimals = await tokenContract.decimals();
@@ -65,12 +53,6 @@ const TokenInfo = ({ tokenAddress }: { tokenAddress: string }) => {
   );
 };
 
-async function requestAccount() {
-  if (window.ethereum?.request) return window.ethereum.request({ method: "eth_requestAccounts" });
-
-  throw new Error("Missing install Metamask. Please access https://metamask.io/ to install extension on your browser");
-}
-
 const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
   const { library, chainId, account } = useWeb3React();
   const [balance, setBalance] = useState(BigNumber.from(0));
@@ -80,17 +62,17 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
 
   useEffect(() => {
     const fetchDepositedTokenInfo = () => {
-      const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
+      // const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
       const tokenContract = new ethers.Contract(
         tokenAddress, 
-        ERC20TokenArtifacts.abi, 
-        provider
-      ) as ERC20;
+        ERC20TokenArtifacts.abi,
+        library
+      )
       const chrl2 = new ethers.Contract(
         chrL2Address,
         ChrL2Artifacts.abi,
-        provider
-      ) as ChrL2;
+        library
+      )
       tokenContract.balanceOf(account).then(setBalance).catch();
       tokenContract.decimals().then(setUnit).catch();
       chrl2._balances(account, tokenAddress).then(setDeposit).catch();
@@ -102,18 +84,13 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
   }, [library, tokenAddress, account]);
 
   const depositTokens = async () => {
-    const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
-    const signer = provider.getSigner();
+    const signer = library.getSigner();
     try {
-      if (!account) {
-        await requestAccount();
-        return;
-      }
       const chrl2 = new ethers.Contract(
         chrL2Address,
         ChrL2Artifacts.abi,
-        provider
-      ) as ChrL2;
+        library
+      )
       const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from(10).pow(unit))
       const calldata = chrl2.interface.encodeFunctionData("deposit", [tokenAddress, value])
       const txPrams = {
@@ -132,14 +109,10 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
   };
 
   const approveTokens = async () => {
-    const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
-    const signer = provider.getSigner();
+    // const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
+    const signer = library.getSigner();
     try {
-      if (!account) {
-        await requestAccount();
-        return;
-      }
-      const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, provider) as ERC20;
+      const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library)
       const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from(10).pow(unit))
       const calldata = tokenContract.interface.encodeFunctionData("approve", [chrL2Address, value]);
       const txPrams = {

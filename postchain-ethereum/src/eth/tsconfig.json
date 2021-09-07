@@ -2,17 +2,35 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["es6"],
-    "module": "commonjs",
+    "lib": [
+      "es6"
+    ],
+    "module": "esnext",
     "moduleResolution": "node",
     "noImplicitAny": true,
     "outDir": "dist",
     "resolveJsonModule": true,
     "sourceMap": true,
     "strict": true,
-    "target": "es6"
+    "target": "es6",
+    "allowJs": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
   },
-  "exclude": ["node_modules"],
-  "files": ["./hardhat.config.ts"],
-  "include": ["tasks/**/*.ts", "test/**/*.ts", "src/types/**/*.d.ts", "src/types/**/*.ts"]
+  "exclude": [
+    "node_modules"
+  ],
+  "files": [
+    "./hardhat.config.ts"
+  ],
+  "include": [
+    "tasks/**/*.ts",
+    "test/**/*.ts",
+    "src/types/**/*.d.ts",
+    "src/types/**/*.ts"
+  ]
 }

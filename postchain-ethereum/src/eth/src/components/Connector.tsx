@@ -9,7 +9,6 @@ import React from "react";
 
 import { injected, POLLING_INTERVAL } from "../dapp/connectors";
 import { useEagerConnect, useInactiveListener } from "../dapp/hooks";
-import logger from "../logger";
 import { Header } from "./Header";
 
 function getErrorMessage(error: Error) {
@@ -23,7 +22,6 @@ function getErrorMessage(error: Error) {
     ) {
       return "Please authorize this website to access your Ethereum account.";
     } else {
-      logger.error(error);
       return "An unknown error occurred. Check the console for more details.";
     }
 }

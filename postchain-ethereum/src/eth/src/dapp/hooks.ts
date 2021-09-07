@@ -1,7 +1,6 @@
 import { useWeb3React } from "@web3-react/core";
 import { useState, useEffect } from "react";
 
-import logger from "../logger";
 import { injected } from "./connectors";
 
 export function useEagerConnect() {
@@ -35,38 +34,33 @@ export function useInactiveListener(suppress: boolean = false) {
   const { active, error, activate } = useWeb3React();
 
   useEffect((): any => {
-    const { ethereum } = window as any;
-    if (ethereum && ethereum.on && !active && !error && !suppress) {
+    if (window.ethereum && window.ethereum.on && !active && !error && !suppress) {
       const handleConnect = () => {
-        logger.warn("Handling 'connect' event");
         activate(injected);
       };
       const handleChainChanged = (chainId: string | number) => {
-        logger.warn("Handling 'chainChanged' event with payload", chainId);
         activate(injected);
       };
       const handleAccountsChanged = (accounts: string[]) => {
-        logger.warn("Handling 'accountsChanged' event with payload", accounts);
         if (accounts.length > 0) {
           activate(injected);
         }
       };
       const handleNetworkChanged = (networkId: string | number) => {
-        logger.warn("Handling 'networkChanged' event with payload", networkId);
         activate(injected);
       };
 
-      ethereum.on("connect", handleConnect);
-      ethereum.on("chainChanged", handleChainChanged);
-      ethereum.on("accountsChanged", handleAccountsChanged);
-      ethereum.on("networkChanged", handleNetworkChanged);
+      window.ethereum.on("connect", handleConnect);
+      window.ethereum.on("chainChanged", handleChainChanged);
+      window.ethereum.on("accountsChanged", handleAccountsChanged);
+      window.ethereum.on("networkChanged", handleNetworkChanged);
 
       return () => {
-        if (ethereum.removeListener) {
-          ethereum.removeListener("connect", handleConnect);
-          ethereum.removeListener("chainChanged", handleChainChanged);
-          ethereum.removeListener("accountsChanged", handleAccountsChanged);
-          ethereum.removeListener("networkChanged", handleNetworkChanged);
+        if (window.ethereum.removeListener) {
+          window.ethereum.removeListener("connect", handleConnect);
+          window.ethereum.removeListener("chainChanged", handleChainChanged);
+          window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+          window.ethereum.removeListener("networkChanged", handleNetworkChanged);
         }
       };
     }
