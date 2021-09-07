@@ -66,7 +66,7 @@ const config: HardhatUserConfig = {
     ropsten: createTestnetConfig("ropsten"),
   },
   paths: {
-    artifacts: "./artifacts",
+    artifacts: "./src/artifacts",
     cache: "./cache",
     sources: "./contracts",
     tests: "./test",

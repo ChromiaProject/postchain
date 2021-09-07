@@ -5,8 +5,8 @@ import { toast } from "react-hot-toast";
 import React, { useEffect, useState } from "react";
 import { useQuery } from "react-query";
 
-import ERC20TokenArtifacts from "../artifacts/contracts/token/ERC20.sol/ERC20.json";
-import ChrL2Artifacts from "../artifacts/contracts/ChrL2.sol/ChrL2.json";
+import ERC20TokenArtifacts from "./artifacts/contracts/token/ERC20.sol/ERC20.json";
+import ChrL2Artifacts from "./artifacts/contracts/ChrL2.sol/ChrL2.json";
 import { ERC20 } from "./types/ERC20";
 import { ChrL2 } from "./types/ChrL2";
 
