@@ -1,4 +1,4 @@
-package net.postchain.integrationtest.sync
+package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.api.rest.infra.BaseApiInfrastructure
@@ -13,15 +13,12 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.devtools.KeyPairHelper
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
-import net.postchain.devtools.currentHeight
+import net.postchain.devtools.ManagedModeTest.NodeSet
 import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.*
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
-import net.postchain.integrationtest.sync.ManagedModeTest.NodeSet
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
@@ -31,7 +28,7 @@ import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
-import kotlin.test.assertTrue
+
 
 open class ManagedModeTest : AbstractSyncTest() {
 
@@ -173,7 +170,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         buildBlockNoWait(nodeSet.nodes(), nodeSet.chain, height)
         sleep(1000)
         nodeSet.nodes().forEach {
-            assertTrue(it.blockQueries(nodeSet.chain).getBestHeight().get() < height)
+            if (it.blockQueries(nodeSet.chain).getBestHeight().get() >= height) throw RuntimeException("assertCantBuildBlock: Can build block")
         }
     }
 
@@ -229,10 +226,15 @@ open class ManagedModeTest : AbstractSyncTest() {
             historicChain: Long? = null,
             excludeChain0Nodes: Set<Int> = setOf(),
             waitForRestart: Boolean = true): NodeSet {
-        assertTrue(signers.intersect(replicas).isEmpty())
+        if (signers.intersect(replicas).isNotEmpty()) throw
+            IllegalArgumentException("a node cannot be both signer and replica")
         val maxIndex = c0.all().size
-        signers.forEach { assertTrue(it < maxIndex) }
-        replicas.forEach { assertTrue(it < maxIndex) }
+        signers.forEach {
+            if (it >= maxIndex) throw IllegalArgumentException("bad signer index")
+        }
+        replicas.forEach {
+            if (it >= maxIndex) throw IllegalArgumentException("bad replica index")
+        }
         val c = NodeSet(chainId++, signers, replicas)
         newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
         // Await blockchain started on all relevant nodes
@@ -439,12 +441,12 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
     }
 
     //Does not return the real blockchain configuration byteArray
-    override fun getConfiguration(blockchainRIDRaw: ByteArray, height: Long): ByteArray? {
-        val l = bridToConfs[BlockchainRid(blockchainRIDRaw)] ?: return null
+    override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {
+        val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return null
         var conf: ByteArray? = null
         for (entry in l) {
             if (entry.key <= height) {
-                conf = toByteArray(Key(BlockchainRid(blockchainRIDRaw), entry.key))
+                conf = toByteArray(Key(BlockchainRid(blockchainRidRaw), entry.key))
             } else {
                 return conf
             }
@@ -459,8 +461,8 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         return h as Map<Long, ByteArray>? ?: mapOf()
     }
 
-    override fun findNextConfigurationHeight(blockchainRIDRaw: ByteArray, height: Long): Long? {
-        val l = bridToConfs[BlockchainRid(blockchainRIDRaw)] ?: return null
+    override fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long? {
+        val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return null
         for (h in l.keys) {
             if (h > height) {
                 return h
@@ -485,7 +487,7 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         val result = mutableMapOf<BlockchainRid, List<XPeerID>>()
         chainToNodeSet.keys.union(extraReplicas.keys).forEach {
             val replicaSet = chainToNodeSet[it]?.replicas ?: emptySet()
-            var replicas = replicaSet.map { XPeerID(KeyPairHelper.pubKey(it)) }.toMutableSet()
+            val replicas = replicaSet.map { XPeerID(KeyPairHelper.pubKey(it)) }.toMutableSet()
             replicas.addAll(extraReplicas[it] ?: emptySet())
             result.put(it, replicas.toList())
         }
@@ -522,7 +524,7 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
 
     fun addConf(rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, nodeSet: NodeSet, rawBcConf: ByteArray) {
         val confs = bridToConfs.computeIfAbsent(rid) { sortedMapOf() }
-        if (confs!!.put(height, Pair(conf, rawBcConf)) != null) {
+        if (confs.put(height, Pair(conf, rawBcConf)) != null) {
             throw IllegalArgumentException("Setting blockchain configuraion for height that already has a configuration")
         } else {
             awaitDebug("### NEW BC CONFIG for chain: ${nodeSet.chain} (bc rid: ${rid.toShortHex()}) at height: $height")

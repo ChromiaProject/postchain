@@ -2,6 +2,8 @@ package net.postchain.integrationtest.sync
 
 import net.postchain.base.PeerInfo
 import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.ManagedModeTest
+import net.postchain.devtools.chainRidOf
 import net.postchain.devtools.currentHeight
 import net.postchain.network.x.XPeerID
 import org.apache.commons.configuration2.Configuration
@@ -10,7 +12,6 @@ import org.junit.Test
 import org.junit.Ignore
 import java.lang.Thread.sleep
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class ForkTestNightly : ManagedModeTest() {
 

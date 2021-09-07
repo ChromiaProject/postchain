@@ -61,7 +61,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
             peerInfos = null
             expectedSuccessRids = mutableMapOf()
             configOverrides.clear()
-            logger.debug("teadDown() done")
+            logger.debug("tearDown() done")
         } catch (t: Throwable) {
             logger.error("tearDown() failed", t)
         }

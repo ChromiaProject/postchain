@@ -13,8 +13,6 @@
 
     <properties>
         <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
-        <mockito.version>2.23.0</mockito.version>
-        <mockito-kotlin.version>2.1.0</mockito-kotlin.version>
         <assertk.version>0.10</assertk.version>
     </properties>
 
@@ -39,12 +37,10 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
-            <version>${kotlin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
-            <version>${kotlin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -84,15 +80,11 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>${mockito.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.nhaarman.mockitokotlin2</groupId>
             <artifactId>mockito-kotlin</artifactId>
-            <version>${mockito-kotlin.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -111,7 +103,7 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
-            <version>1.12.5</version>
+            <version>1.15.3</version>
             <scope>test</scope>
         </dependency>
 
@@ -119,27 +111,6 @@
 
     <build>
         <plugins>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven.surefire.plugin.version}</version>
-                <configuration>
-                    <properties>
-                        <property>
-                            <name>listener</name>
-                            <value>net.postchain.maven.surefire.PrintCurrentTestRunListener</value>
-                        </property>
-                    </properties>
-                    <includes>
-                        <include>**/*Test.java</include>
-                        <include>**/*IT.java</include>
-                        <!--                        <include>**/*Nightly.java</include>-->
-                        <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
-                    </includes>
-                </configuration>
-            </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -181,19 +152,19 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
 
     <profiles>
         <profile>
+            <!-- Cannot add this listener in parent pom (as long as it is not located on top  level), so adding it here
+             to the ci profile instead. Most tests are in devtools anyway -->
             <id>ci</id>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>${maven.surefire.plugin.version}</version>
                         <configuration>
                             <properties>
                                 <property>
@@ -201,13 +172,6 @@
                                     <value>net.postchain.maven.surefire.PrintCurrentTestRunListener</value>
                                 </property>
                             </properties>
-                            <includes>
-                                <include>**/*Test.java</include>
-                                <include>**/*IT.java</include>
-                                <include>**/*Nightly.java</include>
-                                <include>**/*E2ET.*</include>
-                                <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
-                            </includes>
                         </configuration>
                     </plugin>
                 </plugins>

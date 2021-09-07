@@ -108,9 +108,9 @@ class DefaultSlaveConnectionManager(
         val chain = chains[chainId] ?: throw ProgrammerMistake("Master chain not found: $chainId")
         if (chain.connection != null) {
             val message = MsDataMessage(
+                    chain.config.blockchainRid.data,
                     nodeConfig.pubKeyByteArray,
                     peerId.byteArray,
-                    chain.config.blockchainRid.data,
                     data())
             chain.connection?.sendPacket { MsCodec.encode(message) }
         } else {
@@ -166,22 +166,22 @@ class DefaultSlaveConnectionManager(
 
     @Synchronized
     override fun onMasterConnected(descriptor: SlaveConnectionDescriptor, connection: MsConnection): MsMessageHandler? {
-        logger.info { "${logger(descriptor)}: Master node connected: blockchainRid: ${descriptor.blockchainRid}" }
+        logger.info { "${logger(descriptor)}: Master node connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
 
         val chain = findChainByBrid(descriptor.blockchainRid)
         return when {
             chain == null -> {
-                logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid = ${descriptor.blockchainRid}")
+                logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid = ${descriptor.blockchainRid.toShortHex()}")
                 connection.close()
                 null
             }
             chain.connection != null -> {
-                logger.debug { "${logger(descriptor)}: Master node already connected: blockchainRid = ${descriptor.blockchainRid}" }
+                logger.debug { "${logger(descriptor)}: Master node already connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 // Don't close connection here, just return handler
                 chain.msMessageHandler
             }
             else -> {
-                logger.debug { "${logger(descriptor)}: Master node connected: blockchainRid = ${descriptor.blockchainRid}" }
+                logger.debug { "${logger(descriptor)}: Master node connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 chain.connection = connection
                 chain.msMessageHandler
             }
@@ -190,11 +190,11 @@ class DefaultSlaveConnectionManager(
 
     @Synchronized
     override fun onMasterDisconnected(descriptor: SlaveConnectionDescriptor, connection: MsConnection) {
-        logger.info { "${logger(descriptor)}: Master node disconnected: blockchainRid = ${descriptor.blockchainRid}" }
+        logger.info { "${logger(descriptor)}: Master node disconnected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
 
         val chain = findChainByBrid(descriptor.blockchainRid)
         if (chain == null) {
-            logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid: ${descriptor.blockchainRid}")
+            logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid: ${descriptor.blockchainRid.toShortHex()}")
             connection.close()
         } else {
             if (chain.connection !== connection) {
@@ -217,7 +217,7 @@ class DefaultSlaveConnectionManager(
         if (chain.connection != null) {
             chain.connection?.sendPacket { MsCodec.encode(message) }
         } else {
-            logger.error("${logger(chain)}: Can't send packet to master node blockchainRid = ${chain.config.blockchainRid}")
+            logger.error("${logger(chain)}: Can't send packet to master node blockchainRid = ${chain.config.blockchainRid.toShortHex()}")
         }
     }
 
