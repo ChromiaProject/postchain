@@ -347,6 +347,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.surefire.plugin.version}</version>
                 <configuration>
+                    <includes>
+                        <include>*DirectoryIT.kt</include>
+                    </includes>
                     <!-- skips surefire tests without skipping failsafe tests.
          Property value seems to magically default to false (e.g.: mvn verify -Dskip.surefire.tests)-->
                     <skipTests>${skip.surefire.tests}</skipTests>

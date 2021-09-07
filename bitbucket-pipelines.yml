@@ -9,7 +9,7 @@ pipelines:
           - maven
         script:
           - export TESTCONTAINERS_RYUK_DISABLED=true
-          - mvn -e -B -P ci clean install
+          - mvn -e -B -Dskip.surefire.tests=true -P ci clean install
         services:
           - postgres
           - docker
