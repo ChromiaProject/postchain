@@ -39,13 +39,15 @@ import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.protocol.MsSubnodeStatusMessage
 import net.postchain.network.x.PeersCommConfigFactory
 import org.apache.commons.configuration2.Configuration
+import org.junit.Before
 import org.junit.Test
 import java.lang.Thread.sleep
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 
-const val firstContainerName = "cont1"
-const val secondContainerName = "cont2"
+const val commonContainerName = "postchainCont"
+const val firstContainerName = commonContainerName + "1"
+const val secondContainerName = commonContainerName + "2"
 val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
         firstContainerName to listOf(chainRidOf(1)),
         secondContainerName to listOf(chainRidOf(2), chainRidOf(3))
@@ -58,6 +60,20 @@ val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
 class DirectoryIT : ManagedModeTest() {
 
 //    override val awaitDebugLog = true
+
+    @Before
+    fun setUp() {
+        // If container UUTs already exist, remove them
+        val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
+        var listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+        listc.forEach {
+            if (it.names()?.get(0)?.contains(Regex(commonContainerName))!!) {
+                println("removing existing container: " + it.names())
+                dockerClient.stopContainer(it.id(), 0)
+                dockerClient.removeContainer(it.id())
+            }
+        }
+    }
 
     @Test
     fun testSingleChain() {
@@ -105,19 +121,9 @@ class DirectoryIT : ManagedModeTest() {
         //update dataSource with limit value. This is used when container is created (getResourceLimitForContainer)
         dataSource(0).setLimitsForContainer(firstContainerName, ramLimit, cpuQuotaLimit)
 
-
-        // If container UUT already exist, remove it
-        val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
-        var listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        listc.forEach {
-            if (it.names()?.get(0)?.contains(Regex(firstContainerName))!!) {
-                println("removing existing container: " + it.names())
-                dockerClient.stopContainer(it.id(), 0)
-                dockerClient.removeContainer(it.id())
-            }
-        }
         startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
-        listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+        val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
+        val listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         listc.forEach {
             if (it.names()?.get(0)?.contains(Regex(firstContainerName))!!) {
                 val res = dockerClient.inspectContainer(it.id())
