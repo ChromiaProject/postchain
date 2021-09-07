@@ -70,13 +70,12 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
   const [deposite, setDeposit] = useState(BigNumber.from(0));
   const [amount, setAmount] = useState(0);
   const [unit, setUnit] = useState(18);
-  const [blkNumber, setBlkNumber] = useState(0)
   const [eventHash, setEventHash] = useState("00000000000000000000000000000000")
 
   const withdrawRequest = async () => {
     const signer = library.getSigner();
     try {
-      let event = await client.query('get_event_merkle_proof', { 'blockHeight': blkNumber, "eventHash": eventHash })
+      let event = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
       let data = JSON.parse(JSON.stringify(event))
       const chrl2 = new ethers.Contract(
         chrL2Address,
@@ -118,7 +117,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
   const withdraw = async () => {
     const signer = library.getSigner();
     try {
-      let event = await client.query('get_event_merkle_proof', { 'blockHeight': blkNumber, "eventHash": eventHash })
+      let event = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
       let data = JSON.parse(JSON.stringify(event))
       const chrl2 = new ethers.Contract(
         chrL2Address,
@@ -144,7 +143,6 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
 
   useEffect(() => {
     const fetchDepositedTokenInfo = () => {
-      // const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
       const tokenContract = new ethers.Contract(
         tokenAddress, 
         ERC20TokenArtifacts.abi,
@@ -191,7 +189,6 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
   };
 
   const approveTokens = async () => {
-    // const provider = library || new ethers.providers.Web3Provider(window.ethereum || providerUrl);
     const signer = library.getSigner();
     try {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library)
@@ -281,19 +278,13 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
         </div>
         <div className="divider"></div>
 
-        <div class="md:container md:mx-auto">
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">BlockNumber</span>
-            </label>
-            <input type="number" placeholder="BlockNumber" class="input input-bordered" value={blkNumber} 
-              onChange={(evt) => setBlkNumber(evt.target.valueAsNumber)}/>
-          </div>
+
+        <div className="text-center shadow-2xl card"><div className="card-body">
           <div class="form-control">
             <label class="label">
               <span class="label-text">Event Hash</span>
             </label>
-            <input type="text" placeholder="Event Hash" class="input input-bordered" value={eventHash} 
+            <input type="text" placeholder="Event Hash" class="input input-bordered" value={eventHash} size="80"
               onChange={(evt) => setEventHash(evt.target.value)}/>
           </div>
           <div className="justify-center card-actions">
@@ -304,7 +295,8 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
               Withdraw
             </button>
           </div>
-        </div>
+        </div></div>
+        <div className="divider"></div>
       </div>
     </div>
   );

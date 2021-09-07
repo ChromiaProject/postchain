@@ -46,12 +46,12 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
 
 fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val argsDict = args as GtvDictionary
-    val blockHeight = argsDict["blockHeight"]!!.asInteger()
     val eventHash = argsDict["eventHash"]!!.asString().hexStringToByteArray()
     val db = DatabaseAccess.of(ctx)
+    val eventInfo = db.getEvent(ctx, PREFIX, eventHash) ?: return GtvNull
+    val blockHeight = eventInfo.blockHeight
     val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
-    val eventInfo = db.getEvent(ctx, PREFIX, blockHeight, eventHash) ?: return GtvNull
     val eventData = eventData(eventInfo)
     val event = EventPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
     val proofs = event.getMerkleProof(blockHeight, eventInfo.pos)

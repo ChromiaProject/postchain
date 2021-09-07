@@ -310,11 +310,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     // ---- Event and State ----
-    override fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
+    override fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): DatabaseAccess.EventInfo? {
         val sql = """SELECT block_height, position, hash, data 
             FROM ${tableEventLeafs(ctx, prefix)} 
-            WHERE block_height = ? AND hash = ?"""
-        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
+            WHERE hash = ?"""
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, eventHash)
         if (rows.isEmpty()) return null
         val data = rows.first()
         return DatabaseAccess.EventInfo(

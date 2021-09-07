@@ -85,7 +85,7 @@ interface DatabaseAccess {
     fun createEventLeafTable(ctx: EContext, prefix: String)
     fun createStateLeafTable(ctx: EContext, prefix: String)
     fun insertEvent(ctx: EContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
-    fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): EventInfo?
+    fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): EventInfo?
     fun pruneEvents(ctx: EContext, prefix: String, height: Long)
     fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray)
     fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): AccountState?
