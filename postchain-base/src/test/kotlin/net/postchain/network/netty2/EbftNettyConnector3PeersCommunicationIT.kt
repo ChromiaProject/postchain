@@ -21,7 +21,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
-class EbftNettyConnector3PeersCommunicationNightly {
+class EbftNettyConnector3PeersCommunicationIT {
 
     private val cryptoSystem = SECP256K1CryptoSystem()
     private val blockchainRid = BlockchainRid.buildRepeat(0)

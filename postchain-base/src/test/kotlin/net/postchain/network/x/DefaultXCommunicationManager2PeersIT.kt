@@ -14,7 +14,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 
-class DefaultXCommunicationManager2PeersNightly {
+class DefaultXCommunicationManager2PeersIT {
 
     private val cryptoSystem = SECP256K1CryptoSystem()
     private val blockchainRid = BlockchainRid.buildRepeat(0)
