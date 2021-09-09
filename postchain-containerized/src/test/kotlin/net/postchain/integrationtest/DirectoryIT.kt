@@ -94,7 +94,7 @@ class DirectoryIT : ManagedModeTest() {
 //        println("all: " + all.map { it.names()?.get(0) }.joinToString())
         val cont1 = all.find { it.names()?.get(0)?.startsWith("/$firstContainerName") ?: false }
         return if (cont1 != null) {
-            dockerClient.logs(cont1.id(), LogsParam.stdout(), LogsParam.tail(10))
+            dockerClient.logs(cont1.id(), LogsParam.stdout(), LogsParam.tail(100))
                     .readFully()
         } else ""
     }
