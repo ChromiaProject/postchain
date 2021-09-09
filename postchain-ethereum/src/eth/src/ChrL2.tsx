@@ -8,14 +8,14 @@ import { useQuery } from "react-query";
 import ERC20TokenArtifacts from "./artifacts/contracts/token/ERC20.sol/ERC20.json";
 import ChrL2Artifacts from "./artifacts/contracts/ChrL2.sol/ChrL2.json";
 
-import { restClient, gtxClient } from "postchain-client"
+import { restClient, gtxClient, util } from "postchain-client"
 
 const postchainURL = process.env.REACT_APP_POSTCHAIN_URL
 const blockchainRID = process.env.REACT_APP_POSTCHAIN_BRID
 const rest = restClient.createRestClient(postchainURL, blockchainRID, 5);
 const client = gtxClient.createClient(
     rest,
-    blockchainRID,
+    Buffer.from(blockchainRID, 'hex'),
     []
 )
 
@@ -25,20 +25,24 @@ interface Props {
 }
 
 const TokenInfo = ({ tokenAddress }: { tokenAddress: string }) => {
-  const { library } = useWeb3React();
+  const { library, account } = useWeb3React();
   const fetchTokenInfo = async () => {
     const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library);
     const name = await tokenContract.name();
     const symbol = await tokenContract.symbol();
     const decimals = await tokenContract.decimals();
     const totalSupply = await tokenContract.totalSupply();
+    let balance = await client.query('__eth_balance_of', { "token": tokenAddress.toLowerCase(), "beneficiary": account.toLowerCase() })
+    balance = balance.toString()
     return {
       name,
       symbol,
       decimals,
       totalSupply,
+      balance,
     };
   };
+
   const { error, isLoading, data } = useQuery(["token-info", tokenAddress], fetchTokenInfo, {
     enabled: tokenAddress !== "",
   });
@@ -54,10 +58,17 @@ const TokenInfo = ({ tokenAddress }: { tokenAddress: string }) => {
         <div className="ml-2 badge badge-info">{data?.decimals}</div>
       </button>
 
-      <div className="shadow stats">
+      {/* <div className="shadow stats">
         <div className="stat">
           <div className="stat-title">Total Supply</div>
           <div className="stat-value">{Number(formatUnits(data?.totalSupply ?? 0, data?.decimals)).toFixed(6)}</div>
+        </div>
+      </div> */}
+
+      <div className="shadow stats">
+        <div className="stat">
+          <div className="stat-title">Postchain Balance</div>
+          <div className="stat-value">{Number(formatUnits(data?.balance ?? 0, data?.decimals)).toFixed(6)}</div>
         </div>
       </div>
     </div>
@@ -65,36 +76,37 @@ const TokenInfo = ({ tokenAddress }: { tokenAddress: string }) => {
 };
 
 const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
-  const { library, chainId, account } = useWeb3React();
-  const [balance, setBalance] = useState(BigNumber.from(0));
-  const [deposite, setDeposit] = useState(BigNumber.from(0));
-  const [amount, setAmount] = useState(0);
-  const [unit, setUnit] = useState(18);
+  const { library, chainId, account } = useWeb3React()
+  const [balance, setBalance] = useState(BigNumber.from(0))
+  const [deposite, setDeposit] = useState(BigNumber.from(0))
+  const [amount, setAmount] = useState(0)
+  const [withdrawAmount, setWithdrawAmount] = useState(0)
+  const [unit, setUnit] = useState(18)
   const [eventHash, setEventHash] = useState("00000000000000000000000000000000")
 
   const withdrawRequest = async () => {
-    const signer = library.getSigner();
+    const signer = library.getSigner()
     try {
-      let event = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
-      let data = JSON.parse(JSON.stringify(event))
+      let data = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
+      let event = JSON.parse(JSON.stringify(data))
       const chrl2 = new ethers.Contract(
         chrL2Address,
         ChrL2Artifacts.abi,
         library
       )
 
-      const blockHeader = "0x" + data.blockHeader
-      const blockWitness = data.blockWitness
+      const blockHeader = "0x" + event.blockHeader
+      const blockWitness = event.blockWitness
       let sigs = new Array<string>(blockWitness.length)
       for (let i = 0; i < blockWitness.length; i++) {
         sigs[i] = "0x" + blockWitness[i].sig
       }
 
-      const eventData = data.eventData
+      const eventData = event.eventData
       const evtPosition = eventData[1]
       const evtHash = "0x" + eventData[2]
       const evtData = "0x" + eventData[3]
-      const merkleProofs = data.merkleProofs
+      const merkleProofs = event.merkleProofs
       let proofs = new Array<string>(merkleProofs.length)
       for (let i = 0; i < merkleProofs.length; i++) {
         proofs[i] = "0x" + merkleProofs[i]
@@ -110,21 +122,21 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
         loading: `Transaction submitted. Wait for confirmation...`,
         success: <b>Transaction confirmed!</b>,
         error: <b>Transaction failed!.</b>,
-      });
+      })
     } catch (error) { }
   }
 
   const withdraw = async () => {
     const signer = library.getSigner();
     try {
-      let event = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
-      let data = JSON.parse(JSON.stringify(event))
+      let data = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
+      let event = JSON.parse(JSON.stringify(data))
       const chrl2 = new ethers.Contract(
         chrL2Address,
         ChrL2Artifacts.abi,
         library
       )
-      const eventData = data.eventData
+      const eventData = event.eventData
       const evtHash = "0x" + eventData[2]
       const calldata = chrl2.interface.encodeFunctionData("withdraw", [evtHash, account])
       const txPrams = {
@@ -141,6 +153,56 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
     } catch (error) { }
   }
 
+  const waitConfirmation = function(txRID) {
+    return new Promise((resolve, reject) => {
+      rest.status(txRID, (err, res) => {
+        if (err) {
+          resolve(err);
+        } else {
+          const status = res.status;
+          switch (status) {
+            case "confirmed":
+              resolve(null)
+              break;
+            case "rejected":
+              reject(Error("Message was rejected"))
+              break
+            case "unknown":
+              reject(Error("Server lost our message"))
+              break
+            case "waiting":
+              setTimeout(() => waitConfirmation(txRID).then(resolve, reject), 100)
+              break
+            default:
+              console.log(status)
+              reject(Error("got unexpected response from server"))
+          }
+        }
+      })
+    })
+  }
+
+  const postchainWithdraw = async () => {
+    try {
+      let sender = util.makeKeyPair()
+      var tx = client.newTransaction([sender.pubKey])
+      tx.addOperation("__withdraw", tokenAddress.toLowerCase(), account.toLowerCase(), withdrawAmount*1000000)
+      tx.sign(sender.privKey, sender.pubKey)
+      let txRID = tx.getTxRID()
+      tx.send((err) => {
+        if (err !== null) {
+          console.log(err)
+          return
+        }
+        waitConfirmation(txRID).catch(err => {
+          console.log(err);
+        })
+      })
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   useEffect(() => {
     const fetchDepositedTokenInfo = () => {
       const tokenContract = new ethers.Contract(
@@ -153,9 +215,9 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
         ChrL2Artifacts.abi,
         library
       )
-      tokenContract.balanceOf(account).then(setBalance).catch();
-      tokenContract.decimals().then(setUnit).catch();
-      chrl2._balances(account, tokenAddress).then(setDeposit).catch();
+      tokenContract.balanceOf(account).then(setBalance).catch()
+      tokenContract.decimals().then(setUnit).catch()
+      chrl2._balances(account, tokenAddress).then(setDeposit).catch()
     };
     try {
       fetchDepositedTokenInfo();
@@ -164,7 +226,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
   }, [library, tokenAddress, account]);
 
   const depositTokens = async () => {
-    const signer = library.getSigner();
+    const signer = library.getSigner()
     try {
       const chrl2 = new ethers.Contract(
         chrL2Address,
@@ -193,7 +255,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
     try {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library)
       const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from(10).pow(unit))
-      const calldata = tokenContract.interface.encodeFunctionData("approve", [chrL2Address, value]);
+      const calldata = tokenContract.interface.encodeFunctionData("approve", [chrL2Address, value])
       const txPrams = {
         to: tokenAddress,
         value: '0x0',
@@ -241,7 +303,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
 
         <div className="text-center shadow-2xl card">
           <div className="card-body">
-            <h2 className="card-title">ERC20 Token Deposit</h2>
+            {/* <h2 className="card-title">ERC20 Token Deposit</h2> */}
             <div className="shadow stats">
               <div className="stat">
                 <div className="stat-title">Balance</div>
@@ -280,19 +342,19 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
 
 
         <div className="text-center shadow-2xl card"><div className="card-body">
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Event Hash</span>
-            </label>
-            <input type="text" placeholder="Event Hash" class="input input-bordered" value={eventHash} size="80"
-              onChange={(evt) => setEventHash(evt.target.value)}/>
+          <div className="shadow stats">
+            <div className="stat">
+              <div className="stat-title">Amount</div>
+              <div className="stat-value">{withdrawAmount}</div>
+            </div>
+          </div>
+          <div className="form-control">
+            <input type="range" max="10" className="range range-accent" value={withdrawAmount}
+              onChange={(evt) => setWithdrawAmount(evt.target.valueAsNumber)}/>
           </div>
           <div className="justify-center card-actions">
-            <button onClick={withdrawRequest} type="button" className="btn btn-outline btn-accent">
-              Withdraw Request
-            </button>
-            <button onClick={withdraw} type="button" className="btn btn-outline btn-accent">
-              Withdraw
+            <button onClick={postchainWithdraw} type="button" className="btn btn-outline btn-accent">
+              Withdraw on Postchain
             </button>
           </div>
         </div></div>
