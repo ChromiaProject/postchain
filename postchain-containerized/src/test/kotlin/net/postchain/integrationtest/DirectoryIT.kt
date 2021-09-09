@@ -2,6 +2,7 @@ package net.postchain.integrationtest
 
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
+import com.spotify.docker.client.DockerClient.LogsParam
 import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
@@ -46,10 +47,10 @@ import java.lang.Thread.sleep
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 
-const val commonContainerName = "postchainCont"
-const val firstContainerName = commonContainerName + "1"
-const val secondContainerName = commonContainerName + "2"
-val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
+private const val commonContainerName = "postchainCont"
+private const val firstContainerName = commonContainerName + "1"
+private const val secondContainerName = commonContainerName + "2"
+private val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
         firstContainerName to listOf(chainRidOf(1)),
         secondContainerName to listOf(chainRidOf(2), chainRidOf(3))
 )
@@ -59,14 +60,14 @@ val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
  */
 class DirectoryIT : ManagedModeTest() {
 
-//    override val awaitDebugLog = true
+    //    override val awaitDebugLog = true
+    private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
 
     @Before
     fun setUp() {
         // If container UUTs already exist, remove them
-        val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
-        var listc = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        listc.forEach {
+        val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+        all.forEach {
             if (it.names()?.get(0)?.contains(Regex(commonContainerName))!!) {
                 println("removing existing container: " + it.names())
                 dockerClient.stopContainer(it.id(), 0)
@@ -80,6 +81,16 @@ class DirectoryIT : ManagedModeTest() {
         startManagedSystem(1, 0)
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false) //location defined in blockchainDistribution
         awaitHeight(c1.chain, 5)
+    }
+
+    private fun getCont1Logs(): String {
+        val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
+//        println("all: " + all.map { it.names()?.get(0) }.joinToString())
+        val cont1 = all.find { it.names()?.get(0)?.startsWith("/$firstContainerName") ?: false }
+        return if (cont1 != null) {
+            dockerClient.logs(cont1.id(), LogsParam.stdout(), LogsParam.tail(10))
+                    .readFully()
+        } else ""
     }
 
     /**
@@ -165,6 +176,7 @@ class DirectoryIT : ManagedModeTest() {
         val sleepTime = 1000L // 1000ms is not so much for Docker tests
         awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
 
+        val start = System.currentTimeMillis()
         var running: Boolean
         do {
             sleep(sleepTime)
@@ -176,6 +188,14 @@ class DirectoryIT : ManagedModeTest() {
                 }
                 res
             }
+
+            println("---------- Cont1 logs ----------")
+            println(getCont1Logs())
+            println("---------- END of Cont1 logs ----------")
+
+            // Stop after 5 min
+            if ((System.currentTimeMillis() - start) / 60_000 > 5) running = false
+
         } while (running)
 
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
