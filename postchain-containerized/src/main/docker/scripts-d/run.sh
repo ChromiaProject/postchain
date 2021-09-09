@@ -7,8 +7,9 @@ set -eu
 
 date '+%Y %b %d %H:%M'
 
-ALREADY_INITED=.initialized
+chmod +x scripts/postchain.sh
 
+ALREADY_INITED=.initialized
 if [ ! -e $ALREADY_INITED ]
 then
   echo "pwd:"

@@ -40,6 +40,7 @@ import net.postchain.network.masterslave.protocol.MsSubnodeStatusMessage
 import net.postchain.network.x.PeersCommConfigFactory
 import org.apache.commons.configuration2.Configuration
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.lang.Thread.sleep
 import java.util.concurrent.ConcurrentHashMap
@@ -55,7 +56,6 @@ val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
 
 /**
  * For the tests below, a docker image is needed. It can be build with e.g:  `mvn (clean) verify -Dskip.surefire.tests`
- *
  */
 class DirectoryIT : ManagedModeTest() {
 
@@ -78,8 +78,8 @@ class DirectoryIT : ManagedModeTest() {
     @Test
     fun testSingleChain() {
         startManagedSystem(1, 0)
-        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true) //location defined in blockchainDistribution
-        awaitHeight(c1.chain, 0)
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false) //location defined in blockchainDistribution
+        awaitHeight(c1.chain, 5)
     }
 
     /**
@@ -87,20 +87,21 @@ class DirectoryIT : ManagedModeTest() {
      * is run in container "cont1" by the subnode. c2, and c3 in cont2
      */
     @Test
+    @Ignore
     fun testMultipleChains() {
         startManagedSystem(1, 0)
-        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
-        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //location defined in blockchainDistribution
-        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //location defined in blockchainDistribution
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)
+        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //location defined in blockchainDistribution
+        val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false)  //location defined in blockchainDistribution
         awaitHeight(c1.chain, 0)
         awaitHeight(c2.chain, 0)
         awaitHeight(c3.chain, 0)
     }
 
-
     /**
      * With more than one node, docker port, container name and directory for files must be node specific.
      */
+    @Ignore
     @Test
     fun testMultipleNodes() {
         startManagedSystem(2, 0)
@@ -111,6 +112,7 @@ class DirectoryIT : ManagedModeTest() {
     /**
      * Assert that ram and cpu limits can be set on the container
      */
+    @Ignore
     @Test
     fun testResourceLimits() {
         startManagedSystem(1, 0)
@@ -160,30 +162,39 @@ class DirectoryIT : ManagedModeTest() {
     }
 
     override fun awaitHeight(chainId: Long, height: Long) {
-        val sleepTime = 10L
+        val sleepTime = 1000L // 1000ms is not so much for Docker tests
         awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
-        for (i in nodes.indices) {
-            var h = dataSource(i).subnodeInterceptors[chainRidOf(chainId)]!!.subnodeStatus
-            while (h < height) {
-                h = dataSource(i).subnodeInterceptors[chainRidOf(chainId)]!!.subnodeStatus
-                sleep(sleepTime)
+
+        var running: Boolean
+        do {
+            sleep(sleepTime)
+            running = nodes.indices.any {
+                val subnode = dataSource(it).subnodeInterceptors[chainRidOf(chainId)]
+                val res = subnode == null || subnode.subnodeStatus < height
+                if (res) {
+                    println("ChainId: $chainId, node idx: $it, subnode height: ${subnode?.subnodeStatus}")
+                }
+                res
             }
-        }
+        } while (running)
+
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
     }
 
     override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
         val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
         val className = TestDirectoryMasterInfraFactory::class.qualifiedName
+        val masterHost = System.getenv("POSTCHAIN_TEST_MASTER_HOST") ?: "host.docker.internal"
+        val dbHost = System.getenv("POSTCHAIN_TEST_DB_HOST") ?: "localhost"
         propertyMap.setProperty("infrastructure", className)
         propertyMap.setProperty("containerChains.masterPort", 9860 - nodeIndex)
-        propertyMap.setProperty("containerChains.masterHost", "172.17.0.1")
+        propertyMap.setProperty("containerChains.masterHost", masterHost)
         propertyMap.setProperty("configDir", System.getProperty("user.dir"))
-        propertyMap.setProperty("subnode.database.url", "jdbc:postgresql://localhost:5432/postchain")
+        propertyMap.setProperty("subnode.database.url", "jdbc:postgresql://$dbHost:5432/postchain")
         propertyMap.setProperty("brid.chainid.1", chainRidOf(1).toHex())
         propertyMap.setProperty("brid.chainid.2", chainRidOf(2).toHex())
         propertyMap.setProperty("brid.chainid.3", chainRidOf(3).toHex())
-        propertyMap.setProperty("heartbeat.enabled", true)
+        propertyMap.setProperty("heartbeat.enabled", false)
         propertyMap.setProperty("heartbeat.timeout", 6_000_000L) //default 60_000
         propertyMap.setProperty("heartbeat.sleep_timeout", 500L)
         propertyMap.setProperty("remote_config.enabled", false)

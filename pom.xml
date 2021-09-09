@@ -37,6 +37,7 @@
         <docker.maven.plugin.version>0.36.0</docker.maven.plugin.version>
         <maven.compiler.plugin.version>3.5.1</maven.compiler.plugin.version>
         <maven.assembly.plugin.version>3.2.0</maven.assembly.plugin.version>
+        <skipSurefireTests>false</skipSurefireTests>
 
         <!-- Logging -->
         <kotlin-logging.version>1.6.26</kotlin-logging.version>
@@ -352,7 +353,7 @@
                     </includes>
                     <!-- skips surefire tests without skipping failsafe tests.
          Property value seems to magically default to false (e.g.: mvn verify -Dskip.surefire.tests)-->
-                    <skipTests>${skip.surefire.tests}</skipTests>
+                    <skipTests>${skipSurefireTests}</skipTests>
                 </configuration>
             </plugin>
 
@@ -404,6 +405,7 @@
                                 <include>**/*E2ET.*</include>
                                 <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
                             </includes>
+                            <skipTests>${skipSurefireTests}</skipTests>
                         </configuration>
                     </plugin>
                 </plugins>
