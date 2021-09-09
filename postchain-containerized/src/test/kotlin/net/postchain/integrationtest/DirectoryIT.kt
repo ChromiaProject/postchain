@@ -62,7 +62,7 @@ private val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
 class DirectoryIT : ManagedModeTest() {
 
     //    override val awaitDebugLog = true
-    private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().apiVersion("v1.40").build()
+    private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().apiVersion("v1.41").build()
 
     @Before
     fun setUp() {
