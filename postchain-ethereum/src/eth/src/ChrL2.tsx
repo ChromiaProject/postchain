@@ -9,6 +9,8 @@ import ERC20TokenArtifacts from "./artifacts/contracts/token/ERC20.sol/ERC20.jso
 import ChrL2Artifacts from "./artifacts/contracts/ChrL2.sol/ChrL2.json";
 
 import { restClient, gtxClient, util } from "postchain-client"
+import { hexZeroPad, keccak256 } from "ethers/lib/utils";
+import { intToHex } from "ethjs-util";
 
 const postchainURL = process.env.REACT_APP_POSTCHAIN_URL
 const blockchainRID = process.env.REACT_APP_POSTCHAIN_BRID
@@ -24,68 +26,62 @@ interface Props {
   tokenAddress: string;
 }
 
-const TokenInfo = ({ tokenAddress }: { tokenAddress: string }) => {
+const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2Address: string}) => {
   const { library, account } = useWeb3React();
   const fetchTokenInfo = async () => {
     const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library);
     const name = await tokenContract.name();
     const symbol = await tokenContract.symbol();
     const decimals = await tokenContract.decimals();
-    const totalSupply = await tokenContract.totalSupply();
     let balance = await client.query('__eth_balance_of', { "token": tokenAddress.toLowerCase(), "beneficiary": account.toLowerCase() })
+    let withdraws = await client.query('get_withdrawal', {
+      'token': tokenAddress.toLowerCase(),
+      'beneficiary': account.toLowerCase()
+    });
+    withdraws = JSON.parse(JSON.stringify(withdraws))
     balance = balance.toString()
     return {
       name,
       symbol,
       decimals,
-      totalSupply,
       balance,
-    };
-  };
+      withdraws
+    }
+  }
 
   const { error, isLoading, data } = useQuery(["token-info", tokenAddress], fetchTokenInfo, {
     enabled: tokenAddress !== "",
   });
 
-  if (error) return <div>failed to load</div>;
-  if (isLoading) return <div>loading...</div>;
+  if (error) return <div>failed to load</div>
+  if (isLoading) return <div>loading...</div>
 
-  return (
-    <div className="flex flex-col">
-      <button className="btn">
-        {data?.name}
-        <div className="ml-2 badge">{data?.symbol}</div>
-        <div className="ml-2 badge badge-info">{data?.decimals}</div>
-      </button>
+  var DecodeHexStringToByteArray = function (hexString: string) {
+    var result = [];
+    while (hexString.length >= 2) {
+        result.push(parseInt(hexString.substring(0, 2), 16))
+        hexString = hexString.substring(2, hexString.length)
+    }
+    return result;
+  }
 
-      {/* <div className="shadow stats">
-        <div className="stat">
-          <div className="stat-title">Total Supply</div>
-          <div className="stat-value">{Number(formatUnits(data?.totalSupply ?? 0, data?.decimals)).toFixed(6)}</div>
-        </div>
-      </div> */}
+  var calculateEventLeafHash = function (serial: number, token: string, beneficiary: string, amount: number) {
+    let s = hexZeroPad(intToHex(serial), 32)
+    let t = hexZeroPad(token, 32)
+    let b = hexZeroPad(beneficiary, 32)
+    let a = hexZeroPad(intToHex(amount), 32)
+    let event: string = ''
+    event = event.concat(s.substring(2, s.length))
+    event = event.concat(t.substring(2, t.length))
+    event = event.concat(b.substring(2, b.length))
+    event = event.concat(a.substring(2, a.length))
+    let eventHash = keccak256(DecodeHexStringToByteArray(event))
+    return eventHash.substring(2, eventHash.length)
+  }
 
-      <div className="shadow stats">
-        <div className="stat">
-          <div className="stat-title">Postchain Balance</div>
-          <div className="stat-value">{Number(formatUnits(data?.balance ?? 0, data?.decimals)).toFixed(6)}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
-  const { library, chainId, account } = useWeb3React()
-  const [balance, setBalance] = useState(BigNumber.from(0))
-  const [deposite, setDeposit] = useState(BigNumber.from(0))
-  const [amount, setAmount] = useState(0)
-  const [withdrawAmount, setWithdrawAmount] = useState(0)
-  const [unit, setUnit] = useState(18)
-  const [eventHash, setEventHash] = useState("00000000000000000000000000000000")
-
-  const withdrawRequest = async () => {
+  const withdrawRequest = async (serial: number, token: string, beneficiary: string, amount: number) => {
     const signer = library.getSigner()
+    const eventHash = calculateEventLeafHash(serial, token, beneficiary, amount)
     try {
       let data = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
       let event = JSON.parse(JSON.stringify(data))
@@ -126,8 +122,9 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
     } catch (error) { }
   }
 
-  const withdraw = async () => {
+  const withdraw = async (serial: number, token: string, beneficiary: string, amount: number) => {
     const signer = library.getSigner();
+    const eventHash = calculateEventLeafHash(serial, token, beneficiary, amount)
     try {
       let data = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
       let event = JSON.parse(JSON.stringify(data))
@@ -149,9 +146,61 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
         loading: `Transaction submitted. Wait for confirmation...`,
         success: <b>Transaction confirmed!</b>,
         error: <b>Transaction failed!.</b>,
-      });
+      })
     } catch (error) { }
   }
+
+  return (
+    <div className="flex flex-col">
+      <button className="btn">
+        {data?.name}
+        <div className="ml-2 badge">{data?.symbol}</div>
+        <div className="ml-2 badge badge-info">{data?.decimals}</div>
+      </button>
+      <div className="shadow stats">
+        <div className="stat">
+          <div className="stat-title">Postchain Balance</div>
+          <div className="stat-value">{Number(formatUnits(data?.balance ?? 0, data?.decimals)).toFixed(6)}</div>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="table w-full">
+          <thead>
+            <tr>
+              <th>Serial</th>
+              <th>Amount</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data?.withdraws.map((w) => {
+              return (<tr key={w?.serial}>
+                <th>{w?.serial}</th>
+                <td>{w?.amount}</td>
+                <td>
+                  <button type="button" className="btn btn-outline btn-accent" onClick={() => withdrawRequest(w?.serial, w?.token, w?.beneficiary, w?.amount)}>
+                    Withdraw Request
+                  </button>
+                  <button type="button" className="btn btn-outline btn-accent" onClick={() => withdraw(w?.serial, w?.token, w?.beneficiary, w?.amount)}>
+                    Withdraw
+                  </button>
+                </td>
+              </tr>)
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
+  const { library, chainId, account } = useWeb3React()
+  const [balance, setBalance] = useState(BigNumber.from(0))
+  const [deposite, setDeposit] = useState(BigNumber.from(0))
+  const [amount, setAmount] = useState(0)
+  const [withdrawAmount, setWithdrawAmount] = useState(0)
+  const [unit, setUnit] = useState(18)
 
   const waitConfirmation = function(txRID) {
     return new Promise((resolve, reject) => {
@@ -299,7 +348,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
       )}
 
       <div className="flex items-center w-full px-4 py-10 bg-cover card bg-base-200">
-        <TokenInfo tokenAddress={tokenAddress} />
+        <TokenInfo tokenAddress={tokenAddress} chrL2Address={chrL2Address}/>
 
         <div className="text-center shadow-2xl card">
           <div className="card-body">
