@@ -40,6 +40,7 @@ import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.protocol.MsSubnodeStatusMessage
 import net.postchain.network.x.PeersCommConfigFactory
 import org.apache.commons.configuration2.Configuration
+import org.glassfish.jersey.client.RequestEntityProcessing
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
@@ -62,7 +63,11 @@ private val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
 class DirectoryIT : ManagedModeTest() {
 
     //    override val awaitDebugLog = true
-    private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().apiVersion("v1.41").build()
+    private val dockerClient: DockerClient = DefaultDockerClient
+            .fromEnv()
+            .apiVersion("v1.40")
+            .useRequestEntityProcessing(RequestEntityProcessing.BUFFERED)
+            .build()
 
     @Before
     fun setUp() {
@@ -197,7 +202,7 @@ class DirectoryIT : ManagedModeTest() {
             // Stop after 5 min
             if ((System.currentTimeMillis() - start) / 60_000 > 5) {
                 running = false
-                assertTrue(false,  "awaitHeight: timeout occurred")
+                assertTrue(false, "awaitHeight: timeout occurred")
             }
 
         } while (running)
