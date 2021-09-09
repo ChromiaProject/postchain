@@ -1,6 +1,5 @@
 package net.postchain.containers.bpm
 
-import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import mu.KLogging
@@ -38,10 +37,7 @@ open class ContainerManagedBlockchainProcessManager(
      * TODO: [POS-129]: Implement handling of DockerException
      */
     private val containerInitializer = DefaultContainerInitializer(nodeConfig)
-
-    // Docker-In-Docker attempts:
-    // DockerClient.builder().uri("http://172.26.32.1:2375") // .uri("unix:///var/run/docker.sock")
-    private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
+    private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
     private val lock = Any()
 
