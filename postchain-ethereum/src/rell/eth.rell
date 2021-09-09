@@ -14,13 +14,24 @@ entity eth_event {
     amount: integer;
 }
 
+entity eth_balance {
+    token: text;
+    beneficiary: text;
+    key token, beneficiary;
+    mutable amount: integer;
+}
+
+entity eth_withdraw {
+    key serial: integer;
+    token: text;
+    beneficiary: text;
+    amount: integer;
+}
+
 struct eth_event_data {
-    eth_block_height: integer;
-    eth_block_hash: byte_array;
-    tnx_hash: byte_array;
-    log_index: integer;
-    contract_address: byte_array;
-    to_address: byte_array;
+    serial: integer;
+    token: byte_array;
+    beneficiary: byte_array;
     amount: integer;
 }
 
@@ -29,9 +40,9 @@ struct state_data {
     account: eth_event_data;
 }
 
-query get_last_eth_block () { return eth_block @? {} (@sort_desc .eth_block_height, .eth_block_hash) limit 1;}
+query get_last_eth_block() { return eth_block @? {} (@sort_desc .eth_block_height, .eth_block_hash) limit 1;}
 
-operation __eth_block (eth_block_height: integer, eth_block_hash: text) {
+operation __eth_block(eth_block_height: integer, eth_block_hash: text) {
 
     var eth_block = eth_block @? { eth_block_height, eth_block_hash };
 
@@ -43,9 +54,9 @@ operation __eth_block (eth_block_height: integer, eth_block_hash: text) {
     }
 }
 
-operation __eth_event (eth_block_height: integer, eth_block_hash: text, tnx_hash: text, log_index: integer,
+operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash: text, log_index: integer,
                         event_signature: text, contract_address: text,
-                        from_address: text, to_address: text, amount: integer) {
+                        from_address: text, to_address: text, token_amount: integer) {
 
     var eth_block = eth_block @? { eth_block_height, eth_block_hash };
 
@@ -64,24 +75,65 @@ operation __eth_event (eth_block_height: integer, eth_block_hash: text, tnx_hash
         contract_address,
         from_address,
         to_address,
-        amount
+        amount = token_amount
+    );
+
+    val balance = eth_balance @? { .token == to_address, .beneficiary == from_address };
+
+    if (empty(balance)) {
+        create eth_balance(
+            token = to_address,
+            beneficiary = from_address,
+            amount = token_amount
+        );
+    }
+    update balance (amount += token_amount);
+}
+
+operation __withdraw(token: text, beneficiary: text, w_amount: integer) {
+    val b = eth_balance @ { token, beneficiary };
+    require(b.amount >= w_amount, "Balance is too low");
+    update b(amount -= w_amount);
+
+    val last_withdraw = eth_withdraw @? {} (@sort_desc .serial) limit 1;
+    var next_serial = 0;
+    if (empty(last_withdraw)) {
+        next_serial += 1;
+    } else {
+        next_serial = last_withdraw + 1;
+    }
+
+    val w = create eth_withdraw(
+        serial = next_serial,
+        token,
+        beneficiary,
+        amount = w_amount
     );
 
     val eth_event_data = eth_event_data(
-        eth_block_height = eth_event.eth_block.eth_block_height,
-        eth_block_hash = byte_array.from_hex(eth_event.eth_block.eth_block_hash.sub(2)),
-        tnx_hash = byte_array.from_hex(eth_event.tnx_hash.sub(2)),
-        log_index = eth_event.log_index,
-        contract_address = byte_array.from_hex("000000000000000000000000" + eth_event.to_address.sub(2)),
-        to_address = byte_array.from_hex("000000000000000000000000" + eth_event.from_address.sub(2)),
-        amount = eth_event.amount
+        serial = w.serial,
+        token = byte_array.from_hex("000000000000000000000000" + w.token.sub(2)),
+        beneficiary = byte_array.from_hex("000000000000000000000000" + w.beneficiary.sub(2)),
+        amount = w.amount
     );
 
     val state_data = state_data(
-        state_n = eth_block.eth_block_height,
+        state_n = w.serial,
         account = eth_event_data
     );
 
     op_context.emit_event("el2_event", eth_event_data.to_gtv());
     op_context.emit_event("el2_state", state_data.to_gtv());
+}
+
+query get_withdrawal(token: text, beneficiary: text) {
+    return eth_withdraw @* { token, beneficiary } (@sort_desc .serial, .token, .beneficiary, .amount);
+}
+
+query __eth_balance_of(token: text, beneficiary: text): integer {
+    val b = eth_balance @? { token, beneficiary } (.amount);
+    if (empty(b)) {
+        return 0;
+    }
+    return b;
 }
