@@ -9,9 +9,8 @@ pipelines:
           - maven
         script:
           - export TESTCONTAINERS_RYUK_DISABLED=true
-          - docker version
+#          - docker version
           - mvn -e -B -P ci clean verify -DskipSurefireTests=true
-#          - mvn fabric8:deploy
         services:
           - postgres
           - docker
