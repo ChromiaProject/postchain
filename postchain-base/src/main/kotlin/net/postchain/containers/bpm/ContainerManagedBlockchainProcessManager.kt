@@ -19,6 +19,7 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
+import org.glassfish.jersey.client.RequestEntityProcessing
 
 open class ContainerManagedBlockchainProcessManager(
         private val masterBlockchainInfra: MasterBlockchainInfra,
@@ -41,7 +42,11 @@ open class ContainerManagedBlockchainProcessManager(
 
     // Docker-In-Docker attempts:
     // DockerClient.builder().uri("http://172.26.32.1:2375") // .uri("unix:///var/run/docker.sock")
-    private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
+    private val dockerClient: DockerClient = DefaultDockerClient
+            .fromEnv()
+            .apiVersion("v1.40")
+            .useRequestEntityProcessing(RequestEntityProcessing.BUFFERED)
+            .build()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
     private val lock = Any()
 
