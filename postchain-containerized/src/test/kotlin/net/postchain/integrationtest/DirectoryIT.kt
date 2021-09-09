@@ -46,6 +46,7 @@ import org.junit.Test
 import java.lang.Thread.sleep
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 private const val commonContainerName = "postchainCont"
 private const val firstContainerName = commonContainerName + "1"
@@ -61,7 +62,7 @@ private val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
 class DirectoryIT : ManagedModeTest() {
 
     //    override val awaitDebugLog = true
-    private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().build()
+    private val dockerClient: DockerClient = DefaultDockerClient.fromEnv().apiVersion("v1.40").build()
 
     @Before
     fun setUp() {
@@ -194,7 +195,10 @@ class DirectoryIT : ManagedModeTest() {
             println("---------- END of Cont1 logs ----------")
 
             // Stop after 5 min
-            if ((System.currentTimeMillis() - start) / 60_000 > 5) running = false
+            if ((System.currentTimeMillis() - start) / 60_000 > 5) {
+                running = false
+                assertTrue(false,  "awaitHeight: timeout occurred")
+            }
 
         } while (running)
 
