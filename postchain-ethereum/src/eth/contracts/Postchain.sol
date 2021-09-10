@@ -15,10 +15,7 @@ library Postchain {
     bytes32 constant L2_STATE_KEY = 0x04A48CDA5CE81FF2A97A9E2C0F521C2853258D6DDBA62190D3F0A2523B09C4B0;    
 
     struct Event {
-        uint256 blockNumber;
-        bytes32 blockHash;
-        bytes32 tnxHash;
-        uint256 logIndex;
+        uint256 serialNumber;
         ERC20 token;
         address beneficiary;
         uint256 amount;

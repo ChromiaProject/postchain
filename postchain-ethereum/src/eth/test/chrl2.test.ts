@@ -248,25 +248,19 @@ describe("ChrL2", () => {
             if (logs !== undefined) {
                 let log = logs[0]
                 const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)
-                const blockHash = log.blockHash
-                const tnxHash = log.transactionHash
-                const logIndex = hexZeroPad(intToHex(log.logIndex), 32)
+                const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
                 const contractAdress = hexZeroPad(tokenAddress, 32)
                 const toAddress = hexZeroPad(user.address, 32)
                 const amount = log.data
                 let event: string = ''
-                event = event.concat(blockNumber.substring(2, blockNumber.length))
-                event = event.concat(blockHash.substring(2, blockHash.length))
-                event = event.concat(tnxHash.substring(2, tnxHash.length))
-                event = event.concat(logIndex.substring(2, logIndex.length))
+                event = event.concat(serialNumber.substring(2, serialNumber.length))
                 event = event.concat(contractAdress.substring(2, contractAdress.length))
                 event = event.concat(toAddress.substring(2, toAddress.length))
                 event = event.concat(amount.substring(2, amount.length))
+
+                // swap toAddress and contractAdress position to make maliciousEvent
                 let maliciousEvent: string = ''
-                maliciousEvent = maliciousEvent.concat(blockNumber.substring(2, blockNumber.length))
-                maliciousEvent = maliciousEvent.concat(blockHash.substring(2, blockHash.length))
-                maliciousEvent = maliciousEvent.concat(tnxHash.substring(2, tnxHash.length))
-                maliciousEvent = maliciousEvent.concat(logIndex.substring(2, logIndex.length))
+                maliciousEvent = maliciousEvent.concat(serialNumber.substring(2, serialNumber.length))
                 maliciousEvent = maliciousEvent.concat(toAddress.substring(2, toAddress.length))
                 maliciousEvent = maliciousEvent.concat(contractAdress.substring(2, contractAdress.length))
                 maliciousEvent = maliciousEvent.concat(amount.substring(2, amount.length))
