@@ -1,4 +1,4 @@
-package net.postchain.util
+package net.postchain.devtools.utils
 
 import mu.KLogging
 import net.postchain.common.toHex
@@ -16,7 +16,6 @@ import net.postchain.devtools.assertNodeConnectedWith
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.Assert
-import kotlin.test.assertNotNull
 
 /**
  * Extends [IntegrationTestSetup] with extra functions relevant for real GTX transactions on multi chain tests
@@ -144,7 +143,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
         }
     }
 
-    private fun buildBlocks(nodeId: Int, chain: Long, block: Int) {
+    fun buildBlocks(nodeId: Int, chain: Long, block: Int) {
         logger.debug("-------------------------------------------")
         logger.info { "Node: $nodeId, chain: $chain -> Trigger block" }
         logger.debug("-------------------------------------------")
@@ -196,10 +195,10 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
 
             // Asserting uniqueness of block at height
             val blockRids = queries.getBlockRid(height).get()
-            assertNotNull(blockRids)
+            Assert.assertNotNull(blockRids)
 
             // Asserting txs count
-            val txs = queries.getBlockTransactionRids(blockRids).get()
+            val txs = queries.getBlockTransactionRids(blockRids!!).get()
             Assert.assertEquals(txPerBlock, txs.size)
 
             // Asserting txs content

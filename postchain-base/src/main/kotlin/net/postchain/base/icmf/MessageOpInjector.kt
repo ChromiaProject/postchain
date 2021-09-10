@@ -1,6 +1,6 @@
 package net.postchain.base.icmf
 
-class MessageOpInjector(val pumpStation: IcmfPumpStation) {
+class MessageOpInjector(val controller: IcmfController) {
 
     /**
      * Returns maximum of "max" messages from the queue, or none if empty

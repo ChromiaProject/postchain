@@ -37,14 +37,22 @@ interface SynchronizationInfrastructure : Shutdownable {
 }
 
 /**
- * This is a loosely defined concept, basically a chunk of logic that can be
- * connected to a [BlockchainProcess], where "connected" is open to interpretation.
+ * This interface works a bit like a lifecycle hook, basically you can create a chunk of logic that can use
+ * a [BlockchainProcess] for something during startup of the process.
  *
  * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
  * (examples: BBB Ext and GTX Spec TX Ext).
  * To see how it all goes together, see: doc/extension_classes.graphml
+ *
  */
 interface SynchronizationInfrastructureExtension: Shutdownable {
+
+    /**
+     * "connect" here is a loosely defined concept. Often we want to initiate the corresponding [GTXSpecialTxExtension]
+     * during "connect" but it could be anything.
+     *
+     * @param process is the new process being created (that has this [SynchronizationInfrastructureExtension] on it).
+     */
     fun connectProcess(process: BlockchainProcess)
 }
 
@@ -58,7 +66,8 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     fun makeBlockchainConfiguration(rawConfigurationData: ByteArray,
                                     eContext: EContext,
                                     nodeId: Int,
-                                    chainId: Long
+                                    chainId: Long,
+                                    configurationComponentMap: MutableMap<String, Any> = HashMap() // For unusual settings, customizations etc.
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(

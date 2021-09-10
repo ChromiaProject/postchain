@@ -18,6 +18,7 @@ interface BlockchainConfiguration {
     val traits: Set<String>
     val syncInfrastructureName: DynamicClassName?
     val syncInfrastructureExtensionNames: List<DynamicClassName>
+    val icmfTarget: String?
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader
     fun decodeWitness(rawWitness: ByteArray): BlockWitness
@@ -26,6 +27,7 @@ interface BlockchainConfiguration {
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun initializeDB(ctx: EContext)
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
+    fun <T> getComponent(name: String): T?
 
 }
 

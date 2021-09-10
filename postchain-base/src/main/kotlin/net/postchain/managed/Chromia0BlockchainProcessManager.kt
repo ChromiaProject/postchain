@@ -18,6 +18,9 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.GTXDataBuilder
 
+/**
+ * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.
+ */
 class Chromia0BlockchainProcessManager(
         blockchainInfrastructure: BlockchainInfrastructure,
         nodeConfigProvider: NodeConfigurationProvider,

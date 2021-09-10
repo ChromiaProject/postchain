@@ -3,13 +3,13 @@
 package net.postchain.base.data
 
 import net.postchain.base.*
-import net.postchain.base.icmf.IcmfPumpStation
+import net.postchain.base.icmf.IcmfController
 import net.postchain.core.*
 import net.postchain.getBFTRequiredSignatureCount
 
 open class BaseBlockchainConfiguration(
         val configData: BaseBlockchainConfigurationData,
-        val pumpStation: IcmfPumpStation? = null // Only some chains (like anchoring) will have a pump station.
+        val controller: IcmfController? = null // Only some chains (like anchoring) will have a pump station.
         ): BlockchainConfiguration {
 
     override val traits = setOf<String>()
@@ -26,8 +26,11 @@ open class BaseBlockchainConfiguration(
     override val syncInfrastructureName = DynamicClassName.build(configData.getSyncInfrastructureName())
     override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.getSyncInfrastructureExtensions())
 
+    override val icmfTarget = configData.getIcmfTarget()
+
     val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler() // TODO
 
+    val componentMap: Map<String, Any> = configData.getComponentMap() // Used for things that might or might not exist
 
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
@@ -66,7 +69,6 @@ open class BaseBlockchainConfiguration(
 
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
-        val anchorProc: TxEventSink? = null
 
         val bb = BaseBlockBuilder(
                 effectiveBlockchainRID,
@@ -82,9 +84,6 @@ open class BaseBlockchainConfiguration(
                 effectiveBlockchainRID != blockchainRid,
                 configData.getMaxBlockSize(),
                 configData.getMaxBlockTransactions())
-
-        // Every block will have an anchoring chain to report to
-        bb.installEventProcessor("anchor", anchorProc!!)
 
         return bb
     }
@@ -132,6 +131,22 @@ open class BaseBlockchainConfiguration(
                 TransactionQueue::class.java)
 
         return ctor.newInstance(configData, this, blockQueries, txQueue) as BlockBuildingStrategy
+    }
+
+    /**
+     * It's not crystal clear when something is important enough to get a typed "getX()" method in the config, or if it
+     * should be hidden behind this generic getter. If you suspect your setting is unusual, put it as a component.
+     *
+     * @param name is the identifier for the component we need
+     * @return a component if found
+     */
+    override fun <T> getComponent(name: String): T? {
+        val obj: Any? = componentMap[name]
+        return if (obj != null) {
+            obj as T
+        } else {
+            null
+        }
     }
 }
 

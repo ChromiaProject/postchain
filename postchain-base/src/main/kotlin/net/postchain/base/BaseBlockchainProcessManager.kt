@@ -4,9 +4,11 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.StorageBuilder
-import net.postchain.base.icmf.IcmfDispatcher
-import net.postchain.base.icmf.IcmfPumpStation
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.icmf.IcmfController
+import net.postchain.base.icmf.IcmfPipeConnectionSync
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.blockchain.DirtSimpleConfigReader
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
@@ -44,10 +46,6 @@ open class BaseBlockchainProcessManager(
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
-
-    // ICMF
-    protected val icmfDispatcher = IcmfDispatcher()
-    protected val icmfPumpStation = IcmfPumpStation()
 
     // For DEBUG only
     var insideATest = false
@@ -89,8 +87,9 @@ open class BaseBlockchainProcessManager(
                     val configuration = blockchainConfigProvider.getConfiguration(eContext, chainId)
                     if (configuration != null) {
 
+                        val componentMap = buildComponentMap()
                         val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                                configuration, eContext, NODE_ID_AUTO, chainId)
+                                configuration, eContext, NODE_ID_AUTO, chainId, componentMap)
 
                         val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
                         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
@@ -125,9 +124,19 @@ open class BaseBlockchainProcessManager(
 
                         val process = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
                         blockchainProcesses[chainId] = process
-                        val pipes = icmfPumpStation.maybeConnect(process)
+
+                        // --- ICMF ---
+                        val icmfController = blockchainConfigProvider.getIcmfController()
+                        maybeInitIcmf(icmfController) // We only init first time (for managed mode init has been done by now)
+
+
+                        // Create the pipes we should feed the dispatcher
+                        val pipes = icmfController.maybeConnect(process) // We only create pipes first time
+
+                        val db = DatabaseAccess.of(eContext)
+                        val height = db.getLastBlockHeight(eContext) // TODO: Olle: A bit ugly to get this here, we should prob pass it as a param from somewhere
                         for (pipe in pipes) {
-                            icmfDispatcher.addMessagePipe(pipe)
+                            blockchainConfigProvider.getIcmfController().icmfDispatcher.addMessagePipe(pipe, height)
                         }
 
                         startInfoDebug("Blockchain has been started", processName, chainId, bTrace)
@@ -145,6 +154,40 @@ open class BaseBlockchainProcessManager(
                 null
             }
         }
+    }
+
+
+    /**
+     * Init ICMF, or nothing if it has been initiated.
+     */
+    fun maybeInitIcmf(icmfController: IcmfController) {
+        if (!icmfController.isInitialized()) {
+            val oneConfReader = DirtSimpleConfigReader(
+                storage,
+                blockchainConfigProvider
+            )
+            val connSync = IcmfPipeConnectionSync(oneConfReader)
+            icmfController.initialize(connSync)
+        }
+    }
+
+    /**
+     * Set all chains we have to ICMF, or nothing if chains have been set.
+     */
+    fun initAllChainsForIcmf(allChains: Set<BlockchainRelatedInfo>) {
+        this.blockchainConfigProvider.getIcmfController().setAllChains(allChains)
+    }
+
+    /**
+     * In the future there probably should be some way to transport unique configuration components
+     * into the map (initially set in the the configuration file?). Currently it's not needed.
+     *
+     * @return the component map we will use for the configuration of this BC process.
+     */
+    private fun buildComponentMap(): MutableMap<String, Any> {
+        val cm = HashMap<String, Any>()
+        cm["IcmfPumpStation"] = this.blockchainConfigProvider.getIcmfController() // Currently all chains have ICMF access
+        return cm
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
@@ -209,10 +252,9 @@ open class BaseBlockchainProcessManager(
      */
     protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         val foo: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
-            testDebug("BaseBlockchainProcessManager's (normal) restart of: $chainId", bTrace)
 
             // After block commit we trigger ICMF pipes for this chain's new height
-            icmfDispatcher.triggerPipes(chainId, height)
+            blockchainConfigProvider.getIcmfController().icmfDispatcher.newBlockHeight(chainId, height, storage)
 
             val doRestart = withReadConnection(storage, chainId) { eContext ->
                 blockchainConfigProvider.needsConfigurationChange(eContext, chainId)

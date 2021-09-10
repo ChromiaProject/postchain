@@ -4,7 +4,7 @@ package net.postchain.integrationtest.multiple_chains
 
 import mu.KLogging
 import net.postchain.devtools.TxCache
-import net.postchain.util.GtxTxIntegrationTestSetup
+import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import org.junit.Ignore
 import org.junit.Test

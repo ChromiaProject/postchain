@@ -2,17 +2,20 @@
 
 package net.postchain.base
 
-import net.postchain.core.BlockchainContext
-import net.postchain.core.BlockchainRid
-import net.postchain.core.NODE_ID_AUTO
-import net.postchain.core.NODE_ID_READ_ONLY
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvFactory
 
+/**
+ * Minimal/raw version of the BC configuration.
+ */
 class BaseBlockchainConfigurationData(
     val data: GtvDictionary,
     partialContext: BlockchainContext,
-    val blockSigMaker: SigMaker
+    val blockSigMaker: SigMaker,
+    val configurationComponentMap: MutableMap<String, Any> = HashMap() // For unusual settings, customizations etc.
 ) {
 
     val context: BlockchainContext
@@ -87,6 +90,27 @@ class BaseBlockchainConfigurationData(
         }
     }
 
+    // Most chains don't have this setting
+    fun getIcmfTarget(): String? {
+        return data[KEY_ICMF_LISTENER]?.asString()
+    }
+
+    fun getComponentMap() = configurationComponentMap
+
+    /**
+     * We can add anything in here, should be used for unusual configurations.
+     *
+     * @param name is what the component is called
+     * @param obj is really any type of component. Must be cast back to "real" type after it has been fetched.
+     */
+    fun addComponentToMap(name: String, obj: Any) {
+        if (configurationComponentMap.containsKey(name)) {
+            throw ProgrammerMistake("Adding component with existing key: $name")
+        } else {
+            this.configurationComponentMap[name] = obj
+        }
+    }
+
     companion object {
 
         const val KEY_BLOCKSTRATEGY = "blockstrategy"
@@ -108,6 +132,27 @@ class BaseBlockchainConfigurationData(
 
         const val KEY_SYNC = "sync"
         const val KEY_SYNC_EXT = "sync_ext"
+
+        const val KEY_ICMF_SOURCE = "icmfsource" // Only use this setting for manual mode (only)
+        const val KEY_ICMF_LISTENER = "icmflistener" // Only use this setting for managed mode
+
+
+        /**
+         * Factory method
+         */
+        fun build(rawConfigurationData: ByteArray,
+                  eContext: EContext,
+                  nodeId: Int,
+                  chainId: Long,
+                  subjectID: ByteArray,
+                  blockSigMaker: SigMaker,
+                  configurationComponentMap: MutableMap<String, Any> = HashMap()
+        ): BaseBlockchainConfigurationData {
+            val gtvData = GtvFactory.decodeGtv(rawConfigurationData)
+            val brid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
+            val context = BaseBlockchainContext(brid, nodeId, chainId, subjectID)
+            return BaseBlockchainConfigurationData(gtvData as GtvDictionary, context, blockSigMaker, configurationComponentMap)
+        }
     }
 
     private fun resolveNodeID(nodeID: Int): Int {

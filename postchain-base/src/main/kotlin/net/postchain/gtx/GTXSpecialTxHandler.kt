@@ -25,7 +25,7 @@ interface GTXSpecialTxExtension {
     fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem)
     fun getRelevantOps(): Set<String>
     fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean
-    fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData>
+    fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, blockchainRID: BlockchainRid): List<OpData>
     fun validateSpecialOperations(position: SpecialTransactionPosition,
                                   bctx: BlockEContext, ops: List<OpData>): Boolean
 }
@@ -72,7 +72,7 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
         }
     }
 
-    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
+    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, blockchainRID: BlockchainRid): List<OpData> {
         val op = if (position == SpecialTransactionPosition.Begin)
             OP_BEGIN_BLOCK else OP_END_BLOCK
         return listOf(OpData(op, arrayOf(GtvInteger(bctx.height))))
@@ -139,7 +139,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         val b = GTXDataBuilder(blockchainRID, arrayOf(), cs)
         for (x in extensions) {
             if (x.needsSpecialTransaction(position)) {
-                for (o in x.createSpecialOperations(position, bctx)) {
+                for (o in x.createSpecialOperations(position, bctx, blockchainRID)) {
                     b.addOperation(o.opName, o.args)
                 }
             }
@@ -151,6 +151,18 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         return factory.decodeTransaction(b.serialize())
     }
 
+    /**
+     * The goal of this method is to call "validateSpecialOperations()" on all extensions we have.
+     *
+     * NOTE: For the logic below to work no two extensions can have operations with the same name. If they do we
+     *       might use the wrong extension to validate an operation.
+     *
+     * @param position is the position we are investigating
+     * @param tx is the [Transaction] we are investigating (must already have been created at an earlier stage).
+     *           This tx holds all operations from all extensions, so it can be very big (in case of Anchoring chain at least)
+     * @param ectx
+     * @param true if all special operations of all extensions valid
+     */
     override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, ectx: BlockEContext): Boolean {
         val gtxTransaction = tx as GTXTransaction
         val gtxData = gtxTransaction.gtxData

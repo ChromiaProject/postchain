@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.icmf.IcmfController
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -218,6 +219,8 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
 class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSource):
         BlockchainConfigurationProvider {
 
+    private val icmfController = IcmfController() // Using the "real" ICMF for test, see no reason not to(?)
+
     companion object: KLogging()
 
     override fun getConfiguration(eContext: EContext, chainId: Long): ByteArray? {
@@ -234,6 +237,10 @@ class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSou
         logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight")
         return (nextConfigHeight != null) && (nextConfigHeight == height + 1)
     }
+
+    override fun getIcmfController(): IcmfController {
+        return this.icmfController
+    }
 }
 
 
@@ -241,7 +248,13 @@ class TestManagedBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationP
                                           syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
                                           nodeDiagnosticContext: NodeDiagnosticContext, val mockDataSource: MockManagedNodeDataSource) :
         BaseBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext) {
-    override fun makeBlockchainConfiguration(rawConfigurationData: ByteArray, eContext: EContext, nodeId: Int, chainId: Long): BlockchainConfiguration {
+    override fun makeBlockchainConfiguration(
+        rawConfigurationData: ByteArray,
+        eContext: EContext,
+        nodeId: Int,
+        chainId: Long,
+        configurationComponentMap: MutableMap<String, Any>
+    ): BlockchainConfiguration {
         return mockDataSource.getConf(rawConfigurationData)!!
     }
 }
@@ -268,13 +281,14 @@ class TestManagedBlockchainProcessManager(blockchainInfrastructure: BlockchainIn
      * Overriding the original method, so that we now, instead of checking the DB for what
      * BCs to launch we instead
      */
-    override fun retrieveBlockchainsToLaunch(): Array<Long> {
+    override fun retrieveBlockchainsToLaunch(): Array<BlockchainRelatedInfo> {
         retrieveDebug("NOTE TEST! - Begin ")
-        val result = mutableListOf<Long>()
+        val result = mutableListOf<BlockchainRelatedInfo>()
         dataSource.computeBlockchainList().forEach {
             val brid = BlockchainRid(it)
             val chainIid = chainIidOf(brid)
-            result.add(chainIid)
+            val chainInfo = BlockchainRelatedInfo(brid, null, chainIid)
+            result.add(chainInfo)
             retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")
             withReadWriteConnection(storage, chainIid) { newCtx ->
                 DatabaseAccess.of(newCtx).initializeBlockchain(newCtx, brid)

@@ -8,6 +8,9 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.debug.NodeDiagnosticContext
 
+/**
+ * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.
+ */
 class Chromia0InfrastructureFactory: ManagedEBFTInfrastructureFactory() {
 
     override fun makeProcessManager(

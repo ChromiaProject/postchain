@@ -23,9 +23,14 @@ import java.util.*
  * @property eContext Connection context including blockchain and node identifiers
  * @property store For database access
  * @property txFactory Used for serializing transaction data
+ * @property specialTxHandler is the main entry point for special transaction handling.
  * @property subjects Public keys for nodes authorized to sign blocks
- * @property blockchainDependencies holds the blockchain RIDs this blockchain depends on
  * @property blockSigMaker used to produce signatures on blocks for local node
+ * @property blockchainRelatedInfoDependencyList holds the blockchain RIDs this blockchain depends on
+ * @property extensions are extensions to the block builder, usually helping with handling of special transactions.
+ * @property usingHistoricBRID
+ * @property maxBlockSize
+ * @property maxBlockTransactions
  */
 open class BaseBlockBuilder(
         blockchainRID: BlockchainRid,
@@ -88,6 +93,13 @@ open class BaseBlockBuilder(
         }
     }
 
+    /**
+     * Retrieve initial block data and set block context.
+     *
+     * NOTE: For NEW blocks we must remember to add special transactions (old blocks should not be tampered with).
+     *
+     * @param partialBlockHeader might hold the header.
+     */
     override fun begin(partialBlockHeader: BlockHeader?) {
         if (partialBlockHeader == null && usingHistoricBRID) {
             throw UserMistake("Cannot build new blocks in historic mode (check configuration)")
@@ -278,12 +290,25 @@ open class BaseBlockBuilder(
         return witnessBuilder
     }
 
+    /**
+     * When this is really a new block there won't be a [BlockHeader] until after this step.
+     *
+     * NOTE: For NEW blocks we add special transactions (old block data must not be modified).
+     *
+     * @return the new [BlockHeader] we are about to create.
+     */
     override fun finalizeBlock(): BlockHeader {
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End))
             appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.End, bctx))
         return super.finalizeBlock()
     }
 
+    /**
+     * In this case we already have the [BlockHeader] meaning it's a block we got from someone else, and thus
+     * we will validate it.
+     *
+     * @param blockHeader is the header for the block we are working on.
+     */
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
         if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End) && !haveSpecialEndTransaction)
             throw BadDataMistake(BadDataType.BAD_BLOCK,"End special transaction is missing")

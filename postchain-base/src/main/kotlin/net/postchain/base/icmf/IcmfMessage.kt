@@ -1,5 +1,6 @@
 package net.postchain.base.icmf
 
+import net.postchain.core.BlockWitness
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvNull
 
@@ -19,15 +20,17 @@ data class IcmfMessage(
 data class IcmfPackage(
     val height: Long, // Block height this package corresponds to
     val blockHeader: Gtv, // Header of the block
+    val witness: Gtv, // Must send the witness so the recipient can validate
     val messages: List<IcmfMessage> // (potentially) messages
 ) {
 
     companion object {
 
-        // Dummy used until we figure out how to do this right
-        fun build(height: Long): IcmfPackage {
-            val header: Gtv = GtvNull // TODO: Fix this
-            return IcmfPackage(height, header, ArrayList())
+        /**
+         * @return a [IcmfPackage] without messages (Anchoring can use this)
+         */
+        fun build(height: Long, header: Gtv, witness: Gtv): IcmfPackage {
+            return IcmfPackage(height, header, witness, ArrayList())
         }
     }
 

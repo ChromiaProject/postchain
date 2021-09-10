@@ -53,7 +53,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
 
-    // Optional Tables
+    // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
 
@@ -406,6 +406,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
 
+
+    override fun createEventLeafTable(ctx: EContext, prefix: String) {
+        queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx, prefix))
+    }
 
     // --- Init App ----
 

@@ -2,6 +2,7 @@
 
 package net.postchain.config.blockchain
 
+import net.postchain.base.icmf.IcmfController
 import net.postchain.core.EContext
 
 /**
@@ -11,4 +12,7 @@ import net.postchain.core.EContext
 interface BlockchainConfigurationProvider {
     fun getConfiguration(eContext: EContext, chainId: Long): ByteArray?
     fun needsConfigurationChange(eContext: EContext, chainId: Long): Boolean
+    fun getIcmfController(): IcmfController // We need to use the same [IcmfController] for all BC configuration
+                                            // or else they won't "see" each other (and be unable to connect).
+
 }

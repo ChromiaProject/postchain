@@ -92,6 +92,9 @@ open class ManagedBlockchainProcessManager(
                     ?.setDataSource(dataSource)
                     ?: logger.warn { "Blockchain config is not managed" }
 
+            // This is the best place for ICMF init (for non-managed mode we don't have any similar place right?).
+            maybeInitIcmf(blockchainConfigProvider.getIcmfController())
+
         } catch (e: Exception) {
             // TODO: [POS-90]: Improve error handling here
             logger.error { e.message }
@@ -189,7 +192,7 @@ open class ManagedBlockchainProcessManager(
                 synchronized(synchronizer) {
                     wrTrace("Sync", chainId, bTrace)
                     // After block commit we trigger ICMF pipes for this chain's new height
-                    icmfDispatcher.triggerPipes(chainId, blockHeight)
+                    blockchainConfigProvider.getIcmfController().icmfDispatcher.newBlockHeight(chainId, blockHeight, storage)
 
                     val x = if (chainId == 0L) restartHandlerChain0(bTrace) else restartHandlerChainN(bTrace)
                     wrTrace("After", chainId, bTrace)
@@ -212,8 +215,9 @@ open class ManagedBlockchainProcessManager(
     private fun reloadBlockchainsAsync(bTrace: BlockTrace?) {
         executor.submit {
             reloadAllDebug("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch()
+            val toLaunchInfos = retrieveBlockchainsToLaunch()
             val launched = blockchainProcesses.keys
+            val toLaunch = toLaunchInfos.map { it.chainId!! }.toTypedArray()
             logChains(toLaunch, launched, true)
 
             // Starting blockchains: at first chain0, then the rest
@@ -248,13 +252,18 @@ open class ManagedBlockchainProcessManager(
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
         executor.submit {
             ssaTrace("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch()
+            val toLaunchInfos = retrieveBlockchainsToLaunch()
             val launched = blockchainProcesses.keys
+            val toLaunch = toLaunchInfos.map { it.chainId!! }.toTypedArray()
             logChains(toLaunch, launched, reloadChain0)
+
+            // For managed mode we do the final initiation step of ICMF here.
+            // This is the first time we can be sure all the BCs have a ChainIid
+            initAllChainsForIcmf(toLaunchInfos.toSet())
 
             // Launching blockchain 0
             if (reloadChain0) {
-                ssaInfo("Reloading of blockchai 0 is required, launching it", 0L)
+                ssaInfo("Reloading of blockchain 0 is required, launching it", 0L)
                 startBlockchain(0L, bTrace)
             }
 
@@ -332,12 +341,12 @@ open class ManagedBlockchainProcessManager(
      * Note: We use [computeBlockchainList()] which is the API method "nm_compute_blockchain_list" of this node's own
      * API for chain zero.
      *
-     * @return all chainIids chain zero thinks we should run.
+     * @return all chains chain zero thinks we should run.
      */
-    protected open fun retrieveBlockchainsToLaunch(): Array<Long> {
+    protected open fun retrieveBlockchainsToLaunch(): Array<BlockchainRelatedInfo> {
         retrieveDebug("Begin")
         // chain-zero is always in the list
-        val blockchains = mutableListOf(0L)
+        val blockchains = mutableListOf(BlockchainRelatedInfo(BlockchainRid.ZERO_RID, "chain zero", 0L))
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
@@ -355,11 +364,11 @@ open class ManagedBlockchainProcessManager(
                     withReadWriteConnection(storage, newChainId) { newCtx ->
                         db.initializeBlockchain(newCtx, blockchainRid)
                     }
-                    newChainId
+                    BlockchainRelatedInfo(blockchainRid, null, newChainId)
                 } else {
-                    chainId
+                    BlockchainRelatedInfo(blockchainRid, null, chainId)
                 }
-            }.filter { it != 0L }.forEach {
+            }.filter { it.chainId != 0L }.forEach {
                 blockchains.add(it)
             }
             true

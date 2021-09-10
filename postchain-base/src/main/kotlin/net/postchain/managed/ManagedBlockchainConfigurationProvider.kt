@@ -4,6 +4,7 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.icmf.IcmfController
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
@@ -12,6 +13,7 @@ class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvider {
 
     private lateinit var dataSource: ManagedNodeDataSource
     private val systemProvider = ManualBlockchainConfigurationProvider()
+    private val icmfController = IcmfController()
 
     companion object: KLogging()
 
@@ -52,6 +54,10 @@ class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvider {
                 throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
             }
         }
+    }
+
+    override fun getIcmfController(): IcmfController {
+        return this.icmfController
     }
 
     private fun getConfigurationFromDataSource(eContext: EContext): ByteArray? {
