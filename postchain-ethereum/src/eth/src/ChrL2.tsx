@@ -266,7 +266,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
       )
       tokenContract.balanceOf(account).then(setBalance).catch()
       tokenContract.decimals().then(setUnit).catch()
-      chrl2._balances(account, tokenAddress).then(setDeposit).catch()
+      chrl2._balances(tokenAddress).then(setDeposit).catch()
     };
     try {
       fetchDepositedTokenInfo();

@@ -223,7 +223,7 @@ describe("ChrL2", () => {
                     .to.emit(chrL2Instance, "Deposited")
                     .withArgs(user.address, tokenAddress, toDeposit)
 
-            expect(await chrL2Instance._balances(user.address, tokenAddress)).to.eq(toDeposit)
+            expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
             expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
         })
     })
@@ -374,7 +374,7 @@ describe("ChrL2", () => {
                 }
 
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
-                expect(await chrL2Instance._balances(user.address, tokenAddress)).to.eq(toDeposit)
+                expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
                     deployer.address)).to.be.revertedWith('ChrL2: no fund for the beneficiary')
@@ -383,7 +383,7 @@ describe("ChrL2", () => {
                     user.address))
                 .to.emit(chrL2Instance, "Withdrawal")
                 .withArgs(user.address, tokenAddress, toDeposit)
-                expect(await chrL2Instance._balances(user.address, tokenAddress)).to.eq(0)
+                expect(await chrL2Instance._balances(tokenAddress)).to.eq(0)
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint)
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 

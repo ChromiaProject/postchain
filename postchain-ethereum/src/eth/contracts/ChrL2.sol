@@ -8,7 +8,7 @@ import "./token/ERC20.sol";
 contract ChrL2 {
     using Postchain for bytes32;
 
-    mapping (address => mapping(ERC20 => uint256)) public _balances;
+    mapping(ERC20 => uint256) public _balances;
     mapping (bytes32 => Withdraw) public _withdraw;
     address[] public directoryNodes;
     address[] public appNodes;
@@ -55,7 +55,7 @@ contract ChrL2 {
 
     function deposit(ERC20 token, uint256 amount) public returns (bool) {
         token.transferFrom(msg.sender, address(this), amount);
-        _balances[msg.sender][token] += amount;
+        _balances[token] += amount;
         emit Deposited(msg.sender, token, amount);
         return true;
     }
@@ -69,7 +69,7 @@ contract ChrL2 {
         require(_events[_hash] == false, "ChrL2: event hash was already used");
         _hash.verifyBlock(blockHeader, sigs, merkleProofs, position, appNodes);
         (ERC20 token, address beneficiary, uint256 amount) = _hash.verifyEvent(_event);
-        require(amount <= _balances[beneficiary][token], "ChrL2: not enough amount to request withdraw");
+        require(amount > 0 && amount <= _balances[token], "ChrL2: invalid amount to make request withdraw");
         Withdraw storage wd = _withdraw[_hash];
         wd.token = token;
         wd.beneficiary = beneficiary;
@@ -86,11 +86,11 @@ contract ChrL2 {
         require(wd.beneficiary == beneficiary, "ChrL2: no fund for the beneficiary");
         require(wd.block_number <= block.number, "ChrL2: not mature enough to withdraw the fund");
         require(wd.isWithdraw == false, "ChrL2: fund was already claimed");
-        require(wd.amount > 0 && wd.amount <= _balances[beneficiary][wd.token], "ChrL2: not enough amount to withdraw");
+        require(wd.amount > 0 && wd.amount <= _balances[wd.token], "ChrL2: not enough amount to withdraw");
         wd.isWithdraw = true;
         uint value = wd.amount;
         wd.amount = 0;
-        _balances[beneficiary][wd.token] -= value;
+        _balances[wd.token] -= value;
         wd.token.transfer(beneficiary, value);
         emit Withdrawal(beneficiary, wd.token, value);
     }
