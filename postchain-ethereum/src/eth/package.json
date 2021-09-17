@@ -10,6 +10,7 @@
     "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
     "coverage": "cross-env CODE_COVERAGE=true hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
     "deploy": "npx hardhat deploy:ChrL2",
+    "deploy:token": "npx hardhat deploy:token",
     "start": "craco start",
     "build": "craco build"
   },
