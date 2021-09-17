@@ -176,7 +176,7 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
             {data?.withdraws.map((w) => {
               return (<tr key={w?.serial}>
                 <th>{w?.serial}</th>
-                <td>{w?.amount}</td>
+                <td>{Number(formatUnits(w?.amount.toString() ?? 0, data?.decimals)).toFixed(6)}</td>
                 <td>
                   <button type="button" className="btn btn-outline btn-accent" onClick={() => withdrawRequest(w?.serial, w?.token, w?.beneficiary, w?.amount)}>
                     Withdraw Request
@@ -235,7 +235,8 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
     try {
       let sender = util.makeKeyPair()
       var tx = client.newTransaction([sender.pubKey])
-      tx.addOperation("__withdraw", tokenAddress.toLowerCase(), account.toLowerCase(), withdrawAmount*1000000)
+      let amount = ethers.BigNumber.from(withdrawAmount).mul(ethers.BigNumber.from(10).pow(unit)).toString()
+      tx.addOperation("__withdraw", tokenAddress.toLowerCase(), account.toLowerCase(), parseInt(amount))
       tx.sign(sender.privKey, sender.pubKey)
       let txRID = tx.getTxRID()
       tx.send((err) => {
