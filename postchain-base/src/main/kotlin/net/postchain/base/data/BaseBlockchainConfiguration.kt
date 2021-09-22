@@ -28,7 +28,8 @@ open class BaseBlockchainConfiguration(
 
     override val icmfTarget = configData.getIcmfTarget()
 
-    val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler() // TODO
+    // Only GTX config can have special TX, this is just "Base" so we settle for null
+    private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
 
     val componentMap: Map<String, Any> = configData.getComponentMap() // Used for things that might or might not exist
 
@@ -60,7 +61,7 @@ open class BaseBlockchainConfiguration(
     }
 
     open fun getSpecialTxHandler(): SpecialTransactionHandler {
-        return specialTransactionHandler
+        return specialTransactionHandler // Must be overridden in sub-class
     }
 
     open fun makeBBExtensions(): List<BaseBlockBuilderExtension> {

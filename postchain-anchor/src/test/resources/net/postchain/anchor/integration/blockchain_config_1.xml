@@ -45,7 +45,7 @@
         find the source chains (using the Chain 0 data).
         -->
         <array>
-            <bytea>641E3EDE0EC0226ABD3747345BD405580AFF1D43AA840D859DECCB38A42112FC</bytea> <!-- This is the Anchor chain -->
+            <bytea>3455DBCF67151BA27C93D2D0EDFD9356DD5DAE69D519C8FB94E8620E21681536</bytea> <!-- This is the Anchor chain -->
         </array>
     </entry>
 </dict>

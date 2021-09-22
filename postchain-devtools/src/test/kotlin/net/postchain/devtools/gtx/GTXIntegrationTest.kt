@@ -12,6 +12,7 @@ import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.GtxNop
 import org.junit.Assert
 import org.junit.Test
 
@@ -21,7 +22,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
 
     fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(pubKey(0)), myCS)
-        b.addOperation("nop", arrayOf(gtv(42)))
+        b.addOperation(GtxNop.OP_NAME, arrayOf(gtv(42)))
         b.finish()
         b.sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
         return b.serialize()

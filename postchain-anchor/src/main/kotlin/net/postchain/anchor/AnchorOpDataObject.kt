@@ -1,0 +1,53 @@
+package net.postchain.anchor
+
+import mu.KLogging
+import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.gtx.OpData
+
+/**
+ * This data class hides the ordering of the [OpData] arguments to the outside world
+ * Can do primitive validation of [OpData] too.
+ */
+data class AnchorOpDataObject(
+    val headerData: BlockHeaderData,
+    val witness: ByteArray
+    )  {
+
+    companion object: KLogging() {
+
+        /**
+         * Does first part of validation, and hands over a "decoded" [AnchorOpDataObject] for further validation
+         *
+         * @param op is what we should validate/decode
+         * @return is a simple DTO or null if decode failed
+         */
+        fun validateAndDecodeOpData(op: OpData): AnchorOpDataObject? {
+            if (AnchorSpecialTxExtension.OP_BLOCK_HEADER != op.opName) {
+                logger.info("Invalid spcl operation: Expected op name ${AnchorSpecialTxExtension.OP_BLOCK_HEADER} got ${op.opName}.")
+                return null
+            }
+
+            if (op.args.size != 2) {
+                logger.info("Invalid spcl operation: Expected 1 arg but got ${op.args.size}.")
+                return null
+            }
+
+            try {
+                val gtvHeader = op.args[0]
+                val gtvWitness = op.args[1]
+
+                val header = BlockHeaderDataFactory.buildFromGtv(gtvHeader)
+                val rawWitness = gtvWitness.asByteArray()
+
+                return AnchorOpDataObject(header, rawWitness)
+
+            } catch (e: RuntimeException) {
+                logger.info("Invalid spcl operation: Error: ${e.message}")
+                return null // We don't really care what's wrong, just log it and return null
+            }
+        }
+    }
+
+
+}

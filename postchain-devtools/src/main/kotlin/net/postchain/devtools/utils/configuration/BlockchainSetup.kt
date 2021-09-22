@@ -16,13 +16,17 @@ import net.postchain.gtv.Gtv
  * @property bcGtv is the BC configuration in the form of [GTV] dictionary
  * @property signerNodeList is a list of [NodeSeqNumber] that must sign this chain
  * @property chainDependencies is a set of the other chain IDs this chain depends on
+ * @property shouldHaveNormalTx  means we will generate regular test TX for this blockchain, a chain with only
+ *                               special TX in it (like Anchor chain) should have this value set to false.
+ *
  */
 data class BlockchainSetup(
         val chainId: Int,
         val rid: BlockchainRid,
         val bcGtv: Gtv,
         val signerNodeList: List<NodeSeqNumber>,
-        val chainDependencies: Set<Int> = setOf() // default is none
+        val chainDependencies: Set<Int> = setOf(), // default is none
+        private var shouldHaveNormalTx: Boolean = true  // Set to false to prevent normal TXs to go to this chain
 ) {
 
     /**
@@ -64,4 +68,9 @@ data class BlockchainSetup(
 
     fun isNodeSigner(nodeNr: NodeSeqNumber) = signerNodeList.find { it == nodeNr } != null
 
+    fun shouldHaveNormalTx() = shouldHaveNormalTx
+
+    fun setShouldHaveNormalTx(b: Boolean) {
+        this.shouldHaveNormalTx = b
+    }
 }

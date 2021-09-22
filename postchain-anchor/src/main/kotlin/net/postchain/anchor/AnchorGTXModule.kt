@@ -1,15 +1,27 @@
 package net.postchain.anchor
 
+import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.icmf.IcmfBBBExtension
-import net.postchain.common.data.KECCAK256
-import net.postchain.common.hexStringToByteArray
+import net.postchain.base.snapshot.LeafStore
+import net.postchain.common.data.Hash
 import net.postchain.core.EContext
+import net.postchain.core.TxEContext
 import net.postchain.gtv.*
+import net.postchain.gtv.merkle.GtvBinaryTreeFactory
+import net.postchain.gtx.ExtOpData
+import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 
+/**
+ * This module allows external parties to ask Anchor chain about what heights been anchored.
+ *
+ * Note regarding modules:
+ * We write this module as a complement to the "anchor" module that is written in Rell.
+ * The Rell module define the "__anchor" operation for example, it is not known by this module.
+ */
 class AnchorGTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf(
         "get_anchor_height" to ::anchorHeightQuery,
@@ -18,7 +30,7 @@ class AnchorGTXModule : SimpleGTXModule<Unit>(
 ) {
 
     companion object {
-        const val PREFIX = "anchor"
+        const val PREFIX: String = "sys.x.anchor" // This name should not clash with the Rell "anchor" module
     }
 
     /**
@@ -45,14 +57,20 @@ class AnchorGTXModule : SimpleGTXModule<Unit>(
     }
 }
 
+
+// TODO: Olle: impl
 fun anchorHeightQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
+    val db = DatabaseAccess.of(ctx)
     /*
     val argsDict = args as GtvDictionary
     val blockHeight = argsDict["blockHeight"]!!.asInteger()
     val eventHash = argsDict["eventHash"]!!.asString().hexStringToByteArray()
-    val db = DatabaseAccess.of(ctx)
     val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
+
+    // Go to DB
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
+
+    // Go to DB
     val eventInfo = db.getEvent(ctx, AnchorGTXModule.PREFIX, blockHeight, eventHash) ?: return GtvNull
     val eventData = eventData(eventInfo)
     return GtvFactory.gtv(
@@ -63,13 +81,16 @@ fun anchorHeightQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     return GtvNull
 }
 
+// TODO: Olle: impl
 fun anchorChainsQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
+    val db = DatabaseAccess.of(ctx)
     /*
     val argsDict = args as GtvDictionary
     val blockHeight = argsDict["blockHeight"]!!.asInteger()
     val accountNumber = argsDict["accountNumber"]!!.asInteger()
-    val db = DatabaseAccess.of(ctx)
     val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
+
+    // Go to DB
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
     return GtvFactory.gtv(
         "chains" to accountState,

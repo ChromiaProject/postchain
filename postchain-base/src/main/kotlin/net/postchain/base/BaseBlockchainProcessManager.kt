@@ -130,13 +130,14 @@ open class BaseBlockchainProcessManager(
                         maybeInitIcmf(icmfController) // We only init first time (for managed mode init has been done by now)
 
 
-                        // Create the pipes we should feed the dispatcher
-                        val pipes = icmfController.maybeConnect(process) // We only create pipes first time
-
                         val db = DatabaseAccess.of(eContext)
-                        val height = db.getLastBlockHeight(eContext) // TODO: Olle: A bit ugly to get this here, we should prob pass it as a param from somewhere
+                        val height = db.getLastBlockHeight(eContext) // FUTURE WORK: Olle: A bit ugly/slow to get this from db here, we should prob pass it as a param from somewhere
+
+                        // Create the pipes we should feed the dispatcher
+                        val pipes = icmfController.maybeConnect(process, height) // We only create pipes first time
+
                         for (pipe in pipes) {
-                            blockchainConfigProvider.getIcmfController().icmfDispatcher.addMessagePipe(pipe, height)
+
                         }
 
                         startInfoDebug("Blockchain has been started", processName, chainId, bTrace)
@@ -251,7 +252,7 @@ open class BaseBlockchainProcessManager(
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
     protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        val foo: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
+        val retFun: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
 
             // After block commit we trigger ICMF pipes for this chain's new height
             blockchainConfigProvider.getIcmfController().icmfDispatcher.newBlockHeight(chainId, height, storage)
@@ -267,7 +268,7 @@ open class BaseBlockchainProcessManager(
 
             doRestart
         }
-        return foo
+        return retFun //  (So that we can put a breakpoint here where it won't be mixed with actual execution of the function)
     }
 
     protected fun nodeName(): String {

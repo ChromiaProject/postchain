@@ -11,6 +11,7 @@ import net.postchain.core.TxEContext
 import net.postchain.gtv.Gtv
 
 /**
+ * TODO: Olle: Is this even needed for ICMF, seems to work without it?
  *
  * This class implements both the BBB Extension and the [TxEventSink], so that the extension, during initialization,
  * can add itself as an event listener (i.e. [TxEventSink]). After we are added as event listener,

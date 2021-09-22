@@ -21,7 +21,7 @@ class AnchorSynchronizationInfrastructureExtension(
      * We need to connect this new anchor process to ICMF so it is fed messages
      * (we need to connect the [AnchorSpecialTxExtension] to a [IcmfReceiver])
      *
-     * Note: All other [BlockchainProcess] will feed us data via [IcmfDispatcher] TODO: Olle when do we connect?
+     * Note: All other [BlockchainProcess] will feed us data via [IcmfDispatcher]
      */
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.getEngine()
@@ -48,7 +48,7 @@ class AnchorSynchronizationInfrastructureExtension(
     }
 
     /**
-     * TODO: Olle, Hack. Should be a generic function somewhere else?
+     *  (Olle: Hack. Should be a generic function somewhere else?)
      *
      * Note: having more than one [AnchorSpecialTxExtension] tied to the Anchor process would be wrong I guess, but
      * we don't care about that here.

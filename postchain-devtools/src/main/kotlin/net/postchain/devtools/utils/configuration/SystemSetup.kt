@@ -69,11 +69,11 @@ data class SystemSetup(
          * Complex setup means we look at the blockchain configurations given, and figure out what nodes we need from that.
          * The [NodeSetup] we will create will know exactly what nodes they should connect to
          *
-         * @param blockchainConfList holds the complete blockchain configurations
+         * @param blockchainConfMap holds the complete blockchain configurations
          */
         fun buildComplexSetup(
-                blockchainConfList: List<BlockchainSetup>
-        ): SystemSetup  =  SystemSetupFactory.buildSystemSetup(blockchainConfList)
+            blockchainConfMap: Map<Int, String>
+        ): SystemSetup  =  SystemSetupFactory.buildSystemSetup(blockchainConfMap)
 
 
 

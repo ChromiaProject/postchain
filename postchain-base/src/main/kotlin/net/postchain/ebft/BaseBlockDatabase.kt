@@ -19,10 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger
  * NOTE: Re threading
  * [ThreadPoolExecutor] will queue up tasks and execute them in the order they were given.
  * We use only one thread, which means we know the previous task was completed before we begin the next.
- *
- * NOTE: Re logging
- * Looks like this class used to do too much logging, so now everything has been scaled down one notch
- * (debug -> trace, etc). IMO this is better than blocking the logging from YAML (which might be hard to remember)
  */
 class BaseBlockDatabase(
         private val engine: BlockchainEngine,
@@ -48,11 +44,15 @@ class BaseBlockDatabase(
     companion object : KLogging()
 
     fun stop() {
-        logger.debug("stop() - Begin, node: $nodeIndex")
+        if (logger.isDebugEnabled) {
+            logger.debug("stop() - Begin, node: $nodeIndex")
+        }
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS) // TODO: [et]: 1000 ms
         maybeRollback()
-        logger.debug("stop() - End, node: $nodeIndex")
+        if (logger.isDebugEnabled) {
+            logger.debug("stop() - End, node: $nodeIndex")
+        }
     }
 
     override fun getQueuedBlockCount(): Int {
@@ -67,16 +67,16 @@ class BaseBlockDatabase(
         val deferred = deferred<RT, Exception>()
         executor.execute {
             try {
-                if (logger.isTraceEnabled) {
-                    logger.trace("Starting job $name")
+                if (logger.isDebugEnabled) {
+                    logger.debug("Starting job $name")
                 }
                 val res = op()
-                if (logger.isTraceEnabled) {
-                    logger.trace("Finished job $name")
+                if (logger.isDebugEnabled) {
+                    logger.debug("Finished job $name")
                 }
                 deferred.resolve(res)
             } catch (e: Exception) {
-                logger.debug("Failed job $name", e) // Shouldn't this be at leas WARN?
+                logger.info("Failed job $name", e)
                 deferred.reject(e)
             }
         }
@@ -237,8 +237,8 @@ class BaseBlockDatabase(
     }
 
     fun addBlockLog(str: String) {
-        if (logger.isTraceEnabled) {
-            logger.trace("addBlock() -- $str")
+        if (logger.isDebugEnabled) {
+            logger.debug("addBlock() -- $str")
         }
     }
     fun addBlockLog(str: String, bTrace: BlockTrace?) {

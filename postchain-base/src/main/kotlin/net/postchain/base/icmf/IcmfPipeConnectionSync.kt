@@ -11,13 +11,13 @@ import java.util.*
 
 /**
  * Goal of [IcmfPipeConnectionSync] is to know things about the chains ABOUT TO START on this node, BEFORE the first
- * chain has been started (but this is only possible for managed mode). This is important so we don't lose any messages
- * from a potentially early started source chain.
+ * chain has been started. This is important so we don't lose any messages from a potentially early started source chain.
  * (if a source chain starts running and generates messages before the listener chain has been started, we must store
  * these messages in [IcmfPipe]s until the listener is ready to read).
  *
  * It's possible to add new chains to [IcmfPipeConnectionSync] at any time, using the "addChains()" function, but, if
  * a new listener chain is added late, it will have missed all ICMF messages before "its birth-time" (obvious, or?).
+ * NOTE: Currently late added chains won't work since these connections are not visible in the IcmfReceiver/Dispatcher // TODO: Olle: fix
  *
  * Discussion:
  * It's likely that source chains will start anytime, but I don't think a "listener chains" will ever be introduced
@@ -35,7 +35,7 @@ import java.util.*
  * the ICMF config settings cannot change without a node restart (but they don't right?).
  */
 class IcmfPipeConnectionSync(
-    private val simpleConfReader: SimpleConfigReader // Does the ugly part of actually reading BC config (easy to mock)
+    private var simpleConfReader: SimpleConfigReader // Does the ugly part of actually reading BC config (easy to mock)
 ) {
 
     companion object: KLogging()
@@ -51,6 +51,23 @@ class IcmfPipeConnectionSync(
 
     // This is only relevant for managed mode
     private val listenerChainToConnCheckerMap = HashMap<BlockchainRid, ConnectionChecker>() // All listener chains we have and their corresponding [ConnectionChecker]
+
+    /**
+     * Useful in test
+     */
+    fun setSimpleConfReader(scf: SimpleConfigReader) {
+        simpleConfReader = scf
+    }
+
+    private lateinit var icmfReceiver: IcmfReceiver
+    private lateinit var icmfDispatcher: IcmfDispatcher
+
+    fun setReceiver(r: IcmfReceiver) {
+        icmfReceiver = r
+    }
+    fun setDispatcher(d: IcmfDispatcher) {
+        icmfDispatcher = d
+    }
 
     /**
      * @return true if we have read the config for this chain already
@@ -122,7 +139,7 @@ class IcmfPipeConnectionSync(
     }
 
     /**
-     * Safe to use this function to add chains we already know about, old chains will just be ignored.
+     * Safe to use this function to add chains we already know about, previous seen chains will just be ignored.
      */
     @Synchronized
     fun addChains(allNew: Set<BlockchainRelatedInfo>)  {
@@ -133,7 +150,7 @@ class IcmfPipeConnectionSync(
     }
 
     /**
-     * Find ICMF config parameters from the chain, and add the info to the internal cache.
+     * Find ICMF config parameters from the chain, and add the info to the internal cache/map.
      *
      * NOTE:
      * We DON'T want to create a configuration domain object here (b/c we might instantiate too many objects).
@@ -159,28 +176,28 @@ class IcmfPipeConnectionSync(
     }
 
     /**
-     * Updates the internal lists depending on the nature of the chain
+     * Updates the internal cache/map if this is a listener chains with correct configuration.
      *
      * Currently we can only handle the "all" strategy for "icmflistener" setting but:
-     * TODO: Olle: The plan is to try to instantiate the given class and use it as a [ConnectionChecker]
+     * FUTURE WORK: Olle: The plan is to try to instantiate the given class and use it as a [ConnectionChecker]
      *
      * @param chainInfo is the identifiers of chain we are about to add
-     * @param icmfListener is the target setting from the chain's config file.
+     * @param icmfListenerConf is the target setting from the chain's config file.
      */
-    private fun interpretIcmfListenerConfig(chainInfo: BlockchainRelatedInfo, icmfListener: String?) {
-        if (icmfListener != null) {
+    private fun interpretIcmfListenerConfig(chainInfo: BlockchainRelatedInfo, icmfListenerConf: String?) {
+        if (icmfListenerConf != null) {
             // This is a listener chain, let's add it to the listener list
             if (listenerChainToConnCheckerMap.containsKey(chainInfo.blockchainRid)) {
                 throw ProgrammerMistake("We shouldn't reset an existing listener chain id: ${chainInfo.chainId} , RID: $chainInfo.")
             } else {
-                if ("all" == icmfListener!!) {
+                if ("all" == icmfListenerConf!!) {
                     // Simple case, we want all chains to send to this chain
                     listenerChainToConnCheckerMap[chainInfo.blockchainRid] = AllConnectionChecker()
                 } else {
-                    // TODO: Olle: Implement
+                    // FUTURE WORK: Olle: Implement
                     //val customConnectionChecker = xxx as ConnectionChecker
                     //internalListenerChains[chainIid] = customConnectionChecker
-                    throw UserMistake("At this point we cannot handle custom listener chain connection checkers, icmflistener must be set to \"all\" but was \"$icmfListener\".")
+                    throw UserMistake("At this point we cannot handle custom listener chain connection checkers, icmflistener must be set to \"all\" but was \"$icmfListenerConf\".")
                 }
             }
         }

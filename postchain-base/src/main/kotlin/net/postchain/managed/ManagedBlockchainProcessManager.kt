@@ -408,8 +408,8 @@ open class ManagedBlockchainProcessManager(
     }
 
     private fun reloadAllInfo(str: String, chainId: Long) {
-        if (logger.isDebugEnabled) {
-            logger.debug("${nodeName()}: reloadBlockchainsAsync() -- $str: chainId: $chainId")
+        if (logger.isInfoEnabled) {
+            logger.info("${nodeName()}: reloadBlockchainsAsync() -- $str: chainId: $chainId")
         }
     }
 

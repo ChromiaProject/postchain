@@ -6,7 +6,6 @@ import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.UserMistake
 import net.postchain.gtv.*
-import sun.jvm.hotspot.opto.Block
 
 /**
  * Standard implementation of the [SimpleConfigReader].

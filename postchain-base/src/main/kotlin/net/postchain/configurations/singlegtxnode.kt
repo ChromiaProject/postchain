@@ -15,6 +15,7 @@ import net.postchain.gtx.GTXSchemaManager
 import net.postchain.gtx.SimpleGTXModule
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
+import java.lang.Exception
 
 // TODO: [POS-128]: Refactor this
 
@@ -46,17 +47,21 @@ class GTXTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
         if (data.args[1].asString() == "rejectMe")
             throw UserMistake("You were asking for it")
 
-        r.update(ctx.conn,
+        try {
+            r.update(
+                ctx.conn,
                 """INSERT INTO ${table_gtx_test_value(ctx)}(tx_iid, value) VALUES (?, ?)""",
-                ctx.txIID, data.args[1].asString())
+                ctx.txIID, data.args[1].asString()
+            )
+        } catch (e: Exception) {
+            throw e // Just a good spot to place breakpoint
+        }
         return true
     }
 }
 
 /**
  * A simple module that has its own table where it can store and read things. Useful for testing all the way down to DB.
- *
- * TODO: (Olle) Is it used for testing in prod? If it is only used for internal testing it be moved to test, right?
  */
 class GTXTestModule : SimpleGTXModule<Unit>(Unit,
     mapOf("gtx_test" to ::GTXTestOp),

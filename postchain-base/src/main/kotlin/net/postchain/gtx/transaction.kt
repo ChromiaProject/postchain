@@ -77,7 +77,14 @@ class GTXTransaction (
         var hasCustomOperation = false
         var foundNop = false
         var foundTimeB = false
+        var totalOps = 0
+        var specialOps = 0
+
         for (op in ops) {
+
+            totalOps++
+            if (op.isSpecial()) specialOps++
+
             when (op) {
                 is GtxNop -> {
                     if (foundNop) {
@@ -101,6 +108,11 @@ class GTXTransaction (
             }
 
             if (!op.isCorrect()) return false
+        }
+
+        if (specialOps > 0 && specialOps == totalOps) {
+            // The TX contains only special ops
+            return true // Pure special TX, and this should be valid  // TODO: Olle: not sure about this, should talk to Alex
         }
 
         // "This transaction must have at least one operation (nop and timeb not counted) or be classed as spam."

@@ -6,6 +6,7 @@ import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.core.BlockWitness
+import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -21,9 +22,23 @@ class IcmfDispatcher {
 
     companion object : KLogging()
 
+    // source -> pipe -> listener
+    // (On the sending side we need to know who a source should send to)
     val icmfsourceToPipesMap = HashMap<Long, ArrayList<IcmfPipe>>()
     val icmfsourceToHeightMap = HashMap<Long, Long>() // Keeps track of the last seen height (mostly to check for errors)
 
+    /**
+     * @param sourceChainIid is the source chain we use for lookup
+     * @return is all pipes where sourceChainIid is the source.
+     */
+    fun getAllPipesForSourceChain(sourceChainIid: Long): List<IcmfPipe> {
+        val x = icmfsourceToPipesMap[sourceChainIid]
+        return if (x == null) {
+            listOf()
+        } else {
+            x!!.toList()
+        }
+    }
 
     /**
      * @param pipe is the pipe we should add
@@ -42,18 +57,17 @@ class IcmfDispatcher {
     }
 
     /**
-     * Put new message in all pipes linked to the given source chain.
+     * Put new message in all pipes where the given chain is the source.
      *
-     * TODO: Olle: currently we get the header from DB, but better performance would be to have it sent to us.
+     *  TODO: Olle: currently we get the header from DB, but better performance would be to have it sent to us.
      *
      * @param sourceChainIid is the BC we want to dispatch messages for
      * @param newHeight is the new height of the source chain
+     * @param storage is the DB
      */
     fun newBlockHeight(sourceChainIid: Long, newHeight: Long, storage: Storage) {
         var pipes = icmfsourceToPipesMap[sourceChainIid]
-        if (pipes == null) {
-            logger.warn("newBlockHeight() -- chain: $sourceChainIid doesn't have any pipes") // Isn't this strange? All chains have anchor chain at least?
-        } else {
+        if (pipes != null) {
             if (logger.isDebugEnabled) {
                 logger.debug("newBlockHeight() -- trigger chain: $sourceChainIid for height: $newHeight with ${pipes.size} pipes")
             }
@@ -67,7 +81,7 @@ class IcmfDispatcher {
                 val blockRID = dba.getBlockRID(eContext, newHeight)
                 if (blockRID != null) {
                     // Get raw data
-                    val rawHeader = dba.getBlockHeader(eContext, blockRID)
+                    val rawHeader = dba.getBlockHeader(eContext, blockRID)  // TODO: Olle expensive
                     val rawWitness = dba.getWitnessData(eContext, blockRID)
 
                     // Transform raw bytes to GTV
@@ -80,11 +94,16 @@ class IcmfDispatcher {
 
 
             for (pipe in pipes) {
-                val pkg = IcmfPackage.build(newHeight, gtvHeader!!, gtvWitness!!) // TODO: Olle: should add messages
+                val pkg = IcmfPackage.build(newHeight, gtvHeader!!, gtvWitness!!) // TODO: Olle: This is generic ICMF logic so any messages should be added also
                 pipe.push(pkg)
             }
 
             icmfsourceToHeightMap[sourceChainIid] = newHeight
+        } else {
+            // This is fine, for example anchor chain won't send anything to any ICMF pipes
+            if (logger.isDebugEnabled) {
+                logger.debug("newBlockHeight() -- chain: $sourceChainIid doesn't have any pipes, probably a pure listening chain")
+            }
         }
     }
 

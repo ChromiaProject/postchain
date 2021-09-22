@@ -41,8 +41,10 @@ This is a Anchor Chain configuration specifically for testing.
         <dict>
             <entry key="modules">
                 <array>
+                    <!-- Note: we don't want GTXTestModule here, b/c we are not supposed to write any "normal" TXs -->
                     <string>net.postchain.anchor.AnchorGTXModule</string> <!-- This is the Anchor module: essential!  -->
-                    <!--string>net.postchain.gtx.StandardOpsGTXModule</string-->
+                    <string>net.postchain.anchor.AnchorTestGTXModule</string> <!-- This is the stand in for the missing Rell code.  -->
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>
             </entry>
         </dict>

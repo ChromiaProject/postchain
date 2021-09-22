@@ -73,7 +73,12 @@ class IcmfController : KLogging(){
      * the [IcmfPipeConnectionSync] can created.
      */
     fun initialize(pipeSync: IcmfPipeConnectionSync) {
+        if (this.pipeConnSync != null) {
+            logger.error("Why are we initializing the IcmfController twice?")
+        }
         this.pipeConnSync = pipeSync
+        this.pipeConnSync!!.setDispatcher(icmfDispatcher) // Will be updated when new connections are created
+        this.pipeConnSync!!.setReceiver(icmfReceiver) // Will be updated when new connections are created
         logger.info("ICMF properly initialized.")
     }
 
@@ -109,40 +114,52 @@ class IcmfController : KLogging(){
 
     /**
      * Decides if a new BC process needs pipes or not, and if they are needed they will be created.
+     * We also update the [IcmfDispatcher] and [IcmfReceiver] during this process.
      *
      * @param bcProcess is the new process that might need a pipe
+     * @param height is the current height of the bcProcess we are working with
      * @return a set of new [IcmfPipe] if the given process should be connected to something
      */
-    fun maybeConnect(bcProcess: BlockchainProcess): List<IcmfPipe> {
+    fun maybeConnect(bcProcess: BlockchainProcess, height: Long): List<IcmfPipe> {
         if (pipeConnSync == null) {
             throw ProgrammerMistake("Cannot use ICMF to connect without PipeConnectionSync set.")
         }
 
         val newPipes = ArrayList<IcmfPipe>()
 
-        // We assume this is a source chain, and try to see if it needs to connect to listening chains
-        val sourceChainIid = bcProcess.getEngine().getConfiguration().chainID
-        val sourceChainBcRid = bcProcess.getEngine().getConfiguration().blockchainRid
-        val sourceChainInfo = BlockchainRelatedInfo(sourceChainBcRid, null, sourceChainIid)
+        val givenChainIid = bcProcess.getEngine().getConfiguration().chainID
+        val givenChainBcRid = bcProcess.getEngine().getConfiguration().blockchainRid
+        val givenChainInfo = BlockchainRelatedInfo(givenChainBcRid, null, givenChainIid)
 
-        if (!seenThisChainBefore(sourceChainIid)) {
+        if (!seenThisChainBefore(givenChainIid)) {
             if(logger.isDebugEnabled()) {
-                logger.debug("First time we've seen chain id: $sourceChainIid ")// Probably b/c we are running manual mode
+                logger.debug("First time we've seen chain id: $givenChainIid , height $height")// Probably b/c we are running manual mode
             }
-            val chainInfo = BlockchainRelatedInfo(sourceChainBcRid, null, sourceChainIid)
-            pipeConnSync!!.addChains(setOf(chainInfo))
+            pipeConnSync!!.addChains(setOf(givenChainInfo))
+
+            // (manual mode only)
+            icmfReceiver.maybeUpdateWithChainIid(givenChainInfo)
         }
 
-        val listeningChainMap = pipeConnSync!!.getListeningChainsForSource(sourceChainInfo)
+        // ------------
+        // We assume this is a source chain, and try to see if it needs to connect to listening chains
+        // ------------
+        val listeningChainMap = pipeConnSync!!.getListeningChainsForSource(givenChainInfo)
         for (listenerChainRid: BlockchainRid in listeningChainMap.keys) {
 
-
             if (listeningChainMap[listenerChainRid]!!.shouldConnect(listenerChainRid, bcProcess, this)) {
+                // We know we should connect this source with the listener, and this means updating all parts:
                 val bcInfo = pipeConnSync!!.getBlockchainInfo(listenerChainRid)
-                val newPipe = icmfReceiver.connectPipe(sourceChainIid, bcInfo)
+
+                // 1. Update the receiver and get the pipe in one go
+                val newPipe = icmfReceiver.connectPipe(givenChainIid, bcInfo)
+                // 2. Update the dispatcher
+                icmfDispatcher.addMessagePipe(newPipe, height)
+                // 3. Add new pipe to the return list
                 newPipes.add(newPipe)
             }
         }
+
         return newPipes
     }
 

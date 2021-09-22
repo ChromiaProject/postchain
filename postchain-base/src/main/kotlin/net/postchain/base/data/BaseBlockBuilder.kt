@@ -107,10 +107,12 @@ open class BaseBlockBuilder(
         super.begin(partialBlockHeader)
         if (buildingNewBlock
                 && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.Begin)) {
-            appendTransaction(specialTxHandler.createSpecialTransaction(
-                    SpecialTransactionPosition.Begin,
-                    bctx
-            ))
+
+            val stx = specialTxHandler.createSpecialTransaction(
+                SpecialTransactionPosition.Begin,
+                bctx
+            )
+            appendTransaction(stx)
         }
     }
 

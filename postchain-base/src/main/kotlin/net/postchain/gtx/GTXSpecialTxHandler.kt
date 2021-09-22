@@ -23,9 +23,31 @@ import net.postchain.gtv.GtvType
  */
 interface GTXSpecialTxExtension {
     fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem)
+
+    /**
+     * @return the names of all special operations relevant for this extension
+     */
     fun getRelevantOps(): Set<String>
+
+    /**
+     * @param position is position in the block, either "begin" or "end"
+     * @return true if this position needs a special transaction.
+     */
     fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean
+
+    /**
+     * The parameters below should be enough to find the data needed to create a special operation:
+     *
+     * @param position is position in the block, either "begin" or "end"
+     * @param bctx
+     * @param blockchainRID is the alternative identifier of the chain (we can get chainIid from the [BlockEContext])
+     * @return all new operations created
+     */
     fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, blockchainRID: BlockchainRid): List<OpData>
+
+    /**
+     * @return true if the list of operations are considered valid
+     */
     fun validateSpecialOperations(position: SpecialTransactionPosition,
                                   bctx: BlockEContext, ops: List<OpData>): Boolean
 }
@@ -145,8 +167,8 @@ open class GTXSpecialTxHandler(val module: GTXModule,
             }
         }
         if (b.operations.isEmpty()) {
-            // no extension emitted an operation - add nop
-            b.addOperation("nop", arrayOf(GtvFactory.gtv(cs.getRandomBytes(32))))
+            // no extension emitted an operation - add "__nop" (same as "nop" but for spec tx)
+            b.addOperation(GtxSpecNop.OP_NAME, arrayOf(GtvFactory.gtv(cs.getRandomBytes(32))))
         }
         return factory.decodeTransaction(b.serialize())
     }
@@ -191,7 +213,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         return if (idx == operations.size) {
             true
         } else if (idx == operations.size - 1) {
-            if (operations[idx].opName == "nop") { // nop is allowed as last operation
+            if (operations[idx].opName == GtxSpecNop.OP_NAME) { // __nop is allowed as last operation
                 true
             } else {
                 logger.warn("Unprocessed special op: ${operations[idx].opName}")

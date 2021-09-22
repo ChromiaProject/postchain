@@ -19,7 +19,7 @@ open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationDat
     private val txFactory = GTXTransactionFactory(
         effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize()
     )
-    private lateinit var specTxHandler: GTXSpecialTxHandler
+    private lateinit var specTxHandler: GTXSpecialTxHandler // Note: this is NOT the same as the variable in Base.
 
     companion object : KLogging()
 
@@ -32,12 +32,12 @@ open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationDat
     }
 
     override fun getSpecialTxHandler(): SpecialTransactionHandler {
-        return specTxHandler
+        return specTxHandler // NOTE: not the same as "specialTransactionHandler" in Base
     }
 
     override fun initializeDB(ctx: EContext) {
         super.initializeDB(ctx)
-        logger.debug("Running initialize DB of class GTXBlockchainConfiguration")
+        logger.debug("Running initialize DB of class GTXBlockchainConfiguration using ctx chainIid: ${ctx.chainID}, BC RID: ${effectiveBlockchainRID.toShortHex()}")
         GTXSchemaManager.initializeDB(ctx)
         module.initializeDB(ctx)
         specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem,
