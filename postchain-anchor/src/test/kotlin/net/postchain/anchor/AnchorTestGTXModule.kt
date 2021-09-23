@@ -8,7 +8,7 @@ import org.apache.commons.dbutils.QueryRunner
 private val r = QueryRunner()
 
 /**
- * This module defines the "__anchor" operation and the main anchor table.
+ * This module defines the "__anchor_block_header" operation and the main anchor table.
  *
  * NOTE:
  * In production this class will not exist, but instead be replaced by a corresponding Rell file.
@@ -32,7 +32,7 @@ class AnchorTestGTXModule: SimpleGTXModule<Unit>(
         val moduleName = this::class.qualifiedName!!
         val version = GTXSchemaManager.getModuleVersion(ctx, moduleName)
         if (version == null) {
-            val tableName = table_anchor_block(ctx)
+            val tableName = table_anchor_blocks(ctx)
             logger.info("About to create table: $tableName")
             val sql = """CREATE TABLE $tableName (
                 |blockchain_rid TEXT NOT NULL, 

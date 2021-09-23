@@ -29,7 +29,7 @@ class PostchainTestNode(
         preWipeDatabase: Boolean = false
 ) : PostchainNode(nodeConfigProvider) {
 
-    private val testStorage: Storage
+    val testStorage: Storage
     val pubKey: String
     private var isInitialized by Delegates.notNull<Boolean>()
     private val blockchainRidMap = mutableMapOf<Long, BlockchainRid>() // Used to keep track of the BC RIDs of the chains

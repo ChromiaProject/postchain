@@ -1,5 +1,7 @@
 # As a developer you need PostgreSQL
 
+## PostgreSQL setup for Postchain dev
+
 To develop Postchain you need a database, and this guide shows how to setup a default user with a default password. 
 In the code below we assume you are running Linux, Ubuntu. We begin with installing the Postgres Database (if you don't have it already):
 
@@ -47,6 +49,66 @@ Try build Postchain with:
 ```bash 
  22 mvn clean install
 ```
+
+## Investigate PostgreSQL test data
+
+When running an integration test the test will usually create a new schema for 
+itself based to the test's name. We can see all schemas using the ``<backslash>dn`` command 
+(don't know how to make Markup show only one backslash, but whenever you see two backslash in this doc remember: there should only be one).
+
+```bash 
+postchain=> \dn
+List of schemas
+Name                     |   Owner   
+----------------------------------------------+-----------
+anchorintegrationtest0_0                     | postchain
+anchorintegrationtest1_1                     | postchain
+anchorintegrationtest2_2                     | postchain
+blockchainconfigurationtest0_0               | postchain
+blockchainenginetest0_0                      | postchain
+...
+```
+To look at the data for one specific test we have to set Postgres to use this schema using the "set search_path to.." command:
+```bash 
+postchain=> set search_path to anchorintegrationtest0_0;
+SET
+```
+We can now see the tables for this schema using "\d":
+```bash 
+postchain=> \d
+List of relations
+Schema          |                 Name                 |   Type   |   Owner   
+--------------------------+--------------------------------------+----------+-----------
+anchorintegrationtest0_0 | blockchain_replicas                  | table    | postchain
+anchorintegrationtest0_0 | blockchains                          | table    | postchain
+anchorintegrationtest0_0 | c1.blocks                            | table    | postchain
+anchorintegrationtest0_0 | c1.blocks_block_iid_seq              | sequence | postchain
+anchorintegrationtest0_0 | c1.configurations                    | table    | postchain
+...
+```
+Now when we do a SELECT it will look at the data for your specific test: 
+```bash 
+postchain=> SELECT * FROM blockchains;
+ chain_iid |                           blockchain_rid                           
+-----------+--------------------------------------------------------------------
+         1 | \x19a1d544fcf9ce8de44aaedd3b6803fe524730486f84bd2f62c508a25fe36f5a
+         2 | \x3455dbcf67151ba27c93d2d0edfd9356dd5dae69d519c8fb94e8620e21681536
+(2 rows)
+```
+
+If you want to look in the ```c1.blocks``` table you must put ``<double quotes>`` around the name 
+(because of the "." in the name):
+```bash 
+postchain=> select block_iid, block_height from "c1.blocks";
+block_iid | block_height
+-----------+--------------
+1 |            0
+2 |            1
+3 |            2
+4 |            3
+(4 rows)
+```
+
 
 
 ## Copyright & License information

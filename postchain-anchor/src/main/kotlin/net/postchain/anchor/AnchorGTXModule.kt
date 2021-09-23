@@ -20,7 +20,7 @@ import net.postchain.gtx.SimpleGTXModule
  *
  * Note regarding modules:
  * We write this module as a complement to the "anchor" module that is written in Rell.
- * The Rell module define the "__anchor" operation for example, it is not known by this module.
+ * The Rell module define the "__anchor_block_header" operation for example, it is not known by this module.
  */
 class AnchorGTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf(

@@ -12,7 +12,7 @@ import org.apache.commons.dbutils.QueryRunner
 private val r = QueryRunner()
 
 /**
- * This operation corresponds to the "__anchor" special operation.
+ * This operation corresponds to the "__anchor_block_header" special operation.
  *
  * NOTE:
  * This is for test only, IRL this will be in the Rell code.
@@ -45,7 +45,7 @@ class AnchorTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
         logger.debug("About to anchor block height: $height, bc: ${realBcRid.toShortHex()} to DB.")
         r.update(ctx.conn,
-            """INSERT INTO ${table_anchor_block(ctx)} (blockchain_rid, block_height, block_hash, status)
+            """INSERT INTO ${table_anchor_blocks(ctx)} (blockchain_rid, block_height, block_hash, status)
                 |VALUES (?, ?, ?, ?)""".trimMargin(),
             realBcRid.toHex(),
             height,

@@ -3,15 +3,15 @@ package net.postchain.anchor.integration
 import mu.KLogging
 import net.postchain.anchor.AnchorGTXModule
 import net.postchain.anchor.AnchorSpecialTxExtension
+import net.postchain.anchor.AnchorTestGTXModule
 import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.base.withWriteConnection
 import net.postchain.configurations.GTXTestModule
 import net.postchain.core.BlockchainRid
 import net.postchain.devtools.TxCache
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
-import net.postchain.gtx.GTXOperation
-import net.postchain.gtx.GTXTransaction
-import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.*
 import org.junit.Assert
 import org.junit.Test
 import java.lang.Exception
@@ -28,7 +28,6 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
 
     companion object : KLogging()
 
-    private lateinit var gtxTxFactory: GTXTransactionFactory
     private lateinit var anchorGtxTxFactory: GTXTransactionFactory // Need it's own since BC RID is part of the factory
 
     private val ANCHOR_CHAIN_ID = 2 // Only for this test, we don't have a hard ID for anchoring.
@@ -70,14 +69,10 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
         // --------------------
         val cs = SECP256K1CryptoSystem()
 
-        // Normal TX for chain1
-        val blockchainRID: BlockchainRid = sysSetup.blockchainMap[1]!!.rid
-        val module = GTXTestModule()
-        gtxTxFactory = GTXTransactionFactory(blockchainRID, module, cs)
-
         // Anchor (special) TX
         val anchorBlockchainRID: BlockchainRid = sysSetup.blockchainMap[ANCHOR_CHAIN_ID]!!.rid
-        val anchorModule = AnchorGTXModule() // This is a simplification, since we also accept "__nop" in the spec TX, but good enough for our test
+        val anchorModule = buildCompositeGTXModule()
+
         anchorGtxTxFactory = GTXTransactionFactory(anchorBlockchainRID, anchorModule, cs)
 
         // --------------------
@@ -107,6 +102,22 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
             4,
             anchorGtxTxFactory // We must use correct factory or else we cannot decode the transaction due to incorrect BC RID.
         )
+    }
+
+    /**
+     * There MUST be a prettier way to do this (without triggering the configurations and creating tables etc)
+     */
+    private fun buildCompositeGTXModule(): CompositeGTXModule {
+        val moduleList = listOf(AnchorGTXModule(), AnchorTestGTXModule(), StandardOpsGTXModule())
+        val anchorModule = CompositeGTXModule(moduleList.toTypedArray(), false)
+        val _opmap = mutableMapOf<String, GTXModule>()
+        for (m in moduleList) {
+            for (op in m.getOperations()) {
+                _opmap[op] = m
+            }
+        }
+        anchorModule.opmap = _opmap.toMap()
+        return anchorModule
     }
 
     private fun checkForOperation(tx: ByteArray, opName: String, numberOfOperations: Int, currTxFactory: GTXTransactionFactory) {

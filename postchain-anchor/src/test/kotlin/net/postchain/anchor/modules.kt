@@ -24,9 +24,9 @@ private val r = QueryRunner()
 
 private val mapListHandler = MapListHandler()
 
-fun table_anchor_block(ctx: EContext): String {
+fun table_anchor_blocks(ctx: EContext): String {
     val db = DatabaseAccess.of(ctx)
-    return db.tableName(ctx, "anchor_block")
+    return db.tableName(ctx, "anchor_blocks")
 }
 
 /**
