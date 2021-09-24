@@ -244,8 +244,10 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
           console.log(err)
           return
         }
-        waitConfirmation(txRID).catch(err => {
-          console.log(err);
+        toast.promise(waitConfirmation(txRID), {
+          loading: `Transaction submitted. Wait for confirmation...`,
+          success: <b>Transaction confirmed!</b>,
+          error: <b>Transaction failed!.</b>,
         })
       })
     } catch (error) {
