@@ -2,7 +2,7 @@
 
 set -eu
 
-export IMAGE=chromaway/postchain-subnode
+export IMAGE=chromaway/postchain-subnode-db
 export VER=3.4.0
 
 export TARGET_DIR=target

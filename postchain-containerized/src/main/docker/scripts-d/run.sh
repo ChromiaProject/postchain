@@ -35,6 +35,14 @@ then
   do
     echo " * $f"
   done
+
+  echo -e "\nfiles of /opt/chromaway/postchain/scripts/bin"
+  files4=`ls /opt/chromaway/postchain/scripts/bin`
+  for f in $files4
+  do
+    echo " * $f"
+  done
+
   echo -e "\n"
 
 	echo "Deleting the database..."

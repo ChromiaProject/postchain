@@ -46,7 +46,7 @@ ENV POSTGRES_PASSWORD=postchain
 ADD scripts /opt/chromaway/postchain/scripts/
 ADD ./scripts-d/* /opt/chromaway/postchain/
 ADD env.sh /opt/chromaway/postchain/env.sh
-ADD ./maven/ /opt/chromaway/postchain/scripts/
+ADD ./dependencies/ /opt/chromaway/postchain/scripts/bin/
 
 
 ENV BUILD_RELL_DAPP false

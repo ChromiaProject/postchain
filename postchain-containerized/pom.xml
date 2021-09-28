@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright (c) 2020 ChromaWay AB. See README for license information. -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
@@ -13,6 +14,18 @@
     <name>Postchain Containerized</name>
     <packaging>docker</packaging>
 
+    <!--<repositories>
+        <repository>
+            <id>jcentral</id>
+            <name>bintray</name>
+            <url>https://jcenter.bintray.com</url>
+        </repository>
+        <repository>
+            <id>etherjar</id>
+            <url>https://dl.bintray.com/infinitape/etherjar</url>
+        </repository>
+    </repositories>-->
+
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -22,6 +35,11 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-devtools</artifactId>
         </dependency>
+        <!--<dependency>
+            <groupId>net.postchain.rell</groupId>
+            <artifactId>rellr</artifactId>
+            <version>0.10.5</version>
+        </dependency>-->
     </dependencies>
 
     <build>
@@ -39,8 +57,13 @@
                             <build>
                                 <assemblies>
                                     <assembly>
+                                        <name>dependencies</name>
                                         <descriptorRef>artifact-with-dependencies</descriptorRef>
                                     </assembly>
+<!--                                    <assembly>-->
+<!--                                        <name>rellr</name>-->
+<!--                                        <descriptorRef>artifact-with-dependencies</descriptorRef>-->
+<!--                                    </assembly>-->
                                 </assemblies>
                                 <dockerFileDir>${project.basedir}/src/main/docker</dockerFileDir>
                                 <filter>@</filter>
