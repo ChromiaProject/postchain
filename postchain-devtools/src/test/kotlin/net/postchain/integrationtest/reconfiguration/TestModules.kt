@@ -2,6 +2,7 @@
 
 package net.postchain.integrationtest.reconfiguration
 
+import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -9,8 +10,17 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.ExtOpData
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GTXSpecialTxExtension
 
 open class AbstractDummyModule : GTXModule {
+
+    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
+        return listOf()
+    }
+
+    override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
+        return listOf()
+    }
 
     override fun makeTransactor(opData: ExtOpData): Transactor {
         return object : Transactor {

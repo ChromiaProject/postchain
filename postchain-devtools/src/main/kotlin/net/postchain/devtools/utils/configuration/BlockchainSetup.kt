@@ -1,6 +1,6 @@
 package net.postchain.devtools.utils.configuration
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.gtv.Gtv
 

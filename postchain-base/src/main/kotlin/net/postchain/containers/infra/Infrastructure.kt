@@ -2,7 +2,7 @@
 
 package net.postchain.containers.infra
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.ContainerChainDir
 import net.postchain.core.BlockchainInfrastructure

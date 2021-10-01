@@ -1,6 +1,6 @@
 package net.postchain.managed
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.containers.infra.ContainerResourceType
 
 interface DirectoryDataSource : ManagedNodeDataSource {

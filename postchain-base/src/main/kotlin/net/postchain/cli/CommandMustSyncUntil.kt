@@ -4,7 +4,7 @@ package net.postchain.cli
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
 import net.postchain.common.hexStringToByteArray

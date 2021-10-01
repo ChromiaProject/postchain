@@ -2,7 +2,7 @@
 
 package net.postchain.integrationtest
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.configurations.GTXTestModule
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper

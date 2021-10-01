@@ -2,9 +2,8 @@
 
 package net.postchain.core
 
-import net.postchain.base.BlockchainRid
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.debug.BlockTrace
+import net.postchain.ebft.heartbeat.HeartbeatListener
 
 interface Shutdownable {
     fun shutdown()

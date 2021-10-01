@@ -61,16 +61,17 @@ abstract class AbstractBlockBuilder(
             ProgrammerMistake("Attempted to begin block second time")
         }
         blockchainDependencies = buildBlockchainDependencies(partialBlockHeader)
-        initialBlockData = store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
+        initialBlockData =
+            store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
         bctx = BaseBlockEContext(
-                ectx,
-                initialBlockData.height,
-                initialBlockData.blockIID,
-                initialBlockData.timestamp,
-                blockchainDependencies!!.extractChainIdToHeightMap(),
-                this
+            ectx,
+            initialBlockData.height,
+            initialBlockData.blockIID,
+            initialBlockData.timestamp,
+            blockchainDependencies!!.extractChainIdToHeightMap(),
+            this
         )
-        buildingNewBlock = partialBlockHeader != null
+        buildingNewBlock = partialBlockHeader == null // If we have a header this must be an old block we are loading
         beginLog("End")
     }
 

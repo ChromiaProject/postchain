@@ -6,7 +6,7 @@ import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.spy
 import com.nhaarman.mockitokotlin2.verify
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.PostchainClient

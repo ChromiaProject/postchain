@@ -9,6 +9,7 @@ import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify
 import net.postchain.base.*
+import net.postchain.core.BlockchainRid
 import net.postchain.devtools.argumentCaptor2
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.common.Utils

@@ -1,6 +1,6 @@
 package net.postchain.network.masterslave.master
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.config.node.NodeConfig
 import net.postchain.debug.BlockchainProcessName

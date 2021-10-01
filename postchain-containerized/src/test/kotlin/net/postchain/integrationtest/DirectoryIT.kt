@@ -3,7 +3,7 @@ package net.postchain.integrationtest
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.DockerClient.LogsParam
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.devtools.ManagedModeTest

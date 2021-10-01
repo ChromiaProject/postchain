@@ -1,7 +1,7 @@
 package net.postchain.ebft.heartbeat
 
 import com.nhaarman.mockitokotlin2.*
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.MockStorage

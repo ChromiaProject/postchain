@@ -2,7 +2,7 @@
 
 package net.postchain.network.masterslave.slave
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 
 data class SlaveConnectionDescriptor(
         val blockchainRid: BlockchainRid,

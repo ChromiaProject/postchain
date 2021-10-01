@@ -3,7 +3,7 @@
 package net.postchain.devtools.cli
 
 import net.postchain.StorageBuilder
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
 import net.postchain.base.runStorageCommand

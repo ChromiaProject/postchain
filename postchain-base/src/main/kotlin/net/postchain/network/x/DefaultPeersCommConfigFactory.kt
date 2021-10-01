@@ -3,6 +3,7 @@ package net.postchain.network.x
 import net.postchain.base.*
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainRid
 
 open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 

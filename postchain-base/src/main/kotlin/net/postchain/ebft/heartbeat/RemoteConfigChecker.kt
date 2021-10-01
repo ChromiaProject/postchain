@@ -5,6 +5,7 @@ import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
+import net.postchain.core.BlockchainRid
 import net.postchain.network.masterslave.MsMessageHandler
 import net.postchain.network.masterslave.protocol.*
 import net.postchain.network.masterslave.slave.SlaveConnectionManager

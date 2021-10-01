@@ -141,7 +141,7 @@ class PostchainTestNode(
     fun networkTopology(chainId: Long = DEFAULT_CHAIN_IID): Map<String, String> {
         // TODO: [et]: Fix type casting
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure)
-                .synchronizationInfrastructure as EBFTSynchronizationInfrastructure)
+                .defaultSynchronizationInfrastructure as EBFTSynchronizationInfrastructure)
                 .connectionManager.getPeersTopology(chainId)
                 .mapKeys { pubKeyToConnection ->
                     pubKeyToConnection.key.toString()

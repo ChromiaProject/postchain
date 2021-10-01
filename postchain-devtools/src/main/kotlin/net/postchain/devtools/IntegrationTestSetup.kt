@@ -255,7 +255,12 @@ open class IntegrationTestSetup : AbstractIntegration() {
         awaitHeight(nodes, chainId, toHeight)
     }
 
-    protected fun buildBlockNoWait(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
+    protected fun buildBlockNoWait(
+        nodes: List<PostchainTestNode>,
+        chainId: Long,
+        toHeight: Long,
+        vararg txs: Transaction
+    ) {
         nodes.forEach {
             it.enqueueTxs(chainId, *txs)
         }

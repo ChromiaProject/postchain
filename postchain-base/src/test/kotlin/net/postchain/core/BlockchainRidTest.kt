@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base
+package net.postchain.core
 
 import assertk.assert
 import assertk.assertions.isEqualTo

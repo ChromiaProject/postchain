@@ -3,7 +3,7 @@
 package net.postchain.network.x
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.toHex
 import net.postchain.core.BadDataMistake

@@ -138,7 +138,10 @@ fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
     )
 }
 
-
+/**
+ * Module that should be included in the [CompositeGTXModule] of all "normal/real world" DApp modules.
+ * It holds some standard things that are very useful, bordering on mandatory.
+ */
 class StandardOpsGTXModule : SimpleGTXModule<Unit>(
         Unit,
         mapOf(
@@ -150,5 +153,14 @@ class StandardOpsGTXModule : SimpleGTXModule<Unit>(
                 "tx_confirmation_time" to ::txConfirmationTime
         )
 ) {
+    private val stxs = mutableListOf<GTXSpecialTxExtension>(
+            // We put the Auto Extension here, since it's sort of "standard" (and anyways all "real life" configurations
+            // will import StandardOps and  thus get access to this extension).
+            GTXAutoSpecialTxExtension()
+    )
+
+    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = stxs.toList()
+
     override fun initializeDB(ctx: EContext) {}
+
 }

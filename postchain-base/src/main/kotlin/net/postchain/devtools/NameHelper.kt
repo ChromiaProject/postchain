@@ -2,7 +2,7 @@
 
 package net.postchain.devtools
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.network.x.XPeerID
 

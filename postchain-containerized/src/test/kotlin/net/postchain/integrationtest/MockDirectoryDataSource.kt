@@ -1,6 +1,6 @@
 package net.postchain.integrationtest
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.containers.infra.ContainerResourceType
 import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.gtv.GtvFactory

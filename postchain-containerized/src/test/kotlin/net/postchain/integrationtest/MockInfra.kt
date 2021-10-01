@@ -1,6 +1,6 @@
 package net.postchain.integrationtest
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadWriteConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider

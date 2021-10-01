@@ -1,7 +1,7 @@
 package net.postchain.network.masterslave.slave
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.ProgrammerMistake
