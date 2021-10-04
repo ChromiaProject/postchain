@@ -11,7 +11,6 @@ import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.devtools.chainRidOf
 import org.apache.commons.configuration2.Configuration
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.lang.Thread.sleep
 import kotlin.test.assertEquals
@@ -27,10 +26,12 @@ val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
 
 /**
  * For the tests below, a docker image is needed. It can be build with e.g:  `mvn (clean) verify -Dskip.surefire.tests`
+ * Bitbucket builds image on the fly.
+ * Please note: Currently for the tests to pass, flag waitForRestart must be set.
  */
 class DirectoryIT : ManagedModeTest() {
 
-    //    override val awaitDebugLog = true
+    override val awaitDebugLog = false
     private val dockerClient: DockerClient = DockerClientFactory.create()
 
     @Before
@@ -46,11 +47,15 @@ class DirectoryIT : ManagedModeTest() {
         }
     }
 
+    /**
+     * Why await height > 0? Technically 0 is not enough, because subnode builds block0 with its own initial config for height 0 then it looks
+     * for the remote config. So 1 might be, but 1 is the corner-/edge-case for the test, so I would use something > 1.
+     */
     @Test
     fun testSingleChain() {
         startManagedSystem(1, 0)
-        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = false) //location defined in blockchainDistribution
-        awaitHeight(c1.chain, 5)
+        val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true) //location defined in blockchainDistribution
+        awaitHeight(c1.chain, 2)
     }
 
     /**
@@ -58,11 +63,10 @@ class DirectoryIT : ManagedModeTest() {
      * is run in container "cont1" by the subnode. c2, and c3 in cont2
      */
     @Test
-    @Ignore
     fun testMultipleChains() {
         startManagedSystem(1, 0)
         val c1 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)
-        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //location defined in blockchainDistribution
+        val c2 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //We must wait until chain2 is up and running (waitForRestart = true) before we start chain3 in the same container.
         val c3 = startNewBlockchain(setOf(0), setOf(), waitForRestart = true)  //location defined in blockchainDistribution
         awaitHeight(c1.chain, 0)
         awaitHeight(c2.chain, 0)
@@ -72,7 +76,6 @@ class DirectoryIT : ManagedModeTest() {
     /**
      * With more than one node, docker port, container name and directory for files must be node specific.
      */
-    @Ignore
     @Test
     fun testMultipleNodes() {
         startManagedSystem(2, 0)
@@ -83,7 +86,6 @@ class DirectoryIT : ManagedModeTest() {
     /**
      * Assert that ram and cpu limits can be set on the container
      */
-    @Ignore
     @Test
     fun testResourceLimits() {
         startManagedSystem(1, 0)
@@ -144,7 +146,7 @@ class DirectoryIT : ManagedModeTest() {
                 val subnode = dataSource(it).subnodeInterceptors[chainRidOf(chainId)]
                 val res = subnode == null || subnode.subnodeStatus < height
                 if (res) {
-                    println("ChainId: $chainId, node idx: $it, subnode height: ${subnode?.subnodeStatus}")
+                    awaitLog("ChainId: $chainId, node idx: $it, subnode height: ${subnode?.subnodeStatus}")
                 }
                 res
             }
@@ -179,9 +181,9 @@ class DirectoryIT : ManagedModeTest() {
         propertyMap.setProperty("brid.chainid.1", chainRidOf(1).toHex())
         propertyMap.setProperty("brid.chainid.2", chainRidOf(2).toHex())
         propertyMap.setProperty("brid.chainid.3", chainRidOf(3).toHex())
-        propertyMap.setProperty("heartbeat.enabled", false)                             // Temporarily disabled
+        propertyMap.setProperty("heartbeat.enabled", true)
         propertyMap.setProperty("heartbeat.timeout", 6_000_000L) //default 60_000
-        propertyMap.setProperty("heartbeat.sleep_timeout", 500L)
+        propertyMap.setProperty("heartbeat.sleep_timeout", 500L) //default 5_000
         propertyMap.setProperty("remote_config.enabled", false)
         return propertyMap
     }
