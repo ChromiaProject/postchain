@@ -5,32 +5,64 @@ package net.postchain.config.blockchain
 import mu.KLogging
 import net.postchain.base.BaseConfigurationDataStore
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.icmf.IcmfController
 import net.postchain.core.EContext
+import net.postchain.core.ProgrammerMistake
 
-class ManualBlockchainConfigurationProvider : BlockchainConfigurationProvider {
-
-    private val icmfController = IcmfController()
+class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
     companion object : KLogging()
 
-    override fun needsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
-        val height = DatabaseAccess.of(eContext).getLastBlockHeight(eContext)
-        val currentConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height)
-        val nextConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height + 1)
-        logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight (currentConfigHeight: $currentConfigHeight)")
-        return (currentConfigHeight != nextConfigHeight)
+    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
+        check(eContext, chainId)
+
+        val dba = DatabaseAccess.of(eContext)
+        val activeHeight = getActiveBlocksHeight(eContext, dba)
+        val configHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, activeHeight)
+
+        // Some safety checks
+        if (configHeight == null) {
+            logger.error("Don't look for a chain: $chainId that doesn't exist or doesn't have a configuration. " +
+                    "Probably bug!")
+        } else if (configHeight < activeHeight) {
+            if (logger.isDebugEnabled) {
+                logger.debug("activeBlockNeedsNewConfig() - No need to reload config, since active height: " +
+                            "$activeHeight, should still use conf at: $configHeight "
+                )
+            }
+        } else {
+            logger.error("activeBlockNeedsNewConfig() - Why did we find a next config height: " +
+                    "$configHeight higher than our active block's height: $activeHeight (chain: $chainId)? " +
+                    " Most likely a bug")
+        }
+
+        return activeHeight == configHeight
     }
 
-    override fun getConfiguration(eContext: EContext, chainId: Long): ByteArray? {
-        val lastHeight = DatabaseAccess.of(eContext).getLastBlockHeight(eContext)
-        val nextHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, lastHeight + 1)
-        return nextHeight?.let {
-            BaseConfigurationDataStore.getConfigurationData(eContext, it)!!
+    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+        check(eContext, chainId)
+
+        val dba = DatabaseAccess.of(eContext)
+        val activeHeight = getActiveBlocksHeight(eContext, dba)
+        val configHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, activeHeight)
+
+        return if (configHeight == null) {
+            logger.error("Don't look for a chain: $chainId that doesn't exist or doesn't have a configuration. " +
+                    "Probably bug!")
+            null
+        } else {
+            BaseConfigurationDataStore.getConfigurationData(eContext, configHeight)!!
         }
     }
 
-    override fun getIcmfController(): IcmfController {
-        return this.icmfController
+    override fun getHistoricConfigurationHeight(eContext: EContext, chainId: Long, historicBlockHeight: Long): Long? {
+        check(eContext, chainId)
+
+        return BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, historicBlockHeight)
+    }
+
+    override fun getHistoricConfiguration(eContext: EContext, chainId: Long, historicBlockHeight: Long): ByteArray? {
+        check(eContext, chainId)
+
+        return BaseConfigurationDataStore.getConfigurationData(eContext, historicBlockHeight)
     }
 }

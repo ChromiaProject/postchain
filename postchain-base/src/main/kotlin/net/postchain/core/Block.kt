@@ -2,8 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.core.BlockchainRid
-
 
 interface BlockHeader {
     val prevBlockRID: ByteArray
@@ -50,7 +48,7 @@ data class ValidationResult(
         val result: Result,
         val message: String = "") {
     enum class Result {
-        OK, PREV_BLOCK_MISMATCH, BLOCK_FROM_THE_FUTURE, DUPLICATE_BLOCK, SPLIT, INVALID_TIMESTAMP,
+        OK, PREV_BLOCK_MISMATCH, BLOCK_FROM_THE_FUTURE, DUPLICATE_BLOCK, SPLIT, OLD_BLOCK_NOT_FOUND, INVALID_TIMESTAMP,
         MISSING_BLOCKCHAIN_DEPENDENCY, INVALID_ROOT_HASH }
 }
 
@@ -68,6 +66,49 @@ open class BlockDataWithWitness(header: BlockHeader, transactions: List<ByteArra
 
 interface MultiSigBlockWitness : BlockWitness {
     fun getSignatures(): Array<Signature>
+}
+
+/**
+ * Can validate a block header. This is either:
+ * 1. check the witness signatures
+ * 2. compare the header to data about our blocks (that we've gotten from DB or somewhere else)
+ */
+interface BlockHeaderValidator {
+    // Returns a new witness builder for the current header
+    fun createWitnessBuilderWithoutOwnSignature(
+        header: BlockHeader
+    ): BlockWitnessBuilder
+
+    // Same as above, but "this node" also adds a signature
+    fun createWitnessBuilderWithOwnSignature(
+        header: BlockHeader
+    ): BlockWitnessBuilder
+
+    // Returns true if the signatures check out
+    fun validateWitness(
+        blockWitness: BlockWitness,
+        witnessBuilder: BlockWitnessBuilder // Includes the header we are about to validate
+    ): Boolean
+
+    // Returns "OK" if the header checks out with various block info (we must have the block already)
+    fun advancedValidateAgainstKnownBlocks(
+        blockHeader: BlockHeader,
+        initialBlockData: InitialBlockData, // We can pull expected height and expected prev block RID from this
+        expectedMerkleRootHash: () -> ByteArray, // Expensive, if we use raw TX to calculate merkle root
+        blockRidFromHeight: (height: Long) -> ByteArray?, // Expensive, since we will probably need to go to DB to find block RID
+        currentBlockTimestamp: Long,
+        nrOfDependencies: Int  // We cannot test the actual dependencies b/c some might be null still, so this lame check is what we have
+    ): ValidationResult
+
+    // Returns "OK" if the header checks out with 1) prev block RID and 2) prev height
+    fun basicValidationAgainstKnownBlocks(
+        headerBlockRid: BlockRid,
+        headerPrevBlockRid: BlockRid,
+        headerHeight: Long,
+        expectedPrevBlockRid: BlockRid,
+        expectedHeight: Long,
+        blockRidFromHeight: (height: Long) -> ByteArray? // We will probably need to go to DB to find this, so don't call this in vain
+    ): ValidationResult
 }
 
 /**

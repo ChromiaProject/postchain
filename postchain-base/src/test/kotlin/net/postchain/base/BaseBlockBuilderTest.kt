@@ -2,11 +2,9 @@
 
 package net.postchain.base
 
-import net.postchain.base.data.BaseBlockBuilder
-import net.postchain.base.data.BaseBlockStore
-import net.postchain.base.data.BaseTransactionFactory
-import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.data.*
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.BlockHeaderValidator
 import net.postchain.core.BlockchainRid
 import net.postchain.core.InitialBlockData
 import net.postchain.core.TxEContext
@@ -40,9 +38,10 @@ class BaseBlockBuilderTest {
     val dummy = ByteArray(32, { 0 })
     val subjects = arrayOf("test".toByteArray())
     val signer = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
+    val validator = BaseBlockHeaderValidator(cryptoSystem, signer, subjects)
     val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
-        subjects, signer, listOf(),  listOf(), false)
+        subjects, signer, validator, listOf(),  listOf(), false)
 
     @Test
     fun invalidMonotoneTimestamp() {
@@ -51,7 +50,7 @@ class BaseBlockBuilderTest {
         val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
+        assertEquals(INVALID_TIMESTAMP, bbb.validate(header).result)
     }
 
     @Test
@@ -61,7 +60,7 @@ class BaseBlockBuilderTest {
         val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
+        assertEquals(INVALID_TIMESTAMP, bbb.validate(header).result)
     }
 
     @Test
@@ -71,7 +70,7 @@ class BaseBlockBuilderTest {
         val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(OK, bbb.validateBlockHeader(header).result)
+        assertEquals(OK, bbb.validate(header).result)
     }
 }
 /*

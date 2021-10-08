@@ -2,10 +2,7 @@
 
 package net.postchain.base
 
-import net.postchain.base.data.BaseBlockBuilder
-import net.postchain.base.data.BaseBlockStore
-import net.postchain.base.data.BaseTransactionFactory
-import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.data.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainRid
 import net.postchain.core.InitialBlockData
@@ -45,10 +42,11 @@ class BaseBlockBuilderValidationTest {
         }
     }
 
+    val validator = BaseBlockHeaderValidator(cryptoSystem, sigMaker, subjects)
     val bctx = BaseBlockEContext(ctx, 0, 1, 10, mapOf(), dummyEventSink)
     val bbb = BaseBlockBuilder(BlockchainRid.buildRepeat(0), cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
-            subjects, sigMaker, listOf(), listOf(), false)
+            subjects, sigMaker, validator, listOf(), listOf(), false)
 
     @Test
     fun validateBlockHeader_valid() {
@@ -58,7 +56,7 @@ class BaseBlockBuilderValidationTest {
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validateBlockHeader(header)
+        val validation = bbb.validate(header)
 
         assertEquals(OK, validation.result)
     }
@@ -71,7 +69,7 @@ class BaseBlockBuilderValidationTest {
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validateBlockHeader(header)
+        val validation = bbb.validate(header)
 
         assertEquals(INVALID_TIMESTAMP, validation.result)
     }
@@ -84,7 +82,7 @@ class BaseBlockBuilderValidationTest {
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validateBlockHeader(header)
+        val validation = bbb.validate(header)
 
         assertEquals(INVALID_TIMESTAMP, validation.result)
     }
@@ -97,7 +95,7 @@ class BaseBlockBuilderValidationTest {
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validateBlockHeader(header)
+        val validation = bbb.validate(header)
 
         assertEquals(INVALID_ROOT_HASH, validation.result)
     }

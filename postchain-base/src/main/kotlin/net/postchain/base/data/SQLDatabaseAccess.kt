@@ -531,6 +531,17 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
+    /**
+     * The rule is: a blockchain will continue use a configuration until
+     * we say that a new configuration should be used (at a certain height).
+     * This query let us go from "block height" to what configuration is used at this height.
+     *
+     * @param ctx
+     * @param height is the height of a block
+     * @return the height of the CONFIGURATION used for a block of the given height.
+     *         returning "null" here means no configuration is defined for the chain,
+     *         which is must likely an error.
+     */
     override fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long? {
         val sql = """
             SELECT height 

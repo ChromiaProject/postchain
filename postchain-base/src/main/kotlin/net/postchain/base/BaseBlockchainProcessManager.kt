@@ -8,7 +8,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.icmf.IcmfController
 import net.postchain.base.icmf.IcmfPipeConnectionSync
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.blockchain.DirtSimpleConfigReader
+import net.postchain.config.blockchain.QuickSimpleConfigReader
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
@@ -84,7 +84,7 @@ open class BaseBlockchainProcessManager(
 
                 startInfo("Starting of blockchain", chainId)
                 withReadWriteConnection(storage, chainId) { eContext ->
-                    val configuration = blockchainConfigProvider.getConfiguration(eContext, chainId)
+                    val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
                     if (configuration != null) {
 
                         val componentMap = buildComponentMap()
@@ -163,7 +163,7 @@ open class BaseBlockchainProcessManager(
      */
     fun maybeInitIcmf(icmfController: IcmfController) {
         if (!icmfController.isInitialized()) {
-            val oneConfReader = DirtSimpleConfigReader(
+            val oneConfReader = QuickSimpleConfigReader(
                 storage,
                 blockchainConfigProvider
             )
@@ -258,7 +258,7 @@ open class BaseBlockchainProcessManager(
             blockchainConfigProvider.getIcmfController().icmfDispatcher.newBlockHeight(chainId, height, storage)
 
             val doRestart = withReadConnection(storage, chainId) { eContext ->
-                blockchainConfigProvider.needsConfigurationChange(eContext, chainId)
+                blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
             }
 
             if (doRestart) {

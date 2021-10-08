@@ -478,7 +478,9 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         }
 
         val w = blockchainConfiguration.decodeWitness(witness)
-        if ((blockchainConfiguration as BaseBlockchainConfiguration).verifyBlockHeader(h, w)) {
+        val validator = blockchainConfiguration.getBlockHeaderValidator()
+        val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
+        if (validator.validateWitness(w, witnessBuilder)) {
             j.header = h
             j.witness = w
             headerTrace("Header for $j received")

@@ -22,6 +22,7 @@ interface BlockchainConfiguration {
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader
     fun decodeWitness(rawWitness: ByteArray): BlockWitness
+    fun getBlockHeaderValidator(): BlockHeaderValidator
     fun getTransactionFactory(): TransactionFactory
     fun makeBlockBuilder(ctx: EContext): BlockBuilder
     fun makeBlockQueries(storage: Storage): BlockQueries

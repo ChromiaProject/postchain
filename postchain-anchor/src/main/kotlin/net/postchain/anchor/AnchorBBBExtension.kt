@@ -1,4 +1,4 @@
-package net.postchain.base.icmf
+package net.postchain.anchor
 
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.TxEventSink
@@ -11,31 +11,37 @@ import net.postchain.core.TxEContext
 import net.postchain.gtv.Gtv
 
 /**
- * TODO: Olle: Is this even needed for ICMF, seems to work without it?
+ * Anchor headers from other blockchains on this node, and if everything works out, the
+ * block will be built.
+ *
+ * Note:
+ * The reason we put a lot of Anchoring validation here (instead of inside the [AnchorSpecialTxExtension] ) is
+ * b/c we have access to [Storage], [EContext] and other things which makes the work more practical.
  *
  * This class implements both the BBB Extension and the [TxEventSink], so that the extension, during initialization,
  * can add itself as an event listener (i.e. [TxEventSink]). After we are added as event listener,
  * we only care about events.
  *
- * There is only one event type we care about: "icmf_message_event"
- * This one we must save.
  */
-class IcmfBBBExtension : BaseBlockBuilderExtension, TxEventSink {
+class AnchorBBBExtension : BaseBlockBuilderExtension, TxEventSink {
 
     private lateinit var bctx: BlockEContext
     lateinit var store: LeafStore // We only need leaf store, since we consider every ICMF message as a solo message.
 
     private val events = mutableListOf<Hash>()
 
+    /**
+     * Cannot really do any validation here, since we get into here after the TX has been committed.
+     */
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         when (type) {
-            "icmf_message_event" -> icmfEvent(data)
+            "anchor_" -> anchorEvent(data)
             else -> throw ProgrammerMistake("Unrecognized event")
         }
     }
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
-        baseBB.installEventProcessor("icmf_message_event", this)
+        baseBB.installEventProcessor("anchor_header_message", this)
         bctx = blockEContext
         store = LeafStore()
     }
@@ -48,7 +54,8 @@ class IcmfBBBExtension : BaseBlockBuilderExtension, TxEventSink {
         return extra
     }
 
-    private fun icmfEvent(data: Gtv) {
+    private fun anchorEvent(data: Gtv) {
+        //
 
     }
 

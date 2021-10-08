@@ -89,6 +89,7 @@ interface BlockBuilder {
     fun finalizeAndValidate(blockHeader: BlockHeader)
     fun getBlockData(): BlockData
     fun getBlockWitnessBuilder(): BlockWitnessBuilder?
+    fun getBlockHeaderValidator(): BlockHeaderValidator
     fun commit(blockWitness: BlockWitness)
     // Just debug
     fun getBTrace(): BlockTrace? // Use this function to get quick debug info about the block, note: ONLY for logging!

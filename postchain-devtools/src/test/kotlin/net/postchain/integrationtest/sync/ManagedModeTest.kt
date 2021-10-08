@@ -4,7 +4,6 @@ import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.icmf.IcmfController
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -15,6 +14,7 @@ import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.*
 import net.postchain.devtools.testinfra.TestTransactionFactory
+import net.postchain.devtools.utils.ChainUtil
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
@@ -57,7 +57,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
     fun addBlockchainConfiguration(nodeSet: NodeSet, historicChain: Long?, height: Long) {
-        val brid = chainRidOf(nodeSet.chain)
+        val brid = ChainUtil.ridOf(nodeSet.chain)
 
         val signerGtvs = mutableListOf<GtvByteArray>()
         if (nodeSet.chain == 0L) {
@@ -74,7 +74,7 @@ open class ManagedModeTest : AbstractSyncTest() {
             val data = TestBlockchainConfigurationData()
             data.setValue(BaseBlockchainConfigurationData.KEY_SIGNERS, GtvArray(signerGtvs.toTypedArray()))
             if (historicChain != null) {
-                data.setValue(BaseBlockchainConfigurationData.KEY_HISTORIC_BRID, GtvByteArray(chainRidOf(historicChain).data))
+                data.setValue(BaseBlockchainConfigurationData.KEY_HISTORIC_BRID, GtvByteArray(ChainUtil.ridOf(historicChain).data))
             }
             val pubkey = if (nodeSet.chain == 0L) {
                 if (it.key < nodeSet.signers.size) {
@@ -120,7 +120,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
     fun restartNodeClean(index: Int, nodeSet: NodeSet, atLeastHeight: Long) {
-        restartNodeClean(index, chainRidOf(0))
+        restartNodeClean(index, ChainUtil.ridOf(0))
         awaitChainRunning(index, nodeSet.chain, atLeastHeight)
     }
 
@@ -211,37 +211,10 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return TestBlockchainConfigurationProvider(dataSource)
+        return MockBlockchainConfigurationProvider(dataSource)
     }
 }
 
-
-class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSource):
-        BlockchainConfigurationProvider {
-
-    private val icmfController = IcmfController() // Using the "real" ICMF for test, see no reason not to(?)
-
-    companion object: KLogging()
-
-    override fun getConfiguration(eContext: EContext, chainId: Long): ByteArray? {
-        val db = DatabaseAccess.of(eContext)
-        val height = db.getLastBlockHeight(eContext)
-        return mockDataSource.getConfiguration(chainRidOf(chainId).data, height+1)
-    }
-
-    override fun needsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
-        val dba = DatabaseAccess.of(eContext)
-        val height = dba.getLastBlockHeight(eContext)
-        val blockchainRid = chainRidOf(chainId)
-        val nextConfigHeight = mockDataSource.findNextConfigurationHeight(blockchainRid.data, height)
-        logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight")
-        return (nextConfigHeight != null) && (nextConfigHeight == height + 1)
-    }
-
-    override fun getIcmfController(): IcmfController {
-        return this.icmfController
-    }
-}
 
 
 class TestManagedBlockchainInfrastructure(nodeConfigProvider: NodeConfigurationProvider,
@@ -286,7 +259,7 @@ class TestManagedBlockchainProcessManager(blockchainInfrastructure: BlockchainIn
         val result = mutableListOf<BlockchainRelatedInfo>()
         dataSource.computeBlockchainList().forEach {
             val brid = BlockchainRid(it)
-            val chainIid = chainIidOf(brid)
+            val chainIid = ChainUtil.iidOf(brid)
             val chainInfo = BlockchainRelatedInfo(brid, null, chainIid)
             result.add(chainInfo)
             retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")
@@ -357,16 +330,6 @@ fun awaitDebug(dbg: String) {
     }
 }
 
-fun chainRidOf(chainIid: Long): BlockchainRid {
-    val hexChainIid = chainIid.toString(8)
-    val base = "0000000000000000000000000000000000000000000000000000000000000000"
-    val rid = base.substring(0, 64-hexChainIid.length) + hexChainIid
-    return BlockchainRid.buildFromHex(rid)
-}
-
-fun chainIidOf(brid: BlockchainRid): Long {
-    return brid.toHex().toLong(8)
-}
 
 typealias Key = Pair<BlockchainRid, Long>
 
@@ -466,7 +429,7 @@ class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
         } else {
             awaitDebug("### NEW BC CONFIG for chain: ${nodeSet.chain} (bc rid: ${rid.toShortHex()}) at height: $height")
         }
-        chainToNodeSet.put(chainRidOf(nodeSet.chain), nodeSet)
+        chainToNodeSet.put(ChainUtil.ridOf(nodeSet.chain), nodeSet)
     }
 
     /**

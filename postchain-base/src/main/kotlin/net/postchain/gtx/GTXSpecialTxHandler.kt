@@ -6,6 +6,8 @@ import mu.KLogging
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.base.Storage
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
@@ -22,7 +24,17 @@ import net.postchain.gtv.GtvType
  * To see how it all goes together, see: doc/extension_classes.graphml
  */
 interface GTXSpecialTxExtension {
-    fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem)
+
+    /**
+     * The extension is handed a lot of things that it might need
+     */
+    fun init(
+        module: GTXModule,
+        blockchainRID: BlockchainRid,
+        cs: CryptoSystem,
+        storage: Storage?,
+        confProvider: BlockchainConfigurationProvider
+    )
 
     /**
      * @return the names of all special operations relevant for this extension
@@ -48,8 +60,11 @@ interface GTXSpecialTxExtension {
     /**
      * @return true if the list of operations are considered valid
      */
-    fun validateSpecialOperations(position: SpecialTransactionPosition,
-                                  bctx: BlockEContext, ops: List<OpData>): Boolean
+    fun validateSpecialOperations(
+        position: SpecialTransactionPosition,
+        bctx: BlockEContext,
+        ops: List<OpData>
+    ): Boolean
 }
 
 /**
@@ -75,7 +90,8 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
      * (Alex:) We only add the "__begin_.." and "__end.." if they are used by the Rell programmer writing the module,
      * so we must check the module for these operations before we know if they are relevant.
      */
-    override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) {
+    override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem,
+                      storage: Storage?, confProvider: BlockchainConfigurationProvider) {
         val ops = module.getOperations()
         if (OP_BEGIN_BLOCK in ops) {
             wantBegin = true
@@ -132,10 +148,11 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
 /**
  *
  */
-open class GTXSpecialTxHandler(val module: GTXModule,
+open class GTXSpecialTxHGTXSpecialTxHandlerandler(val module: GTXModule,
                                val blockchainRID: BlockchainRid,
                                val cs: CryptoSystem,
-                               val factory: GTXTransactionFactory
+                               val factory: GTXTransactionFactory,
+                               val bcConfigurationProvider: BlockchainConfigurationProvider
 ) : SpecialTransactionHandler {
 
     private val extensions: List<GTXSpecialTxExtension> = module.getSpecialTxExtensions()
@@ -145,7 +162,8 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     init {
         val opSet = mutableSetOf<String>()
         for (x in extensions) {
-            x.init(module, blockchainRID, cs)
+            val storage: Storage? = null // TODO: Olle: where to get this?
+            x.init(module, blockchainRID, cs, storage, bcConfigurationProvider)
             for (op in x.getRelevantOps()) {
                 if (op in opSet) throw ProgrammerMistake("Overlapping op: $op")
                 opSet.add(op)

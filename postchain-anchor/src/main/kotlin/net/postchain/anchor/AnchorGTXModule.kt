@@ -1,17 +1,9 @@
 package net.postchain.anchor
 
-import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.BaseBlockBuilderExtension
-import net.postchain.base.icmf.IcmfBBBExtension
-import net.postchain.base.snapshot.LeafStore
-import net.postchain.common.data.Hash
 import net.postchain.core.EContext
-import net.postchain.core.TxEContext
 import net.postchain.gtv.*
-import net.postchain.gtv.merkle.GtvBinaryTreeFactory
-import net.postchain.gtx.ExtOpData
-import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 
@@ -45,7 +37,7 @@ class AnchorGTXModule : SimpleGTXModule<Unit>(
      * We need extensions to make anchoring work, especially we need to listen to ICMF messages.
      */
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf(IcmfBBBExtension())
+        return listOf(AnchorBBBExtension())
     }
 
     /**
@@ -59,20 +51,20 @@ class AnchorGTXModule : SimpleGTXModule<Unit>(
 
 
 // TODO: Olle: impl
+/**
+ * Send the bcRid and get last anchored height and blockRid back
+ */
 fun anchorHeightQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val db = DatabaseAccess.of(ctx)
-    /*
-    val argsDict = args as GtvDictionary
-    val blockHeight = argsDict["blockHeight"]!!.asInteger()
-    val eventHash = argsDict["eventHash"]!!.asString().hexStringToByteArray()
-    val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
 
-    // Go to DB
-    val blockWitness = blockWitnessData(db, ctx, blockHeight)
+    val argsDict = args as GtvDictionary
+    val blockHeight = argsDict["blockchainRid"]!!.asString().hexStringToByteArray()
+
 
     // Go to DB
     val eventInfo = db.getEvent(ctx, AnchorGTXModule.PREFIX, blockHeight, eventHash) ?: return GtvNull
     val eventData = eventData(eventInfo)
+    /*
     return GtvFactory.gtv(
         "eventData" to eventData,
         "blockHeader" to gtv(blockHeader),

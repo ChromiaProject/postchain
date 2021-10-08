@@ -4,13 +4,31 @@ import net.postchain.base.Storage
 import net.postchain.base.withReadConnection
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
-import net.postchain.core.UserMistake
 import net.postchain.gtv.*
 
 /**
- * Standard implementation of the [SimpleConfigReader].
+ * Standard implementation of the [SimpleConfigReader] which enables you to do fast lookups from a configuration,
+ * using an internal cache for speed.
+ *
+ * Here we use a primitive [GtvDictionary] to hold the entire configuration. Too expensive to interpret what we've got
+ * in it unless actually needed.
+ *
+ * ------
+ * Note!!
+ * ------
+ * We are using a cache to map the chain Iid to the [GtvDictionary], but we see the config as static, and we DON'T
+ * automatically update the cache at different heights! Very easy you shoot yourself in the foot with this tool,
+ * b/c if you try to read a value that might change when the configuration change at a specific block height
+ * (for example the signer list) you'll get the old value from the cache.
+ * If a configuration value might change over time, you should use [HeightAwareConfigReader] instead.
+ *
+ *
+ * Why not use [BlockchainConfiguration]:
+ * Sometimes it's too much work to create a real [BlockchainConfiguration] instance, or we are simply worried
+ * we might create instances that will cause a conflict somewhere, for those cases the [QuickSimpleConfigReader] is
+ * useful, b/c we can lookup whatever setting we need with a minimal effort.
  */
-class DirtSimpleConfigReader (
+class QuickSimpleConfigReader (
     private val storage: Storage,
     private val bcConfigProvider: BlockchainConfigurationProvider
 ) : SimpleConfigReader {
@@ -30,40 +48,20 @@ class DirtSimpleConfigReader (
     }
 
     override fun getBcRidArray(chainIid: Long, confKey: String): List<BlockchainRid> {
-        var ret = arrayListOf<BlockchainRid>()
 
         var gtvDict: GtvDictionary? = cache[chainIid]
         if (gtvDict == null) {
             gtvDict = populateCache(chainIid)!!
         }
 
-        val settings = gtvDict[confKey]
-        if (settings != null) {
-            if (settings.type == GtvType.ARRAY) {
-                var i = 0
-                for (gtv in settings.asArray()) {
-                    if (gtv.type == GtvType.BYTEARRAY) {
-                        val bcRidGtv = gtv.asByteArray()
-                        if (bcRidGtv != null) {
-                            ret.add(BlockchainRid(bcRidGtv))
-                        }
-                    } else {
-                        throw UserMistake("Configuration error: $confKey 's array member pos $i should be Blockchain RIDs (hex), but was ${gtv.type}.")
-                    }
-                    i++
-                }
-            } else {
-                throw UserMistake("Configuration error: $confKey was expected to hold an array.")
-            }
-        }
-
-        return ret
+        val setting = gtvDict[confKey]
+        return ConfigReaderHelper.readAsBlockchainRid(setting, chainIid, confKey)
     }
 
     private fun populateCache(chainIid: Long): GtvDictionary? {
         var gtvData: GtvDictionary? = null
         withReadConnection(storage, chainIid) { eContext ->
-            val rawConf = bcConfigProvider.getConfiguration(eContext, chainIid)
+            val rawConf = bcConfigProvider.getActiveBlocksConfiguration(eContext, chainIid)
             if (rawConf == null) {
                 throw ProgrammerMistake("Didn't find the configuration for chain id $chainIid") // Not sure if there is valid reason for this to ever happen?
             } else {

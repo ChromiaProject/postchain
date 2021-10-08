@@ -5,7 +5,6 @@ package net.postchain.base.data
 import net.postchain.base.*
 import net.postchain.base.icmf.IcmfController
 import net.postchain.core.*
-import net.postchain.getBFTRequiredSignatureCount
 
 open class BaseBlockchainConfiguration(
         val configData: BaseBlockchainConfigurationData,
@@ -19,6 +18,12 @@ open class BaseBlockchainConfiguration(
     override val blockchainRid = configData.context.blockchainRID
     override val effectiveBlockchainRID = configData.getHistoricBRID() ?: configData.context.blockchainRID
     val signers = configData.getSigners()
+
+    private val blockHeaderValidator: BlockHeaderValidator = BaseBlockHeaderValidator(
+        cryptoSystem,
+        configData.blockSigMaker,
+        signers.toTypedArray()
+    ) // TODO: Olle: create the validator from config setting (currently always "base")
 
     val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
 
@@ -42,19 +47,10 @@ open class BaseBlockchainConfiguration(
         return BaseBlockWitness.fromBytes(rawWitness)
     }
 
-    // This is basically a duplicate of BaseBlockBuilder.validateWitness.
-    // We should find a common place to put this code.
-    fun verifyBlockHeader(blockHeader: BlockHeader, blockWitness: BlockWitness): Boolean {
-        if (!(blockWitness is MultiSigBlockWitness)) {
-            throw ProgrammerMistake("Invalid BlockWitness implementation.")
-        }
-        val signers = signers.toTypedArray()
-        val witnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, blockHeader, signers, getBFTRequiredSignatureCount(signers.size))
-        for (signature in blockWitness.getSignatures()) {
-            witnessBuilder.applySignature(signature)
-        }
-        return witnessBuilder.isComplete()
-    }
+    /**
+     * We can get the [BlockHeaderValidator] directly from the config, don't have to go to the [BlockBuilder]
+     */
+    override fun getBlockHeaderValidator(): BlockHeaderValidator = blockHeaderValidator
 
     override fun getTransactionFactory(): TransactionFactory {
         return BaseTransactionFactory()
@@ -72,19 +68,20 @@ open class BaseBlockchainConfiguration(
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
 
         val bb = BaseBlockBuilder(
-                effectiveBlockchainRID,
-                cryptoSystem,
-                ctx,
-                blockStore,
-                getTransactionFactory(),
-                getSpecialTxHandler(),
-                signers.toTypedArray(),
-                configData.blockSigMaker,
-                bcRelatedInfosDependencyList,
-                makeBBExtensions(),
-                effectiveBlockchainRID != blockchainRid,
-                configData.getMaxBlockSize(),
-                configData.getMaxBlockTransactions())
+            effectiveBlockchainRID,
+            cryptoSystem,
+            ctx,
+            blockStore,
+            getTransactionFactory(),
+            getSpecialTxHandler(),
+            signers.toTypedArray(),
+            configData.blockSigMaker,
+            blockHeaderValidator,
+            bcRelatedInfosDependencyList,
+            makeBBExtensions(),
+            effectiveBlockchainRID != blockchainRid,
+            configData.getMaxBlockSize(),
+            configData.getMaxBlockTransactions())
 
         return bb
     }

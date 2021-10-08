@@ -26,6 +26,7 @@ import java.util.*
  * @property specialTxHandler is the main entry point for special transaction handling.
  * @property subjects Public keys for nodes authorized to sign blocks
  * @property blockSigMaker used to produce signatures on blocks for local node
+ * @property blockValidator
  * @property blockchainRelatedInfoDependencyList holds the blockchain RIDs this blockchain depends on
  * @property extensions are extensions to the block builder, usually helping with handling of special transactions.
  * @property usingHistoricBRID
@@ -41,6 +42,7 @@ open class BaseBlockBuilder(
         val specialTxHandler: SpecialTransactionHandler,
         val subjects: Array<ByteArray>,
         val blockSigMaker: SigMaker,
+        val blockValidator: BlockHeaderValidator,
         val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
         val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
@@ -58,11 +60,16 @@ open class BaseBlockBuilder(
     private var haveSpecialEndTransaction = false
 
     /**
+     * @return a proper [BlockHeaderValidator] with [CryptoSystem] in it.
+     */
+    override fun getBlockHeaderValidator() = blockValidator
+
+    /**
      * Computes the root hash for the Merkle tree of transactions currently in a block
      *
      * @return The Merkle tree root hash
      */
-    fun computeMerkleRootHash(): ByteArray {
+    override fun computeMerkleRootHash(): ByteArray {
         val digests = rawTransactions.map { txFactory.decodeTransaction(it).getHash() }
 
         val gtvArr = gtv(digests.map { gtv(it) })
@@ -105,6 +112,7 @@ open class BaseBlockBuilder(
             throw UserMistake("Cannot build new blocks in historic mode (check configuration)")
         }
         super.begin(partialBlockHeader)
+        for (x in extensions) x.init(this.bctx, this)
         if (buildingNewBlock
                 && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.Begin)) {
 
@@ -139,77 +147,6 @@ open class BaseBlockBuilder(
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
         return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, finalizeExtensions())
-    }
-
-    /**
-     * Validate block header:
-     * - check that previous block RID is used in this block
-     * - check for correct height
-     *   - If height is too low check if it's a split or dublicate
-     *   - If too high, it's from the future
-     * - check that timestamp occurs after previous blocks timestamp
-     * - check if all required dependencies are present
-     * - check for correct root hash
-     *
-     * @param blockHeader The block header to validate
-     */
-    override fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
-        val header = blockHeader as BaseBlockHeader
-
-        val computedMerkleRoot = computeMerkleRootHash()
-        val height = header.blockHeaderRec.getHeight()
-        val expectedHeight = initialBlockData.height
-        return when {
-            !header.prevBlockRID.contentEquals(initialBlockData.prevBlockRID) ->
-                ValidationResult(PREV_BLOCK_MISMATCH, "header.prevBlockRID != initialBlockData.prevBlockRID," +
-                        "( ${header.prevBlockRID.toHex()} != ${initialBlockData.prevBlockRID.toHex()} ), " +
-                        " height: $height and $expectedHeight ")
-
-            // These checks are for belts-and-suspenders. We shouldn't call this method
-            // if there's a height mismatch, and we probably don't. But if we do, let's
-            // check the stuff we can before reporting an error.
-            height > expectedHeight ->
-                ValidationResult(BLOCK_FROM_THE_FUTURE, "Expected height: $expectedHeight, got: $height, Block RID: ${header.blockRID.toHex()}")
-            height < expectedHeight -> {
-                val ourBlockRID = store.getBlockRID(ectx, height)
-                if (ourBlockRID!!.contentEquals(header.blockRID))
-                    ValidationResult(DUPLICATE_BLOCK, "Duplicate block at height ${height}, Block RID: ${header.blockRID.toHex()}")
-                else
-                    ValidationResult(SPLIT, "Blockchain split detected at height $height. Our block: ${ourBlockRID.toHex()}, " +
-                            "received block: ${header.blockRID.toHex()}")
-            }
-
-            bctx.timestamp >= header.timestamp ->
-                ValidationResult(INVALID_TIMESTAMP, "bctx.timestamp >= header.timestamp")
-
-            !header.checkIfAllBlockchainDependenciesArePresent(blockchainRelatedInfoDependencyList) ->
-                ValidationResult(MISSING_BLOCKCHAIN_DEPENDENCY, "checkIfAllBlockchainDependenciesArePresent() is false")
-
-            !Arrays.equals(header.blockHeaderRec.getMerkleRootHash(), computedMerkleRoot) -> // Do this last since most expensive check!
-                ValidationResult(INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeRootHash()")
-
-            else -> ValidationResult(OK)
-        }
-    }
-
-    /**
-     * Validates the following:
-     *  - Witness is of a correct implementation
-     *  - The signatures are valid with respect to the block being signed
-     *  - The number of signatures exceeds the threshold necessary to deem the block itself valid
-     *
-     *  @param blockWitness The witness to be validated
-     *  @throws ProgrammerMistake Invalid BlockWitness implementation
-     */
-    override fun validateWitness(blockWitness: BlockWitness): Boolean {
-        if (!(blockWitness is MultiSigBlockWitness)) {
-            throw ProgrammerMistake("Invalid BlockWitness impelmentation.")
-        }
-        val witnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, _blockData!!.header, subjects, getBFTRequiredSignatureCount(subjects.size))
-        for (signature in blockWitness.getSignatures()) {
-            witnessBuilder.applySignature(signature)
-        }
-        return witnessBuilder.isComplete()
     }
 
     /**
@@ -282,14 +219,13 @@ open class BaseBlockBuilder(
      * @throws ProgrammerMistake If the block is not finalized yet signatures can't be created since they would
      * be invalid when further transactions are added to the block
      */
+    // TODO: Olle: Talked to Alex and he said this shouldn't be this tied to the BBB, the WitnessBuilder should come from somewhere else
     override fun getBlockWitnessBuilder(): BlockWitnessBuilder? {
         if (!finalized) {
             throw ProgrammerMistake("Block is not finalized yet.")
         }
 
-        val witnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, _blockData!!.header, subjects, getBFTRequiredSignatureCount(subjects.size))
-        witnessBuilder.applySignature(blockSigMaker.signDigest(_blockData!!.header.blockRID)) // TODO: POS-04_sig
-        return witnessBuilder
+        return getBlockHeaderValidator().createWitnessBuilderWithOwnSignature(_blockData!!.header)
     }
 
     /**
@@ -316,7 +252,6 @@ open class BaseBlockBuilder(
             throw BadDataMistake(BadDataType.BAD_BLOCK,"End special transaction is missing")
         super.finalizeAndValidate(blockHeader)
 
-        // Need to call this method to invoke finalize() method of L2 Implementation
         // TODO: validate returned values!
         finalizeExtensions()
     }

@@ -107,7 +107,7 @@ open class ManagedBlockchainProcessManager(
                 nodeConfigProvider.getConfiguration().appConfig, NODE_ID_NA)
 
         val blockQueries = withReadWriteConnection(storage, chain0) { ctx0 ->
-            val configuration = blockchainConfigProvider.getConfiguration(ctx0, chain0)
+            val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(ctx0, chain0)
                     ?: throw ProgrammerMistake("chain0 configuration not found")
 
             val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
@@ -152,7 +152,7 @@ open class ManagedBlockchainProcessManager(
                 wrTrace("about to restart chain0", chainId, bTrace)
                 // Checking out for a chain0 configuration changes
                 val reloadChain0 = withReadConnection(storage, 0L) { eContext ->
-                    blockchainConfigProvider.needsConfigurationChange(eContext, 0L)
+                    blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, 0L)
                 }
                 startStopBlockchainsAsync(reloadChain0, bTrace)
                 reloadChain0
@@ -170,7 +170,7 @@ open class ManagedBlockchainProcessManager(
             // Checking out for a chain configuration changes
             wrTrace("chainN, begin", chainId, bTrace)
             val reloadConfig = withReadConnection(storage, chainId) { eContext ->
-                (blockchainConfigProvider.needsConfigurationChange(eContext, chainId))
+                (blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId))
             }
 
             return if (reloadConfig) {

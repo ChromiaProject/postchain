@@ -49,6 +49,13 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
         return depRequired.size == blockHeightDependencyArray.size
     }
 
+    /**
+     * Simplified version of the above
+     */
+    fun checkCorrectNumberOfDependencies(depsRequired: Int): Boolean {
+        return depsRequired == blockHeightDependencyArray.size
+    }
+
     companion object Factory {
         /**
          * Utility to simplify creating an instance of BaseBlockHeader
