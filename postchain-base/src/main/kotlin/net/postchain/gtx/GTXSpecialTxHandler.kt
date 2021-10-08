@@ -148,7 +148,7 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
 /**
  *
  */
-open class GTXSpecialTxHGTXSpecialTxHandlerandler(val module: GTXModule,
+open class GTXSpecialTxHandler(val module: GTXModule,
                                val blockchainRID: BlockchainRid,
                                val cs: CryptoSystem,
                                val factory: GTXTransactionFactory,
