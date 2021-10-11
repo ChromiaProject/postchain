@@ -40,7 +40,7 @@ open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationDat
         logger.debug("Running initialize DB of class GTXBlockchainConfiguration using ctx chainIid: ${ctx.chainID}, BC RID: ${effectiveBlockchainRID.toShortHex()}")
         GTXSchemaManager.initializeDB(ctx)
         module.initializeDB(ctx)
-        specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem, txFactory, bcConfigProvider)
+        specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem, txFactory)
     }
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {

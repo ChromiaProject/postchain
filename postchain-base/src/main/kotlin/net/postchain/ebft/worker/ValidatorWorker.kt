@@ -42,6 +42,8 @@ class ValidatorWorker(val workerContext: WorkerContext) : BlockchainProcess {
         return workerContext.engine
     }
 
+    override fun getIcmfController() = workerContext.icmfController
+
     init {
         val bestHeight = getEngine().getBlockQueries().getBestHeight().get()
         statusManager = BaseStatusManager(

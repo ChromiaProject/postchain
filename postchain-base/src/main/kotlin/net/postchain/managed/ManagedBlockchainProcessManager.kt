@@ -93,7 +93,7 @@ open class ManagedBlockchainProcessManager(
                     ?: logger.warn { "Blockchain config is not managed" }
 
             // This is the best place for ICMF init (for non-managed mode we don't have any similar place right?).
-            maybeInitIcmf(blockchainConfigProvider.getIcmfController())
+            maybeInitIcmf()
 
         } catch (e: Exception) {
             // TODO: [POS-90]: Improve error handling here
@@ -192,7 +192,7 @@ open class ManagedBlockchainProcessManager(
                 synchronized(synchronizer) {
                     wrTrace("Sync", chainId, bTrace)
                     // After block commit we trigger ICMF pipes for this chain's new height
-                    blockchainConfigProvider.getIcmfController().icmfDispatcher.newBlockHeight(chainId, blockHeight, storage)
+                    icmfController.icmfDispatcher.newBlockHeight(chainId, blockHeight, storage)
 
                     val x = if (chainId == 0L) restartHandlerChain0(bTrace) else restartHandlerChainN(bTrace)
                     wrTrace("After", chainId, bTrace)

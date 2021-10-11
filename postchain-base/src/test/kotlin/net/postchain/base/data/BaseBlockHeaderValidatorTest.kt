@@ -51,7 +51,7 @@ class BaseBlockHeaderValidatorTest {
         // ------------------
         val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(header)
 
-        val valid = validator.advancedValidateAgainstKnownBlocks(header, myBlockData, ::expectedMerkleHash, ::getBlockRid, myTimestamp, 0)
+        val valid = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(header, myBlockData, ::expectedMerkleHash, ::getBlockRid, myTimestamp, 0)
 
     }
 

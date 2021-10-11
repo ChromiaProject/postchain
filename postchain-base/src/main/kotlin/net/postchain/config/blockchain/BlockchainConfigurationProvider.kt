@@ -45,11 +45,5 @@ interface BlockchainConfigurationProvider {
      */
     fun getHistoricConfiguration(eContext: EContext, chainId: Long, historicBlockHeight: Long): ByteArray?
 
-    /**
-     * Note:
-     * We need to use the same [IcmfController] for all BC configuration or else they won't "see" each other
-     * (and be unable to connect).
-     */
-    fun getIcmfController(): IcmfController // TODO: Olle: spoke to Alex and he thought this must move to BC Provider
 
 }

@@ -8,6 +8,7 @@ import net.postchain.core.BlockchainRid
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.icmf.IcmfController
 import net.postchain.base.withReadConnection
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
@@ -56,6 +57,8 @@ class HistoricChainWorker(val workerContext: WorkerContext,
     val procName: BlockchainProcessName // For logging only
 
     companion object : KLogging()
+
+    override fun getIcmfController() = workerContext.icmfController
 
     init {
         val engine = getEngine()

@@ -90,25 +90,7 @@ interface BlockHeaderValidator {
         witnessBuilder: BlockWitnessBuilder // Includes the header we are about to validate
     ): Boolean
 
-    // Returns "OK" if the header checks out with various block info (we must have the block already)
-    fun advancedValidateAgainstKnownBlocks(
-        blockHeader: BlockHeader,
-        initialBlockData: InitialBlockData, // We can pull expected height and expected prev block RID from this
-        expectedMerkleRootHash: () -> ByteArray, // Expensive, if we use raw TX to calculate merkle root
-        blockRidFromHeight: (height: Long) -> ByteArray?, // Expensive, since we will probably need to go to DB to find block RID
-        currentBlockTimestamp: Long,
-        nrOfDependencies: Int  // We cannot test the actual dependencies b/c some might be null still, so this lame check is what we have
-    ): ValidationResult
 
-    // Returns "OK" if the header checks out with 1) prev block RID and 2) prev height
-    fun basicValidationAgainstKnownBlocks(
-        headerBlockRid: BlockRid,
-        headerPrevBlockRid: BlockRid,
-        headerHeight: Long,
-        expectedPrevBlockRid: BlockRid,
-        expectedHeight: Long,
-        blockRidFromHeight: (height: Long) -> ByteArray? // We will probably need to go to DB to find this, so don't call this in vain
-    ): ValidationResult
 }
 
 /**

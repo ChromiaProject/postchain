@@ -11,7 +11,7 @@ import net.postchain.debug.BlockTrace
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
- * with checks to see if current working block has been commited or not, and rolling back
+ * with checks to see if current working block has been committed or not, and rolling back
  * database state in case some operation fails
  *
  * @property eContext Connection context including blockchain and node identifiers
@@ -19,11 +19,8 @@ import net.postchain.debug.BlockTrace
  * @property blockBuilder The base block builder
  * @property onCommit Clean-up function to be called when block has been commited
  * @property closed Boolean for if block is open to further modifications and queries. It is closed if
- * an operation fails to execute in full or if a witness is created and the block commited.
+ *           an operation fails to execute in full or if a witness is created and the block commited.
  *
- * NOTE: Re logging
- * Looks like this class used to do too much logging, so now everything has been scaled down one notch
- * (debug -> trace, etc). IMO this is better than blocking the logging from YAML (which might be hard to remember)
  */
 class BaseManagedBlockBuilder(
         private val eContext: EContext,
@@ -56,6 +53,8 @@ class BaseManagedBlockBuilder(
             throw e
         }
     }
+
+    override fun getBlockHeaderValidator() = blockBuilder.getBlockHeaderValidator()
 
     override fun begin(partialBlockHeader: BlockHeader?) {
         runOpSafely { blockBuilder.begin(partialBlockHeader) }

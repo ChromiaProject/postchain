@@ -2,6 +2,7 @@
 
 package net.postchain.core
 
+import net.postchain.base.icmf.IcmfController
 import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockTrace
 
@@ -47,6 +48,7 @@ interface BlockchainEngine : Shutdownable {
  */
 interface BlockchainProcess {
     fun getEngine(): BlockchainEngine
+    fun getIcmfController(): IcmfController
     fun shutdown()
 }
 

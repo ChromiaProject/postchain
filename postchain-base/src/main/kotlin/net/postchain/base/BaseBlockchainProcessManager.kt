@@ -47,6 +47,9 @@ open class BaseBlockchainProcessManager(
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
 
+    // We need to use the same [IcmfController] for all chains or else they won't "see" each other (and be unable to connect).
+    protected val icmfController = IcmfController()
+
     // For DEBUG only
     var insideATest = false
     var blockDebug: BlockTrace? = null
@@ -122,13 +125,11 @@ open class BaseBlockchainProcessManager(
                                             ?: emptyMap())
                                 } else null
 
-                        val process = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
+
+                        val process = blockchainInfrastructure.makeBlockchainProcess(processName, engine, icmfController, histConf)
                         blockchainProcesses[chainId] = process
 
-                        // --- ICMF ---
-                        val icmfController = blockchainConfigProvider.getIcmfController()
-                        maybeInitIcmf(icmfController) // We only init first time (for managed mode init has been done by now)
-
+                        maybeInitIcmf() // We only init first time (for managed mode init has been done by now)
 
                         val db = DatabaseAccess.of(eContext)
                         val height = db.getLastBlockHeight(eContext) // FUTURE WORK: Olle: A bit ugly/slow to get this from db here, we should prob pass it as a param from somewhere
@@ -136,8 +137,11 @@ open class BaseBlockchainProcessManager(
                         // Create the pipes we should feed the dispatcher
                         val pipes = icmfController.maybeConnect(process, height) // We only create pipes first time
 
-                        for (pipe in pipes) {
-
+                        if (logger.isDebugEnabled) {
+                            for (pipe in pipes) {
+                                // Not much to do with the created pipes since they already got added to the dispatcher in maybeConnect()
+                                logger.debug("Pipe created: ${pipe.pipeId} for process: $processName")
+                            }
                         }
 
                         startInfoDebug("Blockchain has been started", processName, chainId, bTrace)
@@ -161,7 +165,7 @@ open class BaseBlockchainProcessManager(
     /**
      * Init ICMF, or nothing if it has been initiated.
      */
-    fun maybeInitIcmf(icmfController: IcmfController) {
+    fun maybeInitIcmf() {
         if (!icmfController.isInitialized()) {
             val oneConfReader = QuickSimpleConfigReader(
                 storage,
@@ -176,7 +180,7 @@ open class BaseBlockchainProcessManager(
      * Set all chains we have to ICMF, or nothing if chains have been set.
      */
     fun initAllChainsForIcmf(allChains: Set<BlockchainRelatedInfo>) {
-        this.blockchainConfigProvider.getIcmfController().setAllChains(allChains)
+        icmfController.setAllChains(allChains)
     }
 
     /**
@@ -187,7 +191,7 @@ open class BaseBlockchainProcessManager(
      */
     private fun buildComponentMap(): MutableMap<String, Any> {
         val cm = HashMap<String, Any>()
-        cm["IcmfPumpStation"] = this.blockchainConfigProvider.getIcmfController() // Currently all chains have ICMF access
+        // cm["xxx"] = Xxx()  // <-- This is how we can add stuff
         return cm
     }
 
@@ -255,7 +259,7 @@ open class BaseBlockchainProcessManager(
         val retFun: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
 
             // After block commit we trigger ICMF pipes for this chain's new height
-            blockchainConfigProvider.getIcmfController().icmfDispatcher.newBlockHeight(chainId, height, storage)
+            icmfController.icmfDispatcher.newBlockHeight(chainId, height, storage)
 
             val doRestart = withReadConnection(storage, chainId) { eContext ->
                 blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)

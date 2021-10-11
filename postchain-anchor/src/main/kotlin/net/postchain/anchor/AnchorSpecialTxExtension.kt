@@ -2,6 +2,7 @@ package net.postchain.anchor
 import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockHeaderValidator
+import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.base.icmf.IcmfPackage
@@ -28,15 +29,9 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     private var myChainRid: BlockchainRid? = null // We must know the id of the anchor chain itself
     private var myChainIid: Long? = null // We must know the id of the anchor chain itself
 
-    private var cs: CryptoSystem? = null
-
-    private var blockchainConfigProvider: BlockchainConfigurationProvider? = null
-
     private var icmfReceiver: IcmfReceiver? = null // This is where we get the actual data to create operations
 
     private var blockQueries: BlockQueries? = null // This is for querying ourselves, i.e. the "anchor rell app"
-
-    private var quickConfReader: HeightAwareConfigReader? = null // Will find all configuration settings we need
 
     // We will need one validator for each blockchain we are anchoring
     private val validationMap: Map<BlockchainRid, BlockHeaderValidator> = hashMapOf()
@@ -49,22 +44,13 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
     override fun init(
         module: GTXModule,
-        blockchainRID: BlockchainRid,
-        cs: CryptoSystem,
-        storage: Storage?,
-        confProvider: BlockchainConfigurationProvider
+        blockchainRID: BlockchainRid
     ) {
         if (!_relevantOps.contains(OP_BLOCK_HEADER)) {
             _relevantOps.add(OP_BLOCK_HEADER)
         }
 
         myChainRid = blockchainRID // TODO: Olle: verify this is correct
-
-        this.cs = cs
-
-        blockchainConfigProvider = confProvider
-
-        quickConfReader = QuickHeightAwareConfigReader(storage!!, confProvider)
     }
 
     /**
@@ -234,29 +220,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             // ------------------
             // 1.b) This is a known chain, let's verify things we know
             // ------------------
-
-            var validator = validationMap[bcRid]!!
-            /*
-            if (validator == null) {
-                // If we don't have a validator in the cache, we just build one
-                // (but only if we are in managed mode, manual mode doesn't have chain0).
-                // We cannot get the signers without first getting the configuration, so we need to call chain0 for that
-
-                val blockQueries = withReadWriteConnection(storage, chain0) { ctx0 ->
-                    val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(ctx0, chain0)
-                        ?:  null // Too bad, assume we are in manual mode!
-
-                val configRaw =
-
-
-                val blockHeaderValidator: BlockHeaderValidator = BaseBlockHeaderValidator(
-                    this.cs!!, // This is not 100% kosher, since we must go into the configuration to really verify the CryptoSystem of this chain.
-                    configData.blockSigMaker,
-                    signers.toTypedArray()
-                )
-            }
-             */
-
             val headerBlockRid = BlockRid(header.getMerkleRootHash())
             val headerPrevBlockRid = BlockRid(header.gtvPreviousBlockRid.bytearray)
             val expectedPrevBlockRid = tmpBlockInfo.blockRid
@@ -266,7 +229,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
 
             // Use the validator Do the check
-            val result = validator.basicValidationAgainstKnownBlocks(
+            val result = GenericBlockHeaderValidator.basicValidationAgainstKnownBlocks(
                 headerBlockRid,
                 headerPrevBlockRid,
                 newBlockHeight,
@@ -284,20 +247,19 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             // ------------------
             // 2. Witness check:
             // ------------------
-            if (isManagedMode()) {
-                val witness = BaseBlockWitness.fromBytes(anchorObj.witness)
-                // We must ask chain 0 for the configurations of the blockchain at the height we are at
+            /*
+            // WE DON'T WANT TO VALIDATE WITNESS ON THE PRIMARY NODE, SINCE ALL THE BLOCKCHAINS ARE LOCAL AND IN THE DB
+            // TODO: Olle: How to do this
 
-                if (logger.isDebugEnabled) {
-                    logger.debug("Witness check of block not possible for anchoring in manual mode.")
-                }
-                return true
-            } else {
-                if (logger.isDebugEnabled) {
-                    logger.debug("Witness check of block not possible for anchoring in manual mode.")
-                }
-                return true // Do nothing for manual mode
+            //val witness = BaseBlockWitness.fromBytes(anchorObj.witness)
+            // We must ask chain 0 for the configurations of the blockchain at the height we are at
+
+            if (logger.isDebugEnabled) {
+                logger.debug("Witness check of block not possible for anchoring in manual mode.")
             }
+             */
+            return true
+
         }
     }
 

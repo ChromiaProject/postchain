@@ -17,6 +17,8 @@ class ReadOnlyWorker(val workerContext: WorkerContext) : BlockchainProcess {
 
     override fun getEngine() = workerContext.engine
 
+    override fun getIcmfController() = workerContext.icmfController
+
     private val fastSynchronizer: FastSynchronizer
 
     private val done = CountDownLatch(1)

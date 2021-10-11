@@ -3,6 +3,7 @@
 package net.postchain.core
 
 import net.postchain.base.HistoricBlockchainContext
+import net.postchain.base.icmf.IcmfController
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockTrace
@@ -20,6 +21,7 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
         processName: BlockchainProcessName,
         engine: BlockchainEngine,
+        icmfController: IcmfController,
         historicBlockchainContext: HistoricBlockchainContext? = null
     ): BlockchainProcess
 

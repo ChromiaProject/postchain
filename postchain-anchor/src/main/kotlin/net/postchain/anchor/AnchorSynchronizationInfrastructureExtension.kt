@@ -1,6 +1,5 @@
 package net.postchain.anchor
 
-import net.postchain.base.icmf.IcmfController
 import net.postchain.base.icmf.IcmfReceiver
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainProcess
@@ -30,11 +29,11 @@ class AnchorSynchronizationInfrastructureExtension(
         if (cfg is GTXBlockchainConfiguration) {
             getAnchoreSpecialTxExtension(cfg)?.let {
                 // Since this configuration has an Anchor extension, let's add the [IcmfReceiver]
-                val pumpStation = cfg.getComponent<IcmfController>("IcmfPumpStation") // Dynamic access
-                if (pumpStation != null) {
-                    it.useIcmfReceiver(pumpStation.icmfReceiver)
+                val icmf = process.getIcmfController()
+                if (icmf != null) {
+                    it.useIcmfReceiver(icmf.icmfReceiver)
                 } else {
-                    throw ConfigurationException("Anchor chain must have an IcmfPumpStation set, chain id: ${cfg.chainID}.")
+                    throw ConfigurationException("Anchor chain must have an IcmfController set, chain id: ${cfg.chainID}.")
                 }
             }
         }

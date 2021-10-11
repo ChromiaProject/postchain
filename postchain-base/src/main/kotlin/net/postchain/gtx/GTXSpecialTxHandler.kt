@@ -6,153 +6,25 @@ import mu.KLogging
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition
-import net.postchain.base.Storage
-import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.GtvInteger
-import net.postchain.gtv.GtvType
 
 /**
- * Holds various info regarding special TXs used by an extension, when a Spec TX is needed and how to create Spec TX etc.
+ * In this case "Handler" means we:
  *
- * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
- * (examples: BBB Ext and Sync Ext).
- * To see how it all goes together, see: doc/extension_classes.graphml
- */
-interface GTXSpecialTxExtension {
-
-    /**
-     * The extension is handed a lot of things that it might need
-     */
-    fun init(
-        module: GTXModule,
-        blockchainRID: BlockchainRid,
-        cs: CryptoSystem,
-        storage: Storage?,
-        confProvider: BlockchainConfigurationProvider
-    )
-
-    /**
-     * @return the names of all special operations relevant for this extension
-     */
-    fun getRelevantOps(): Set<String>
-
-    /**
-     * @param position is position in the block, either "begin" or "end"
-     * @return true if this position needs a special transaction.
-     */
-    fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean
-
-    /**
-     * The parameters below should be enough to find the data needed to create a special operation:
-     *
-     * @param position is position in the block, either "begin" or "end"
-     * @param bctx
-     * @param blockchainRID is the alternative identifier of the chain (we can get chainIid from the [BlockEContext])
-     * @return all new operations created
-     */
-    fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, blockchainRID: BlockchainRid): List<OpData>
-
-    /**
-     * @return true if the list of operations are considered valid
-     */
-    fun validateSpecialOperations(
-        position: SpecialTransactionPosition,
-        bctx: BlockEContext,
-        ops: List<OpData>
-    ): Boolean
-}
-
-/**
- * This extension adds "begin" and "end" to the block, which how a block should be constructed.
+ * - can find out if we need a special tx, and
+ * - can create a special tx, and
+ * - can validate a special tx.
  *
- * Note: This extension is called "auto" because it's always needed (so technically not extending the protocol,
- * but part of it, but the extension mechanism is the cleanest way to add extra TXs).
- */
-class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
-    var wantBegin: Boolean = false
-    var wantEnd: Boolean = false
-
-    private val _relevantOps = mutableSetOf<String>()
-
-    companion object {
-        const val OP_BEGIN_BLOCK = "__begin_block"
-        const val OP_END_BLOCK = "__end_block"
-    }
-
-    override fun getRelevantOps() = _relevantOps
-
-    /**
-     * (Alex:) We only add the "__begin_.." and "__end.." if they are used by the Rell programmer writing the module,
-     * so we must check the module for these operations before we know if they are relevant.
-     */
-    override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem,
-                      storage: Storage?, confProvider: BlockchainConfigurationProvider) {
-        val ops = module.getOperations()
-        if (OP_BEGIN_BLOCK in ops) {
-            wantBegin = true
-            _relevantOps.add(OP_BEGIN_BLOCK)
-        }
-        if (OP_END_BLOCK in ops) {
-            wantEnd = true
-            _relevantOps.add(OP_END_BLOCK)
-        }
-    }
-
-    override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
-        return when (position) {
-            SpecialTransactionPosition.Begin -> wantBegin
-            SpecialTransactionPosition.End -> wantEnd
-        }
-    }
-
-    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, blockchainRID: BlockchainRid): List<OpData> {
-        val op = if (position == SpecialTransactionPosition.Begin)
-            OP_BEGIN_BLOCK else OP_END_BLOCK
-        return listOf(OpData(op, arrayOf(GtvInteger(bctx.height))))
-    }
-
-    fun validateOp( bctx: BlockEContext, op: OpData, requiredOpName: String): Boolean {
-        if (op.opName != requiredOpName) return false
-
-        if (op.args.size != 1) return false
-        val arg = op.args[0]
-        if (arg.type !== GtvType.INTEGER) return false
-        if (arg.asInteger() != bctx.height) return false
-        return true
-    }
-
-    override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
-        if (position == SpecialTransactionPosition.Begin) {
-            if (wantBegin) {
-                if (ops.size != 1) return false
-                return validateOp(bctx, ops[0], OP_BEGIN_BLOCK)
-            } else {
-                return ops.isEmpty()
-            }
-        } else {
-            if (wantEnd) {
-                if (ops.size != 1) return false
-                return validateOp(bctx, ops[0], OP_END_BLOCK)
-            } else {
-                return ops.isEmpty()
-            }
-        }
-    }
-}
-
-/**
- *
+ * Special transactions are usually created by a [GTXSpecialTxExtension], which makes this extendable.
  */
 open class GTXSpecialTxHandler(val module: GTXModule,
                                val blockchainRID: BlockchainRid,
                                val cs: CryptoSystem,
-                               val factory: GTXTransactionFactory,
-                               val bcConfigurationProvider: BlockchainConfigurationProvider
+                               val factory: GTXTransactionFactory
 ) : SpecialTransactionHandler {
 
     private val extensions: List<GTXSpecialTxExtension> = module.getSpecialTxExtensions()
@@ -162,8 +34,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     init {
         val opSet = mutableSetOf<String>()
         for (x in extensions) {
-            val storage: Storage? = null // TODO: Olle: where to get this?
-            x.init(module, blockchainRID, cs, storage, bcConfigurationProvider)
+            x.init(module, blockchainRID)
             for (op in x.getRelevantOps()) {
                 if (op in opSet) throw ProgrammerMistake("Overlapping op: $op")
                 opSet.add(op)

@@ -11,13 +11,8 @@ import net.postchain.core.ProgrammerMistake
  */
 abstract class AbstractBlockchainConfigurationProvider: BlockchainConfigurationProvider {
 
-    private val icmfController = IcmfController()
 
     companion object : KLogging()
-
-    override fun getIcmfController(): IcmfController {
-        return this.icmfController
-    }
 
     fun check(eContext: EContext, chainId: Long) {
         if (eContext.chainID != chainId) {

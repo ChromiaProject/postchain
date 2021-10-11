@@ -6,6 +6,7 @@ import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.BaseTransactionQueue
+import net.postchain.base.icmf.IcmfController
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
@@ -127,12 +128,14 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainProcess(
-        processName: BlockchainProcessName, engine: BlockchainEngine,
+        processName: BlockchainProcessName,
+        engine: BlockchainEngine,
+        icmfController: IcmfController,
         historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val conf = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastucture(conf.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, historicBlockchainContext)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, icmfController, historicBlockchainContext)
         if (conf is BaseBlockchainConfiguration) {
             for (extName in conf.syncInfrastructureExtensionNames) {
                 getSynchronizationInfrastuctureExtension(extName).connectProcess(process)

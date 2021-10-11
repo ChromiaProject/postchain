@@ -1,6 +1,7 @@
 package net.postchain.ebft.worker
 
 import net.postchain.base.PeerCommConfiguration
+import net.postchain.base.icmf.IcmfController
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainEngine
 import net.postchain.debug.BlockchainProcessName
@@ -19,6 +20,7 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val communicationManager: CommunicationManager<Message>,
                     val peerCommConfiguration: PeerCommConfiguration,
                     val nodeConfig: NodeConfig,
+                    val icmfController: IcmfController,
                     val onShutdown: () -> Unit,
                     val startWithFastSync: Boolean = true // for ValidatorWorker
 ) {

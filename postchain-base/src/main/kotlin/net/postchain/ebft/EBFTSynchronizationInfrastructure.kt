@@ -4,6 +4,7 @@ package net.postchain.ebft
 
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.base.icmf.IcmfController
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
@@ -49,8 +50,12 @@ class EBFTSynchronizationInfrastructure(
         connectionManager.shutdown()
     }
 
-    override fun makeBlockchainProcess(processName: BlockchainProcessName, engine: BlockchainEngine,
-                                       historicBlockchainContext: HistoricBlockchainContext?): BlockchainProcess {
+    override fun makeBlockchainProcess(
+        processName: BlockchainProcessName,
+        engine: BlockchainEngine,
+        icmfController: IcmfController,
+        historicBlockchainContext: HistoricBlockchainContext?
+    ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration() as BaseBlockchainConfiguration // TODO: [et]: Resolve type cast
         val unregisterBlockchainDiagnosticData: () -> Unit = {
             blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
@@ -63,6 +68,7 @@ class EBFTSynchronizationInfrastructure(
                 buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration),
                 peerCommConfiguration,
                 nodeConfig,
+                icmfController,
                 unregisterBlockchainDiagnosticData,
                 getStartWithFastSyncValue(blockchainConfig.chainID)
         )
@@ -93,7 +99,7 @@ class EBFTSynchronizationInfrastructure(
 
                 WorkerContext(processName, blockchainConfig.signers,
                         engine, blockchainConfig.configData.context.nodeID, histCommManager, historicPeerCommConfiguration,
-                        nodeConfig, unregisterBlockchainDiagnosticData)
+                        nodeConfig, icmfController, unregisterBlockchainDiagnosticData)
 
             }
             HistoricChainWorker(workerContext, historicBlockchainContext).also {

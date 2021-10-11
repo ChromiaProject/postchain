@@ -3,22 +3,18 @@ package net.postchain.anchor
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.core.EContext
-import net.postchain.gtv.*
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 
 /**
- * This module allows external parties to ask Anchor chain about what heights been anchored.
+ * This module doesn't do much.
  *
  * Note regarding modules:
  * We write this module as a complement to the "anchor" module that is written in Rell.
  * The Rell module define the "__anchor_block_header" operation for example, it is not known by this module.
  */
 class AnchorGTXModule : SimpleGTXModule<Unit>(
-    Unit, mapOf(), mapOf(
-        "get_anchor_height" to ::anchorHeightQuery,
-        "get_anchor_chains" to ::anchorChainsQuery
-    )
+    Unit, mapOf(), mapOf()
 ) {
 
     companion object {
@@ -30,7 +26,7 @@ class AnchorGTXModule : SimpleGTXModule<Unit>(
      */
     override fun initializeDB(ctx: EContext) {
         val dba = DatabaseAccess.of(ctx)
-        dba.createEventLeafTable(ctx, PREFIX)
+        dba.createEventLeafTable(ctx, PREFIX) // TODO: Olle: don't think we need tis
     }
 
     /**
@@ -49,66 +45,4 @@ class AnchorGTXModule : SimpleGTXModule<Unit>(
     }
 }
 
-
-// TODO: Olle: impl
-/**
- * Send the bcRid and get last anchored height and blockRid back
- */
-fun anchorHeightQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
-    val db = DatabaseAccess.of(ctx)
-
-    val argsDict = args as GtvDictionary
-    val blockHeight = argsDict["blockchainRid"]!!.asString().hexStringToByteArray()
-
-
-    // Go to DB
-    val eventInfo = db.getEvent(ctx, AnchorGTXModule.PREFIX, blockHeight, eventHash) ?: return GtvNull
-    val eventData = eventData(eventInfo)
-    /*
-    return GtvFactory.gtv(
-        "eventData" to eventData,
-        "blockHeader" to gtv(blockHeader),
-        "blockWitness" to blockWitness
-    ) */
-    return GtvNull
-}
-
-// TODO: Olle: impl
-fun anchorChainsQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
-    val db = DatabaseAccess.of(ctx)
-    /*
-    val argsDict = args as GtvDictionary
-    val blockHeight = argsDict["blockHeight"]!!.asInteger()
-    val accountNumber = argsDict["accountNumber"]!!.asInteger()
-    val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
-
-    // Go to DB
-    val blockWitness = blockWitnessData(db, ctx, blockHeight)
-    return GtvFactory.gtv(
-        "chains" to accountState,
-        "blockHeader" to gtv(blockHeader),
-        "blockWitness" to blockWitness
-    )
-     */
-    return GtvNull
-}
-
-private fun eventData(event: DatabaseAccess.EventInfo?): Gtv {
-    if (event == null) return GtvNull
-    return GtvFactory.gtv(
-        GtvFactory.gtv(event.blockHeight),
-        GtvFactory.gtv(event.pos),
-        GtvFactory.gtv(event.hash),
-        GtvFactory.gtv(event.data)
-    )
-}
-
-private fun accountState(state: DatabaseAccess.AccountState?): Gtv {
-    if (state == null) return GtvNull
-    return GtvFactory.gtv(
-        GtvFactory.gtv(state.blockHeight),
-        GtvFactory.gtv(state.stateN),
-        GtvFactory.gtv(state.data)
-    )
-}
 

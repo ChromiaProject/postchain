@@ -3,6 +3,7 @@
 package net.postchain.base
 
 import mu.KLogging
+import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
@@ -147,7 +148,7 @@ abstract class AbstractBlockBuilder(
      */
     fun validate(blockHeader: BlockHeader): ValidationResult {
         val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
-        return getBlockHeaderValidator().advancedValidateAgainstKnownBlocks(
+        return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
             blockHeader,
             initialBlockData,
             ::computeMerkleRootHash,
