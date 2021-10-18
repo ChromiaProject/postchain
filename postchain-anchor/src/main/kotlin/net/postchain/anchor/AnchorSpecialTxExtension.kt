@@ -1,11 +1,12 @@
 package net.postchain.anchor
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.data.BaseBlockHeaderValidator
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.base.icmf.IcmfFetcher
 import net.postchain.base.icmf.IcmfPackage
+import net.postchain.base.icmf.IcmfPipe
 import net.postchain.base.icmf.IcmfReceiver
 import net.postchain.config.blockchain.*
 import net.postchain.core.*
@@ -83,18 +84,44 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
         // Extract all packages from all pipes
         for (pipe in pipes) {
-
-            var debugCounter = 0  // Remove if this is disturbing
-            // Loop all messages for the pipe
-            while (!pipe.isEmpty()) {
-                debugCounter++
-                val icmfPackage = pipe.pull()!!
-                val anchorOpData = buildOpData(icmfPackage)
-                retList.add(anchorOpData)
-            }
-            // logger.debug("Pulled $debugCounter messages from pipeId: ${pipe.pipeId}")
+            handlePipe(blockchainRID, pipe, retList)
         }
         return retList
+    }
+
+    /**
+     * Loop all messages for the pipe
+     */
+    private fun handlePipe(
+        blockchainRID: BlockchainRid,
+        pipe: IcmfPipe,
+        retList: ArrayList<OpData>
+    ) {
+        var debugCounter = 0  // Remove if this is disturbing
+
+        var heightToFetch: Long = getHeightToAnchor(blockchainRID)
+        while (pipe.hasNewPackets()) {
+            debugCounter++
+            val icmfPackage = pipe.fetch(heightToFetch)
+            if (icmfPackage != null) {
+                val anchorOpData = buildOpData(icmfPackage)
+                retList.add(anchorOpData)
+                heightToFetch++ // Try next height
+            } else {
+                break // Nothing more to find
+            }
+        }
+        logger.debug("Pulled $debugCounter messages from pipeId: ${pipe.pipeId}")
+    }
+
+    private fun getHeightToAnchor(blockchainRID: BlockchainRid): Long {
+        val tmpBlockInfo = getLastAnchoredBlock(blockchainRID)
+        return if (tmpBlockInfo == null) {
+            // First block
+            0
+        } else {
+            tmpBlockInfo.height + 1
+        }
     }
 
     /**
@@ -160,22 +187,29 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     /**
      * Checks a single operation for validity, which means go through the header and verify it.
      *
-     * 1. General check:
-     *    Initially we compare the height we see in the header with what we expect from our local table
-     * 2. Witness check:
-     *    The witness check is tricky b/c every chain we will validate must have its own instance of the
-     *    [BlockHeaderValidator], specific for the chain in question (b/c we cannot be certain of what signers
-     *    are relevant for the chain). ALSO!! We cannot just pick the latest configuration to get the signer list,
-     *    but we must take the configuration for the height in question!
+     * General check:
+     *   Initially we compare the height we see in the header with what we expect from our local table
      *
      * Discussion1: managed mode only
-     * Since anchoring is done locally, we will ask chain0 for the configurations. This means this will only work for
-     * managed mode, and manual mode (which is only used for testing anyways) will simply not verify witness signatures
-     * (based on discussion with Alex).
+     *   Since anchoring is done locally, we will ask chain0 for the configurations. This means this will only work for
+     *   managed mode, and manual mode (which is only used for testing anyways) will simply not verify witness
+     *   signatures (based on discussion with Alex).
      *
      * Discussion2: crypto system
-     * In theory we cannot be certain about what [CryptoSystem] is used by the chain, so it should be taken from the
-     * config too.
+     *   In theory we cannot be certain about what [CryptoSystem] is used by the chain, so it should be taken from the
+     *   config too.
+     *
+     * Discussion3: Why no witness check here?
+     *    1. Save time:
+     *      When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
+     *      (But when we are copying finished anchor block from another node we actually should validate,
+     *      but that's not here).
+     *    2. Tech issues:
+     *      The witness check is tricky b/c every chain we will validate must have its own instance of the
+     *      [BlockHeaderValidator], specific for the chain in question (b/c we cannot be certain of what signers
+     *      are relevant for the chain). ALSO!! We cannot just pick the latest configuration to get the signer list,
+     *      but we must take the configuration for the height in question!
+     *
      */
     fun isOpValid(op: OpData): Boolean {
 
@@ -227,7 +261,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             val expectedHeight =  oldHeight + 1
             val newBlockHeight = header.getHeight()
 
-
             // Use the validator Do the check
             val result = GenericBlockHeaderValidator.basicValidationAgainstKnownBlocks(
                 headerBlockRid,
@@ -262,13 +295,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
         }
     }
-
-    fun isManagedMode(): Boolean {
-        // TODO: Olle: Impl
-        return false
-    }
-
-
 
 
     /**

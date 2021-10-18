@@ -56,6 +56,8 @@ class IcmfController : KLogging(){
 
     private var pipeConnSync: IcmfPipeConnectionSync? = null
 
+    private val sourceChainToFetcherMap = HashMap<Long, IcmfFetcher>() // Must use the correct [IcmfFetcher] for each source chain.
+
     // --------------
     // The task of sending and receiving of messages is delegated to the [IcmfDispatcher] and the [IcmfReceiver].
     // --------------
@@ -151,16 +153,30 @@ class IcmfController : KLogging(){
                 // We know we should connect this source with the listener, and this means updating all parts:
                 val bcInfo = pipeConnSync!!.getBlockchainInfo(listenerChainRid)
 
-                // 1. Update the receiver and get the pipe in one go
-                val newPipe = icmfReceiver.connectPipe(givenChainIid, bcInfo)
-                // 2. Update the dispatcher
+                // 1. Get the relevant fetcher
+                val fetcher: IcmfFetcher = sourceChainToFetcherMap[givenChainIid]?:
+                    throw ProgrammerMistake("No fetcher for chain: $givenChainIid, must exist at this point.")
+
+                // 2. Update the receiver and get the pipe in one go
+                val newPipe = icmfReceiver.connectPipe(givenChainIid, bcInfo, fetcher)
+                // 3. Update the dispatcher
                 icmfDispatcher.addMessagePipe(newPipe, height)
-                // 3. Add new pipe to the return list
+                // 4. Add new pipe to the return list
                 newPipes.add(newPipe)
             }
         }
 
         return newPipes
+    }
+
+
+    fun setFetcherForSourceChain(sourceChain: Long, fetcher: IcmfFetcher) {
+        val existingFetcher = sourceChainToFetcherMap[sourceChain]
+        if (existingFetcher != null) {
+            throw ProgrammerMistake("Source chain $sourceChain already has a fetcher: ${existingFetcher.javaClass}")
+        } else {
+            sourceChainToFetcherMap[sourceChain] = fetcher
+        }
     }
 
 }

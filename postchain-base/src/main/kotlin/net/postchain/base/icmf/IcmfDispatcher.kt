@@ -72,6 +72,8 @@ class IcmfDispatcher {
                 logger.debug("newBlockHeight() -- trigger chain: $sourceChainIid for height: $newHeight with ${pipes.size} pipes")
             }
 
+            // Olle: we remove this since we'll use fetch instead
+            /*
             // Slow to fetch the header from DB. Investigate if it can be passed.
             heightCheck(sourceChainIid, newHeight)
             var gtvHeader: Gtv? = null
@@ -81,7 +83,7 @@ class IcmfDispatcher {
                 val blockRID = dba.getBlockRID(eContext, newHeight)
                 if (blockRID != null) {
                     // Get raw data
-                    val rawHeader = dba.getBlockHeader(eContext, blockRID)  // TODO: Olle expensive
+                    val rawHeader = dba.getBlockHeader(eContext, blockRID)
                     val rawWitness = dba.getWitnessData(eContext, blockRID)
 
                     // Transform raw bytes to GTV
@@ -94,27 +96,17 @@ class IcmfDispatcher {
 
 
             for (pipe in pipes) {
-                val pkg = IcmfPackage.build(newHeight, gtvHeader!!, gtvWitness!!) // TODO: Olle: This is generic ICMF logic so any messages should be added also
+                val pkg = IcmfPackage.build(newHeight, gtvHeader!!, gtvWitness!!)
                 pipe.push(pkg)
             }
 
             icmfsourceToHeightMap[sourceChainIid] = newHeight
+             */
         } else {
             // This is fine, for example anchor chain won't send anything to any ICMF pipes
             if (logger.isDebugEnabled) {
                 logger.debug("newBlockHeight() -- chain: $sourceChainIid doesn't have any pipes, probably a pure listening chain")
             }
-        }
-    }
-
-    private fun heightCheck(sourceChainIid: Long, newHeight: Long) {
-        var lastHeight = icmfsourceToHeightMap[sourceChainIid]
-        if (lastHeight != null) {
-            if (lastHeight + 1 != newHeight) {
-                throw ProgrammerMistake("One block has gone missing for source chain: $sourceChainIid , last seen height $lastHeight but new height is $newHeight")
-            }
-        } else {
-            throw ProgrammerMistake("Heights for source chain: $sourceChainIid hasn't been initialized properly.")
         }
     }
 

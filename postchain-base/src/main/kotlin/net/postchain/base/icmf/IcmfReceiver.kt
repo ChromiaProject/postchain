@@ -38,7 +38,7 @@ class IcmfReceiver {
 
         val dataPipes = ArrayList<IcmfPipe>() // Make a defensive copy of the pipe collection
         for (pipe in allPipes) {
-            if (!pipe.isEmpty()) { // Only put non-empty pipes in here (to save time)
+            if (pipe.hasNewPackets()) { // Only put non-empty pipes in here (to save time)
                 dataPipes.add(pipe)
             }
         }
@@ -58,9 +58,10 @@ class IcmfReceiver {
      *
      * @param sourceChainIid is the chain that should send messages
      * @param listenerChainInfo is the chain that should receive messages (we might only have BcRID at this point)
+     * @param fetcher is used to fetch new [IcmfPackage] from the source chain.
      */
-    fun connectPipe(sourceChainIid: Long, listenerChainInfo: BlockchainRelatedInfo): IcmfPipe {
-        val newPipe = IcmfPipe(sourceChainIid, listenerChainInfo)
+    fun connectPipe(sourceChainIid: Long, listenerChainInfo: BlockchainRelatedInfo, fetcher: IcmfFetcher): IcmfPipe {
+        val newPipe = IcmfPipe(sourceChainIid, listenerChainInfo, fetcher)
         val pipes = getListOrAddIfNotExists(listenerChainInfo.blockchainRid)
         pipes.add(newPipe)
         return newPipe

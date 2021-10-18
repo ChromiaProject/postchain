@@ -1,6 +1,7 @@
 package net.postchain.anchor
 
-import net.postchain.base.icmf.IcmfReceiver
+import net.postchain.base.BaseBlockchainEngine
+import net.postchain.base.Storage
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
@@ -17,8 +18,11 @@ class AnchorSynchronizationInfrastructureExtension(
      * When this method is executed we know an anchor chain is being created/connected (only such a chain would have
      * this extension).
      *
-     * We need to connect this new anchor process to ICMF so it is fed messages
-     * (we need to connect the [AnchorSpecialTxExtension] to a [IcmfReceiver])
+     * 1. Connect this new anchor process to ICMF so it is fed messages
+     *    (we need to connect the [AnchorSpecialTxExtension] to a [IcmfReceiver])
+     *
+     * 2. Create a new anchor-specific Fetcher for the chainId of the new process
+     *    (will be used to fetch messages).
      *
      * Note: All other [BlockchainProcess] will feed us data via [IcmfDispatcher]
      */
@@ -32,6 +36,9 @@ class AnchorSynchronizationInfrastructureExtension(
                 val icmf = process.getIcmfController()
                 if (icmf != null) {
                     it.useIcmfReceiver(icmf.icmfReceiver)
+                    val bbe = engine as BaseBlockchainEngine
+                    val storage: Storage = bbe.storage
+                    icmf.setFetcherForSourceChain(cfg.chainID, AnchorIcmfFetcher(cfg.chainID, storage))
                 } else {
                     throw ConfigurationException("Anchor chain must have an IcmfController set, chain id: ${cfg.chainID}.")
                 }

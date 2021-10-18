@@ -258,8 +258,10 @@ open class BaseBlockchainProcessManager(
     protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         val retFun: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
 
-            // After block commit we trigger ICMF pipes for this chain's new height
-            icmfController.icmfDispatcher.newBlockHeight(chainId, height, storage)
+            // One option (that we currently don't use), is to trigger ICMF pipes
+            // after block commit. Instead we fetch the block headers at the time the
+            // listener chain needs it.
+            //icmfController.icmfDispatcher.newBlockHeight(chainId, height, storage)
 
             val doRestart = withReadConnection(storage, chainId) { eContext ->
                 blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
