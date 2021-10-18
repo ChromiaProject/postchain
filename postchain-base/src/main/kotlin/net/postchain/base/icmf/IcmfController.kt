@@ -56,7 +56,7 @@ class IcmfController : KLogging(){
 
     private var pipeConnSync: IcmfPipeConnectionSync? = null
 
-    private val sourceChainToFetcherMap = HashMap<Long, IcmfFetcher>() // Must use the correct [IcmfFetcher] for each source chain.
+    private val listenerChainToFetcherMap = HashMap<BlockchainRid, IcmfFetcher>() // Must use the correct [IcmfFetcher] for each listener chain.
 
     // --------------
     // The task of sending and receiving of messages is delegated to the [IcmfDispatcher] and the [IcmfReceiver].
@@ -154,8 +154,9 @@ class IcmfController : KLogging(){
                 val bcInfo = pipeConnSync!!.getBlockchainInfo(listenerChainRid)
 
                 // 1. Get the relevant fetcher
-                val fetcher: IcmfFetcher = sourceChainToFetcherMap[givenChainIid]?:
-                    throw ProgrammerMistake("No fetcher for chain: $givenChainIid, must exist at this point.")
+                // TODO: Olle: Timing problem here, what if listener (e.g. Anchor) chain hasn't started yet and thus nothing in this map?
+                val fetcher: IcmfFetcher = listenerChainToFetcherMap[bcInfo.blockchainRid]?:
+                    throw ProgrammerMistake("No fetcher for chain: ${bcInfo.blockchainRid.toHex()}, must exist at this point.")
 
                 // 2. Update the receiver and get the pipe in one go
                 val newPipe = icmfReceiver.connectPipe(givenChainIid, bcInfo, fetcher)
@@ -170,12 +171,12 @@ class IcmfController : KLogging(){
     }
 
 
-    fun setFetcherForSourceChain(sourceChain: Long, fetcher: IcmfFetcher) {
-        val existingFetcher = sourceChainToFetcherMap[sourceChain]
+    fun setFetcherForListenerChain(listenerBcRid: BlockchainRid, fetcher: IcmfFetcher) {
+        val existingFetcher = listenerChainToFetcherMap[listenerBcRid]
         if (existingFetcher != null) {
-            throw ProgrammerMistake("Source chain $sourceChain already has a fetcher: ${existingFetcher.javaClass}")
+            throw ProgrammerMistake("Listener chain ${listenerBcRid.toHex()} already has a fetcher: ${existingFetcher.javaClass}")
         } else {
-            sourceChainToFetcherMap[sourceChain] = fetcher
+            listenerChainToFetcherMap[listenerBcRid] = fetcher
         }
     }
 
