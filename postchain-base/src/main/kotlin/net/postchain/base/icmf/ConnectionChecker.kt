@@ -11,7 +11,8 @@ interface ConnectionChecker {
     /**
      * @param listeningChainRid is the potential listener chain of the connection
      * @param bcProcess represents the potential source process
-     * @return true if a we should connect target with source via
+     * @param controller is the [IcmfController] (could be needed for something)
+     * @return true if a we should connect target with source
      */
     fun shouldConnect(listeningChainRid: BlockchainRid, bcProcess: BlockchainProcess, controller: IcmfController): Boolean
 }

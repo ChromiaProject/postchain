@@ -91,7 +91,7 @@ class BaseBlockchainConfigurationData(
     }
 
     // Most chains don't have this setting
-    fun getIcmfTarget(): String? {
+    fun getIcmfListener(): String? {
         return data[KEY_ICMF_LISTENER]?.asString()
     }
 

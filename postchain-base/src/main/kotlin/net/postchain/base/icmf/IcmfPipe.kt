@@ -8,12 +8,11 @@ import net.postchain.base.BlockchainRelatedInfo
 interface IcmfFetcher {
 
     /**
-     * The fetcher already knows what source blockchain this is about, so we only need to provide the height
-     *
+     * @param sourceChainIid is the chain we will read from
      * @param height of the source chain we need a package for
      * @return a [IcmfPackage] for this height or nothing if the height doesn't exist for the source chain.
      */
-    fun fetch(height: Long): IcmfPackage?
+    fun fetch(sourceChainIid: Long, height: Long): IcmfPackage?
 }
 
 /**
@@ -62,7 +61,6 @@ class IcmfPipe(
         return !likelyCaughtUp || (pendingPackets.size > 0);
     }
 
-
     /**
      * We can find a [IcmfPackage] two ways:
      * 1. in our pendingPackets cache (that got pushed to us previously), or
@@ -79,7 +77,7 @@ class IcmfPipe(
             pendingPackets.remove(height)
             return pkt
         } else {
-            return fetcher.fetch(height)
+            return fetcher.fetch(sourceChainIid, height)
         }
     }
 

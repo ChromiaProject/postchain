@@ -6,6 +6,8 @@ import mu.KLogging
 import net.postchain.StorageBuilder
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.icmf.IcmfListenerLevelSorter
+import net.postchain.base.icmf.LevelConnectionChecker
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
@@ -210,7 +212,7 @@ open class ManagedBlockchainProcessManager(
     }
 
     /**
-     * Restart all chains. Begin with chain zero.
+     * Restart all chains. Begin with chain zero and then according to the order given by ICMF.
      */
     private fun reloadBlockchainsAsync(bTrace: BlockTrace?) {
         executor.submit {
@@ -244,6 +246,9 @@ open class ManagedBlockchainProcessManager(
     /**
      * Only the chains in the [toLaunch] list should run. Any old chains not in this list must be stopped.
      * Note: any chains not in the new config for this node should actually also be deleted, but not impl yet.
+     *
+     * Note: Since ICMF has a complex initiation, we launch pure listener chains (like Anchor chain) before
+     * "normal" chains.
      *
      * @param toLaunch the chains to run
      * @param launched is the old chains. Maybe stop some of them.
@@ -341,12 +346,13 @@ open class ManagedBlockchainProcessManager(
      * Note: We use [computeBlockchainList()] which is the API method "nm_compute_blockchain_list" of this node's own
      * API for chain zero.
      *
-     * @return all chains chain zero thinks we should run.
+     * @return all chains chain zero thinks we should run, in the order they should be started.
      */
     protected open fun retrieveBlockchainsToLaunch(): Array<BlockchainRelatedInfo> {
         retrieveDebug("Begin")
         // chain-zero is always in the list
-        val blockchains = mutableListOf(BlockchainRelatedInfo(BlockchainRid.ZERO_RID, "chain zero", 0L))
+        val chain0 = BlockchainRelatedInfo(BlockchainRid.ZERO_RID, "chain zero", 0L)
+        val levelSorter = IcmfListenerLevelSorter(chain0)
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
@@ -354,7 +360,9 @@ open class ManagedBlockchainProcessManager(
             val locallyConfiguredReplicas = nodeConfig.blockchainsToReplicate
             val domainBlockchainSet = dataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
             val allMyBlockchains = domainBlockchainSet.union(locallyConfiguredReplicas)
-            allMyBlockchains.map { blockchainRid ->
+
+            // If we cannot find the chainIid, then we should create an Iid for the chain.
+            val allChainsWithIid = allMyBlockchains.map { blockchainRid ->
                 val chainId = db.getChainId(ctx0, blockchainRid)
                 retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
                 if (chainId == null) {
@@ -368,13 +376,26 @@ open class ManagedBlockchainProcessManager(
                 } else {
                     BlockchainRelatedInfo(blockchainRid, null, chainId)
                 }
-            }.filter { it.chainId != 0L }.forEach {
-                blockchains.add(it)
+            }.filter { it.chainId != 0L }
+
+            // Add the chains to the level sorter
+            allChainsWithIid.forEach {
+                val conn = icmfController.getListenerConnChecker(it)
+                if (conn == null) {
+                    levelSorter.add(LevelConnectionChecker.NOT_LISTENER, it) // This is not a listener chain
+                }  else {
+                    val level: Int = when (conn) {
+                        is LevelConnectionChecker -> conn.myListeningLevel // Get the real level
+                        else -> LevelConnectionChecker.MID_LEVEL // We don't know take middle
+                    }
+                    levelSorter.add(level, it)
+                }
             }
             true
         }
-        retrieveDebug("End, restart: ${blockchains.size}.")
-        return blockchains.toTypedArray()
+
+        retrieveDebug("End, restart: ${levelSorter.size()}.")
+        return levelSorter.getSorted() // Generate a sorted list
     }
 
     // ----------------------------------------------

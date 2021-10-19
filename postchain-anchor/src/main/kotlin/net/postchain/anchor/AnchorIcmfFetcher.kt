@@ -15,7 +15,6 @@ import net.postchain.gtv.GtvFactory
  * source chain, and packs this into the [IcmfPackage].
  */
 class AnchorIcmfFetcher(
-    protected val sourceChainIid: Long,
     protected val storage: Storage
 ) : IcmfFetcher {
 
@@ -23,7 +22,7 @@ class AnchorIcmfFetcher(
 
     var lastHeight: Long? = null // Just to spot strange behaviour, not strictly needed
 
-    override fun fetch(height: Long): IcmfPackage? {
+    override fun fetch(sourceChainIid: Long, height: Long): IcmfPackage? {
         heightCheck(sourceChainIid, height)
 
         var pkg: IcmfPackage? = null

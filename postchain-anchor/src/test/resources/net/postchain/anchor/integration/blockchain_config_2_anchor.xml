@@ -25,7 +25,7 @@ This is a Anchor Chain configuration specifically for testing.
         <array><string>net.postchain.anchor.AnchorSynchronizationInfrastructureExtension</string></array> <!-- This is the Anchor infra: essential!  -->
     </entry>
     <entry key="icmflistener">
-        <string>all</string> <!-- "all" = Anchor listens to messages from all other chains. This only works for managed mode, manual don't know about other chains. -->
+        <string>10</string> <!-- Anchor chain listens to messages from all chains with no number or lower number. This only works for managed mode, manual don't know about other chains. -->
     </entry>
     <entry key="signers">
         <array>

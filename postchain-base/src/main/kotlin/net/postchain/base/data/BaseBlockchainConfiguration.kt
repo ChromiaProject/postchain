@@ -31,7 +31,7 @@ open class BaseBlockchainConfiguration(
     override val syncInfrastructureName = DynamicClassName.build(configData.getSyncInfrastructureName())
     override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.getSyncInfrastructureExtensions())
 
-    override val icmfTarget = configData.getIcmfTarget()
+    override val icmfListener = configData.getIcmfListener()
 
     // Only GTX config can have special TX, this is just "Base" so we settle for null
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()

@@ -81,6 +81,27 @@ class IcmfPipeConnectionSync(
     @Synchronized
     fun areChainsSet(): Boolean = chainsInitiated
 
+    /**
+     * Use this method to check if the chain is a listener (or to determine what order it should be started in)
+     *
+     * @param bcRid is the chain we need the connection checker from
+     * @return a [ConnectionChecker] if this is a listener chain, or null if the chain isn't a listener
+     */
+    @Synchronized
+    fun getListenerConnChecker(chainInfo: BlockchainRelatedInfo): ConnectionChecker? {
+        if (!internalChainRidToChainIidCache.containsKey(chainInfo.blockchainRid)) {
+            if (logger.isDebugEnabled) {
+                logger.debug("isListener() - The chain $chainInfo has never been seen. Checking if it's a listener")
+            }
+
+            val isListener: Boolean = false
+            if (isListener) {
+                logger.warn("isListener() - Potentially dangerous to start a listener late in the game, we might have missed messages")
+            }
+        }
+
+        return listenerChainToConnCheckerMap[chainInfo.blockchainRid]
+    }
 
     /**
      * Figures out what listener chains this source should connect to.
@@ -104,7 +125,8 @@ class IcmfPipeConnectionSync(
             //1. We have a manual conf, use it and ignore everything else
             val retMap = HashMap<BlockchainRid, ConnectionChecker>()
             for (bcRid in manualConf) {
-                retMap[bcRid] = AllConnectionChecker() // We know we want this listener
+                // Setting manual setting to "high" (= 10) means other listeners with "high" level will ignore it.
+                retMap[bcRid] = LevelConnectionChecker(bcRid, LevelConnectionChecker.HIGH_LEVEL)
             }
             return retMap
         } else {
@@ -178,7 +200,7 @@ class IcmfPipeConnectionSync(
     /**
      * Updates the internal cache/map if this is a listener chains with correct configuration.
      *
-     * Currently we can only handle the "all" strategy for "icmflistener" setting but:
+     * Currently we can only handle the "number" strategy for "icmflistener" setting but:
      * FUTURE WORK: Olle: The plan is to try to instantiate the given class and use it as a [ConnectionChecker]
      *
      * @param chainInfo is the identifiers of chain we are about to add
@@ -190,14 +212,15 @@ class IcmfPipeConnectionSync(
             if (listenerChainToConnCheckerMap.containsKey(chainInfo.blockchainRid)) {
                 throw ProgrammerMistake("We shouldn't reset an existing listener chain id: ${chainInfo.chainId} , RID: $chainInfo.")
             } else {
-                if ("all" == icmfListenerConf!!) {
-                    // Simple case, we want all chains to send to this chain
-                    listenerChainToConnCheckerMap[chainInfo.blockchainRid] = AllConnectionChecker()
+                val listeningLevel: Int? = icmfListenerConf!!.toIntOrNull()
+                if (listeningLevel != null) {
+                    // Simple case, we use the level given
+                    listenerChainToConnCheckerMap[chainInfo.blockchainRid] = LevelConnectionChecker(chainInfo.blockchainRid, listeningLevel!!)
                 } else {
                     // FUTURE WORK: Olle: Implement
                     //val customConnectionChecker = xxx as ConnectionChecker
                     //internalListenerChains[chainIid] = customConnectionChecker
-                    throw UserMistake("At this point we cannot handle custom listener chain connection checkers, icmflistener must be set to \"all\" but was \"$icmfListenerConf\".")
+                    throw UserMistake("At this point we cannot handle custom listener chain connection checkers, icmflistener must be set to \"number\" but was \"$icmfListenerConf\".")
                 }
             }
         }

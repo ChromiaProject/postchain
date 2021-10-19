@@ -5,6 +5,7 @@ import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
+import net.postchain.core.UserMistake
 
 
 /**
@@ -97,6 +98,10 @@ class IcmfController : KLogging(){
         }
     }
 
+    fun getListenerConnChecker(chainInfo: BlockchainRelatedInfo): ConnectionChecker? {
+        return pipeConnSync!!.getListenerConnChecker(chainInfo)
+    }
+
     /**
      * For managed mode only! Manual mode cannot do this.
      *
@@ -154,9 +159,16 @@ class IcmfController : KLogging(){
                 val bcInfo = pipeConnSync!!.getBlockchainInfo(listenerChainRid)
 
                 // 1. Get the relevant fetcher
-                // TODO: Olle: Timing problem here, what if listener (e.g. Anchor) chain hasn't started yet and thus nothing in this map?
-                val fetcher: IcmfFetcher = listenerChainToFetcherMap[bcInfo.blockchainRid]?:
-                    throw ProgrammerMistake("No fetcher for chain: ${bcInfo.blockchainRid.toHex()}, must exist at this point.")
+                // -------------------------
+                // Managed Mode: all listeners have been started before the sources, so this error cannot happen.
+                // Manual Mode: there is no way to prevent the operator starting chains in the "wrong" order,
+                //   so this error might very well happen and should therefore be pushed to the top so the operator
+                //   understands the mistake.
+                // -------------------------
+                val fetcher: IcmfFetcher = listenerChainToFetcherMap[listenerChainRid]?:
+                    throw UserMistake("Listener chain: $bcInfo must be started before source " +
+                            "chain: $givenChainInfo. Now we don't have a fetcher for ICMF listener chain and " +
+                            "cannot proceed.")
 
                 // 2. Update the receiver and get the pipe in one go
                 val newPipe = icmfReceiver.connectPipe(givenChainIid, bcInfo, fetcher)
