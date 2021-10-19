@@ -1,6 +1,7 @@
 package net.postchain.devtools.utils.configuration
 
 import mu.KLogging
+import net.postchain.base.icmf.IcmfListenerLevelSorter
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
@@ -99,9 +100,20 @@ data class NodeSetup(
         }
 
         logger.debug("Node ${sequenceNumber.nodeNumber}: Start all blockchains we should sign")
+
+        // Add all chains to the level sorter
+        val levelSorter = IcmfListenerLevelSorter(null) // Don't use a chain0
         chainsToSign.forEach { chainId ->
-            val chainSetup = systemSetup.blockchainMap[chainId]
+            val chainSetup: BlockchainSetup = systemSetup.blockchainMap[chainId]
                     ?: error("Incorrect SystemSetup")
+            levelSorter.add(chainSetup.getListenerLevel(), chainSetup.getChainInfo())
+        }
+
+        // Sort the chains, and start them in order
+        val sortedChainList = levelSorter.getSorted()
+        sortedChainList.forEach { chainInfo ->
+            val chainSetup: BlockchainSetup = systemSetup.blockchainMap[chainInfo.chainId!!.toInt()]
+                ?: error("Incorrect SystemSetup")
             startChain(node, chainSetup, "")
         }
 

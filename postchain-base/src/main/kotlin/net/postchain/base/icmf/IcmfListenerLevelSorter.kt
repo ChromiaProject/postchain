@@ -2,12 +2,14 @@ package net.postchain.base.icmf
 
 import net.postchain.base.BlockchainRelatedInfo
 
-class IcmfListenerLevelSorter(chain0: BlockchainRelatedInfo) {
+class IcmfListenerLevelSorter(chain0: BlockchainRelatedInfo?) {
 
     val chainMap = mutableMapOf<Int, MutableSet<BlockchainRelatedInfo>>() // Listener level to chain
 
     init {
-        chainMap[Int.MAX_VALUE] = mutableSetOf(chain0) // We give chain0 the best start number possible
+        if (chain0 != null) {
+            chainMap[Int.MAX_VALUE] = mutableSetOf(chain0) // We give chain0 the best start number possible
+        }
     }
 
     fun add(level: Int, chainInfo: BlockchainRelatedInfo) {

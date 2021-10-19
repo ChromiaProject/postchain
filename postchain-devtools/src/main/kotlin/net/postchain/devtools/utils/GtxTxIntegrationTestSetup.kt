@@ -56,8 +56,9 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
         Awaitility.await().atMost(Duration.TEN_SECONDS)
                 .untilAsserted {
                     systemSetup.nodeMap.values.forEach { nodeSetup ->
-                        val bcList = systemSetup.getBlockchainsANodeShouldRun(nodeSetup.sequenceNumber)
                         val node = nodeMap[nodeSetup.sequenceNumber]!!
+                        val bcList = systemSetup.getBlockchainsANodeShouldRun(nodeSetup.sequenceNumber)
+
                         bcList.forEach{ bcSetup -> node.assertChainStarted(bcSetup.chainId.toLong()) }
                     }
                 }

@@ -45,10 +45,10 @@ class AnchorTestGTXModule: SimpleGTXModule<Unit>(
             val tableName = table_anchor_blocks(ctx)
             logger.info("About to create table: $tableName")
             val sql = """CREATE TABLE $tableName (
-                |blockchain_rid TEXT NOT NULL, 
-                |block_rid TEXT NOT NULL, 
-                |block_height BIGINT,
-                |status INT)""".trimMargin()
+                blockchain_rid TEXT NOT NULL, 
+                block_rid TEXT NOT NULL, 
+                block_height BIGINT,
+                status INT)""".trimMargin()
             r.update(ctx.conn, sql)
             GTXSchemaManager.setModuleVersion(ctx, moduleName, 0)
         } else {
@@ -72,13 +72,14 @@ fun getLastBlockForChainRid(config: Unit, ctx: EContext, args: Gtv): Gtv {
 
     val tableName = table_anchor_blocks(ctx)
 
-    val sql = """SELECT LIMIT 1 
-    | block_rid,              
-    | block_height, 
-    | status,
-    | FROM $tableName 
-    | WHERE blockchain_rid = ?
-    | ORDER BY block_height DESC """
+    val sql = """SELECT  
+     block_rid,              
+     block_height, 
+     status
+     FROM $tableName 
+     WHERE blockchain_rid = ?
+     ORDER BY block_height DESC 
+     LIMIT 1 """
 
     val resultHandler = MapListHandler()
 
@@ -108,12 +109,12 @@ fun getBlockAtHeight(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val tableName = table_anchor_blocks(ctx)
 
     val sql = """SELECT 
-    | block_rid,              
-    | block_height,
-    | status,
-    | FROM $tableName 
-    | WHERE blockchain_rid = ?
-    | AND block_height = ? """
+     block_rid,              
+     block_height,
+     status,
+     FROM $tableName 
+     WHERE blockchain_rid = ?
+     AND block_height = ? """
 
     val resultHandler = MapListHandler()
 

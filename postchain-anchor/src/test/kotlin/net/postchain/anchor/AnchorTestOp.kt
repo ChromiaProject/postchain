@@ -45,7 +45,7 @@ class AnchorTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
         logger.debug("About to anchor block height: $height, bc: ${realBcRid.toShortHex()} to DB.")
         r.update(ctx.conn,
-            """INSERT INTO ${table_anchor_blocks(ctx)} (blockchain_rid, block_height, block_hash, status)
+            """INSERT INTO ${table_anchor_blocks(ctx)} (blockchain_rid, block_height, block_rid, status)
                 |VALUES (?, ?, ?, ?)""".trimMargin(),
             realBcRid.toHex(),
             height,

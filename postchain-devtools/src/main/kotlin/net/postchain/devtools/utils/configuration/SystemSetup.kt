@@ -1,6 +1,7 @@
 package net.postchain.devtools.utils.configuration
 
 import net.postchain.base.PeerInfo
+import net.postchain.base.icmf.IcmfListenerLevelSorter
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.ByteArrayKey
@@ -121,14 +122,28 @@ data class SystemSetup(
     }
 
     /**
-     * Get all [BlockchainSetup] that a node should sign
+     * Get all [BlockchainSetup] that a node should sign, in correct ICMF order
      */
     fun getBlockchainsANodeShouldRun(nodeNr: NodeSeqNumber): List<BlockchainSetup> {
-        return blockchainMap.values.filter { bc -> bc.signerNodeList.contains(nodeNr) }
+        val bcSetups = blockchainMap.values.filter { bc -> bc.signerNodeList.contains(nodeNr) }
+        val levelSorter = IcmfListenerLevelSorter(null) // No chain0
+        bcSetups.forEach {
+            levelSorter.add(it.getListenerLevel(), it.getChainInfo())
+        }
+        val sortedChains = levelSorter.getSorted()
+        val retBcSetups = mutableListOf<BlockchainSetup>()
+        var debugStr = ""
+        sortedChains.forEach {
+            debugStr += ", ${it.chainId!!}"
+            val bcSetup = blockchainMap[it.chainId!!.toInt()]!!
+            retBcSetups.add(bcSetup)
+        }
+        System.out.println("-- Chain start order $debugStr")
+        return retBcSetups
     }
 
     /**
-     * Transform this [SystemSetup] instance into a list of [PostchainTestNode] s.
+     * Transform this [SystemSetup] instance into a list of [PostchainTestNode] s, and start everything.
      */
     fun toTestNodes(): List<PostchainTestNode> {
         val retList = mutableListOf<PostchainTestNode>()

@@ -34,14 +34,11 @@ class AnchorSynchronizationInfrastructureExtension(
             getAnchoreSpecialTxExtension(cfg)?.let {
                 // Since this configuration has an Anchor extension, let's add the [IcmfReceiver]
                 val icmf = process.getIcmfController()
-                //if (icmf != null) {
-                    it.useIcmfReceiver(icmf.icmfReceiver)
-                    val bbe = engine as BaseBlockchainEngine
-                    val storage: Storage = bbe.storage
-                    icmf.setFetcherForListenerChain(cfg.blockchainRid, AnchorIcmfFetcher(storage))
-                //} else {
-                //    throw ConfigurationException("Anchor chain must have an IcmfController set, chain id: ${cfg.chainID}.")
-                //}
+                it.useIcmfReceiver(icmf.icmfReceiver)
+                val bbe = engine as BaseBlockchainEngine
+                val storage: Storage = bbe.storage
+                icmf.setFetcherForListenerChain(cfg.blockchainRid, AnchorIcmfFetcher(storage))
+                it.setBlockQueries(engine.getBlockQueries())
             }
         }
     }

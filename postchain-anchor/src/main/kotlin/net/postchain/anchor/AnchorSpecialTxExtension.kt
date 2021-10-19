@@ -55,6 +55,13 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     }
 
     /**
+     * Not part of the usual init
+     */
+    fun setBlockQueries(bq: BlockQueries) {
+        blockQueries = bq
+    }
+
+    /**
      * Asked Alex, and he said we always use "begin" for special TX (unless we are wrapping up something)
      * so we only add them here (if we have any).
      */
@@ -296,7 +303,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         }
     }
 
-
     /**
      * Ask the Anchor Module for last anchored block
      *
@@ -310,6 +316,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             Pair("blockchainRid", gtv(bcRidByteArr))
         )
         val block = blockQueries!!.query("get_last_anchored_block", args).get()
+
         return if (block == GtvNull) {
             null
         } else {
