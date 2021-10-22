@@ -5,7 +5,6 @@ import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
-import net.postchain.core.UserMistake
 
 
 /**
@@ -57,7 +56,7 @@ class IcmfController : KLogging(){
 
     private var pipeConnSync: IcmfPipeConnectionSync? = null
 
-    private val listenerChainToFetcherMap = HashMap<BlockchainRid, IcmfFetcher>() // Must use the correct [IcmfFetcher] for each listener chain.
+    private val listenerChainToFetcherMap = HashMap<Long, IcmfFetcher>() // Must use the correct [IcmfFetcher] for each listener chain.
 
     // --------------
     // The task of sending and receiving of messages is delegated to the [IcmfDispatcher] and the [IcmfReceiver].
@@ -80,47 +79,23 @@ class IcmfController : KLogging(){
             logger.error("Why are we initializing the IcmfController twice?")
         }
         this.pipeConnSync = pipeSync
-        this.pipeConnSync!!.setDispatcher(icmfDispatcher) // Will be updated when new connections are created
-        this.pipeConnSync!!.setReceiver(icmfReceiver) // Will be updated when new connections are created
         logger.info("ICMF properly initialized.")
     }
 
-    fun seenThisChainBefore(chainIid: Long): Boolean = pipeConnSync!!.seenThisChainBefore(chainIid)
-
-    /**
-     * @return true if we have initiated ICMF with all chains for this node.
-     */
-    fun areChainsSet(): Boolean {
-        return if (pipeConnSync == null) {
-            false
-        } else {
-            pipeConnSync!!.areChainsSet()
-        }
-    }
-
-    fun getListenerConnChecker(chainInfo: BlockchainRelatedInfo): ConnectionChecker? {
-        return pipeConnSync!!.getListenerConnChecker(chainInfo)
-    }
-
-    /**
-     * For managed mode only! Manual mode cannot do this.
-     *
-     * Why is done via a setter when is should have been in the constructor?
-     * A: b/c we usually must wait until we have the chain IIDs for all chains.
-     * (Yes, this is a bit tricky. An alternative would be to use [BlockchainRID] to keep track of chains.)
-     *
-     * @param allChains are all chains Chain 0 knows about during startup.
-     */
-    fun setAllChains(allChains: Set<BlockchainRelatedInfo>) {
-        if (pipeConnSync == null) {
-            throw ProgrammerMistake("Cannot add chains before PipeConnectionSync has been set.")
-        } else {
-            pipeConnSync!!.addChains(allChains)
-        }
+    fun getListenerConnChecker(bcIid: Long): ConnectionChecker? {
+        return pipeConnSync!!.getListenerConnChecker(bcIid)
     }
 
     /**
      * Decides if a new BC process needs pipes or not, and if they are needed they will be created.
+     *
+     * - If the chain will send messages, it will act as "source" in a new [IcmfPipe],
+     * - If the chain is configured to receive messages it will act as "listener" in a new pipe.
+     * A pipe can be both a listener and a source.
+     *
+     * The pipe will only be created if both chains are active, and it's the job of the [IcmfPipeConnectionSync] to
+     * know about these things.
+     *
      * We also update the [IcmfDispatcher] and [IcmfReceiver] during this process.
      *
      * @param bcProcess is the new process that might need a pipe
@@ -134,48 +109,57 @@ class IcmfController : KLogging(){
 
         val newPipes = ArrayList<IcmfPipe>()
 
-        val givenChainIid = bcProcess.getEngine().getConfiguration().chainID
-        val givenChainBcRid = bcProcess.getEngine().getConfiguration().blockchainRid
-        val givenChainInfo = BlockchainRelatedInfo(givenChainBcRid, null, givenChainIid)
+        val conf = bcProcess.getEngine().getConfiguration()
+        val givenChainIid = conf.chainID
+        val givenChainListenerConf = conf.icmfListener
 
-        if (!seenThisChainBefore(givenChainIid)) {
-            if(logger.isDebugEnabled()) {
-                logger.debug("First time we've seen chain id: $givenChainIid , height $height")// Probably b/c we are running manual mode
-            }
-            pipeConnSync!!.addChains(setOf(givenChainInfo))
-
-            // (manual mode only)
-            icmfReceiver.maybeUpdateWithChainIid(givenChainInfo)
+        // Create listener pipes
+        if (givenChainListenerConf != null) {
+            val connChecker = ConnectionCheckerFactory.build(givenChainIid, givenChainListenerConf)
+            val listPipes = getPipesForListenerRole(givenChainIid, height, connChecker)
+            newPipes.addAll(listPipes)
         }
 
-        // ------------
-        // We assume this is a source chain, and try to see if it needs to connect to listening chains
-        // ------------
-        val listeningChainMap = pipeConnSync!!.getListeningChainsForSource(givenChainInfo)
-        for (listenerChainRid: BlockchainRid in listeningChainMap.keys) {
+        // Create source pipes
+        val sourcePipes = getPipesForSourceRole(givenChainIid, bcProcess, height)
+        newPipes.addAll(sourcePipes)
 
-            if (listeningChainMap[listenerChainRid]!!.shouldConnect(listenerChainRid, bcProcess, this)) {
-                // We know we should connect this source with the listener, and this means updating all parts:
-                val bcInfo = pipeConnSync!!.getBlockchainInfo(listenerChainRid)
+        return newPipes
+    }
 
-                // 1. Get the relevant fetcher
-                // -------------------------
-                // Managed Mode: all listeners have been started before the sources, so this error cannot happen.
-                // Manual Mode: there is no way to prevent the operator starting chains in the "wrong" order,
-                //   so this error might very well happen and should therefore be pushed to the top so the operator
-                //   understands the mistake.
-                // -------------------------
-                val fetcher: IcmfFetcher = listenerChainToFetcherMap[listenerChainRid]?:
-                    throw UserMistake("Listener chain: $bcInfo must be started before source " +
-                            "chain: $givenChainInfo. Now we don't have a fetcher for ICMF listener chain and " +
-                            "cannot proceed.")
 
-                // 2. Update the receiver and get the pipe in one go
-                val newPipe = icmfReceiver.connectPipe(givenChainIid, bcInfo, fetcher)
-                // 3. Update the dispatcher
-                icmfDispatcher.addMessagePipe(newPipe, height)
-                // 4. Add new pipe to the return list
-                newPipes.add(newPipe)
+    /**
+     * At this point we know the chain is configured as a listener, and our job is to figure out what source chains
+     * that should have given chain as a listener, and create pipes for them.
+     *
+     * @return any [IcmfPipe] where the given chain acts "listener"
+     */
+    private fun getPipesForListenerRole(
+        iid: Long, // the given chain IID
+        height: Long,
+        connChecker: ConnectionChecker
+    ) : List<IcmfPipe> {
+        val newPipes = ArrayList<IcmfPipe>()
+
+        // Validation
+        val existingPipes = icmfReceiver.getAllPipesForListenerChain(iid)
+        if (existingPipes != null && !existingPipes.isEmpty()) {
+            logger.warn("We are about to start a chain: $iid that already has ${existingPipes.size} active pipes" +
+                    "where it is listener. Very likely something is wrong.")
+        }
+
+        // Fetch all possible source chains
+        val sourceChains = pipeConnSync!!.getSourceChainsFromListener(iid)
+        for (sourceChainIid: Long in sourceChains) {
+            // (just in case) If they are already connected, don't connect
+            val found = existingPipes.firstOrNull { it.sourceChainIid == sourceChainIid }
+
+            if (found == null) {
+                // Not connected, go on to with final check
+                if (connChecker.shouldConnect(sourceChainIid, iid, this)) {
+                    val newPipe = buildAndAddPipe(sourceChainIid, iid, height)
+                    newPipes.add(newPipe)
+                }
             }
         }
 
@@ -183,12 +167,76 @@ class IcmfController : KLogging(){
     }
 
 
-    fun setFetcherForListenerChain(listenerBcRid: BlockchainRid, fetcher: IcmfFetcher) {
-        val existingFetcher = listenerChainToFetcherMap[listenerBcRid]
+    /**
+     * We assume this is a source chain, and try to see if it needs to connect to listening chains
+     *
+     * @return any [IcmfPipe] where the given chain acts "source"
+     */
+    private fun getPipesForSourceRole(
+        iid: Long, // given chain ID
+        bcProcess: BlockchainProcess,
+        height: Long
+    ) : List<IcmfPipe> {
+        val newPipes = ArrayList<IcmfPipe>()
+
+
+        // Validation
+        val existingPipes = icmfDispatcher.getAllPipesForSourceChain(iid)
+        if (existingPipes != null && !existingPipes.isEmpty()) {
+            logger.warn("We are about to start a chain: $iid that already has ${existingPipes.size} active pipes " +
+                    "where it is source. Very likely something is wrong.")
+        }
+
+        // Fetch all possible listening chains
+        val listeningChainMap = pipeConnSync!!.getListeningChainsFromSource(iid)
+        for (listenerChainIid: Long in listeningChainMap.keys) {
+            // (just in case) If they are already connected, don't connect
+            val found = existingPipes.firstOrNull { it.listenerChainIid == listenerChainIid }
+
+            if (found == null) {
+                // Not connected, go on to with final check
+                if (listeningChainMap[listenerChainIid]!!.shouldConnect(iid, listenerChainIid, this)) {
+                    val newPipe = buildAndAddPipe(iid, listenerChainIid, height)
+                    newPipes.add(newPipe)
+                }
+            }
+        }
+        return newPipes
+    }
+
+    /**
+     * @return the newly created and added [IcmfPipe]
+     */
+    private fun buildAndAddPipe(
+        sourceChainIid: Long,
+        listenerChainIid: Long,
+        height: Long
+    ): IcmfPipe {
+        // 1. Get fetcher
+        // --------------------------------
+        // Regarding the [ProgrammerMistake]: We should never create a pipe unless both source and listener have
+        // started (so the fetcher shouldn't be missing).
+        // --------------------------------
+        val fetcher: IcmfFetcher = listenerChainToFetcherMap[listenerChainIid] ?: throw ProgrammerMistake(
+            "Listener chain: $listenerChainIid must be started and initiated with a fetcher before the pipe " +
+                    "can be created (source chain: $sourceChainIid)."
+        )
+
+        // 2. Update the receiver and get the pipe in one go
+        val newPipe = icmfReceiver.connectPipe(sourceChainIid, listenerChainIid, fetcher)
+        // 3. Update the dispatcher
+        icmfDispatcher.addMessagePipe(newPipe, height)
+
+        return newPipe
+    }
+
+
+    fun setFetcherForListenerChain(listenerIid: Long, fetcher: IcmfFetcher) {
+        val existingFetcher = listenerChainToFetcherMap[listenerIid]
         if (existingFetcher != null) {
-            throw ProgrammerMistake("Listener chain ${listenerBcRid.toHex()} already has a fetcher: ${existingFetcher.javaClass}")
+            throw ProgrammerMistake("Listener chain $listenerIid already has a fetcher: ${existingFetcher.javaClass}")
         } else {
-            listenerChainToFetcherMap[listenerBcRid] = fetcher
+            listenerChainToFetcherMap[listenerIid] = fetcher
         }
     }
 

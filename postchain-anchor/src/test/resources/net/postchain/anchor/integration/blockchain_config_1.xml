@@ -39,13 +39,4 @@
             </entry>
         </dict>
     </entry>
-    <entry key="icmfsource">
-        <!--
-        We only need this configuration when we are running manual mode. For managed mode we will automatically
-        find the source chains (using the Chain 0 data).
-        -->
-        <array>
-            <bytea>210A0AAFD72023A07D4408BE7E21890C439A24D2127278DD57F27BEFC3F440F6</bytea> <!-- This is the Anchor chain -->
-        </array>
-    </entry>
 </dict>

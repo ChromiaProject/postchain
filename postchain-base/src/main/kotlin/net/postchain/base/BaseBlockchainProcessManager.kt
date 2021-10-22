@@ -177,13 +177,6 @@ open class BaseBlockchainProcessManager(
     }
 
     /**
-     * Set all chains we have to ICMF, or nothing if chains have been set.
-     */
-    fun initAllChainsForIcmf(allChains: Set<BlockchainRelatedInfo>) {
-        icmfController.setAllChains(allChains)
-    }
-
-    /**
      * In the future there probably should be some way to transport unique configuration components
      * into the map (initially set in the the configuration file?). Currently it's not needed.
      *

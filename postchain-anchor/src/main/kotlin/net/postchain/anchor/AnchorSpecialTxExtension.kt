@@ -87,7 +87,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         val retList = ArrayList<OpData>()
 
         verifySameChainId(bctx, blockchainRID)
-        val pipes = this.icmfReceiver!!.getNonEmptyPipesForListenerChain(blockchainRID) // Returns the pipes that has anchor chain as a listener
+        val pipes = this.icmfReceiver!!.getNonEmptyPipesForListenerChain(bctx.blockIID) // Returns the pipes that has anchor chain as a listener
 
         // Extract all packages from all pipes
         for (pipe in pipes) {

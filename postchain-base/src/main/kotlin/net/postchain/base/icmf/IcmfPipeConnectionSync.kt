@@ -3,36 +3,41 @@ package net.postchain.base.icmf
 import mu.KLogging
 import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.base.BlockchainRelatedInfo
-import net.postchain.core.UserMistake
 import net.postchain.core.ProgrammerMistake
 import net.postchain.config.blockchain.SimpleConfigReader
 import net.postchain.core.BlockchainRid
 import java.util.*
 
 /**
- * Goal of [IcmfPipeConnectionSync] is to know things about the chains ABOUT TO START on this node, BEFORE the first
- * chain has been started. This is important so we don't lose any messages from a potentially early started source chain.
- * (if a source chain starts running and generates messages before the listener chain has been started, we must store
- * these messages in [IcmfPipe]s until the listener is ready to read).
+ * Goal of [IcmfPipeConnectionSync] is to know what chains are running on this node.
+ * This class exists so that a chain that is starting can call "getListeningChainsForSource()"
+ * to find out what listeners it potentially should connect to (we say "potentially" since it's the [ConnectionChecker]
+ * that really knows if a [IcmfPipe] should exist or not).
  *
- * It's possible to add new chains to [IcmfPipeConnectionSync] at any time, using the "addChains()" function, but, if
- * a new listener chain is added late, it will have missed all ICMF messages before "its birth-time" (obvious, or?).
- * NOTE: Currently late added chains won't work since these connections are not visible in the IcmfReceiver/Dispatcher // TODO: Olle: fix
+ * Note on startup sequence:
+ * -------------------------
+ * Startup sequence isn't a problem. We usually use the [IcmfFetcher] to pull messages from the receiver side,
+ * but if we were to push from the source chain to a pipe, the chains should have been started in the correct
+ * order anyway, so the pipe should have living chains on the listener side (ICMF doesn't allow chains to be
+ * started in incorrect order).
  *
- * Discussion:
- * It's likely that source chains will start anytime, but I don't think a "listener chains" will ever be introduced
- * on a running node, but who knows?
+ * Limitation 1:
+ * ------------
+ * It's not possible to add new LISTENER chains to [IcmfPipeConnectionSync] after startup, only source chains
+ * (using the "addChains()" function)
  *
- * Limitations:
+ * Limitation 2:
+ * -----------
  * Currently we don't look at the "type" of message, if a chain is a "listener" that's it. // TODO: Olle: this is a simplification of what Alex described, might not be good enough
  *
  * Note 1
- * ... for manual configuration we only have BC RID for the listening chain, therefore we must use BC RID for listeners.
+ * ... in the manual configuration we only have BC RID for the listening chain, therefore we use BC RID for listeners,
+ * but since we can depend on the listener being started the Chain IID should be available too.
  *
  * Note 2
  * ... that the internal collections of this class often survive BC restarts (since [IcmfPipeConnectionSync] survives),
- * but won't survive a node restart. We deliberately don't delete old chains from the "seen" lists which means
- * the ICMF config settings cannot change without a node restart (but they don't right?).
+ * but won't survive a node restart. We deliberately don't delete old chains from the "seen" lists which means the
+ * ICMF config settings cannot change without a node restart (the "ICMF configs" are "icmfListener" and "icmfSource").
  */
 class IcmfPipeConnectionSync(
     private var simpleConfReader: SimpleConfigReader // Does the ugly part of actually reading BC config (easy to mock)
@@ -40,17 +45,11 @@ class IcmfPipeConnectionSync(
 
     companion object: KLogging()
 
-    // All chains we've seen are in here, with empty list meaning no manual configuration
-    private val chainToManualListenerConfMap = HashMap<Long, List<BlockchainRid>>()
-
-    // Sometimes we have seen the chain ID of a listener, sometimes not. Check here to find out if we know it
-    private val internalChainRidToChainIidCache = HashMap<BlockchainRid, Long>()  // TODO: Olle: don't know how this works with forking
+    // All chains we've seen are in here, we want to move back and forth IID <-> RID
+    private val internalChainSet = mutableSetOf<Long>()
 
     // This is only relevant for managed mode
-    private var chainsInitiated = false // false = we never added the initial set of chains
-
-    // This is only relevant for managed mode
-    private val listenerChainToConnCheckerMap = HashMap<BlockchainRid, ConnectionChecker>() // All listener chains we have and their corresponding [ConnectionChecker]
+    private val listenerChainToConnCheckerMap = HashMap<Long, ConnectionChecker>() // All listener chains we have and their corresponding [ConnectionChecker]
 
     /**
      * Useful in test
@@ -59,105 +58,70 @@ class IcmfPipeConnectionSync(
         simpleConfReader = scf
     }
 
-    private lateinit var icmfReceiver: IcmfReceiver
-    private lateinit var icmfDispatcher: IcmfDispatcher
-
-    fun setReceiver(r: IcmfReceiver) {
-        icmfReceiver = r
-    }
-    fun setDispatcher(d: IcmfDispatcher) {
-        icmfDispatcher = d
-    }
-
     /**
      * @return true if we have read the config for this chain already
      */
     @Synchronized
-    fun seenThisChainBefore(chainIid: Long) = chainToManualListenerConfMap.containsKey(chainIid)
-
-    /**
-     * @return true if we have the initial set of chains set.
-     */
-    @Synchronized
-    fun areChainsSet(): Boolean = chainsInitiated
+    fun seenThisChainBefore(chainIid: Long) = internalChainSet.contains(chainIid)
 
     /**
      * Use this method to check if the chain is a listener (or to determine what order it should be started in)
      *
-     * @param bcRid is the chain we need the connection checker from
+     * @param bcIid is the chain we need the connection checker from
      * @return a [ConnectionChecker] if this is a listener chain, or null if the chain isn't a listener
      */
     @Synchronized
-    fun getListenerConnChecker(chainInfo: BlockchainRelatedInfo): ConnectionChecker? {
-        if (!internalChainRidToChainIidCache.containsKey(chainInfo.blockchainRid)) {
-            if (logger.isDebugEnabled) {
-                logger.debug("isListener() - The chain $chainInfo has never been seen. Checking if it's a listener")
-            }
-
-            val isListener: Boolean = false
-            if (isListener) {
-                logger.warn("isListener() - Potentially dangerous to start a listener late in the game, we might have missed messages")
-            }
-        }
-
-        return listenerChainToConnCheckerMap[chainInfo.blockchainRid]
+    fun getListenerConnChecker(bcIid: Long): ConnectionChecker? {
+        return listenerChainToConnCheckerMap[bcIid]
     }
 
     /**
-     * Figures out what listener chains this source should connect to.
-     * Manual override will trumph any setting on the listener side.
+     * @return a list of potential source chains, which means everything.
+     */
+    @Synchronized
+    fun getSourceChainsFromListener(listenerChainIid: Long): List<Long> {
+        val retList = mutableListOf<Long>()
+
+        if (!seenThisChainBefore(listenerChainIid)) {
+            if(logger.isDebugEnabled) {
+                logger.debug("First time ICMF seen chain id: $listenerChainIid, let's add it to the cache.")
+            }
+            internalChainSet.add(listenerChainIid)
+        }
+
+        // Loop all started chains use them (weed out already connected chains later)
+        for (tmpIid: Long in internalChainSet) {
+            if (listenerChainIid != tmpIid) { // No need to add itself
+                retList.add(tmpIid)
+            }
+        }
+
+        return retList
+    }
+
+    /**
+     * Figures out what listener chains this source could (perhaps) connect to.
      *
-     * @param sourceChainInfo is the chain we want to find listener chains for.
+     * @param sourceChainInfo is the chain we want to find listener chains for. It doesn't HAVE to be a source chain,
+     *                        but we don't know what it is at this point, so we assume source.
      * @return a map of potential listener chains and their corresponding [ConnectionChecker]s.
      */
     @Synchronized
-    fun getListeningChainsForSource(sourceChainInfo: BlockchainRelatedInfo): Map<BlockchainRid, ConnectionChecker> {
+    fun getListeningChainsFromSource(sourceChainIid: Long): Map<Long, ConnectionChecker> {
 
-        if (sourceChainInfo.chainId == null) {
-            ProgrammerMistake("We must know chainIid for the source chain at this point")
+        return if (listenerChainToConnCheckerMap.containsKey(sourceChainIid)) {
+            // It's a listener chain
+            // A listener chain might still want to listen to other listener chains, but not to itself
+            listenerChainToConnCheckerMap.filter { (key, value) ->
+                key != sourceChainIid  // Remove itself from list
+            }.toMap() // Return an immutable version
         } else {
-            // Best place to update internal chainIid cache
-            internalChainRidToChainIidCache[sourceChainInfo.blockchainRid] = sourceChainInfo.chainId!!
+            // This being never seen isn't an error really, it just means this chain didn't exist during node startup
+            logger.warn("We didn't notice chain $sourceChainIid during startup. Was it added later?")
+
+            listenerChainToConnCheckerMap.toMap() // Return an immutable version
         }
 
-        val manualConf: List<BlockchainRid>? = this.chainToManualListenerConfMap[sourceChainInfo.chainId]
-        if (manualConf != null && manualConf.isNotEmpty()) {
-            //1. We have a manual conf, use it and ignore everything else
-            val retMap = HashMap<BlockchainRid, ConnectionChecker>()
-            for (bcRid in manualConf) {
-                // Setting manual setting to "high" (= 10) means other listeners with "high" level will ignore it.
-                retMap[bcRid] = LevelConnectionChecker(bcRid, LevelConnectionChecker.HIGH_LEVEL)
-            }
-            return retMap
-        } else {
-            //2. No manual conf, do we have chains?
-            if (this.areChainsSet()) {
-                //2.a: we should know about a bunch of chains by now
-                if (listenerChainToConnCheckerMap.containsKey(sourceChainInfo.blockchainRid)) {
-                    // It's a listener chain
-                    // A listener chain might still want to listen to other listener chains, but not to itself
-                    return listenerChainToConnCheckerMap.filter { (key, value) ->
-                        sourceChainInfo.blockchainRid != key  // Remove itself from list
-                    }.toMap() // Return an immutable version
-                } else {
-                    // This being never seen isn't an error really, it just means this chain didn't exist during node startup
-                    logger.warn("We didn't notice chain ${sourceChainInfo.chainId} during startup. Was it added later?")
-                }
-
-                return listenerChainToConnCheckerMap.toMap() // Return an immutable version
-            } else {
-                //2.b: we don't have any configuration at all to go on, this is rare in prod, since we usually have the anchor chain
-                return mapOf()
-            }
-        }
-    }
-
-    /**
-     * @return a [BlockchainRelatedInfo] object with as much info as we currently have, possibly without chainIid
-     */
-    fun getBlockchainInfo(listenerChainRid: BlockchainRid): BlockchainRelatedInfo {
-        val chainIid = internalChainRidToChainIidCache[listenerChainRid] // If this is manual conf we might not have the chainIid
-        return BlockchainRelatedInfo(listenerChainRid, null, chainIid)
     }
 
     /**
@@ -165,10 +129,8 @@ class IcmfPipeConnectionSync(
      */
     @Synchronized
     fun addChains(allNew: Set<BlockchainRelatedInfo>)  {
-        val knownChainIids = chainToManualListenerConfMap.keys
-        val newChains = allNew.filter { it.chainId !in knownChainIids }
-        newChains.forEach { addSingleChain(it) }
-        chainsInitiated = true
+        val newChains = allNew.filter { it.chainId !in internalChainSet }
+        newChains.forEach { addChain(it) }
     }
 
     /**
@@ -180,48 +142,23 @@ class IcmfPipeConnectionSync(
      *
      * @param chainInfo is the chain we should add (to the list of started chains).
      */
-    private fun addSingleChain(chainInfo: BlockchainRelatedInfo) {
+    @Synchronized
+    fun addChain(chainInfo: BlockchainRelatedInfo) {
         val chainIid = chainInfo.chainId!! // This must exist
-        this.internalChainRidToChainIidCache[chainInfo.blockchainRid] = chainIid // Update cache immediately
 
-        if (chainToManualListenerConfMap.containsKey(chainIid)) {
+        if (internalChainSet.contains(chainIid)) {
             throw ProgrammerMistake("Don't add a chain if we've seen it already, chainId: $chainIid")
         }
 
-        val icmfBcRids: List<BlockchainRid> =
-            simpleConfReader.getBcRidArray(chainIid, BaseBlockchainConfigurationData.KEY_ICMF_SOURCE)
-        chainToManualListenerConfMap[chainIid] = icmfBcRids // This list will be empty unless we have a manual override
-
-        val icmfListener: String? = simpleConfReader.getSetting(chainIid, BaseBlockchainConfigurationData.KEY_ICMF_LISTENER)
-
-        interpretIcmfListenerConfig(chainInfo, icmfListener)
-    }
-
-    /**
-     * Updates the internal cache/map if this is a listener chains with correct configuration.
-     *
-     * Currently we can only handle the "number" strategy for "icmflistener" setting but:
-     * FUTURE WORK: Olle: The plan is to try to instantiate the given class and use it as a [ConnectionChecker]
-     *
-     * @param chainInfo is the identifiers of chain we are about to add
-     * @param icmfListenerConf is the target setting from the chain's config file.
-     */
-    private fun interpretIcmfListenerConfig(chainInfo: BlockchainRelatedInfo, icmfListenerConf: String?) {
+        // Get the listener ICMF setting (which won't exist for sources/normal chains)
+        val icmfListenerConf: String? = simpleConfReader.getSetting(chainIid, BaseBlockchainConfigurationData.KEY_ICMF_LISTENER)
         if (icmfListenerConf != null) {
-            // This is a listener chain, let's add it to the listener list
-            if (listenerChainToConnCheckerMap.containsKey(chainInfo.blockchainRid)) {
+            // A listener chain must be added it to the listener list
+            if (listenerChainToConnCheckerMap.containsKey(chainInfo.chainId!!)) {
                 throw ProgrammerMistake("We shouldn't reset an existing listener chain id: ${chainInfo.chainId} , RID: $chainInfo.")
             } else {
-                val listeningLevel: Int? = icmfListenerConf!!.toIntOrNull()
-                if (listeningLevel != null) {
-                    // Simple case, we use the level given
-                    listenerChainToConnCheckerMap[chainInfo.blockchainRid] = LevelConnectionChecker(chainInfo.blockchainRid, listeningLevel!!)
-                } else {
-                    // FUTURE WORK: Olle: Implement
-                    //val customConnectionChecker = xxx as ConnectionChecker
-                    //internalListenerChains[chainIid] = customConnectionChecker
-                    throw UserMistake("At this point we cannot handle custom listener chain connection checkers, icmflistener must be set to \"number\" but was \"$icmfListenerConf\".")
-                }
+                val connChecker = ConnectionCheckerFactory.build(chainInfo.chainId!!, icmfListenerConf!!)
+                listenerChainToConnCheckerMap[chainInfo.chainId!!] = connChecker
             }
         }
     }

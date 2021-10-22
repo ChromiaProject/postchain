@@ -262,10 +262,6 @@ open class ManagedBlockchainProcessManager(
             val toLaunch = toLaunchInfos.map { it.chainId!! }.toTypedArray()
             logChains(toLaunch, launched, reloadChain0)
 
-            // For managed mode we do the final initiation step of ICMF here.
-            // This is the first time we can be sure all the BCs have a ChainIid
-            initAllChainsForIcmf(toLaunchInfos.toSet())
-
             // Launching blockchain 0
             if (reloadChain0) {
                 ssaInfo("Reloading of blockchain 0 is required, launching it", 0L)
@@ -380,7 +376,7 @@ open class ManagedBlockchainProcessManager(
 
             // Add the chains to the level sorter
             allChainsWithIid.forEach {
-                val conn = icmfController.getListenerConnChecker(it)
+                val conn = icmfController.getListenerConnChecker(it.chainId!!)
                 if (conn == null) {
                     levelSorter.add(LevelConnectionChecker.NOT_LISTENER, it) // This is not a listener chain
                 }  else {

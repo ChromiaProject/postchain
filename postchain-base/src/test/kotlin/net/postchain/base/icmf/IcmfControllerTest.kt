@@ -76,11 +76,11 @@ class IcmfControllerTest : EasyMockSupport() {
         // Test 1.a
         // ---------
         // If we ask the Receiver for the listener's pipes we only get one pipe
-        val pipesForChain2 = controller.icmfReceiver.getAllPipesForListenerChain(bcRid2)
+        val pipesForChain2 = controller.icmfReceiver.getAllPipesForListenerChain(2L)
         assertEquals(1, pipesForChain2.size)
         val pipeR = pipesForChain2[0]
         assertEquals(1, pipeR.sourceChainIid)
-        assertEquals(bcRid2, pipeR.listenerChainInfo.blockchainRid)
+        assertEquals(2L, pipeR.listenerChainIid)
 
         // ---------
         // Test 1.b
@@ -101,11 +101,11 @@ class IcmfControllerTest : EasyMockSupport() {
         // ---------
         // Test 2.a
         // ---------
-        val pipesForChain2New = controller.icmfReceiver.getAllPipesForListenerChain(bcRid2)
+        val pipesForChain2New = controller.icmfReceiver.getAllPipesForListenerChain(2L)
         assertEquals(1, pipesForChain2New.size)
         val pipeRNew = pipesForChain2New[0]
         assertEquals(1, pipeRNew.sourceChainIid)
-        assertEquals(2, pipeRNew.listenerChainInfo.chainId) // At this point the Receiver will know chain2's internal ID.
+        assertEquals(2, pipeRNew.listenerChainIid) // At this point the Receiver will know chain2's internal ID.
     }
 
     /**
@@ -155,9 +155,6 @@ class IcmfControllerTest : EasyMockSupport() {
             chain2,
             chain3
         )
-        val allChains = initialListenerChains.toMutableSet()
-        // Using the SimpleConfReader, these will all look like listener chains
-        controller.setAllChains(allChains) // We have to start with the chains we got from Chain 0 (i.e. chain 1-3)
 
         // ---------
         // Test 1.
@@ -177,11 +174,11 @@ class IcmfControllerTest : EasyMockSupport() {
         // Test 1.a Receiver
         // ---------
         // If we ask the Receiver for the listener's pipes we only get one pipe
-        val pipesForChain1 = controller.icmfReceiver.getAllPipesForListenerChain(chain1.blockchainRid)
+        val pipesForChain1 = controller.icmfReceiver.getAllPipesForListenerChain(chain1.chainId!!)
         assertEquals(1, pipesForChain1.size)
         val pipeR = pipesForChain1[0]
         assertEquals(4, pipeR.sourceChainIid)
-        assertEquals(1, pipeR.listenerChainInfo.chainId)
+        assertEquals(1, pipeR.listenerChainIid)
 
         // ---------
         // Test 1.b Dispatcher
@@ -228,7 +225,7 @@ class IcmfControllerTest : EasyMockSupport() {
         // Test 4.a Receiver
         // ---------
         // If we ask the Receiver for the listener's pipes we only get one pipe
-        val pipesForChain1_new = controller.icmfReceiver.getAllPipesForListenerChain(chain1.blockchainRid)
+        val pipesForChain1_new = controller.icmfReceiver.getAllPipesForListenerChain(chain1.chainId!!)
         assertEquals(3, pipesForChain1_new.size)
         assertTrue(hasPipeId( "4-1",  pipesForChain1_new))
         assertTrue(hasPipeId( "5-1",  pipesForChain1_new)) // means we'll get data from chain 5, which is itself a listener

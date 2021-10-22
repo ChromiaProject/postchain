@@ -35,21 +35,13 @@ interface IcmfFetcher {
  */
 class IcmfPipe(
     val sourceChainIid: Long, // Where packages coming from
-    val listenerChainInfo: BlockchainRelatedInfo,  // Where packages are going, we might only have the BcRID in the beginning
+    val listenerChainIid: Long,  // Where packages are going
     private val fetcher: IcmfFetcher // Using this to get more data into the pipe
 ) {
-    val pipeId = "$sourceChainIid-${listenerToString()}" // This id will probably be unique in the system, for debugging
+    val pipeId = "$sourceChainIid-$listenerChainIid" // This id will probably be unique in the system, for debugging
     var likelyCaughtUp = false
 
     val pendingPackets = mutableMapOf<Long, IcmfPackage>()
-
-    fun listenerToString(): String {
-        return if (listenerChainInfo.chainId != null) {
-            "${listenerChainInfo.chainId}"
-        } else {
-            "${listenerChainInfo.blockchainRid.toShortHex()}"
-        }
-    }
 
     @Synchronized
     fun push(newPkg: IcmfPackage) {

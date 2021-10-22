@@ -19,7 +19,7 @@ class IcmfPipeConnectionSyncTest {
         )
         connSync.addChains(chains) // Using the SimpleConfReader, these will all look like listener chains
         val chain4 = BlockchainRelatedInfo(BlockchainRid.buildRepeat(4), null, 4L)
-        val map = connSync.getListeningChainsForSource(chain4)
+        val map = connSync.getListeningChainsFromSource(chain4.chainId!!)
 
         assertEquals(3, map.size)
     }

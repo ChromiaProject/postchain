@@ -1,7 +1,8 @@
 package net.postchain.base.icmf
 
-import net.postchain.core.BlockchainProcess
+import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.core.BlockchainRid
+import net.postchain.core.ProgrammerMistake
 
 /**
  * The a simple ICMF pipe connection strategy, just listen to all chains with lower level.
@@ -14,7 +15,7 @@ import net.postchain.core.BlockchainRid
  *        you need.
  */
 class LevelConnectionChecker(
-    val myBcRid: BlockchainRid,
+    val myBcIid: Long, // The chain ID that this config belongs to
     val myListeningLevel: Int // We listen to all chains with a lower level (chains are started reversed level order)
     ) : ConnectionChecker {
 
@@ -26,31 +27,52 @@ class LevelConnectionChecker(
     }
 
     /**
-     * @param listeningChainRid is the potential listener chain of the connection
-     * @param bcProcess represents the potential source process
+     * For [LevelConnectionChecker] we don't need the listeningChain, we have it from the constructor
+     *
+     * @param sourceIid represents the potential source process
+     * @param listeningIid is the potential listener chain of the connection (not really used).
      * @param controller is the [IcmfController] (could be needed for something)
      * @return true if the source chain has no level or a lower level than this listener has
      */
-    override fun shouldConnect(listeningChainRid: BlockchainRid, bcProcess: BlockchainProcess, controller: IcmfController): Boolean {
-        val conf = bcProcess.getEngine().getConfiguration()
-        val sourceChainIid: Long = conf.chainID
+    override fun shouldConnect(sourceIid: Long, listeningIid: Long, controller: IcmfController): Boolean {
 
         // Verify we don't have errors
-        if (myBcRid != listeningChainRid) {
-            controller.logger.warn("shouldConnect() -- listening chain id: ${listeningChainRid.toShortHex()} used on a ConnectionChecker for another listener: ${myBcRid.toShortHex()}. Why?")
+        if (myBcIid != listeningIid) { // Must be used from the listener's perspective (b/c that's where the config was found)
+            ProgrammerMistake("shouldConnect() -- Don't use ConnectionChecker of chain id: $myBcIid to check: $sourceIid -> $listeningIid.")
         }
-        if (controller.icmfReceiver.isSourceAndTargetConnected(sourceChainIid, listeningChainRid)) {
-            controller.logger.warn("shouldConnect() -- source chain id: $sourceChainIid and listening chain id: ${listeningChainRid.toShortHex()} already connected")
+        if (controller.icmfReceiver.isSourceAndTargetConnected(sourceIid, listeningIid)) {
+            controller.logger.warn("shouldConnect() -- source chain id: $sourceIid and listening chain id: $listeningIid already connected")
             return false
         }
 
-        // Compare levels
-        val listenerSetting = conf.icmfListener
-        val sourceLevel: Int = if (listenerSetting != null) {
-            listenerSetting.toIntOrNull()?: MID_LEVEL // A listener, but we don't know the level
-        } else {
-            NOT_LISTENER // If this setting is null this is a source chain
+        // We have the listeners level already, so only have to get the source's to compare
+        return myListeningLevel > getSourceLevel(sourceIid, controller)
+    }
+
+    /**
+     * @param otherSourceConnChecker is a conn checker for another (potential) source chain
+     * @return true if we want to use the other chain as a source chain (only based on the given conn checker)
+     */
+    override fun shouldConnect(otherSourceConnChecker: ConnectionChecker): Boolean {
+        val otherLevel = getLevel(otherSourceConnChecker)
+        return myListeningLevel > otherLevel
+    }
+
+    private fun getSourceLevel(sourceIid: Long, controller: IcmfController): Int {
+        // Use controller to find the level of the (potential) source
+        val sourceListenerConnChecker = controller.getListenerConnChecker(sourceIid)
+        return getLevel(sourceListenerConnChecker)
+    }
+
+    private fun getLevel(otherSourceConnChecker: ConnectionChecker?): Int {
+        return if (otherSourceConnChecker == null) {
+            NOT_LISTENER
+        }  else {
+            // The given chain is a potential listener
+            when (otherSourceConnChecker) {
+                is LevelConnectionChecker -> otherSourceConnChecker.myListeningLevel // Get the real level
+                else -> MID_LEVEL // We don't know take middle
+            }
         }
-        return myListeningLevel > sourceLevel
     }
 }
