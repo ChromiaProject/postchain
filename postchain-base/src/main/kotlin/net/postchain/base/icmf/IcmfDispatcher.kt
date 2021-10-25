@@ -15,8 +15,6 @@ import net.postchain.gtv.GtvFactory
 /**
  * Responsible for sending message(s) when a block was built to the relevant pipes
  * Messages are received by [IcmfReceiver].
- *
- * TODO: Olle: We don't want to lose messages when the node goes down, so upon startup it must be clear what messages have been pushed to a pipe but never been consumed.
  */
 class IcmfDispatcher {
 
@@ -26,6 +24,14 @@ class IcmfDispatcher {
     // (On the sending side we need to know who a source should send to)
     val icmfsourceToPipesMap = HashMap<Long, ArrayList<IcmfPipe>>()
     val icmfsourceToHeightMap = HashMap<Long, Long>() // Keeps track of the last seen height (mostly to check for errors)
+
+
+    /**
+     * Throw away all pipes immediately (don't try to empty them first)
+     */
+    fun chainShuttingDown(chainIid: Long) {
+        icmfsourceToPipesMap.remove(chainIid)
+    }
 
     /**
      * @param sourceChainIid is the source chain we use for lookup

@@ -14,10 +14,6 @@ import net.postchain.gtv.Gtv
  * Anchor headers from other blockchains on this node, and if everything works out, the
  * block will be built.
  *
- * Note:
- * The reason we put a lot of Anchoring validation here (instead of inside the [AnchorSpecialTxExtension] ) is
- * b/c we have access to [Storage], [EContext] and other things which makes the work more practical.
- *
  * This class implements both the BBB Extension and the [TxEventSink], so that the extension, during initialization,
  * can add itself as an event listener (i.e. [TxEventSink]). After we are added as event listener,
  * we only care about events.

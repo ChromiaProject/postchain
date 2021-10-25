@@ -35,9 +35,13 @@ class AnchorSynchronizationInfrastructureExtension(
                 // Since this configuration has an Anchor extension, let's add the [IcmfReceiver]
                 val icmf = process.getIcmfController()
                 it.useIcmfReceiver(icmf.icmfReceiver)
+
+                // ICMF will need the correct [IcmfFetcher] to work
                 val bbe = engine as BaseBlockchainEngine
                 val storage: Storage = bbe.storage
-                icmf.setFetcherForListenerChain(cfg.blockchainRid, AnchorIcmfFetcher(storage))
+                icmf.setFetcherForListenerChain(cfg.chainID, AnchorIcmfFetcher(storage))
+
+                // We steal the [BlockQueries] from the engine, so that the spec TX extension can call the Anchor Module
                 it.setBlockQueries(engine.getBlockQueries())
             }
         }

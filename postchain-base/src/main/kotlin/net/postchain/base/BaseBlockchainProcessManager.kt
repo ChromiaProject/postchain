@@ -129,8 +129,6 @@ open class BaseBlockchainProcessManager(
                         val process = blockchainInfrastructure.makeBlockchainProcess(processName, engine, icmfController, histConf)
                         blockchainProcesses[chainId] = process
 
-                        maybeInitIcmf() // We only init first time (for managed mode init has been done by now)
-
                         val db = DatabaseAccess.of(eContext)
                         val height = db.getLastBlockHeight(eContext) // FUTURE WORK: Olle: A bit ugly/slow to get this from db here, we should prob pass it as a param from somewhere
 
@@ -161,21 +159,6 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-
-    /**
-     * Init ICMF, or nothing if it has been initiated.
-     */
-    fun maybeInitIcmf() {
-        if (!icmfController.isInitialized()) {
-            val oneConfReader = QuickSimpleConfigReader(
-                storage,
-                blockchainConfigProvider
-            )
-            val connSync = IcmfPipeConnectionSync(oneConfReader)
-            icmfController.initialize(connSync)
-        }
-    }
-
     /**
      * In the future there probably should be some way to transport unique configuration components
      * into the map (initially set in the the configuration file?). Currently it's not needed.
@@ -200,6 +183,9 @@ open class BaseBlockchainProcessManager(
     override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
         synchronized(synchronizer) {
             stopInfoDebug("Stopping of Blockchain", chainId, bTrace)
+
+            // We shut off ICMF before the chain stops (since it can be aborted anytime without lost messages)
+            icmfController.chainStop(chainId)
 
             blockchainProcesses.remove(chainId)?.also {
                 if (restart) {

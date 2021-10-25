@@ -94,9 +94,6 @@ open class ManagedBlockchainProcessManager(
                     ?.setDataSource(dataSource)
                     ?: logger.warn { "Blockchain config is not managed" }
 
-            // This is the best place for ICMF init (for non-managed mode we don't have any similar place right?).
-            maybeInitIcmf()
-
         } catch (e: Exception) {
             // TODO: [POS-90]: Improve error handling here
             logger.error { e.message }

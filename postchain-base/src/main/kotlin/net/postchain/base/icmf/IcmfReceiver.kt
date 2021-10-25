@@ -13,6 +13,12 @@ class IcmfReceiver {
     // (On the receiving end we want to know all pipes a listener should listen to)
     val listenerChainToPipes: MutableMap<Long, MutableList<IcmfPipe>> = HashMap()
 
+    /**
+     * Throw away all pipes immediately (don't try to empty them first)
+     */
+    fun chainShuttingDown(chainIid: Long) {
+        listenerChainToPipes.remove(chainIid)
+    }
 
     /**
      * @return true if given source and target chains are already connected

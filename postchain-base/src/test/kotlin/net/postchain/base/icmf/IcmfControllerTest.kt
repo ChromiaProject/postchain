@@ -17,230 +17,209 @@ import kotlin.test.assertEquals
  */
 class IcmfControllerTest : EasyMockSupport() {
 
-    /**
-     * This is a manual mode scenario test on [IcmfController], testing few things at once.
-     *
-     * Scenario:
-     * We only use one source chain (=1) and one listener chain (=2).
-     * 1. Chain 1 starts first, calls "maybeConnect()", get one pipe
-     *   1.x,a,b: make sure things get updated
-     * 2. Chain 2 starts later, calls "maybeConnect()", get no pipes
-     *   2.a: make sure things get updated
-     */
-    @Test
-    fun manualConfigTest() {
-        // Setup PipeConnSync
-        val bcRid2 = BlockchainRid.buildRepeat(2)
-        val chain1ConfMock = SimpleConfReaderMock(
-                null,
-                listOf(bcRid2) // Idea is that chain1 will have chain2 as a listener
-        )
-        val chain2ConfMock = SimpleConfReaderMock(
-            null   // Chain2 doesn't have any configuration
-        )
-        val connSync = IcmfPipeConnectionSync(chain1ConfMock) // Using the mock for chain1 initially
-
-        // Setup Controller
-        val controller = IcmfController()
-        controller.initialize(connSync)
-
-        val dummyHeight = 17L
-
-        // Hate EasyMock and prefer to do my own dummy classes, but here I had to
-        val mockProcessChain1: BlockchainProcess = mockBlockchainProcess(1L)
-        val mockProcessChain2: BlockchainProcess = mockBlockchainProcess(2L)
-        replayAll()
-
-        // ---------
-        // Test 1.
-        // ---------
-        // Call "maybeConnect()" to see if we get the correct pipes created
-        val chain1NewPipes = controller.maybeConnect(mockProcessChain1, dummyHeight)
-
-        assertEquals(1, chain1NewPipes.size)
-        assertTrue(
-            hasPipeId(
-                "1-02:02", // ICMF doesn't know the chainIid, so we'll use the BcRID for the name
-                chain1NewPipes
-            )
-        )
-
-        // ---------
-        // Test 1.x
-        // ---------
-        // If we try to connect same process (=chain) again, nothing happens (only get a bunch o warnings)
-        val noPipes = controller.maybeConnect(mockProcessChain1, dummyHeight)
-        assertEquals(0, noPipes.size)
-
-        // ---------
-        // Test 1.a
-        // ---------
-        // If we ask the Receiver for the listener's pipes we only get one pipe
-        val pipesForChain2 = controller.icmfReceiver.getAllPipesForListenerChain(2L)
-        assertEquals(1, pipesForChain2.size)
-        val pipeR = pipesForChain2[0]
-        assertEquals(1, pipeR.sourceChainIid)
-        assertEquals(2L, pipeR.listenerChainIid)
-
-        // ---------
-        // Test 1.b
-        // ---------
-        // If we ask the Dispatcher about the source we should see it too
-        val pipesDispatch = controller.icmfDispatcher.getAllPipesForSourceChain(1)
-        assertEquals(1, pipesDispatch.size)
-        assertTrue(hasPipeId("1-02:02", chain1NewPipes))
-
-        // ---------
-        // Test 2.
-        // ---------
-        // Call "maybeConnect()" for chain 2
-        connSync.setSimpleConfReader(chain2ConfMock) // Now, we're running chain2 so we manually replace the mock for the conf file reader
-        val chain2Pipes = controller.maybeConnect(mockProcessChain2, dummyHeight)
-        assertEquals(0, chain2Pipes.size) // This is just a listener chain, so no new pipes will come out
-
-        // ---------
-        // Test 2.a
-        // ---------
-        val pipesForChain2New = controller.icmfReceiver.getAllPipesForListenerChain(2L)
-        assertEquals(1, pipesForChain2New.size)
-        val pipeRNew = pipesForChain2New[0]
-        assertEquals(1, pipeRNew.sourceChainIid)
-        assertEquals(2, pipeRNew.listenerChainIid) // At this point the Receiver will know chain2's internal ID.
-    }
 
     /**
      * This is a managed mode scenario test on [IcmfController], testing this:
      *
-     * 0. We set up 3 fake listener chains
-     * 1. Call "maybeConnect()" on a new source chain (=4) to see if we get these listeners back for a new (unseen) source chain (=4)
-     *   1.a-b. Make sure the [IcmfDispatcher] and [IcmfReceiver] get's updated
-     * 3. Add another listener "maybeConnect() (=5)"
-     * 4. Call "maybeConnect()" again on a new source (=6) to see what pipes we get
-     *   4.a-b. Make sure the [IcmfDispatcher] and [IcmfReceiver] get's updated
+     * - We set up 3 fake listener chains
+     * - We set up 3 fake source chains
+     * - Start them in random order, and we should get the correct amount of pipes, defined by what chains that are
+     *   running at the moment
      */
     @Test
-    fun managedTest() {
+    fun happyScenarioTest() {
+        // These are listener chains
         val chain1 = BlockchainRelatedInfo(BlockchainRid.buildRepeat(1), null, 1L)
         val chain2 = BlockchainRelatedInfo(BlockchainRid.buildRepeat(2), null, 2L)
         val chain3 = BlockchainRelatedInfo(BlockchainRid.buildRepeat(3), null, 3L)
         val chain4 = BlockchainRelatedInfo(BlockchainRid.buildRepeat(4), null, 4L)
         val chain5 = BlockchainRelatedInfo(BlockchainRid.buildRepeat(5), null, 5L)
+        val chain6 = BlockchainRelatedInfo(BlockchainRid.buildRepeat(6), null, 6L)
 
         val dummyHeight = 17L
 
-        // Conf mocks representing managed mode
-        val sourceConfMock = SimpleConfReaderMock(null) // No conf
-        val listenerConfMock = SimpleConfReaderMock("all") // This conf mock will say that this is a listener for all chains
-
         // Hate EasyMock and prefer to do my own dummy classes, but here I had to
-        val mockProcessChain4: BlockchainProcess = mockBlockchainProcess(4L)
-        val mockProcessChain5: BlockchainProcess = mockBlockchainProcess(5L)
-        val mockProcessChain6: BlockchainProcess = mockBlockchainProcess(6L)
+        val mockProcessChain1: BlockchainProcess = mockBlockchainProcess(chain1.chainId!!, "10") // It's a listener
+        val mockProcessChain2: BlockchainProcess = mockBlockchainProcess(chain2.chainId!!, "10") // It's a listener
+        val mockProcessChain3: BlockchainProcess = mockBlockchainProcess(chain3.chainId!!, "5") // It's a listener of lower rank
+
+        val mockProcessChain4: BlockchainProcess = mockBlockchainProcess(chain4.chainId!!, null) // It's a source, so listenerConfig is "null"
+        val mockProcessChain5: BlockchainProcess = mockBlockchainProcess(chain5.chainId!!, null)
+        val mockProcessChain6: BlockchainProcess = mockBlockchainProcess(chain6.chainId!!, null)
+
+        // EasyMock thing
         replayAll()
 
-        // -------------------
-        // Setup PipeConnSync
-        // -------------------
-        // (Using mock to avoid the DB)
-        val connSync = IcmfPipeConnectionSync(listenerConfMock)
 
         // ---------
         // Setup Controller
         // ---------
         val controller = IcmfController()
-        controller.initialize(connSync)
 
-        val initialListenerChains = setOf(
-            chain1,
-            chain2,
-            chain3
-        )
+        // -------------------
+        // Setup Fetchers (don't care about messages for this test)
+        // -------------------
+        controller.setFetcherForListenerChain(chain1.chainId!!, MockFetcher())
+        controller.setFetcherForListenerChain(chain2.chainId!!, MockFetcher())
+        controller.setFetcherForListenerChain(chain3.chainId!!, MockFetcher())
+        controller.setFetcherForListenerChain(chain4.chainId!!, MockFetcher())
+        controller.setFetcherForListenerChain(chain5.chainId!!, MockFetcher())
+        controller.setFetcherForListenerChain(chain6.chainId!!, MockFetcher())
 
-        // ---------
-        // Test 1.
-        // ---------
-        // Put source config mock
-        connSync.setSimpleConfReader(sourceConfMock)
 
+        // ----------------------------------
+        // Test 1, start a source without any listeners
+        // ----------------------------------
         // Call "maybeConnect()" to see if we get the correct pipes created
         val chain4Pipes = controller.maybeConnect(mockProcessChain4, dummyHeight) // Use the mock for process 4
-        assertEquals(3, chain4Pipes.size, "A new source should get connected to all existing listeners")
-        // What order the pipes are sorted in doesn't matter to us
-        assertTrue(hasPipeId( "4-1",  chain4Pipes))
-        assertTrue(hasPipeId( "4-2",  chain4Pipes))
-        assertTrue(hasPipeId( "4-3",  chain4Pipes))
+        assertEquals(0, chain4Pipes.size, "A new source cannot connect to unstarted listeners")
 
         // ---------
         // Test 1.a Receiver
         // ---------
-        // If we ask the Receiver for the listener's pipes we only get one pipe
-        val pipesForChain1 = controller.icmfReceiver.getAllPipesForListenerChain(chain1.chainId!!)
-        assertEquals(1, pipesForChain1.size)
-        val pipeR = pipesForChain1[0]
-        assertEquals(4, pipeR.sourceChainIid)
-        assertEquals(1, pipeR.listenerChainIid)
+        // If we ask the Receiver for the listener's pipes we get none
+        val pipesForChain1_test1 = controller.icmfReceiver.getAllPipesForListenerChain(chain1.chainId!!)
+        assertEquals(0, pipesForChain1_test1.size)
 
         // ---------
         // Test 1.b Dispatcher
         // ---------
+        val pipesDispatch4_test1 = controller.icmfDispatcher.getAllPipesForSourceChain(4)
+        assertEquals(0, pipesDispatch4_test1.size)
+
+        // ----------------------------------
+        // Test 2, start a listener
+        // ----------------------------------
+        // Call "maybeConnect()" to see if we get the correct pipes created
+        val chain1Pipes = controller.maybeConnect(mockProcessChain1, dummyHeight)
+        assertEquals(1, chain1Pipes.size, "The new listener should find the source")
+        assertTrue(hasPipeId( "4-1",  chain1Pipes))
+
+        // ---------
+        // Test 2.a Receiver
+        // ---------
+        val pipesForChain1_test2 = controller.icmfReceiver.getAllPipesForListenerChain(chain1.chainId!!)
+        assertEquals(1, pipesForChain1_test2.size)
+        val pipeR_test2 = pipesForChain1_test2[0]
+        assertEquals(4, pipeR_test2.sourceChainIid)
+        assertEquals(1, pipeR_test2.listenerChainIid)
+
+        // ---------
+        // Test 2.b Dispatcher
+        // ---------
         // If we ask the Dispatcher about the source we should see it too
-        val pipesDispatch4 = controller.icmfDispatcher.getAllPipesForSourceChain(4)
-        assertEquals(3, pipesDispatch4.size)
-        assertTrue(hasPipeId( "4-1",  pipesDispatch4))
-        assertTrue(hasPipeId( "4-2",  pipesDispatch4))
-        assertTrue(hasPipeId( "4-3",  pipesDispatch4))
+        val pipesDispatch4_test2 = controller.icmfDispatcher.getAllPipesForSourceChain(4)
+        assertEquals(1, pipesDispatch4_test2.size)
+        assertTrue(hasPipeId( "4-1",  pipesDispatch4_test2))
+
+        // ----------------------------------
+        // Test 3, start a listener
+        // ----------------------------------
+        // Call "maybeConnect()" to see if we get the correct pipes created
+        val chain2Pipes = controller.maybeConnect(mockProcessChain2, dummyHeight)
+        assertEquals(1, chain2Pipes.size, "The new listener should find the source, but should NOT " +
+                " connect to the other listener, since they are of same height")
+        assertTrue(hasPipeId( "4-2",  chain2Pipes))
 
         // ---------
-        // Test 2.
+        // Test 3.a Receiver
         // ---------
-        // Put listener config mock
-        connSync.setSimpleConfReader(listenerConfMock)
+        val pipesForChain2_test3 = controller.icmfReceiver.getAllPipesForListenerChain(chain2.chainId!!)
+        assertEquals(1, pipesForChain2_test3.size)
+        val pipeR_test3 = pipesForChain2_test3[0]
+        assertEquals(4, pipeR_test3.sourceChainIid)
+        assertEquals(2, pipeR_test3.listenerChainIid)
 
-        // Call "maybeConnect()" to add an unseen listener to the mix
+        // ---------
+        // Test 3.b Dispatcher
+        // ---------
+        // If we ask the Dispatcher about the source we should see it too
+        val pipesDispatch4_test3 = controller.icmfDispatcher.getAllPipesForSourceChain(4)
+        assertEquals(2, pipesDispatch4_test3.size)
+        assertTrue(hasPipeId( "4-1",  pipesDispatch4_test3))
+        assertTrue(hasPipeId( "4-2",  pipesDispatch4_test3))
+
+        // ----------------------------------
+        // Test 5, start another source
+        // ----------------------------------
         val chain5Pipes = controller.maybeConnect(mockProcessChain5, dummyHeight)
-        assertEquals(3, chain5Pipes.size) // QUESTION: Olle: currently a new listener chain will produce data for other listener chains. This might on might not be correct depending on what we choose.
+        assertEquals(2, chain5Pipes.size, "A new source should get connected to all existing listeners")
+        // What order the pipes are sorted in doesn't matter to us
+        assertTrue(hasPipeId( "5-1",  chain5Pipes))
+        assertTrue(hasPipeId( "5-2",  chain5Pipes))
 
         // ---------
-        // Test 3.
+        // Test 5.a Receiver
         // ---------
-        // Put source config mock
-        connSync.setSimpleConfReader(sourceConfMock)
+        val pipesForChain1 = controller.icmfReceiver.getAllPipesForListenerChain(chain1.chainId!!)
+        assertEquals(2, pipesForChain1.size)
+        assertTrue(hasPipeId( "4-1",  pipesForChain1))
+        assertTrue(hasPipeId( "5-1",  pipesForChain1))
 
-        // Call "maybeConnect()" again to see if new chain (5) will get picked up
+        // ---------
+        // Test 5.b Dispatcher
+        // ---------
+        val pipesDispatch5 = controller.icmfDispatcher.getAllPipesForSourceChain(5)
+        assertEquals(2, pipesDispatch5.size)
+        assertTrue(hasPipeId( "5-1",  pipesDispatch5))
+        assertTrue(hasPipeId( "5-2",  pipesDispatch5))
+
+        // ---------
+        // Test 6
+        // ---------
+        // What makes chain 3 interesting is its listener level, make it available to other listeners
+        val chain3Pipes = controller.maybeConnect(mockProcessChain3, dummyHeight)
+        assertEquals(4, chain3Pipes.size)
+        assertTrue(hasPipeId( "4-3",  chain3Pipes))
+        assertTrue(hasPipeId( "5-3",  chain3Pipes))
+        assertTrue(hasPipeId( "3-1",  chain3Pipes)) // This is key, listener 3 -> listener 1
+        assertTrue(hasPipeId( "3-2",  chain3Pipes)) // This is key, listener 3 -> listener 2
+
+        // ---------
+        // Test 6.a Receiver
+        // ---------
+        val pipesForChain1_test6 = controller.icmfReceiver.getAllPipesForListenerChain(chain1.chainId!!)
+        assertEquals(3, pipesForChain1_test6.size)
+        assertTrue(hasPipeId( "4-1",  pipesForChain1_test6))
+        assertTrue(hasPipeId( "5-1",  pipesForChain1_test6))
+        assertTrue(hasPipeId( "3-1",  pipesForChain1_test6)) // This is key, listener 3 -> listener 1
+
+        // ---------
+        // Test 7
+        // ---------
         val chain6Pipes = controller.maybeConnect(mockProcessChain6, dummyHeight)
-        assertEquals(4, chain6Pipes.size)
+        assertEquals(3, chain6Pipes.size)
         assertTrue(hasPipeId( "6-1",  chain6Pipes))
         assertTrue(hasPipeId( "6-2",  chain6Pipes))
         assertTrue(hasPipeId( "6-3",  chain6Pipes))
-        assertTrue(hasPipeId( "6-5",  chain6Pipes))
 
         // ---------
-        // Test 4.
+        // Test 8.
         // ---------
         // If we try to connect same process (=chain) again, nothing happens (only get a bunch o warnings)
         val noPipes = controller.maybeConnect(mockProcessChain6, dummyHeight)
         assertEquals(0, noPipes.size)
 
         // ---------
-        // Test 4.a Receiver
+        // Test 8.a Receiver
         // ---------
         // If we ask the Receiver for the listener's pipes we only get one pipe
         val pipesForChain1_new = controller.icmfReceiver.getAllPipesForListenerChain(chain1.chainId!!)
-        assertEquals(3, pipesForChain1_new.size)
+        assertEquals(4, pipesForChain1_new.size)
+        assertTrue(hasPipeId( "3-1",  pipesForChain1_new))
         assertTrue(hasPipeId( "4-1",  pipesForChain1_new))
-        assertTrue(hasPipeId( "5-1",  pipesForChain1_new)) // means we'll get data from chain 5, which is itself a listener
+        assertTrue(hasPipeId( "5-1",  pipesForChain1_new))
         assertTrue(hasPipeId( "6-1",  pipesForChain1_new))
 
         // ---------
-        // Test 4.b Dispatcher
+        // Test 8.b Dispatcher
         // ---------
         // If we ask the Dispatcher about the source we should see it too
         val pipesDispatch = controller.icmfDispatcher.getAllPipesForSourceChain(6)
-        assertEquals(4, pipesDispatch.size)
+        assertEquals(3, pipesDispatch.size)
         assertTrue(hasPipeId( "6-1",  pipesDispatch))
         assertTrue(hasPipeId( "6-2",  pipesDispatch))
         assertTrue(hasPipeId( "6-3",  pipesDispatch))
-        assertTrue(hasPipeId( "6-5",  pipesDispatch))
     }
 
 
@@ -250,7 +229,7 @@ class IcmfControllerTest : EasyMockSupport() {
      *
      * @param chainIid is the chain we pretend this process is for.
      */
-    private fun mockBlockchainProcess(chainIid: Long): BlockchainProcess {
+    private fun mockBlockchainProcess(chainIid: Long, listenerConfig: String?): BlockchainProcess {
         val bcRid = BlockchainRid.buildRepeat(chainIid.toByte())
 
         val mockProcess: BlockchainProcess = mock(BlockchainProcess::class.java)
@@ -260,6 +239,7 @@ class IcmfControllerTest : EasyMockSupport() {
         EasyMock.expect(mockEngine.getConfiguration()).andReturn(mockConfig).anyTimes()
         EasyMock.expect(mockConfig.chainID).andReturn(chainIid).anyTimes()
         EasyMock.expect(mockConfig.blockchainRid).andReturn(bcRid).anyTimes()
+        EasyMock.expect(mockConfig.icmfListener).andReturn(listenerConfig).anyTimes()
 
         return mockProcess
     }

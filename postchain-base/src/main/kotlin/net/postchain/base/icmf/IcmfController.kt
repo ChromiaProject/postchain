@@ -54,7 +54,7 @@ import net.postchain.core.ProgrammerMistake
  */
 class IcmfController : KLogging(){
 
-    private var pipeConnSync: IcmfPipeConnectionSync? = null
+    private val pipeConnSync = IcmfPipeConnectionSync()
 
     private val listenerChainToFetcherMap = HashMap<Long, IcmfFetcher>() // Must use the correct [IcmfFetcher] for each listener chain.
 
@@ -64,26 +64,22 @@ class IcmfController : KLogging(){
     val icmfDispatcher = IcmfDispatcher() // This is intentionally public, anyone can get it
     val icmfReceiver = IcmfReceiver() // This is intentionally public, anyone can get it
 
-    /**
-     * @return true if we have a [IcmfPipeConnectionSync]
-     */
-    fun isInitialized(): Boolean = this.pipeConnSync != null
-
-    /**
-     * Why don't we set the [IcmfPipeConnectionSync] in the constructor?
-     * A: b/c we usually must wait until we have the DB connection before
-     * the [IcmfPipeConnectionSync] can created.
-     */
-    fun initialize(pipeSync: IcmfPipeConnectionSync) {
-        if (this.pipeConnSync != null) {
-            logger.error("Why are we initializing the IcmfController twice?")
-        }
-        this.pipeConnSync = pipeSync
-        logger.info("ICMF properly initialized.")
-    }
-
     fun getListenerConnChecker(bcIid: Long): ConnectionChecker? {
         return pipeConnSync!!.getListenerConnChecker(bcIid)
+    }
+
+    /**
+     * When this method is called we know the chain is going down and we don't know when it's going up again.
+     * We can afford do be brutal and throw away pipes that are not empty, b/c we won't lose any messages anyway
+     * (Any messages potentially still in a pipe will be transferred when both chains are active next time).
+     *
+     * @param chainIid remove this chain from caches and objects
+     */
+    @Synchronized
+    fun chainStop(chainIid: Long) {
+        this.pipeConnSync.chainShuttingDown(chainIid)
+        this.icmfDispatcher.chainShuttingDown(chainIid)
+        this.icmfReceiver.chainShuttingDown(chainIid)
     }
 
     /**
@@ -117,6 +113,7 @@ class IcmfController : KLogging(){
         if (givenChainListenerConf != null) {
             val connChecker = ConnectionCheckerFactory.build(givenChainIid, givenChainListenerConf)
             val listPipes = getPipesForListenerRole(givenChainIid, height, connChecker)
+            this.pipeConnSync.addListenerChain(givenChainIid, connChecker) // We can do this after the getPipes
             newPipes.addAll(listPipes)
         }
 
