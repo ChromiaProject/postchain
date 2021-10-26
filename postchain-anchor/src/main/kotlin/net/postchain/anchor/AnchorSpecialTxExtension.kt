@@ -2,9 +2,9 @@ package net.postchain.anchor
 import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.data.GenericBlockHeaderValidator
+import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
-import net.postchain.base.icmf.IcmfFetcher
 import net.postchain.base.icmf.IcmfPackage
 import net.postchain.base.icmf.IcmfPipe
 import net.postchain.base.icmf.IcmfReceiver
@@ -87,7 +87,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         val retList = ArrayList<OpData>()
 
         verifySameChainId(bctx, blockchainRID)
-        val pipes = this.icmfReceiver!!.getNonEmptyPipesForListenerChain(bctx.blockIID) // Returns the pipes that has anchor chain as a listener
+        val pipes = this.icmfReceiver!!.getNonEmptyPipesForListenerChain(bctx.chainID) // Returns the pipes that has anchor chain as a listener
 
         // Extract all packages from all pipes
         for (pipe in pipes) {
@@ -142,17 +142,128 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         val headerMsg = BlockHeaderDataFactory.buildFromGtv(gtvHeaderMsg) // Yes, a bit expensive going back and forth between GTV and Domain objects like this
         val witnessBytes: ByteArray = icmfPackage.witness.asByteArray()
 
+        val gtvBlockRid: Gtv = icmfPackage.blockRid
         val gtvHeader: Gtv = headerMsg.toGtv()
         val gtvWitness = GtvByteArray(witnessBytes)
 
-        return OpData(OP_BLOCK_HEADER, arrayOf(gtvHeader, gtvWitness))
+        return OpData(OP_BLOCK_HEADER, arrayOf(gtvBlockRid, gtvHeader, gtvWitness))
     }
 
     /**
-     * We loop all operations (to check if the block headers are ok)
+     * We look at the content of all operations (to check if the block headers are ok and nothing is missing)
      */
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
-        return ops.all { isOpValid(it) }
+        val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
+        val valid = ops.all { isOpValidAndFillTheMinimalHeaderMap(it, chainHeadersMap) }
+        if (!valid) {
+            return false // Usually meaning the actual format of a header is broken
+        }
+
+        // Go through it chain by chain
+        for (bcRid in chainHeadersMap.keys) {
+            // Each chain must be validated by itself b/c we must now look for gaps in the blocks etc
+            // and we pass that task to the [GenericBlockHeaderValidator]
+            val minimalHeaders = chainHeadersMap[bcRid]
+            if (minimalHeaders != null) {
+                val valid = chainValidation(bcRid, minimalHeaders)
+                if (valid.result != ValidationResult.Result.OK) {
+                    logger.error("Failing to anchor a block for blockchain ${bcRid.toHex()}. ${valid.message}")
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    /**
+     * Checks all headers we have for specific chain
+     *
+     * General check:
+     *   Initially we compare the height we see in the header with what we expect from our local table
+     *   However, we might anchor multiple headers from one chain at the same time, so there is some sorting to
+     *   do if we intend to discover gaps.
+     *
+     * Discussion1: crypto system
+     *   In theory we cannot be certain about what [CryptoSystem] is used by the chain, so it should be taken from the
+     *   config too.
+     *
+     * Discussion2: Why no witness check here?
+     *    1. Save time:
+     *      When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
+     *      (But when we are copying finished anchor block from another node we actually should validate,
+     *      but that's not here).
+     *    2. Tech issues:
+     *      The witness check is tricky b/c every chain we will validate must have its own instance of the
+     *      [BlockHeaderValidator], specific for the chain in question (b/c we cannot be certain of what signers
+     *      are relevant for the chain). ALSO!! We cannot just pick the latest configuration to get the signer list,
+     *      but we must take the configuration for the height in question!
+     *
+     * @param bcRid is the chain we intend to validate
+     * @param minimalHeaders is a very small data set for each header (that we use for basic validation)
+     * @return the result of the validation
+     */
+    private fun chainValidation(
+        bcRid: BlockchainRid,
+        minimalHeaders: MutableSet<MinimalBlockHeaderInfo>
+    ): ValidationResult {
+
+        /**
+         * NOTE: We declare this as an inner function to access BC RID.
+         *
+         * @return the block RID at a certain height
+         */
+        fun getBlockRidAtHeight(height: Long): ByteArray? = getAnchoredBlockAtHeight(bcRid, height)?.blockRid?.data
+
+        // Restructure to the format the Validator needs
+        val myMap: MutableMap<Long, MinimalBlockHeaderInfo> = mutableMapOf()
+        for (minimalHeader in minimalHeaders) {
+            myMap[minimalHeader.headerHeight] = minimalHeader
+        }
+
+        // Get the expected data
+        val expected = getExpectedData(bcRid)
+
+        // Run the validator
+        return GenericBlockHeaderValidator.multiValidationAgainstKnownBlocks(
+            bcRid,
+            myMap,
+            expected,
+            ::getBlockRidAtHeight // Using a locally defined function, and a closure here to use the bc RID
+        )
+    }
+
+    /**
+     * @return the data we expect to find, fetched from Anchor module's own tables
+     */
+    private fun getExpectedData(bcRid: BlockchainRid): MinimalBlockHeaderInfo? {
+        val tmpBlockInfo = getLastAnchoredBlock(bcRid)
+        return if (tmpBlockInfo == null) {
+            // We've never anchored any block for this chain before.
+            null
+        } else {
+            // We found something, return it
+            MinimalBlockHeaderInfo(tmpBlockInfo.blockRid, null, tmpBlockInfo.height) // Don't care about the prev block here
+        }
+    }
+
+    /**
+     * Add the height to the map
+     */
+    private fun updateChainHeightMap(
+        bcRid: BlockchainRid,
+        newInfo: MinimalBlockHeaderInfo,
+        chainHeightMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
+    ) {
+        var headers = chainHeightMap[bcRid]
+        if (headers == null) {
+            chainHeightMap[bcRid] = mutableSetOf(newInfo)
+        } else {
+            if (headers.all{ header -> header.headerHeight != newInfo.headerHeight }) { // Rather primitive, but should be enough
+                headers.add(newInfo)
+            } else {
+                ProgrammerMistake("Adding the same header twice, bc RID: ${bcRid.toHex()}, height ${newInfo.headerHeight}. New block: $newInfo")
+            }
+        }
     }
 
     // ------------------------ PUBLIC NON-INHERITED ----------------
@@ -193,114 +304,35 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
     /**
      * Checks a single operation for validity, which means go through the header and verify it.
-     *
-     * General check:
-     *   Initially we compare the height we see in the header with what we expect from our local table
-     *
-     * Discussion1: managed mode only
-     *   Since anchoring is done locally, we will ask chain0 for the configurations. This means this will only work for
-     *   managed mode, and manual mode (which is only used for testing anyways) will simply not verify witness
-     *   signatures (based on discussion with Alex).
-     *
-     * Discussion2: crypto system
-     *   In theory we cannot be certain about what [CryptoSystem] is used by the chain, so it should be taken from the
-     *   config too.
-     *
-     * Discussion3: Why no witness check here?
-     *    1. Save time:
-     *      When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
-     *      (But when we are copying finished anchor block from another node we actually should validate,
-     *      but that's not here).
-     *    2. Tech issues:
-     *      The witness check is tricky b/c every chain we will validate must have its own instance of the
-     *      [BlockHeaderValidator], specific for the chain in question (b/c we cannot be certain of what signers
-     *      are relevant for the chain). ALSO!! We cannot just pick the latest configuration to get the signer list,
-     *      but we must take the configuration for the height in question!
-     *
      */
-    fun isOpValid(op: OpData): Boolean {
+    private fun isOpValidAndFillTheMinimalHeaderMap(
+        op: OpData,
+        chainMinimalHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
+    ): Boolean {
 
         val anchorObj = AnchorOpDataObject.validateAndDecodeOpData(op)?: return false
 
-
         val header: BlockHeaderData = anchorObj.headerData
-        val bcRid = BlockchainRid(header.gtvBlockchainRid.bytearray)
+        val bcRid = BlockchainRid(header.getBlockchainRid())
 
-        /**
-         * NOTE: We declare this as an inner function to access BC RID.
-         *
-         * @return the block RID at a certain height
-         */
-        fun getBlockRidAtHeight(height: Long): ByteArray? = getAnchoredBlockAtHeight(bcRid, height)?.blockRid?.data
-
-        // ------------------
-        // 1. General check:
-        // ------------------
-        val tmpBlockInfo = getLastAnchoredBlock(bcRid)
-        if (tmpBlockInfo == null) {
-            // ------------------
-            // 1.a) We've never anchored any block for this chain before.
-            // ------------------
-            val newHeight = header.getHeight()
-            if (newHeight == 0L) {
-                logger.info("We are anchoring first block for blockchain ${bcRid.toShortHex()} (height = $newHeight).")
-                return true
-            } else if (newHeight > 0L) {
-                // Not sure if we should expect the block height to begin from the beginning (=0)?
-                // But better to allow anchoring to start in the middle this than to stop it I guess?
-                logger.warn("We are anchoring first block for a previously unseen blockchain ${bcRid.toHex()}, " +
-                        "starting at height = $newHeight. ")
-                return true
-            } else {
-                // There's no doubt this is broken.
-                logger.error("Someone is trying to anchor first block for a previously unseen blockchain: " +
-                        "${bcRid.toHex()} at height = $newHeight (which is impossible!). ")
-                return false
-            }
-        } else {
-            // ------------------
-            // 1.b) This is a known chain, let's verify things we know
-            // ------------------
-            val headerBlockRid = BlockRid(header.getMerkleRootHash())
-            val headerPrevBlockRid = BlockRid(header.gtvPreviousBlockRid.bytearray)
-            val expectedPrevBlockRid = tmpBlockInfo.blockRid
-            val oldHeight: Long = tmpBlockInfo.height
-            val expectedHeight =  oldHeight + 1
-            val newBlockHeight = header.getHeight()
-
-            // Use the validator Do the check
-            val result = GenericBlockHeaderValidator.basicValidationAgainstKnownBlocks(
-                headerBlockRid,
-                headerPrevBlockRid,
-                newBlockHeight,
-                expectedPrevBlockRid,
-                expectedHeight,
-                ::getBlockRidAtHeight // Using a locally defined function, and a closure here to use the bc RID
-            )
-
-            if (result.result != ValidationResult.Result.OK) {
-                logger.error("Failing to anchor a block at height: $newBlockHeight " +
-                    "(blockchain ${bcRid.toHex()}, old height $oldHeight). ${result.message}")
-                return false
-            }
-
-            // ------------------
-            // 2. Witness check:
-            // ------------------
-            /*
-            // WE DON'T WANT TO VALIDATE WITNESS ON THE PRIMARY NODE, SINCE ALL THE BLOCKCHAINS ARE LOCAL AND IN THE DB
-            // TODO: Olle: How to do this
-
-            //val witness = BaseBlockWitness.fromBytes(anchorObj.witness)
-            // We must ask chain 0 for the configurations of the blockchain at the height we are at
-
-            if (logger.isDebugEnabled) {
-                logger.debug("Witness check of block not possible for anchoring in manual mode.")
-            }
-             */
-            return true
-
+        val newHeight = header.getHeight()
+        if (newHeight < 0) { // Ok, pretty stupid check, but why not
+            logger.error("Someone is trying to anchor a block for blockchain: " +
+                    "${bcRid.toHex()} at height = $newHeight (which is impossible!). ")
+            return false
         }
+
+        val headerBlockRid = BlockRid(anchorObj.blockRid) // Another way to get BlockRid is to calculate it from the header
+        val headerPrevBlockRid = BlockRid(header.getPreviousBlockRid())
+        val newBlockHeight = header.getHeight()
+
+        updateChainHeightMap(
+            bcRid,
+            MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight),
+            chainMinimalHeadersMap)
+
+        return true
+
     }
 
     /**

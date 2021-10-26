@@ -29,33 +29,4 @@ fun table_anchor_blocks(ctx: EContext): String {
     return db.tableName(ctx, "anchor_blocks")
 }
 
-/**
- * The "real" operation (operation that will be used in production) will be defined in Rell.
- *
- * To make testing easier, we define it here as a Kotlin class.
- */
-class AnchorEventOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
-    override fun isCorrect(): Boolean {
-        if (data.args.size != 2) return false
-        return true
-    }
-
-    /**
-     * When we "apply" the operation, we fire an event using the built in "emitEvent()" method on the [TxEContext] class.
-     * The corresponding action in Rell is:
-     *
-     *   op_context.emit_event("x_event", x_event_data.to_gtv());
-     */
-    override fun apply(ctx: TxEContext): Boolean {
-        ctx.emitEvent(
-            "anchor_event",
-            gtv(
-                GtvInteger(data.args[0].asInteger()),
-                GtvByteArray(data.args[1].asByteArray())
-            )
-        )
-
-        return true
-    }
-}

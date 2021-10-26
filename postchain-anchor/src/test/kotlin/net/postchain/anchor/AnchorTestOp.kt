@@ -3,6 +3,7 @@ package net.postchain.anchor
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.toHex
+import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainRid
 import net.postchain.core.TxEContext
 import net.postchain.gtx.ExtOpData
@@ -24,10 +25,10 @@ class AnchorTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
     override fun isSpecial(): Boolean = true
 
     override fun isCorrect(): Boolean {
-        return if (data.args.size == 2) { // 1. Header, 2. Witness-list
+        return if (data.args.size == 3) { // 1. BlockRid, 2. Header, 3. Witness-list
             true
         } else {
-            logger.debug("Incorrect arguments to operation ${AnchorSpecialTxExtension.OP_BLOCK_HEADER}, expect 2 got ${data.args.size}")
+            logger.debug("Incorrect arguments to operation ${AnchorSpecialTxExtension.OP_BLOCK_HEADER}, expect 3 got ${data.args.size}")
             false
         }
     }
@@ -38,9 +39,9 @@ class AnchorTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
      * Insert these into the table.
      */
     override fun apply(ctx: TxEContext): Boolean {
-        val header = BlockHeaderDataFactory.buildFromGtv(data.args[0])
+        val blockRid = BlockRid(data.args[0].asByteArray())
+        val header = BlockHeaderDataFactory.buildFromGtv(data.args[1])
         val realBcRid = BlockchainRid(header.getBlockchainRid())
-        val blockHash: ByteArray = header.getMerkleRootHash()
         val height = header.gtvHeight.integer
 
         logger.debug("About to anchor block height: $height, bc: ${realBcRid.toShortHex()} to DB.")
@@ -49,7 +50,7 @@ class AnchorTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
                 |VALUES (?, ?, ?, ?)""".trimMargin(),
             realBcRid.toHex(),
             height,
-            blockHash.toHex(),
+            blockRid.toHex(),
             0 // Not sure how to use this yet. Maybe update to 1 after event has been removed?
         )
         return true

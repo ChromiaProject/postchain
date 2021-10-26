@@ -1,10 +1,7 @@
 package net.postchain.base.data
 
 import net.postchain.base.BaseBlockHeader
-import net.postchain.core.BlockHeader
-import net.postchain.core.BlockRid
-import net.postchain.core.InitialBlockData
-import net.postchain.core.ValidationResult
+import net.postchain.core.*
 import java.util.*
 
 /**
@@ -32,18 +29,31 @@ object GenericBlockHeaderValidator {
      */
     fun basicValidationAgainstKnownBlocks(
         headerBlockRid: BlockRid,
-        headerPrevBlockRid: BlockRid,
+        headerPrevBlockRid: BlockRid?, // Might be missing (for first block)
         headerHeight: Long,
-        expectedPrevBlockRid: BlockRid,
+        expectedPrevBlockRid: BlockRid?, // Might be missing (for first block)
         expectedHeight: Long,
         blockRidFromHeight: (height: Long) -> ByteArray? // We will probably need to go to DB to find this, so don't call this in vain
     ): ValidationResult {
 
         return when {
-            headerPrevBlockRid != expectedPrevBlockRid ->
+            headerPrevBlockRid == null && expectedPrevBlockRid != null ->
                 ValidationResult(
-                    ValidationResult.Result.PREV_BLOCK_MISMATCH, "header.prevBlockRID != expected previous BlockRID," +
-                            "( ${headerPrevBlockRid.toHex()} != ${expectedPrevBlockRid.toHex()} ), " +
+                    ValidationResult.Result.PREV_BLOCK_MISMATCH, "header.prevBlockRID doesn't exist, while we " +
+                            "expected previous BlockRID = ${expectedPrevBlockRid.toHex()} , " +
+                            " height: $headerHeight and $expectedHeight "
+                )
+
+            expectedPrevBlockRid == null && headerPrevBlockRid != null  ->
+                ValidationResult(
+                    ValidationResult.Result.PREV_BLOCK_MISMATCH, "We expected null but got header.prevBlockRID " +
+                            "= ${headerPrevBlockRid.toHex()} height: $headerHeight and $expectedHeight "
+                )
+
+            headerPrevBlockRid!! != expectedPrevBlockRid!! ->
+                ValidationResult(
+                    ValidationResult.Result.PREV_BLOCK_MISMATCH, "header.prevBlockRID != expected previous " +
+                            "BlockRID,( ${headerPrevBlockRid.toHex()} != ${expectedPrevBlockRid.toHex()} ), " +
                             " height: $headerHeight and $expectedHeight "
                 )
 
@@ -82,6 +92,39 @@ object GenericBlockHeaderValidator {
     }
 
     /**
+     * Same as above, but we must validate an entire group of headers
+     */
+    fun multiValidationAgainstKnownBlocks(
+        bcRid: BlockchainRid,
+        headerMap: Map<Long, MinimalBlockHeaderInfo>, // headerHeight: Long -> Minimal header
+        prevMinimalHeader: MinimalBlockHeaderInfo?,
+        blockRidFromHeight: (height: Long) -> ByteArray? // We will probably need to go to DB to find this, so don't call this in vain
+    ): ValidationResult {
+
+        // Go through them in order and check for gaps
+        var expHeight: Long = 0
+        var expPrevBlockRid: BlockRid? = BlockRid(bcRid.data) // If we don't have a previous block we'll use the Blockchain RID
+        if (prevMinimalHeader != null) {
+            expHeight = prevMinimalHeader.headerHeight + 1
+            expPrevBlockRid = prevMinimalHeader.headerBlockRid
+        }
+        for (height in headerMap.keys) {
+
+            val minimalHeader = headerMap[height]!!
+            val res = basicValidationAgainstKnownBlocks(minimalHeader.headerBlockRid, minimalHeader.headerPrevBlockRid, height, expPrevBlockRid, expHeight, blockRidFromHeight)
+            if (res.result != ValidationResult.Result.OK) {
+                // Failed so we can abort here
+                return res
+            }
+
+            expHeight++
+            expPrevBlockRid = minimalHeader.headerBlockRid
+        }
+
+        return ValidationResult(ValidationResult.Result.OK)
+    }
+
+    /**
      * Validate block header against block data we possess locally. This is extensive and heavy, including:
      *
      * - The checks is [basicValidationAgainstKnownBlocks], and
@@ -116,7 +159,7 @@ object GenericBlockHeaderValidator {
         val expectedPrevBlockRid = BlockRid(initialBlockData.prevBlockRID)
 
         // Do the basic test first
-        val basicResult = GenericBlockHeaderValidator.basicValidationAgainstKnownBlocks(headerBlockRid, headerPrevBlockRid, headerHeight, expectedPrevBlockRid, expectedHeight, blockRidFromHeight)
+        val basicResult = basicValidationAgainstKnownBlocks(headerBlockRid, headerPrevBlockRid, headerHeight, expectedPrevBlockRid, expectedHeight, blockRidFromHeight)
         if (basicResult.result != ValidationResult.Result.OK) {
             return basicResult
         }

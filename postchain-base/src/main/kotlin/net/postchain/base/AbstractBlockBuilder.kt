@@ -90,6 +90,9 @@ abstract class AbstractBlockBuilder(
         // a meaningful error message to log.
         TimeLog.startSum("AbstractBlockBuilder.appendTransaction().isCorrect")
         if (!tx.isCorrect()) {
+            if (logger.isDebugEnabled) {
+                logger.debug("Failing tx is of type ${tx.javaClass.canonicalName}")
+            }
             throw UserMistake("Transaction ${tx.getRID().toHex()} is not correct")
         }
         TimeLog.end("AbstractBlockBuilder.appendTransaction().isCorrect")

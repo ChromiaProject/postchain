@@ -7,6 +7,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.toHex
 import net.postchain.core.AppContext
 import org.awaitility.Awaitility
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.TimeUnit
 
@@ -20,6 +21,7 @@ class ReplicaSyncTest : AbstractSyncTest() {
 
 
     // Try to synchronize when the replica nodes have been removed from the blockchain_replicas table.
+    @Ignore
     @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
     fun testRemove() {
         Awaitility.await().atMost(7, TimeUnit.SECONDS).until {
@@ -29,6 +31,7 @@ class ReplicaSyncTest : AbstractSyncTest() {
     }
 
     // Check that sync problem is solved if nodes are added to the blockchain replica table again
+    @Ignore
     @Test
     fun testRemoveAndAddAgain() {
         addReplica = true

@@ -10,6 +10,7 @@ import net.postchain.gtx.OpData
  * Can do primitive validation of [OpData] too.
  */
 data class AnchorOpDataObject(
+    val blockRid: ByteArray,
     val headerData: BlockHeaderData,
     val witness: ByteArray
     )  {
@@ -28,19 +29,21 @@ data class AnchorOpDataObject(
                 return null
             }
 
-            if (op.args.size != 2) {
-                logger.info("Invalid spcl operation: Expected 1 arg but got ${op.args.size}.")
+            if (op.args.size != 3) {
+                logger.info("Invalid spcl operation: Expected 3 arg but got ${op.args.size}.")
                 return null
             }
 
             try {
-                val gtvHeader = op.args[0]
-                val gtvWitness = op.args[1]
+                val gtvBlockRid = op.args[0]
+                val gtvHeader = op.args[1]
+                val gtvWitness = op.args[2]
 
+                val blockRid = gtvBlockRid.asByteArray()
                 val header = BlockHeaderDataFactory.buildFromGtv(gtvHeader)
                 val rawWitness = gtvWitness.asByteArray()
 
-                return AnchorOpDataObject(header, rawWitness)
+                return AnchorOpDataObject(blockRid, header, rawWitness)
 
             } catch (e: RuntimeException) {
                 logger.info("Invalid spcl operation: Error: ${e.message}")

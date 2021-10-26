@@ -7,6 +7,7 @@ import net.postchain.base.icmf.IcmfFetcher
 import net.postchain.base.icmf.IcmfPackage
 import net.postchain.base.withReadConnection
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 
@@ -31,6 +32,8 @@ class AnchorIcmfFetcher(
 
             val blockRID = dba.getBlockRID(eContext, height)
             if (blockRID != null) {
+                val gtvBlockRid: Gtv = GtvByteArray(blockRID)
+
                 // Get raw data
                 val rawHeader = dba.getBlockHeader(eContext, blockRID)  // TODO: Olle expensive
                 val rawWitness = dba.getWitnessData(eContext, blockRID)
@@ -39,7 +42,7 @@ class AnchorIcmfFetcher(
                 val gtvHeader: Gtv = GtvDecoder.decodeGtv(rawHeader)
                 val gtvWitness: Gtv = GtvFactory.gtv(rawWitness)  // This is a primitive GTV encoding, but all we have
 
-                pkg = IcmfPackage.build(height, gtvHeader, gtvWitness)
+                pkg = IcmfPackage.build(height, gtvBlockRid, gtvHeader, gtvWitness)
             } else {
                 // Not a problem, this happens when we get up to speed with the underlying chain
                 if (logger.isDebugEnabled) {
