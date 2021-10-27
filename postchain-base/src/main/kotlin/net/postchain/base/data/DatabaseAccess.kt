@@ -113,7 +113,7 @@ interface DatabaseAccess {
 
     // To be able to create tables not automatically created by the system
     // (most mandatory tables are not "creatable")
-    fun createEventLeafTable(ctx: EContext, prefix: String)
+    fun createEventLeafTable(ctx: EContext, prefix: String) // Note: Not used by anchoring
 
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {

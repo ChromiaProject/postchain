@@ -45,13 +45,14 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
     override fun init(
         module: GTXModule,
-        blockchainRID: BlockchainRid
+        blockchainRID: BlockchainRid,
+        cs: CryptoSystem
     ) {
         if (!_relevantOps.contains(OP_BLOCK_HEADER)) {
             _relevantOps.add(OP_BLOCK_HEADER)
         }
 
-        myChainRid = blockchainRID // TODO: Olle: verify this is correct
+        myChainRid = blockchainRID
     }
 
     /**
@@ -118,7 +119,9 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
                 break // Nothing more to find
             }
         }
-        logger.debug("Pulled $debugCounter messages from pipeId: ${pipe.pipeId}")
+        if (logger.isDebugEnabled) {
+            logger.debug("Pulled $debugCounter messages from pipeId: ${pipe.pipeId}")
+        }
     }
 
     private fun getHeightToAnchor(blockchainRID: BlockchainRid): Long {

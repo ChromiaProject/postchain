@@ -81,8 +81,8 @@ data class NodeSetup(
      * Turns this [NodeSetup] to a [PostchainTestNode] and adds and starts all blockchains on it
      */
     fun toTestNodeAndStartAllChains(
-            systemSetup: SystemSetup,
-            preWipeDatabase: Boolean = true
+        systemSetup: SystemSetup,
+        preWipeDatabase: Boolean = true
     ): PostchainTestNode {
 
         require(configurationProvider != null) { "Cannot build a PostchainTestNode without a NodeConfigurationProvider set" }
@@ -94,25 +94,14 @@ data class NodeSetup(
             // TODO: These chains can in turn be depending on each other, so they should be "sorted" first
             chainsToRead.forEach { chainId ->
                 val chainSetup = systemSetup.blockchainMap[chainId]
-                        ?: error("Incorrect SystemSetup")
+                    ?: error("Incorrect SystemSetup")
                 startChain(node, chainSetup, "read only")
             }
         }
 
         logger.debug("Node ${sequenceNumber.nodeNumber}: Start all blockchains we should sign")
-
-        // Add all chains to the level sorter
-        val levelSorter = IcmfListenerLevelSorter(null) // Don't use a chain0
         chainsToSign.forEach { chainId ->
-            val chainSetup: BlockchainSetup = systemSetup.blockchainMap[chainId]
-                    ?: error("Incorrect SystemSetup")
-            levelSorter.add(chainSetup.getListenerLevel(), chainSetup.getChainInfo())
-        }
-
-        // Sort the chains, and start them in order
-        val sortedChainList = levelSorter.getSorted()
-        sortedChainList.forEach { chainInfo ->
-            val chainSetup: BlockchainSetup = systemSetup.blockchainMap[chainInfo.chainId!!.toInt()]
+            val chainSetup = systemSetup.blockchainMap[chainId]
                 ?: error("Incorrect SystemSetup")
             startChain(node, chainSetup, "")
         }

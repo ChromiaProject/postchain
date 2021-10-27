@@ -1,6 +1,5 @@
 package net.postchain.anchor
 
-import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.core.EContext
 import net.postchain.gtx.GTXSpecialTxExtension
@@ -21,19 +20,10 @@ class AnchorGTXModule : SimpleGTXModule<Unit>(
         const val PREFIX: String = "sys.x.anchor" // This name should not clash with the Rell "anchor" module
     }
 
-    /**
-     *
-     */
-    override fun initializeDB(ctx: EContext) {
-        val dba = DatabaseAccess.of(ctx)
-        dba.createEventLeafTable(ctx, PREFIX) // TODO: Olle: don't think we need tis
-    }
+    override fun initializeDB(ctx: EContext) { } // Don't need anything, the "real" anchor module creates tables etc
 
-    /**
-     * We need extensions to make anchoring work, especially we need to listen to ICMF messages.
-     */
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf(AnchorBBBExtension())
+        return listOf() // We don't need any BBB extensions to make anchoring work
     }
 
     /**

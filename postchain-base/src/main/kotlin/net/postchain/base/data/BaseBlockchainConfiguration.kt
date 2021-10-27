@@ -19,11 +19,13 @@ open class BaseBlockchainConfiguration(
     override val effectiveBlockchainRID = configData.getHistoricBRID() ?: configData.context.blockchainRID
     val signers = configData.getSigners()
 
+    // Future work: make validation configurable (i.e. create the validator from config setting),
+    // Currently we can only use "base"
     private val blockHeaderValidator: BlockHeaderValidator = BaseBlockHeaderValidator(
         cryptoSystem,
         configData.blockSigMaker,
         signers.toTypedArray()
-    ) // TODO: Olle: create the validator from config setting (currently always "base")
+    )
 
     val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
 

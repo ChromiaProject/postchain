@@ -16,7 +16,7 @@ import java.util.*
  *
  * Limitation 1:
  * -----------
- * Currently we don't look at the "type" of message, if a chain is a "listener" that's it. // TODO: Olle: this is a simplification of what Alex described, might not be good enough
+ * Currently we don't look at the "type" of message, if a chain is a "listener" that's it. // Future work: use topics
  *
  * Note:
  * ... that the internal collections of this class often survive BC restarts (since [IcmfPipeConnectionSync] survives),

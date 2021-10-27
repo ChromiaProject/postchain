@@ -1,5 +1,6 @@
 package net.postchain.gtx
 
+import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockchainRid
@@ -18,7 +19,8 @@ interface GTXSpecialTxExtension {
      */
     fun init(
         module: GTXModule,
-        blockchainRID: BlockchainRid
+        blockchainRID: BlockchainRid,
+        cs: CryptoSystem
     )
 
     /**
@@ -43,7 +45,7 @@ interface GTXSpecialTxExtension {
     fun createSpecialOperations(
         position: SpecialTransactionPosition,
         bctx: BlockEContext,
-        blockchainRID: BlockchainRid
+        blockchainRID: BlockchainRid // This is not strictly needed, but to get it from DB is slow
     ): List<OpData>
 
     /**

@@ -34,7 +34,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     init {
         val opSet = mutableSetOf<String>()
         for (x in extensions) {
-            x.init(module, blockchainRID)
+            x.init(module, blockchainRID, cs)
             for (op in x.getRelevantOps()) {
                 if (op in opSet) throw ProgrammerMistake("Overlapping op: $op")
                 opSet.add(op)

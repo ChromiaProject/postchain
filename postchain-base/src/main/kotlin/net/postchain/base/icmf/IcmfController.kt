@@ -1,9 +1,7 @@
 package net.postchain.base.icmf
 
 import mu.KLogging
-import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.core.BlockchainProcess
-import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 
 
@@ -15,42 +13,31 @@ import net.postchain.core.ProgrammerMistake
  * ------------------
  * Communication between blockchains via ICMF is more loosely coupled compared with regular blockchain dependencies.
  * Where a "BC dependency" must know what height a block should depend on another block, ICMF just send a message and
- * doesn't care one bit who reads it and when. But with ICMF we must still know what chains can send what messages to
- * what other chains. We use [IcmfPipe] to represent such a connection.
+ * doesn't care one bit who reads it and when (or the receiver fetch the message from the source when it feels like it).
+ * But, with ICMF we must still know what chains can send what messages to what other chains.  We use [IcmfPipe] to
+ * represent such a connection.
  *
  * "Source chain" (SC) = a BC that generates messages
  * "Listener chain" (LC) = a BC that receives messages
  *
  * Currently we use a simple mechanics, where a listener gets all messages from a connected source chain,
- * this is a bit wasteful, since usually a listener is only interested in one message type. // TODO: Olle: ok or fix?
+ * this is a bit wasteful, since usually a listener is only interested in one message type. // Future work: use topics
  *
- * The first use-case for ICMF is anchoring, where messages sent to anchor chains can be processed at any time by the
- * anchor chain, and a loose connection is preferable.
+ * Example: Anchoring
+ * The first use-case for ICMF is anchoring, where headers of new blocks of the "regular chains" can be processed
+ * at any time by the anchor chain.
  *
  * --------
  * The Controller
  * --------
- * The [IcmfController] is the main ICMF class that ties everything together. It ..
- * 1. ... knows if a [BlockchainProcess] needs a [IcmfPipe] or not (via "maybeConnect()")
- * 2. ... adds newly created [IcmfPipe] to the receiver, so that messages added to the pipe will be listened to.
+ * The [IcmfController] is the main ICMF class that ties everything together. It knows if a [BlockchainProcess]
+ * needs a [IcmfPipe] or not (via "maybeConnect()")
  *
  * -------------
  *  Re startup:
  * -------------
- * A "source chain" (SC) must have a [IcmfPipe] to "listener chain" (LC), but the SC might
- * start before the LC has been started, so we have to know all the LC chainIid before SC starts.
- *
- * Manual mode:
- *            Here we must configure the SC to know in advance what LCs they must use.
- *            When the SC is started, we will use this configuration to create correct amount of [IcmfPipe]s.
- *            (In practice nobody want to do this, too much configuration to write by hand, but useful in tests)
- * Managed mode:
- *            For managed mode we only have to put configuration on the LC, and we use [IcmfPipeConnectionSync] to
- *            handle the initialization logic.
- *            Currently, [IcmfPipeConnectionSync] has a complex initiation process (for managed mode):
- *            1. Call "initialize()" when we have access to DB, then
- *            2. Call "setAllChains()" first when we gotten the "ChainIids" from Chain 0.
- *
+ * A "source chain" (SC) and "listener chain" (LC) can start in any order, but only when both chains are started
+ * a pipe will be created so that messages can flow.
  */
 class IcmfController : KLogging(){
 

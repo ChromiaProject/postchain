@@ -35,7 +35,7 @@ class AnchorIcmfFetcher(
                 val gtvBlockRid: Gtv = GtvByteArray(blockRID)
 
                 // Get raw data
-                val rawHeader = dba.getBlockHeader(eContext, blockRID)  // TODO: Olle expensive
+                val rawHeader = dba.getBlockHeader(eContext, blockRID)  // Note: expensive
                 val rawWitness = dba.getWitnessData(eContext, blockRID)
 
                 // Transform raw bytes to GTV

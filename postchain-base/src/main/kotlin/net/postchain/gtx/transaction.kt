@@ -112,7 +112,7 @@ class GTXTransaction (
 
         if (specialOps > 0 && specialOps == totalOps) {
             // The TX contains only special ops
-            return true // Pure special TX, and this should be valid  // TODO: Olle: not sure about this, should talk to Alex
+            return true // Pure special TX, and this should be valid
         }
 
         // "This transaction must have at least one operation (nop and timeb not counted) or be classed as spam."
