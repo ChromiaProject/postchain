@@ -2,10 +2,10 @@
 
 package net.postchain.config.node
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
+import net.postchain.core.BlockchainRid
 import net.postchain.core.Infrastructure
 import net.postchain.network.x.XPeerID
 import org.apache.commons.configuration2.Configuration
@@ -187,4 +187,23 @@ open class NodeConfig(val appConfig: AppConfig) {
             else
                 emptyArray()
         }
+
+    // Tests / Containers and Dapps
+    val dappsContainers: Map<String, String> = initDappsContainers()
+
+    private fun initDappsContainers(): Map<String, String> {
+        val res = mutableMapOf<String, String>()
+
+        val processCont: (String) -> Unit = { cont ->
+            config.getStringArray(cont).forEach { res[it] = cont }
+        }
+
+        processCont("cont0")
+        processCont("cont1")
+        processCont("cont2")
+        processCont("cont3")
+
+        return res
+    }
+
 }

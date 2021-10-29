@@ -220,9 +220,7 @@ open class BaseBlockchainProcessManager(
     protected open fun buildRestartHandler(chainId: Long): RestartHandler {
         return { _: Long, bTrace: BlockTrace? ->
             testDebug("BaseBlockchainProcessManager's (normal) restart of: $chainId", bTrace)
-            val doRestart = withReadConnection(storage, chainId) { eContext ->
-                blockchainConfigProvider.needsConfigurationChange(eContext, chainId)
-            }
+            val doRestart = isConfigurationChanged(chainId)
 
             if (doRestart) {
                 testDebug("BaseBlockchainProcessManager, need restart of: $chainId", bTrace)
@@ -270,6 +268,12 @@ open class BaseBlockchainProcessManager(
 
         logger.trace {
             "[${nodeName()}]: Topology: ${prettyTopology.values}"
+        }
+    }
+
+    protected fun isConfigurationChanged(chainId: Long): Boolean {
+        return withReadConnection(storage, chainId) { eContext ->
+            blockchainConfigProvider.needsConfigurationChange(eContext, chainId)
         }
     }
 

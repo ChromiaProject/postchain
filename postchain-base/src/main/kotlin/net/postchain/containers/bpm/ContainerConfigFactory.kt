@@ -10,12 +10,12 @@ import net.postchain.containers.infra.ContainerResourceType
 
 object ContainerConfigFactory {
 
-    fun createConfig(nodeConfig: NodeConfig, container: PostchainContainer, containerChainDir: ContainerChainDir): ContainerConfig {
+    fun createConfig(nodeConfig: NodeConfig, container: PostchainContainer, containerDir: String): ContainerConfig {
         // -v $containerCwd:/opt/chromaway/postchain/target \
         val volume = HostConfig.Bind
-                .from(containerChainDir.containerDir.toString())
-                .to("/opt/chromaway/postchain/target")
-                .build()
+            .from(containerDir)
+            .to("/opt/chromaway/postchain/target")
+            .build()
 
         /**
          * Rest API port binding.
@@ -45,22 +45,22 @@ object ContainerConfigFactory {
 
         // Host config
         val hostConfig = HostConfig.builder()
-                .appendBinds(volume)
-                .portBindings(portBindings)
-                .publishAllPorts(true)
-                .memory(container.resourceLimits?.get(ContainerResourceType.RAM))
-                .cpuQuota(container.resourceLimits?.get(ContainerResourceType.CPU))
+            .appendBinds(volume)
+            .portBindings(portBindings)
+            .publishAllPorts(true)
+            .memory(container.resourceLimits?.get(ContainerResourceType.RAM))
+            .cpuQuota(container.resourceLimits?.get(ContainerResourceType.CPU))
 //                .storageOpt(mapOf("dm.basesize" to "3G"))
 //                .storageOpt(mapOf("size" to "3G"))
 //                .storageOpt(mapOf("overlay2.size" to "3G"))
 //                .storageOpt(container.resourceLimits?.get("storage"))
-                .build()
+            .build()
 
         return ContainerConfig.builder()
-                .image(NameService.containerImage(nodeConfig))
-                .hostConfig(hostConfig)
-                .exposedPorts(dockerPort)
-                .build()
+            .image(NameService.containerImage(nodeConfig))
+            .hostConfig(hostConfig)
+            .exposedPorts(dockerPort)
+            .build()
     }
 
 }

@@ -3,11 +3,8 @@
 
 FROM postgres:11-alpine
 
-# Install JDK 8
-RUN apk add openjdk8
-
-# Install bash, curl
-RUN apk update && apk add bash curl
+# Install jdk8, bash, curl
+RUN apk update && apk add openjdk8 bash curl
 
 ENV GOSU_VERSION 1.13
 RUN set -eux; \

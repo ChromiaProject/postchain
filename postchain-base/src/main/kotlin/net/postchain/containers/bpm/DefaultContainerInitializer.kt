@@ -8,30 +8,49 @@ import net.postchain.containers.NameService
 import net.postchain.core.Infrastructure
 import org.apache.commons.configuration2.ConfigurationUtils
 import java.io.File
+import java.nio.file.Path
 import java.nio.file.Paths
 
-class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitializer {
+internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitializer {
 
     companion object : KLogging()
 
-    // Just for tests
-    private fun m(message: String) = "\t" + message
+    override fun getContainerWorkingDir(containerName: ContainerName): Path {
+        return Paths.get(nodeConfig.appConfig.configDir, "containers", containerName.toString())
+    }
 
-    override fun createContainerChainWorkingDir(chainId: Long, containerName: ContainerName): ContainerChainDir {
+    override fun initContainerWorkingDir(container: PostchainContainer) {
+        val containerDir = getContainerWorkingDir(container.containerName)
+        val exists = if (containerDir.toFile().exists()) {
+            logger.info("Container dir exists: $containerDir")
+            true
+        } else {
+            val created = containerDir.toFile().mkdirs()
+            logger.info("Container dir ${if (created) "has" else "hasn't"} been created: $containerDir")
+            created
+        }
+
+        if (exists) {
+            createContainerNodeConfig(container, containerDir)
+            createPeersConfig(container, containerDir)
+        }
+    }
+
+    override fun initContainerChainWorkingDir(chain: Chain): ContainerChainDir {
         // Creating current working dir (target)
-        val containerDir = Paths.get(nodeConfig.appConfig.configDir, "containers", containerName.toString())
-        val containerChainDir = containerDir.resolve("blockchains${File.separator}$chainId")
+        val containerDir = getContainerWorkingDir(chain.containerName)
+        val containerChainDir = containerDir.resolve("blockchains${File.separator}${chain.chainId}")
         if (containerChainDir.toFile().exists()) {
-            logger.info(m("Container chain dir exists: $containerChainDir"))
+            logger.info("Container chain dir exists: $containerChainDir")
         } else {
             val created = containerChainDir.toFile().mkdirs()
-            logger.info(m("Container chain dir ${if (created) "has" else "hasn't"} been created: $containerChainDir"))
+            logger.info("Container chain dir ${if (created) "has" else "hasn't"} been created: $containerChainDir")
         }
 
         return ContainerChainDir(containerDir, containerChainDir)
     }
 
-    override fun createContainerNodeConfig(container: PostchainContainer, containerChainDir: ContainerChainDir) {
+    override fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path) {
         // Cloning original nodeConfig
         val config = ConfigurationUtils.cloneConfiguration(nodeConfig.appConfig.config)
 
@@ -39,6 +58,12 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
         config.setProperty("configuration.provider.node", NodeConfigProviders.Manual.name.toLowerCase())
         config.setProperty("infrastructure", Infrastructure.EbftContainerSlave.get())
 
+        // DB
+        if (config.containsKey("subnode.database.url")) {
+            config.setProperty("database.url", config.getProperty("subnode.database.url"))
+            config.clearProperty("subnode.database.url")
+            //        config.setProperty("database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
+        }
         val scheme = NameService.databaseSchema(nodeConfig, container.containerName.toString())
         config.setProperty("database.schema", scheme)
 
@@ -58,20 +83,13 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
          */
         if (nodeConfig.restApiPort > -1) config.setProperty("api.port", nodeConfig.subnodeRestApiPort)
 
-        //TODO: works only for linux?
-        if (config.containsKey("subnode.database.url")) {
-            config.setProperty("database.url", config.getProperty("subnode.database.url"))
-            config.clearProperty("subnode.database.url")
-            //        config.setProperty("database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
-        }
-
         // Creating a nodeConfig file
-        val filename = containerChainDir.resolveContainerFilename("node-config.properties")
+        val filename = containerDir.resolve("node-config.properties").toString()
         AppConfig.toPropertiesFile(config, filename)
-        logger.info(m("Container subnode properties file has been created: $filename"))
+        logger.info("Container subnode properties file has been created: $filename")
     }
 
-    override fun createPeersConfig(container: PostchainContainer, containerChainDir: ContainerChainDir) {
+    override fun createPeersConfig(container: PostchainContainer, containerDir: Path) {
         val peers = """
             export NODE_HOST=127.0.0.1
             export NODE_PORT=${NodeConfig.DEFAULT_PORT}
@@ -79,20 +97,23 @@ class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitial
             
         """.trimIndent()
 
-        val filename = containerChainDir.resolveContainerFilename("env-peers.sh")
+        val filename = containerDir.resolve("env-peers.sh").toString()
         File(filename).writeText(peers)
-        logger.info(m("Container subnode peers file has been created: $filename"))
+        logger.info("Container subnode peers file has been created: $filename")
     }
 
-    override fun killContainerChainWorkingDir(chainId: Long, containerName: ContainerName) {
-        // Creating current working dir (target)
-        val containerDir = Paths.get(nodeConfig.appConfig.configDir, "containers", containerName.toString())
-        val containerChainConfigsDir = containerDir.resolve("blockchains${File.separator}$chainId")
-        if (containerChainConfigsDir.toFile().deleteRecursively()) {
-            logger.info(m("Container chain dir has been deleted: $containerChainConfigsDir"))
+    override fun rmChainWorkingDir(chain: Chain): Boolean {
+        // Deleting chain working dir
+        val containerDir = Paths.get(nodeConfig.appConfig.configDir, "containers", chain.containerName.toString())
+        val containerChainConfigsDir = containerDir.resolve("blockchains${File.separator}${chain.chainId}")
+        val res = containerChainConfigsDir.toFile().deleteRecursively()
+        if (res) {
+            logger.info("Container chain dir has been deleted: $containerChainConfigsDir")
         } else {
-            logger.info(m("Container chain dir hasn't been deleted properly: $containerChainConfigsDir"))
+            logger.info("Container chain dir hasn't been deleted properly: $containerChainConfigsDir")
         }
+
+        return res
     }
 
 }

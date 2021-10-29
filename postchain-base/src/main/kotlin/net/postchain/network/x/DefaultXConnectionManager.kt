@@ -296,8 +296,7 @@ open class DefaultXConnectionManager<PacketType>(
     }
 
     private fun loggingPrefix(blockchainRid: BlockchainRid): String = BlockchainProcessName(
-            myPeerInfo.peerId().toString(),
-            blockchainRid
+            myPeerInfo.peerId().toString(), blockchainRid
     ).toString()
 
     private fun logger(descriptor: XPeerConnectionDescriptor): String = descriptor.loggingPrefix(myPeerInfo.peerId())

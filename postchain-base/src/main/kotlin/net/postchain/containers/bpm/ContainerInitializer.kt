@@ -1,24 +1,30 @@
 package net.postchain.containers.bpm
 
-interface ContainerInitializer {
+import java.nio.file.Path
+
+internal interface ContainerInitializer {
+
+    fun getContainerWorkingDir(containerName: ContainerName): Path
+
+    fun initContainerWorkingDir(container: PostchainContainer)
 
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun createContainerChainWorkingDir(chainId: Long, containerName: ContainerName): ContainerChainDir
+    fun initContainerChainWorkingDir(chain: Chain): ContainerChainDir
 
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun createContainerNodeConfig(container: PostchainContainer, containerChainDir: ContainerChainDir)
+    fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path)
 
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun createPeersConfig(container: PostchainContainer, containerChainDir: ContainerChainDir)
+    fun createPeersConfig(container: PostchainContainer, containerDir: Path)
 
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun killContainerChainWorkingDir(chainId: Long, containerName: ContainerName)
+    fun rmChainWorkingDir(chain: Chain): Boolean
 }

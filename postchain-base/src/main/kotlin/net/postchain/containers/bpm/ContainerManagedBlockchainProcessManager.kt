@@ -3,7 +3,6 @@ package net.postchain.containers.bpm
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import mu.KLogging
-import net.postchain.core.BlockchainRid
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -12,6 +11,8 @@ import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.BlockQueries
+import net.postchain.core.BlockchainRid
+import net.postchain.core.RestartHandler
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
@@ -20,18 +21,21 @@ import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
 
 open class ContainerManagedBlockchainProcessManager(
-        private val masterBlockchainInfra: MasterBlockchainInfra,
-        nodeConfigProvider: NodeConfigurationProvider,
-        blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext
+    private val masterBlockchainInfra: MasterBlockchainInfra,
+    nodeConfigProvider: NodeConfigurationProvider,
+    blockchainConfigProvider: BlockchainConfigurationProvider,
+    nodeDiagnosticContext: NodeDiagnosticContext
 ) : ManagedBlockchainProcessManager(
-        masterBlockchainInfra,
-        nodeConfigProvider,
-        blockchainConfigProvider,
-        nodeDiagnosticContext
+    masterBlockchainInfra,
+    nodeConfigProvider,
+    blockchainConfigProvider,
+    nodeDiagnosticContext
 ) {
 
     companion object : KLogging()
+
+    private val directoryDataSource: DirectoryDataSource by lazy { dataSource as DirectoryDataSource }
+    private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
 
     /**
      * TODO: [POS-129]: Implement handling of DockerException
@@ -39,145 +43,192 @@ open class ContainerManagedBlockchainProcessManager(
     private val containerInitializer = DefaultContainerInitializer(nodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
-    private val lock = Any()
+    private val containerJobManager = DefaultContainerJobManager(::containerJobHandler)
 
     override fun createDataSource(blockQueries: BlockQueries) =
-            BaseDirectoryDataSource(blockQueries, nodeConfigProvider.getConfiguration())
+        BaseDirectoryDataSource(blockQueries, nodeConfigProvider.getConfiguration())
 
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
-        return if (chainId == CHAIN0) {
-            super.startBlockchain(chainId, bTrace)
-        } else {
-            synchronized(lock) {
-                if (isRunning(chainId)) {
-                    logger.info(m("startBlockchain: Chain $chainId is stopping"))
-                    stopContainerChain(chainId)
-                    logger.info(m("startBlockchain: Chain $chainId stopped"))
-                }
-
-                logger.info(m("startBlockchain: Chain $chainId is starting up"))
-                val brid = startContainerChain(chainId)
-                logger.info(m("startBlockchain: Chain $chainId is running"))
-
-                brid
-            }
-        }
-    }
-
-    override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
-        if (chainId == CHAIN0) {
-            super.stopBlockchain(chainId, bTrace, restart)
-        } else {
-            synchronized(lock) {
-                if (isRunning(chainId)) {
-                    logger.info(m("stopBlockchain: Chain $chainId is stopping"))
-                    stopContainerChain(chainId)
-                    logger.info(m("stopBlockchain: Chain $chainId stopped"))
+    override fun buildRestartHandler(chainId: Long): RestartHandler {
+        return { blockTimestamp: Long, blockTrace: BlockTrace? ->
+            try {
+                rTrace("Before", chainId, blockTrace)
+                if (chainId != CHAIN0) {
+                    logger.warn {
+                        "[${nodeName()}]: RestartHandler() -- RestartHandler has been called for chainId $chainId != 0, " +
+                                "block causing handler to run: $blockTrace"
+                    }
+                    false
                 } else {
-                    logger.warn(m("stopBlockchain: Chain $chainId (already) stopped"))
-                }
-            }
-        }
-    }
+                    synchronized(synchronizer) {
+                        rTrace("Sync block / before", chainId, blockTrace)
+                        // Sending heartbeat to other chains
+                        heartbeatManager.beat(blockTimestamp)
 
-    private fun startContainerChain(chainId: Long): BlockchainRid? {
-        val (ds, brid, containerName) = containerNamesFromDataSource(chainId)
+                        // Preloading blockchain configuration
+                        preloadChain0Configuration()
 
-        return try {
-            // Creating working dir
-            val containerChainDir = containerInitializer.createContainerChainWorkingDir(chainId, containerName)
+                        // Checking out the peer list changes
+                        val doReload = isPeerListChanged()
 
-            //Create container (with containerBlockchainProcess) if not exist. Also transfer configs
-            val dockerContainer = findDockerContainer(containerName)
-            if (dockerContainer != null) {
-                logger.info(m("startContainerChain: Container $containerName already exists: ${dockerContainer.id()}"))
-                //container exist, but chainID is new. Does postchainContainer exist? If not, add it:
-                val container = findContainer(containerName)
-                        ?: createPostchainContainer(chainId, ds, containerChainDir, containerName, true)
-                                .also { postchainContainers.add(it) }
-
-                if (!containerBlockchainProcessExists(container, chainId)) {
-                    val containerBlockchainProcess = createBlockchainProcess(chainId, ds, containerChainDir)
-
-                    // Creating chain configs
-                    containerBlockchainProcess.transferConfigsToContainer()
-                    container.processes.add(containerBlockchainProcess)
-                    if (container.processes.size > 1) {
-                        dockerClient.restartContainer(dockerContainer.id())
+                        containerJobManager.lock()
+                        val res = if (doReload) {
+                            rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
+                            reloadAllBlockchains()
+                            true
+                        } else {
+                            rTrace("about to restart chain0", chainId, blockTrace)
+                            // Checking out for chain0 configuration changes
+                            val reloadChain0 = isConfigurationChanged(CHAIN0)
+                            stopStartBlockchains(reloadChain0)
+                            reloadChain0
+                        }
+                        containerJobManager.unlock()
+                        rTrace("Sync block / after", chainId, blockTrace)
+                        res
                     }
                 }
-            } else { //new docker container, new postchainContainer, new chainID
-                logger.info(m("startContainerChain: Container $containerName for chainId $chainId is being created"))
-                val newPostchainContainer = createPostchainContainer(
-                        chainId, ds, containerChainDir, containerName, false)
-
-                // Creating nodeConfig and peersConfig for container node (node specific)
-                containerInitializer.createContainerNodeConfig(newPostchainContainer, containerChainDir)
-                containerInitializer.createPeersConfig(newPostchainContainer, containerChainDir)
-
-                postchainContainers.add(newPostchainContainer)
-                logger.info(m("startContainerChain: Container $containerName has been created: ${newPostchainContainer.containerId}"))
+            } catch (e: Exception) {
+                logger.error("Exception in RestartHandler: $e")
+                e.printStackTrace()
+                restartBlockchainAsync(chainId, blockTrace)
+                true // let's hope restarting a blockchain fixes the problem
             }
-            // Start docker container if it is not already running
-            startContainer(containerName)
-            brid
-        } catch (e: Exception) {
-            // TODO: [POS-129]: Improve error handling/logging
-            logger.info("", e)
-            val currentContainer = findContainer(containerName)
-            currentContainer?.stop()
-            postchainContainers.remove(currentContainer)
-            null
         }
     }
 
-    private fun containerNamesFromDataSource(chainId: Long): Triple<DirectoryDataSource, BlockchainRid, ContainerName> {
-        val ds = dataSource as DirectoryDataSource
-        val brid = withReadConnection(storage, chainId) { ctx ->
-            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+    /**
+     * Restart all chains. Begin with chain zero.
+     */
+    private fun reloadAllBlockchains() {
+        restartBlockchainAsync(CHAIN0, null)
+
+        postchainContainers.forEach { cont ->
+            cont.getChains().forEach {
+                logger.debug("[${nodeName()}]: ContainerJob -- restart chain: ${getChain(it)}")
+                containerJobManager.restartChain(getChain(it))
+            }
         }
-        val containerName = ContainerName.create(nodeConfig, ds.getContainerForBlockchain(brid))
-
-        return Triple(ds, brid, containerName)
     }
 
-    private fun containerBlockchainProcessExists(currentContainer: PostchainContainer, chainId: Long): Boolean {
-        return currentContainer.processes.any { it.chainId == chainId }
+    private fun stopStartBlockchains(reloadChain0: Boolean) {
+        val toLaunch = retrieveBlockchainsToLaunch()
+        val launched = getLaunchedBlockchains()
+
+        // Chain0
+        if (reloadChain0) {
+            logger.debug("[${nodeName()}]: ContainerJob -- Restart chain0")
+            restartBlockchainAsync(CHAIN0, null)
+        }
+
+        // Stopping launched blockchains
+        launched.filterNot(toLaunch::contains).forEach {
+            logger.debug("[${nodeName()}]: ContainerJob -- Stop chain: ${getChain(it)}")
+            containerJobManager.stopChain(getChain(it))
+        }
+
+        // Launching new blockchains except blockchain 0
+        toLaunch.filter { it != CHAIN0 && it !in launched }.forEach {
+            logger.debug("[${nodeName()}]: ContainerJob -- Start chain: ${getChain(it)}")
+            containerJobManager.startChain(getChain(it))
+        }
     }
 
-    // Blockchain process is removed, but container is only stopped if it is empty. It might hold other bcs.
-    private fun stopContainerChain(chainId: Long) {
-        // Remove process from postchainContainer.
-        val (_, _, containerName) = containerNamesFromDataSource(chainId)
+    private fun containerJobHandler(containerName: ContainerName, chainsToStop: Set<Chain>, chainsToStart: Set<Chain>) {
+        val start = System.currentTimeMillis()
+        logger.debug {
+            "[${nodeName()}]: ContainerJobHandler -- Begin: " +
+                    "containerName: $containerName, " +
+                    "chains to stop: ${chainsToStop.map { it.chainId }.toTypedArray().contentToString()}, " +
+                    "chains to start: ${chainsToStart.map { it.chainId }.toTypedArray().contentToString()}"
+        }
 
-        val container = findContainer(containerName)
-        if (container != null) {
-            val process = findProcess(container, chainId)
-            if (process != null) {
-                heartbeatManager.removeListener(process)
-                container.processes.remove(process)
-                containerInitializer.killContainerChainWorkingDir(chainId, containerName) // TODO: [POS-164]: Redesign
+        // Postchain container
+        var psContainer = findPostchainContainer(containerName.name)
+        var restartDockerContainer = false
+
+        if (psContainer == null) {
+            chainsToStop.forEach { chain ->
+                if (clearBlockchainProcessResources(chain)) { // TODO: [POS-164]: Redesign
+                    logger.debug { "[${nodeName()}]: ContainerJobHandler -- chain resources cleared: $chain" }
+                    restartDockerContainer = true
+                }
             }
 
-            // If container now has no BCProcesses left, stop docker container.
-            if (container.processes.isEmpty()) {
-                container.stop()
-                logger.info(m("stopContainerChain: Container $containerName is stopping"))
-                dockerClient.stopContainer(container.containerId, 10)
-                logger.info(m("stopContainerChain: Container $containerName stopped"))
-            } else {
-                dockerClient.restartContainer(container.containerId)
-                logger.info(m("stopContainerChain: Chain $chainId stopped but container $containerName not empty => container not stopped"))
-            }
+            if (chainsToStart.isNotEmpty()) {
+                logger.debug { "[${nodeName()}]: ContainerJobHandler -- PostchainContainer created" }
+                val newPsContainer = DefaultPostchainContainer(nodeConfig, directoryDataSource, containerName, STARTING)
+                containerInitializer.initContainerWorkingDir(newPsContainer)
+                postchainContainers.add(newPsContainer)
 
+                chainsToStart.forEach { chain ->
+                    val process = createBlockchainProcess(chain, newPsContainer)
+                    logger.debug { "[${nodeName()}]: ContainerJobHandler -- BlockchainProcess created: $process" }
+                }
+
+                psContainer = newPsContainer
+                restartDockerContainer = true
+            }
         } else {
-            logger.error(m("stopContainerChain: Can't stop container ${containerName}, does not exist"))
+            chainsToStop.forEach { chain ->
+                val (process, res) = terminateBlockchainProcess(psContainer, chain)
+                if (res) {
+                    logger.debug { "[${nodeName()}]: ContainerJobHandler -- ContainerBlockchainProcess terminated: $process" }
+                    restartDockerContainer = true
+                }
+            }
+
+            chainsToStart.forEach { chain ->
+                val process = createBlockchainProcess(chain, psContainer)
+                logger.debug { "[${nodeName()}]: ContainerJobHandler -- BlockchainProcess created: $process" }
+                restartDockerContainer = true
+            }
         }
+
+        // Docker container
+        if (restartDockerContainer) {
+            val msg = { state: String, container: PostchainContainer? ->
+                "[${nodeName()}]: ContainerJobHandler -- Docker container $state: $containerName, " +
+                        "containerId: ${container?.shortContainerId()}"
+            }
+
+            val dockerContainer = findDockerContainer(containerName)
+            if (dockerContainer == null) {
+                logger.debug { msg("not found", null) }
+
+                if (!psContainer!!.isEmpty()) {
+                    val containerDir = containerInitializer.getContainerWorkingDir(containerName)
+                    val config = ContainerConfigFactory.createConfig(nodeConfig, psContainer, containerDir.toString())
+
+                    psContainer.containerId = dockerClient.createContainer(config, containerName.toString()).id()!!
+                    logger.debug { msg("created", psContainer) }
+
+                    dockerClient.startContainer(psContainer.containerId)
+                    psContainer.start()
+                    logger.debug { msg("started", psContainer) }
+                }
+            } else {
+                psContainer!!.containerId = dockerContainer.id()
+                logger.debug { msg("found", psContainer) }
+                if (psContainer.isEmpty()) {
+                    psContainer.stop()
+                    postchainContainers.remove(psContainer)
+                    dockerClient.stopContainer(dockerContainer.id(), 10)
+                    logger.debug { msg("stopped", psContainer) }
+                } else {
+                    dockerClient.restartContainer(dockerContainer.id())
+                    logger.debug { msg("restarted", psContainer) }
+                }
+            }
+        }
+
+        val elapsed = System.currentTimeMillis() - start
+        logger.debug { "[${nodeName()}]: ContainerJobHandler -- End ($elapsed ms)" }
     }
 
     override fun shutdown() {
-        startingOrRunningProcesses()
-                .forEach { stopBlockchain(it, bTrace = null) }
+        startingOrRunningContainerProcesses()
+            .forEach { stopBlockchain(it, bTrace = null) }
+        containerJobManager.shutdown()
         super.shutdown()
     }
 
@@ -187,81 +238,77 @@ open class ContainerManagedBlockchainProcessManager(
                 "blockchainRid: ${process.blockchainRid}, " +
                 "containerName: ${cont.containerName}, " +
                 "containerId: ${cont.containerId}"
-        logger.info(m(message))
+        logger.info("\t" + message) // \t -- for tests
     }
 
-    // Just for tests
-    private fun m(message: String) = "\t" + message
-
-    private fun createPostchainContainer(
-            chainId: Long,
-            dataSource: DirectoryDataSource,
-            containerChainDir: ContainerChainDir,
-            containerName: ContainerName,
-            dockerContainerExists: Boolean
-    ): PostchainContainer {
-
-        val process = createBlockchainProcess(chainId, dataSource, containerChainDir)
-        val container = DefaultPostchainContainer(
-                nodeConfig, dataSource, containerName, mutableSetOf(process), STARTING)
-        // Creating chain configs
-        process.transferConfigsToContainer()
-        container.containerId = if (!dockerContainerExists) {
-            val config = ContainerConfigFactory.createConfig(nodeConfig, container, containerChainDir)
-            dockerClient.createContainer(config, containerName.toString()).id()!!
-        } else {
-            findDockerContainer(containerName)!!.id()
-        }
-
-        // TODO: [POS-129]: Handle the case when containerId is null
-        return container
-    }
-
-    private fun createBlockchainProcess(chainId: Long, dataSource: DirectoryDataSource, containerChainDir: ContainerChainDir): ContainerBlockchainProcess {
-        val brid = withReadConnection(storage, chainId) { ctx ->
-            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
-        }
-        val processName = BlockchainProcessName(nodeConfig.pubKey, brid)
+    private fun createBlockchainProcess(chain: Chain, targetContainer: PostchainContainer): ContainerBlockchainProcess {
+        val containerChainDir = containerInitializer.initContainerChainWorkingDir(chain)
+        val processName = BlockchainProcessName(nodeConfig.pubKey, chain.brid)
         val process = masterBlockchainInfra.makeMasterBlockchainProcess(
-                processName, chainId, brid, dataSource, containerChainDir, nodeConfig.subnodeRestApiPort)
+            processName,
+            chain.chainId,
+            chain.brid,
+            directoryDataSource,
+            containerChainDir,
+            nodeConfig.subnodeRestApiPort
+        )
+        process.transferConfigsToContainer()
+        targetContainer.addProcess(process)
         heartbeatManager.addListener(process)
         return process
     }
 
-    //    f [ "$( docker container inspect -f '{{.State.Running}}' $container_name )" == "true" ]; then ...
-    private fun startContainer(containerName: ContainerName) {
-        val container = findContainer(containerName)
-        val info = dockerClient.inspectContainer(container!!.containerId)
-        if (!info.state().running()) {
-            logger.info(m("startContainer: Container $containerName is starting up"))
-            dockerClient.startContainer(container.containerId)
-            container.start()
+    private fun terminateBlockchainProcess(
+        container: PostchainContainer,
+        chain: Chain
+    ): Pair<ContainerBlockchainProcess?, Boolean> {
+        val process = container.findProcesses(chain.chainId)
+        return if (process != null) {
+            heartbeatManager.removeListener(process)
+            container.removeProcess(process)
+            process to containerInitializer.rmChainWorkingDir(chain) // TODO: [POS-164]: Redesign
+        } else {
+            null to false
         }
-        logger.info(m("startContainer: Container $containerName is running"))
     }
 
-    private fun isRunning(chainId: Long): Boolean =
-            postchainContainers.any { it.contains(chainId) }
+    private fun clearBlockchainProcessResources(chain: Chain): Boolean {
+        return containerInitializer.rmChainWorkingDir(chain)
+    }
 
     private fun findDockerContainer(containerName: ContainerName): Container? {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        return all.find { it.names()?.contains("/$containerName") ?: false } // Prefix /
+        return all.find { it.names()?.contains("/$containerName") ?: false } // Prefix '/'
     }
 
-    private fun findContainer(containerName: ContainerName) =
-            postchainContainers.find { it.containerName == containerName }
-
-    private fun findProcess(container: PostchainContainer, chainId: Long): ContainerBlockchainProcess? =
-            container.processes.find { it.chainId == chainId }
+    private fun findPostchainContainer(containerName: String) =
+        postchainContainers.find { it.containerName.name == containerName }
 
     override fun getLaunchedBlockchains(): Set<Long> {
-        return super.getLaunchedBlockchains() + startingOrRunningProcesses()
+        // chain0 + chainsOf(starting/running containers)
+        return super.getLaunchedBlockchains() + startingOrRunningContainerProcesses()
     }
 
-    private fun startingOrRunningProcesses(): Set<Long> {
+    private fun startingOrRunningContainerProcesses(): Set<Long> {
         return postchainContainers
-                .filter { it.state == STARTING || it.state == RUNNING }
-                .flatMap { it.getChains() }
-                .toSet()
+            .filter { it.state == STARTING || it.state == RUNNING }
+            .flatMap { it.getChains() }
+            .toSet()
     }
+
+    private fun getBridByChainId(chainId: Long): BlockchainRid {
+        return withReadConnection(storage, chainId) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+        }
+    }
+
+    private fun getChain(chainId: Long): Chain {
+        return chains.computeIfAbsent(chainId) {
+            val brid = getBridByChainId(chainId)
+            val container = directoryDataSource.getContainerForBlockchain(brid)
+            val containerName = ContainerName.create(nodeConfig, container)
+            Chain(containerName, chainId, brid)
+        }
+    }
+
 }

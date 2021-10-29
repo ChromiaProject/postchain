@@ -4,7 +4,6 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.base.BaseBlockchainEngine
-import net.postchain.core.BlockchainRid
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.DatabaseAccess
@@ -12,11 +11,10 @@ import net.postchain.base.withReadConnection
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
-import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.CompletionPromise
+import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import nl.komponents.kovenant.Promise
@@ -35,14 +33,17 @@ import kotlin.concurrent.thread
  * 2 Sync from remote-FB until drained or timeout
  * 3 Sync from remote-OB until drained or timeout
  * 4 Goto 1
- *
  */
-class HistoricChainWorker(val workerContext: WorkerContext,
-                          val historicBlockchainContext: HistoricBlockchainContext) : BlockchainProcess {
+@Suppress("PrivatePropertyName")
+class HistoricChainWorker(
+        val workerContext: WorkerContext,
+        val historicBlockchainContext: HistoricBlockchainContext
+) : BlockchainProcess {
 
+    override val name: String = workerContext.processName.toString()
     override fun getEngine() = workerContext.engine
 
-    val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
+    private val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
 
     private val fastSynchronizer: FastSynchronizer
     private var historicSynchronizer: FastSynchronizer? = null
@@ -51,10 +52,9 @@ class HistoricChainWorker(val workerContext: WorkerContext,
     private val storage = (workerContext.engine as BaseBlockchainEngine).storage
 
     // Logging only
-    var blockTrace: BlockTrace? = null // For logging only
-    val myNodeConf: NodeConfig // For logging only
-    val myBRID: BlockchainRid // For logging only
-    val procName: BlockchainProcessName // For logging only
+    private var blockTrace: BlockTrace? = null // For logging only
+    private val myNodeConf: NodeConfig // For logging only
+    private val myBRID: BlockchainRid // For logging only
 
     companion object : KLogging()
 
@@ -65,13 +65,12 @@ class HistoricChainWorker(val workerContext: WorkerContext,
                 engine, engine.getBlockQueries(), NODE_ID_READ_ONLY)
         val params = FastSyncParameters()
         myNodeConf = workerContext.nodeConfig
-        procName = BlockchainProcessName(myNodeConf.pubKey, myBRID)
 
         params.exitDelay = myNodeConf.fastSyncExitDelay
         params.jobTimeout = myNodeConf.fastSyncJobTimeout
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
 
-        thread(name = "historicSync-${workerContext.processName}") {
+        thread(name = "historicSyncWorker-$name") {
             try {
                 val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
 
@@ -101,12 +100,12 @@ class HistoricChainWorker(val workerContext: WorkerContext,
                     initTrace("Network synch full waking up")
                 }
             } catch (e: Exception) {
-                logger.error(e) { "$procName Error syncing forkchain" }
+                logger.error(e) { "$name Error syncing forkchain" }
             } finally {
                 try {
                     blockDatabase.stop()
                 } catch (e: Exception) {
-                    logger.error(e) { "$procName Error syncing forkchain - stopping db" }
+                    logger.error(e) { "$name Error syncing forkchain - stopping db" }
                 } finally {
                     initTrace("Sync done, countdown latches")
                     done.countDown()
@@ -302,37 +301,37 @@ class HistoricChainWorker(val workerContext: WorkerContext,
     // init
     private fun initDebug(str: String) {
         if (logger.isDebugEnabled) {
-            logger.debug("$procName init() -- $str")
+            logger.debug("$name init() -- $str")
         }
     }
 
     private fun initTrace(str: String) {
         if (logger.isTraceEnabled) {
-            logger.trace("$procName init() --- $str")
+            logger.trace("$name init() --- $str")
         }
     }
 
     //copyBlocksNetwork()
     private fun netTrace(str: String, heightToCopy: Long) {
         if (logger.isTraceEnabled) {
-            logger.trace("$procName copyBlocksNetwork() -- $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
+            logger.trace("$name copyBlocksNetwork() -- $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
         }
     }
 
     private fun netDebug(str: String) {
         if (logger.isDebugEnabled) {
-            logger.debug("$procName copyBlocksNetwork() -- $str from blockchain ${historicBlockchainContext.historicBrid}")
+            logger.debug("$name copyBlocksNetwork() -- $str from blockchain ${historicBlockchainContext.historicBrid}")
         }
     }
 
     private fun netInfo(str: String, heightToCopy: Long) {
         if (logger.isInfoEnabled) {
-            logger.info("$procName copyBlocksNetwork() - $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
+            logger.info("$name copyBlocksNetwork() - $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
         }
     }
 
     private fun netErr(str: String, e: Exception) {
-        logger.error("$procName copyBlocksNetwork() - $str, from blockchain ${historicBlockchainContext.historicBrid}", e)
+        logger.error("$name copyBlocksNetwork() - $str, from blockchain ${historicBlockchainContext.historicBrid}", e)
     }
 
 
@@ -366,7 +365,7 @@ class HistoricChainWorker(val workerContext: WorkerContext,
 
     private fun getCopyBTrace(heightToCopy: Long): BlockTrace? {
         return if (logger.isTraceEnabled) {
-            this.blockTrace = BlockTrace.buildBeforeBlock(procName, heightToCopy) // At this point we don't have the Block RID.
+            this.blockTrace = BlockTrace.buildBeforeBlock(workerContext.processName, heightToCopy) // At this point we don't have the Block RID.
             copyLog("Got block height", heightToCopy)
             this.blockTrace
         } else {

@@ -18,7 +18,8 @@ class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
     companion object : KLogging()
 
     // Need this stuff to make this test class look a bit "normal"
-    val processName: BlockchainProcessName = BlockchainProcessName("?", _engine.getConfiguration().blockchainRid)
+    override val name: String = BlockchainProcessName("?", _engine.getConfiguration().blockchainRid)
+            .toString()
 
     override fun getEngine(): BlockchainEngine {
         return _engine
@@ -32,12 +33,11 @@ class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
 
     private fun shutdownDebug(str: String) {
         if (logger.isDebugEnabled) {
-            logger.debug("$processName: shutdown() - $str.")
+            logger.debug("$name: shutdown() - $str.")
         }
     }
 
-    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-    }
+    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) = Unit
 }
 
 

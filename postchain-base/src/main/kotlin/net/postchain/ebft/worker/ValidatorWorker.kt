@@ -24,8 +24,7 @@ import kotlin.concurrent.thread
  */
 class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProcess {
 
-    companion object : KLogging()
-
+    override val name: String = workerContext.processName.toString()
     private lateinit var updateLoop: Thread
     private val shutdown = AtomicBoolean(false)
 
@@ -35,6 +34,8 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
     val networkAwareTxQueue: NetworkAwareTxQueue
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
+
+    companion object : KLogging()
 
     fun isInFastSyncMode(): Boolean {
         return syncManager.isInFastSync()
@@ -80,10 +81,10 @@ class ValidatorWorker(private val workerContext: WorkerContext) : BlockchainProc
 
     /**
      * Create and run the [updateLoop] thread
-     * @param syncManager the syncronization manager
+     * @param syncManager the synchronization manager
      */
     protected fun startUpdateLoop(syncManager: SyncManager) {
-        updateLoop = thread(name = "updateLoop-${workerContext.processName}") {
+        updateLoop = thread(name = "validatorSyncWorker-$name") {
             while (!shutdown.get()) {
                 try {
                     if (workerContext.heartbeatChecker.checkHeartbeat(getLastBlockTimestamp())) {

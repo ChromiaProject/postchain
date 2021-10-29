@@ -14,8 +14,7 @@ import kotlin.concurrent.thread
 
 class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProcess {
 
-    companion object : KLogging()
-
+    override val name: String = workerContext.processName.toString()
     override fun getEngine() = workerContext.engine
 
     private val fastSynchronizer: FastSynchronizer
@@ -24,13 +23,14 @@ class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProce
     private val blockDatabase = BaseBlockDatabase(
             getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
 
-    init {
+    companion object : KLogging()
 
+    init {
         val params = FastSyncParameters()
         params.jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout
 
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
-        thread(name = "replicaSync-${workerContext.processName}") {
+        thread(name = "replicaSyncWorker-$name") {
             fastSynchronizer.syncUntilShutdown()
             done.countDown()
         }
@@ -50,7 +50,7 @@ class ReadOnlyWorker(private val workerContext: WorkerContext) : BlockchainProce
 
     private fun shutdownDebug(str: String) {
         if (logger.isDebugEnabled) {
-            logger.debug("${workerContext.processName}: shutdown() - $str.")
+            logger.debug("$name: shutdown() - $str.")
         }
     }
 
