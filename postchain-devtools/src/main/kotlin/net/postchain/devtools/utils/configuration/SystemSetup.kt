@@ -6,8 +6,8 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.ByteArrayKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
-import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.devtools.utils.configuration.pre.SystemPreSetup
+import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 
 
 /**
@@ -17,17 +17,22 @@ import net.postchain.devtools.utils.configuration.pre.SystemPreSetup
  * 1. all nodes run on the same machine,
  * 2. all nodes have standard "test" port numbers
  *
- * [SystemSetup] is not a stand alone test framework, but meant to be used by subclasses of [IntegrationTestSetup] or similar.
+ * [SystemSetup] is not a stand alone test framework, but meant to be used by subclasses of [IntegrationTestSetup] or
+ * similar.
  *
- * [SystemSetup] works like a builder, we add data to it (mostly other "setup" objects) and finally calls "toTestNodes()"
- *   which corresponds to the "build()" function in the builder pattern.
+ * [SystemSetup] works like a builder, we add data to it (mostly other "setup" objects) and finally calls
+ * "toTestNodes()" which corresponds to the "build()" function in the builder pattern.
  *
- * Note: When using [SystemSetup] for your test setup it doesn't matter if you have a node configuration file or not
- *  (for example "node1.properties"). Since the [SystemSetup] will use the [NodeConfigurationProvider] instance sent to it
- *  as an argument in the "toTestNodes()" function, it doesn't matter how the [NodeConfigurationProvider] was created.
- *  However, the most common thing would be to use "buildFromSetup()" in [NodeConfigurationProviderGenerator] to
- *  simulate the node conf file, which means that you don't have to provide these files for your test.
-
+ * -----------
+ * Background:
+ * -----------
+ * When using [SystemSetup] for your test setup it doesn't matter if you have a node configuration file or not
+ * (for example "node1.properties"). Since the [SystemSetup] will use the [NodeConfigurationProvider] instance sent
+ * to it as an argument in the "toTestNodes()" function, it doesn't matter how the [NodeConfigurationProvider] was
+ * created.
+ * However, the main idea behind the "Setup" testing framework is to use "buildFromSetup()" in
+ * [NodeConfigurationProviderGenerator] to simulate the node conf file, which means that you don't have to provide
+ * these files for your test (Node config files are easy to guess from the BC configs, so why provide them).
  *
  * @property nodeMap is a map from node seq number to [NodeSetup]. Represents all nodes in the system.
  * @property blockchainMap is a map from chain ID to [BlockchainSetup]. Represents all BCs in the system.

@@ -12,8 +12,11 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.devtools.*
+import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.OnDemandBlockBuildingStrategy
+import net.postchain.devtools.currentHeight
 import net.postchain.devtools.testinfra.TestTransactionFactory
+import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
@@ -24,8 +27,6 @@ import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.x.XPeerID
-import org.apache.commons.configuration2.Configuration
-import java.lang.IllegalStateException
 import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -146,17 +147,21 @@ open class ManagedModeTest : AbstractSyncTest() {
         }
     }
 
-    override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
-        val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
+    /**
+     * In this case we want unique configs per node (the mock datasource)
+     */
+    override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         var className = TestManagedEBFTInfrastructureFactory::class.qualifiedName
-        propertyMap.setProperty("infrastructure", className)
-        propertyMap.setProperty("infrastructure.datasource", mockDataSources[nodeIndex])
-        return propertyMap
+        nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", className)
+        nodeSetup.nodeSpecificConfigs.setProperty(
+            "infrastructure.datasource",
+            mockDataSources[nodeSetup.sequenceNumber.nodeNumber]
+        )
     }
 
     lateinit var c0: NodeSet
     fun startManagedSystem(signers: Int, replicas: Int) {
-        c0 = NodeSet(0, (0 until signers).toSet(), (signers until signers+replicas).toSet())
+        c0 = NodeSet(0, (0 until signers).toSet(), (signers until signers + replicas).toSet())
         setupDataSources(c0)
         runNodes(c0.signers.size, c0.replicas.size)
         buildBlock(c0, 0)

@@ -1,18 +1,20 @@
 package net.postchain.integrationtest.sync
 
-import net.postchain.base.PeerInfo
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.currentHeight
+import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.network.x.XPeerID
-import org.apache.commons.configuration2.Configuration
 import org.junit.Assert
-import org.junit.Test
 import org.junit.Ignore
+import org.junit.Test
 import java.lang.Thread.sleep
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ForkTestNightly : ManagedModeTest() {
+
+    // If you need a specific node to have a specific property, add it in here
+    val extraNodeProperties = mutableMapOf<Int, Map<String, Any>>()
 
     @Test
     fun testSyncManagedBlockchain() {
@@ -406,11 +408,18 @@ class ForkTestNightly : ManagedModeTest() {
         return "${XPeerID(KeyPairHelper.pubKey(index))}:${chainRidOf(blockchain)}"
     }
 
-    val extraNodeProperties = mutableMapOf<Int, Map<String, Any>>()
-    override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
-        val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
-        extraNodeProperties[nodeIndex]?.forEach { key, value -> propertyMap.setProperty(key, value) }
-        return propertyMap
+    /**
+     * Here we want to set properties on unique nodes via a special map, just transfer the property to the
+     * [NodeSetup] in question
+     */
+
+    override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+        val nodesExtra = extraNodeProperties[nodeSetup.sequenceNumber.nodeNumber]
+        if (nodesExtra != null) {
+            for (key in nodesExtra.keys) {
+                nodeSetup.nodeSpecificConfigs.setProperty(key, nodesExtra[key])
+            }
+        }
     }
 
 
