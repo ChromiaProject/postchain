@@ -2,12 +2,9 @@ package net.postchain.devtools.utils.configuration.system
 
 import mu.KLogging
 import net.postchain.base.BlockchainRelatedInfo
-import net.postchain.common.toHex
-import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.pre.SystemPreSetup
-import java.lang.IllegalStateException
 
 /**
  * This factory replaces the need for node configuration files in (most) tests. The nodes' conf will be calculated.
@@ -121,8 +118,50 @@ object SystemSetupFactory : KLogging() {
         }
 
         return SystemSetup(
-                tmpNodeMap.toMap(),
-                bcMap)
+            tmpNodeMap.toMap(),
+            bcMap
+        )
+    }
+
+    /**
+     * Builds a [SystemSetup] with "nrOfSigners" signers and "nrOfReplicas" replicas that runs managed mode.
+     *
+     * TODO: Olle: Use this from [AbstractSyncTest]
+     *
+     * @param nrOfSigners is how many signers we need
+     * @param nrOfReplicas is how many replicas we need
+     */
+    fun buildManagedSystemSetup(
+        nrOfSigners: Int,
+        nrOfReplicas: Int
+    ): SystemSetup {
+        val chainId = 0 // Currently we work with chain zero only
+
+        // 1. Get BCSetup for chain 0
+        val blockchainPreSetup =
+            BlockchainPreSetup.simpleBuild(chainId, (0 until nrOfSigners).map { NodeSeqNumber(it) })
+        val blockchainSetup = BlockchainSetup.buildFromGtv(chainId, blockchainPreSetup.toGtvConfig(mapOf()))
+
+        // 2. Get NodeSetup
+        val nodeSetups = mapOf<NodeSeqNumber, NodeSetup>()
+        //var i = 0
+        //= peerInfos.associate {  peerInfo ->
+        //    NodeSeqNumber(i) to createNodeSetup(i++, peerInfo)
+        // }
+
+        // 3. Combine (1) and (2) to get SystemSetup
+        val systemSetup = SystemSetup(
+            nodeSetups,
+            mapOf(chainId to blockchainSetup),
+            true,
+            "managed",
+            "unused", // Doesn't matter, not used as of now
+            "base/ebft",
+            true
+        )
+
+        return systemSetup
+
     }
 
     /**

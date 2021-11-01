@@ -14,9 +14,14 @@ object NodeConfigurationProviderFactory {
         StorageBuilder.buildStorage(it, NODE_ID_NA)
     }
 
+    /**
+     * @param appConfig used to find the provider
+     * @param storageFactory
+     * @return the correct [NodeConfigurationProvider] based on [AppConfig]'s setting
+     */
     fun createProvider(
-            appConfig: AppConfig,
-            storageFactory: (AppConfig) -> Storage = DEFAULT_STORAGE_FACTORY
+        appConfig: AppConfig,
+        storageFactory: (AppConfig) -> Storage = DEFAULT_STORAGE_FACTORY
     ): NodeConfigurationProvider {
 
         return when (appConfig.nodeConfigProvider.toLowerCase()) {
