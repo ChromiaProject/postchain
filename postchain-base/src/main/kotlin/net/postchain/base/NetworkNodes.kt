@@ -79,11 +79,9 @@ class NetworkNodes(
 
         if (now > nextTimestamp) {
             val totalCalls = readOnlyNodeContacts.values.sum()
-            logger.info("------------------------------------")
             logger.info("Clearing the read-only node overuse counter. " +
                     "Number of read-only nodes in contact since yesterday: ${readOnlyNodeContacts.size}. " +
                     "Total calls from read-only nodes: $totalCalls")
-            logger.info("------------------------------------")
             nextTimestamp = now + DAY_IN_MILLIS
             readOnlyNodeContacts.clear()
         }
