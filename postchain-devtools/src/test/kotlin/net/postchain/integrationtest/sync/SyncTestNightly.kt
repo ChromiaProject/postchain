@@ -31,11 +31,13 @@ class SyncTestNightly(val signers: Int, val replicas: Int, val syncIndex: Set<In
 
                 // Multi node multi blocks
                 arrayOf(4, 4, setOf(0, 1, 2, 4, 5), setOf<Int>(3, 6), 50)
+
         )
     }
 
     @Test
     fun sync() {
+        System.out.println("++ Sync Nightly, -------- Signs: $signers Repls: $replicas SyncIdx: ${syncIndex?.size} StopIdx: ${stopIndex?.size} blocks: $blocksToSync ------------------")
         runSyncTest(signers, replicas, syncIndex, stopIndex, blocksToSync)
     }
 }
