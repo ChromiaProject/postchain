@@ -414,6 +414,7 @@ class ForkTestNightly : ManagedModeTest() {
      */
 
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+        super.addNodeConfigurationOverrides(nodeSetup) // Will jack into ManagedModeTest overrides (= set the specific "infrastructure" we need)
         val nodesExtra = extraNodeProperties[nodeSetup.sequenceNumber.nodeNumber]
         if (nodesExtra != null) {
             for (key in nodesExtra.keys) {
