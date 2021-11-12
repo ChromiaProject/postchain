@@ -179,12 +179,14 @@ abstract class AbstractBlockBuilder(
     /**
      * By committing to the block we update the database to include the witness for that block
      *
+     * Note: replicas commit blocks too, so we cannot append our own signature on the [BlockWitnessBuilder].
+     *
      * @param blockWitness The witness for the block
      * @throws ProgrammerMistake If the witness is invalid
      */
     override fun commit(blockWitness: BlockWitness) {
         commitLog("Begin")
-        val witnessBuilder = getBlockHeaderValidator().createWitnessBuilderWithOwnSignature(_blockData!!.header)
+        val witnessBuilder = getBlockHeaderValidator().createWitnessBuilderWithoutOwnSignature(_blockData!!.header) // Don't  append signature when just validating
         if (!getBlockHeaderValidator().validateWitness(blockWitness, witnessBuilder)) {
             throw ProgrammerMistake("Invalid witness")
         }

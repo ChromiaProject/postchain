@@ -1,7 +1,9 @@
 package net.postchain.base.data
 
 import net.postchain.base.*
+import net.postchain.common.toHex
 import net.postchain.core.*
+import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.getBFTRequiredSignatureCount
 import java.util.*
 
@@ -63,8 +65,11 @@ class BaseBlockHeaderValidator(
         if (witnessBuilder !is MultiSigBlockWitnessBuilder) {
             throw ProgrammerMistake("Invalid BlockWitnessBuilder, we need a multi sig for the base validation.")
         }
+
+        // A bit counter intuitive maybe, but we are using the given [BlockWitnessBuilder] to re-create the witnesses
+        // by applying the signatures again to see if it works ("applySignature()" will do a lot of verifications).
         for (signature in blockWitness.getSignatures()) {
-            witnessBuilder.applySignature(signature)
+            witnessBuilder.applySignature(signature) // Will explode if signature isn't valid.
         }
         return witnessBuilder.isComplete()
     }
