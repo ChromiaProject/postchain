@@ -17,6 +17,7 @@ class BaseStorage(
         private val writeDataSource: DataSource,
         private val nodeId: Int,
         private val db: DatabaseAccess,
+        override val readConcurrency: Int,
         private val savepointSupport: Boolean = true
 ) : Storage {
 

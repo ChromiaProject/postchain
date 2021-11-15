@@ -303,23 +303,23 @@ open class BaseBlockchainEngine(
     }
 
     private fun loadLog(str: String, bTrace: BlockTrace?) {
-        if (logger.isTraceEnabled) {
-            logger.trace { "$processName loadUnfinishedBlockImpl() -- $str, coming from block: $bTrace" }
+        if (true) {
+            logger.debug { "$processName loadUnfinishedBlockImpl() -- $str, coming from block: $bTrace" }
         }
     }
 
     private fun buildLog(str: String) {
-        if (logger.isTraceEnabled) {
-            logger.trace { "$processName buildBlock() -- $str" }
+        if (true) {
+            logger.debug { "$processName buildBlock() -- $str" }
         }
     }
     private fun buildLog(str: String, bTrace: BlockTrace?) {
-        if (logger.isTraceEnabled) {
-            logger.trace { "$processName buildBlock() -- $str, for block: $bTrace" }
+        if (true) {
+            logger.debug { "$processName buildBlock() -- $str, for block: $bTrace" }
         }
     }
     private fun buildDebug(str: String) {
-        if (logger.isDebugEnabled) {
+        if (true) {
             logger.debug { "$processName buildBlock() - $str" }
         }
     }

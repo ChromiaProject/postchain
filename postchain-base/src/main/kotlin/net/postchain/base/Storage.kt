@@ -10,6 +10,8 @@ import net.postchain.core.EContext
  */
 interface Storage : AutoCloseable {
 
+    val readConcurrency: Int
+
     // AppContext
     fun openReadConnection(): AppContext
     fun closeReadConnection(context: AppContext)
