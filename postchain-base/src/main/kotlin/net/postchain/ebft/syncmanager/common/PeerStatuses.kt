@@ -51,8 +51,8 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
          */
         private var maybeLegacy = false
         private var confirmedModern = false
-        private var unresponsiveTime: Long = System.currentTimeMillis()
-        private var drainedTime: Long = System.currentTimeMillis()
+        private var unresponsiveTime: Long = 0
+        private var drainedTime: Long = 0
         private var drainedHeight: Long = -1
         private var errorCount = 0
         private var timeOfLastError: Long = 0
@@ -61,7 +61,9 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         fun isBlacklisted(now: Long): Boolean {
             if (state == State.BLACKLISTED && (now > timeOfLastError + params.blacklistingTimeoutMs)) {
                 // Alex suggested that peers should be given new chances often
-                logger.debug("Peer timed out of blacklist")
+                if (logger.isDebugEnabled) {
+                    logger.debug("Peer timed out of blacklist")
+                }
                 this.state = State.SYNCABLE
                 this.timeOfLastError = 0
                 this.errorCount = 0
@@ -69,20 +71,52 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
 
             return state == State.BLACKLISTED
         }
-        fun isUnresponsive() = state == State.UNRESPONSIVE
+
+        fun isUnresponsive(now: Long): Boolean {
+            if (state == State.UNRESPONSIVE && (now > unresponsiveTime + params.resurrectUnresponsiveTime)) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Peer timed out of unresponsiveness")
+                }
+                this.state = State.SYNCABLE
+                this.unresponsiveTime = 0
+            }
+
+            return state == State.UNRESPONSIVE
+        }
+
+        fun isDrained(now: Long): Boolean {
+            if (state == State.DRAINED && (now > drainedTime + params.resurrectDrainedTime)) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Peer timed out of drained")
+                }
+                this.state = State.SYNCABLE
+                this.drainedTime = 0
+                this.drainedHeight = -1
+            }
+
+            return state == State.DRAINED
+        }
+
         fun isMaybeLegacy() = !confirmedModern && maybeLegacy
         fun isConfirmedModern() = confirmedModern
         fun isSyncable(h: Long) = state == State.SYNCABLE || state == State.DRAINED && drainedHeight >= h
 
-        fun drained(height: Long) {
+        /**
+         * @param height is where the node's highest block can be found (but higher than that the node has no blocks).
+         */
+        fun drained(height: Long, now: Long) {
             state = State.DRAINED
-            drainedTime = System.currentTimeMillis()
+            drainedTime = now
             if (height > drainedHeight) {
                 drainedHeight = height
             }
         }
+
         fun headerReceived(height: Long) {
             if (state == State.DRAINED && height > drainedHeight) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Got header. Setting new fast sync peer status SYNCABLE")
+                }
                 state = State.SYNCABLE
             }
         }
@@ -91,22 +125,43 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
             // there might be more blocks to fetch now. But
             // we won't resurrect unresponsive peers.
             if (state == State.DRAINED && height > drainedHeight) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Got status. Setting new fast sync peer status SYNCABLE")
+                }
                 state = State.SYNCABLE
             }
         }
+
+        /**
+         * Note: this will get into conflict with connection manager, which also has a way of dealing with
+         * unresponsive peers.
+         */
         fun unresponsive(desc: String, now: Long) {
             if (this.state != State.UNRESPONSIVE) {
                 this.state = State.UNRESPONSIVE
                 unresponsiveTime = now
-                logger.debug("Peer is UNRESPONSIVE: $desc")
+                if (logger.isDebugEnabled) {
+                    logger.debug("Setting new fast sync peer status UNRESPONSIVE: $desc")
+                }
             }
         }
+
         fun maybeLegacy(isLegacy: Boolean) {
             if (!this.confirmedModern) {
+                if (this.maybeLegacy != isLegacy) {
+                    if (logger.isDebugEnabled) {
+                        logger.debug("Setting new fast sync peer status maybeLegacy: $isLegacy")
+                    }
+                }
                 this.maybeLegacy = isLegacy
             }
         }
         fun confirmedModern() {
+            if (logger.isDebugEnabled) {
+                if (!this.confirmedModern) {
+                    logger.debug("Setting new fast sync peer status CONFIRMED MODERN")
+                }
+            }
             this.confirmedModern = true
             this.maybeLegacy = false
         }
@@ -126,42 +181,63 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
                 }
             }
         }
+
         fun resurrect(now: Long) {
-            if (state == State.DRAINED && drainedTime + params.resurrectDrainedTime < now ||
-                    isUnresponsive() && unresponsiveTime + params.resurrectUnresponsiveTime < now) {
-                state = State.SYNCABLE
-            }
+            isUnresponsive(now)
+            isDrained(now)
+        }
+
+        override fun toString(): String {
+            return "state: ${state.name}, legacy: $maybeLegacy, modern: $confirmedModern"
         }
     }
+
     private val statuses = HashMap<XPeerID, KnownState>()
 
-    private fun resurrectDrainedAndUnresponsivePeers() {
-        val now = System.currentTimeMillis()
+    private fun resurrectDrainedAndUnresponsivePeers(now: Long) {
         statuses.forEach {
             it.value.resurrect(now)
         }
     }
 
-    fun exclNonSyncable(height: Long): Set<XPeerID> {
-        resurrectDrainedAndUnresponsivePeers()
-        return statuses.filterValues { !it.isSyncable(height) || it.isMaybeLegacy() }.keys
+    /**
+     * @param height is the height we need
+     * @param now is our current time (we want to send it to keep this pure = testable)
+     * @return the nodes we SHOULDN'T sync
+     */
+    fun exclNonSyncable(height: Long, now: Long): Set<XPeerID> {
+        resurrectDrainedAndUnresponsivePeers(now)
+        val excluded = statuses.filter {
+            val state = it.value
+            val syncable = state.isSyncable(height) && !state.isMaybeLegacy()
+            !syncable
+        }
+        return excluded.keys
+
     }
 
     fun getLegacyPeers(height: Long): Set<XPeerID> {
         return statuses.filterValues { it.isMaybeLegacy() && it.isSyncable(height) }.keys
     }
 
-    fun drained(peerId: XPeerID, height: Long) {
+    fun drained(peerId: XPeerID, height: Long, now: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
+            logger.warn("We tried to get block from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
             return
         }
-        status.drained(height)
+        if (logger.isDebugEnabled) {
+            if (!status.isDrained(now)) { // Don't worry about resurrect b/c we drain later
+                logger.debug("Setting new fast sync peer status DRAINED at height: $height")
+            }
+        }
+        status.drained(height, now)
     }
 
     fun headerReceived(peerId: XPeerID, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
+            logger.warn("We got a header from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
             return
         }
         status.headerReceived(height)
@@ -170,6 +246,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
     fun statusReceived(peerId: XPeerID, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
+            logger.warn("Got status from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
             return
         }
         status.statusReceived(height)
@@ -192,6 +269,11 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
             return
+        }
+        if (logger.isDebugEnabled) {
+            if (status.isMaybeLegacy() != isLegacy) {
+                logger.debug("Setting new fast sync peer: ${peerId.shortString()} status maybe legacy: $isLegacy.")
+            }
         }
         status.maybeLegacy(isLegacy)
     }
@@ -237,6 +319,9 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
     }
 
     fun clear() {
+        if (logger.isDebugEnabled) {
+            logger.debug("clearing all fast sync peer statuses")
+        }
         statuses.clear()
     }
 }

@@ -3,17 +3,16 @@
 package net.postchain.network.x
 
 import mu.KLogging
-import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.toHex
+import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.PeerNameHelper.peerName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
-import java.lang.IllegalStateException
 
 class DefaultXConnectionManager<PacketType>(
         private val connectorFactory: XConnectorFactory<PacketType>,
@@ -38,6 +37,8 @@ class DefaultXConnectionManager<PacketType>(
 
     private val chains: MutableMap<Long, Chain> = mutableMapOf()
     private val chainIDforBlockchainRID = mutableMapOf<BlockchainRid, Long>()
+    private val disconnectedChainIDforBlockchainRID =
+        mutableMapOf<BlockchainRid, Long>() // Needed for serious inconsistencies
     private var isShutDown = false
 
     override fun shutdown() {
@@ -131,7 +132,11 @@ class DefaultXConnectionManager<PacketType>(
     @Synchronized
     override fun connectChainPeer(chainID: Long, peerID: XPeerID) {
         val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
-        if (peerID !in chain.connections) { // ignore if already connected
+        if (peerID in chain.connections) {
+            if (logger.isDebugEnabled) {
+                logger.debug("${logger(chain.peerConfig)}: connectChainPeer() - already connected chain $chainID to peer: ${peerID.shortString()} so do nothing. ")
+            }
+        } else {
             connectorConnectPeer(chain.peerConfig, peerID)
         }
     }
@@ -170,6 +175,8 @@ class DefaultXConnectionManager<PacketType>(
         if (conn != null) {
             conn.close()
             chain.connections.remove(peerID)
+        } else {
+            logger.debug("${logger(chain.peerConfig)}: connectChainPeer() - cannot connect chain $chainID to peer: ${peerID.shortString()} b/c chain missing that connection. ")
         }
     }
 
@@ -181,7 +188,10 @@ class DefaultXConnectionManager<PacketType>(
         // reconnect in onPeerDisconnected()
         val chain = chains.remove(chainID)
         if (chain != null) {
-            chainIDforBlockchainRID.remove(chain.peerConfig.blockchainRID)
+            val old = chainIDforBlockchainRID.remove(chain.peerConfig.blockchainRID)
+            if (old != null) {
+                disconnectedChainIDforBlockchainRID[chain.peerConfig.blockchainRID] = old
+            }
             chain.connections.forEach { (_, conn) ->
                 conn.close()
             }
@@ -249,12 +259,24 @@ class DefaultXConnectionManager<PacketType>(
     override fun onPeerDisconnected(connection: XPeerConnection) {
         val descriptor = connection.descriptor()
 
-        val chainID = chainIDforBlockchainRID[descriptor.blockchainRID]
+        var chainID = chainIDforBlockchainRID[descriptor.blockchainRID]
         if (chainID == null) {
-            logger.warn("${descriptor.loggingPrefix(myPeerInfo.peerId())}: Peer disconnected: Why can't we find chainID? peer: ${peerName(descriptor.peerId)} " +
-                    ", direction: ${descriptor.dir}, blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID.\") . ")
-            connection.close()
-            return
+            val oldChainID = disconnectedChainIDforBlockchainRID[descriptor.blockchainRID]
+            if (oldChainID != null) {
+                chainID =
+                    oldChainID!! // Ok, we are here because someone called "disconnectChain()" and we lost the chainId, let's take the old one.
+            } else {
+                logger.error(
+                    "${descriptor.loggingPrefix(myPeerInfo.peerId())}: Peer disconnected: How can we never have seen chain: ${
+                        peerName(
+                            descriptor.peerId
+                        )
+                    } " +
+                            ", direction: ${descriptor.dir}, blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID.\") . "
+                )
+                connection.close()
+                return
+            }
         }
         val chain = chains[chainID]
         if (chain == null) {
@@ -267,10 +289,18 @@ class DefaultXConnectionManager<PacketType>(
         }
 
         if (chain.connections[descriptor.peerId] == connection) {
-            logger.debug("${descriptor.loggingPrefix(myPeerInfo.peerId())}: Peer disconnected: Removing peer: ${peerName(descriptor.peerId)}" +
-                                        ", direction: ${descriptor.dir} from blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID.")
+            logger.debug(
+                "${descriptor.loggingPrefix(myPeerInfo.peerId())}: Peer disconnected: Removing peer: ${
+                    peerName(
+                        descriptor.peerId
+                    )
+                }" +
+                        ", direction: ${descriptor.dir} from blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID."
+            )
             // It's the connection we're using, so we have to remove it
             chain.connections.remove(descriptor.peerId)
+        } else {
+            // This is the normal case when a Netty connection fails immediately
         }
         connection.close()
         if (chain.connectAll) {
