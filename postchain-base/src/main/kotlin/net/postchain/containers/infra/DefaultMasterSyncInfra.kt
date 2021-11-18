@@ -2,13 +2,15 @@
 
 package net.postchain.containers.infra
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.ContainerChainDir
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
+import net.postchain.containers.bpm.PostchainContainer
+import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.EbftPacketDecoderFactory
@@ -35,6 +37,8 @@ open class DefaultMasterSyncInfra(
                 SECP256K1CryptoSystem(),
                 nodeConfig
         )
+
+        fillDiagnosticContext()
     }
 
     override fun makeMasterBlockchainProcess(
@@ -42,6 +46,7 @@ open class DefaultMasterSyncInfra(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
+            targetContainer: PostchainContainer,
             containerChainDir: ContainerChainDir,
             restApiPort: Int
     ): ContainerBlockchainProcess {
@@ -56,7 +61,11 @@ open class DefaultMasterSyncInfra(
                 processName
         ).apply { init() }
 
-        return DefaultContainerBlockchainProcess(
+        val unregisterBlockchainDiagnosticData: () -> Unit = {
+            blockchainProcessesDiagnosticData.remove(blockchainRid)
+        }
+
+        val process = DefaultContainerBlockchainProcess(
                 nodeConfig,
                 processName,
                 chainId,
@@ -64,8 +73,17 @@ open class DefaultMasterSyncInfra(
                 restApiPort,
                 communicationManager,
                 dataSource,
-                containerChainDir
+                containerChainDir,
+                unregisterBlockchainDiagnosticData
         )
+
+        blockchainProcessesDiagnosticData[blockchainRid] = mutableMapOf<String, () -> Any>(
+                DiagnosticProperty.BLOCKCHAIN_RID.prettyName to { blockchainRid.toHex() },
+                DiagnosticProperty.CONTAINER_NAME.prettyName to { targetContainer.containerName.toString() },
+                DiagnosticProperty.CONTAINER_ID.prettyName to { targetContainer.shortContainerId() ?: "" }
+        )
+
+        return process
     }
 
 }

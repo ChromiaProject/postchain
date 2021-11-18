@@ -295,6 +295,7 @@ open class ContainerManagedBlockchainProcessManager(
                 chain.chainId,
                 chain.brid,
                 directoryDataSource,
+                targetContainer,
                 containerChainDir,
                 nodeConfig.subnodeRestApiPort
         )
@@ -311,6 +312,7 @@ open class ContainerManagedBlockchainProcessManager(
         val process = container.findProcesses(chain.chainId)
         return if (process != null) {
             heartbeatManager.removeListener(process)
+            process.shutdown()
             container.removeProcess(process)
             process to containerInitializer.rmChainWorkingDir(chain) // TODO: [POS-164]: Redesign
         } else {

@@ -17,6 +17,7 @@ interface ContainerBlockchainProcess : HeartbeatListener {
     val restApiPort: Int
 
     fun transferConfigsToContainer()
+    fun shutdown()
 }
 
 class DefaultContainerBlockchainProcess(
@@ -27,7 +28,8 @@ class DefaultContainerBlockchainProcess(
     override val restApiPort: Int,
     private val communicationManager: MasterCommunicationManager,
     private val dataSource: DirectoryDataSource, // TODO [POS-164]: (!)
-    private val containerChainDir: ContainerChainDir
+    private val containerChainDir: ContainerChainDir,
+    private val onShutdown: () -> Unit
 ) : ContainerBlockchainProcess {
 
     companion object : KLogging()
@@ -61,6 +63,10 @@ class DefaultContainerBlockchainProcess(
                 lastHeight = height
             }
         }
+    }
+
+    override fun shutdown() {
+        onShutdown()
     }
 
     override fun toString(): String = name

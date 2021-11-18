@@ -1,6 +1,5 @@
 package net.postchain.integrationtest
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadWriteConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -8,15 +7,9 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.api.DefaultMasterApiInfra
 import net.postchain.containers.api.MasterApiInfra
-import net.postchain.containers.bpm.ContainerBlockchainProcess
-import net.postchain.containers.bpm.ContainerChainDir
-import net.postchain.containers.bpm.ContainerManagedBlockchainProcessManager
-import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
+import net.postchain.containers.bpm.*
 import net.postchain.containers.infra.*
-import net.postchain.core.BlockchainConfiguration
-import net.postchain.core.BlockchainInfrastructure
-import net.postchain.core.BlockchainProcessManager
-import net.postchain.core.EContext
+import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
@@ -70,6 +63,7 @@ class TestMasterSyncInfra(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
+            targetContainer: PostchainContainer,
             containerChainDir: ContainerChainDir,
             restApiPort: Int
     ): ContainerBlockchainProcess {
@@ -92,7 +86,8 @@ class TestMasterSyncInfra(
                 restApiPort,
                 communicationManager,
                 dataSource,
-                containerChainDir
+                containerChainDir,
+                {}
         )
     }
 }
