@@ -50,6 +50,12 @@ open class NodeConfig(val appConfig: AppConfig) {
     val slaveHost: String
         get() = config.getString("containerChains.slaveHost", "localhost")
 
+    val runningContainersAtStartRegexp: String
+        get() = config.getString("container.healthcheck.runningContainersAtStartRegexp", "")
+    val runningContainersCheckPeriod: Int // In number of blocks of chain0, set 0 to disable a check
+        get() = config.getInt("container.healthcheck.runningContainersCheckPeriod", 0)
+
+
     /**
      * Database
      */

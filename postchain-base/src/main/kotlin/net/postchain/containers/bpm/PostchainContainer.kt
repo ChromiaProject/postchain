@@ -26,11 +26,11 @@ interface PostchainContainer {
 }
 
 class DefaultPostchainContainer(
-    val nodeConfig: NodeConfig,
-    dataSource: DirectoryDataSource,
-    override val containerName: ContainerName,
-    override var state: ContainerState = ContainerState.UNDEFINED,
-    override var containerId: String? = null
+        val nodeConfig: NodeConfig,
+        dataSource: DirectoryDataSource,
+        override val containerName: ContainerName,
+        override var state: ContainerState = ContainerState.UNDEFINED,
+        override var containerId: String? = null
 ) : PostchainContainer {
 
     companion object : KLogging()
@@ -41,7 +41,7 @@ class DefaultPostchainContainer(
     override var resourceLimits = dataSource.getResourceLimitForContainer(containerName.directory)
 
     override fun shortContainerId(): String? {
-        return containerId?.take(12)
+        return DockerTools.shortContainerId(containerId)
     }
 
     override fun findProcesses(chainId: Long): ContainerBlockchainProcess? {

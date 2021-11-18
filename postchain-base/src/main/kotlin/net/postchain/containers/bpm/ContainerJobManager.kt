@@ -6,14 +6,17 @@ import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
 internal interface ContainerJobManager {
-    fun lock()
-    fun unlock()
+    fun <T> withLock(action: () -> T): T
     fun stopChain(chain: Chain)
     fun startChain(chain: Chain)
     fun restartChain(chain: Chain)
+    fun executeHealthcheck()
 }
 
-internal class DefaultContainerJobManager(val jobHandler: ContainerJobHandler) : ContainerJobManager, Shutdownable {
+internal class DefaultContainerJobManager(
+        val jobHandler: ContainerJobHandler,
+        val healthcheckJobHandler: HealthcheckJobHandler
+) : ContainerJobManager, Shutdownable {
 
     private val containerJobsThread: Thread
     private var isProcessJobs = true
@@ -21,16 +24,16 @@ internal class DefaultContainerJobManager(val jobHandler: ContainerJobHandler) :
     private var currentJob: Job? = null
     private val lockJobs = ReentrantLock()
 
+    companion object {
+        private const val HEALTHCHECK_JOB_TAG = "healthcheck"
+    }
+
     init {
         containerJobsThread = startThread()
     }
 
-    override fun lock() {
-        lockJobs.lock()
-    }
-
-    override fun unlock() {
-        lockJobs.unlock()
+    override fun <T> withLock(action: () -> T): T {
+        return lockJobs.withLock(action)
     }
 
     override fun stopChain(chain: Chain) {
@@ -53,6 +56,10 @@ internal class DefaultContainerJobManager(val jobHandler: ContainerJobHandler) :
         jobOf(chain.containerName).restartChain(chain)
     }
 
+    override fun executeHealthcheck() {
+        jobOf(ContainerName.createGroupName(HEALTHCHECK_JOB_TAG))
+    }
+
     private fun startThread(): Thread {
         return thread(name = "containerJobThread") {
             while (isProcessJobs) {
@@ -68,7 +75,11 @@ internal class DefaultContainerJobManager(val jobHandler: ContainerJobHandler) :
 
                 // Process the job
                 if (currentJob != null) {
-                    jobHandler(currentJob!!.containerName, currentJob!!.toStop, currentJob!!.toStart)
+                    if (currentJob!!.containerName.isGroup(HEALTHCHECK_JOB_TAG)) {
+                        healthcheckJobHandler()
+                    } else {
+                        jobHandler(currentJob!!.containerName, currentJob!!.toStop, currentJob!!.toStart)
+                    }
                 }
 
                 Thread.sleep(100)
@@ -86,7 +97,6 @@ internal class DefaultContainerJobManager(val jobHandler: ContainerJobHandler) :
             Job(containerName)
         }
     }
-
 }
 
 internal class Job(val containerName: ContainerName) {
@@ -121,4 +131,5 @@ internal class Job(val containerName: ContainerName) {
 }
 
 internal typealias ContainerJobHandler = (containerName: ContainerName, toStop: Set<Chain>, toStart: Set<Chain>) -> Unit
+internal typealias HealthcheckJobHandler = () -> Unit
 

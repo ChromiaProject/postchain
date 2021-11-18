@@ -75,7 +75,7 @@ open class ManagedBlockchainProcessManager(
         return super.startBlockchain(chainId, bTrace)
     }
 
-    private fun initManagedEnvironment() {
+    protected open fun initManagedEnvironment() {
         try {
             dataSource = buildChain0ManagedDataSource()
             peerListVersion = dataSource.getPeerListVersion()

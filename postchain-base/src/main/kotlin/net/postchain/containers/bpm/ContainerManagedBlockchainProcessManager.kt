@@ -9,6 +9,9 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
+import net.postchain.containers.bpm.DockerTools.checkContainerName
+import net.postchain.containers.bpm.DockerTools.containerName
+import net.postchain.containers.bpm.DockerTools.shortContainerId
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.BlockQueries
 import net.postchain.core.BlockchainRid
@@ -21,15 +24,15 @@ import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
 
 open class ContainerManagedBlockchainProcessManager(
-    private val masterBlockchainInfra: MasterBlockchainInfra,
-    nodeConfigProvider: NodeConfigurationProvider,
-    blockchainConfigProvider: BlockchainConfigurationProvider,
-    nodeDiagnosticContext: NodeDiagnosticContext
+        private val masterBlockchainInfra: MasterBlockchainInfra,
+        nodeConfigProvider: NodeConfigurationProvider,
+        blockchainConfigProvider: BlockchainConfigurationProvider,
+        nodeDiagnosticContext: NodeDiagnosticContext
 ) : ManagedBlockchainProcessManager(
-    masterBlockchainInfra,
-    nodeConfigProvider,
-    blockchainConfigProvider,
-    nodeDiagnosticContext
+        masterBlockchainInfra,
+        nodeConfigProvider,
+        blockchainConfigProvider,
+        nodeDiagnosticContext
 ) {
 
     companion object : KLogging()
@@ -43,10 +46,15 @@ open class ContainerManagedBlockchainProcessManager(
     private val containerInitializer = DefaultContainerInitializer(nodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
-    private val containerJobManager = DefaultContainerJobManager(::containerJobHandler)
+    private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
+
+    override fun initManagedEnvironment() {
+        super.initManagedEnvironment()
+        stopRunningChainContainers()
+    }
 
     override fun createDataSource(blockQueries: BlockQueries) =
-        BaseDirectoryDataSource(blockQueries, nodeConfigProvider.getConfiguration())
+            BaseDirectoryDataSource(blockQueries, nodeConfigProvider.getConfiguration())
 
     override fun buildRestartHandler(chainId: Long): RestartHandler {
         return { blockTimestamp: Long, blockTrace: BlockTrace? ->
@@ -70,19 +78,25 @@ open class ContainerManagedBlockchainProcessManager(
                         // Checking out the peer list changes
                         val doReload = isPeerListChanged()
 
-                        containerJobManager.lock()
-                        val res = if (doReload) {
-                            rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
-                            reloadAllBlockchains()
-                            true
-                        } else {
-                            rTrace("about to restart chain0", chainId, blockTrace)
-                            // Checking out for chain0 configuration changes
-                            val reloadChain0 = isConfigurationChanged(CHAIN0)
-                            stopStartBlockchains(reloadChain0)
-                            reloadChain0
+                        val res = containerJobManager.withLock {
+                            // Reload/start/stops blockchains
+                            val res2 = if (doReload) {
+                                rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
+                                reloadAllBlockchains()
+                                true
+                            } else {
+                                rTrace("about to restart chain0", chainId, blockTrace)
+                                // Checking out for chain0 configuration changes
+                                val reloadChain0 = isConfigurationChanged(CHAIN0)
+                                stopStartBlockchains(reloadChain0)
+                                reloadChain0
+                            }
+
+                            // Docker containers healthcheck
+                            executeDockerContainersHealthcheck()
+                            res2
                         }
-                        containerJobManager.unlock()
+
                         rTrace("Sync block / after", chainId, blockTrace)
                         res
                     }
@@ -225,9 +239,41 @@ open class ContainerManagedBlockchainProcessManager(
         logger.debug { "[${nodeName()}]: ContainerJobHandler -- End ($elapsed ms)" }
     }
 
+    private fun executeDockerContainersHealthcheck() {
+        val period = nodeConfig.runningContainersCheckPeriod.toLong()
+        if (period > 0 && postchainContainers.isNotEmpty()) {
+            val height = withReadConnection(storage, CHAIN0) { ctx ->
+                DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
+            }
+
+            if (height % period == 0L) {
+                logger.debug("[${nodeName()}]: ContainerJob -- Healthcheck job created")
+                containerJobManager.executeHealthcheck()
+            }
+        }
+    }
+
+    private fun containerHealthcheckJobHandler() {
+        val start = System.currentTimeMillis()
+        logger.debug { "[${nodeName()}]: ContainerHealthcheckJobHandler -- Begin" }
+
+        val running = dockerClient.listContainers() // running containers only
+        postchainContainers.forEach { psc ->
+            val dc = running.find { checkContainerName(it, psc.containerName) }
+            if (dc == null && psc.containerId != null) {
+                logger.warn { "Container ${psc.containerName} / ${psc.shortContainerId()} is not running and will be restarted" }
+                dockerClient.startContainer(psc.containerId)
+                logger.info { "Container ${psc.containerName} / ${psc.shortContainerId()} has been restarted" }
+            }
+        }
+
+        val elapsed = System.currentTimeMillis() - start
+        logger.debug { "[${nodeName()}]: ContainerHealthcheckJobHandler -- End ($elapsed ms)" }
+    }
+
     override fun shutdown() {
         startingOrRunningContainerProcesses()
-            .forEach { stopBlockchain(it, bTrace = null) }
+                .forEach { stopBlockchain(it, bTrace = null) }
         containerJobManager.shutdown()
         super.shutdown()
     }
@@ -245,12 +291,12 @@ open class ContainerManagedBlockchainProcessManager(
         val containerChainDir = containerInitializer.initContainerChainWorkingDir(chain)
         val processName = BlockchainProcessName(nodeConfig.pubKey, chain.brid)
         val process = masterBlockchainInfra.makeMasterBlockchainProcess(
-            processName,
-            chain.chainId,
-            chain.brid,
-            directoryDataSource,
-            containerChainDir,
-            nodeConfig.subnodeRestApiPort
+                processName,
+                chain.chainId,
+                chain.brid,
+                directoryDataSource,
+                containerChainDir,
+                nodeConfig.subnodeRestApiPort
         )
         process.transferConfigsToContainer()
         targetContainer.addProcess(process)
@@ -259,8 +305,8 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun terminateBlockchainProcess(
-        container: PostchainContainer,
-        chain: Chain
+            container: PostchainContainer,
+            chain: Chain
     ): Pair<ContainerBlockchainProcess?, Boolean> {
         val process = container.findProcesses(chain.chainId)
         return if (process != null) {
@@ -278,11 +324,11 @@ open class ContainerManagedBlockchainProcessManager(
 
     private fun findDockerContainer(containerName: ContainerName): Container? {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        return all.find { it.names()?.contains("/$containerName") ?: false } // Prefix '/'
+        return all.find { checkContainerName(it, containerName) }
     }
 
     private fun findPostchainContainer(containerName: String) =
-        postchainContainers.find { it.containerName.name == containerName }
+            postchainContainers.find { it.containerName.name == containerName }
 
     override fun getLaunchedBlockchains(): Set<Long> {
         // chain0 + chainsOf(starting/running containers)
@@ -291,9 +337,9 @@ open class ContainerManagedBlockchainProcessManager(
 
     private fun startingOrRunningContainerProcesses(): Set<Long> {
         return postchainContainers
-            .filter { it.state == STARTING || it.state == RUNNING }
-            .flatMap { it.getChains() }
-            .toSet()
+                .filter { it.state == STARTING || it.state == RUNNING }
+                .flatMap { it.getChains() }
+                .toSet()
     }
 
     private fun getBridByChainId(chainId: Long): BlockchainRid {
@@ -311,4 +357,27 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
+    private fun stopRunningChainContainers() {
+        if (nodeConfig.runningContainersAtStartRegexp.isNotEmpty()) {
+            val toStop = dockerClient.listContainers().filter {
+                try {
+                    containerName(it).contains(Regex(nodeConfig.runningContainersAtStartRegexp))
+                } catch (e: Exception) {
+                    logger.error { "Regexp expression error: ${nodeConfig.runningContainersAtStartRegexp}" }
+                    false
+                }
+            }
+
+            if (toStop.isNotEmpty()) {
+                logger.warn {
+                    "Containers found to be stopped (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
+                }
+
+                toStop.forEach {
+                    dockerClient.stopContainer(it.id(), 20)
+                    logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                }
+            }
+        }
+    }
 }
