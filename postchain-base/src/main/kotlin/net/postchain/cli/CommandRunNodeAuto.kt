@@ -9,7 +9,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import java.io.File
 import java.nio.file.Paths
-import kotlin.concurrent.timer
 
 @Parameters(commandDescription = "Run Node Auto")
 class CommandRunNodeAuto : Command {
@@ -56,9 +55,6 @@ class CommandRunNodeAuto : Command {
             CliExecution.waitDb(50, 1000, nodeConfigFile)
             val chainIds = loadChainsConfigs(chainsDir, nodeConfigFile)
             CliExecution.runNode(nodeConfigFile, chainIds.sorted())
-            timer(name = "timer-run-node-auto-load-chains-configs", period = 1000, daemon = true) {
-                loadChainsConfigs(chainsDir, nodeConfigFile)
-            }
             Ok("Postchain node is running", isLongRunning = true)
 
         } catch (e: CliError.Companion.CliException) {
