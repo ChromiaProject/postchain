@@ -3,9 +3,9 @@ package net.postchain.integrationtest
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.DockerClient.LogsParam
-import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.containers.bpm.DockerClientFactory
+import net.postchain.core.BlockchainRid
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.devtools.chainRidOf
@@ -87,7 +87,7 @@ class DirectoryIT : ManagedModeTest() {
      * Assert that ram and cpu limits can be set on the container
      */
     @Test
-    fun testResourceLimits() {
+    fun testContainerResourceLimits() {
         startManagedSystem(1, 0)
         buildBlock(c0, 0)
         val ramLimit = 6_000_000_000L
