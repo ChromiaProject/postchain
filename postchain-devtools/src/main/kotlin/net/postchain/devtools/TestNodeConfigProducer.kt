@@ -7,9 +7,15 @@ import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.PropertiesConfiguration
 
 /**
- * "Legacy" means there is no "managed mode" with chain zero etc.
+ * This can build node configurations for both "legacy/manual" and "managed"
+ *
+ * - "Legacy" just call "createLegacyNodeConfig()"
+ * - "Managed" just call "createManagedNodeConfig()"
+ *
+ * Note: yeah this could have been a part of the [NodeConfigurationProviderGenerator] but I broke it out to make testing
+ *       easier (fewer dependencies).
  */
-object TestLegacyNodeConfigProducer {
+object TestNodeConfigProducer {
 
     /**
      * Builds a [NodeConfigurationProvider] of type "legacy" and returns it.
@@ -24,20 +30,63 @@ object TestLegacyNodeConfigProducer {
      * @return the [NodeConfigurationProvider] we created
      *
      */
-    fun createNodeConfig(testName: String,
-                         nodeSetup: NodeSetup,
-                         systemSetup: SystemSetup,
-                         startConfig: PropertiesConfiguration? = null
+    fun createLegacyNodeConfig(
+            testName: String,
+            nodeSetup: NodeSetup,
+            systemSetup: SystemSetup,
+            startConfig: PropertiesConfiguration? = null
     ): Configuration {
 
         val baseConfig = startConfig ?: PropertiesConfiguration()
 
+        commonSettings(baseConfig, testName, nodeSetup, systemSetup)
+
+        // For legacy we need to know the peers
+        setPeerConfig(nodeSetup, systemSetup, baseConfig)
+
+        return baseConfig
+    }
+
+    /**
+     * Builds a [NodeConfigurationProvider] of type "managed" and returns it.
+     *
+     * Here we don't care about the node configuration file (nodeX.properties) at all (most test won't have one).
+     *
+     * @param testName is the name of the test
+     * @param nodeSetup is the node we are working with
+     * @param systemSetup is the entire system's config
+     * @param startConfig is the config we will use as starting point (but can be overridden by automatic conf), usually nothing
+
+     * @return the [NodeConfigurationProvider] we created
+     *
+     */
+    fun createManagedNodeConfig(
+            testName: String,
+            nodeSetup: NodeSetup,
+            systemSetup: SystemSetup,
+            startConfig: PropertiesConfiguration? = null
+    ): Configuration {
+
+        val baseConfig = startConfig ?: PropertiesConfiguration()
+
+        commonSettings(baseConfig, testName, nodeSetup, systemSetup)
+
+        // Note: No peers (not needed for managed mode)
+
+        return baseConfig
+    }
+
+    fun commonSettings(
+            baseConfig: PropertiesConfiguration,
+            testName: String,
+            nodeSetup: NodeSetup,
+            systemSetup: SystemSetup
+    ) {
+
         // DB
         setDbConfig(testName, nodeSetup, baseConfig)
 
-        // peers
-        setPeerConfig(nodeSetup, systemSetup, baseConfig)
-
+        // Others
         setSyncTuningParams(systemSetup, baseConfig)
 
         setConfProvider(systemSetup.nodeConfProvider, baseConfig)
@@ -45,8 +94,6 @@ object TestLegacyNodeConfigProducer {
         setApiPort(nodeSetup, baseConfig, systemSetup.needRestApi)
         setKeys(nodeSetup, baseConfig)
         setHeartbeat(baseConfig)
-
-        return baseConfig
     }
 
     fun setSyncTuningParams(systemSetup: SystemSetup, baseConfig: PropertiesConfiguration) {
@@ -71,9 +118,10 @@ object TestLegacyNodeConfigProducer {
     ) {
         // These are the same for all tests
         baseConfig.setProperty("database.driverclass", "org.postgresql.Driver")
-        baseConfig.setProperty("database.url",         "jdbc:postgresql://localhost:5432/postchain")
-        baseConfig.setProperty("database.username",    "postchain")
-        baseConfig.setProperty("database.password",    "postchain")
+        val dbHost = System.getenv("POSTCHAIN_TEST_DB_HOST") ?: "localhost"
+        baseConfig.setProperty("database.url", "jdbc:postgresql://$dbHost:5432/postchain")
+        baseConfig.setProperty("database.username", "postchain")
+        baseConfig.setProperty("database.password", "postchain")
         // TODO: Maybe a personalized schema name like this is not needed (this is just legacy from the node.properties files)
         val goodTestName = testName.filter { it.isLetterOrDigit() }.toLowerCase()
         baseConfig.setProperty("database.schema", goodTestName + nodeConf.sequenceNumber.nodeNumber)
@@ -111,10 +159,10 @@ object TestLegacyNodeConfigProducer {
      * Sets the API port, so it wont clash with other nodes.
      */
     fun setApiPort(
-        nodeSetup: NodeSetup,
-        baseConfig: PropertiesConfiguration,
-        needRestApi: Boolean
-    ){
+            nodeSetup: NodeSetup,
+            baseConfig: PropertiesConfiguration,
+            needRestApi: Boolean
+    ) {
         if (needRestApi) {
             baseConfig.setProperty("api.port", nodeSetup.getApiPortNumber())
         } else {

@@ -78,11 +78,25 @@ open class IntegrationTestSetup : AbstractIntegration() {
         }
     }
 
+    /**
+     * Easy to forget we have two caches (due to legacy, maybe a bad practice?)
+     */
+    protected fun updateCache(nodeSetup: NodeSetup, testNode: PostchainTestNode) {
+        nodeMap[nodeSetup.sequenceNumber] = testNode
+        val nodeId = nodeSetup.sequenceNumber.nodeNumber
+
+        if (nodeId < nodes.size) {
+            nodes[nodeId] = testNode // We'll overwrite the existing test node
+        } else {
+            nodes.add(nodeId, testNode) // We'll add the test node to the list, but should be on the correct position.
+        }
+    }
+
     protected fun strategy(node: PostchainTestNode): OnDemandBlockBuildingStrategy {
         return node
-                .getBlockchainInstance()
-                .getEngine()
-                .getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
+            .getBlockchainInstance()
+            .getEngine()
+            .getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
     }
 
     // TODO: [et]: Check out nullability for return value
@@ -157,36 +171,44 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * @param systemSetup is the map of what the test setup looks like.
      */
     protected fun createNodesFromSystemSetup(
-            sysSetup: SystemSetup,
-            preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+        sysSetup: SystemSetup,
+        preWipeDatabase: Boolean = true,
+        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ) {
         this.systemSetup = sysSetup
-        val peerList = systemSetup.toPeerInfoList()
-        configOverrides.setProperty("testpeerinfos", peerList.toTypedArray())
 
-        val testName: String = this::class.java.simpleName ?: "NoName"   // Get subclass name or dummy
-        for (nodeSetup in systemSetup.nodeMap.values) {
-            val nodeConfigProvider = NodeConfigurationProviderGenerator.buildFromSetup(testName, configOverrides, nodeSetup, systemSetup, setupAction)
-            nodeSetup.configurationProvider = nodeConfigProvider
-            val newPTNode = nodeSetup.toTestNodeAndStartAllChains(systemSetup, preWipeDatabase)
+        // 1. generate node config for all [NodeSetup]
+        createNodeConfProvidersAndAddToNodeSetup(sysSetup, configOverrides, setupAction)
 
-            // TODO: not nice to mutate the "nodes" object like this, should return the list of PTNodes instead for testability
-            nodes.add(newPTNode)
-            nodeMap[nodeSetup.sequenceNumber] = newPTNode
+        // 2. start all nodes and all chains
+        val testNodeMap = startAllTestNodesAndAllChains(sysSetup, preWipeDatabase)
+        for (nodeId in testNodeMap.keys) {
+            val tmpNode = testNodeMap[nodeId]!!
+            updateCache(sysSetup.nodeMap[nodeId]!!, tmpNode)
         }
-        // Await FastSynch to complete. This is to prevent a situation where
-        // 1. Test starts all nodes
-        // 2. post a transaction
-        // 3. await block 0 (with timeout of 10 seconds)
-        // 4. Fastsync doesn't succeed within a timeout of X>10 seconds
-        // This can happen in rare occations. It's common enough to happen at avery
-        // other -Pci build on travis.
-        // This code waits for sync on all signer nodes before returning in step 1.
-        systemSetup.nodeMap.values.forEach {
-            val ns = it
-            it.chainsToSign.forEach {
-                val process = nodes[ns.sequenceNumber.nodeNumber].getBlockchainInstance(it.toLong())
+
+        // 3. FastSynch
+        awaitFastSynch(sysSetup, testNodeMap)
+    }
+
+    /**
+     * (Kalle's description)
+     * Await FastSynch to complete. This is to prevent a situation where:
+     * 1. Test starts all nodes
+     * 2. post a transaction
+     * 3. await block 0 (with timeout of 10 seconds)
+     * 4. Fastsync doesn't succeed within a timeout of X>10 seconds
+     *
+     * This can happen in rare occations. It's common enough to happen at avery other -Pci build on travis.
+     * This code waits for sync on all signer nodes before returning in step 1.
+     */
+    protected fun awaitFastSynch(
+        sysSetup: SystemSetup,
+        testNodeMap: Map<NodeSeqNumber, PostchainTestNode>
+    ) {
+        sysSetup.nodeMap.values.forEach { nodeSetup ->
+            nodeSetup.chainsToSign.forEach { chainIid ->
+                val process = testNodeMap[nodeSetup.sequenceNumber]!!.getBlockchainInstance(chainIid.toLong())
                 await.until {
                     if (process is ValidatorWorker) {
                         !process.syncManager.isInFastSync()
@@ -199,6 +221,56 @@ open class IntegrationTestSetup : AbstractIntegration() {
     }
 
     /**
+     * Create the [PostchainTestNode], start everything, and return them
+     */
+    protected fun startAllTestNodesAndAllChains(
+        sysSetup: SystemSetup,
+        preWipeDatabase: Boolean
+    ): Map<NodeSeqNumber, PostchainTestNode> {
+        val retMap = mutableMapOf<NodeSeqNumber, PostchainTestNode>()
+        for (nodeSetup in sysSetup.nodeMap.values) {
+            retMap[nodeSetup.sequenceNumber] = nodeSetup.toTestNodeAndStartAllChains(systemSetup, preWipeDatabase)
+        }
+        return retMap.toMap()
+    }
+
+    /**
+     * @return subclass name or dummy
+     */
+    protected fun getTestName() = this::class.java.simpleName ?: "NoName"
+
+    /**
+     * Override this in your test to add config overrides directly on the [NodeSetup] (for node specific configs).
+     */
+    open fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+
+    }
+
+    /**
+     * Generates config for all [NodeSetup] objects
+     */
+    protected fun createNodeConfProvidersAndAddToNodeSetup(
+        sysSetup: SystemSetup,
+        confOverrides: MapConfiguration,
+        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+    ) {
+        val peerList = sysSetup.toPeerInfoList()
+        confOverrides.setProperty("testpeerinfos", peerList.toTypedArray())
+
+        val testName: String = getTestName()
+        for (nodeSetup in sysSetup.nodeMap.values) {
+            val nodeConfigProvider = NodeConfigurationProviderGenerator.buildFromSetup(
+                testName,
+                confOverrides,
+                nodeSetup,
+                sysSetup,
+                setupAction
+            )
+            nodeSetup.configurationProvider = nodeConfigProvider
+        }
+    }
+
+    /**
      * Starts the nodes with the number of chains different for each node
      *
      * NOTE: This is a more generic function compared to the createMultiChainNodes function. It handles any setup.
@@ -206,7 +278,8 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * @param systemSetup is holds the configuration of all the nodes and chains
      * @return list of [PostchainTestNode] s.
      */
-    protected fun createMultiChainNodesFromSystemSetup(systemSetup: SystemSetup) = systemSetup.toTestNodes().toTypedArray()
+    protected fun createMultiChainNodesFromSystemSetup(systemSetup: SystemSetup) =
+        systemSetup.toTestNodes().toTypedArray()
 
     /**
      * Takes a [SystemSetup] and adds [NodeConfigurationProvider] to all [NodeSetup] in it.

@@ -1,7 +1,6 @@
 package net.postchain.devtools
 
 import net.postchain.StorageBuilder
-import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
@@ -9,17 +8,13 @@ import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.AppContext
+import net.postchain.core.BlockchainRid
 import net.postchain.core.NODE_ID_NA
-import net.postchain.devtools.utils.configuration.BlockchainSetup
-import net.postchain.devtools.utils.configuration.NodeSeqNumber
-import net.postchain.devtools.utils.configuration.NodeSetup
-import net.postchain.devtools.utils.configuration.SystemSetup
+import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
+import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.network.x.XPeerID
-import org.apache.commons.configuration2.Configuration
-import org.apache.commons.configuration2.MapConfiguration
 import org.junit.Assert.assertArrayEquals
 
 open class AbstractSyncTest : IntegrationTestSetup() {
@@ -27,20 +22,63 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     open var mustSyncUntil = -1L
 
 
+    /**
+     * Does everything from building configuration to starting the nodes.
+     *
+     * Note:
+     * This is a bit different from hov the [SystemSetupFactory] works. In the factory everything is created at
+     * once and started, but here we want to be able to re-start nodes and re-generate their setups.
+     *
+     * // TODO: Olle: The remaining task is to go (NodeSetup -> PeerInfo) instead of (PeerInfo -> NodeSetup), then lift this into [SystemSetupFactory]
+     *
+     * @param signerNodeCount is the number of signers we need
+     * @param replicaCount is the number of replicas we need
+     * @return the newly created [NodeSetup]s.
+     */
     protected fun runNodes(signerNodeCount: Int, replicaCount: Int): Array<NodeSetup> {
         signerCount = signerNodeCount
+
+        // -------
+        // TODO: Olle Implement this instead of step 1-4
+        // val sysSetup = SystemSetupFactory.buildManagedSystemSetup(signerNodeCount, replicaCount)
+        // -------
+
         val peerInfos = createPeerInfosWithReplicas(signerNodeCount, replicaCount)
 
+        // 1. Get BCSetup
         val chainId = 0
-        val blockchainPreSetup = BlockchainPreSetup.simpleBuild(chainId, (0 until signerNodeCount).map { NodeSeqNumber(it) })
+        val blockchainPreSetup =
+                BlockchainPreSetup.simpleBuild(chainId, (0 until signerNodeCount).map { NodeSeqNumber(it) })
         val blockchainSetup = BlockchainSetup.buildFromGtv(chainId, blockchainPreSetup.toGtvConfig(mapOf()))
+
+        // 2. Get NodeSetup
         var i = 0
-        val nodeSetups = peerInfos.associate { NodeSeqNumber(i) to nodeSetup(i++, peerInfos, true, blockchainSetup.rid) }
+        val nodeSetups = peerInfos.associate { peerInfo ->
+            NodeSeqNumber(i) to createNodeSetup(i++, peerInfo)
+        }
 
-        val systemSetup = SystemSetup(nodeSetups, mapOf(chainId to blockchainSetup), true,
-                "unused", "unused", "base/ebft", true)
+        // 3. Combine (1) and (2) to get SystemSetup
+        val systemSetup = SystemSetup(
+                nodeSetups,
+                mapOf(chainId to blockchainSetup),
+                true,
+                "managed",
+                "unused", // Doesn't matter, not used as of now
+                "base/ebft",
+                true
+        )
 
-        createNodesFromSystemSetup(systemSetup)
+        this.systemSetup = systemSetup
+
+        // 4. Add node config and fix DB
+        nodeSetups.values.forEach { nodeSetup ->
+            configureSingleNodeSetup(nodeSetup)
+            fixDbForSingleNodeSetup(nodeSetup, peerInfos, true, blockchainSetup.rid)
+        }
+
+        // 5. Start everything
+        createTestNodesAndStartAllChainsFromSystem(systemSetup)
+
         return nodeSetups.values.toTypedArray()
     }
 
@@ -49,7 +87,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     }
 
     /** This function is used instead of the default one, to prepare the local database tables before node is started.
-     * Byintroducing a prepareBlockchainOnNode function, preparations is separeted from the running. Thereby (as in this
+     * By introducing a prepareBlockchainOnNode function, preparations is separated from the running. Thereby (as in this
      * example, we can populate the database table must_sync_until)
      **/
     open fun prepareBlockchainOnNode(setup: BlockchainSetup, node: PostchainTestNode) {
@@ -61,26 +99,78 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     protected fun restartNodeClean(nodeIndex: Int, brid: BlockchainRid) {
         val nodeSetup = systemSetup.nodeMap[NodeSeqNumber(nodeIndex)]!!
         val peerInfoMap = nodeSetup.configurationProvider!!.getConfiguration().peerInfoMap
+        val peers = peerInfoMap.values.toTypedArray()
+
+        // Shutdown the node
         nodes[nodeIndex].shutdown()
-        val newSetup = nodeSetup(nodeIndex, peerInfoMap.values.toTypedArray(), true, brid)
+
+        // Start over
+        val newSetup = createNodeSetup(nodeIndex, peers[nodeIndex])
+        configureSingleNodeSetup(newSetup)
+        fixDbForSingleNodeSetup(newSetup, peers, true, brid)
         val blockchainSetup = systemSetup.blockchainMap[0]
         blockchainSetup!!.prepareBlockchainOnNode = { setup, node -> prepareBlockchainOnNode(setup, node) }
-        nodes[nodeIndex] = newSetup.toTestNodeAndStartAllChains(systemSetup, false)
+        val testNode = newSetup.toTestNodeAndStartAllChains(systemSetup, false)
+        updateCache(newSetup, testNode)
     }
 
     protected fun startOldNode(nodeIndex: Int, peerInfoMap: Map<XPeerID, PeerInfo>, brid: BlockchainRid) {
-        val newSetup = nodeSetup(nodeIndex, peerInfoMap.values.toTypedArray(), false, brid)
-        nodes[nodeIndex] = newSetup.toTestNodeAndStartAllChains(systemSetup, false)
+        val peers = peerInfoMap.values.toTypedArray()
+        val newSetup = createNodeSetup(nodeIndex, peers[nodeIndex])
+        configureSingleNodeSetup(newSetup)
+        fixDbForSingleNodeSetup(newSetup, peers, false, brid)
+        val testNode = newSetup.toTestNodeAndStartAllChains(systemSetup, false)
+        updateCache(newSetup, testNode)
     }
 
-    private fun nodeSetup(nodeIndex: Int, peerInfos: Array<PeerInfo>, wipeDb: Boolean, brid: BlockchainRid): NodeSetup {
-        val appConfig = AppConfig(nodeConfigurationMap(nodeIndex, peerInfos[nodeIndex]))
+    /**
+     * @return the new [NodeSetup] with key pair from [PeerInfo]
+     */
+    private fun createNodeSetup(nodeIndex: Int, peerInfo: PeerInfo): NodeSetup {
         val signer = if (nodeIndex < signerCount) setOf(0) else setOf()
         val replica = if (nodeIndex >= signerCount) setOf(0) else setOf()
-        val nodeSetup = NodeSetup(NodeSeqNumber(nodeIndex), signer, replica, KeyPairHelper.pubKeyHex(nodeIndex),
-                KeyPairHelper.privKeyHex(nodeIndex), ManagedNodeConfigurationProvider(appConfig, DEFAULT_STORAGE_FACTORY))
-        StorageBuilder.buildStorage(appConfig, nodeIndex, wipeDb).close()
+        return NodeSetup(
+                NodeSeqNumber(nodeIndex),
+                signer,
+                replica,
+                peerInfo.pubKey.toHex(),
+                KeyPairHelper.privKey(peerInfo.pubKey).toHex()  // Derive from pubkey
+        )
+    }
 
+    /**
+     * Create a [NodeConfigurationProvider] and add it to the [NodeSetup].
+     */
+    private fun configureSingleNodeSetup(nodeSetup: NodeSetup) {
+
+        // 1. The node specific overrides will be stored in the [NodeSetup], so they can be used in step 2 when
+        // the [NodeConfigurationProvider] is created.
+        addNodeConfigurationOverrides(nodeSetup)
+
+        // 2. Create the provider
+        val nodeConfigProvider = NodeConfigurationProviderGenerator.buildFromSetup(
+                getTestName(),
+                this.configOverrides, // Don't think these test ever use this
+                nodeSetup,
+                systemSetup
+        )
+        nodeSetup.configurationProvider = nodeConfigProvider // New way of fetching the config
+    }
+
+    /**
+     * ??
+     */
+    private fun fixDbForSingleNodeSetup(
+            nodeSetup: NodeSetup,
+            peerInfos: Array<PeerInfo>,
+            wipeDb: Boolean,
+            brid: BlockchainRid
+    ) {
+        val appConfig = nodeSetup.configurationProvider!!.getConfiguration().appConfig
+
+        StorageBuilder.buildStorage(appConfig, nodeSetup.sequenceNumber.nodeNumber, wipeDb).close()
+
+        // TODO: Olle: Not sure what's going on here
         if (wipeDb) {
             runStorageCommand(appConfig) {
                 val ctx = it
@@ -91,43 +181,29 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 }
             }
         }
-        return nodeSetup
     }
 
-    open protected fun addPeerInfo(dbAccess: DatabaseAccess, ctx: AppContext, peerInfo: PeerInfo, brid: BlockchainRid, isPeerSigner: Boolean) {
+    open protected fun addPeerInfo(
+            dbAccess: DatabaseAccess,
+            ctx: AppContext,
+            peerInfo: PeerInfo,
+            brid: BlockchainRid,
+            isPeerSigner: Boolean
+    ) {
         dbAccess.addPeerInfo(ctx, peerInfo)
         if (!isPeerSigner) {
             dbAccess.addBlockchainReplica(ctx, brid.toHex(), peerInfo.pubKey.toHex())
         }
     }
 
-    open fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
-        val privKey = KeyPairHelper.privKey(peerInfo.pubKey)
-        testLog("DB Schema: " + this.javaClass.simpleName.toLowerCase() + "_$nodeIndex")
-        val dbHost = System.getenv("POSTCHAIN_TEST_DB_HOST") ?: "localhost"
-        return MapConfiguration(mapOf(
-                "database.driverclass" to "org.postgresql.Driver",
-                "database.url" to "jdbc:postgresql://$dbHost:5432/postchain",
-                "database.username" to "postchain",
-                "database.password" to "postchain",
-                "database.schema" to this.javaClass.simpleName.toLowerCase() + "_$nodeIndex",
-                "messaging.pubkey" to peerInfo.pubKey.toHex(),
-                "messaging.privkey" to privKey.toHex(),
-                "fastsync.exit_delay" to 2000, // All tests are multinode, see FastSyncParameters.exitDelay
-                "api.port" to "-1",
-                "heartbeat.enabled" to false
-        ))
-    }
 
-    private fun createNodesFromSystemSetup(
-            sysSetup: SystemSetup
-    ) {
-        this.systemSetup = sysSetup
-
-        for (nodeSetup in systemSetup.nodeMap.values) {
-            val newPTNode = nodeSetup.toTestNodeAndStartAllChains(systemSetup, false)
-            nodes.add(newPTNode)
-            nodeMap[nodeSetup.sequenceNumber] = newPTNode
+    /**
+     * Use the [SystemSetup] to create [PostchainTestNode] and run all chains
+     */
+    private fun createTestNodesAndStartAllChainsFromSystem(sysSetup: SystemSetup) {
+        for (nodeSetup in sysSetup.nodeMap.values) {
+            val newPTNode = nodeSetup.toTestNodeAndStartAllChains(sysSetup, false)
+            updateCache(nodeSetup, newPTNode)
         }
     }
 
@@ -142,39 +218,40 @@ open class AbstractSyncTest : IntegrationTestSetup() {
      * @param blocksToSync height when sync nodes are wiped.
      */
     fun runSyncTest(signerCount: Int, replicaCount: Int, syncIndex: Set<Int>, stopIndex: Set<Int>, blocksToSync: Int) {
-        val nodeSetups = runNodes(signerCount, replicaCount)
+        val nodeSetups = runNodes(signerCount, replicaCount) // This gives us SystemSetup
+
         val blockchainRid = nodes[0].getBlockchainRid(0)!!
-        logger.debug { "All nodes started" }
+        logger.debug { "++ All nodes started" }
         buildBlock(0, blocksToSync - 1L)
-        logger.debug { "All nodes have block ${blocksToSync - 1}" }
+        logger.debug { "++ All nodes have block ${blocksToSync - 1}" }
 
         val expectedBlockRid = nodes[0].blockQueries(0).getBlockRid(blocksToSync - 1L).get()
         val peerInfos = nodeSetups[0].configurationProvider!!.getConfiguration().peerInfoMap
         stopIndex.forEach {
-            logger.debug { "Shutting down ${n(it)}" }
+            logger.debug { "++ Shutting down ${n(it)}" }
             nodes[it].shutdown()
-            logger.debug { "Shutting down ${n(it)} done" }
+            logger.debug { "++ Shutting down ${n(it)} done" }
         }
         syncIndex.forEach {
-            logger.debug { "Restarting clean ${n(it)}" }
+            logger.debug { "++ Restarting clean ${n(it)}" }
             restartNodeClean(it, blockchainRid)
-            logger.debug { "Restarting clean ${n(it)} done" }
+            logger.debug { "++ Restarting clean ${n(it)} done" }
         }
 
         syncIndex.forEach {
-            logger.debug { "Awaiting height ${blocksToSync - 1L} on ${n(it)}" }
+            logger.debug { "++ Awaiting height ${blocksToSync - 1L} on ${n(it)}" }
             nodes[it].awaitHeight(0, blocksToSync - 1L)
             val actualBlockRid = nodes[it].blockQueries(0).getBlockRid(blocksToSync - 1L).get()
             assertArrayEquals(expectedBlockRid, actualBlockRid)
-            logger.debug { "Awaiting height ${blocksToSync - 1L} on ${n(it)} done" }
+            logger.debug { "++ Awaiting height ${blocksToSync - 1L} on ${n(it)} done" }
         }
 
         stopIndex.forEach {
-            logger.debug { "Start ${n(it)} again" }
+            logger.debug { "++ Start ${n(it)} again" }
             startOldNode(it, peerInfos, blockchainRid)
         }
         awaitHeight(0, blocksToSync - 1L)
         buildBlock(0, blocksToSync.toLong())
-        logger.debug { "All nodes have block $blocksToSync" }
+        logger.debug { "++ All nodes have block $blocksToSync" }
     }
 }

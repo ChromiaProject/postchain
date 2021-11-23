@@ -3,13 +3,12 @@ package net.postchain.integrationtest
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.DockerClient.LogsParam
-import net.postchain.base.PeerInfo
 import net.postchain.containers.bpm.DockerClientFactory
 import net.postchain.core.BlockchainRid
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.devtools.chainRidOf
-import org.apache.commons.configuration2.Configuration
+import net.postchain.devtools.utils.configuration.NodeSetup
 import org.junit.Before
 import org.junit.Test
 import java.lang.Thread.sleep
@@ -168,24 +167,24 @@ class DirectoryIT : ManagedModeTest() {
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
     }
 
-    override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
-        val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
+    override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+        super.addNodeConfigurationOverrides(nodeSetup)
+
         val className = TestDirectoryMasterInfraFactory::class.qualifiedName
         val masterHost = System.getenv("POSTCHAIN_TEST_MASTER_HOST") ?: "172.17.0.1" // Default Docker host
         val dbHost = System.getenv("POSTCHAIN_TEST_DB_HOST") ?: "localhost"
-        propertyMap.setProperty("infrastructure", className)
-        propertyMap.setProperty("containerChains.masterPort", 9860 - nodeIndex)
-        propertyMap.setProperty("containerChains.masterHost", masterHost)
-        propertyMap.setProperty("configDir", System.getProperty("user.dir"))
-        propertyMap.setProperty("subnode.database.url", "jdbc:postgresql://$dbHost:5432/postchain")
-        propertyMap.setProperty("brid.chainid.1", chainRidOf(1).toHex())
-        propertyMap.setProperty("brid.chainid.2", chainRidOf(2).toHex())
-        propertyMap.setProperty("brid.chainid.3", chainRidOf(3).toHex())
-        propertyMap.setProperty("heartbeat.enabled", true)
-        propertyMap.setProperty("heartbeat.timeout", 6_000_000L) //default 60_000
-        propertyMap.setProperty("heartbeat.sleep_timeout", 500L) //default 5_000
-        propertyMap.setProperty("remote_config.enabled", false)
-        return propertyMap
+        nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", className)
+        nodeSetup.nodeSpecificConfigs.setProperty("containerChains.masterPort", 9860 - nodeSetup.sequenceNumber.nodeNumber)
+        nodeSetup.nodeSpecificConfigs.setProperty("containerChains.masterHost", masterHost)
+        nodeSetup.nodeSpecificConfigs.setProperty("configDir", System.getProperty("user.dir"))
+        nodeSetup.nodeSpecificConfigs.setProperty("subnode.database.url", "jdbc:postgresql://$dbHost:5432/postchain")
+        nodeSetup.nodeSpecificConfigs.setProperty("brid.chainid.1", chainRidOf(1).toHex())
+        nodeSetup.nodeSpecificConfigs.setProperty("brid.chainid.2", chainRidOf(2).toHex())
+        nodeSetup.nodeSpecificConfigs.setProperty("brid.chainid.3", chainRidOf(3).toHex())
+        nodeSetup.nodeSpecificConfigs.setProperty("heartbeat.enabled", true)
+        nodeSetup.nodeSpecificConfigs.setProperty("heartbeat.timeout", 6_000_000L) //default 60_000
+        nodeSetup.nodeSpecificConfigs.setProperty("heartbeat.sleep_timeout", 500L) //default 5_000
+        nodeSetup.nodeSpecificConfigs.setProperty("remote_config.enabled", false)
     }
 
     /**
