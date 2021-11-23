@@ -3,11 +3,11 @@
 package net.postchain.network.x
 
 import mu.KLogging
-import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.toHex
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.CommunicationManager
@@ -27,7 +27,6 @@ class DefaultXCommunicationManager<PacketType>(
     companion object : KLogging()
 
     private var inboundPackets = mutableListOf<Pair<XPeerID, PacketType>>()
-
     var connected = false
 
     @Synchronized
@@ -71,13 +70,21 @@ class DefaultXCommunicationManager<PacketType>(
     }
 
     override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<XPeerID>): XPeerID? {
-        return try {
-            val peer = connectionManager.getConnectedPeers(chainId).intersect(amongPeers).random()
-            logger.trace { "$processName: sendToRandomPeer($packet, ${peerName(peer.toString())})" }
-            sendPacket(packet, peer)
-            peer
+        var randomPeer: XPeerID? = null
+        try {
+            val possiblePeers = connectionManager.getConnectedPeers(chainId).intersect(amongPeers)
+            if (possiblePeers.isEmpty()) {
+                return null // We don't want to apply random to an empty list b/c throwing exception is too expensive.
+            }
+            randomPeer = possiblePeers.random()
+            if (logger.isTraceEnabled) {
+                logger.trace("$processName: sendToRandomPeer($packet, ${peerName(randomPeer.toString())})")
+            }
+            sendPacket(packet, randomPeer)
+            return randomPeer!!
         } catch (e: Exception) {
-            null
+            logger.error("Could not send package to random peer: ${peerName(randomPeer.toString())} because: ${e.message}")
+            return null
         }
     }
 

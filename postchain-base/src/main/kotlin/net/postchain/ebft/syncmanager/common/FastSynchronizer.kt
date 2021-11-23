@@ -203,14 +203,21 @@ class FastSynchronizer(
      */
     fun syncUntilResponsiveNodesDrained() {
         val timeout = System.currentTimeMillis() + params.exitDelay
-        trace("exitDelay: ${params.exitDelay}")
+        if (logger.isDebugEnabled) {
+            logger.debug("syncUntilResponsiveNodesDrained() begin with exitDelay: ${params.exitDelay}")
+        }
         syncUntil {
             val syncableCount = peerStatuses.getSyncable(blockHeight + 1).intersect(configuredPeers).size
 
             // Keep syncing until this becomes true, i.e. to exit we must have:
-            timeout < System.currentTimeMillis()                 // 1. must have timeout
+            val done = timeout < System.currentTimeMillis()      // 1. must have timeout
                     && syncableCount == 0                        // 2. must have no syncable nodes
                     && blockHeight >= params.mustSyncUntilHeight // 3. must BC height above the minimum specified height
+
+            if (logger.isDebugEnabled && done) {
+                logger.debug("We are done syncing. Syncable count: $syncableCount, height: $blockHeight, must sync until: ${params.mustSyncUntilHeight}.")
+            }
+            done
         }
     }
 
@@ -397,7 +404,8 @@ class FastSynchronizer(
     }
 
     private fun sendRequest(height: Long): XPeerID? {
-        val excludedPeers = peerStatuses.exclNonSyncable(height)
+        val now = System.currentTimeMillis()
+        val excludedPeers = peerStatuses.exclNonSyncable(height, now)
         val peers = configuredPeers.minus(excludedPeers)
         if (peers.isEmpty()) return null
         return communicationManager.sendToRandomPeer(GetBlockHeaderAndBlock(height), peers)
@@ -457,31 +465,45 @@ class FastSynchronizer(
         }
         if (peerId != j.peerId) {
             var dbg = debugJobString(j, requestedHeight, peerId)
-            peerStatuses.maybeBlacklist(peerId, "Synch: Why do we receive a header from a peer when we didn't ask this peer? $dbg")
+            peerStatuses.maybeBlacklist(
+                peerId,
+                "Synch: Why do we receive a header from a peer when we didn't ask this peer? $dbg"
+            )
             return false
         }
         if (j.header != null) {
             var dbg = debugJobString(j, requestedHeight, peerId)
-            peerStatuses.maybeBlacklist(peerId, "Synch: Why do we receive a header when we already have the header? $dbg")
+            peerStatuses.maybeBlacklist(
+                peerId,
+                "Synch: Why do we receive a header when we already have the header? $dbg"
+            )
             return false
         }
 
-        if (header.size == 0 && witness.size == 0) {
-            // The peer says it has no blocks, try another peer
-            headerTrace("Peer for job $j drained", -1L)
-            peerStatuses.drained(peerId, -1)
-            restartJob(j)
-            return false
+        if (header.size == 0) {
+            if (witness.size == 0) {
+                // The peer says it has no blocks, try another peer
+                headerDebug("Peer for job $j drained (sent empty header)")
+                val now = System.currentTimeMillis()
+                peerStatuses.drained(peerId, -1, now)
+                restartJob(j)
+                return false
+            } else {
+                var dbg = debugJobString(j, requestedHeight, peerId)
+                peerStatuses.maybeBlacklist(peerId, "Synch: Why we get a witness without a header? $dbg")
+                return false
+            }
         }
 
         val h = blockchainConfiguration.decodeBlockHeader(header)
         val peerBestHeight = getHeight(h)
 
         if (peerBestHeight != j.height) {
-            headerTrace("Peer for $j drained", peerBestHeight)
+            headerDebug("Header height=$peerBestHeight, we asked for ${j.height}. Peer for $j must be drained")
             // The peer didn't have the block we wanted
             // Remember its height and try another peer
-            peerStatuses.drained(peerId, peerBestHeight)
+            val now = System.currentTimeMillis()
+            peerStatuses.drained(peerId, peerBestHeight, now)
             restartJob(j)
             return false
         }
@@ -750,16 +772,16 @@ class FastSynchronizer(
         }
     }
 
+    // handleBlockHeader()
     private fun headerTrace(message: String, e: Exception? = null) {
         if (logger.isTraceEnabled) {
             logger.trace("${workerContext.processName}: handleBlockHeader() -- $message", e)
         }
     }
 
-    private fun headerTrace(message: String, height: Long, e: Exception? = null) {
-        if (logger.isTraceEnabled) {
-            logger.trace("${workerContext.processName}: handleBlockHeader() -- $message, at height: $height", e)
+    private fun headerDebug(message: String, e: Exception? = null) {
+        if (logger.isDebugEnabled) {
+            logger.debug("${workerContext.processName}: handleBlockHeader() -- $message", e)
         }
     }
-
 }

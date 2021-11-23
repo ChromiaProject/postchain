@@ -1,6 +1,7 @@
 package net.postchain.devtools
 
 import net.postchain.StorageBuilder
+import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.base.PeerInfo
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
@@ -37,6 +38,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
      */
     protected fun runNodes(signerNodeCount: Int, replicaCount: Int): Array<NodeSetup> {
         signerCount = signerNodeCount
+        configOverrides.setProperty("fastsync.exit_delay", "2000")
 
         // -------
         // TODO: Olle Implement this instead of step 1-4
@@ -50,6 +52,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         val blockchainPreSetup =
                 BlockchainPreSetup.simpleBuild(chainId, (0 until signerNodeCount).map { NodeSeqNumber(it) })
         val blockchainSetup = BlockchainSetup.buildFromGtv(chainId, blockchainPreSetup.toGtvConfig(mapOf()))
+        System.out.println("++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: ${blockchainSetup.bcGtv[BaseBlockchainConfigurationData.KEY_BLOCKSTRATEGY]} ")
 
         // 2. Get NodeSetup
         var i = 0
@@ -168,6 +171,12 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     ) {
         val appConfig = nodeSetup.configurationProvider!!.getConfiguration().appConfig
 
+        if (wipeDb) {
+            System.out.println("++ Wiping DB for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}")
+        } else {
+            System.out.println("++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}")
+        }
+
         StorageBuilder.buildStorage(appConfig, nodeSetup.sequenceNumber.nodeNumber, wipeDb).close()
 
         // TODO: Olle: Not sure what's going on here
@@ -213,6 +222,21 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     }
 
     /**
+     * The idea here is to:
+     *
+     * 1. run nodes up to the height just before the given "blocksToSync",
+     * 2. stop the nodes given in the "stopIndex" list.
+     * 3. kill the nodes given in the "syncIndex" list (kill means wipe their DB, so all blocks have been lost).
+     * 4. wait until the nodes in "syncIndex" list get back to the height they had
+     * 5. start the nodes in "stopIndex" list
+     * 6. build one more block
+     *
+     * This is actually a rather good way to test fast sync, b/c a "real" node might get wiped and we will get
+     * into this situation.
+     * Note: another common situation is when a new node wants to join the network.
+     *
+     * @param signerCount amount of signer nodes
+     * @param replicaCount amount of replica nodes
      * @param syncIndex which nodes to clean+restart and try to sync without help from stop index nodes
      * @param stopIndex which nodes to stop
      * @param blocksToSync height when sync nodes are wiped.

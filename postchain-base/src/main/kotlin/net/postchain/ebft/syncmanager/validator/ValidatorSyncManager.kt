@@ -380,7 +380,9 @@ class ValidatorSyncManager(
      */
     override fun update() {
         if (useFastSyncAlgorithm) {
-            logger.debug("$processName Using fast sync") // Doesn't happen very often
+            if (logger.isDebugEnabled) {
+                logger.debug("$processName Using fast sync") // Doesn't happen very often
+            }
             fastSynchronizer.syncUntilResponsiveNodesDrained()
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions

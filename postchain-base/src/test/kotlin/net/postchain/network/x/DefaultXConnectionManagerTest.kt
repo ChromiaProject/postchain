@@ -37,9 +37,13 @@ class DefaultXConnectionManagerTest {
 
     @Before
     fun setUp() {
-        peerInfo1 = PeerInfo("localhost", Utils.findFreePort(), byteArrayOf(0x01))
-        peerInfo2 = PeerInfo("localhost", Utils.findFreePort(), byteArrayOf(0x02))
-        unknownPeerInfo = PeerInfo("localhost", Utils.findFreePort(), byteArrayOf(0x03))
+        // TODO: [et]: Make dynamic ports
+        val b1 = BlockchainRid.buildRepeat(0x01)
+        val b2 = BlockchainRid.buildRepeat(0x02)
+        val b3 = BlockchainRid.buildRepeat(0x03)
+        peerInfo1 = PeerInfo("localhost", Utils.findFreePort(), b1.data)
+        peerInfo2 = PeerInfo("localhost", Utils.findFreePort(), b2.data)
+        unknownPeerInfo = PeerInfo("localhost", Utils.findFreePort(), b3.data)
 
         peerConnectionDescriptor1 = XPeerConnectionDescriptor(peerInfo1.peerId(), blockchainRid)
         peerConnectionDescriptor2 = XPeerConnectionDescriptor(peerInfo2.peerId(), blockchainRid)
@@ -238,9 +242,8 @@ class DefaultXConnectionManagerTest {
         }
 
         // Then
-        verify(chainPeerConfig, atLeast(1)).chainId
-        verify(chainPeerConfig, atLeast(1)).commConfiguration
-        verify(chainPeerConfig, atLeast(1)).blockchainRid
+        verify(chainPeerConfig, atLeast(3)).chainId
+        verify(chainPeerConfig, times(6)).commConfiguration
 
         connectionManager.shutdown()
     }

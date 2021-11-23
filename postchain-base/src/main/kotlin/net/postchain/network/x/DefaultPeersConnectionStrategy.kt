@@ -20,13 +20,19 @@ class DefaultPeersConnectionStrategy(val connectionManager: XConnectionManager,
     private val peerToDelayMap: MutableMap<XPeerID, ExponentialDelay> = mutableMapOf()
     private val timerQueue = ScheduledThreadPoolExecutor(1)
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     var backupConnTimeMin = 1000
     var backupConnTimeMax = 2000
 
     var reconnectTimeMin = 100
     var reconnectTimeMax = 1000
+
+    init {
+        if (logger.isDebugEnabled) {
+            logger.debug("${peerName(me)}: new DefaultPeersConnectionStrategy created") // It's interesting b/c we have the delay map that gets refreshed
+        }
+    }
 
     override fun connectAll(chainID: Long, peerIds: Set<XPeerID>) {
         for (peerId in peerIds) {
