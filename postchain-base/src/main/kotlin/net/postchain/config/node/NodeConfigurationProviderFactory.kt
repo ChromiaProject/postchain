@@ -18,6 +18,11 @@ class NodeConfigurationProviderFactory(
         }
     }
 
+    /**
+     * @param appConfig used to find the provider
+     * @param storageFactory
+     * @return the correct [NodeConfigurationProvider] based on [AppConfig]'s setting
+     */
     fun createProvider(appConfig: AppConfig): NodeConfigurationProvider {
         return when (appConfig.nodeConfigProvider.toLowerCase()) {
             Legacy.name.toLowerCase() -> LegacyNodeConfigurationProvider(appConfig)

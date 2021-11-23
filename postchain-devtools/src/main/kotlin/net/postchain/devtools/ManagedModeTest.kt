@@ -15,6 +15,7 @@ import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.ManagedModeTest.NodeSet
 import net.postchain.devtools.testinfra.TestTransactionFactory
+import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.*
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
@@ -23,7 +24,6 @@ import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.x.XPeerID
-import org.apache.commons.configuration2.Configuration
 import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -174,12 +174,16 @@ open class ManagedModeTest : AbstractSyncTest() {
         }
     }
 
-    override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
-        val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
+    /**
+     * In this case we want unique configs per node (the mock datasource)
+     */
+    override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         var className = TestManagedEBFTInfrastructureFactory::class.qualifiedName
-        propertyMap.setProperty("infrastructure", className)
-        propertyMap.setProperty("infrastructure.datasource", mockDataSources[nodeIndex])
-        return propertyMap
+        nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", className)
+        nodeSetup.nodeSpecificConfigs.setProperty(
+                "infrastructure.datasource",
+                mockDataSources[nodeSetup.sequenceNumber.nodeNumber]
+        )
     }
 
     lateinit var c0: NodeSet
@@ -204,7 +208,7 @@ open class ManagedModeTest : AbstractSyncTest() {
 
 
     class TestBlockchainConfiguration(data: BaseBlockchainConfigurationData) :
-        BaseBlockchainConfiguration(data) {
+            BaseBlockchainConfiguration(data) {
         override fun getTransactionFactory(): TransactionFactory {
             return TestTransactionFactory()
         }
@@ -227,7 +231,7 @@ open class ManagedModeTest : AbstractSyncTest() {
             excludeChain0Nodes: Set<Int> = setOf(),
             waitForRestart: Boolean = true): NodeSet {
         if (signers.intersect(replicas).isNotEmpty()) throw
-            IllegalArgumentException("a node cannot be both signer and replica")
+        IllegalArgumentException("a node cannot be both signer and replica")
         val maxIndex = c0.all().size
         signers.forEach {
             if (it >= maxIndex) throw IllegalArgumentException("bad signer index")
@@ -275,7 +279,7 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
 
 
 class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSource) :
-    BlockchainConfigurationProvider {
+        BlockchainConfigurationProvider {
 
     companion object : KLogging()
 
@@ -305,7 +309,7 @@ class TestManagedBlockchainInfrastructure(
         nodeConfigProvider: NodeConfigurationProvider,
         syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
         nodeDiagnosticContext: NodeDiagnosticContext, val mockDataSource: MockManagedNodeDataSource) :
-    BaseBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext) {
+        BaseBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext) {
     override fun makeBlockchainConfiguration(
             rawConfigurationData: ByteArray,
             eContext: EContext,

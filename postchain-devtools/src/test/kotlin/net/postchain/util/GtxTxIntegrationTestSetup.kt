@@ -3,16 +3,11 @@ package net.postchain.util
 import mu.KLogging
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
-import net.postchain.devtools.IntegrationTestSetup
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
-import net.postchain.devtools.PostchainTestNode
-import net.postchain.devtools.TxCache
+import net.postchain.devtools.*
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtx.GTXTransactionFactory
-import net.postchain.devtools.assertChainStarted
-import net.postchain.devtools.assertNodeConnectedWith
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.Assert
@@ -58,8 +53,12 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
                 .untilAsserted {
                     systemSetup.nodeMap.values.forEach { nodeSetup ->
                         val bcList = systemSetup.getBlockchainsANodeShouldRun(nodeSetup.sequenceNumber)
-                        val node = nodeMap[nodeSetup.sequenceNumber]!!
-                        bcList.forEach{ bcSetup -> node.assertChainStarted(bcSetup.chainId.toLong()) }
+                        val node = nodeMap[nodeSetup.sequenceNumber]
+                        if (node == null) {
+                            logger.error("Don't think this should happen")
+                        } else {
+                            bcList.forEach { bcSetup -> node.assertChainStarted(bcSetup.chainId.toLong()) }
+                        }
                     }
                 }
 
