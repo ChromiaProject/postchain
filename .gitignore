@@ -14,3 +14,4 @@ logs
 postchain-distribution/lib
 *.jar
 /postchain-containerized/containers/
+/containers/
