@@ -39,7 +39,6 @@
         <junitparams.version>1.1.1</junitparams.version>
         <mockito-kotlin.version>2.1.0</mockito-kotlin.version> <!-- Cannot be upgraded due to lib not found in -base -->
         <mockito.version>2.23.0</mockito.version>
-        <easymock.version>3.6</easymock.version> <!-- TODO: Replace with mockito if possible -->
         <assertk.version>0.10</assertk.version>
 
         <!-- Logging -->
@@ -187,12 +186,6 @@
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
                 <version>${mockito.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.easymock</groupId>
-                <artifactId>easymock</artifactId>
-                <version>${easymock.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
