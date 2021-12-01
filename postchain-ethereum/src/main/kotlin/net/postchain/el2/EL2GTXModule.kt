@@ -7,13 +7,16 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotPageStore
+import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.KECCAK256
+import net.postchain.common.data.SHA256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
 import net.postchain.core.MultiSigBlockWitness
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.MerkleTree
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 
@@ -52,18 +55,14 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val blockHeight = eventInfo.blockHeight
     val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
-    val eventData = eventData(eventInfo)
-    val event = EventPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
-    val proofs = event.getMerkleProof(blockHeight, eventInfo.pos)
-    var gtvProofs: List<GtvByteArray> = listOf()
-    for (proof in proofs) {
-        gtvProofs = gtvProofs.plus(gtv(proof))
-    }
+    val eventProof = eventProof(ctx, blockHeight, eventInfo)
+    val el2MerkleProof = el2MerkleProof(db, ctx, blockHeight)
     return gtv(
-        "eventData" to eventData,
+        "eventData" to gtv(eventInfo.data),
         "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
-        "merkleProofs" to GtvArray(gtvProofs.toTypedArray())
+        "eventProof" to gtv(GtvEncoder.simpleEncodeGtv(eventProof)),
+        "el2MerkleProof" to gtv(GtvEncoder.simpleEncodeGtv(el2MerkleProof))
     )
 }
 
@@ -89,9 +88,15 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     )
 }
 
-private fun eventData(event: DatabaseAccess.EventInfo?): Gtv {
+private fun eventProof(ctx: EContext, blockHeight: Long, event: DatabaseAccess.EventInfo?): Gtv {
     if (event == null) return GtvNull
-    return gtv(gtv(event.blockHeight), gtv(event.pos), gtv(event.hash), gtv(event.data))
+    val es = EventPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
+    val proofs = es.getMerkleProof(blockHeight, event.pos)
+    var gtvProofs: List<GtvByteArray> = listOf()
+    for (proof in proofs) {
+        gtvProofs = gtvProofs.plus(gtv(proof))
+    }
+    return gtv(gtv(event.hash), gtv(event.pos), gtv(gtvProofs))
 }
 
 private fun accountState(state: DatabaseAccess.AccountState?): Gtv {
@@ -115,9 +120,21 @@ private fun blockHeaderData(
         bh.gtvTimestamp,
         bh.gtvHeight,
         gtv(bh.gtvDependencies.merkleHash(merkleHashCalculator)),
-        bh.gtvExtra["el2RootEvent"]!!,
-        bh.gtvExtra["el2RootState"]!!
+        gtv(bh.gtvExtra.merkleHash(merkleHashCalculator)),
     )
+}
+
+private fun el2MerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Long): Gtv {
+    val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
+    val bh = BaseBlockHeader(db.getBlockHeader(ctx, blockRid), SECP256K1CryptoSystem()).blockHeaderRec
+    val merkleTree = MerkleTree(bh.gtvExtra.asDict(), SimpleDigestSystem(SHA256))
+    val path = merkleTree.getMerklePath("el2")
+    val proofs = merkleTree.getMerkleProof(path)
+    var gtvProofs: List<GtvByteArray> = listOf()
+    for (proof in proofs) {
+        gtvProofs = gtvProofs.plus(gtv(proof))
+    }
+    return gtv(gtv(EMPTY_HASH), gtv(path.toLong()), gtv(bh.gtvExtra["el2"]!!), gtv(gtvProofs))
 }
 
 private fun blockWitnessData(

@@ -31,8 +31,15 @@ object GtvEncoder {
         var out = ByteArray(0){0}
         a.forEach {
             out = when (it) {
+                is GtvArray -> {
+                    val b = it.asArray()
+                    b.forEach { ba ->
+                        if (ba.asByteArray().size != 32) throw IllegalArgumentException("invalid byte array length")
+                        out = out.plus(ba.asByteArray())
+                    }
+                    out
+                }
                 is GtvByteArray -> {
-                    // TODO: temporarily strictly data validation for ease
                     if (it.bytearray.size != 32) {
                         throw IllegalArgumentException("invalid byte array length")
                     }

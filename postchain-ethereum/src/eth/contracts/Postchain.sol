@@ -6,13 +6,11 @@ import "./utils/cryptography/Hash.sol";
 import "./utils/cryptography/ECDSA.sol";
 import "./utils/cryptography/MerkleProof.sol";
 import "./token/ERC20.sol";
+import "./Data.sol";
 
 library Postchain {
     using EC for bytes32;
     using MerkleProof for bytes32[];
-
-    bytes32 constant L2_EVENT_KEY = 0x1F1831C339CD7E1195B64253AF6691E58A43D402BE48D0834BBD1869A9C9C935;
-    bytes32 constant L2_STATE_KEY = 0x04A48CDA5CE81FF2A97A9E2C0F521C2853258D6DDBA62190D3F0A2523B09C4B0;    
 
     struct Event {
         uint256 serialNumber;
@@ -29,8 +27,7 @@ library Postchain {
         uint timestamp;
         uint height;
         bytes32 dependenciesHashedLeaf;
-        bytes32 l2RootEvent;
-        bytes32 l2RootState;
+        bytes32 extraDataHashedLeaf;
     }
 
     function isValidNodes(bytes32 hash, address[] memory nodes) public pure returns (bool) {
@@ -68,20 +65,22 @@ library Postchain {
         return (evt.token, evt.beneficiary, evt.amount);
     }
 
-    function verifyBlock(bytes32 _hash,
-        bytes calldata blockHeader,
-        bytes[] calldata sigs,
-        bytes32[] calldata merkleProofs,
-        uint position,
-        address[] memory _appNode
-    ) public pure {
-        (bytes32 blockRid, bytes32 eventRoot, ) = _verifyBlockHeader(blockHeader);
-        if (!isValidSignatures(blockRid, sigs, _appNode)) revert("Postchain: block signature is invalid");
-        if (!merkleProofs.verify(_hash, position, eventRoot)) revert("Postchain: invalid merkle proof");
+    function verifyBlockHeader(
+        bytes memory blockHeader,
+        bytes calldata el2Leaf,
+        Data.EL2ProofData memory proof
+    ) public pure returns (bytes32, bytes32, bytes32) {
+
+        bytes32 blockRid = _decodeBlockHeader(blockHeader);
+        if (!proof.extraMerkleProofs.verifySHA256(proof.leaf, proof.el2Position, proof.extraRoot)) {
+            revert("Postchain: invalid el2 extra data");
+        }
+        return (blockRid, _bytesToBytes32(el2Leaf, 0), _bytesToBytes32(el2Leaf, 32));
     }
 
-    function _verifyBlockHeader(bytes calldata blockHeader) internal pure returns (bytes32, bytes32, bytes32) {
-
+    function _decodeBlockHeader(
+        bytes memory blockHeader
+    ) internal pure returns (bytes32) {
         BlockHeaderData memory header = abi.decode(blockHeader, (BlockHeaderData));
 
         bytes32 node12 = sha256(abi.encodePacked(
@@ -102,24 +101,6 @@ library Postchain {
                 header.dependenciesHashedLeaf
             ));
 
-        bytes32 l2event = sha256(abi.encodePacked(
-                uint8(0x00),
-                L2_EVENT_KEY,
-                Hash.hashGtvBytes32Leaf(header.l2RootEvent)
-            ));
-
-        bytes32 l2state = sha256(abi.encodePacked(
-                uint8(0x00),
-                L2_STATE_KEY,
-                Hash.hashGtvBytes32Leaf(header.l2RootState)
-            ));
-
-        bytes32 node78 = sha256(abi.encodePacked(
-                uint8(0x8), // Gtv merkle tree dict prefix
-                l2event,
-                l2state
-            ));
-
         bytes32 node1234 = sha256(abi.encodePacked(
                 uint8(0x00),
                 node12,
@@ -129,7 +110,7 @@ library Postchain {
         bytes32 node5678 = sha256(abi.encodePacked(
                 uint8(0x00),
                 node56,
-                node78
+                header.extraDataHashedLeaf
             ));
 
         bytes32 blockRid = sha256(abi.encodePacked(
@@ -139,7 +120,7 @@ library Postchain {
             ));
 
         if (blockRid != header.blockRid) revert("Postchain: invalid block header");
-        return (blockRid, header.l2RootEvent, header.l2RootState);
+        return blockRid;
     }
 
     function _calculateBFTRequiredNum(uint total) internal pure returns (uint) {
@@ -157,5 +138,14 @@ library Postchain {
         uint p = 1;
         while (p < x) p <<= 1;
         return p;
+    }
+
+    function _bytesToBytes32(bytes memory b, uint offset) internal pure returns (bytes32) {
+        bytes32 out;
+
+        for (uint i = 0; i < 32; i++) {
+            out |= bytes32(b[offset + i] & 0xFF) >> (i * 8);
+        }
+        return out;
     }
 }

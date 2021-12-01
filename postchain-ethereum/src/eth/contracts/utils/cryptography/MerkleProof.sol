@@ -5,7 +5,7 @@ import "./Hash.sol";
 
 library MerkleProof {
     /**
-     * @dev verify merkle proof
+     * @dev verify merkle proof using keccak256
      */
     function verify(bytes32[] calldata proofs, bytes32 leaf, uint position, bytes32 rootHash) public pure returns (bool) {
         bytes32 r = leaf;
@@ -15,6 +15,22 @@ library MerkleProof {
                 r = Hash.hash(r, proofs[i]);
             } else {
                 r = Hash.hash(proofs[i], r);
+            }
+        }
+        return (r == rootHash);
+    }
+
+    /**
+     * @dev verify merkle proof using sha256
+     */
+    function verifySHA256(bytes32[] calldata proofs, bytes32 leaf, uint position, bytes32 rootHash) public pure returns (bool) {
+        bytes32 r = leaf;
+        for (uint i = 0; i < proofs.length; i++) {
+            uint b = position & (1 << i);
+            if (b == 0) {
+                r = sha256(abi.encodePacked(r, proofs[i]));
+            } else {
+                r = sha256(abi.encodePacked(proofs[i], r));
             }
         }
         return (r == rootHash);

@@ -29,7 +29,7 @@ interface ChrL2Interface extends ethers.utils.Interface {
     "updateAppNodes(bytes32,bytes[],address[])": FunctionFragment;
     "updateDirectoryNodes(bytes32,bytes[],address[])": FunctionFragment;
     "withdraw(bytes32,address)": FunctionFragment;
-    "withdraw_request(bytes,bytes32,bytes,bytes[],bytes32[],uint256)": FunctionFragment;
+    "withdraw_request(bytes,tuple,bytes,bytes[],bytes,tuple)": FunctionFragment;
   };
 
   encodeFunctionData(functionFragment: "_balances", values: [string]): string;
@@ -65,11 +65,16 @@ interface ChrL2Interface extends ethers.utils.Interface {
     functionFragment: "withdraw_request",
     values: [
       BytesLike,
-      BytesLike,
+      { leaf: BytesLike; position: BigNumberish; merkleProofs: BytesLike[] },
       BytesLike,
       BytesLike[],
-      BytesLike[],
-      BigNumberish
+      BytesLike,
+      {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      }
     ]
   ): string;
 
@@ -200,11 +205,20 @@ export class ChrL2 extends BaseContract {
 
     withdraw_request(
       _event: BytesLike,
-      _hash: BytesLike,
+      eventProof: {
+        leaf: BytesLike;
+        position: BigNumberish;
+        merkleProofs: BytesLike[];
+      },
       blockHeader: BytesLike,
       sigs: BytesLike[],
-      merkleProofs: BytesLike[],
-      position: BigNumberish,
+      el2Leaf: BytesLike,
+      el2Proof: {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      },
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
@@ -259,11 +273,20 @@ export class ChrL2 extends BaseContract {
 
   withdraw_request(
     _event: BytesLike,
-    _hash: BytesLike,
+    eventProof: {
+      leaf: BytesLike;
+      position: BigNumberish;
+      merkleProofs: BytesLike[];
+    },
     blockHeader: BytesLike,
     sigs: BytesLike[],
-    merkleProofs: BytesLike[],
-    position: BigNumberish,
+    el2Leaf: BytesLike,
+    el2Proof: {
+      leaf: BytesLike;
+      el2Position: BigNumberish;
+      extraRoot: BytesLike;
+      extraMerkleProofs: BytesLike[];
+    },
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -318,11 +341,20 @@ export class ChrL2 extends BaseContract {
 
     withdraw_request(
       _event: BytesLike,
-      _hash: BytesLike,
+      eventProof: {
+        leaf: BytesLike;
+        position: BigNumberish;
+        merkleProofs: BytesLike[];
+      },
       blockHeader: BytesLike,
       sigs: BytesLike[],
-      merkleProofs: BytesLike[],
-      position: BigNumberish,
+      el2Leaf: BytesLike,
+      el2Proof: {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      },
       overrides?: CallOverrides
     ): Promise<void>;
   };
@@ -396,11 +428,20 @@ export class ChrL2 extends BaseContract {
 
     withdraw_request(
       _event: BytesLike,
-      _hash: BytesLike,
+      eventProof: {
+        leaf: BytesLike;
+        position: BigNumberish;
+        merkleProofs: BytesLike[];
+      },
       blockHeader: BytesLike,
       sigs: BytesLike[],
-      merkleProofs: BytesLike[],
-      position: BigNumberish,
+      el2Leaf: BytesLike,
+      el2Proof: {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      },
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
@@ -454,11 +495,20 @@ export class ChrL2 extends BaseContract {
 
     withdraw_request(
       _event: BytesLike,
-      _hash: BytesLike,
+      eventProof: {
+        leaf: BytesLike;
+        position: BigNumberish;
+        merkleProofs: BytesLike[];
+      },
       blockHeader: BytesLike,
       sigs: BytesLike[],
-      merkleProofs: BytesLike[],
-      position: BigNumberish,
+      el2Leaf: BytesLike,
+      el2Proof: {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      },
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

@@ -51,8 +51,7 @@ class EthereumL2Implementation(
         val extra = mutableMapOf<String, Gtv>()
         val stateRootHash = snapshot.updateSnapshot(bctx.height, states)
         val eventRootHash = event.writeEventTree(bctx.height, events)
-        extra["el2RootState"] = GtvByteArray(stateRootHash)
-        extra["el2RootEvent"] = GtvByteArray(eventRootHash)
+        extra["el2"] = GtvByteArray(eventRootHash + stateRootHash)
         return extra
     }
 

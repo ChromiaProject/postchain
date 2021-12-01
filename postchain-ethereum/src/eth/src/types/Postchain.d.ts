@@ -22,7 +22,7 @@ interface PostchainInterface extends ethers.utils.Interface {
   functions: {
     "isValidNodes(bytes32,address[])": FunctionFragment;
     "isValidSignatures(bytes32,bytes[],address[])": FunctionFragment;
-    "verifyBlock(bytes32,bytes,bytes[],bytes32[],uint256,address[])": FunctionFragment;
+    "verifyBlockHeader(bytes,bytes,tuple)": FunctionFragment;
     "verifyEvent(bytes32,bytes)": FunctionFragment;
   };
 
@@ -35,14 +35,16 @@ interface PostchainInterface extends ethers.utils.Interface {
     values: [BytesLike, BytesLike[], string[]]
   ): string;
   encodeFunctionData(
-    functionFragment: "verifyBlock",
+    functionFragment: "verifyBlockHeader",
     values: [
       BytesLike,
       BytesLike,
-      BytesLike[],
-      BytesLike[],
-      BigNumberish,
-      string[]
+      {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      }
     ]
   ): string;
   encodeFunctionData(
@@ -59,7 +61,7 @@ interface PostchainInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "verifyBlock",
+    functionFragment: "verifyBlockHeader",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -127,15 +129,17 @@ export class Postchain extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
-    verifyBlock(
-      _hash: BytesLike,
+    verifyBlockHeader(
       blockHeader: BytesLike,
-      sigs: BytesLike[],
-      merkleProofs: BytesLike[],
-      position: BigNumberish,
-      _appNode: string[],
+      el2Leaf: BytesLike,
+      proof: {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      },
       overrides?: CallOverrides
-    ): Promise<[void]>;
+    ): Promise<[string, string, string]>;
 
     verifyEvent(
       _hash: BytesLike,
@@ -157,15 +161,17 @@ export class Postchain extends BaseContract {
     overrides?: CallOverrides
   ): Promise<boolean>;
 
-  verifyBlock(
-    _hash: BytesLike,
+  verifyBlockHeader(
     blockHeader: BytesLike,
-    sigs: BytesLike[],
-    merkleProofs: BytesLike[],
-    position: BigNumberish,
-    _appNode: string[],
+    el2Leaf: BytesLike,
+    proof: {
+      leaf: BytesLike;
+      el2Position: BigNumberish;
+      extraRoot: BytesLike;
+      extraMerkleProofs: BytesLike[];
+    },
     overrides?: CallOverrides
-  ): Promise<void>;
+  ): Promise<[string, string, string]>;
 
   verifyEvent(
     _hash: BytesLike,
@@ -187,15 +193,17 @@ export class Postchain extends BaseContract {
       overrides?: CallOverrides
     ): Promise<boolean>;
 
-    verifyBlock(
-      _hash: BytesLike,
+    verifyBlockHeader(
       blockHeader: BytesLike,
-      sigs: BytesLike[],
-      merkleProofs: BytesLike[],
-      position: BigNumberish,
-      _appNode: string[],
+      el2Leaf: BytesLike,
+      proof: {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      },
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<[string, string, string]>;
 
     verifyEvent(
       _hash: BytesLike,
@@ -220,13 +228,15 @@ export class Postchain extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    verifyBlock(
-      _hash: BytesLike,
+    verifyBlockHeader(
       blockHeader: BytesLike,
-      sigs: BytesLike[],
-      merkleProofs: BytesLike[],
-      position: BigNumberish,
-      _appNode: string[],
+      el2Leaf: BytesLike,
+      proof: {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      },
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -251,13 +261,15 @@ export class Postchain extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    verifyBlock(
-      _hash: BytesLike,
+    verifyBlockHeader(
       blockHeader: BytesLike,
-      sigs: BytesLike[],
-      merkleProofs: BytesLike[],
-      position: BigNumberish,
-      _appNode: string[],
+      el2Leaf: BytesLike,
+      proof: {
+        leaf: BytesLike;
+        el2Position: BigNumberish;
+        extraRoot: BytesLike;
+        extraMerkleProofs: BytesLike[];
+      },
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 

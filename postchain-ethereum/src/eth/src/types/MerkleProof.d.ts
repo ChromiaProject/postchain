@@ -22,6 +22,7 @@ interface MerkleProofInterface extends ethers.utils.Interface {
   functions: {
     "root(bytes32[])": FunctionFragment;
     "verify(bytes32[],bytes32,uint256,bytes32)": FunctionFragment;
+    "verifySHA256(bytes32[],bytes32,uint256,bytes32)": FunctionFragment;
   };
 
   encodeFunctionData(functionFragment: "root", values: [BytesLike[]]): string;
@@ -29,9 +30,17 @@ interface MerkleProofInterface extends ethers.utils.Interface {
     functionFragment: "verify",
     values: [BytesLike[], BytesLike, BigNumberish, BytesLike]
   ): string;
+  encodeFunctionData(
+    functionFragment: "verifySHA256",
+    values: [BytesLike[], BytesLike, BigNumberish, BytesLike]
+  ): string;
 
   decodeFunctionResult(functionFragment: "root", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "verifySHA256",
+    data: BytesLike
+  ): Result;
 
   events: {};
 }
@@ -89,6 +98,14 @@ export class MerkleProof extends BaseContract {
       rootHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<[boolean]>;
+
+    verifySHA256(
+      proofs: BytesLike[],
+      leaf: BytesLike,
+      position: BigNumberish,
+      rootHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
   };
 
   root(nodes: BytesLike[], overrides?: CallOverrides): Promise<string>;
@@ -101,10 +118,26 @@ export class MerkleProof extends BaseContract {
     overrides?: CallOverrides
   ): Promise<boolean>;
 
+  verifySHA256(
+    proofs: BytesLike[],
+    leaf: BytesLike,
+    position: BigNumberish,
+    rootHash: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
   callStatic: {
     root(nodes: BytesLike[], overrides?: CallOverrides): Promise<string>;
 
     verify(
+      proofs: BytesLike[],
+      leaf: BytesLike,
+      position: BigNumberish,
+      rootHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    verifySHA256(
       proofs: BytesLike[],
       leaf: BytesLike,
       position: BigNumberish,
@@ -125,6 +158,14 @@ export class MerkleProof extends BaseContract {
       rootHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    verifySHA256(
+      proofs: BytesLike[],
+      leaf: BytesLike,
+      position: BigNumberish,
+      rootHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -134,6 +175,14 @@ export class MerkleProof extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     verify(
+      proofs: BytesLike[],
+      leaf: BytesLike,
+      position: BigNumberish,
+      rootHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    verifySHA256(
       proofs: BytesLike[],
       leaf: BytesLike,
       position: BigNumberish,

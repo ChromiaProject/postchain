@@ -4,9 +4,15 @@ pragma experimental ABIEncoderV2;
 
 import "./Postchain.sol";
 import "./token/ERC20.sol";
+import "./utils/cryptography/MerkleProof.sol";
+import "./Data.sol";
 
 contract ChrL2 {
+    // hash of "el2" on postchain
+    bytes32 constant EL2_KEY = 0x36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C;
+
     using Postchain for bytes32;
+    using MerkleProof for bytes32[];
 
     mapping(ERC20 => uint256) public _balances;
     mapping (bytes32 => Withdraw) public _withdraw;
@@ -60,25 +66,39 @@ contract ChrL2 {
         return true;
     }
 
-    function withdraw_request(bytes calldata _event, bytes32 _hash,
+    function withdraw_request(
+        bytes calldata _event,
+        Data.EventProof memory eventProof,
         bytes calldata blockHeader,
         bytes[] calldata sigs,
-        bytes32[] calldata merkleProofs,
-        uint position
+        bytes calldata el2Leaf,
+        Data.EL2ProofData memory el2Proof
     ) public {
-        require(_events[_hash] == false, "ChrL2: event hash was already used");
-        _hash.verifyBlock(blockHeader, sigs, merkleProofs, position, appNodes);
-        (ERC20 token, address beneficiary, uint256 amount) = _hash.verifyEvent(_event);
-        require(amount > 0 && amount <= _balances[token], "ChrL2: invalid amount to make request withdraw");
-        Withdraw storage wd = _withdraw[_hash];
-        wd.token = token;
-        wd.beneficiary = beneficiary;
-        wd.amount += amount;
-        wd.block_number = block.number + 50;
-        wd.isWithdraw = false;
-        _withdraw[_hash] = wd;
-        _events[_hash] = true; // mark the event hash was already used.
-        emit WithdrawRequest(beneficiary, token, amount);
+        require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
+        {
+            el2Proof.leaf = sha256(abi.encodePacked(EL2_KEY, Hash.hashGtvBytes64Leaf(el2Leaf)));
+            (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, el2Leaf, el2Proof);
+            if (!Postchain.isValidSignatures(blockRid, sigs, appNodes)) revert("ChrL2: block signature is invalid");
+            if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("ChrL2: invalid merkle proof");
+        }
+
+        _events[eventProof.leaf] = _updateWithdraw(eventProof.leaf, _event); // mark the event hash was already used.
+    }
+
+    function _updateWithdraw(bytes32 hash, bytes calldata _event) internal returns (bool) {
+        Withdraw storage wd = _withdraw[hash];
+        {
+            (ERC20 token, address beneficiary, uint256 amount) = hash.verifyEvent(_event);
+            require(amount > 0 && amount <= _balances[token], "ChrL2: invalid amount to make request withdraw");
+            wd.token = token;
+            wd.beneficiary = beneficiary;
+            wd.amount += amount;
+            wd.block_number = block.number + 50;
+            wd.isWithdraw = false;
+            _withdraw[hash] = wd;
+            emit WithdrawRequest(beneficiary, token, amount);
+        }
+        return true;
     }
 
     function withdraw(bytes32 _hash, address payable beneficiary) public {
