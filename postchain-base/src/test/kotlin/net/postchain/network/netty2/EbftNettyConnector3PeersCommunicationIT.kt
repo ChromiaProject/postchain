@@ -20,6 +20,7 @@ import org.awaitility.Duration.TEN_SECONDS
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.net.InetSocketAddress
 
 class EbftNettyConnector3PeersCommunicationIT {
 
@@ -33,6 +34,10 @@ class EbftNettyConnector3PeersCommunicationIT {
     private lateinit var context1: EbftTestContext
     private lateinit var context2: EbftTestContext
     private lateinit var context3: EbftTestContext
+
+    private lateinit var socketAddress1: InetSocketAddress
+    private lateinit var socketAddress2: InetSocketAddress
+    private lateinit var socketAddress3: InetSocketAddress
 
     @Before
     fun setUp() {
@@ -64,9 +69,9 @@ class EbftNettyConnector3PeersCommunicationIT {
                 blockchainRid)
 
         // Initializing
-        context1.init()
-        context2.init()
-        context3.init()
+        socketAddress1 = context1.init()
+        socketAddress2 = context2.init()
+        socketAddress3 =context3.init()
     }
 
     @After
@@ -81,12 +86,12 @@ class EbftNettyConnector3PeersCommunicationIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = XPeerConnectionDescriptor(peerInfo2.peerId(), blockchainRid)
-        context1.peer.connectPeer(peerDescriptor2, peerInfo2, context1.buildPacketEncoder())
+        context1.peer.connectPeer(peerDescriptor2, peerInfo2, context1.buildPacketEncoder(), socketAddress2)
         // * 1 -> 3
         val peerDescriptor3 = XPeerConnectionDescriptor(peerInfo3.peerId(), blockchainRid)
-        context1.peer.connectPeer(peerDescriptor3, peerInfo3, context2.buildPacketEncoder())
+        context1.peer.connectPeer(peerDescriptor3, peerInfo3, context2.buildPacketEncoder(), socketAddress3)
         // * 3 -> 2
-        context3.peer.connectPeer(peerDescriptor2, peerInfo2, context3.buildPacketEncoder())
+        context3.peer.connectPeer(peerDescriptor2, peerInfo2, context3.buildPacketEncoder(), socketAddress2)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<XPeerConnection>()

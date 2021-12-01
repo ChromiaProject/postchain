@@ -10,6 +10,8 @@ import net.postchain.network.XPacketEncoder
 import net.postchain.network.x.XConnector
 import net.postchain.network.x.XConnectorEvents
 import net.postchain.network.x.XPeerConnectionDescriptor
+import java.net.InetSocketAddress
+import java.net.SocketAddress
 
 class NettyConnector<PacketType>(
         private val eventReceiver: XConnectorEvents
@@ -19,7 +21,8 @@ class NettyConnector<PacketType>(
 
     private lateinit var server: NettyServer
 
-    override fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>) {
+    override fun init(port: Int, packetDecoder: XPacketDecoder<PacketType>): InetSocketAddress {
+        var socketAddress: InetSocketAddress
         server = NettyServer().apply {
             setChannelHandler {
                 NettyServerPeerConnection(packetDecoder)
@@ -32,16 +35,26 @@ class NettyConnector<PacketType>(
                         }
             }
 
-            run(peerInfo.port)
+            socketAddress = run(port)
         }
+        return socketAddress
+    }
+
+    override fun connectPeer(
+        peerConnectionDescriptor: XPeerConnectionDescriptor,
+        peerInfo: PeerInfo,
+        packetEncoder: XPacketEncoder<PacketType>
+    ) {
+        connectPeer(peerConnectionDescriptor, peerInfo, packetEncoder, InetSocketAddress(peerInfo.host, peerInfo.port))
     }
 
     override fun connectPeer(
             peerConnectionDescriptor: XPeerConnectionDescriptor,
             peerInfo: PeerInfo,
-            packetEncoder: XPacketEncoder<PacketType>
+            packetEncoder: XPacketEncoder<PacketType>,
+            peerSocketAddress: SocketAddress
     ) {
-        with(NettyClientPeerConnection(peerInfo, packetEncoder, peerConnectionDescriptor)) {
+        with(NettyClientPeerConnection(peerInfo, packetEncoder, peerConnectionDescriptor, peerSocketAddress)) {
             try {
                 open(
                         onConnected = {

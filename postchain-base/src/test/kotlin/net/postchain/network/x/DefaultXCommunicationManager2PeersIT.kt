@@ -4,6 +4,7 @@ package net.postchain.network.x
 
 import assertk.assert
 import assertk.assertions.containsExactly
+import com.nhaarman.mockitokotlin2.withSettings
 import net.postchain.base.*
 import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
@@ -13,6 +14,7 @@ import org.awaitility.Duration
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.mockito.mock.SerializableMode
 
 class DefaultXCommunicationManager2PeersIT {
 

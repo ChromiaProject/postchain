@@ -18,7 +18,8 @@ import java.net.SocketAddress
 class NettyClientPeerConnection<PacketType>(
         val peerInfo: PeerInfo,
         private val packetEncoder: XPacketEncoder<PacketType>,
-        private val descriptor: XPeerConnectionDescriptor
+        private val descriptor: XPeerConnectionDescriptor,
+        private val peerSocketAddress: SocketAddress
 ) : NettyPeerConnection() {
 
     companion object : KLogging()
@@ -33,7 +34,7 @@ class NettyClientPeerConnection<PacketType>(
 
         nettyClient.apply {
             setChannelHandler(this@NettyClientPeerConnection)
-            val future = connect(peerAddress()).await()
+            val future = connect(peerSocketAddress).await()
             if (future.isSuccess) {
                 onConnected()
             } else {

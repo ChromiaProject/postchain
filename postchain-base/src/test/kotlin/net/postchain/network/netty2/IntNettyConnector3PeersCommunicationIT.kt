@@ -12,7 +12,6 @@ import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
-import net.postchain.devtools.argumentCaptor2
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
@@ -21,6 +20,7 @@ import org.awaitility.Duration.TEN_SECONDS
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.net.InetSocketAddress
 
 class IntNettyConnector3PeersCommunicationIT {
 
@@ -31,17 +31,24 @@ class IntNettyConnector3PeersCommunicationIT {
     private lateinit var context1: IntTestContext
     private lateinit var context2: IntTestContext
     private lateinit var context3: IntTestContext
+    private lateinit var socketAddress1: InetSocketAddress
+    private lateinit var socketAddress2: InetSocketAddress
+    private lateinit var socketAddress3: InetSocketAddress
 
     @Before
     fun setUp() {
-        peerInfo1 = PeerInfo("localhost", 3331, byteArrayOf(0, 0, 0, 1))
-        peerInfo2 = PeerInfo("localhost", 3332, byteArrayOf(0, 0, 0, 2))
-        peerInfo3 = PeerInfo("localhost", 3333, byteArrayOf(0, 0, 0, 3))
+        peerInfo1 = PeerInfo("localhost", 0, byteArrayOf(0, 0, 0, 1))
+        peerInfo2 = PeerInfo("localhost", 0, byteArrayOf(0, 0, 0, 2))
+        peerInfo3 = PeerInfo("localhost", 0, byteArrayOf(0, 0, 0, 3))
 
         // Starting contexts
-        context1 = startContext(peerInfo1)
-        context2 = startContext(peerInfo2)
-        context3 = startContext(peerInfo3)
+        context1 = IntTestContext(peerInfo1, arrayOf(peerInfo1, peerInfo2, peerInfo3))
+        context2 = IntTestContext(peerInfo2, arrayOf(peerInfo1, peerInfo2, peerInfo3))
+        context3 = IntTestContext(peerInfo3, arrayOf(peerInfo1, peerInfo2, peerInfo3))
+
+        socketAddress1 = context1.peer.init(0, context1.packetDecoder)
+        socketAddress2 = context2.peer.init(0, context2.packetDecoder)
+        socketAddress3 = context3.peer.init(0, context3.packetDecoder)
     }
 
     @After
@@ -49,13 +56,6 @@ class IntNettyConnector3PeersCommunicationIT {
         stopContext(context1)
         stopContext(context2)
         stopContext(context3)
-    }
-
-    private fun startContext(peerInfo: PeerInfo): IntTestContext {
-        return IntTestContext(peerInfo, arrayOf(peerInfo1, peerInfo2, peerInfo3))
-                .also {
-                    it.peer.init(peerInfo, it.packetDecoder)
-                }
     }
 
     private fun stopContext(context: IntTestContext) {
@@ -67,12 +67,12 @@ class IntNettyConnector3PeersCommunicationIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = XPeerConnectionDescriptor(peerInfo2.peerId(), blockchainRid)
-        context1.peer.connectPeer(peerDescriptor2, peerInfo2, context1.packetEncoder)
+        context1.peer.connectPeer(peerDescriptor2, peerInfo2, context1.packetEncoder, socketAddress2)
         // * 1 -> 3
         val peerDescriptor3 = XPeerConnectionDescriptor(peerInfo3.peerId(), blockchainRid)
-        context1.peer.connectPeer(peerDescriptor3, peerInfo3, context1.packetEncoder)
+        context1.peer.connectPeer(peerDescriptor3, peerInfo3, context1.packetEncoder, socketAddress3)
         // * 3 -> 2
-        context3.peer.connectPeer(peerDescriptor2, peerInfo2, context3.packetEncoder)
+        context3.peer.connectPeer(peerDescriptor2, peerInfo2, context3.packetEncoder, socketAddress2)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<XPeerConnection>()

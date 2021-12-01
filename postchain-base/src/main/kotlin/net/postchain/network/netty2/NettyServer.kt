@@ -12,6 +12,8 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
+import java.net.InetSocketAddress
+import java.net.SocketAddress
 import java.util.concurrent.TimeUnit
 
 class NettyServer {
@@ -19,7 +21,6 @@ class NettyServer {
     companion object: KLogging()
 
     private lateinit var server: ServerBootstrap
-    private lateinit var bindFuture: ChannelFuture
     private lateinit var createChannelHandler: () -> ChannelHandler
     private lateinit var eventLoopGroup: EventLoopGroup
 
@@ -27,7 +28,7 @@ class NettyServer {
         this.createChannelHandler = handlerFactory
     }
 
-    fun run(port: Int) {
+    fun run(port: Int): InetSocketAddress {
         eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyServer"))
 
         server = ServerBootstrap()
@@ -47,13 +48,13 @@ class NettyServer {
                     }
                 })
 
-        bindFuture = server.bind(port).sync()
+        return server.bind(port).sync().channel().localAddress() as InetSocketAddress
     }
 
     fun shutdown() {
         logger.debug("Shutting down NettyServer")
         try {
-            eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).sync()
+            eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).await().sync()
             logger.debug("Shutting down NettyServer done")
         } catch (t: Throwable) {
             logger.debug("Shutting down NettyServer failed", t)
