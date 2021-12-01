@@ -13,6 +13,7 @@ import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
+import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
@@ -21,7 +22,6 @@ import org.awaitility.Duration.TEN_SECONDS
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.net.InetSocketAddress
 
 class IntNettyConnector2PeersCommunicationIT {
 
@@ -30,21 +30,19 @@ class IntNettyConnector2PeersCommunicationIT {
     private lateinit var peerInfo2: PeerInfo
     private lateinit var context1: IntTestContext
     private lateinit var context2: IntTestContext
-    private lateinit var socketAddress1: InetSocketAddress
-    private lateinit var socketAddress2: InetSocketAddress
 
     @Before
     fun setUp() {
-        peerInfo1 = PeerInfo("localhost", 0, byteArrayOf(0, 0, 0, 1))
-        peerInfo2 = PeerInfo("localhost", 0, byteArrayOf(0, 0, 0, 2))
+        peerInfo1 = peerInfoFromPublicKey(byteArrayOf(0, 0, 0, 1))
+        peerInfo2 = peerInfoFromPublicKey(byteArrayOf(0, 0, 0, 2))
 
         // Creating
         context1 = IntTestContext(peerInfo1, arrayOf(peerInfo1, peerInfo2))
         context2 = IntTestContext(peerInfo2, arrayOf(peerInfo1, peerInfo2))
 
         // Initializing
-        socketAddress1 = context1.peer.init(0, context1.packetDecoder)
-        socketAddress2 = context2.peer.init(0, context2.packetDecoder)
+        context1.peer.init(peerInfo1, context1.packetDecoder)
+        context2.peer.init(peerInfo2, context2.packetDecoder)
     }
 
     @After
@@ -57,7 +55,7 @@ class IntNettyConnector2PeersCommunicationIT {
     fun testConnectAndCommunicate() {
         // Connecting 1 -> 2
         val peerDescriptor2 = XPeerConnectionDescriptor(peerInfo2.peerId(), blockchainRid)
-        context1.peer.connectPeer(peerDescriptor2, peerInfo2, context1.packetEncoder, socketAddress2)
+        context1.peer.connectPeer(peerDescriptor2, peerInfo2, context1.packetEncoder)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<XPeerConnection>()

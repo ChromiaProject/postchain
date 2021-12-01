@@ -10,6 +10,7 @@ import net.postchain.base.*
 import net.postchain.core.BlockchainRid
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.junit.Before
 import org.junit.Test
 
@@ -28,9 +29,8 @@ class DefaultXCommunicationManagerTest {
 
     @Before
     fun setUp() {
-        // TODO: [et]: Make dynamic ports
-        peerInfo1 = PeerInfo("localhost", 3331, pubKey1)
-        peerInfo2 = PeerInfo("localhost", 3332, pubKey2)
+        peerInfo1 = peerInfoFromPublicKey(pubKey1)
+        peerInfo2 = peerInfoFromPublicKey(pubKey2)
     }
 
     @Test

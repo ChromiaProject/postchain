@@ -10,8 +10,8 @@ import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify
 import net.postchain.base.*
 import net.postchain.core.BlockchainRid
-import net.postchain.devtools.argumentCaptor2
 import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
@@ -20,7 +20,6 @@ import org.awaitility.Duration.TEN_SECONDS
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.net.InetSocketAddress
 
 class EbftNettyConnector3PeersCommunicationIT {
 
@@ -35,10 +34,6 @@ class EbftNettyConnector3PeersCommunicationIT {
     private lateinit var context2: EbftTestContext
     private lateinit var context3: EbftTestContext
 
-    private lateinit var socketAddress1: InetSocketAddress
-    private lateinit var socketAddress2: InetSocketAddress
-    private lateinit var socketAddress3: InetSocketAddress
-
     @Before
     fun setUp() {
         val privKey1 = cryptoSystem.getRandomBytes(32)
@@ -50,9 +45,9 @@ class EbftNettyConnector3PeersCommunicationIT {
         val privKey3 = cryptoSystem.getRandomBytes(32)
         val pubKey3 = secp256k1_derivePubKey(privKey3)
 
-        peerInfo1 = PeerInfo("localhost", 3331, pubKey1)
-        peerInfo2 = PeerInfo("localhost", 3332, pubKey2)
-        peerInfo3 = PeerInfo("localhost", 3333, pubKey3)
+        peerInfo1 = peerInfoFromPublicKey(pubKey1)
+        peerInfo2 = peerInfoFromPublicKey(pubKey2)
+        peerInfo3 = peerInfoFromPublicKey(pubKey3)
         val peers = arrayOf(peerInfo1, peerInfo2, peerInfo3)
 
         // Creating
@@ -69,9 +64,9 @@ class EbftNettyConnector3PeersCommunicationIT {
                 blockchainRid)
 
         // Initializing
-        socketAddress1 = context1.init()
-        socketAddress2 = context2.init()
-        socketAddress3 =context3.init()
+        context1.init()
+        context2.init()
+        context3.init()
     }
 
     @After
@@ -86,12 +81,12 @@ class EbftNettyConnector3PeersCommunicationIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = XPeerConnectionDescriptor(peerInfo2.peerId(), blockchainRid)
-        context1.peer.connectPeer(peerDescriptor2, peerInfo2, context1.buildPacketEncoder(), socketAddress2)
+        context1.peer.connectPeer(peerDescriptor2, peerInfo2, context1.buildPacketEncoder())
         // * 1 -> 3
         val peerDescriptor3 = XPeerConnectionDescriptor(peerInfo3.peerId(), blockchainRid)
-        context1.peer.connectPeer(peerDescriptor3, peerInfo3, context2.buildPacketEncoder(), socketAddress3)
+        context1.peer.connectPeer(peerDescriptor3, peerInfo3, context2.buildPacketEncoder())
         // * 3 -> 2
-        context3.peer.connectPeer(peerDescriptor2, peerInfo2, context3.buildPacketEncoder(), socketAddress2)
+        context3.peer.connectPeer(peerDescriptor2, peerInfo2, context3.buildPacketEncoder())
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<XPeerConnection>()

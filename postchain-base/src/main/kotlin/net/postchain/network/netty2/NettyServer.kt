@@ -3,7 +3,6 @@
 package net.postchain.network.netty2
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.EventLoopGroup
@@ -12,8 +11,6 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
-import java.net.InetSocketAddress
-import java.net.SocketAddress
 import java.util.concurrent.TimeUnit
 
 class NettyServer {
@@ -28,7 +25,7 @@ class NettyServer {
         this.createChannelHandler = handlerFactory
     }
 
-    fun run(port: Int): InetSocketAddress {
+    fun run(port: Int) {
         eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyServer"))
 
         server = ServerBootstrap()
@@ -48,13 +45,13 @@ class NettyServer {
                     }
                 })
 
-        return server.bind(port).sync().channel().localAddress() as InetSocketAddress
+        server.bind(port).sync()
     }
 
     fun shutdown() {
         logger.debug("Shutting down NettyServer")
         try {
-            eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).await().sync()
+            eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).sync()
             logger.debug("Shutting down NettyServer done")
         } catch (t: Throwable) {
             logger.debug("Shutting down NettyServer failed", t)

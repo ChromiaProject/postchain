@@ -17,7 +17,7 @@ class NettyConnectorFactory<PacketType> : XConnectorFactory<PacketType> {
     ): XConnector<PacketType> {
 
         return NettyConnector<PacketType>(eventReceiver).apply {
-            init(peerInfo.port, packetDecoder)
+            init(peerInfo, packetDecoder)
         }
     }
 }
