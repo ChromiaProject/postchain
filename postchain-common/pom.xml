@@ -12,7 +12,6 @@
     <name>Postchain Common</name>
 
     <properties>
-        <assertk.version>0.10</assertk.version>
         <commons-configuration2.version>2.1.1</commons-configuration2.version>
         <commons-beanutils.version>1.9.3</commons-beanutils.version>
     </properties>
@@ -21,13 +20,11 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
-            <version>${kotlin.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.8.5</version>
         </dependency>
 
         <!-- Apache Commons -->
@@ -41,26 +38,22 @@
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
             <artifactId>assertk</artifactId>
-            <version>${assertk.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
-            <version>3.1.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>3.1.2</version>
         </dependency>
 
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility-kotlin</artifactId>
-            <version>3.1.2</version>
         </dependency>
 
     </dependencies>
