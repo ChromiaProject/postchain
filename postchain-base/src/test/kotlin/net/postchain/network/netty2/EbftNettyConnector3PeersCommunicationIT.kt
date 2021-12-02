@@ -10,8 +10,8 @@ import com.nhaarman.mockitokotlin2.times
 import com.nhaarman.mockitokotlin2.verify
 import net.postchain.base.*
 import net.postchain.core.BlockchainRid
-import net.postchain.devtools.argumentCaptor2
 import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
@@ -45,9 +45,9 @@ class EbftNettyConnector3PeersCommunicationIT {
         val privKey3 = cryptoSystem.getRandomBytes(32)
         val pubKey3 = secp256k1_derivePubKey(privKey3)
 
-        peerInfo1 = PeerInfo("localhost", 3331, pubKey1)
-        peerInfo2 = PeerInfo("localhost", 3332, pubKey2)
-        peerInfo3 = PeerInfo("localhost", 3333, pubKey3)
+        peerInfo1 = peerInfoFromPublicKey(pubKey1)
+        peerInfo2 = peerInfoFromPublicKey(pubKey2)
+        peerInfo3 = peerInfoFromPublicKey(pubKey3)
         val peers = arrayOf(peerInfo1, peerInfo2, peerInfo3)
 
         // Creating

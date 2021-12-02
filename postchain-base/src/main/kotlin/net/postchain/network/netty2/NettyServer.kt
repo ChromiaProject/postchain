@@ -3,7 +3,6 @@
 package net.postchain.network.netty2
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.EventLoopGroup
@@ -19,7 +18,6 @@ class NettyServer {
     companion object: KLogging()
 
     private lateinit var server: ServerBootstrap
-    private lateinit var bindFuture: ChannelFuture
     private lateinit var createChannelHandler: () -> ChannelHandler
     private lateinit var eventLoopGroup: EventLoopGroup
 
@@ -47,7 +45,7 @@ class NettyServer {
                     }
                 })
 
-        bindFuture = server.bind(port).sync()
+        server.bind(port).sync()
     }
 
     fun shutdown() {
