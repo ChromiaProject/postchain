@@ -157,6 +157,11 @@
 
         <!-- Test dependencies -->
         <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
         </dependency>
@@ -175,7 +180,7 @@
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
-            <artifactId>awaitility</artifactId>
+            <artifactId>awaitility-kotlin</artifactId>
         </dependency>
         <dependency>
             <groupId>org.skyscreamer</groupId>
