@@ -2,9 +2,9 @@
 
 package net.postchain.network.netty2
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.ebft.EbftPacketDecoder

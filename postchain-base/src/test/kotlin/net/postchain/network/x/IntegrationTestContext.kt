@@ -2,7 +2,7 @@
 
 package net.postchain.network.x
 
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.mock
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.SECP256K1CryptoSystem
