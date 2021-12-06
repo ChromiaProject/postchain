@@ -5,7 +5,7 @@ package net.postchain.network.x
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
-import com.nhaarman.mockitokotlin2.*
+import org.mockito.kotlin.*
 import net.postchain.base.*
 import net.postchain.core.BlockchainRid
 import net.postchain.network.XPacketDecoder

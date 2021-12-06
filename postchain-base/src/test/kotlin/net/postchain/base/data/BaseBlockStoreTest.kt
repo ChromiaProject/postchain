@@ -2,8 +2,8 @@
 
 package net.postchain.base.data
 
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.whenever
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.postchain.base.BaseEContext
 import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem

@@ -2,7 +2,7 @@
 
 package net.postchain.devtools
 
-import com.nhaarman.mockitokotlin2.KArgumentCaptor
+import org.mockito.kotlin.KArgumentCaptor
 import org.mockito.ArgumentCaptor
 
 // FYI: Kotlin/MockitoKotlin can't infer return type correctly here w/o explicit declaration

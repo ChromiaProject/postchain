@@ -14,9 +14,9 @@ import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
 import net.postchain.gtv.merkle.proof.ProofValueGtvLeaf
 import net.postchain.gtv.path.ArrayGtvPathElement
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.whenever
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.hamcrest.Matchers.isEmptyString
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.After

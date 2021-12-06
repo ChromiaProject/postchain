@@ -6,8 +6,8 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.hexStringToByteArray

@@ -2,8 +2,8 @@
 
 package net.postchain.api.rest.endpoint
 
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi

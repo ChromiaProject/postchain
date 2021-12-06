@@ -5,7 +5,7 @@ package net.postchain.network.netty2
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
-import com.nhaarman.mockitokotlin2.*
+import org.mockito.kotlin.*
 import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId

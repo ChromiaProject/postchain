@@ -2,9 +2,9 @@ package net.postchain.base
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.eq
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import net.postchain.core.BlockQueries
 import net.postchain.core.TransactionQueue
 import net.postchain.gtv.Gtv

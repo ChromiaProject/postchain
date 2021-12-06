@@ -2,7 +2,7 @@
 
 package net.postchain.base
 
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.mock
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseTransactionFactory
