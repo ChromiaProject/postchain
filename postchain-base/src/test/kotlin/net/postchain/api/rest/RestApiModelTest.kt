@@ -3,6 +3,9 @@
 package net.postchain.api.rest
 
 import com.google.gson.JsonParser
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.Model
@@ -18,7 +21,6 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.ebft.NodeState
 import net.postchain.ebft.rest.contract.EBFTstateNodeStatusContract
-import org.easymock.EasyMock.*
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.After
 import org.junit.Before
@@ -38,8 +40,9 @@ class RestApiModelTest {
 
     @Before
     fun setup() {
-        model = createMock(Model::class.java)
-        expect(model.chainIID).andReturn(1L).anyTimes()
+        model = mock {
+            on { chainIID } doReturn 1L
+        }
 
         restApi = RestApi(0, basePath)
 
@@ -54,20 +57,14 @@ class RestApiModelTest {
 
     @Test
     fun test_getTx_no_models_404_received() {
-        replay(model)
-
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/tx/$blockchainRID1/$txRID")
                 .then()
                 .statusCode(404)
-
-        verify(model)
     }
 
     @Test
     fun test_getTx_unknown_model_404_received() {
-        replay(model)
-
         restApi.attachModel(blockchainRID1, model)
         restApi.attachModel(blockchainRID2, model)
 
@@ -75,16 +72,12 @@ class RestApiModelTest {
                 .get("/tx/$blockchainRID3/$txRID")
                 .then()
                 .statusCode(404)
-
-        verify(model)
     }
 
     @Test
     fun test_getTx_case_insensitive_ok() {
-        expect(model.getTransaction(TxRID(txRID.hexStringToByteArray())))
-                .andReturn(ApiTx("1234"))
-
-        replay(model)
+        whenever(model.getTransaction(TxRID(txRID.hexStringToByteArray())))
+                .thenReturn(ApiTx("1234"))
 
         restApi.attachModel(blockchainRID1.toUpperCase(), model)
 
@@ -92,15 +85,12 @@ class RestApiModelTest {
                 .get("/tx/${blockchainRID1.toLowerCase()}/$txRID")
                 .then()
                 .statusCode(200)
-
-        verify(model)
     }
 
     @Test
     fun test_getTx_attach_then_detach_ok() {
-        expect(model.getTransaction(TxRID(txRID.hexStringToByteArray())))
-                .andReturn(ApiTx("1234")).times(1)
-        replay(model)
+        whenever(model.getTransaction(TxRID(txRID.hexStringToByteArray())))
+            .thenReturn(ApiTx("1234"))
 
         restApi.attachModel(blockchainRID1, model)
         given().basePath(basePath).port(restApi.actualPort())
@@ -114,29 +104,22 @@ class RestApiModelTest {
                 .then()
                 .statusCode(404)
 
-        verify(model)
     }
 
     @Test
     fun test_getTx_incorrect_blockchainRID_format() {
-        replay(model)
-
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/tx/$blockchainRIDBadFormatted/$txRID")
                 .then()
                 .statusCode(400)
-
-        verify(model)
     }
 
     @Test
     fun test_node_get_block_height_null() {
-        expect(model.nodeQuery("height"))
-                .andReturn(null)
-
-        replay(model)
+        whenever(model.nodeQuery("height"))
+                .thenReturn(null)
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -145,17 +128,13 @@ class RestApiModelTest {
                 .then()
                 .statusCode(404)
                 .assertThat().body(equalTo(JsonParser().parse("""{"error":"Not found"}""").toString()))
-
-        verify(model)
     }
 
 
     @Test
     fun test_node_get_block_height() {
-        expect(model.nodeQuery("height"))
-                .andReturn(gson.toJson(BlockHeight(42)))
-
-        replay(model)
+        whenever(model.nodeQuery("height"))
+            .thenReturn(gson.toJson(BlockHeight(42)))
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -164,8 +143,6 @@ class RestApiModelTest {
                 .then()
                 .statusCode(200)
                 .assertThat().body(equalTo("""{"blockHeight":42}"""))
-
-        verify(model)
     }
 
     @Test
@@ -179,10 +156,8 @@ class RestApiModelTest {
                 blockRid = null
         )
 
-        expect(model.nodeQuery("my_status"))
-                .andReturn(gson.toJson(response))
-
-        replay(model)
+        whenever(model.nodeQuery("my_status"))
+                .thenReturn(gson.toJson(response))
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -191,8 +166,6 @@ class RestApiModelTest {
                 .then()
                 .statusCode(200)
                 .assertThat().body(equalTo(gson.toJson(response).toString()))
-
-        verify(model)
     }
 
     @Test
@@ -216,10 +189,8 @@ class RestApiModelTest {
                                 blockRid = null
                         ))
 
-        expect(model.nodeQuery("statuses"))
-                .andReturn(response.map { gson.toJson(it) }.toTypedArray().joinToString(separator = ",", prefix = "[", postfix = "]"))
-
-        replay(model)
+        whenever(model.nodeQuery("statuses"))
+                .thenReturn(response.map { gson.toJson(it) }.toTypedArray().joinToString(separator = ",", prefix = "[", postfix = "]"))
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -228,8 +199,6 @@ class RestApiModelTest {
                 .then()
                 .statusCode(200)
                 .assertThat().body(equalTo(gson.toJson(response).toString()))
-
-        verify(model)
     }
 
     @Test
@@ -271,10 +240,8 @@ class RestApiModelTest {
                         "signatures".toByteArray(),
                         1574849940)
         )
-        expect(model.getBlocks(Long.MAX_VALUE, 25, false))
-                .andReturn(response)
-
-        replay(model)
+        whenever(model.getBlocks(Long.MAX_VALUE, 25, false))
+                .thenReturn(response)
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -283,8 +250,6 @@ class RestApiModelTest {
                 .then()
                 .statusCode(200)
                 .assertThat().body(equalTo(gson.toJson(response).toString()))
-
-        verify(model)
     }
 
     @Test
@@ -312,10 +277,8 @@ class RestApiModelTest {
                         1574849940)
         )
 
-        expect(model.getBlocks(1574849940, 2, true))
-                .andReturn(response)
-
-        replay(model)
+        whenever(model.getBlocks(1574849940, 2, true))
+                .thenReturn(response)
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -324,8 +287,6 @@ class RestApiModelTest {
                 .then()
                 .statusCode(200)
                 .assertThat().body(equalTo(gson.toJson(response).toString()))
-
-        verify(model)
     }
 
     @Test
@@ -384,10 +345,8 @@ class RestApiModelTest {
                 )
         )
 
-        expect(model.getBlocks(Long.MAX_VALUE, 25, true))
-                .andReturn(blocks)
-
-        replay(model)
+        whenever(model.getBlocks(Long.MAX_VALUE, 25, true))
+                .thenReturn(blocks)
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -395,8 +354,6 @@ class RestApiModelTest {
                 .get("/blocks/$blockchainRID1")
                 .then()
                 .statusCode(200)
-
-        verify(model)
     }
 
     @Test
@@ -408,9 +365,8 @@ class RestApiModelTest {
                 TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),
                 TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
-        expect(model.getTransactionsInfo(Long.MAX_VALUE, 300))
-                .andReturn(response)
-        replay(model)
+        whenever(model.getTransactionsInfo(Long.MAX_VALUE, 300))
+                .thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -418,8 +374,6 @@ class RestApiModelTest {
                 .then()
                 .statusCode(200)
                 .assertThat().body(equalTo(gson.toJson(response).toString()))
-
-        verify(model)
     }
 
     @Test
@@ -430,9 +384,8 @@ class RestApiModelTest {
                 TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),
                 TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
-        expect(model.getTransactionsInfo(Long.MAX_VALUE, 25))
-                .andReturn(response)
-        replay(model)
+        whenever(model.getTransactionsInfo(Long.MAX_VALUE, 25))
+                .thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -440,7 +393,6 @@ class RestApiModelTest {
                 .then()
                 .statusCode(200)
                 .assertThat().body(equalTo(gson.toJson(response).toString()))
-        verify(model)
     }
 
     @Test
@@ -448,9 +400,8 @@ class RestApiModelTest {
         val tx = "tx2".toByteArray()
         val txRID = cryptoSystem.digest(tx)
         val response = TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
-        expect(model.getTransactionInfo(TxRID(txRID)))
-                .andReturn(response)
-        replay(model)
+        whenever(model.getTransactionInfo(TxRID(txRID)))
+                .thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -464,9 +415,8 @@ class RestApiModelTest {
     fun test_block_get_by_RID() {
         val blockRID = "blockRid001".toByteArray()
         val response = BlockDetail("blockRid001".toByteArray(), blockchainRID3.toByteArray(), "some header".toByteArray(), 0, listOf<TxDetail>(), "signatures".toByteArray(), 1574849700)
-        expect(model.getBlock(blockRID, true))
-                .andReturn(response)
-        replay(model)
+        whenever(model.getBlock(blockRID, true))
+                .thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
