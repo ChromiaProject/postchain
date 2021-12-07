@@ -15,10 +15,6 @@
 
     <name>Postchain Client</name>
 
-    <properties>
-        <executable-classifier>jar-with-dependencies</executable-classifier>
-    </properties>
-
     <dependencies>
         <!-- Kotlin -->
         <dependency>
@@ -122,44 +118,6 @@
                     <forkCount>0</forkCount>
                 </configuration>
             </plugin>
-
-
-
         </plugins>
     </build>
-
-    <!-- TODO: Remove this profile -->
-    <profiles>
-        <profile>
-            <id>assembly</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <version>${maven.assembly.plugin.version}</version>
-                        <executions>
-                            <execution>
-                                <id>make-executable-jar</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <archive>
-                                        <manifest>
-                                            <mainClass>net.postchain.client.AppKt</mainClass>
-                                        </manifest>
-                                    </archive>
-                                    <descriptorRefs>
-                                        <descriptorRef>${executable-classifier}</descriptorRef>
-                                    </descriptorRefs>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
