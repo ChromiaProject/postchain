@@ -26,17 +26,6 @@ library Hash {
             ));
     }
 
-    function hashGtvBytes64Leaf(bytes calldata value) public pure returns (bytes32) {
-        return sha256(abi.encodePacked(
-                uint8(0x1),  // Gtv merkle tree leaf prefix
-                uint8(0xA1), // // Gtv ByteArray tag: CONTEXT_CLASS, CONSTRUCTED, 1
-                uint8(64 + 2),
-                uint8(0x4), // DER ByteArray tag
-                uint8(64),
-                value
-            ));
-    }
-
     function hashGtvIntegerLeaf(uint value) public pure returns (bytes32) {
         uint8 nbytes = 1;
         uint remainingValue = value >> 8; // minimal length is 1 so we skip the first byte

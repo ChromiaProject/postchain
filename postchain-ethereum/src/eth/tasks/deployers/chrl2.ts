@@ -36,6 +36,7 @@ task("deploy:ChrL2")
     const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2", {
         libraries: {
             Postchain: postchain.address,
+            MerkleProof: merkleProof.address,
         }
     })
     const directoryNode = directory === undefined ? [] : getNodes(directory);
@@ -55,6 +56,7 @@ task("deploy:ChrL2")
             ],
             libraries: {
                 Postchain: postchain.address,
+                MerkleProof: merkleProof.address,
             },
         });
     }

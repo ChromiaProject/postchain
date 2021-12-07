@@ -22,7 +22,6 @@ interface HashInterface extends ethers.utils.Interface {
   functions: {
     "hash(bytes32,bytes32)": FunctionFragment;
     "hashGtvBytes32Leaf(bytes32)": FunctionFragment;
-    "hashGtvBytes64Leaf(bytes)": FunctionFragment;
     "hashGtvIntegerLeaf(uint256)": FunctionFragment;
   };
 
@@ -35,10 +34,6 @@ interface HashInterface extends ethers.utils.Interface {
     values: [BytesLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "hashGtvBytes64Leaf",
-    values: [BytesLike]
-  ): string;
-  encodeFunctionData(
     functionFragment: "hashGtvIntegerLeaf",
     values: [BigNumberish]
   ): string;
@@ -46,10 +41,6 @@ interface HashInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: "hash", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "hashGtvBytes32Leaf",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "hashGtvBytes64Leaf",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -115,11 +106,6 @@ export class Hash extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[string]>;
 
-    hashGtvBytes64Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
-
     hashGtvIntegerLeaf(
       value: BigNumberish,
       overrides?: CallOverrides
@@ -137,11 +123,6 @@ export class Hash extends BaseContract {
     overrides?: CallOverrides
   ): Promise<string>;
 
-  hashGtvBytes64Leaf(
-    value: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<string>;
-
   hashGtvIntegerLeaf(
     value: BigNumberish,
     overrides?: CallOverrides
@@ -155,11 +136,6 @@ export class Hash extends BaseContract {
     ): Promise<string>;
 
     hashGtvBytes32Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>;
-
-    hashGtvBytes64Leaf(
       value: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>;
@@ -184,11 +160,6 @@ export class Hash extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    hashGtvBytes64Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     hashGtvIntegerLeaf(
       value: BigNumberish,
       overrides?: CallOverrides
@@ -203,11 +174,6 @@ export class Hash extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     hashGtvBytes32Leaf(
-      value: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    hashGtvBytes64Leaf(
       value: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;

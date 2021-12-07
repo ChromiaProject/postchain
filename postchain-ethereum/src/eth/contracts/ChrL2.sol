@@ -3,14 +3,8 @@ pragma solidity >=0.6.0 <=0.8.7;
 pragma experimental ABIEncoderV2;
 
 import "./Postchain.sol";
-import "./token/ERC20.sol";
-import "./utils/cryptography/MerkleProof.sol";
-import "./Data.sol";
 
 contract ChrL2 {
-    // hash of "el2" on postchain
-    bytes32 constant EL2_KEY = 0x36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C;
-
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
 
@@ -76,7 +70,6 @@ contract ChrL2 {
     ) public {
         require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
         {
-            el2Proof.leaf = sha256(abi.encodePacked(EL2_KEY, Hash.hashGtvBytes64Leaf(el2Leaf)));
             (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, el2Leaf, el2Proof);
             if (!Postchain.isValidSignatures(blockRid, sigs, appNodes)) revert("ChrL2: block signature is invalid");
             if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("ChrL2: invalid merkle proof");

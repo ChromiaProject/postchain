@@ -7,13 +7,13 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotPageStore
-import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.data.SHA256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
 import net.postchain.core.MultiSigBlockWitness
 import net.postchain.gtv.*
+import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.MerkleTree
@@ -21,6 +21,7 @@ import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 
 const val PREFIX: String = "sys.x.el2"
+const val EL2: String = "el2"
 
 class EL2GTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf(
@@ -53,7 +54,8 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val db = DatabaseAccess.of(ctx)
     val eventInfo = db.getEvent(ctx, PREFIX, eventHash) ?: return GtvNull
     val blockHeight = eventInfo.blockHeight
-    val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
+    val bh = blockHeaderData(db, ctx, blockHeight)
+    val blockHeader = GtvEncoder.simpleEncodeGtv(bh)
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
     val eventProof = eventProof(ctx, blockHeight, eventInfo)
     val el2MerkleProof = el2MerkleProof(db, ctx, blockHeight)
@@ -62,6 +64,7 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
         "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
         "eventProof" to gtv(GtvEncoder.simpleEncodeGtv(eventProof)),
+        "el2Leaf" to el2Leaf(db, ctx, blockHeight),
         "el2MerkleProof" to gtv(GtvEncoder.simpleEncodeGtv(el2MerkleProof))
     )
 }
@@ -124,17 +127,28 @@ private fun blockHeaderData(
     )
 }
 
+private fun el2Leaf(db: DatabaseAccess, ctx: EContext, blockHeight: Long): Gtv {
+    val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
+    val bh = BaseBlockHeader(db.getBlockHeader(ctx, blockRid), SECP256K1CryptoSystem()).blockHeaderRec
+    return gtv(bh.gtvExtra[EL2]!!)
+}
+
 private fun el2MerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Long): Gtv {
     val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
     val bh = BaseBlockHeader(db.getBlockHeader(ctx, blockRid), SECP256K1CryptoSystem()).blockHeaderRec
-    val merkleTree = MerkleTree(bh.gtvExtra.asDict(), SimpleDigestSystem(SHA256))
-    val path = merkleTree.getMerklePath("el2")
+    val ds = SimpleDigestSystem(SHA256)
+    val merkleTree = MerkleTree(bh.gtvExtra.asDict(), ds)
+    val path = merkleTree.getMerklePath(EL2)
     val proofs = merkleTree.getMerkleProof(path)
     var gtvProofs: List<GtvByteArray> = listOf()
     for (proof in proofs) {
         gtvProofs = gtvProofs.plus(gtv(proof))
     }
-    return gtv(gtv(EMPTY_HASH), gtv(path.toLong()), gtv(bh.gtvExtra["el2"]!!), gtv(gtvProofs))
+    val el2Leaf = ds.hash(
+        ds.digest(encodeGtv(GtvString(EL2))),
+        ds.digest(encodeGtv(bh.gtvExtra[EL2]!!))
+    )
+    return gtv(gtv(el2Leaf), gtv(path.toLong()), gtv(merkleTree.getMerkleRoot()), gtv(gtvProofs))
 }
 
 private fun blockWitnessData(

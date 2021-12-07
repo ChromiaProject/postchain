@@ -16,7 +16,7 @@ class MerkleTreeTest : TestCase() {
     fun testGetMerkleProof_1() {
         val ds = SimpleDigestSystem(SHA256)
         val dict = HashMap<String, Gtv>()
-        dict["el2"] = GtvByteArray("044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d".hexStringToByteArray())
+        dict["el2"] = GtvByteArray("1a535d48ce851c5e5005da5a281f25ef3791449c089b8c6185be375693b8d9db1a535d48ce851c5e5005da5a281f25ef3791449c089b8c6185be375693b8d9db".hexStringToByteArray())
 
         val tree = MerkleTree(dict, ds)
         val pos = tree.getMerklePath("el2")
