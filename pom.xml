@@ -40,6 +40,7 @@
         <mockito-kotlin.version>4.0.0</mockito-kotlin.version>
         <mockito.version>2.23.0</mockito.version>
         <assertk.version>0.10</assertk.version>
+        <awaitility.version>3.1.2</awaitility.version>
 
         <!-- Logging -->
         <kotlin-logging.version>1.6.26</kotlin-logging.version>
@@ -139,6 +140,7 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-test-junit</artifactId>
                 <version>${kotlin.version}</version>
+                <scope>test</scope>
             </dependency>
 
             <!-- Postchain -->
@@ -223,12 +225,14 @@
             <dependency>
                 <groupId>org.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
-                <version>3.1.2</version>
+                <scope>test</scope>
+                <version>${awaitility.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.awaitility</groupId>
                 <artifactId>awaitility-kotlin</artifactId>
-                <version>3.1.2</version>
+                <scope>test</scope>
+                <version>${awaitility.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.github.ajalt</groupId>
@@ -304,21 +308,6 @@
                     <source>1.8</source>
                     <target>1.8</target>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>${maven.source.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
 
             <plugin>
