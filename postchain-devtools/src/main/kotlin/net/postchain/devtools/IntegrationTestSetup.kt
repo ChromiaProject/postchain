@@ -18,6 +18,7 @@ import org.awaitility.kotlin.await
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
+import java.net.ServerSocket
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
@@ -303,12 +304,20 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
         if (peerInfos == null) {
+            val sockets = List(nodeCount + replicasCount) { ServerSocket(0).apply { reuseAddress = true } }.onEach { it.close() }
             peerInfos =
-                    Array(nodeCount) { PeerInfo("localhost", BASE_PORT + it, pubKey(it)) } +
-                            Array(replicasCount) { PeerInfo("localhost", BASE_PORT - it - 1, pubKey(-it - 1)) }
+                    Array(nodeCount) { PeerInfo(sockets[it].inetAddress.hostName, sockets[it].localPort, pubKey(it)) } +
+                            Array(replicasCount) { PeerInfo(sockets[nodeCount+it].inetAddress.hostName, sockets[nodeCount+it].localPort, pubKey(-it - 1)) }
         }
 
         return peerInfos!!
+    }
+
+    private fun peerInfoFromPublicKey(pubKey: ByteArray): PeerInfo {
+        ServerSocket(0).use { socket ->
+            socket.reuseAddress = true
+            return PeerInfo(socket.inetAddress.hostName, socket.localPort, pubKey)
+        }
     }
 
     fun createPeerInfosWithReplicas(sysSetup: SystemSetup): Array<PeerInfo> {

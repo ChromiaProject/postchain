@@ -116,8 +116,11 @@ object TestNodeConfigProducer {
             baseConfig: PropertiesConfiguration
     ) {
         // These are the same for all tests
+        val hostName = System.getenv()["DB_HOST"] ?: "localhost"
+        val port = System.getenv()["DB_PORT"] ?: "5432"
+
         baseConfig.setProperty("database.driverclass", "org.postgresql.Driver")
-        baseConfig.setProperty("database.url",         "jdbc:postgresql://localhost:5432/postchain")
+        baseConfig.setProperty("database.url",         "jdbc:postgresql://$hostName:$port/postchain")
         baseConfig.setProperty("database.username",    "postchain")
         baseConfig.setProperty("database.password",    "postchain")
         // TODO: Maybe a personalized schema name like this is not needed (this is just legacy from the node.properties files)

@@ -21,6 +21,7 @@ import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import org.junit.After
 import org.junit.Assert
 import java.io.File
+import java.net.ServerSocket
 
 // Legacy code still use this old name, don't want to break compatibility.
 typealias IntegrationTest = ConfigFileBasedIntegrationTest
@@ -309,9 +310,10 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
 
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
         if (peerInfos == null) {
+            val sockets = List(nodeCount + replicasCount) { ServerSocket(0).apply { reuseAddress = true } }.onEach { it.close() }
             peerInfos =
-                    Array(nodeCount) { PeerInfo("localhost", BASE_PORT + it, generatePubKey(it)) } +
-                            Array(replicasCount) { PeerInfo("localhost", BASE_PORT - it - 1, generatePubKey(-it - 1)) }
+                    Array(nodeCount) { i ->  sockets[i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(i))} } +
+                            Array(replicasCount) { i -> sockets[nodeCount+i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(-i - 1)) }}
         }
 
         return peerInfos!!

@@ -36,10 +36,14 @@ class SQLModuleTest {
     }
 
     private fun getDatabaseConfig(): Configuration {
+        val hostName = System.getenv()["DB_HOST"] ?: "localhost"
+        val port = System.getenv()["DB_PORT"]
+
+        val host = port?.let { "$hostName:$it" } ?: hostName
         return MapConfiguration(mapOf(
                 "configuration.provider.node" to "legacy",
                 "database.driverclass" to "org.postgresql.Driver",
-                "database.url" to "jdbc:postgresql://localhost/postchain",
+                "database.url" to "jdbc:postgresql://$host/postchain",
                 "database.username" to "postchain",
                 "database.password" to "postchain",
                 "database.schema" to "testschema"
