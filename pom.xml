@@ -11,7 +11,6 @@
         <module>postchain-base</module>
         <module>postchain-devtools</module>
         <module>postchain-cw-modules</module>
-        <module>postchain-docker</module>
         <module>postchain-client</module>
         <module>postchain-distribution</module>
     </modules>
@@ -23,6 +22,7 @@
         <doclint>none</doclint>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <postchain.snapshots.url>https://maven.pkg.jetbrains.space/chromaway/p/postchain/postchain-snapshots</postchain.snapshots.url>
+        <postchain.releases.url>https://maven.pkg.jetbrains.space/chromaway/p/postchain/postchain-releases</postchain.releases.url>
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
@@ -65,6 +65,17 @@
             <id>space-postchain-snapshots</id>
             <name>Repository for postchain-related snapshots</name>
             <url>${postchain.snapshots.url}</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+        </repository>
+        <repository>
+            <id>space-postchain-releases</id>
+            <name>Repository for postchain-related releases</name>
+            <url>${postchain.releases.url}</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
@@ -451,9 +462,13 @@
     </profiles>
 
     <distributionManagement>
-        <repository>
+        <snapshotRepository>
             <id>space-postchain-snapshots</id>
             <url>${postchain.snapshots.url}</url>
+        </snapshotRepository>
+        <repository>
+            <id>space-postchain-releases</id>
+            <url>${postchain.releases.url}</url>
         </repository>
     </distributionManagement>
 
