@@ -96,12 +96,13 @@ class DefaultXCommunicationManagerTest {
         communicationManager.shutdown()
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun sendPacket_will_result_in_exception_if_empty_XPeerID_was_given() {
         // Given
         val connectionManager: XConnectionManager = mock()
         val peerCommunicationConfig: PeerCommConfiguration = mock {
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), XPeerID(pubKey1))
+            on { pubKey } doReturn pubKey1
         }
 
         // When
@@ -112,12 +113,13 @@ class DefaultXCommunicationManagerTest {
         communicationManager.shutdown()
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun sendPacket_will_result_in_exception_if_unknown_recipient_was_given() {
         // Given
         val connectionManager: XConnectionManager = mock()
         val peerCommunicationConfig: PeerCommConfiguration = mock {
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), XPeerID(pubKey1))
+            on { pubKey } doReturn pubKey1
         }
 
         // When
@@ -128,11 +130,12 @@ class DefaultXCommunicationManagerTest {
         communicationManager.shutdown()
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun sendPacket_will_result_in_exception_if_my_XPeerID_was_given() {
         // Given
         val peersConfig: PeerCommConfiguration = mock {
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), XPeerID(pubKey2))
+            on { pubKey } doReturn pubKey1
         }
 
         // When / Then exception

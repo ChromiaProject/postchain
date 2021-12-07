@@ -18,25 +18,25 @@ class DbTool(
             "postchain")
 
     fun getTxsCount(): Long {
-        return dataSource.connection.use { connection ->
+        return dataSource.connection.let { connection ->
             QueryRunner().query(connection, "SELECT COUNT(*) FROM transactions", ScalarHandler<Long>())
         }
     }
 
     fun getCities(): List<String> {
-        return dataSource.connection.use { connection ->
+        return dataSource.connection.let { connection ->
             QueryRunner().query(connection, "SELECT name FROM $databaseSchema.\"c100.city\"", ColumnListHandler<String>())
         }
     }
 
     fun getPeerIds(): List<ByteArray> {
-        return dataSource.connection.use { connection ->
+        return dataSource.connection.let { connection ->
             QueryRunner().query(connection, "SELECT pubkey FROM $databaseSchema.\"c0.peer_info\"", ColumnListHandler<ByteArray>())
         }
     }
 
     fun getBlockchainConfigsHeights(): List<Long> {
-        return dataSource.connection.use { connection ->
+        return dataSource.connection.let { connection ->
             QueryRunner().query(connection, "SELECT height FROM $databaseSchema.\"c0.blockchain_configuration\"", ColumnListHandler<Long>())
         }
     }

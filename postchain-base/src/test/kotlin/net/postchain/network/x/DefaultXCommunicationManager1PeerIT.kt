@@ -35,7 +35,7 @@ class DefaultXCommunicationManager1PeerIT {
     @Test
     fun singlePeer_launched_successfully() {
         startTestContext(arrayOf(peerInfo), pubKey)
-                .use { context ->
+                .let { context ->
                     context.communicationManager.init()
 
                     // Waiting for all connections to be established
@@ -50,7 +50,7 @@ class DefaultXCommunicationManager1PeerIT {
     @Test(expected = UserMistake::class)
     fun singlePeer_launching_with_empty_peers_will_result_in_exception() {
         startTestContext(arrayOf(), pubKey)
-                .use {
+                .let {
                     it.communicationManager.init()
                 }
     }
@@ -58,7 +58,7 @@ class DefaultXCommunicationManager1PeerIT {
     @Test(expected = UserMistake::class)
     fun singlePeer_launching_with_wrong_pubkey_will_result_in_exception() {
         startTestContext(arrayOf(peerInfo), pubKey2)
-                .use {
+                .let {
                     it.communicationManager.init()
                 }
     }

@@ -118,6 +118,12 @@ class DirectoryIT : ManagedModeTest() {
         return MockDirectoryDataSource(nodeIndex)
     }
 
+    /**
+     * This is causing some problems
+     *
+     * 1. Loop all subnode interceptors on the node with status.
+     * 2. we await the [ProcessManager] to start the chain to the given height
+     */
     override fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
         val pm = nodes[index].processManager as TestContainerManagedBlockchainProcessManager
         // await subnode ready for heartbeat:
