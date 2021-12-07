@@ -16,7 +16,7 @@
         </file>
         <file>
             <source>
-                ../postchain-base/target/postchain-base-${project.version}-jar-with-dependencies.jar
+                ../postchain-base/target/postchain-base-${project.version}.jar
             </source>
             <outputDirectory>./</outputDirectory>
         </file>

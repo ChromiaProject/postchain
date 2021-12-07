@@ -14,7 +14,7 @@
         <!-- postchain-base -->
         <file>
             <source>
-                ../postchain-base/target/postchain-base-${project.version}-${executable-classifier}.jar
+                ../postchain-base/target/postchain-base-${project.version}.jar
             </source>
             <outputDirectory>./postchain-node/lib</outputDirectory>
         </file>
@@ -28,7 +28,7 @@
         <!-- postchain-devtools -->
         <file>
             <source>
-                ../postchain-devtools/target/postchain-devtools-${project.version}-${executable-classifier}.jar
+                ../postchain-devtools/target/postchain-devtools-${project.version}.jar
             </source>
             <outputDirectory>./postchain-node/lib</outputDirectory>
         </file>
@@ -36,7 +36,7 @@
         <!-- postchain-client -->
         <file>
             <source>
-                ../postchain-client/target/postchain-client-${project.version}-${executable-classifier}.jar
+                ../postchain-client/target/postchain-client-${project.version}.jar
             </source>
             <outputDirectory>./postchain-node/lib</outputDirectory>
         </file>
@@ -44,6 +44,18 @@
 
     <fileSets>
         <!-- External lib jars -->
+        <fileSet>
+            <directory>../postchain-base/target/dependency</directory>
+            <outputDirectory>./postchain-node/lib</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../postchain-devtools/target/dependency</directory>
+            <outputDirectory>./postchain-node/lib</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../postchain-client/target/dependency</directory>
+            <outputDirectory>./postchain-node/lib</outputDirectory>
+        </fileSet>
         <fileSet>
             <directory>./lib</directory>
             <outputDirectory>./postchain-node/lib</outputDirectory>
