@@ -45,7 +45,12 @@ job("Build and deploy develop branch") {
 }
 
 fun Job.mavenContainer(displayName: String?, init: Container.() -> Unit) {
-    container(displayName = displayName, image = "maven:3.8.4-openjdk-11", init = init)
+    container(displayName = displayName, image = "maven:3.8.4-openjdk-11") {
+        resources {
+            cpu = 4
+        }
+        init.invoke(this)
+    }
 }
 
 fun Container.withPostgresDatabase() {
