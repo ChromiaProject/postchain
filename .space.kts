@@ -57,3 +57,11 @@ fun Container.withPostgresDatabase() {
         env["POSTGRES_PASSWORD"] = "postchain"
     }
 }
+
+fun Container.withDockerService() {
+    service("docker") {
+        resources {
+            memory = 4096
+        }
+    }
+}
