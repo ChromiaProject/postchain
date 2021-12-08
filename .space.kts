@@ -15,6 +15,7 @@ job("Build feature branch") {
     }
 
     mavenContainer("Run unit tests") {
+        withDockerService()
         withPostgresDatabase()
         env["TESTCONTAINERS_RYUK_DISABLED"] = "true"
         shellScript {
@@ -35,6 +36,7 @@ job("Build and deploy develop branch") {
     }
 
     mavenContainer("Run unit tests and deploy snapshots") {
+        withDockerService()
         withPostgresDatabase()
         shellScript {
             content = """
@@ -46,8 +48,10 @@ job("Build and deploy develop branch") {
 
 fun Job.mavenContainer(displayName: String?, init: Container.() -> Unit) {
     container(displayName = displayName, image = "maven:3.8.4-openjdk-11") {
+        args("--docker-privileged", "-v", "/var/run/docker.sock:/var/run/docker.sock")
         resources {
-            cpu = 4
+            cpu = 2.5.cpu
+            memory = 7600.mb
         }
         init.invoke(this)
     }
@@ -58,15 +62,21 @@ fun Container.withPostgresDatabase() {
     env["DB_PORT"] = "5432"
     service("postgres:latest") {
         alias("db")
+        resources {
+            cpu = 1.cpu
+            memory = 4000.mb
+        }
         env["POSTGRES_USER"] = "postchain"
         env["POSTGRES_PASSWORD"] = "postchain"
     }
 }
 
 fun Container.withDockerService() {
-    service("docker") {
+    service("docker:dind") {
+        args("--docker-privileged")
         resources {
-            memory = 4096
+            cpu = 0.5.cpu
+            memory = 4000.mb
         }
     }
 }
