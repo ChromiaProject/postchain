@@ -26,11 +26,17 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
         </dependency>
-
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-client</artifactId>
-            <version>3.4.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-common</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
         </dependency>
 
         <!-- Kotlin -->
@@ -45,66 +51,64 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit</artifactId>
-            <version>${kotlin.version}</version>
         </dependency>
 
         <!-- CLI -->
         <dependency>
             <groupId>com.github.ajalt</groupId>
             <artifactId>clikt</artifactId>
-            <version>1.4.0</version>
         </dependency>
 
         <!-- Testing -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
-            <scope>compile</scope>
+            <scope>compile</scope> <!-- TODO: Should be test scope -->
         </dependency>
-
         <dependency>
             <groupId>pl.pragmatists</groupId>
             <artifactId>JUnitParams</artifactId>
-            <version>1.1.1</version>
-            <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>io.rest-assured</groupId>
-            <artifactId>rest-assured</artifactId>
-            <version>3.1.1</version>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
         </dependency>
-
         <dependency>
-            <groupId>com.nhaarman.mockitokotlin2</groupId>
+            <groupId>org.mockito.kotlin</groupId>
             <artifactId>mockito-kotlin</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
             <artifactId>assertk</artifactId>
             <version>${assertk.version}</version>
+            <scope>compile</scope> <!-- TODO: Should be test scope -->
         </dependency>
-
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.skyscreamer</groupId>
             <artifactId>jsonassert</artifactId>
-            <version>1.5.0</version>
-            <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
             <version>1.15.3</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility-kotlin</artifactId>
+            <version>${awaitility.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${awaitility.version}</version>
+            <scope>compile</scope>
         </dependency>
 
     </dependencies>

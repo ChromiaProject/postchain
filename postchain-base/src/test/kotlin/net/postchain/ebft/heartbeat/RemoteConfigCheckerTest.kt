@@ -1,6 +1,6 @@
 package net.postchain.ebft.heartbeat
 
-import com.nhaarman.mockitokotlin2.*
+import org.mockito.kotlin.*
 import net.postchain.core.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.blockchain.BlockchainConfigurationProvider

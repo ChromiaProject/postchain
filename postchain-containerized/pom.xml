@@ -50,6 +50,13 @@
                 <artifactId>docker-maven-plugin</artifactId>
                 <version>${docker.maven.plugin.version}</version>
                 <extensions>true</extensions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.github.jnr</groupId>
+                        <artifactId>jnr-unixsocket</artifactId>
+                        <version>0.38.14</version> <!-- Took this version from the fabric8 source. It was upgraded in the the fabric8 source yesterday, so the new version isn't released (This version is needed for Mac M1 to work). -->
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <images>
                         <image>

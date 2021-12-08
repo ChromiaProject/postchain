@@ -16,7 +16,6 @@ class NettyServer {
     companion object : KLogging()
 
     private lateinit var server: ServerBootstrap
-    private lateinit var bindFuture: ChannelFuture
     private lateinit var createChannelHandler: () -> ChannelHandler
     private lateinit var eventLoopGroup: EventLoopGroup
 
@@ -44,7 +43,7 @@ class NettyServer {
                     }
                 })
 
-        bindFuture = server.bind(port).sync()
+        server.bind(port).sync()
     }
 
     fun shutdown() {

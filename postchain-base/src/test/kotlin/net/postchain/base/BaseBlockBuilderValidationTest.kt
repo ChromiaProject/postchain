@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import org.mockito.kotlin.mock
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseTransactionFactory
@@ -15,7 +16,6 @@ import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.MockCryptoSystem
 import net.postchain.gtv.Gtv
-import org.easymock.EasyMock.mock
 import org.junit.Test
 import java.sql.Connection
 import kotlin.test.assertEquals
@@ -23,7 +23,7 @@ import kotlin.test.assertEquals
 class BaseBlockBuilderValidationTest {
     // Mocks
     val cryptoSystem = MockCryptoSystem()
-    val mockedConn = mock(Connection::class.java)
+    val mockedConn: Connection = mock {}
 
     // Real stuff
     var bbs = BaseBlockStore()
@@ -36,7 +36,7 @@ class BaseBlockBuilderValidationTest {
     val sigMaker = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
 
     // Objects using mocks
-    val db = mock(DatabaseAccess::class.java)
+    val db: DatabaseAccess = mock {}
     val ctx = BaseEContext(mockedConn, 2L, 0, db)
 
     val dummyEventSink = object : TxEventSink {

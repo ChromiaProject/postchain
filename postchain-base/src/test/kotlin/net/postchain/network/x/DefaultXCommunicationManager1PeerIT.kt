@@ -7,7 +7,7 @@ import assertk.assertions.isEmpty
 import net.postchain.core.BlockchainRid
 import net.postchain.base.*
 import net.postchain.core.UserMistake
-import net.postchain.common.Utils
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.Test
@@ -23,7 +23,7 @@ class DefaultXCommunicationManager1PeerIT {
     private val privKey2 = cryptoSystem.getRandomBytes(32)
     private val pubKey2 = secp256k1_derivePubKey(privKey2)
 
-    private val peerInfo = PeerInfo("localhost", Utils.findFreePort(), pubKey)
+    private val peerInfo = peerInfoFromPublicKey(pubKey)
 
     private fun startTestContext(peers: Array<PeerInfo>, pubKey: ByteArray): EbftIntegrationTestContext {
         val peerConfiguration = BasePeerCommConfiguration.build(

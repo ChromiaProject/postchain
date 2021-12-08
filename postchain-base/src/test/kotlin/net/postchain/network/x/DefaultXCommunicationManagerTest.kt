@@ -5,15 +5,18 @@ package net.postchain.network.x
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
-import com.nhaarman.mockitokotlin2.*
+import org.mockito.kotlin.*
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.Utils
+import org.mockito.kotlin.*
+import net.postchain.base.*
 import net.postchain.core.BlockchainRid
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.junit.Before
 import org.junit.Test
 
@@ -32,8 +35,8 @@ class DefaultXCommunicationManagerTest {
 
     @Before
     fun setUp() {
-        peerInfo1 = PeerInfo("localhost", Utils.findFreePort(), pubKey1)
-        peerInfo2 = PeerInfo("localhost", Utils.findFreePort(), pubKey2)
+        peerInfo1 = peerInfoFromPublicKey(pubKey1)
+        peerInfo2 = peerInfoFromPublicKey(pubKey2)
     }
 
     @Test
