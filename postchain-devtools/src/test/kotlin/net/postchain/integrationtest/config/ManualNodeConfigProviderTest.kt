@@ -88,7 +88,7 @@ class ManualNodeConfigProviderTest : ConfigFileBasedIntegrationTest() {
     private fun buildAppConfig(nodeIndex: Int): AppConfig {
         return mock {
             on { databaseDriverclass } doReturn "org.postgresql.Driver"
-            on { databaseUrl } doReturn "jdbc:postgresql://localhost:5432/postchain"
+            on { databaseUrl } doReturn "jdbc:postgresql://db:5432/postchain"
             on { databaseSchema } doReturn "it_manual_node_config_test_node$nodeIndex"
             on { databaseUsername } doReturn "postchain"
             on { databasePassword } doReturn "postchain"
