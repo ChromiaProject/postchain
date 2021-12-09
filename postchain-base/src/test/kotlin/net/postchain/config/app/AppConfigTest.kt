@@ -3,6 +3,7 @@
 package net.postchain.config.app
 
 import assertk.assertions.isEmpty
+import assertk.assert
 import assertk.assertions.isEqualTo
 import org.junit.Test
 
@@ -13,11 +14,12 @@ class AppConfigTest {
         val appConfig = AppConfig.fromPropertiesFile(
                 javaClass.getResource("/net/postchain/config/empty-node-config.properties").file)
 
-        assertk.assert(appConfig.nodeConfigProvider).isEmpty()
-        assertk.assert(appConfig.databaseDriverclass).isEmpty()
-        assertk.assert(appConfig.databaseUrl).isEmpty()
-        assertk.assert(appConfig.databaseSchema).isEqualTo("public")
-        assertk.assert(appConfig.databaseUsername).isEmpty()
-        assertk.assert(appConfig.databasePassword).isEmpty()
+        assert(appConfig.nodeConfigProvider).isEmpty()
+        assert(appConfig.databaseDriverclass).isEmpty()
+        assert(appConfig.databaseUrl).isEmpty()
+        assert(appConfig.databaseUrl).takeIf { System.getenv()["POSTGRES_DB_URL"] == null }?.isEmpty()
+        assert(appConfig.databaseSchema).isEqualTo("public")
+        assert(appConfig.databaseUsername).isEmpty()
+        assert(appConfig.databasePassword).isEmpty()
     }
 }

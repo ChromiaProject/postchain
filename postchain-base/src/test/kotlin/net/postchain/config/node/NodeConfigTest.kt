@@ -19,7 +19,7 @@ class NodeConfigTest {
         assertk.assert(nodeConfig.infrastructure).isEqualTo("base/ebft")
 
         assertk.assert(nodeConfig.databaseDriverclass).isEmpty()
-        assertk.assert(nodeConfig.databaseUrl).isEmpty()
+        assertk.assert(appConfig.databaseUrl).takeIf { System.getenv()["POSTGRES_DB_URL"] == null }?.isEmpty()
         assertk.assert(nodeConfig.databaseSchema).isEqualTo("public")
         assertk.assert(nodeConfig.databaseUsername).isEmpty()
         assertk.assert(nodeConfig.databasePassword).isEmpty()

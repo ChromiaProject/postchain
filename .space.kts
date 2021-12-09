@@ -58,6 +58,7 @@ fun Job.mavenContainer(displayName: String?, init: Container.() -> Unit) {
 }
 
 fun Container.withPostgresDatabase() {
+    env["POSTGRES_DB_URL"] = "jdbc:postgresql://db:5432/postchain"
     env["DB_HOST"] = "db"
     env["DB_PORT"] = "5432"
     service("postgres:latest") {
