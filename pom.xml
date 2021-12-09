@@ -453,6 +453,7 @@
                                 <include>**/*E2ET.*</include>
                                 <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
                             </includes>
+                            <forkCount>0</forkCount>
                         </configuration>
                     </plugin>
                 </plugins>
