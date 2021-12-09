@@ -22,7 +22,7 @@
         <commons-configuration2.version>2.1.1</commons-configuration2.version>
         <commons-beanutils.version>1.9.3</commons-beanutils.version>
         <netty.version>4.1.43.Final</netty.version>
-        <spark-core.version>2.7.2</spark-core.version>
+        <spark-core.version>2.8.0</spark-core.version>
         <dist-classifier>dist</dist-classifier>
 
     </properties>
