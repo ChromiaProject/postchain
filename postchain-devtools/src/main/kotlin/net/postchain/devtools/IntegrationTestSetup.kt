@@ -313,6 +313,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
                 peer
             }.toTypedArray()
         }
+        logger.info { "ports in use: ${peerInfos!!.map { it.port }.joinToString(", ")} heh" }
 
         return peerInfos!!
     }
