@@ -32,7 +32,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected lateinit var systemSetup: SystemSetup
     protected val nodes = mutableListOf<PostchainTestNode>()
     protected val nodeMap = mutableMapOf<NodeSeqNumber, PostchainTestNode>()
-    val configOverrides = MapConfiguration(mutableMapOf<String, String>())
+    val configOverrides = MapConfiguration(mutableMapOf<String, String>()).also { it.setProperty("api.port", "0") }
 
     // PeerInfos must be shared between all nodes because
     // a listening node will update the PeerInfo port after
