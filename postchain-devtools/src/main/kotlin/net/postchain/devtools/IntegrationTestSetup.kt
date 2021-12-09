@@ -303,14 +303,16 @@ open class IntegrationTestSetup : AbstractIntegration() {
     }
 
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
-        val pubKeys = Array(nodeCount) { pubKey(it) } + Array(replicasCount) { pubKey(-it - 1) }
+        if (peerInfos == null) {
+            val pubKeys = Array(nodeCount) { pubKey(it) } + Array(replicasCount) { pubKey(-it - 1) }
 
-        peerInfos = pubKeys.map { Pair(it, ServerSocket(0)) }.map {
-            it.second.reuseAddress = true
-            val peer = PeerInfo(it.second.inetAddress.hostName, it.second.localPort, it.first)
-            it.second.close()
-            peer
-        }.toTypedArray()
+            peerInfos = pubKeys.map { Pair(it, ServerSocket(0)) }.map {
+                it.second.reuseAddress = true
+                val peer = PeerInfo(it.second.inetAddress.hostName, it.second.localPort, it.first)
+                it.second.close()
+                peer
+            }.toTypedArray()
+        }
 
         return peerInfos!!
     }

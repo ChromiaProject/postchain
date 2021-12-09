@@ -310,12 +310,13 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     open fun generatePubKey(nodeId: Int): ByteArray = KeyPairHelper.pubKey(nodeId)
 
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
-        val sockets = List(nodeCount + replicasCount) { ServerSocket(0).apply { reuseAddress = true } }
-        peerInfos =
-                Array(nodeCount) { i ->  sockets[i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(i))} } +
-                        Array(replicasCount) { i -> sockets[nodeCount+i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(-i - 1)) }}
-        sockets.forEach { it.close() }
-
+        if (peerInfos == null) {
+            val sockets = List(nodeCount + replicasCount) { ServerSocket(0).apply { reuseAddress = true } }
+            peerInfos =
+                    Array(nodeCount) { i ->  sockets[i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(i))} } +
+                            Array(replicasCount) { i -> sockets[nodeCount+i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(-i - 1)) }}
+            sockets.forEach { it.close() }
+        }
         return peerInfos!!
     }
 
