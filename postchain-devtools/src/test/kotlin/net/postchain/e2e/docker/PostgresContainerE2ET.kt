@@ -5,10 +5,12 @@ import assertk.assertions.contains
 import net.postchain.e2e.tools.KGenericContainer
 import org.awaitility.Awaitility
 import org.awaitility.Duration
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
 
+@Ignore
 class PostgresContainerE2ET {
 
     @get:Rule

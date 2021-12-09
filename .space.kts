@@ -15,7 +15,7 @@ job("Build feature branch") {
     }
 
     mavenContainer("Run unit tests") {
-        withDockerService()
+        //withDockerService()
         withPostgresDatabase()
         env["TESTCONTAINERS_RYUK_DISABLED"] = "true"
         shellScript {
@@ -36,7 +36,7 @@ job("Build and deploy develop branch") {
     }
 
     mavenContainer("Run unit tests and deploy snapshots") {
-        withDockerService()
+        //withDockerService()
         withPostgresDatabase()
         shellScript {
             content = """
