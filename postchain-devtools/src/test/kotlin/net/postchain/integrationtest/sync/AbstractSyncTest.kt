@@ -43,6 +43,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     protected fun runNodes(signerNodeCount: Int, replicaCount: Int): Array<NodeSetup> {
         signerCount = signerNodeCount
         configOverrides.setProperty("fastsync.exit_delay", "2000")
+        configOverrides.setProperty("api.port", "0")
 
         // -------
         // TODO: Olle Implement this instead of step 1-4
