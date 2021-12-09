@@ -37,7 +37,6 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     protected val nodes = mutableListOf<PostchainTestNode>()
     protected val nodesNames = mutableMapOf<String, String>() // { pubKey -> Node${i} }
     val configOverrides = MapConfiguration(mutableMapOf<String, String>(
-        "database.url" to "jdbc:postgres://db:5432/postchain"
     ))
     var gtxConfig: Gtv? = null
 
@@ -311,14 +310,11 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     open fun generatePubKey(nodeId: Int): ByteArray = KeyPairHelper.pubKey(nodeId)
 
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
-        if (peerInfos == null) {
-            val sockets = List(nodeCount + replicasCount) { ServerSocket(0).apply { reuseAddress = true } }
-            peerInfos =
-                    Array(nodeCount) { i ->  sockets[i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(i))} } +
-                            Array(replicasCount) { i -> sockets[nodeCount+i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(-i - 1)) }}
-            sockets.forEach { it.close() }
-            
-        }
+        val sockets = List(nodeCount + replicasCount) { ServerSocket(0).apply { reuseAddress = true } }
+        peerInfos =
+                Array(nodeCount) { i ->  sockets[i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(i))} } +
+                        Array(replicasCount) { i -> sockets[nodeCount+i].let { PeerInfo(it.inetAddress.hostName, it.localPort, generatePubKey(-i - 1)) }}
+        sockets.forEach { it.close() }
 
         return peerInfos!!
     }
