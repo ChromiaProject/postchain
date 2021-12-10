@@ -16,8 +16,10 @@ class AppConfigTest {
 
         assert(appConfig.nodeConfigProvider).isEmpty()
         assert(appConfig.databaseDriverclass).isEmpty()
-        assert(appConfig.databaseUrl).isEmpty()
-        assert(appConfig.databaseUrl).takeIf { System.getenv()["POSTGRES_DB_URL"] == null }?.isEmpty()
+        assert(appConfig.databaseUrl).apply {
+            if ( System.getenv()["POSTCHAIN_DB_URL"] == null ) isEmpty()
+            else isEqualTo(System.getenv()["POSTCHAIN_DB_URL"])
+        }
         assert(appConfig.databaseSchema).isEqualTo("public")
         assert(appConfig.databaseUsername).isEmpty()
         assert(appConfig.databasePassword).isEmpty()
