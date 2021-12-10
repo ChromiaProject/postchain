@@ -412,6 +412,9 @@ class RestApi(
     fun stop() {
         http.stop()
         http.awaitStop()
+        Thread.sleep(200)
+        System.gc()
+        System.runFinalization()
     }
 
     private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any? {
