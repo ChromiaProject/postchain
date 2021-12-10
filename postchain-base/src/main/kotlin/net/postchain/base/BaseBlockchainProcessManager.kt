@@ -173,7 +173,6 @@ open class BaseBlockchainProcessManager(
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
 
         blockchainProcesses.forEach {
-            stopBlockchain(it.key, null, false)
             blockchainInfrastructure.exitBlockchainProcess(it.value)
             it.value.shutdown()
         }
