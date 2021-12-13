@@ -92,7 +92,7 @@ fun <RT> withReadWriteConnection(storage: Storage, chainID: Long, op: (EContext)
 fun <RT> runStorageCommand(appConfig: AppConfig, op: (ctx: AppContext) -> RT): RT {
     val storage = StorageBuilder.buildStorage(appConfig, NODE_ID_NA)
 
-    return storage.let {
+    return storage.use {
         it.withWriteConnection { ctx ->
             op(ctx)
         }
@@ -107,7 +107,7 @@ fun <RT> runStorageCommand(nodeConfigFile: String, op: (ctx: AppContext) -> RT):
 fun <RT> runStorageCommand(appConfig: AppConfig, chainId: Long, op: (ctx: EContext) -> RT): RT {
     val storage = StorageBuilder.buildStorage(appConfig, NODE_ID_NA)
 
-    return storage.let {
+    return storage.use {
         withReadWriteConnection(it, chainId) { ctx ->
             op(ctx)
         }

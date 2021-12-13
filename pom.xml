@@ -125,7 +125,7 @@
             <!-- Kotlin -->
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-stdlib</artifactId>
+                <artifactId>kotlin-stdlib-jdk8</artifactId> <!-- Contains extension methods for jdk8+ (Streams, autocloseable etc -->
                 <version>${kotlin.version}</version>
             </dependency>
             <dependency>
