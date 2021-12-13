@@ -47,8 +47,7 @@ open class DefaultMasterSyncInfra(
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
-            containerChainDir: ContainerChainDir,
-            restApiPort: Int
+            containerChainDir: ContainerChainDir
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -70,7 +69,7 @@ open class DefaultMasterSyncInfra(
                 processName,
                 chainId,
                 blockchainRid,
-                restApiPort,
+                targetContainer.restApiPort,
                 communicationManager,
                 dataSource,
                 containerChainDir,
@@ -85,5 +84,7 @@ open class DefaultMasterSyncInfra(
 
         return process
     }
+
+    override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) = Unit
 
 }

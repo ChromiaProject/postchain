@@ -11,11 +11,13 @@ class ContainerTest {
         val dockerClient: DockerClient = DockerClientFactory.create()
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
 
-        all.forEach {
-            val msg = "[NAME]: ContainerJobHandler -- DockerContainer %s: NAME, " +
-                    "containerId: %s"
-            println("${it.id()}\t${it.names()?.toTypedArray()?.contentToString()}")
-            println(msg.format("found", it.id()))
+        all.forEach { c ->
+            val name = c.names()?.firstOrNull() ?: ""
+            println("${name}\t${c.id()}")
+
+            // ports
+            println(c.portsAsString())
+            println(c.ports()?.map { "${it.publicPort()} + ${it.privatePort()} + ${it.ip()} + ${it.type()}" } ?: "")
         }
     }
 

@@ -1,9 +1,9 @@
 package net.postchain.containers.bpm
 
 import com.spotify.docker.client.messages.ContainerConfig
+import com.spotify.docker.client.messages.ContainerInfo
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
-import net.postchain.common.Utils
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.NameService
 import net.postchain.containers.infra.ContainerResourceType
@@ -13,9 +13,9 @@ object ContainerConfigFactory {
     fun createConfig(nodeConfig: NodeConfig, container: PostchainContainer, containerDir: String): ContainerConfig {
         // -v $containerCwd:/opt/chromaway/postchain/target \
         val volume = HostConfig.Bind
-            .from(containerDir)
-            .to("/opt/chromaway/postchain/target")
-            .build()
+                .from(containerDir)
+                .to("/opt/chromaway/postchain/target")
+                .build()
 
         /**
          * Rest API port binding.
@@ -26,10 +26,10 @@ object ContainerConfigFactory {
          * Therefore use random port selection
          */
         // Likely to be a unique port but not 100% guarantee.
-        // Also not 100% sure that port is still free when connection is made
+        // Also, not 100% sure that port is still free when connection is made
         val dockerPort = "${nodeConfig.subnodeRestApiPort}/tcp"
         val portBindings = if (nodeConfig.restApiPort > -1) {
-            mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", Utils.findFreePort())))
+            mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", container.restApiPort)))
         } else mapOf()
 
         /**
@@ -45,22 +45,27 @@ object ContainerConfigFactory {
 
         // Host config
         val hostConfig = HostConfig.builder()
-            .appendBinds(volume)
-            .portBindings(portBindings)
-            .publishAllPorts(true)
-            .memory(container.resourceLimits?.get(ContainerResourceType.RAM))
-            .cpuQuota(container.resourceLimits?.get(ContainerResourceType.CPU))
+                .appendBinds(volume)
+                .portBindings(portBindings)
+                .publishAllPorts(true)
+                .memory(container.resourceLimits?.get(ContainerResourceType.RAM))
+                .cpuQuota(container.resourceLimits?.get(ContainerResourceType.CPU))
 //                .storageOpt(mapOf("dm.basesize" to "3G"))
 //                .storageOpt(mapOf("size" to "3G"))
 //                .storageOpt(mapOf("overlay2.size" to "3G"))
 //                .storageOpt(container.resourceLimits?.get("storage"))
-            .build()
+                .build()
 
         return ContainerConfig.builder()
-            .image(NameService.containerImage(nodeConfig))
-            .hostConfig(hostConfig)
-            .exposedPorts(dockerPort)
-            .build()
+                .image(NameService.containerImage(nodeConfig))
+                .hostConfig(hostConfig)
+                .exposedPorts(dockerPort)
+                .build()
+    }
+
+    fun getHostPort(containerInfo: ContainerInfo, containerPort: Int): Int? {
+        val bindings = containerInfo.hostConfig()?.portBindings()?.get("${containerPort}/tcp")
+        return bindings?.firstOrNull()?.hostPort()?.toInt()
     }
 
 }

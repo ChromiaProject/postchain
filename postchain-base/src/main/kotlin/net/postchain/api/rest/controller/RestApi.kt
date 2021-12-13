@@ -32,10 +32,10 @@ import spark.Service
  * Contains information on the rest API, such as network parameters and available queries
  */
 class RestApi(
-    private val listenPort: Int,
-    private val basePath: String,
-    private val sslCertificate: String? = null,
-    private val sslCertificatePassword: String? = null
+        private val listenPort: Int,
+        private val basePath: String,
+        private val sslCertificate: String? = null,
+        private val sslCertificatePassword: String? = null
 ) : Modellable {
 
     val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
@@ -126,8 +126,8 @@ class RestApi(
 
             // This is to provide compatibility with old postchain-client code
             req.pathInfo()
-                .takeIf { it.endsWith("/") }
-                ?.also { res.redirect(it.dropLast(1)) }
+                    .takeIf { it.endsWith("/") }
+                    ?.also { res.redirect(it.dropLast(1)) }
         }
 
         http.path(basePath) {
@@ -178,7 +178,7 @@ class RestApi(
                 val model = model(request)
                 val paramsMap = request.queryMap()
                 val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_TXS_PER_REQUEST)
-                    ?: DEFAULT_ENTRY_RESULTS_REQUEST
+                        ?: DEFAULT_ENTRY_RESULTS_REQUEST
                 val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
                 val result = model.getTransactionsInfo(beforeTime, limit)
                 gson.toJson(result)
@@ -203,7 +203,7 @@ class RestApi(
                 val paramsMap = request.queryMap()
                 val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
                 val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
-                    ?: DEFAULT_ENTRY_RESULTS_REQUEST
+                        ?: DEFAULT_ENTRY_RESULTS_REQUEST
                 val partialTxs = paramsMap.get("txs")?.value() != "true"
                 val result = model.getBlocks(beforeTime, limit, partialTxs)
                 gson.toJson(result)
@@ -301,8 +301,8 @@ class RestApi(
     private fun handlePostQuery(request: Request): String {
         logger.debug("Request body: ${request.body()}")
         return model(request)
-            .query(Query(request.body()))
-            .json
+                .query(Query(request.body()))
+                .json
     }
 
     private fun handleGetQuery(request: Request): String {
@@ -427,13 +427,13 @@ class RestApi(
         val model = model(request)
         val txHashHex = checkTxHashHex(request)
         return txAction(model, toTxRID(txHashHex))
-            ?: throw NotFoundError("Can't find tx with hash $txHashHex")
+                ?: throw NotFoundError("Can't find tx with hash $txHashHex")
     }
 
     private fun chainModel(request: Request): ChainModel {
         val blockchainRID = checkBlockchainRID(request)
         return models[blockchainRID.toUpperCase()]
-            ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
+                ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
     }
 
     private fun model(request: Request): Model {
@@ -442,10 +442,10 @@ class RestApi(
 
     private fun model0(request: Request): Model {
         val chain0Rid = bridByIID[0L]
-            ?: throw NotFoundError("Can't find chain0 in DB. Is this node in managed mode?")
+                ?: throw NotFoundError("Can't find chain0 in DB. Is this node in managed mode?")
 
         return models[chain0Rid] as? Model
-            ?: throw NotFoundError("Can't find blockchain with blockchainRID: $chain0Rid")
+                ?: throw NotFoundError("Can't find blockchain with blockchainRID: $chain0Rid")
     }
 
     private fun parseMultipleQueriesRequest(request: Request): JsonArray {
@@ -458,10 +458,14 @@ class RestApi(
         return { request, response ->
             val model = chainModel(request)
             if (model is ExternalModel) {
-                Unirest.get(model.path + request.uri())
-                    .header("Content-Type", "application/json")
-                    .asJson().body.toString()
+                logger.trace { "External REST API model found: $model" }
+                val url = model.path + request.uri() + (request.queryString()?.let { "?$it" } ?: "")
+                logger.trace { "Redirecting get request to $url" }
+                Unirest.get(url)
+                        .header("Content-Type", "application/json")
+                        .asJson().body.toString()
             } else {
+                logger.trace { "Local REST API model found: $model" }
                 localHandler(request, response)
             }
         }
@@ -471,12 +475,16 @@ class RestApi(
         return { request, response ->
             val model = chainModel(request)
             if (model is ExternalModel) {
-                Unirest.post(model.path + request.uri())
-                    .header("Content-Type", "application/json")
-                    .body(request.body())
-                    .asEmptyAsync()
+                logger.trace { "External REST API model found: $model" }
+                val url = model.path + request.uri()
+                logger.trace { "Redirecting post request to $url" }
+                Unirest.post(url)
+                        .header("Content-Type", "application/json")
+                        .body(request.body())
+                        .asEmptyAsync()
                 ""
             } else {
+                logger.trace { "Local REST API model found: $model" }
                 localHandler(request, response)
             }
         }

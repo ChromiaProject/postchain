@@ -29,11 +29,14 @@ open class DefaultMasterBlockchainInfra(
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
-            containerChainDir: ContainerChainDir,
-            restApiPort: Int
+            containerChainDir: ContainerChainDir
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(
-                processName, chainId, blockchainRid, dataSource, targetContainer, containerChainDir, restApiPort
+                processName, chainId, blockchainRid, dataSource, targetContainer, containerChainDir
         ).also(masterApiInfra::connectContainerProcess)
+    }
+
+    override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) {
+        masterApiInfra.disconnectContainerProcess(process)
     }
 }

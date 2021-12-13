@@ -58,14 +58,14 @@ class TestMasterSyncInfra(
         nodeConfigProvider: NodeConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext
 ) : DefaultMasterSyncInfra(nodeConfigProvider, nodeDiagnosticContext) {
+
     override fun makeMasterBlockchainProcess(
             processName: BlockchainProcessName,
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
-            containerChainDir: ContainerChainDir,
-            restApiPort: Int
+            containerChainDir: ContainerChainDir
     ): ContainerBlockchainProcess {
 
         val communicationManager = TestMasterCommunicationManager(
@@ -83,7 +83,7 @@ class TestMasterSyncInfra(
                 processName,
                 chainId,
                 blockchainRid,
-                restApiPort,
+                targetContainer.restApiPort,
                 communicationManager,
                 dataSource,
                 containerChainDir,

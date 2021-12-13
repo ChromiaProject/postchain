@@ -5,6 +5,7 @@ import com.spotify.docker.client.messages.Container
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.common.Utils
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
@@ -156,9 +157,12 @@ open class ContainerManagedBlockchainProcessManager(
                     "chains to start: ${chainsToStart.map { it.chainId }.toTypedArray().contentToString()}"
         }
 
-        // Postchain container
-        var psContainer = findPostchainContainer(containerName.name)
+        /**
+         * Step 1: Postchain Container
+         */
         var restartDockerContainer = false
+        var psContainer = findPostchainContainer(containerName.name)
+        val dockerContainer = findDockerContainer(containerName)
 
         if (psContainer == null) {
             chainsToStop.forEach { chain ->
@@ -170,7 +174,8 @@ open class ContainerManagedBlockchainProcessManager(
 
             if (chainsToStart.isNotEmpty()) {
                 logger.debug { "[${nodeName()}]: ContainerJobHandler -- PostchainContainer created" }
-                val newPsContainer = DefaultPostchainContainer(nodeConfig, directoryDataSource, containerName, STARTING)
+                val port = getRestApiHostPort(dockerContainer)
+                val newPsContainer = DefaultPostchainContainer(nodeConfig, directoryDataSource, containerName, port, STARTING)
                 containerInitializer.initContainerWorkingDir(newPsContainer)
                 postchainContainers.add(newPsContainer)
 
@@ -198,14 +203,15 @@ open class ContainerManagedBlockchainProcessManager(
             }
         }
 
-        // Docker container
+        /**
+         * Step 2: Docker Container
+         */
         if (restartDockerContainer) {
             val msg = { state: String, container: PostchainContainer? ->
                 "[${nodeName()}]: ContainerJobHandler -- Docker container $state: $containerName, " +
                         "containerId: ${container?.shortContainerId()}"
             }
 
-            val dockerContainer = findDockerContainer(containerName)
             if (dockerContainer == null) {
                 logger.debug { msg("not found", null) }
 
@@ -296,8 +302,7 @@ open class ContainerManagedBlockchainProcessManager(
                 chain.brid,
                 directoryDataSource,
                 targetContainer,
-                containerChainDir,
-                nodeConfig.subnodeRestApiPort
+                containerChainDir
         )
         process.transferConfigsToContainer()
         targetContainer.addProcess(process)
@@ -311,6 +316,7 @@ open class ContainerManagedBlockchainProcessManager(
     ): Pair<ContainerBlockchainProcess?, Boolean> {
         val process = container.findProcesses(chain.chainId)
         return if (process != null) {
+            masterBlockchainInfra.exitMasterBlockchainProcess(process)
             heartbeatManager.removeListener(process)
             process.shutdown()
             container.removeProcess(process)
@@ -382,4 +388,15 @@ open class ContainerManagedBlockchainProcessManager(
             }
         }
     }
+
+    private fun getRestApiHostPort(dockerContainer: Container?): Int {
+        return if (dockerContainer != null) {
+            val info = dockerClient.inspectContainer(dockerContainer.id())
+            val port = ContainerConfigFactory.getHostPort(info, nodeConfig.subnodeRestApiPort)
+            port ?: Utils.findFreePort()
+        } else {
+            Utils.findFreePort()
+        }
+    }
+
 }

@@ -2,11 +2,11 @@
 
 package net.postchain.containers.infra
 
-import net.postchain.core.BlockchainRid
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.ContainerChainDir
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainRid
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
@@ -23,9 +23,10 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
-            containerChainDir: ContainerChainDir,
-            restApiPort: Int
+            containerChainDir: ContainerChainDir
     ): ContainerBlockchainProcess
+
+    fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess)
 
 }
 

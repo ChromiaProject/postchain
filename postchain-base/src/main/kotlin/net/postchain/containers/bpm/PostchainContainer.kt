@@ -14,6 +14,7 @@ interface PostchainContainer {
     var state: ContainerState
     var containerId: String?
     var resourceLimits: Map<ContainerResourceType, Long>?
+    var restApiPort: Int
 
     fun shortContainerId(): String?
     fun findProcesses(chainId: Long): ContainerBlockchainProcess?
@@ -29,6 +30,7 @@ class DefaultPostchainContainer(
         val nodeConfig: NodeConfig,
         dataSource: DirectoryDataSource,
         override val containerName: ContainerName,
+        override var restApiPort: Int,
         override var state: ContainerState = ContainerState.UNDEFINED,
         override var containerId: String? = null
 ) : PostchainContainer {
