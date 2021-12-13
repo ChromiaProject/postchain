@@ -411,12 +411,7 @@ class RestApi(
 
     fun stop() {
         http.stop()
-        // Ugly hack to workaround that there is no blocking stop.
-        // Test cases won't work correctly without it
-        Thread.sleep(200)
-        System.gc()
-        System.runFinalization()
-        Thread.sleep(200)
+        http.awaitStop()
         System.gc()
         System.runFinalization()
     }
