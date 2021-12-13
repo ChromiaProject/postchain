@@ -271,169 +271,184 @@ describe("ChrL2", () => {
         })
     })
 
-    // describe("Withdraw", async () => {
-    //     it("User can request withdraw by providing properly proof data", async () => {
-    //         const [deployer, user] = await ethers.getSigners()
-    //         const tokenInstance = new TestToken__factory(deployer).attach(tokenAddress)
-    //         const toMint = ethers.utils.parseEther("10000")
+    describe("Withdraw", async () => {
+        it("User can request withdraw by providing properly proof data", async () => {
+            const [deployer, user] = await ethers.getSigners()
+            const tokenInstance = new TestToken__factory(deployer).attach(tokenAddress)
+            const toMint = ethers.utils.parseEther("10000")
 
-    //         await tokenInstance.mint(user.address, toMint);
-    //         expect(await tokenInstance.totalSupply()).to.eq(toMint)
+            await tokenInstance.mint(user.address, toMint);
+            expect(await tokenInstance.totalSupply()).to.eq(toMint)
 
-    //         const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
-    //         const toDeposit = ethers.utils.parseEther("100")
-    //         const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
-    //         await tokenApproveInstance.approve(chrL2Address, toDeposit)
+            const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
+            const toDeposit = ethers.utils.parseEther("100")
+            const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
+            await tokenApproveInstance.approve(chrL2Address, toDeposit)
 
-    //         let tx: ContractTransaction = await chrL2Instance.deposit(tokenAddress, toDeposit)
-    //         let receipt: ContractReceipt = await tx.wait()
-    //         let logs = receipt.events?.filter((x) =>  {return x.event == 'Deposited'})
-    //         if (logs !== undefined) {
-    //             let log = logs[0]
-    //             const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)
-    //             const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
-    //             const contractAdress = hexZeroPad(tokenAddress, 32)
-    //             const toAddress = hexZeroPad(user.address, 32)
-    //             const amount = log.data
-    //             let event: string = ''
-    //             event = event.concat(serialNumber.substring(2, serialNumber.length))
-    //             event = event.concat(contractAdress.substring(2, contractAdress.length))
-    //             event = event.concat(toAddress.substring(2, toAddress.length))
-    //             event = event.concat(amount.substring(2, amount.length))
+            let tx: ContractTransaction = await chrL2Instance.deposit(tokenAddress, toDeposit)
+            let receipt: ContractReceipt = await tx.wait()
+            let logs = receipt.events?.filter((x) =>  {return x.event == 'Deposited'})
+            if (logs !== undefined) {
+                let log = logs[0]
+                const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)
+                const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
+                const contractAdress = hexZeroPad(tokenAddress, 32)
+                const toAddress = hexZeroPad(user.address, 32)
+                const amount = log.data
+                let event: string = ''
+                event = event.concat(serialNumber.substring(2, serialNumber.length))
+                event = event.concat(contractAdress.substring(2, contractAdress.length))
+                event = event.concat(toAddress.substring(2, toAddress.length))
+                event = event.concat(amount.substring(2, amount.length))
 
-    //             // swap toAddress and contractAdress position to make maliciousEvent
-    //             let maliciousEvent: string = ''
-    //             maliciousEvent = maliciousEvent.concat(serialNumber.substring(2, serialNumber.length))
-    //             maliciousEvent = maliciousEvent.concat(toAddress.substring(2, toAddress.length))
-    //             maliciousEvent = maliciousEvent.concat(contractAdress.substring(2, contractAdress.length))
-    //             maliciousEvent = maliciousEvent.concat(amount.substring(2, amount.length))
+                // swap toAddress and contractAdress position to make maliciousEvent
+                let maliciousEvent: string = ''
+                maliciousEvent = maliciousEvent.concat(serialNumber.substring(2, serialNumber.length))
+                maliciousEvent = maliciousEvent.concat(toAddress.substring(2, toAddress.length))
+                maliciousEvent = maliciousEvent.concat(contractAdress.substring(2, contractAdress.length))
+                maliciousEvent = maliciousEvent.concat(amount.substring(2, amount.length))
 
-    //             let data = DecodeHexStringToByteArray(event)
-    //             let maliciousData = DecodeHexStringToByteArray(maliciousEvent)
-    //             let hashEventLeaf = keccak256(data)
-    //             let maliciousHashEventLeaf = keccak256(keccak256(data))
-    //             let hashRootEvent = keccak256(keccak256(hashEventLeaf))
-    //             let state = blockNumber.substring(2, blockNumber.length).concat(event)
-    //             let hashRootState = keccak256(DecodeHexStringToByteArray(state))
+                let data = DecodeHexStringToByteArray(event)
+                let maliciousData = DecodeHexStringToByteArray(maliciousEvent)
+                let hashEventLeaf = keccak256(data)
+                let maliciousHashEventLeaf = keccak256(keccak256(data))
+                let hashRootEvent = keccak256(keccak256(hashEventLeaf))
+                let state = blockNumber.substring(2, blockNumber.length).concat(event)
+                let hashRootState = keccak256(DecodeHexStringToByteArray(state))
+                let el2Leaf = hashRootEvent.substring(2, hashRootEvent.length).concat(hashRootState.substring(2, hashRootState.length))
 
-    //             let blockchainRid = "977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"
-    //             let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
-    //             let merkleRootHash = "96defe74f43fcf2d12a1844bcd7a3a7bcb0d4fa191776953dae3f1efb508d866"
-    //             let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
-    //             let timestamp = 1629878444220
-    //             let height = 48
-    //             let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
-    //             let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
+                let blockchainRid = "977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"
+                let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
+                let merkleRootHash = "96defe74f43fcf2d12a1844bcd7a3a7bcb0d4fa191776953dae3f1efb508d866"
+                let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
+                let timestamp = 1629878444220
+                let height = 48
+                let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
+                let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
+                let extraDataMerkleRoot = "73178A330CE92CBA29E3B6A16AF70FC4BAB535253969581E3B5CC46D32FB7132"
+                let extraDataMerkleRootHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(extraDataMerkleRoot))
                 
-    //             let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
-    //             let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
-    //             let node12 = postchainMerkleNodeHash([0x00, node1, node2])
-    //             let node3 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
-    //             let node4 = hashGtvIntegerLeaf(timestamp)
-    //             let node34 = postchainMerkleNodeHash([0x00, node3, node4])
-    //             let node5 = hashGtvIntegerLeaf(height)
-    //             let node6 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
-    //             let node56 = postchainMerkleNodeHash([0x00, node5, node6])
-    //             let node7a = DecodeHexStringToByteArray("1F1831C339CD7E1195B64253AF6691E58A43D402BE48D0834BBD1869A9C9C935")
-    //             let node7b = hashGtvBytes32Leaf(DecodeHexStringToByteArray(hashRootEvent.substring(2, hashRootEvent.length)))
-    //             let node7 = postchainMerkleNodeHash([0x00, node7a, node7b])
-    //             let node8a = DecodeHexStringToByteArray("04A48CDA5CE81FF2A97A9E2C0F521C2853258D6DDBA62190D3F0A2523B09C4B0")
-    //             let node8b = hashGtvBytes32Leaf(DecodeHexStringToByteArray(hashRootState.substring(2, hashRootState.length)))
-    //             let node8 = postchainMerkleNodeHash([0x00, node8a, node8b])
-    //             let node78 = postchainMerkleNodeHash([0x8, node7, node8])
+                let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
+                let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
+                let node12 = postchainMerkleNodeHash([0x00, node1, node2])
+                let node3 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
+                let node4 = hashGtvIntegerLeaf(timestamp)
+                let node34 = postchainMerkleNodeHash([0x00, node3, node4])
+                let node5 = hashGtvIntegerLeaf(height)
+                let node6 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
+                let node56 = postchainMerkleNodeHash([0x00, node5, node6])
+                let node1234 = postchainMerkleNodeHash([0x00, node12, node34])
+                let node5678 = postchainMerkleNodeHash([0x00, node56, extraDataMerkleRootHashedLeaf])
 
-    //             let node1234 = postchainMerkleNodeHash([0x00, node12, node34])
-    //             let node5678 = postchainMerkleNodeHash([0x00, node56, node78])
+                let blockRid = postchainMerkleNodeHash([0x7, node1234, node5678])
+                let maliciousBlockRid = postchainMerkleNodeHash([0x7, node1234, node1234])
+                let blockHeader: BytesLike = ''
+                let maliciousBlockHeader: BytesLike = ''
+                let ts = hexZeroPad(intToHex(timestamp), 32)
+                let h = hexZeroPad(intToHex(height), 32)
+                blockHeader = blockHeader.concat(blockchainRid, blockRid.substring(2, blockRid.length), previousBlockRid,
+                                    merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
+                                    ts.substring(2, ts.length), h.substring(2, h.length),
+                                    dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
+                                    extraDataMerkleRootHashedLeaf.substring(2, extraDataMerkleRootHashedLeaf.length)
+                )
 
-    //             let blockRid = postchainMerkleNodeHash([0x7, node1234, node5678])
-    //             let maliciousBlockRid = postchainMerkleNodeHash([0x7, node1234, node1234])
-    //             let blockHeader: BytesLike = ''
-    //             let maliciousBlockHeader: BytesLike = ''
-    //             let ts = hexZeroPad(intToHex(timestamp), 32)
-    //             let h = hexZeroPad(intToHex(height), 32)
-    //             blockHeader = blockHeader.concat(blockchainRid, blockRid.substring(2, blockRid.length), previousBlockRid, 
-    //                                 merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
-    //                                 ts.substring(2, ts.length), h.substring(2, h.length), 
-    //                                 dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
-    //                                 hashRootEvent.substring(2, hashRootEvent.length),
-    //                                 hashRootState.substring(2, hashRootState.length)
-    //             )
+                maliciousBlockHeader = maliciousBlockHeader.concat(blockchainRid, maliciousBlockRid.substring(2, maliciousBlockRid.length), previousBlockRid, 
+                                    merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
+                                    ts.substring(2, ts.length), h.substring(2, h.length), 
+                                    dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
+                                    extraDataMerkleRootHashedLeaf.substring(2, extraDataMerkleRootHashedLeaf.length)
+                )
 
-    //             maliciousBlockHeader = maliciousBlockHeader.concat(blockchainRid, maliciousBlockRid.substring(2, maliciousBlockRid.length), previousBlockRid, 
-    //                                 merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
-    //                                 ts.substring(2, ts.length), h.substring(2, h.length), 
-    //                                 dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
-    //                                 hashRootEvent.substring(2, hashRootEvent.length),
-    //                                 hashRootState.substring(2, hashRootState.length)
-    //             )
+                let sig = await appNodes.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
+                let merkleProof = [
+                                    DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
+                                    DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
+                                ]
+                                
+                let eventProof = {
+                    leaf: DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
+                    position: 0,
+                    merkleProofs: merkleProof,
+                }
+                let maliciousEventProof = {
+                    leaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
+                    position: 0,
+                    merkleProofs: merkleProof,
+                }                
+                let el2HashedLeaf = hashGtvBytes64Leaf(DecodeHexStringToByteArray(el2Leaf))
+                let extraRoot = el2HashedLeaf
+                let el2Proof = {
+                    leaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
+                    el2Position: 0,
+                    extraRoot: DecodeHexStringToByteArray(extraRoot.substring(2, extraRoot.length)),
+                    extraMerkleProofs: [],
+                }
+                await expect(chrL2Instance.withdraw_request(maliciousData, eventProof, 
+                    DecodeHexStringToByteArray(blockHeader), 
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
+                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                ).to.be.revertedWith('Postchain: invalid event')
+                await expect(chrL2Instance.withdraw_request(data, eventProof, 
+                    DecodeHexStringToByteArray(maliciousBlockHeader), 
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
+                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                ).to.be.revertedWith('Postchain: invalid block header')
+                await expect(chrL2Instance.withdraw_request(data, maliciousEventProof, 
+                    DecodeHexStringToByteArray(blockHeader),
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
+                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                ).to.be.revertedWith('ChrL2: invalid merkle proof')
+                await expect(chrL2Instance.withdraw_request(data, eventProof, 
+                    DecodeHexStringToByteArray(blockHeader), 
+                    [],
+                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                ).to.be.revertedWith('ChrL2: block signature is invalid')
 
-    //             let sig = await appNodes.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
-    //             let merkleProof = ["0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000000"]
-    //             await expect(chrL2Instance.withdraw_request(data, 
-    //                 DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 DecodeHexStringToByteArray(blockHeader), [DecodeHexStringToByteArray(sig.substring(2, sig.length))], 
-    //                 merkleProof, 0)
-    //             ).to.be.revertedWith('Postchain: invalid merkle proof')
-    //             await expect(chrL2Instance.withdraw_request(maliciousData, 
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 DecodeHexStringToByteArray(blockHeader), [DecodeHexStringToByteArray(sig.substring(2, sig.length))], 
-    //                 merkleProof, 0)
-    //             ).to.be.revertedWith('Postchain: invalid event')
-    //             await expect(chrL2Instance.withdraw_request(data, 
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 DecodeHexStringToByteArray(maliciousBlockHeader), [DecodeHexStringToByteArray(sig.substring(2, sig.length))], 
-    //                 merkleProof, 0)
-    //             ).to.be.revertedWith('Postchain: invalid block header')
-    //             await expect(chrL2Instance.withdraw_request(data, 
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 DecodeHexStringToByteArray(blockHeader), [], 
-    //                 merkleProof, 0)
-    //             ).to.be.revertedWith('Postchain: block signature is invalid')
+                await expect(chrL2Instance.withdraw_request(data, eventProof, 
+                    DecodeHexStringToByteArray(blockHeader), 
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
+                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                ).to.emit(chrL2Instance, "WithdrawRequest")
+                .withArgs(user.address, tokenAddress, toDeposit)
 
-    //             await expect(chrL2Instance.withdraw_request(data, 
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 DecodeHexStringToByteArray(blockHeader), [DecodeHexStringToByteArray(sig.substring(2, sig.length))], 
-    //                 merkleProof, 0)
-    //             ).to.emit(chrL2Instance, "WithdrawRequest")
-    //             .withArgs(user.address, tokenAddress, toDeposit)
+                await expect(chrL2Instance.withdraw_request(data, eventProof, 
+                    DecodeHexStringToByteArray(blockHeader), 
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
+                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                ).to.be.revertedWith('ChrL2: event hash was already used')
 
-    //             await expect(chrL2Instance.withdraw_request(data, 
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 DecodeHexStringToByteArray(blockHeader), [DecodeHexStringToByteArray(sig.substring(2, sig.length))], 
-    //                 merkleProof, 0)
-    //             ).to.be.revertedWith('ChrL2: event hash was already used')
+                await expect(chrL2Instance.withdraw(
+                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
+                    deployer.address)).to.revertedWith("ChrL2: no fund for the beneficiary")
 
-    //             await expect(chrL2Instance.withdraw(
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 deployer.address)).to.revertedWith("ChrL2: no fund for the beneficiary")
+                await expect(chrL2Instance.withdraw(
+                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
+                    user.address)).to.revertedWith("ChrL2: not mature enough to withdraw the fund")
 
-    //             await expect(chrL2Instance.withdraw(
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 user.address)).to.revertedWith("ChrL2: not mature enough to withdraw the fund")
+                // force mining 100 blocks
+                for (let i = 0; i < 100; i++) {
+                    await ethers.provider.send('evm_mine', [])
+                }
 
-    //             // force mining 100 blocks
-    //             for(let i = 0; i < 100; i++) {
-    //                 await ethers.provider.send('evm_mine', [])
-    //             }
-
-    //             expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
-    //             expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
-    //             await expect(chrL2Instance.withdraw(
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 deployer.address)).to.be.revertedWith('ChrL2: no fund for the beneficiary')
-    //             await expect(chrL2Instance.withdraw(
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 user.address))
-    //             .to.emit(chrL2Instance, "Withdrawal")
-    //             .withArgs(user.address, tokenAddress, toDeposit)
-    //             expect(await chrL2Instance._balances(tokenAddress)).to.eq(0)
-    //             expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint)
-    //             await expect(chrL2Instance.withdraw(
-    //                 DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
-    //                 user.address)).to.be.revertedWith('ChrL2: fund was already claimed')
-    //         }
-    //     })
-    // })
+                expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
+                expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
+                await expect(chrL2Instance.withdraw(
+                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
+                    deployer.address)).to.be.revertedWith('ChrL2: no fund for the beneficiary')
+                await expect(chrL2Instance.withdraw(
+                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
+                    user.address))
+                .to.emit(chrL2Instance, "Withdrawal")
+                .withArgs(user.address, tokenAddress, toDeposit)
+                expect(await chrL2Instance._balances(tokenAddress)).to.eq(0)
+                expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint)
+                await expect(chrL2Instance.withdraw(
+                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
+                    user.address)).to.be.revertedWith('ChrL2: fund was already claimed')
+            }
+        })
+    })
 })
 
 var DecodeHexStringToByteArray = function (hexString: string) {
@@ -452,6 +467,12 @@ var postchainMerkleNodeHash = function(values: any[]): string {
 var hashGtvBytes32Leaf = function (data: BytesLike): string {
     var result: string = ''
     result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes32'], [0x1, 0xA1, 32+2, 0x4, 32, data])
+    return result
+}
+
+var hashGtvBytes64Leaf = function (data: BytesLike): string {
+    var result: string = ''
+    result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA1, 64+2, 0x4, 64, data])
     return result
 }
 

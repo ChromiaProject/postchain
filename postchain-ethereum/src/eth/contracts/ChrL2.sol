@@ -61,11 +61,11 @@ contract ChrL2 {
     }
 
     function withdraw_request(
-        bytes calldata _event,
+        bytes memory _event,
         Data.EventProof memory eventProof,
-        bytes calldata blockHeader,
+        bytes memory blockHeader,
         bytes[] calldata sigs,
-        bytes calldata el2Leaf,
+        bytes memory el2Leaf,
         Data.EL2ProofData memory el2Proof
     ) public {
         require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
@@ -78,7 +78,7 @@ contract ChrL2 {
         _events[eventProof.leaf] = _updateWithdraw(eventProof.leaf, _event); // mark the event hash was already used.
     }
 
-    function _updateWithdraw(bytes32 hash, bytes calldata _event) internal returns (bool) {
+    function _updateWithdraw(bytes32 hash, bytes memory _event) internal returns (bool) {
         Withdraw storage wd = _withdraw[hash];
         {
             (ERC20 token, address beneficiary, uint256 amount) = hash.verifyEvent(_event);

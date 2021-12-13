@@ -56,7 +56,7 @@ library Postchain {
         return (_actualSignature >= _requiredSignature);
     }
 
-    function verifyEvent(bytes32 _hash, bytes calldata _event) public pure returns (ERC20, address, uint256) {
+    function verifyEvent(bytes32 _hash, bytes memory _event) public pure returns (ERC20, address, uint256) {
         Event memory evt = abi.decode(_event, (Event));
         bytes32 hash = keccak256(_event);
         if (hash != _hash) {
@@ -67,7 +67,7 @@ library Postchain {
 
     function verifyBlockHeader(
         bytes memory blockHeader,
-        bytes calldata el2Leaf,
+        bytes memory el2Leaf,
         Data.EL2ProofData memory proof
     ) public pure returns (bytes32, bytes32, bytes32) {
 
