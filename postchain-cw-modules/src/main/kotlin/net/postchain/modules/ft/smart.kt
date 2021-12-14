@@ -2,7 +2,7 @@
 
 package net.postchain.modules.ft
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.core.TxEContext
 import net.postchain.gtv.GtvArray
 import net.postchain.modules.esplix_r4.DbUtils

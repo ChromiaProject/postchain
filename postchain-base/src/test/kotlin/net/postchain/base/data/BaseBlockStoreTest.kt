@@ -2,15 +2,15 @@
 
 package net.postchain.base.data
 
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import net.postchain.base.BaseEContext
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.EContext
-import org.easymock.EasyMock.*
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
 import org.junit.Test
-import java.sql.Connection
 
 class BaseBlockStoreTest {
 
@@ -23,18 +23,17 @@ class BaseBlockStoreTest {
     @Before
     fun setup() {
         sut = BaseBlockStore()
-        db = mock(DatabaseAccess::class.java)
+        db = mock {}
         //sut.db = db
-        ctx = BaseEContext(mock(Connection::class.java), 2L, 0, db)
+        ctx = BaseEContext(mock {}, 2L, 0, db)
     }
 
     @Test
     fun beginBlockReturnsBlockchainRIDOnFirstBlock() {
-        expect(db.getLastBlockHeight(ctx)).andReturn(-1)
-        expect(db.getBlockchainRid(ctx)).andReturn(blockchainRID)
-        expect(db.insertBlock(ctx, 0)).andReturn(17)
-        expect(db.getLastBlockTimestamp(ctx)).andReturn(1509606236)
-        replay(db)
+        whenever(db.getLastBlockHeight(ctx)).thenReturn(-1)
+        whenever(db.getBlockchainRid(ctx)).thenReturn(blockchainRID)
+        whenever(db.insertBlock(ctx, 0)).thenReturn(17)
+        whenever(db.getLastBlockTimestamp(ctx)).thenReturn(1509606236)
         val initialBlockData = sut.beginBlock(ctx, blockchainRID, null)
         assertArrayEquals(blockchainRID.data, initialBlockData.prevBlockRID)
     }
@@ -42,12 +41,11 @@ class BaseBlockStoreTest {
     @Test
     fun beginBlockReturnsPrevBlockRIdOnSecondBlock() {
         val anotherRID = cryptoSystem.digest("A RID".toByteArray())
-        expect(db.getLastBlockHeight(ctx)).andReturn(0)
-        expect(db.getBlockRID(ctx, 0)).andReturn(anotherRID)
-        expect(db.getBlockchainRid(ctx)).andReturn(blockchainRID)
-        expect(db.insertBlock(ctx, 1)).andReturn(17)
-        expect(db.getLastBlockTimestamp(ctx)).andReturn(1509606236)
-        replay(db)
+        whenever(db.getLastBlockHeight(ctx)).thenReturn(0)
+        whenever(db.getBlockRID(ctx, 0)).thenReturn(anotherRID)
+        whenever(db.getBlockchainRid(ctx)).thenReturn(blockchainRID)
+        whenever(db.insertBlock(ctx, 1)).thenReturn(17)
+        whenever(db.getLastBlockTimestamp(ctx)).thenReturn(1509606236)
         val initialBlockData = sut.beginBlock(ctx, blockchainRID, null)
         assertArrayEquals(anotherRID, initialBlockData.prevBlockRID)
     }

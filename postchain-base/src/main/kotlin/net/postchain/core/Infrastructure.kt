@@ -36,6 +36,23 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun exitBlockchainProcess(process: BlockchainProcess)
 }
 
+/**
+ * This is a loosely defined concept, basically a chunk of logic that can be
+ * connected to a [BlockchainProcess], where "connected" is open to interpretation.
+ *
+ * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
+ * (examples: BBB Ext and GTX Spec TX Ext).
+ * To see how it all goes together, see: doc/extension_classes.graphml
+ */
+interface SynchronizationInfrastructureExtension: Shutdownable {
+    fun connectProcess(process: BlockchainProcess)
+}
+
+/**
+ * Extends the [SynchronizationInfrastructure] with these BC related concepts:
+ * 1. [BlockchainConfiguration]
+ * 2. [BlockchainEngine]
+ */
 interface BlockchainInfrastructure : SynchronizationInfrastructure {
 
     fun makeBlockchainConfiguration(rawConfigurationData: ByteArray,
@@ -45,9 +62,9 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(
-            processName: BlockchainProcessName,
-            configuration: BlockchainConfiguration,
-            restartHandler: (BlockTrace?) -> Boolean
+        processName: BlockchainProcessName,
+        configuration: BlockchainConfiguration,
+        restartHandler: (BlockTrace?) -> Boolean
     ): BlockchainEngine
 
 }
@@ -62,8 +79,8 @@ interface InfrastructureFactory {
     fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider
 
     fun makeBlockchainInfrastructure(
-            nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+        nodeConfigProvider: NodeConfigurationProvider,
+        nodeDiagnosticContext: NodeDiagnosticContext
     ): BlockchainInfrastructure
 
     fun makeProcessManager(nodeConfigProvider: NodeConfigurationProvider,

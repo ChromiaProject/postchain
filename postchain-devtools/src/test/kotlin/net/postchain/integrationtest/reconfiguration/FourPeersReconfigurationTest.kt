@@ -250,7 +250,7 @@ class FourPeersReconfigurationTest : ReconfigurationTest() {
                     // Building tx charts of the minimum (common) length for all nodes
                     val commonHeight = nodes.map { node ->
                         node.query(DEFAULT_CHAIN_IID) { it.getBestHeight() } ?: -1L
-                    }.min() ?: -1L
+                    }.minOrNull() ?: -1L
 
                     assertk.assert(commonHeight > 0L).isTrue()
 

@@ -4,7 +4,7 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.base.BaseBlockchainEngine
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.DatabaseAccess

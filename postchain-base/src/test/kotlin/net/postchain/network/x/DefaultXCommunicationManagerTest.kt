@@ -5,10 +5,12 @@ package net.postchain.network.x
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
-import com.nhaarman.mockitokotlin2.*
+import org.mockito.kotlin.*
 import net.postchain.base.*
+import net.postchain.core.BlockchainRid
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.junit.Before
 import org.junit.Test
 
@@ -27,9 +29,8 @@ class DefaultXCommunicationManagerTest {
 
     @Before
     fun setUp() {
-        // TODO: [et]: Make dynamic ports
-        peerInfo1 = PeerInfo("localhost", 3331, pubKey1)
-        peerInfo2 = PeerInfo("localhost", 3332, pubKey2)
+        peerInfo1 = peerInfoFromPublicKey(pubKey1)
+        peerInfo2 = peerInfoFromPublicKey(pubKey2)
     }
 
     @Test
@@ -93,48 +94,17 @@ class DefaultXCommunicationManagerTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun sendPacket_will_result_in_exception_if_empty_XPeerID_was_given() {
-        // Given
-        val connectionManager: XConnectionManager = mock()
-        val peerCommunicationConfig: PeerCommConfiguration = mock {
-            on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), XPeerID(pubKey1))
-        }
-
-        // When
-        val communicationManager = DefaultXCommunicationManager<Int>(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
-        communicationManager.init()
-        communicationManager.sendPacket(0, XPeerID(byteArrayOf()))
-        communicationManager.shutdown()
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun sendPacket_will_result_in_exception_if_unknown_recipient_was_given() {
-        // Given
-        val connectionManager: XConnectionManager = mock()
-        val peerCommunicationConfig: PeerCommConfiguration = mock {
-            on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), XPeerID(pubKey1))
-        }
-
-        // When
-        val communicationManager = DefaultXCommunicationManager<Int>(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
-        communicationManager.init()
-        communicationManager.sendPacket(0, XPeerID(byteArrayOf(0x42)))
-        communicationManager.shutdown()
-    }
-
-    @Test(expected = IllegalArgumentException::class)
     fun sendPacket_will_result_in_exception_if_my_XPeerID_was_given() {
         // Given
         val peersConfig: PeerCommConfiguration = mock {
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), XPeerID(pubKey2))
+            on { pubKey } doReturn pubKey1
         }
 
         // When / Then exception
         DefaultXCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
                 .apply {
-                    sendPacket(0, XPeerID(pubKey2))
+                    sendPacket(0, XPeerID(pubKey1))
                 }
     }
 

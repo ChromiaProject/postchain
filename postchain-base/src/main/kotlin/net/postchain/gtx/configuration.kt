@@ -14,12 +14,15 @@ import nl.komponents.kovenant.Promise
 open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationData, val module: GTXModule)
     : BaseBlockchainConfiguration(configData) {
     private val txFactory = GTXTransactionFactory(
-            effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize())
-    private val specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem,
-            txFactory
+        effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize()
     )
+    private lateinit var specTxHandler: GTXSpecialTxHandler
 
     companion object : KLogging()
+
+    override fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
+        return module.makeBlockBuilderExtensions()
+    }
 
     override fun getTransactionFactory(): TransactionFactory {
         return txFactory
@@ -34,6 +37,9 @@ open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationDat
         logger.debug("Running initialize DB of class GTXBlockchainConfiguration")
         GTXSchemaManager.initializeDB(ctx)
         module.initializeDB(ctx)
+        specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem,
+            txFactory
+        )
     }
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {

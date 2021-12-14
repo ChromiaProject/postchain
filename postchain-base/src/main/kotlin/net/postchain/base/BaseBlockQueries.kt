@@ -6,7 +6,9 @@ import mu.KLogging
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
+import nl.komponents.kovenant.Kovenant
 import nl.komponents.kovenant.Promise
+import nl.komponents.kovenant.buildDispatcher
 import nl.komponents.kovenant.task
 
 /**
@@ -38,12 +40,21 @@ open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfi
 
     companion object : KLogging()
 
+    // create a separate Kovenant context to make sure
+    // other tasks do not compete with BlockQueries
+    val kctx = Kovenant.createContext {
+        workerContext.dispatcher {
+            name = "BlockQueries"
+            concurrentTasks = storage.readConcurrency
+        }
+    }
+
     /**
      * Wrapper function for a supplied function with the goal of opening a new read-only connection, catching any exceptions
      * on the query being run and logging them, and finally closing the connection
      */
     protected fun <T> runOp(operation: (EContext) -> T): Promise<T, Exception> {
-        return task {
+        return task(kctx) {
             val ctx = storage.openReadConnection(chainId)
             try {
                 operation(ctx)

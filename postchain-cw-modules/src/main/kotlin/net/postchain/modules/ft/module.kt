@@ -2,7 +2,7 @@
 
 package net.postchain.modules.ft
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule

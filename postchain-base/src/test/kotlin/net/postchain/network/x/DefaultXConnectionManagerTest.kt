@@ -5,13 +5,15 @@ package net.postchain.network.x
 import assertk.assert
 import assertk.assertions.isEmpty
 import assertk.isContentEqualTo
-import com.nhaarman.mockitokotlin2.*
+import org.mockito.kotlin.*
 import net.postchain.base.*
+import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.Before
 import org.junit.Test
@@ -36,10 +38,12 @@ class DefaultXConnectionManagerTest {
 
     @Before
     fun setUp() {
-        // TODO: [et]: Make dynamic ports
-        peerInfo1 = PeerInfo("localhost", 3331, byteArrayOf(0x01))
-        peerInfo2 = PeerInfo("localhost", 3332, byteArrayOf(0x02))
-        unknownPeerInfo = PeerInfo("localhost", 3333, byteArrayOf(0x03))
+        val b1 = BlockchainRid.buildRepeat(0x01)
+        val b2 = BlockchainRid.buildRepeat(0x02)
+        val b3 = BlockchainRid.buildRepeat(0x03)
+        peerInfo1 = peerInfoFromPublicKey(b1.data)
+        peerInfo2 = peerInfoFromPublicKey(b2.data)
+        unknownPeerInfo = peerInfoFromPublicKey(b3.data)
 
         peerConnectionDescriptor1 = XPeerConnectionDescriptor(peerInfo1.peerId(), blockchainRid)
         peerConnectionDescriptor2 = XPeerConnectionDescriptor(peerInfo2.peerId(), blockchainRid)
@@ -239,7 +243,6 @@ class DefaultXConnectionManagerTest {
         // Then
         verify(chainPeerConfig, atLeast(3)).chainID
         verify(chainPeerConfig, times(6)).commConfiguration
-        verify(chainPeerConfig, times(1 + 2 + 1 + 2)).blockchainRID
 
         connectionManager.shutdown()
     }

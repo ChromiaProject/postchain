@@ -3,7 +3,7 @@
 package net.postchain
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
@@ -14,6 +14,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.PeerNameHelper.peerName
+import nl.komponents.kovenant.Kovenant
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
@@ -27,6 +28,13 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
     companion object : KLogging()
 
     init {
+        Kovenant.context {
+            workerContext.dispatcher {
+                name = "BGwork"
+                concurrentTasks = 5
+            }
+        }
+
         val infrastructureFactory = BaseInfrastructureFactoryProvider().createInfrastructureFactory(nodeConfigProvider)
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(nodeConfigProvider, diagnosticContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()

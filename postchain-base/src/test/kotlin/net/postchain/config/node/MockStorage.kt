@@ -1,8 +1,8 @@
 package net.postchain.config.node
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess

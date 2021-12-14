@@ -1,6 +1,6 @@
 package net.postchain.client
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.hexStringToByteArray
 import org.apache.commons.configuration2.Configuration

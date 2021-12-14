@@ -7,6 +7,7 @@ import assertk.assertions.isNull
 import net.postchain.core.BlockQueries
 import net.postchain.core.MultiSigBlockWitness
 import net.postchain.core.Signature
+import net.postchain.core.Transaction
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.Gtv
@@ -75,14 +76,14 @@ fun PostchainTestNode.awaitHeight(chainId: Long, height: Long) {
     strategy(chainId).awaitCommitted(height.toInt())
 }
 
-fun PostchainTestNode.enqueueTxs(chainId: Long, vararg txs: TestTransaction): Boolean {
+fun PostchainTestNode.enqueueTxs(chainId: Long, vararg txs: Transaction): Boolean {
     return retrieveBlockchain(chainId)
-            ?.let { process ->
-                val txQueue = process.getEngine().getTransactionQueue()
-                txs.forEach { txQueue.enqueue(it) }
-                true
-            }
-            ?: false
+        ?.let { process ->
+            val txQueue = process.getEngine().getTransactionQueue()
+            txs.forEach { txQueue.enqueue(it) }
+            true
+        }
+        ?: false
 }
 
 fun PostchainTestNode.enqueueTxsAndAwaitBuiltBlock(chainId: Long, height: Long, vararg txs: TestTransaction) {
