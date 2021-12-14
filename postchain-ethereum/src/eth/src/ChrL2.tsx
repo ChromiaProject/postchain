@@ -98,16 +98,30 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
         sigs[i] = "0x" + blockWitness[i].sig
       }
 
-      const eventData = event.eventData
-      const evtPosition = eventData[1]
-      const evtHash = "0x" + eventData[2]
-      const evtData = "0x" + eventData[3]
-      const merkleProofs = event.merkleProofs
-      let proofs = new Array<string>(merkleProofs.length)
-      for (let i = 0; i < merkleProofs.length; i++) {
-        proofs[i] = "0x" + merkleProofs[i]
+      const eventData = "0x" + event.eventData
+      const eventProof = event.eventProof
+      let merkleProofs = new Array<String>(eventProof.merkleProofs.length)
+      for (let i = 0; i < eventProof.merkleProofs.length; i++) {
+        merkleProofs[i] = "0x" + eventProof.merkleProofs[i]
       }
-      const calldata = chrl2.interface.encodeFunctionData("withdraw_request", [evtData, evtHash, blockHeader, sigs, proofs, evtPosition])
+      const evtProof = {
+        leaf: "0x" + eventProof.leaf,
+        position: eventProof.position,
+        merkleProofs: merkleProofs,
+      }
+      const el2MerkleProof = event.el2MerkleProof
+      let extraMerkleProofs = new Array<String>(el2MerkleProof.extraMerkleProofs.length)
+      for (let i = 0; i < el2MerkleProof.extraMerkleProofs.length; i++) {
+        extraMerkleProofs[i] = "0x" + el2MerkleProof.extraMerkleProofs[i]
+      }
+      const el2Proof = {
+        leaf: "0x" + el2MerkleProof.leaf,
+        el2Position: el2MerkleProof.el2Position,
+        extraRoot: "0x" + el2MerkleProof.extraRoot,
+        extraMerkleProofs: extraMerkleProofs,
+      }
+      const el2Leaf = "0x" + event.el2Leaf
+      const calldata = chrl2.interface.encodeFunctionData("withdraw_request", [eventData, evtProof, blockHeader, sigs, el2Leaf, el2Proof])
       const txPrams = {
         to: chrL2Address,
         value: '0x0',
@@ -124,18 +138,14 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
 
   const withdraw = async (serial: number, token: string, beneficiary: string, amount: number) => {
     const signer = library.getSigner();
-    const eventHash = calculateEventLeafHash(serial, token, beneficiary, amount)
+    const eventHash = "0x" + calculateEventLeafHash(serial, token, beneficiary, amount)
     try {
-      let data = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
-      let event = JSON.parse(JSON.stringify(data))
       const chrl2 = new ethers.Contract(
         chrL2Address,
         ChrL2Artifacts.abi,
         library
       )
-      const eventData = event.eventData
-      const evtHash = "0x" + eventData[2]
-      const calldata = chrl2.interface.encodeFunctionData("withdraw", [evtHash, account])
+      const calldata = chrl2.interface.encodeFunctionData("withdraw", [eventHash, account])
       const txPrams = {
         to: chrL2Address,
         value: '0x0',

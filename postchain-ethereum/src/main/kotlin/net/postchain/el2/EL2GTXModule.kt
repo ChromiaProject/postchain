@@ -63,9 +63,9 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
         "eventData" to gtv(eventInfo.data),
         "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
-        "eventProof" to gtv(GtvEncoder.simpleEncodeGtv(eventProof)),
+        "eventProof" to eventProof,
         "el2Leaf" to el2Leaf(db, ctx, blockHeight),
-        "el2MerkleProof" to gtv(GtvEncoder.simpleEncodeGtv(el2MerkleProof))
+        "el2MerkleProof" to el2MerkleProof
     )
 }
 
@@ -99,7 +99,11 @@ private fun eventProof(ctx: EContext, blockHeight: Long, event: DatabaseAccess.E
     for (proof in proofs) {
         gtvProofs = gtvProofs.plus(gtv(proof))
     }
-    return gtv(gtv(event.hash), gtv(event.pos), gtv(gtvProofs))
+    return gtv(
+        "leaf" to gtv(event.hash),
+        "position" to gtv(event.pos),
+        "merkleProofs" to gtv(gtvProofs)
+    )
 }
 
 private fun accountState(state: DatabaseAccess.AccountState?): Gtv {
@@ -148,7 +152,11 @@ private fun el2MerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Long)
         ds.digest(encodeGtv(GtvString(EL2))),
         ds.digest(encodeGtv(bh.gtvExtra[EL2]!!))
     )
-    return gtv(gtv(el2Leaf), gtv(path.toLong()), gtv(merkleTree.getMerkleRoot()), gtv(gtvProofs))
+    return gtv(
+        "leaf" to gtv(el2Leaf),
+        "el2Position" to gtv(path.toLong()),
+        "extraRoot" to gtv(merkleTree.getMerkleRoot()),
+        "extraMerkleProofs" to gtv(gtvProofs))
 }
 
 private fun blockWitnessData(
