@@ -76,13 +76,13 @@ class DefaultPeersConnectionStrategyTest {
         testConnectAll(peer2, setOf(peer1, peer3), setOf(peer1))
     }
 
-    fun connectionLost(me: XPeerID, peerIds: Set<XPeerID>, lostpeer: XPeerID, outgoing: Boolean) {
+    private fun connectionLost(me: XPeerID, peerIds: Set<XPeerID>, lostPeer: XPeerID, outgoing: Boolean) {
         val strategy = testConnectAll(me, peerIds, setOf())
         reset(connMan)
-        whenever(connMan.isPeerConnected(0, lostpeer)).thenReturn(false)
-        strategy.connectionLost(0, lostpeer, outgoing)
-        Awaitility.await().atMost(200, TimeUnit.MILLISECONDS).untilAsserted {
-            verify(connMan).connectChainPeer(0, lostpeer)
+        whenever(connMan.isPeerConnected(0, lostPeer)).thenReturn(false)
+        strategy.connectionLost(0, lostPeer, outgoing)
+        Awaitility.await().atMost(2000, TimeUnit.MILLISECONDS).untilAsserted {
+            verify(connMan).connectChainPeer(0, lostPeer)
         }
     }
 

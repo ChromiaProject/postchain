@@ -93,41 +93,7 @@ class DefaultXCommunicationManagerTest {
         communicationManager.shutdown()
     }
 
-    @Test
-    fun sendPacket_will_result_in_exception_if_empty_XPeerID_was_given() {
-        // Given
-        val connectionManager: XConnectionManager = mock()
-        val peerCommunicationConfig: PeerCommConfiguration = mock {
-            on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), XPeerID(pubKey1))
-            on { pubKey } doReturn pubKey1
-        }
-
-        // When
-        val communicationManager = DefaultXCommunicationManager<Int>(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
-        communicationManager.init()
-        communicationManager.sendPacket(0, XPeerID(byteArrayOf()))
-        communicationManager.shutdown()
-    }
-
-    @Test
-    fun sendPacket_will_result_in_exception_if_unknown_recipient_was_given() {
-        // Given
-        val connectionManager: XConnectionManager = mock()
-        val peerCommunicationConfig: PeerCommConfiguration = mock {
-            on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), XPeerID(pubKey1))
-            on { pubKey } doReturn pubKey1
-        }
-
-        // When
-        val communicationManager = DefaultXCommunicationManager<Int>(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
-        communicationManager.init()
-        communicationManager.sendPacket(0, XPeerID(byteArrayOf(0x42)))
-        communicationManager.shutdown()
-    }
-
-    @Test
+    @Test(expected = IllegalArgumentException::class)
     fun sendPacket_will_result_in_exception_if_my_XPeerID_was_given() {
         // Given
         val peersConfig: PeerCommConfiguration = mock {
@@ -138,7 +104,7 @@ class DefaultXCommunicationManagerTest {
         // When / Then exception
         DefaultXCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
                 .apply {
-                    sendPacket(0, XPeerID(pubKey2))
+                    sendPacket(0, XPeerID(pubKey1))
                 }
     }
 
