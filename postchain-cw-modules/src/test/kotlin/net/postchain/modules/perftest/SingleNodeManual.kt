@@ -5,7 +5,7 @@ package net.postchain.modules.perftest
 import net.postchain.common.TimeLog
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 /**
  * This runs a single node server without any consensus code. It just

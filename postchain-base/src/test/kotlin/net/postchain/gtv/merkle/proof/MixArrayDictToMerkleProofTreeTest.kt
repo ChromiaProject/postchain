@@ -12,8 +12,7 @@ import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 /**
@@ -52,7 +51,7 @@ class MixArrayDictToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -83,7 +82,7 @@ class MixArrayDictToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)

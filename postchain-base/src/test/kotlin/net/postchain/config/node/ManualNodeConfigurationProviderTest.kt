@@ -10,7 +10,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.time.Instant
 
 class ManualNodeConfigurationProviderTest {

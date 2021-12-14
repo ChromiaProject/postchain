@@ -7,7 +7,9 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.toHex
 import net.postchain.core.AppContext
 import org.awaitility.Awaitility
-import org.junit.Test
+import org.awaitility.core.ConditionTimeoutException
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.concurrent.TimeUnit
 
 /* One signer, two replica nodes. After one block, node 0 (signer is turned off).
@@ -20,11 +22,13 @@ class ReplicaSyncTest : AbstractSyncTest() {
 
 
     // Try to synchronize when the replica nodes have been removed from the blockchain_replicas table.
-    @Test(expected = org.awaitility.core.ConditionTimeoutException::class)
+    @Test
     fun testRemove() {
-        Awaitility.await().atMost(7, TimeUnit.SECONDS).until {
-            runSyncTest(1, 2, setOf(1), setOf(0), 1)
-            true
+        assertThrows<ConditionTimeoutException> {
+            Awaitility.await().atMost(7, TimeUnit.SECONDS).until {
+                runSyncTest(1, 2, setOf(1), setOf(0), 1)
+                true
+            }
         }
     }
 

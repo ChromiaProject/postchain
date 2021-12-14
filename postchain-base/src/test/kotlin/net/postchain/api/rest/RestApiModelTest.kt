@@ -22,9 +22,9 @@ import net.postchain.core.TxDetail
 import net.postchain.ebft.NodeState
 import net.postchain.ebft.rest.contract.EBFTstateNodeStatusContract
 import org.hamcrest.CoreMatchers.equalTo
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class RestApiModelTest {
 
@@ -38,7 +38,7 @@ class RestApiModelTest {
     private val txRID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     private val gson = JsonFactory.makeJson()
 
-    @Before
+    @BeforeEach
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
@@ -50,7 +50,7 @@ class RestApiModelTest {
         // restApi.attachModel(blockchainRID, model)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         restApi.stop()
     }

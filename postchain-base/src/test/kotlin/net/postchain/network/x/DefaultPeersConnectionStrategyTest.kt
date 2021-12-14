@@ -6,7 +6,7 @@ import org.mockito.kotlin.*
 import mu.KLogging
 import net.postchain.common.hexStringToByteArray
 import org.awaitility.Awaitility
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.lang.Thread.sleep
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals

@@ -8,9 +8,9 @@ import net.postchain.base.BaseEContext
 import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.EContext
-import org.junit.Assert.assertArrayEquals
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class BaseBlockStoreTest {
 
@@ -20,7 +20,7 @@ class BaseBlockStoreTest {
     lateinit var db: DatabaseAccess
     lateinit var ctx: EContext
 
-    @Before
+    @BeforeEach
     fun setup() {
         sut = BaseBlockStore()
         db = mock {}

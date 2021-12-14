@@ -15,8 +15,8 @@ import net.postchain.gtx.CompositeGTXModule
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 import nl.komponents.kovenant.Promise
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 
 fun PostchainTestNode.addBlockchainAndStart(chainId: Long, blockchainConfig: Gtv) {
     val bcRid = addBlockchain(chainId, blockchainConfig)

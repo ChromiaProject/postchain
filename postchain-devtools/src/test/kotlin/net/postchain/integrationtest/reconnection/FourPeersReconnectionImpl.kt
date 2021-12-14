@@ -7,7 +7,8 @@ import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.assertNodeConnectedWith
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.Assert
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 
 open class FourPeersReconnectionImpl : ReconnectionTest() {
 
@@ -19,10 +20,10 @@ open class FourPeersReconnectionImpl : ReconnectionTest() {
     fun assertHeightForAllNodes(height: Long) {
         Awaitility.await().atMost(Duration.TEN_SECONDS.multiply(3))
                 .untilAsserted {
-                    Assert.assertEquals(height, queries(nodes[0]) { it.getBestHeight() })
-                    Assert.assertEquals(height, queries(nodes[1]) { it.getBestHeight() })
-                    Assert.assertEquals(height, queries(nodes[2]) { it.getBestHeight() })
-                    Assert.assertEquals(height, queries(nodes[3]) { it.getBestHeight() })
+                   assertEquals(height, queries(nodes[0]) { it.getBestHeight() })
+                   assertEquals(height, queries(nodes[1]) { it.getBestHeight() })
+                   assertEquals(height, queries(nodes[2]) { it.getBestHeight() })
+                   assertEquals(height, queries(nodes[3]) { it.getBestHeight() })
                 }
     }
 

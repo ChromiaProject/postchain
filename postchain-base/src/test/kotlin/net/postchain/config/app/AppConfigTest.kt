@@ -4,7 +4,7 @@ package net.postchain.config.app
 
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class AppConfigTest {
 

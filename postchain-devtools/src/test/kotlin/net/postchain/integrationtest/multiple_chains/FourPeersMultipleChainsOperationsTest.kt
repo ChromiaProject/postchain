@@ -10,15 +10,15 @@ import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.assertNodeConnectedWith
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 class FourPeersMultipleChainsOperationsTest : ConfigFileBasedIntegrationTest() {
 
     companion object : KLogging()
 
     @Test
-    @Ignore
+   @Disabled
     fun startingAndStoppingAllPeersWithoutAnyChain_Successfully() {
         val nodesCount = 4
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))

@@ -4,11 +4,13 @@ import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.currentHeight
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.network.x.XPeerID
-import org.junit.Assert
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.lang.Thread.sleep
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ForkTestNightly : ManagedModeTest() {
@@ -99,7 +101,7 @@ class ForkTestNightly : ManagedModeTest() {
         val c2 = startNewBlockchain(setOf(0), setOf(), c1.chain)
         awaitHeight(c2, 10)
         c2.all().forEach {
-            Assert.assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
+           assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
         }
         assertCantBuildBlock(c2, 11)
     }
@@ -127,7 +129,7 @@ class ForkTestNightly : ManagedModeTest() {
         val c2 = startNewBlockchain(setOf(0), setOf(1), c1.chain)
         awaitHeight(c2, 10)
         c2.all().forEach {
-            Assert.assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
+           assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
         }
         assertCantBuildBlock(c2, 11)
     }
@@ -208,7 +210,7 @@ class ForkTestNightly : ManagedModeTest() {
      * To do this successfully we must do the different steps in succession, we cannot for example do step1 and step2
      * in parallel, since ConnMgr will not allow us to connect to the same chain  (chain2 on Node2) using different names.
      */
-    @Ignore // Incomplete test, never worked and probably incorrect setup.
+   @Disabled // Incomplete test, never worked and probably incorrect setup.
     @Test
     fun testAncestorNetworkThenLocally() {
         extraNodeProperties[0] = mapOf("blockchain_ancestors.${chainRidOf(3)}" to listOf(ancestor(2,2)))
@@ -447,7 +449,7 @@ class ForkTestNightly : ManagedModeTest() {
     fun assertEqualAtHeight(chainOld: NodeSet, chainNew: NodeSet, height: Long) {
         val expectedBlockRid = nodes[chainOld.all().first()].blockQueries(chainOld.chain).getBlockRid(height).get()
         chainNew.all().forEach {
-            Assert.assertArrayEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get(), expectedBlockRid)
+           assertArrayEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get(), expectedBlockRid)
         }
     }
 
@@ -455,7 +457,7 @@ class ForkTestNightly : ManagedModeTest() {
     fun assertNotEqualAtHeight(chainOld: NodeSet, chainNew: NodeSet, height: Long) {
         val expectedBlockRid = nodes[chainOld.all().first()].blockQueries(chainOld.chain).getBlockRid(height).get()
         chainNew.all().forEach {
-            Assert.assertFalse(expectedBlockRid!!.contentEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get()!!))
+           assertFalse(expectedBlockRid!!.contentEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get()!!))
         }
     }
 

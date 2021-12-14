@@ -3,9 +3,9 @@
 package net.postchain.ebft.messages
 
 import net.postchain.ebft.message.*
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 
 class MessagesTest {
     @Test

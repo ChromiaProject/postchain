@@ -9,9 +9,9 @@ import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.common.toHex
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class RestApiPostTxEndpointTest {
 
@@ -20,7 +20,7 @@ class RestApiPostTxEndpointTest {
     private lateinit var restApi: RestApi
     private lateinit var model: Model
 
-    @Before
+    @BeforeEach
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
@@ -29,7 +29,7 @@ class RestApiPostTxEndpointTest {
         restApi = RestApi(0, basePath)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         restApi.stop()
     }

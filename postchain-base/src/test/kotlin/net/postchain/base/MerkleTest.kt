@@ -5,8 +5,8 @@ package net.postchain.base
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 
 val cryptoSystem = SECP256K1CryptoSystem()
 val calculator = GtvMerkleHashCalculator(cryptoSystem)

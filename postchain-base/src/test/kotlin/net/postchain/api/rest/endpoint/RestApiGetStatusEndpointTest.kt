@@ -12,9 +12,9 @@ import net.postchain.api.rest.model.TxRID
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
 import org.hamcrest.Matchers.equalToIgnoringCase
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 /**
  * [GetStatus] and [GetTx] endpoints have common part,
@@ -30,7 +30,7 @@ class RestApiGetStatusEndpointTest {
     private val chainIid = 1L
     private val txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-    @Before
+    @BeforeEach
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
@@ -40,7 +40,7 @@ class RestApiGetStatusEndpointTest {
         restApi = RestApi(0, basePath, null, null)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         restApi.stop()
     }

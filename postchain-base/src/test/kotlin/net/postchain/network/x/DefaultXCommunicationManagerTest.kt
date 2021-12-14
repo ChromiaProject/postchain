@@ -11,8 +11,10 @@ import net.postchain.core.BlockchainRid
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import net.postchain.network.util.peerInfoFromPublicKey
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import java.lang.IllegalArgumentException
 
 class DefaultXCommunicationManagerTest {
 
@@ -27,7 +29,7 @@ class DefaultXCommunicationManagerTest {
         private val CHAIN_ID = 1L
     }
 
-    @Before
+    @BeforeEach
     fun setUp() {
         peerInfo1 = peerInfoFromPublicKey(pubKey1)
         peerInfo2 = peerInfoFromPublicKey(pubKey2)
@@ -93,7 +95,7 @@ class DefaultXCommunicationManagerTest {
         communicationManager.shutdown()
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun sendPacket_will_result_in_exception_if_my_XPeerID_was_given() {
         // Given
         val peersConfig: PeerCommConfiguration = mock {
@@ -102,10 +104,12 @@ class DefaultXCommunicationManagerTest {
         }
 
         // When / Then exception
-        DefaultXCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
+        assertThrows<IllegalArgumentException> {
+            DefaultXCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
                 .apply {
                     sendPacket(0, XPeerID(pubKey1))
                 }
+        }
     }
 
     @Test

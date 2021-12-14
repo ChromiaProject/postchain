@@ -12,8 +12,10 @@ import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXDataBuilder
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 val myCS = SECP256K1CryptoSystem()
 
@@ -72,13 +74,13 @@ class GTXIntegrationTest : IntegrationTestSetup() {
         fun makeSureBlockIsBuiltCorrectly() {
             currentBlockHeight += 1
             buildBlockAndCommit(node.getBlockchainInstance().getEngine())
-            Assert.assertEquals(currentBlockHeight, getBestHeight(node))
+           assertEquals(currentBlockHeight, getBestHeight(node))
             val ridsAtHeight = getTxRidsAtHeight(node, currentBlockHeight)
             for (vtx in validTxs) {
                 val vtxRID = vtx.getRID()
-                Assert.assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
+               assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
             }
-            Assert.assertEquals(validTxs.size, ridsAtHeight.size)
+           assertEquals(validTxs.size, ridsAtHeight.size)
             validTxs.clear()
         }
 
@@ -121,6 +123,6 @@ class GTXIntegrationTest : IntegrationTestSetup() {
 
         val value = node.getBlockchainInstance().getEngine().getBlockQueries().query(
                 """{"type"="gtx_test_get_value", "txRID"="${validTx1.getRID().toHex()}"}""")
-        Assert.assertEquals("\"true\"", value.get())
+       assertEquals("\"true\"", value.get())
     }
 }

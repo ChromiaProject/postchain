@@ -6,8 +6,9 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.GtvFactory.gtv
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class GtvJSONTest {
 
@@ -16,8 +17,8 @@ class GtvJSONTest {
         val jsonArr = "[\"foo\", \"1234\"]"
         val gson = make_gtv_gson()
         val gtvArr = gson.fromJson<Gtv>(jsonArr, Gtv::class.java)!!
-        Assert.assertEquals("foo", gtvArr[0].asString())
-        Assert.assertEquals("1234", gtvArr[1].asString())
+       assertEquals("foo", gtvArr[0].asString())
+       assertEquals("1234", gtvArr[1].asString())
     }
 
 
@@ -28,8 +29,8 @@ class GtvJSONTest {
         val jsonValue = gson.toJson(gtvArrOrg, Gtv::class.java)
         //println(jsonValue)
         val gtvArrAfterRoundtrip = gson.fromJson<Gtv>(jsonValue, Gtv::class.java)!!
-        Assert.assertEquals("foo",  gtvArrAfterRoundtrip[0].asString())
-        Assert.assertEquals("1234", gtvArrAfterRoundtrip[1].asString())
+       assertEquals("foo",  gtvArrAfterRoundtrip[0].asString())
+       assertEquals("1234", gtvArrAfterRoundtrip[1].asString())
     }
 
     @Test
@@ -39,9 +40,9 @@ class GtvJSONTest {
         jsonValue.add("foo", JsonPrimitive("bar"))
         jsonValue.add("bar", JsonPrimitive("1234"))
         val gtvDict = gson.fromJson<Gtv>(jsonValue, Gtv::class.java)!!
-        Assert.assertEquals("bar", gtvDict["foo"]!!.asString())
-        Assert.assertEquals("1234", gtvDict["bar"]!!.asString())
-        Assert.assertTrue(gtvDict["bar"]!!.asByteArray(true).size == 2)
+       assertEquals("bar", gtvDict["foo"]!!.asString())
+       assertEquals("1234", gtvDict["bar"]!!.asString())
+       assertTrue(gtvDict["bar"]!!.asByteArray(true).size == 2)
     }
 
     @Test
@@ -51,9 +52,9 @@ class GtvJSONTest {
         val jsonValue = gson.toJson(gtvDictOrg, Gtv::class.java)
         //println(jsonValue)
         val gtvDictAfterRoundtrip = gson.fromJson<Gtv>(jsonValue, Gtv::class.java)!!
-        Assert.assertEquals("bar", gtvDictAfterRoundtrip["foo"]!!.asString())
-        Assert.assertEquals("1234", gtvDictAfterRoundtrip["bar"]!!.asString())
-        Assert.assertTrue(gtvDictAfterRoundtrip["bar"]!!.asByteArray(true).size == 2)
+       assertEquals("bar", gtvDictAfterRoundtrip["foo"]!!.asString())
+       assertEquals("1234", gtvDictAfterRoundtrip["bar"]!!.asString())
+       assertTrue(gtvDictAfterRoundtrip["bar"]!!.asByteArray(true).size == 2)
     }
 
 

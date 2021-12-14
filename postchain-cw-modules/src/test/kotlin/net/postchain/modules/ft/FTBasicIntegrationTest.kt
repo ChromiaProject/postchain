@@ -7,8 +7,9 @@ import net.postchain.core.Transaction
 import net.postchain.devtools.modules.ft.FTIntegrationTest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.make_gtv_gson
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class FTBasicIntegrationTest : FTIntegrationTest() {
 
@@ -25,13 +26,13 @@ class FTBasicIntegrationTest : FTIntegrationTest() {
         fun makeSureBlockIsBuiltCorrectly() {
             currentBlockHeight += 1
             buildBlockAndCommit(node)
-            Assert.assertEquals(currentBlockHeight, getBestHeight(node))
+           assertEquals(currentBlockHeight, getBestHeight(node))
             val ridsAtHeight = getTxRidsAtHeight(node, currentBlockHeight)
             for (vtx in validTxs) {
                 val vtxRID = vtx.getRID()
-                Assert.assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
+               assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
             }
-            Assert.assertEquals(validTxs.size, ridsAtHeight.size)
+           assertEquals(validTxs.size, ridsAtHeight.size)
             validTxs.clear()
         }
 
@@ -88,12 +89,12 @@ class FTBasicIntegrationTest : FTIntegrationTest() {
                     "account_id"="${aliceAccountID.toHex()}",
                     "asset_id"="USD"
                    }""")
-        Assert.assertEquals("""{"balance":897}""", balance.get())
+       assertEquals("""{"balance":897}""", balance.get())
         val existence = blockQueries.query(
                 """{"type"="ft_account_exists",
                     "account_id"="${invalidAccountID.toHex()}"
                    }""")
-        Assert.assertEquals("""{"exists":0}""", existence.get())
+       assertEquals("""{"exists":0}""", existence.get())
         val history = blockQueries.query(
                 """{"type"="ft_get_history",
                     "account_id"="${aliceAccountID.toHex()}",
@@ -102,7 +103,7 @@ class FTBasicIntegrationTest : FTIntegrationTest() {
         println(history)
         val gson = make_gtv_gson()
         val historyGTX = gson.fromJson<Gtv>(history, Gtv::class.java)
-        Assert.assertEquals(5, historyGTX.asArray().size)
+       assertEquals(5, historyGTX.asArray().size)
 
         val history2 = blockQueries.query(
                 """{"type"="ft_get_history",
@@ -111,6 +112,6 @@ class FTBasicIntegrationTest : FTIntegrationTest() {
                    }""").get()
         println(history2)
         val history2GTX = gson.fromJson<Gtv>(history2, Gtv::class.java)
-        Assert.assertEquals(4, history2GTX.asArray().size)
+       assertEquals(4, history2GTX.asArray().size)
     }
 }

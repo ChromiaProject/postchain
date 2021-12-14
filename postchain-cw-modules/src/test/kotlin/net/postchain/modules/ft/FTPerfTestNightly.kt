@@ -10,8 +10,9 @@ import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.modules.ft.FTIntegrationTest
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import kotlin.system.measureNanoTime
 
 val testBlockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
@@ -71,7 +72,7 @@ class FTPerfTestNightly : FTIntegrationTest() {
                 total += (ttx as GTXTransaction).ops.size
             }
         }
-        Assert.assertTrue(total == 1000)
+        assertTrue(total == 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
@@ -84,10 +85,10 @@ class FTPerfTestNightly : FTIntegrationTest() {
             for (tx in transactions) {
                 val ttx = txFactory.decodeTransaction(tx)
                 total += (ttx as GTXTransaction).ops.size
-                Assert.assertTrue(ttx.isCorrect())
+                assertTrue(ttx.isCorrect())
             }
         }
-        Assert.assertTrue(total == 1000)
+        assertTrue(total == 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
@@ -103,13 +104,13 @@ class FTPerfTestNightly : FTIntegrationTest() {
         fun makeSureBlockIsBuiltCorrectly() {
             currentBlockHeight += 1
             buildBlockAndCommit(node)
-            Assert.assertEquals(currentBlockHeight, getBestHeight(node))
+            assertEquals(currentBlockHeight, getBestHeight(node))
             val ridsAtHeight = getTxRidsAtHeight(node, currentBlockHeight)
             for (vtx in validTxs) {
                 val vtxRID = vtx.getRID()
-                Assert.assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
+                assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
             }
-            Assert.assertEquals(validTxs.size, ridsAtHeight.size)
+            assertEquals(validTxs.size, ridsAtHeight.size)
             validTxs.clear()
         }
         validTxs.add(enqueueTx(

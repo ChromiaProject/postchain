@@ -6,15 +6,15 @@ import net.postchain.devtools.*
 import net.postchain.devtools.testinfra.TestTransaction
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Assert.assertEquals
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 /**
  * Mixed Four Peers Test is s mix of Reconnection, Reconfiguration and Multiple Chains tests.
  * See [FourPeersReconnectionTest], [FourPeersReconfigurationTest], [FourPeersMultipleChainsOperationsTest].
  */
-@Ignore
+@Disabled
 class MixedFourPeersTest : ConfigFileBasedIntegrationTest() {
 
     private val tx1_0 = TestTransaction(10)

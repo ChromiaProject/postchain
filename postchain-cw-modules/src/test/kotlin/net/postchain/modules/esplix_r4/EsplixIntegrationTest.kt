@@ -12,8 +12,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXDataBuilder
 import net.postchain.modules.esplix_r4.computeChainID
 import net.postchain.modules.esplix_r4.computeMessageID
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class EsplixIntegrationTest : IntegrationTestSetup() {
 
@@ -55,12 +55,12 @@ class EsplixIntegrationTest : IntegrationTestSetup() {
                 val tx = node.getBlockchainInstance().getEngine().getConfiguration().getTransactionFactory().decodeTransaction(data)
                 node.getBlockchainInstance().getEngine().getTransactionQueue().enqueue(tx)
                 buildBlockAndCommit(node.getBlockchainInstance().getEngine())
-                Assert.assertEquals(currentBlockHeight, getBestHeight(node))
+               assertEquals(currentBlockHeight, getBestHeight(node))
                 val txSz = getTxRidsAtHeight(node, currentBlockHeight).size
                 if (fail)
-                    Assert.assertEquals(0, txSz)
+                   assertEquals(0, txSz)
                 else
-                    Assert.assertEquals(1, txSz)
+                   assertEquals(1, txSz)
             } catch (e: Error) {
                 println(e)
             }

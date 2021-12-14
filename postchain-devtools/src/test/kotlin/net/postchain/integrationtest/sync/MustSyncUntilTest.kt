@@ -3,7 +3,7 @@ package net.postchain.integrationtest.sync
 import mu.KLogging
 import net.postchain.devtools.currentHeight
 import org.awaitility.Awaitility
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 

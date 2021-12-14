@@ -20,7 +20,7 @@ import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.network.x.XPeerID
-import org.junit.Assert.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 
 open class AbstractSyncTest : IntegrationTestSetup() {
     var signerCount: Int = -1

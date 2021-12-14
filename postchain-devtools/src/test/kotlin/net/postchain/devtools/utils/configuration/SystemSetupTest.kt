@@ -3,8 +3,8 @@ package net.postchain.devtools.utils.configuration
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.pre.SystemPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
-import org.junit.After
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -35,7 +35,7 @@ class SystemSetupTest {
 
     val sysPreSetup = SystemPreSetup(bcPreSetupMap)
 
-    @After
+    @AfterEach
     fun tearDown() {
         TestBlockchainRidCache.clear()
     }
