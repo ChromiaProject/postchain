@@ -41,6 +41,7 @@
         <mockito.version>2.23.0</mockito.version>
         <assertk.version>0.10</assertk.version>
         <awaitility.version>3.1.2</awaitility.version>
+        <testcontainers.version>1.16.2</testcontainers.version>
 
         <!-- Logging -->
         <kotlin-logging.version>1.12.5</kotlin-logging.version>
@@ -208,7 +209,7 @@
             <dependency>
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers</artifactId>
-                <version>1.12.5</version>
+                <version>${testcontainers.version}</version>
                 <scope>test</scope>
             </dependency>
 
