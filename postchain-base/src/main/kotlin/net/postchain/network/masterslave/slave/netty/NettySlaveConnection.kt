@@ -32,6 +32,7 @@ class NettySlaveConnection(
     private lateinit var onDisconnected: () -> Unit
 
     fun open(onConnected: () -> Unit, onDisconnected: () -> Unit) {
+        logger.info("open() - begin")
         this.onDisconnected = onDisconnected
 
         nettyClient.apply {
@@ -44,9 +45,12 @@ class NettySlaveConnection(
                 onDisconnected()
             }
         }
+
+        logger.info("open() - end")
     }
 
     override fun channelActive(ctx: ChannelHandlerContext?) {
+        logger.debug("channelActive() - begin")
         ctx?.let {
             context = ctx
             context.writeAndFlush(buildHandshakePacket())
@@ -54,10 +58,12 @@ class NettySlaveConnection(
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
+        logger.debug("channelInactive() - begin")
         onDisconnected()
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
+        logger.debug("channelRead() - begin")
         val bytes = Transport.unwrapMessage(msg as ByteBuf)
         val message = MsCodec.decode(bytes)
         messageHandler?.onMessage(message)
@@ -65,21 +71,25 @@ class NettySlaveConnection(
     }
 
     override fun accept(handler: MsMessageHandler) {
+        logger.debug("accept() - begin")
         messageHandler = handler
     }
 
     override fun sendPacket(packet: LazyPacket) {
+        logger.debug("sendPacket() - begin")
         val bytes = Transport.wrapMessage(packet())
         context.writeAndFlush(bytes)
     }
 
     override fun remoteAddress(): String {
+        logger.debug("remoteAddress() - begin")
         return if (::context.isInitialized)
             context.channel().remoteAddress().toString()
         else ""
     }
 
     override fun close() {
+        logger.debug("close() - begin")
         task {
             nettyClient.shutdown()
         }

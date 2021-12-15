@@ -25,6 +25,7 @@ class NettyServer {
     }
 
     fun run(port: Int) {
+        logger.debug("run() - begin")
         eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyServer"))
 
         server = ServerBootstrap()
@@ -45,6 +46,7 @@ class NettyServer {
                 })
 
         bindFuture = server.bind(port).sync()
+        logger.debug("run() - end")
     }
 
     fun shutdown() {

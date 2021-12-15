@@ -15,6 +15,7 @@ class NettySlaveConnector(
     companion object : KLogging()
 
     override fun connectMaster(masterNode: PeerInfo, connectionDescriptor: SlaveConnectionDescriptor) {
+        logger.info("connectMaster() - begin")
         val connection = NettySlaveConnection(masterNode, connectionDescriptor)
         try {
             connection.open(
@@ -29,6 +30,7 @@ class NettySlaveConnector(
             logger.error { e.message }
             eventsReceiver.onMasterDisconnected(connectionDescriptor, connection)
         }
+        logger.info("connectMaster() - end")
     }
 
     override fun shutdown() = Unit

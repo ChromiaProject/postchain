@@ -17,6 +17,7 @@ class NettyMasterConnector(
 
     // TODO: [POS-129]: Put MsCodec here
     override fun init(port: Int) {
+        logger.debug("init() - Add callback to NettyServer at port: $port")
         server = NettyServer().apply {
             setCreateChannelHandler {
                 NettyMasterConnection().apply {

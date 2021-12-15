@@ -5,6 +5,7 @@ package net.postchain.network.masterslave.master.netty
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
+import mu.KLogging
 import net.postchain.network.masterslave.MsConnection
 import net.postchain.network.masterslave.MsMessageHandler
 import net.postchain.network.masterslave.master.MasterConnectionDescriptor
@@ -22,11 +23,15 @@ class NettyMasterConnection : ChannelInboundHandlerAdapter(), MsConnection {
     var onConnectedHandler: ((MasterConnectionDescriptor, MsConnection) -> Unit)? = null
     var onDisconnectedHandler: ((MasterConnectionDescriptor, MsConnection) -> Unit)? = null
 
+    companion object : KLogging()
+
     override fun accept(handler: MsMessageHandler) {
+        logger.debug("accept() - ")
         this.messageHandler = handler
     }
 
     override fun sendPacket(packet: LazyPacket) {
+        logger.debug("sendPacket() - ")
         context.writeAndFlush(Transport.wrapMessage(packet()))
     }
 
@@ -37,13 +42,16 @@ class NettyMasterConnection : ChannelInboundHandlerAdapter(), MsConnection {
     }
 
     override fun close() {
+        logger.debug("close() - ")
         context.close()
     }
 
     // TODO: [POS-129]: Make it generic: <MsMessage> (i.e. extract MsCodec, see `NettyConnector`)
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         val messageBytes = Transport.unwrapMessage(msg as ByteBuf)
-        when (val message = MsCodec.decode(messageBytes)) {
+        val message = MsCodec.decode(messageBytes)
+        logger.debug("channelRead() - message: ${message.type}")
+        when (message) {
             is MsHandshakeMessage -> {
                 connectionDescriptor = MasterConnectionDescriptor.createFromHandshake(message)
                 onConnectedHandler?.invoke(connectionDescriptor!!, this)
@@ -61,10 +69,12 @@ class NettyMasterConnection : ChannelInboundHandlerAdapter(), MsConnection {
     }
 
     override fun channelActive(ctx: ChannelHandlerContext?) {
+        logger.debug("channelActive() - ")
         ctx?.let { context = it }
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
+        logger.debug("channelInactive() - ")
         if (connectionDescriptor != null) {
             onDisconnectedHandler?.invoke(connectionDescriptor!!, this)
         }
