@@ -115,13 +115,13 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
         extraMerkleProofs[i] = "0x" + el2MerkleProof.extraMerkleProofs[i]
       }
       const el2Proof = {
-        leaf: "0x" + el2MerkleProof.leaf,
+        el2Leaf: "0x" + el2MerkleProof.el2Leaf,
+        el2HashedLeaf: "0x" + el2MerkleProof.el2HashedLeaf,
         el2Position: el2MerkleProof.el2Position,
         extraRoot: "0x" + el2MerkleProof.extraRoot,
         extraMerkleProofs: extraMerkleProofs,
       }
-      const el2Leaf = "0x" + event.el2Leaf
-      const calldata = chrl2.interface.encodeFunctionData("withdraw_request", [eventData, evtProof, blockHeader, sigs, el2Leaf, el2Proof])
+      const calldata = chrl2.interface.encodeFunctionData("withdraw_request", [eventData, evtProof, blockHeader, sigs, el2Proof])
       const txPrams = {
         to: chrL2Address,
         value: '0x0',

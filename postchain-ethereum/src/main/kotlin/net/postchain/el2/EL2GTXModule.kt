@@ -64,7 +64,6 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
         "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
         "eventProof" to eventProof,
-        "el2Leaf" to el2Leaf(db, ctx, blockHeight),
         "el2MerkleProof" to el2MerkleProof
     )
 }
@@ -131,12 +130,6 @@ private fun blockHeaderData(
     )
 }
 
-private fun el2Leaf(db: DatabaseAccess, ctx: EContext, blockHeight: Long): Gtv {
-    val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
-    val bh = BaseBlockHeader(db.getBlockHeader(ctx, blockRid), SECP256K1CryptoSystem()).blockHeaderRec
-    return gtv(bh.gtvExtra[EL2]!!)
-}
-
 private fun el2MerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Long): Gtv {
     val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
     val bh = BaseBlockHeader(db.getBlockHeader(ctx, blockRid), SECP256K1CryptoSystem()).blockHeaderRec
@@ -148,12 +141,14 @@ private fun el2MerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Long)
     for (proof in proofs) {
         gtvProofs = gtvProofs.plus(gtv(proof))
     }
-    val el2Leaf = ds.hash(
+    val el2Leaf = bh.gtvExtra[EL2]!!
+    val el2HashedLeaf = ds.hash(
         ds.digest(encodeGtv(GtvString(EL2))),
-        ds.digest(encodeGtv(bh.gtvExtra[EL2]!!))
+        ds.digest(encodeGtv(el2Leaf))
     )
     return gtv(
-        "leaf" to gtv(el2Leaf),
+        "el2Leaf" to gtv(el2Leaf),
+        "el2HashedLeaf" to gtv(el2HashedLeaf),
         "el2Position" to gtv(path.toLong()),
         "extraRoot" to gtv(merkleTree.getMerkleRoot()),
         "extraMerkleProofs" to gtv(gtvProofs))

@@ -64,13 +64,12 @@ contract ChrL2 {
         bytes memory _event,
         Data.EventProof memory eventProof,
         bytes memory blockHeader,
-        bytes[] calldata sigs,
-        bytes memory el2Leaf,
+        bytes[] memory sigs,
         Data.EL2ProofData memory el2Proof
     ) public {
         require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
         {
-            (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, el2Leaf, el2Proof);
+            (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
             if (!Postchain.isValidSignatures(blockRid, sigs, appNodes)) revert("ChrL2: block signature is invalid");
             if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("ChrL2: invalid merkle proof");
         }

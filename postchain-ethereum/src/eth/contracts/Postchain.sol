@@ -67,15 +67,14 @@ library Postchain {
 
     function verifyBlockHeader(
         bytes memory blockHeader,
-        bytes memory el2Leaf,
         Data.EL2ProofData memory proof
     ) public pure returns (bytes32, bytes32, bytes32) {
 
         bytes32 blockRid = _decodeBlockHeader(blockHeader);
-        if (!proof.extraMerkleProofs.verifySHA256(proof.leaf, proof.el2Position, proof.extraRoot)) {
+        if (!proof.extraMerkleProofs.verifySHA256(proof.el2HashedLeaf, proof.el2Position, proof.extraRoot)) {
             revert("Postchain: invalid el2 extra data");
         }
-        return (blockRid, _bytesToBytes32(el2Leaf, 0), _bytesToBytes32(el2Leaf, 32));
+        return (blockRid, _bytesToBytes32(proof.el2Leaf, 0), _bytesToBytes32(proof.el2Leaf, 32));
     }
 
     function _decodeBlockHeader(

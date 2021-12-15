@@ -379,43 +379,52 @@ describe("ChrL2", () => {
                 let el2HashedLeaf = hashGtvBytes64Leaf(DecodeHexStringToByteArray(el2Leaf))
                 let extraRoot = el2HashedLeaf
                 let el2Proof = {
-                    leaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
+                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
+                    el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
                     el2Position: 0,
                     extraRoot: DecodeHexStringToByteArray(extraRoot.substring(2, extraRoot.length)),
                     extraMerkleProofs: [],
                 }
+                let maliciousEl2Proof = {
+                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
+                    el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
+                    el2Position: 0,
+                    extraRoot: DecodeHexStringToByteArray(extraRoot.substring(2, extraRoot.length)),
+                    extraMerkleProofs: [
+                        DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
+                        DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")                        
+                    ],
+                }
                 await expect(chrL2Instance.withdraw_request(maliciousData, eventProof, 
                     DecodeHexStringToByteArray(blockHeader), 
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
-                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid event')
                 await expect(chrL2Instance.withdraw_request(data, eventProof, 
                     DecodeHexStringToByteArray(maliciousBlockHeader), 
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
-                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid block header')
+                await expect(chrL2Instance.withdraw_request(data, eventProof, 
+                    DecodeHexStringToByteArray(blockHeader), 
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], maliciousEl2Proof)
+                ).to.be.revertedWith('Postchain: invalid el2 extra data')
                 await expect(chrL2Instance.withdraw_request(data, maliciousEventProof, 
                     DecodeHexStringToByteArray(blockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
-                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('ChrL2: invalid merkle proof')
                 await expect(chrL2Instance.withdraw_request(data, eventProof, 
                     DecodeHexStringToByteArray(blockHeader), 
-                    [],
-                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                    [], el2Proof)
                 ).to.be.revertedWith('ChrL2: block signature is invalid')
 
                 await expect(chrL2Instance.withdraw_request(data, eventProof, 
                     DecodeHexStringToByteArray(blockHeader), 
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
-                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.emit(chrL2Instance, "WithdrawRequest")
                 .withArgs(user.address, tokenAddress, toDeposit)
 
                 await expect(chrL2Instance.withdraw_request(data, eventProof, 
                     DecodeHexStringToByteArray(blockHeader), 
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))],
-                    DecodeHexStringToByteArray(el2Leaf), el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('ChrL2: event hash was already used')
 
                 await expect(chrL2Instance.withdraw(

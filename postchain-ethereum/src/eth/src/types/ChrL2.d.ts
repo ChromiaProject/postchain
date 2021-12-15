@@ -29,7 +29,7 @@ interface ChrL2Interface extends ethers.utils.Interface {
     "updateAppNodes(bytes32,bytes[],address[])": FunctionFragment;
     "updateDirectoryNodes(bytes32,bytes[],address[])": FunctionFragment;
     "withdraw(bytes32,address)": FunctionFragment;
-    "withdraw_request(bytes,tuple,bytes,bytes[],bytes,tuple)": FunctionFragment;
+    "withdraw_request(bytes,tuple,bytes,bytes[],tuple)": FunctionFragment;
   };
 
   encodeFunctionData(functionFragment: "_balances", values: [string]): string;
@@ -68,9 +68,9 @@ interface ChrL2Interface extends ethers.utils.Interface {
       { leaf: BytesLike; position: BigNumberish; merkleProofs: BytesLike[] },
       BytesLike,
       BytesLike[],
-      BytesLike,
       {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];
@@ -212,9 +212,9 @@ export class ChrL2 extends BaseContract {
       },
       blockHeader: BytesLike,
       sigs: BytesLike[],
-      el2Leaf: BytesLike,
       el2Proof: {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];
@@ -280,9 +280,9 @@ export class ChrL2 extends BaseContract {
     },
     blockHeader: BytesLike,
     sigs: BytesLike[],
-    el2Leaf: BytesLike,
     el2Proof: {
-      leaf: BytesLike;
+      el2Leaf: BytesLike;
+      el2HashedLeaf: BytesLike;
       el2Position: BigNumberish;
       extraRoot: BytesLike;
       extraMerkleProofs: BytesLike[];
@@ -348,9 +348,9 @@ export class ChrL2 extends BaseContract {
       },
       blockHeader: BytesLike,
       sigs: BytesLike[],
-      el2Leaf: BytesLike,
       el2Proof: {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];
@@ -435,9 +435,9 @@ export class ChrL2 extends BaseContract {
       },
       blockHeader: BytesLike,
       sigs: BytesLike[],
-      el2Leaf: BytesLike,
       el2Proof: {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];
@@ -502,9 +502,9 @@ export class ChrL2 extends BaseContract {
       },
       blockHeader: BytesLike,
       sigs: BytesLike[],
-      el2Leaf: BytesLike,
       el2Proof: {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];

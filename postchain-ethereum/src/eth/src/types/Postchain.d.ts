@@ -22,7 +22,7 @@ interface PostchainInterface extends ethers.utils.Interface {
   functions: {
     "isValidNodes(bytes32,address[])": FunctionFragment;
     "isValidSignatures(bytes32,bytes[],address[])": FunctionFragment;
-    "verifyBlockHeader(bytes,bytes,tuple)": FunctionFragment;
+    "verifyBlockHeader(bytes,tuple)": FunctionFragment;
     "verifyEvent(bytes32,bytes)": FunctionFragment;
   };
 
@@ -38,9 +38,9 @@ interface PostchainInterface extends ethers.utils.Interface {
     functionFragment: "verifyBlockHeader",
     values: [
       BytesLike,
-      BytesLike,
       {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];
@@ -131,9 +131,9 @@ export class Postchain extends BaseContract {
 
     verifyBlockHeader(
       blockHeader: BytesLike,
-      el2Leaf: BytesLike,
       proof: {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];
@@ -163,9 +163,9 @@ export class Postchain extends BaseContract {
 
   verifyBlockHeader(
     blockHeader: BytesLike,
-    el2Leaf: BytesLike,
     proof: {
-      leaf: BytesLike;
+      el2Leaf: BytesLike;
+      el2HashedLeaf: BytesLike;
       el2Position: BigNumberish;
       extraRoot: BytesLike;
       extraMerkleProofs: BytesLike[];
@@ -195,9 +195,9 @@ export class Postchain extends BaseContract {
 
     verifyBlockHeader(
       blockHeader: BytesLike,
-      el2Leaf: BytesLike,
       proof: {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];
@@ -230,9 +230,9 @@ export class Postchain extends BaseContract {
 
     verifyBlockHeader(
       blockHeader: BytesLike,
-      el2Leaf: BytesLike,
       proof: {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];
@@ -263,9 +263,9 @@ export class Postchain extends BaseContract {
 
     verifyBlockHeader(
       blockHeader: BytesLike,
-      el2Leaf: BytesLike,
       proof: {
-        leaf: BytesLike;
+        el2Leaf: BytesLike;
+        el2HashedLeaf: BytesLike;
         el2Position: BigNumberish;
         extraRoot: BytesLike;
         extraMerkleProofs: BytesLike[];
