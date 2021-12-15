@@ -81,7 +81,7 @@ class DefaultPeersConnectionStrategyTest {
         reset(connMan)
         whenever(connMan.isPeerConnected(0, lostPeer)).thenReturn(false)
         strategy.connectionLost(0, lostPeer, outgoing)
-        Awaitility.await().atMost(2000, TimeUnit.MILLISECONDS).untilAsserted {
+        Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
             verify(connMan).connectChainPeer(0, lostPeer)
         }
     }
