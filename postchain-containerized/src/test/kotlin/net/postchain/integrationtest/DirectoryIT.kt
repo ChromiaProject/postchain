@@ -171,7 +171,7 @@ class DirectoryIT : ManagedModeTest() {
     override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
         val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
         val className = TestDirectoryMasterInfraFactory::class.qualifiedName
-        val masterHost = System.getenv("POSTCHAIN_TEST_MASTER_HOST") ?: "172.17.0.1" // Default Docker host
+        val masterHost = System.getenv("POSTCHAIN_TEST_MASTER_HOST") ?: "host.docker.internal" // Default Docker host
         val dbHost = System.getenv("POSTCHAIN_TEST_DB_HOST") ?: "localhost"
         propertyMap.setProperty("infrastructure", className)
         propertyMap.setProperty("containerChains.masterPort", 9860 - nodeIndex)
