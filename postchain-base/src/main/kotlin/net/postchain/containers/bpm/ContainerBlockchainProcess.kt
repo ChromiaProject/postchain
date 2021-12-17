@@ -8,7 +8,7 @@ import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.masterslave.master.MasterCommunicationManager
-import java.io.File
+import java.nio.file.Path
 
 interface ContainerBlockchainProcess : HeartbeatListener {
     val processName: BlockchainProcessName
@@ -21,15 +21,15 @@ interface ContainerBlockchainProcess : HeartbeatListener {
 }
 
 class DefaultContainerBlockchainProcess(
-    val nodeConfig: NodeConfig,
-    override val processName: BlockchainProcessName,
-    override val chainId: Long,
-    override val blockchainRid: BlockchainRid,
-    override val restApiPort: Int,
-    private val communicationManager: MasterCommunicationManager,
-    private val dataSource: DirectoryDataSource, // TODO [POS-164]: (!)
-    private val containerChainDir: ContainerChainDir,
-    private val onShutdown: () -> Unit
+        val nodeConfig: NodeConfig,
+        override val processName: BlockchainProcessName,
+        override val chainId: Long,
+        override val blockchainRid: BlockchainRid,
+        override val restApiPort: Int,
+        private val communicationManager: MasterCommunicationManager,
+        private val dataSource: DirectoryDataSource, // TODO [POS-164]: (!)
+        private val containerChainDir: Path,
+        private val onShutdown: () -> Unit
 ) : ContainerBlockchainProcess {
 
     companion object : KLogging()
@@ -57,9 +57,9 @@ class DefaultContainerBlockchainProcess(
         if (configsToDump.isNotEmpty()) {
             logger.info("Number of chain configs to dump: ${configsToDump.size}")
             configs.filterKeys { it > lastHeight }.forEach { (height, config) ->
-                val filename = containerChainDir.resolveChainFilename("$height.gtv")
-                File(filename).writeBytes(config) // TODO: [POS-129]: Add exceptions handling
-                logger.info("Config file dumped: $filename")
+                val filepath = containerChainDir.resolve("$height.gtv")
+                filepath.toFile().writeBytes(config) // TODO: [POS-129]: Add exceptions handling
+                logger.info("Config file dumped: $filepath")
                 lastHeight = height
             }
         }

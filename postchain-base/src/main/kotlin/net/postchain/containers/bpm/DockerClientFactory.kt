@@ -27,9 +27,9 @@ object DockerClientFactory {
      */
     fun create(): DockerClient {
         return DefaultDockerClient
-            .fromEnv()
-            .useRequestEntityProcessing(RequestEntityProcessing.BUFFERED)
-            .build()
+                .fromEnv()
+                .useRequestEntityProcessing(RequestEntityProcessing.BUFFERED)
+                .build()
     }
 
 }

@@ -197,7 +197,7 @@ open class BaseBlockchainEngine(
             // the transaction queue is gone. This could potentially happen
             // during a revolt. We might need a "transactional" tx queue...
 
-            TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendtransactions")
+            TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendTransactions")
             var acceptedTxs = 0
             var rejectedTxs = 0
 
@@ -208,17 +208,18 @@ open class BaseBlockchainEngine(
                 TimeLog.end("BaseBlockchainEngine.buildBlock().takeTransaction")
                 if (tx != null) {
                     //logger.trace("$processName: Appending transaction ${tx.getRID().toHex()}") // Was this the reason logging for this entire class was disabled??
-                    TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
+                    TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
                     if (tx.isSpecial()) {
                         rejectedTxs++
                         transactionQueue.rejectTransaction(tx, ProgrammerMistake("special transactions can't enter queue"))
                         continue
                     }
                     val txException = blockBuilder.maybeAppendTransaction(tx)
-                    TimeLog.end("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
+                    TimeLog.end("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
                     if (txException != null) {
                         rejectedTxs++
                         transactionQueue.rejectTransaction(tx, txException)
+                        logger.warn { "Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}" }
                     } else {
                         acceptedTxs++
                         // tx is fine, consider stopping
@@ -232,7 +233,7 @@ open class BaseBlockchainEngine(
                 }
             }
 
-            TimeLog.end("BaseBlockchainEngine.buildBlock().appendtransactions")
+            TimeLog.end("BaseBlockchainEngine.buildBlock().appendTransactions")
 
             val netEnd = System.nanoTime()
             val blockHeader = blockBuilder.finalizeBlock()

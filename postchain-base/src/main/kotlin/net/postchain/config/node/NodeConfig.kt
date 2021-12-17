@@ -5,6 +5,7 @@ package net.postchain.config.node
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
+import net.postchain.containers.bpm.FileSystem
 import net.postchain.core.BlockchainRid
 import net.postchain.core.Infrastructure
 import net.postchain.network.x.XPeerID
@@ -14,6 +15,7 @@ open class NodeConfig(val appConfig: AppConfig) {
 
     companion object {
         const val DEFAULT_PORT: Int = 9870
+        const val CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
     }
 
     private val config: Configuration
@@ -55,6 +57,15 @@ open class NodeConfig(val appConfig: AppConfig) {
     val runningContainersCheckPeriod: Int // In number of blocks of chain0, set 0 to disable a check
         get() = config.getInt("container.healthcheck.runningContainersCheckPeriod", 0)
 
+    // Container FileSystem
+    val containerFilesystem: String
+        get() = config.getString("container.filesystem", FileSystem.Type.LOCAL.name).toUpperCase() // LOCAL | ZFS
+    val containerZfsPool: String
+        get() = config.getString("container.zfs.pool-name", FileSystem.ZFS_POOL_NAME)
+    val containerZfsPoolInitScript: String
+        get() = config.getString("container.zfs.pool-init-script", CONTAINER_ZFS_INIT_SCRIPT)
+    val containerBindPgdataVolume: Boolean
+        get() = config.getBoolean("container.bind-pgdata-volume", true)
 
     /**
      * Database
@@ -194,7 +205,25 @@ open class NodeConfig(val appConfig: AppConfig) {
                 emptyArray()
         }
 
-    // Tests / Containers and Dapps
+    // Tests / Containers and Dapps TestMode
+    val containersTestmode: Boolean
+        get() = config.getBoolean("containers.testmode", false)
+
+    val containersTestmodeResourceLimitsRAM: Long
+        get() = config.getLong("containers.testmode.resource-limits-ram", -1)
+    val containersTestmodeResourceLimitsCPU: Long
+        get() = config.getLong("containers.testmode.resource-limits-cpu", -1)
+    val containersTestmodeResourceLimitsSTORAGE: Long
+        get() = config.getLong("containers.testmode.resource-limits-storage", -1)
+
+
+    /*
+        Example:
+            cont0=331A9436,B99F6E8B,BB73F0CA
+            cont1=323ECC01,A9599992,86E2043D
+            cont2=EB7387FD,94F29578
+            cont3=0B942264
+    */
     val dappsContainers: Map<String, String> = initDappsContainers()
 
     private fun initDappsContainers(): Map<String, String> {

@@ -1,5 +1,6 @@
 package net.postchain.containers.bpm
 
+import mu.KLogging
 import net.postchain.core.Shutdownable
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
@@ -24,7 +25,7 @@ internal class DefaultContainerJobManager(
     private var currentJob: Job? = null
     private val lockJobs = ReentrantLock()
 
-    companion object {
+    companion object : KLogging() {
         private const val HEALTHCHECK_JOB_TAG = "healthcheck"
     }
 
@@ -75,10 +76,14 @@ internal class DefaultContainerJobManager(
 
                 // Process the job
                 if (currentJob != null) {
-                    if (currentJob!!.containerName.isGroup(HEALTHCHECK_JOB_TAG)) {
-                        healthcheckJobHandler()
-                    } else {
-                        jobHandler(currentJob!!.containerName, currentJob!!.toStop, currentJob!!.toStart)
+                    try {
+                        if (currentJob!!.containerName.isGroup(HEALTHCHECK_JOB_TAG)) {
+                            healthcheckJobHandler()
+                        } else {
+                            jobHandler(currentJob!!.containerName, currentJob!!.toStop, currentJob!!.toStart)
+                        }
+                    } catch (e: Exception) {
+                        logger.error("Can't handle the container job: ${currentJob!!.containerName}", e)
                     }
                 }
 

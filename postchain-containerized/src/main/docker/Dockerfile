@@ -46,8 +46,6 @@ ADD env.sh /opt/chromaway/postchain/env.sh
 ADD ./dependencies/ /opt/chromaway/postchain/scripts/bin/
 
 
-ENV BUILD_RELL_DAPP false
-
 WORKDIR /opt/chromaway/postchain
 ENTRYPOINT ["sh", "/opt/chromaway/postchain/entrypoint.sh"]
 

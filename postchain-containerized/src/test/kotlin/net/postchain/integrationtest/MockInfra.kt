@@ -7,7 +7,10 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.api.DefaultMasterApiInfra
 import net.postchain.containers.api.MasterApiInfra
-import net.postchain.containers.bpm.*
+import net.postchain.containers.bpm.ContainerBlockchainProcess
+import net.postchain.containers.bpm.ContainerManagedBlockchainProcessManager
+import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
+import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.containers.infra.*
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
@@ -30,6 +33,7 @@ import net.postchain.network.masterslave.protocol.MsDataMessage
 import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.protocol.MsSubnodeStatusMessage
 import net.postchain.network.x.PeersCommConfigFactory
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -65,7 +69,7 @@ class TestMasterSyncInfra(
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
-            containerChainDir: ContainerChainDir
+            containerChainDir: Path
     ): ContainerBlockchainProcess {
 
         val communicationManager = TestMasterCommunicationManager(
@@ -86,9 +90,8 @@ class TestMasterSyncInfra(
                 targetContainer.restApiPort,
                 communicationManager,
                 dataSource,
-                containerChainDir,
-                {}
-        )
+                containerChainDir
+        ) {}
     }
 }
 

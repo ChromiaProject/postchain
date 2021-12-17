@@ -1,7 +1,7 @@
 package net.postchain.managed
 
+import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.core.BlockchainRid
-import net.postchain.containers.infra.ContainerResourceType
 
 interface DirectoryDataSource : ManagedNodeDataSource {
 
@@ -13,7 +13,7 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     /**
      * Which blockchains to run in which container?
      */
-    fun getBlockchainsForContainer(containerID: String): List<BlockchainRid>?
+    fun getBlockchainsForContainer(containerId: String): List<BlockchainRid>?
 
     /**
      * TODO: [POS-164]: Provide a KDoc
@@ -23,8 +23,8 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     /**
      * What is the resource limits for this container?
      */
-    fun getResourceLimitForContainer(containerID: String): Map<ContainerResourceType, Long>?
+    fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits
 
-    fun setLimitsForContainer(containerID: String, ramLimit: Long, cpuQuota: Long)
+    fun setLimitsForContainer(containerId: String, ramLimit: Long, cpuQuota: Long)
 
 }

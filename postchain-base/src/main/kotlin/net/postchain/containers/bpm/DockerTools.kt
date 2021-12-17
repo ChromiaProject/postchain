@@ -4,8 +4,8 @@ import com.spotify.docker.client.messages.Container
 
 object DockerTools {
 
-    fun checkContainerName(container: Container, containerName: ContainerName): Boolean {
-        return container.names()?.contains("/${containerName}") ?: false // Prefix '/'
+    fun checkContainerName(container: Container, containerName: String): Boolean {
+        return container.names()?.contains("/$containerName") ?: false // Prefix '/'
     }
 
     fun containerName(container: Container): String {
@@ -15,5 +15,4 @@ object DockerTools {
     fun shortContainerId(containerId: String?): String? {
         return containerId?.take(12)
     }
-
 }

@@ -4,50 +4,41 @@ import mu.KLogging
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigProviders
-import net.postchain.containers.NameService
+import net.postchain.containers.bpm.FileSystem.Companion.BLOCKCHAINS_DIR
+import net.postchain.containers.bpm.FileSystem.Companion.NODE_CONFIG_FILE
+import net.postchain.containers.bpm.FileSystem.Companion.PEERS_FILE
 import net.postchain.core.Infrastructure
 import org.apache.commons.configuration2.ConfigurationUtils
 import java.io.File
 import java.nio.file.Path
-import java.nio.file.Paths
 
 internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitializer {
 
     companion object : KLogging()
 
-    override fun getContainerWorkingDir(containerName: ContainerName): Path {
-        return Paths.get(nodeConfig.appConfig.configDir, "containers", containerName.toString())
+    override fun initContainerWorkingDir(fs: FileSystem, container: PostchainContainer): Path? {
+        val dir = fs.createContainerRoot(container.containerName, container.resourceLimits)
+        if (dir != null) {
+            createContainerNodeConfig(container, dir)
+            createPeersConfig(container, dir)
+        }
+
+        return dir
     }
 
-    override fun initContainerWorkingDir(container: PostchainContainer) {
-        val containerDir = getContainerWorkingDir(container.containerName)
-        val exists = if (containerDir.toFile().exists()) {
-            logger.info("Container dir exists: $containerDir")
+    override fun initContainerChainWorkingDir(fs: FileSystem, chain: Chain): Path? {
+        // Creating current working dir (target)
+        val dir = getContainerChainDir(fs, chain)
+        val exists = if (dir.toFile().exists()) {
+            logger.info("Container chain dir exists: $dir")
             true
         } else {
-            val created = containerDir.toFile().mkdirs()
-            logger.info("Container dir ${if (created) "has" else "hasn't"} been created: $containerDir")
+            val created = dir.toFile().mkdirs()
+            logger.info("Container chain dir ${if (created) "has" else "hasn't"} been created: $dir")
             created
         }
 
-        if (exists) {
-            createContainerNodeConfig(container, containerDir)
-            createPeersConfig(container, containerDir)
-        }
-    }
-
-    override fun initContainerChainWorkingDir(chain: Chain): ContainerChainDir {
-        // Creating current working dir (target)
-        val containerDir = getContainerWorkingDir(chain.containerName)
-        val containerChainDir = containerDir.resolve("blockchains${File.separator}${chain.chainId}")
-        if (containerChainDir.toFile().exists()) {
-            logger.info("Container chain dir exists: $containerChainDir")
-        } else {
-            val created = containerChainDir.toFile().mkdirs()
-            logger.info("Container chain dir ${if (created) "has" else "hasn't"} been created: $containerChainDir")
-        }
-
-        return ContainerChainDir(containerDir, containerChainDir)
+        return if (exists) dir else null
     }
 
     override fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path) {
@@ -64,7 +55,7 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
             config.clearProperty("subnode.database.url")
             //        config.setProperty("database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
         }
-        val scheme = NameService.databaseSchema(nodeConfig, container.containerName.toString())
+        val scheme = databaseSchema(container.containerName)
         config.setProperty("database.schema", scheme)
 
         // Heartbeat and RemoteConfig
@@ -84,7 +75,7 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
         if (nodeConfig.restApiPort > -1) config.setProperty("api.port", nodeConfig.subnodeRestApiPort)
 
         // Creating a nodeConfig file
-        val filename = containerDir.resolve("node-config.properties").toString()
+        val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()
         AppConfig.toPropertiesFile(config, filename)
         logger.info("Container subnode properties file has been created: $filename")
     }
@@ -97,23 +88,30 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
             
         """.trimIndent()
 
-        val filename = containerDir.resolve("env-peers.sh").toString()
+        val filename = containerDir.resolve(PEERS_FILE).toString()
         File(filename).writeText(peers)
         logger.info("Container subnode peers file has been created: $filename")
     }
 
-    override fun rmChainWorkingDir(chain: Chain): Boolean {
+    override fun removeContainerChainDir(fs: FileSystem, chain: Chain): Boolean {
         // Deleting chain working dir
-        val containerDir = Paths.get(nodeConfig.appConfig.configDir, "containers", chain.containerName.toString())
-        val containerChainConfigsDir = containerDir.resolve("blockchains${File.separator}${chain.chainId}")
-        val res = containerChainConfigsDir.toFile().deleteRecursively()
+        val dir = getContainerChainDir(fs, chain)
+        val res = dir.toFile().deleteRecursively()
         if (res) {
-            logger.info("Container chain dir has been deleted: $containerChainConfigsDir")
+            logger.info("Container chain dir has been deleted: $dir")
         } else {
-            logger.info("Container chain dir hasn't been deleted properly: $containerChainConfigsDir")
+            logger.info("Container chain dir hasn't been deleted properly: $dir")
         }
-
         return res
     }
 
+    private fun getContainerChainDir(fs: FileSystem, chain: Chain): Path {
+        return fs.hostRootOf(chain.containerName)
+                .resolve(BLOCKCHAINS_DIR)
+                .resolve(chain.chainId.toString())
+    }
+
+    private fun databaseSchema(containerName: ContainerName): String {
+        return "${nodeConfig.appConfig.databaseSchema}_${containerName}"
+    }
 }

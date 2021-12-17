@@ -1,7 +1,7 @@
 package net.postchain.integrationtest
 
+import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.core.BlockchainRid
-import net.postchain.containers.infra.ContainerResourceType
 import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.gtv.GtvFactory
 import net.postchain.managed.DirectoryDataSource
@@ -13,7 +13,6 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
     var ram = 7000_000_000L
     var cpu = 100_000L
     var subnodeInterceptors = mutableMapOf<BlockchainRid, TestPacketConsumer>()
-
 
     override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
         val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return mapOf()
@@ -44,12 +43,10 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
         return res
     }
 
-    override fun getResourceLimitForContainer(containerID: String): Map<ContainerResourceType, Long>? {
-        if (containerID == firstContainerName) {
-            return mapOf(ContainerResourceType.STORAGE to 10L, ContainerResourceType.RAM to ram,
-                    ContainerResourceType.CPU to cpu)
-        }
-        return mapOf() //no limits for naked system container.
+    override fun getResourceLimitForContainer(containerID: String): ContainerResourceLimits {
+        return if (containerID == firstContainerName) {
+            ContainerResourceLimits(ram, cpu, 10L)
+        } else ContainerResourceLimits.default() //no limits for naked system container.
     }
 
     override fun setLimitsForContainer(containerID: String, ramLimit: Long, cpuQuota: Long) {

@@ -44,6 +44,7 @@ open class ContainerManagedBlockchainProcessManager(
     /**
      * TODO: [POS-129]: Implement handling of DockerException
      */
+    private val fs = FileSystem(nodeConfig)
     private val containerInitializer = DefaultContainerInitializer(nodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
@@ -150,8 +151,9 @@ open class ContainerManagedBlockchainProcessManager(
 
     private fun containerJobHandler(containerName: ContainerName, chainsToStop: Set<Chain>, chainsToStart: Set<Chain>) {
         val start = System.currentTimeMillis()
+        val scope = "ContainerJobHandler"
         logger.debug {
-            "[${nodeName()}]: ContainerJobHandler -- Begin: " +
+            "[${nodeName()}]: $scope -- Begin: " +
                     "containerName: $containerName, " +
                     "chains to stop: ${chainsToStop.map { it.chainId }.toTypedArray().contentToString()}, " +
                     "chains to start: ${chainsToStart.map { it.chainId }.toTypedArray().contentToString()}"
@@ -162,44 +164,62 @@ open class ContainerManagedBlockchainProcessManager(
          */
         var restartDockerContainer = false
         var psContainer = findPostchainContainer(containerName.name)
-        val dockerContainer = findDockerContainer(containerName)
+        val dockerContainer = findDockerContainer(containerName.name)
 
         if (psContainer == null) {
             chainsToStop.forEach { chain ->
                 if (clearBlockchainProcessResources(chain)) { // TODO: [POS-164]: Redesign
-                    logger.debug { "[${nodeName()}]: ContainerJobHandler -- chain resources cleared: $chain" }
+                    logger.debug { "[${nodeName()}]: $scope -- chain resources cleared: $chain" }
                     restartDockerContainer = true
                 }
             }
 
             if (chainsToStart.isNotEmpty()) {
-                logger.debug { "[${nodeName()}]: ContainerJobHandler -- PostchainContainer created" }
+                logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
                 val port = getRestApiHostPort(dockerContainer)
                 val newPsContainer = DefaultPostchainContainer(nodeConfig, directoryDataSource, containerName, port, STARTING)
-                containerInitializer.initContainerWorkingDir(newPsContainer)
-                postchainContainers.add(newPsContainer)
+                val dir = containerInitializer.initContainerWorkingDir(fs, newPsContainer)
+                if (dir != null) {
+                    postchainContainers.add(newPsContainer)
+                    logger.debug {
+                        "[${nodeName()}]: $scope -- Container dir inited, container: $containerName, dir: $dir"
+                    }
 
-                chainsToStart.forEach { chain ->
-                    val process = createBlockchainProcess(chain, newPsContainer)
-                    logger.debug { "[${nodeName()}]: ContainerJobHandler -- BlockchainProcess created: $process" }
+                    chainsToStart.forEach { chain ->
+                        val process = createBlockchainProcess(chain, newPsContainer)
+                        if (process != null) {
+                            logger.debug { "[${nodeName()}]: $scope -- BlockchainProcess created: $process" }
+                        } else {
+                            logger.error { "[${nodeName()}]: $scope -- Can't create BlockchainProcess for chain $chain" }
+                        }
+                    }
+
+                    psContainer = newPsContainer
+                    restartDockerContainer = true
+
+                } else {
+                    logger.error {
+                        "[${nodeName()}]: $scope -- Container dir hasn't been inited, container: $containerName, dir: $dir"
+                    }
                 }
-
-                psContainer = newPsContainer
-                restartDockerContainer = true
             }
         } else {
             chainsToStop.forEach { chain ->
                 val (process, res) = terminateBlockchainProcess(psContainer, chain)
                 if (res) {
-                    logger.debug { "[${nodeName()}]: ContainerJobHandler -- ContainerBlockchainProcess terminated: $process" }
+                    logger.debug { "[${nodeName()}]: $scope -- ContainerBlockchainProcess terminated: $process" }
                     restartDockerContainer = true
                 }
             }
 
             chainsToStart.forEach { chain ->
                 val process = createBlockchainProcess(chain, psContainer)
-                logger.debug { "[${nodeName()}]: ContainerJobHandler -- BlockchainProcess created: $process" }
-                restartDockerContainer = true
+                if (process != null) {
+                    logger.debug { "[${nodeName()}]: $scope -- BlockchainProcess created: $process" }
+                    restartDockerContainer = true
+                } else {
+                    logger.error { "[${nodeName()}]: $scope -- Can't create BlockchainProcess for chain $chain" }
+                }
             }
         }
 
@@ -208,7 +228,7 @@ open class ContainerManagedBlockchainProcessManager(
          */
         if (restartDockerContainer) {
             val msg = { state: String, container: PostchainContainer? ->
-                "[${nodeName()}]: ContainerJobHandler -- Docker container $state: $containerName, " +
+                "[${nodeName()}]: $scope -- Docker container $state: $containerName, " +
                         "containerId: ${container?.shortContainerId()}"
             }
 
@@ -216,8 +236,7 @@ open class ContainerManagedBlockchainProcessManager(
                 logger.debug { msg("not found", null) }
 
                 if (!psContainer!!.isEmpty()) {
-                    val containerDir = containerInitializer.getContainerWorkingDir(containerName)
-                    val config = ContainerConfigFactory.createConfig(nodeConfig, psContainer, containerDir.toString())
+                    val config = ContainerConfigFactory.createConfig(fs, nodeConfig, psContainer)
 
                     psContainer.containerId = dockerClient.createContainer(config, containerName.toString()).id()!!
                     logger.debug { msg("created", psContainer) }
@@ -242,7 +261,7 @@ open class ContainerManagedBlockchainProcessManager(
         }
 
         val elapsed = System.currentTimeMillis() - start
-        logger.debug { "[${nodeName()}]: ContainerJobHandler -- End ($elapsed ms)" }
+        logger.debug { "[${nodeName()}]: $scope -- End ($elapsed ms)" }
     }
 
     private fun executeDockerContainersHealthcheck() {
@@ -265,7 +284,7 @@ open class ContainerManagedBlockchainProcessManager(
 
         val running = dockerClient.listContainers() // running containers only
         postchainContainers.forEach { psc ->
-            val dc = running.find { checkContainerName(it, psc.containerName) }
+            val dc = running.find { checkContainerName(it, psc.containerName.name) }
             if (dc == null && psc.containerId != null) {
                 logger.warn { "Container ${psc.containerName} / ${psc.shortContainerId()} is not running and will be restarted" }
                 dockerClient.startContainer(psc.containerId)
@@ -293,21 +312,25 @@ open class ContainerManagedBlockchainProcessManager(
         logger.info("\t" + message) // \t -- for tests
     }
 
-    private fun createBlockchainProcess(chain: Chain, targetContainer: PostchainContainer): ContainerBlockchainProcess {
-        val containerChainDir = containerInitializer.initContainerChainWorkingDir(chain)
-        val processName = BlockchainProcessName(nodeConfig.pubKey, chain.brid)
-        val process = masterBlockchainInfra.makeMasterBlockchainProcess(
-                processName,
-                chain.chainId,
-                chain.brid,
-                directoryDataSource,
-                targetContainer,
-                containerChainDir
-        )
-        process.transferConfigsToContainer()
-        targetContainer.addProcess(process)
-        heartbeatManager.addListener(process)
-        return process
+    private fun createBlockchainProcess(chain: Chain, targetContainer: PostchainContainer): ContainerBlockchainProcess? {
+        val dir = containerInitializer.initContainerChainWorkingDir(fs, chain)
+        return if (dir != null) {
+            val processName = BlockchainProcessName(nodeConfig.pubKey, chain.brid)
+            val process = masterBlockchainInfra.makeMasterBlockchainProcess(
+                    processName,
+                    chain.chainId,
+                    chain.brid,
+                    directoryDataSource,
+                    targetContainer,
+                    dir
+            )
+            process.transferConfigsToContainer()
+            targetContainer.addProcess(process)
+            heartbeatManager.addListener(process)
+            process
+        } else {
+            null
+        }
     }
 
     private fun terminateBlockchainProcess(
@@ -320,17 +343,17 @@ open class ContainerManagedBlockchainProcessManager(
             heartbeatManager.removeListener(process)
             process.shutdown()
             container.removeProcess(process)
-            process to containerInitializer.rmChainWorkingDir(chain) // TODO: [POS-164]: Redesign
+            process to containerInitializer.removeContainerChainDir(fs, chain) // TODO: [POS-164]: Redesign
         } else {
             null to false
         }
     }
 
     private fun clearBlockchainProcessResources(chain: Chain): Boolean {
-        return containerInitializer.rmChainWorkingDir(chain)
+        return containerInitializer.removeContainerChainDir(fs, chain)
     }
 
-    private fun findDockerContainer(containerName: ContainerName): Container? {
+    private fun findDockerContainer(containerName: String): Container? {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         return all.find { checkContainerName(it, containerName) }
     }

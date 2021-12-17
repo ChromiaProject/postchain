@@ -4,14 +4,15 @@ import java.nio.file.Path
 
 internal interface ContainerInitializer {
 
-    fun getContainerWorkingDir(containerName: ContainerName): Path
-
-    fun initContainerWorkingDir(container: PostchainContainer)
+    /**
+     * TODO: [POS-129]: Add kdoc
+     */
+    fun initContainerWorkingDir(fs: FileSystem, container: PostchainContainer): Path?
 
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun initContainerChainWorkingDir(chain: Chain): ContainerChainDir
+    fun initContainerChainWorkingDir(fs: FileSystem, chain: Chain): Path?
 
     /**
      * TODO: [POS-129]: Add kdoc
@@ -26,5 +27,5 @@ internal interface ContainerInitializer {
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun rmChainWorkingDir(chain: Chain): Boolean
+    fun removeContainerChainDir(fs: FileSystem, chain: Chain): Boolean
 }
