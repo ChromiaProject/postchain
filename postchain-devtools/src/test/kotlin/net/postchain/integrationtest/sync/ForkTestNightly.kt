@@ -4,7 +4,6 @@ import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.currentHeight
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.network.x.XPeerID
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -140,6 +139,7 @@ class ForkTestNightly : ManagedModeTest() {
      * (chain3 isn't on the pic, but it starts out as a chain1 fork and moves to be a chain2 fork at height 19.
      *  Rather tricky IMO)
      */
+    @Disabled
     @Test
     fun testRecursiveFork() {
         val (c1, c2) = makeFork()
