@@ -195,12 +195,6 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>${maven.surefire.plugin.version}</version>
                         <configuration>
-                            <properties>
-                                <property>
-                                    <name>listener</name>
-                                    <value>net.postchain.maven.surefire.PrintCurrentTestRunListener</value>
-                                </property>
-                            </properties>
                             <includes>
                                 <include>**/*Test.java</include>
                                 <include>**/*IT.java</include>
