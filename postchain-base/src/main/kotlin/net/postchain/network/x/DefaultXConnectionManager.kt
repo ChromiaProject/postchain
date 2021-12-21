@@ -157,15 +157,45 @@ class DefaultXConnectionManager<PacketType>(
     @Synchronized
     override fun sendPacket(data: LazyPacket, chainID: Long, peerID: XPeerID) {
         val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
-        chain.connections[peerID]?.sendPacket(data)
+        val conn = chain.connections[peerID]
+        if (conn != null) {
+            if (!conn.sendPacket(data)) {
+                logger.warn("sendPacket() - We failed b/c Netty didn't activate the channel, must try later.");
+                waitForNetty()
+                if (!conn.sendPacket(data)) {
+                    logger.debug("sendPacket() - Worked second time, so Netty must have fixed it");
+                } else {
+                    logger.error("sendPacket() -- Giving up on Netty, channel not active");
+                }
+            }
+        }
+    }
+
+    private fun waitForNetty() {
+        Thread.sleep(20) // No idea why we even got this error, much less how long we should wait
     }
 
     @Synchronized
     override fun broadcastPacket(data: LazyPacket, chainID: Long) {
         // TODO: lazypacket might be computed multiple times
         val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
+        val failedConnections = mutableListOf<XPeerConnection>()
         chain.connections.forEach { (_, conn) ->
-            conn.sendPacket(data)
+            if (!conn.sendPacket(data)) {
+                logger.warn("broadcastPacket() - We failed b/c Netty didn't activate the channel, must try later. ${failedConnections.size}");
+                failedConnections.add(conn)
+            }
+        }
+        if (failedConnections.size > 0) {
+            waitForNetty() // Only wait once, if this isn't just a glitch we give up
+            logger.warn("broadcastPacket() - Trying again to see if Netty now has activated the channel. ${failedConnections.size}");
+            failedConnections.forEach { conn ->
+                if (conn.sendPacket(data)) {
+                    logger.debug("broadcastPacket() - Worked second time, so Netty must have fixed it");
+                } else {
+                    logger.error("broadcastPacket() - Giving up on Netty, channel not active");
+                }
+            }
         }
     }
 
