@@ -119,7 +119,7 @@ open class BaseBlockchainProcessManager(
 
                         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
 
-                        startInfoDebug("Blockchain has been started", processName, chainId, bTrace)
+                        startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
                         blockchainConfig.blockchainRid
 
                     } else {
@@ -301,12 +301,14 @@ open class BaseBlockchainProcessManager(
 
     private fun startInfo(str: String, processName: BlockchainProcessName, chainId: Long) {
         if (logger.isInfoEnabled) {
-            logger.info("$processName: stopBlockchain() - $str: chainId: $chainId")
+            logger.info("$processName: startBlockchain() - $str: chainId: $chainId")
         }
     }
 
-    private fun startInfoDebug(str: String, processName: BlockchainProcessName, chainId: Long, bTrace: BlockTrace?) {
-        startInfo(str, processName, chainId)
+    private fun startInfoDebug(str: String, processName: BlockchainProcessName, chainId: Long, bcRid: BlockchainRid, bTrace: BlockTrace?) {
+        if (logger.isInfoEnabled) {
+            logger.info("$processName: startBlockchain() - $str: chainId: $chainId, Blockchain RID: ${bcRid.toHex()}") // We need to print full BC RID so that users can see in INFO logs what it is.
+        }
         startDebug(str, processName, chainId, bTrace)
     }
 

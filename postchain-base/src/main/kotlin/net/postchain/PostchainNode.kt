@@ -55,13 +55,13 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
 
     override fun shutdown() {
         // FYI: Order is important
-        logger.debug("${name()}: Stopping ProcessManager")
+        logger.info("${name()}: shutdown() - begin")
         processManager.shutdown()
-        logger.debug("${name()}: Stopping BlockchainInfrastructure")
+        logger.debug("${name()}: shutdown() - Stopping BlockchainInfrastructure")
         blockchainInfrastructure.shutdown()
-        logger.debug("${name()}: Closing NodeConfigurationProvider")
+        logger.debug("${name()}: shutdown() - Closing NodeConfigurationProvider")
         nodeConfigProvider.close()
-        logger.debug("${name()}: Stopped PostchainNode")
+        logger.info("${name()}: shutdown() - end")
     }
 
     private fun name(): String {
