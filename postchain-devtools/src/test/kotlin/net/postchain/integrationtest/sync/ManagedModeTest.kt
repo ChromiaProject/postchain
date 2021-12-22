@@ -23,6 +23,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.integrationtest.sync.ManagedModeTest.NodeSet
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
@@ -215,13 +216,16 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return TestBlockchainConfigurationProvider(dataSource)
+        return TestManagedBlockchainConfigurationProvider(dataSource)
     }
 }
 
 
-class TestBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSource):
-        BlockchainConfigurationProvider {
+/**
+ * We've overridden ALL methods of the [ManagedBlockchainConfigurationProvider] so we will never use the "real" data source.
+ */
+class TestManagedBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSource):
+    ManagedBlockchainConfigurationProvider() {
 
     companion object: KLogging()
 
