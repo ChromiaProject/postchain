@@ -383,7 +383,7 @@ class DefaultXConnectionManagerTest {
         // Then / verify and assert
         verify(connection1, times(0)).sendPacket(any())
         argumentCaptor<LazyPacket>().apply {
-            verify(connection2, times(2)).sendPacket(capture())
+            verify(connection2, times(3)).sendPacket(capture())
             assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
@@ -437,11 +437,11 @@ class DefaultXConnectionManagerTest {
 
         // Then / verify and assert
         argumentCaptor<LazyPacket>().apply {
-            verify(connection1, times(2)).sendPacket(capture())
+            verify(connection1, times(4)).sendPacket(capture()) // 4 = initial attempt + 3 retries
             assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
         argumentCaptor<LazyPacket>().apply {
-            verify(connection2, times(2)).sendPacket(capture())
+            verify(connection2, times(4)).sendPacket(capture()) // 4 = initial attempt + 3 retries
             assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 

@@ -15,6 +15,8 @@ import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 import org.bitcoinj.core.Peer
 
+private const val NETTY_TIMEOUT = 20L
+
 class DefaultXConnectionManager<PacketType>(
         private val connectorFactory: XConnectorFactory<PacketType>,
         private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
@@ -24,6 +26,7 @@ class DefaultXConnectionManager<PacketType>(
 
     companion object : KLogging()
 
+    private val MAX_RETRIES = 3
     private var connector: XConnector<PacketType>? = null
     private lateinit var peersConnectionStrategy: PeersConnectionStrategy
 
@@ -159,20 +162,18 @@ class DefaultXConnectionManager<PacketType>(
         val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
         val conn = chain.connections[peerID]
         if (conn != null) {
-            if (!conn.sendPacket(data)) {
-                logger.warn("sendPacket() - We failed b/c Netty didn't activate the channel, must try later.");
-                waitForNetty()
-                if (!conn.sendPacket(data)) {
-                    logger.debug("sendPacket() - Worked second time, so Netty must have fixed it");
-                } else {
-                    logger.error("sendPacket() -- Giving up on Netty, channel not active");
-                }
-            }
+            sendPacketWithRetries(conn, data, peerID)
         }
     }
 
-    private fun waitForNetty() {
-        Thread.sleep(20) // No idea why we even got this error, much less how long we should wait
+    private fun sendPacketWithRetries(conn: XPeerConnection, data: LazyPacket, peerID: XPeerID?) {
+        var retries = 0
+        while (retries < MAX_RETRIES && !conn.sendPacket(data)) {
+            logger.error { "sendPacket() - Failed to send packet to peer ${peerID?.shortString()}. Retrying..." }
+            Thread.sleep(NETTY_TIMEOUT)
+            retries++
+        }
+        if (retries == MAX_RETRIES) logger.error { "sendPacket() - Could not recover from connection... channel inactive." }
     }
 
     @Synchronized
@@ -180,23 +181,13 @@ class DefaultXConnectionManager<PacketType>(
         // TODO: lazypacket might be computed multiple times
         val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
         val failedConnections = mutableListOf<XPeerConnection>()
-        chain.connections.forEach { (_, conn) ->
+        chain.connections.forEach { (peerId, conn) ->
             if (!conn.sendPacket(data)) {
-                logger.warn("broadcastPacket() - We failed b/c Netty didn't activate the channel, must try later. ${failedConnections.size}");
+                logger.warn("broadcastPacket() - Failed to broadcast packet to ${peerId.shortString()}. ${failedConnections.size}");
                 failedConnections.add(conn)
             }
         }
-        if (failedConnections.size > 0) {
-            waitForNetty() // Only wait once, if this isn't just a glitch we give up
-            logger.warn("broadcastPacket() - Trying again to see if Netty now has activated the channel. ${failedConnections.size}");
-            failedConnections.forEach { conn ->
-                if (conn.sendPacket(data)) {
-                    logger.debug("broadcastPacket() - Worked second time, so Netty must have fixed it");
-                } else {
-                    logger.error("broadcastPacket() - Giving up on Netty, channel not active");
-                }
-            }
-        }
+        failedConnections.forEach { sendPacketWithRetries(it, data, null) }
     }
 
     @Synchronized
