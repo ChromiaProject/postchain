@@ -13,6 +13,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.PeerNameHelper.peerName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
+import org.bitcoinj.core.Peer
 
 class DefaultXConnectionManager<PacketType>(
         private val connectorFactory: XConnectorFactory<PacketType>,
@@ -202,21 +203,17 @@ class DefaultXConnectionManager<PacketType>(
         }
     }
 
-    private fun getChainIidFromCache(bcRid: BlockchainRid, descriptor: XPeerConnectionDescriptor, debugPrefix: String): Long? {
-        var chainID = chainIDforBlockchainRID[bcRid]
-        if (chainID == null) {
-            chainID = disconnectedChainIDforBlockchainRID[bcRid]
-            if (chainID != null) {
-                logger.debug("$debugPrefix - Had to get chainIid: $chainID from the backup.") // Investigate. This happens during [FourPeersReconfigurationTest] for example, don't know why?
-            } else {
-                logger.warn("${logger(descriptor)}: $debugPrefix: Chain ID not found by blockchainRID = ${descriptor.blockchainRID}")
-                return null
-
-            }
-        }
-        return chainID
-    }
-
+    /**
+     * We can get this callback in two ways. Either:
+     *    a) OUTGOING: we connected the other part and got accepted or
+     *    b) INCOMING: they connected us
+     * For case b) we might not know the chain they want to connect about, and this is ok. We shouldn't report it.
+     *
+     * Implementation:
+     *
+     * 1. Initial validation: Try to find the Chain we need from the "descriptor" info
+     * 2. Use the "connection": We have what we need to proceed, now deal with the connection itself
+     */
     @Synchronized
     override fun onPeerConnected(connection: XPeerConnection): XPacketHandler? {
         val descriptor = connection.descriptor()
@@ -226,32 +223,73 @@ class DefaultXConnectionManager<PacketType>(
                     ", (size of c4Brid: ${chainIDforBlockchainRID.size}, size of chains: ${chains.size}) "
         }
 
-        val chainID = getChainIidFromCache(descriptor.blockchainRID, descriptor, "onPeerConnected()")
-        if (chainID == null) {
-            connection.close()
-            return null
-        }
+        // ----------------------
+        // 1. See if we have enough data to proceed with this connection
+        // (if not we shut it down)
+        // ----------------------
+        val chainID = chainIDforBlockchainRID[descriptor.blockchainRID]
+            ?: when (descriptor.dir) {
+                direction.INCOMING -> {
+                    // Here we are forgiving, since it's ok to not know the Chain IID
+                    val oldChainID = disconnectedChainIDforBlockchainRID[descriptor.blockchainRID]
+                    if (oldChainID != null) {
+                        logger.debug { "${logger(descriptor)}: onPeerConnected()  - Found chainIid: $oldChainID for " +
+                                " ${descriptor.blockchainRID} in the backup." }
+                        oldChainID
+                    } else {
+                        logger.info {"${logger(descriptor)}: onPeerConnected() - Chain ID not found by " +
+                                " blockchainRID = ${descriptor.blockchainRID}" +
+                                " (Could be due to 1) chain not started or 2) we really don't have it)"
+                        }
+                        connection.close()
+                        return null
+                    }
+                }
+
+                direction.OUTGOING -> {
+                    logger.error { "${logger(descriptor)}: onPeerConnected() - We initiated this contact but lost "+
+                            " the Chain ID for blockchainRID = ${descriptor.blockchainRID}." }
+                    connection.close()
+                    return null
+                }
+            }
 
         val chain = chains[chainID]
-        if (chain == null) {
-            logger.warn("${logger(descriptor)}: onPeerConnected: Chain not found by chainID = $chainID / blockchainRID = ${descriptor.blockchainRID}. " +
-                    "(This is expected if it happens after this chain was restarted).")
-            connection.close()
-            return null
-        }
+            ?: when (descriptor.dir) {
+                direction.INCOMING -> {
+                    logger.info("${logger(descriptor)}: onPeerConnected() - Chain not found by chainID = $chainID /" +
+                                " blockchainRID = ${descriptor.blockchainRID}. " +
+                                "(This is expected if it happens after this chain was restarted)."
+                    )
+                    connection.close()
+                    return null
+                }
+                direction.OUTGOING -> {
+                    logger.error {"${logger(descriptor)}: onPeerConnected() - We initiated this contact but lost " +
+                                "the Chain for chainID = $chainID / blockchainRID = ${descriptor.blockchainRID}."
+                    }
+                    connection.close()
+                    return null
+                }
+            }
 
+        // ----------------------
+        // 2. We have what we need to proceed
+        // ----------------------
         return if (!chain.peerConfig.commConfiguration.networkNodes.isNodeBehavingWell(descriptor.peerId, System.currentTimeMillis())) {
-            logger.debug { "${logger(descriptor)}: onPeerConnected: Peer not behaving well, so ignore: peer = ${peerName(descriptor.peerId)}" }
+            logger.debug { "${logger(descriptor)}: onPeerConnected() - Peer not behaving well, so ignore: " +
+                    " peer = ${peerName(descriptor.peerId)}" }
             null
         } else {
             val originalConn = chain.connections[descriptor.peerId]
             if (originalConn != null) {
-                logger.debug { "${logger(descriptor)}: onPeerConnected: Peer already connected: peer = ${peerName(descriptor.peerId)}" }
+                logger.debug { "${logger(descriptor)}: onPeerConnected() - Peer already connected: peer = ${peerName(descriptor.peerId)}" }
                 val isOriginalOutgoing = originalConn.descriptor().isOutgoing()
                 if (peersConnectionStrategy.duplicateConnectionDetected(chainID, isOriginalOutgoing, descriptor.peerId)) {
                     disconnectChainPeer(chainID, descriptor.peerId)
                     chain.connections[descriptor.peerId] = connection
-                    logger.debug { "${logger(descriptor)}: onPeerConnected: Peer connected and replaced previous connection: peer = ${peerName(descriptor.peerId)}" }
+                    logger.debug { "${logger(descriptor)}: onPeerConnected() - Peer connected and replaced previous " +
+                            " connection: peer = ${peerName(descriptor.peerId)}" }
                     chain.peerConfig.packetHandler
                 } else {
                     connection.close()
@@ -259,7 +297,8 @@ class DefaultXConnectionManager<PacketType>(
                 }
             } else {
                 chain.connections[descriptor.peerId] = connection
-                logger.debug { "${logger(descriptor)}: onPeerConnected: Connection accepted: peer = ${peerName(descriptor.peerId)}" }
+                logger.debug { "${logger(descriptor)}: onPeerConnected() - Connection accepted: " +
+                        "peer = ${peerName(descriptor.peerId)}" }
                 peersConnectionStrategy.connectionEstablished(chainID, connection.descriptor().isOutgoing(), descriptor.peerId)
                 chain.peerConfig.packetHandler
             }
@@ -267,46 +306,72 @@ class DefaultXConnectionManager<PacketType>(
     }
 
     /**
-     * We often don't know why we got a disconnect.
-     * It could be because we did "disconnectChain()" ourselves, and for those cases we don't even have the BC is chain[].
+     * We often don't know why we got a disconnect callback. These are some valid reasons:
+     *    a) we did "disconnectChain()" ourselves b/c we need to restart the chain, or
+     *    b) we did close() on the connection b/c the other side sent us a chain we don't know, or
+     *    c) the node on the other side disconnected us.
+     *
+     * For case a) and b) we don't even have the BC in chain[], so we shouldn't worry about removing it.
+     *
+     * Implementation:
+     *
+     * 1. Initial validation: Try to find the Chain we need from the "descriptor" info
+     * 2. Close the "connection": We have what we need to proceed, now do the cleanup
      */
     @Synchronized
     override fun onPeerDisconnected(connection: XPeerConnection) {
         val descriptor = connection.descriptor()
 
-        var chainID =  getChainIidFromCache(descriptor.blockchainRID, descriptor, "onPeerDisconnected()")
-        if (chainID == null) {
-            logger.error(
-                "${descriptor.loggingPrefix(myPeerInfo.peerId())}: Peer disconnected: How can we never have seen chain: ${
-                    peerName(
-                        descriptor.peerId
+        // ----------------------
+        // 1. See if we have enough data to proceed with this connection
+        // ----------------------
+        val chainID: Long =  chainIDforBlockchainRID[descriptor.blockchainRID]
+            ?: when (descriptor.dir) {
+                direction.INCOMING -> {
+                    val oldChainID = disconnectedChainIDforBlockchainRID[descriptor.blockchainRID]
+                    if (oldChainID != null) {
+                        logger.debug {"${logger(descriptor)}: onPeerDisconnected() - Had to get chainIid: " +
+                                "$oldChainID from the backup." }
+                        oldChainID
+                    } else {
+                        // One valid way we might end up here:
+                        // Another node connects us about chain X
+                        // We don't have chain X so we close the connection in "onPeerConnection(), and
+                        // Netty will call the callback "onPeerDisconnected()", and now we are here.
+                        logger.info { "${logger(descriptor)}: onPeerDisconnected() - Chain ID not found by " +
+                                " blockchainRID = ${descriptor.blockchainRID}" +
+                                " (Could be due to 1) chain not started or 2) we really don't have it)" }
+                        connection.close()
+                        return
+                    }
+                }
+                direction.OUTGOING -> {
+                    logger.error( "${logger(descriptor)}: onPeerDisconnected() - How can we never "+
+                                "have seen chain: ${peerName(descriptor.peerId)} , direction: ${descriptor.dir}, " +
+                                "blockchainRID = ${descriptor.blockchainRID}) . "
                     )
-                } " +
-                        ", direction: ${descriptor.dir}, blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID.\") . "
-            )
-            connection.close()
-            return
+                    connection.close()
+                    return
+                }
         }
 
         val chain = chains[chainID]
         if (chain == null) {
-            // This is not an error
-            logger.debug("${descriptor.loggingPrefix(myPeerInfo.peerId())}: Peer disconnected: chain structure gone, probably "+
-                    " removed by disconnectChain(). peer: ${peerName(descriptor.peerId)} " +
-                    ", direction: ${descriptor.dir}, blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID.\") . ")
+            // This is not an error (we don't even have to check the direction)
+            logger.debug { "${logger(descriptor)}: onPeerDisconnected() - chain structure gone, probably removed " +
+                    "by disconnectChain(). peer: ${peerName(descriptor.peerId)}, direction: ${descriptor.dir}, " +
+                    "blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID.\") . "}
             connection.close()
             return
         }
 
+        // ----------------------
+        // 2. We have what we need to proceed with closing the connection
+        // ----------------------
         if (chain.connections[descriptor.peerId] == connection) {
-            logger.debug(
-                "${descriptor.loggingPrefix(myPeerInfo.peerId())}: Peer disconnected: Removing peer: ${
-                    peerName(
-                        descriptor.peerId
-                    )
-                }" +
-                        ", direction: ${descriptor.dir} from blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID."
-            )
+            logger.debug { "${logger(descriptor)}: onPeerDisconnected() - Peer disconnected: Removing peer: " +
+                    "${ peerName(descriptor.peerId )}, direction: ${descriptor.dir} from " +
+                    "blockchainRID = ${descriptor.blockchainRID} / chainID = $chainID." }
             // It's the connection we're using, so we have to remove it
             chain.connections.remove(descriptor.peerId)
         } else {
@@ -314,7 +379,7 @@ class DefaultXConnectionManager<PacketType>(
         }
         connection.close()
         if (chain.connectAll) {
-            peersConnectionStrategy.connectionLost(chainID!!, descriptor.peerId, descriptor.isOutgoing())
+            peersConnectionStrategy.connectionLost(chainID, descriptor.peerId, descriptor.isOutgoing())
         }
     }
 
