@@ -69,7 +69,7 @@ class PostchainTestNode(
 
         return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
-            logger.debug("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toShortHex()}")
+            logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
             DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
             BaseConfigurationDataStore.addConfigurationData(eContext, 0, blockchainConfig)
             brid
@@ -80,7 +80,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
-            logger.debug("Adding configuration for chain: $chainId, height: $height")
+            logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
             brid

@@ -203,6 +203,21 @@ open class DefaultXConnectionManager<PacketType>(
         }
     }
 
+    private fun getChainIidFromCache(bcRid: BlockchainRid, descriptor: XPeerConnectionDescriptor, debugPrefix: String): Long? {
+        var chainId = chainIdForBlockchainRid[bcRid]
+        if (chainId == null) {
+            chainId = disconnectedChainIdForBlockchainRid[bcRid]
+            if (chainId != null) {
+                logger.debug("$debugPrefix - Had to get chainIid: $chainId from the backup.") // Investigate. This happens during [FourPeersReconfigurationTest] for example, don't know why?
+            } else {
+                logger.warn("${logger(descriptor)}: $debugPrefix: Chain ID not found by blockchainRID = ${descriptor.blockchainRid}")
+                return null
+
+            }
+        }
+        return chainId
+    }
+
     @Synchronized
     override fun onPeerConnected(connection: XPeerConnection): XPacketHandler? {
         val descriptor = connection.descriptor()
@@ -211,12 +226,12 @@ open class DefaultXConnectionManager<PacketType>(
                     ", blockchainRid: ${descriptor.blockchainRid}"
         }
 
-        val chainId = chainIdForBlockchainRid[descriptor.blockchainRid]
+        val chainId = getChainIidFromCache(descriptor.blockchainRid, descriptor, "onPeerConnected()")
         if (chainId == null) {
-            logger.warn("${logger(descriptor)}: onPeerConnected: chainId not found by blockchainRID = ${descriptor.blockchainRid}")
             connection.close()
             return null
         }
+
         val chain = chains[chainId]
         if (chain == null) {
             logger.warn("${logger(descriptor)}: onPeerConnected: Chain not found by chainID = $chainId / blockchainRID = ${descriptor.blockchainRid}. " +
@@ -261,22 +276,16 @@ open class DefaultXConnectionManager<PacketType>(
     override fun onPeerDisconnected(connection: XPeerConnection) {
         val descriptor = connection.descriptor()
 
-        var chainId = chainIdForBlockchainRid[descriptor.blockchainRid]
+        val chainId = getChainIidFromCache(descriptor.blockchainRid, descriptor, "onPeerDisconnected()")
         if (chainId == null) {
-            val oldChainId = disconnectedChainIdForBlockchainRid[descriptor.blockchainRid]
-            if (oldChainId != null) {
-                // Ok, we are here because someone called "disconnectChain()"
-                // and we lost the chainId, let's take the old one.
-                chainId = oldChainId
-            } else {
-                logger.error("${loggingPrefix(descriptor)}: Peer disconnected: " +
-                        "How can we never have seen chain: ${peerName(descriptor.peerId)}, " +
-                        "direction: ${descriptor.dir}, " +
-                        "blockchainRid = ${descriptor.blockchainRid} / chainId = $chainId.\")."
-                )
-                connection.close()
-                return
-            }
+            logger.error(
+                    "${descriptor.loggingPrefix(myPeerInfo.peerId())}: Peer disconnected: How can we never have seen chain: " +
+                            "${peerName(descriptor.peerId)} " +
+                            ", direction: ${descriptor.dir}" +
+                            ", blockchainRID = ${descriptor.blockchainRid} / chainID = $chainId.\") . "
+            )
+            connection.close()
+            return
         }
 
         val chain = chains[chainId]
@@ -301,7 +310,7 @@ open class DefaultXConnectionManager<PacketType>(
         }
         connection.close()
         if (chain.connectAll) {
-            peersConnectionStrategy.connectionLost(chainId!!, descriptor.peerId, descriptor.isOutgoing())
+            peersConnectionStrategy.connectionLost(chainId, descriptor.peerId, descriptor.isOutgoing())
         }
     }
 

@@ -8,7 +8,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
 
-class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvider {
+open class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvider {
 
     private lateinit var dataSource: ManagedNodeDataSource
     private val systemProvider = ManualBlockchainConfigurationProvider()

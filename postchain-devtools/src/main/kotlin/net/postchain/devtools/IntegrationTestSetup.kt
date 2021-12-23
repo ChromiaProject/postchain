@@ -18,6 +18,8 @@ import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.TestInfo
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
@@ -58,6 +60,11 @@ open class IntegrationTestSetup : AbstractIntegration() {
     // For important test info we always want to log
     fun testLog(dbg: String) {
         System.out.println("TEST: $dbg")
+    }
+
+    @BeforeEach
+    fun setup(testInfo: TestInfo) {
+        println("++ Starting test: ${testInfo.displayName} ++")
     }
 
     @AfterEach

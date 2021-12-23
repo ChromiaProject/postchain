@@ -141,7 +141,7 @@ open class BaseBlockchainProcessManager(
                         heartbeatManager.addListener(process)
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
-                        startInfoDebug("Blockchain has been started", processName, chainId, bTrace)
+                        startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
                         blockchainConfig.blockchainRid
 
                     } else {
@@ -343,8 +343,10 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    private fun startInfoDebug(str: String, processName: BlockchainProcessName, chainId: Long, bTrace: BlockTrace?) {
-        startInfo(str, processName, chainId)
+    private fun startInfoDebug(str: String, processName: BlockchainProcessName, chainId: Long, bcRid: BlockchainRid, bTrace: BlockTrace?) {
+        if (logger.isInfoEnabled) {
+            logger.info("$processName: startBlockchain() - $str: chainId: $chainId, Blockchain RID: ${bcRid.toHex()}") // We need to print full BC RID so that users can see in INFO logs what it is.
+        }
         startDebug(str, processName, chainId, bTrace)
     }
 

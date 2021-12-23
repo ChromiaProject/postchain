@@ -16,7 +16,7 @@ import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.devtools.TestBlockchainConfigurationProvider
+import net.postchain.devtools.TestManagedBlockchainConfigurationProvider
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.chainIidOf
 import net.postchain.devtools.chainRidOf
@@ -120,7 +120,7 @@ class TestDirectoryMasterInfraFactory : MasterManagedEbftInfraFactory() {
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return TestBlockchainConfigurationProvider(dataSource)
+        return TestManagedBlockchainConfigurationProvider(dataSource)
     }
 }
 
