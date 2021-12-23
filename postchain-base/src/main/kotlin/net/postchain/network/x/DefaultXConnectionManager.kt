@@ -325,34 +325,35 @@ open class DefaultXConnectionManager<PacketType>(
         // ----------------------
         // 1. See if we have enough data to proceed with this connection
         // ----------------------
-        val chainID: Long = chainIdForBlockchainRid[descriptor.blockchainRid]
-            ?: when (descriptor.dir) {
-                Direction.INCOMING -> {
-                    val oldChainID = disconnectedChainIdForBlockchainRid[descriptor.blockchainRid]
-                    if (oldChainID != null) {
-                        logger.debug {"${logger(descriptor)}: onPeerDisconnected() - Had to get chainIid: " +
-                                "$oldChainID from the backup." }
-                        oldChainID
-                    } else {
-                        // One valid way we might end up here:
-                        // Another node connects us about chain X
-                        // We don't have chain X so we close the connection in "onPeerConnection(), and
-                        // Netty will call the callback "onPeerDisconnected()", and now we are here.
+        var chainID: Long? = chainIdForBlockchainRid[descriptor.blockchainRid]
+        if (chainID == null) {
+            val oldChainID = disconnectedChainIdForBlockchainRid[descriptor.blockchainRid]
+            if (oldChainID != null) {
+                // If we disconnected ourselves this is expected (since we cleared the cache)
+                chainID = oldChainID
+            } else {
+                when (descriptor.dir) {
+                    Direction.INCOMING -> {
+                        // Example: One valid way we might end up here:
+                        // 1. Another node connects us about chain X, and
+                        // 2. we don't have chain X so we close the connection in "onPeerConnection(), and
+                        // 3. Netty will make the callback "onPeerDisconnected()", and now we are here.
                         logger.info { "${logger(descriptor)}: onPeerDisconnected() - Chain ID not found by " +
-                                " blockchainRID = ${descriptor.blockchainRid}" +
-                                " (Could be due to 1) chain not started or 2) we really don't have it)" }
-                        connection.close()
-                        return
+                                    " blockchainRID = ${descriptor.blockchainRid}" +
+                                    " (Could be due to 1) chain not started or 2) we really don't have it)"
+                        }
+                    }
+                    Direction.OUTGOING -> {
+                        // Should never happen
+                        logger.error( "${logger(descriptor)}: onPeerDisconnected() - How can we never have seen " +
+                                    "chain: from peer: ${peerName(descriptor.peerId)} , direction: " +
+                                    "${descriptor.dir}, blockchainRID = ${descriptor.blockchainRid}) . "
+                        )
                     }
                 }
-                Direction.OUTGOING -> {
-                    logger.error( "${logger(descriptor)}: onPeerDisconnected() - How can we never "+
-                                "have seen chain: ${peerName(descriptor.peerId)} , direction: ${descriptor.dir}, " +
-                                "blockchainRID = ${descriptor.blockchainRid}) . "
-                    )
-                    connection.close()
-                    return
-                }
+                connection.close()
+                return
+            }
         }
 
         val chain = chains[chainID]
