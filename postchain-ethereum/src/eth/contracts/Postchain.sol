@@ -24,8 +24,8 @@ library Postchain {
         bytes32 blockRid;
         bytes32 previousBlockRid;
         bytes32 merkleRootHashHashedLeaf;
-        uint timestamp;
-        uint height;
+        bytes32 timestampHashedLeaf;
+        bytes32 heightHashedLeaf;
         bytes32 dependenciesHashedLeaf;
         bytes32 extraDataHashedLeaf;
     }
@@ -91,12 +91,12 @@ library Postchain {
         bytes32 node34 = sha256(abi.encodePacked(
                 uint8(0x00),
                 header.merkleRootHashHashedLeaf,
-                Hash.hashGtvIntegerLeaf(header.timestamp)
+                header.timestampHashedLeaf
             ));
 
         bytes32 node56 = sha256(abi.encodePacked(
                 uint8(0x00),
-                Hash.hashGtvIntegerLeaf(header.height),
+                header.heightHashedLeaf,
                 header.dependenciesHashedLeaf
             ));
 

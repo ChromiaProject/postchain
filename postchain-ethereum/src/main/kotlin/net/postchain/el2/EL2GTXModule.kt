@@ -123,8 +123,8 @@ private fun blockHeaderData(
         gtv(blockRid),
         bh.gtvPreviousBlockRid,
         gtv(bh.gtvMerkleRootHash.merkleHash(merkleHashCalculator)),
-        bh.gtvTimestamp,
-        bh.gtvHeight,
+        gtv(bh.gtvTimestamp.merkleHash(merkleHashCalculator)),
+        gtv(bh.gtvHeight.merkleHash(merkleHashCalculator)),
         gtv(bh.gtvDependencies.merkleHash(merkleHashCalculator)),
         gtv(bh.gtvExtra.merkleHash(merkleHashCalculator)),
     )

@@ -321,8 +321,6 @@ describe("ChrL2", () => {
                 let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
                 let merkleRootHash = "96defe74f43fcf2d12a1844bcd7a3a7bcb0d4fa191776953dae3f1efb508d866"
                 let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
-                let timestamp = 1629878444220
-                let height = 48
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
                 let extraDataMerkleRoot = "73178A330CE92CBA29E3B6A16AF70FC4BAB535253969581E3B5CC46D32FB7132"
@@ -332,9 +330,9 @@ describe("ChrL2", () => {
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
                 let node12 = postchainMerkleNodeHash([0x00, node1, node2])
                 let node3 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
-                let node4 = hashGtvIntegerLeaf(timestamp)
+                let node4 = keccak256(DecodeHexStringToByteArray("1629878444220"))
                 let node34 = postchainMerkleNodeHash([0x00, node3, node4])
-                let node5 = hashGtvIntegerLeaf(height)
+                let node5 = keccak256(DecodeHexStringToByteArray("46"))
                 let node6 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
                 let node56 = postchainMerkleNodeHash([0x00, node5, node6])
                 let node1234 = postchainMerkleNodeHash([0x00, node12, node34])
@@ -344,18 +342,16 @@ describe("ChrL2", () => {
                 let maliciousBlockRid = postchainMerkleNodeHash([0x7, node1234, node1234])
                 let blockHeader: BytesLike = ''
                 let maliciousBlockHeader: BytesLike = ''
-                let ts = hexZeroPad(intToHex(timestamp), 32)
-                let h = hexZeroPad(intToHex(height), 32)
                 blockHeader = blockHeader.concat(blockchainRid, blockRid.substring(2, blockRid.length), previousBlockRid,
                                     merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
-                                    ts.substring(2, ts.length), h.substring(2, h.length),
+                                    node4.substring(2, node4.length), node5.substring(2, node5.length),
                                     dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
                                     extraDataMerkleRootHashedLeaf.substring(2, extraDataMerkleRootHashedLeaf.length)
                 )
 
                 maliciousBlockHeader = maliciousBlockHeader.concat(blockchainRid, maliciousBlockRid.substring(2, maliciousBlockRid.length), previousBlockRid, 
                                     merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
-                                    ts.substring(2, ts.length), h.substring(2, h.length), 
+                                    node4.substring(2, node4.length), node5.substring(2, node5.length),
                                     dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
                                     extraDataMerkleRootHashedLeaf.substring(2, extraDataMerkleRootHashedLeaf.length)
                 )
@@ -482,24 +478,5 @@ var hashGtvBytes32Leaf = function (data: BytesLike): string {
 var hashGtvBytes64Leaf = function (data: BytesLike): string {
     var result: string = ''
     result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA1, 64+2, 0x4, 64, data])
-    return result
-}
-
-var hashGtvIntegerLeaf = function (num: number): string {
-    var result: string = ''
-    let nbytes = 1
-    let remainingValue = Math.trunc(num / 256)
-    while (remainingValue > 0) {
-        nbytes += + 1
-        remainingValue = Math.trunc(remainingValue / 256)
-    }
-    let b = new Uint8Array(nbytes)
-    remainingValue = num
-    for (let i = 1; i <= nbytes; i++) {
-        let v = remainingValue & 0xFF
-        b[nbytes - i] = v
-        remainingValue = Math.trunc(remainingValue / 256)
-    }    
-    result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA3, nbytes+2, 0x2, nbytes, b])
     return result
 }
