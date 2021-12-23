@@ -12,9 +12,9 @@ import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.common.hexStringToByteArray
 import org.hamcrest.CoreMatchers.equalTo
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class RestApiGetTxEndpointTest {
 
@@ -24,7 +24,7 @@ class RestApiGetTxEndpointTest {
     private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
     private val txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-    @Before
+    @BeforeEach
     fun setup() {
         model = mock { 
             on { chainIID } doReturn 1L
@@ -33,7 +33,7 @@ class RestApiGetTxEndpointTest {
         restApi = RestApi(0, basePath)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         restApi.stop()
     }

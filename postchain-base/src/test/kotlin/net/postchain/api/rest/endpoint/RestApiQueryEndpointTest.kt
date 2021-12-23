@@ -13,9 +13,9 @@ import net.postchain.api.rest.controller.RestApi
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.UserMistake
 import org.hamcrest.core.IsEqual.equalTo
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class RestApiQueryEndpointTest {
 
@@ -24,7 +24,7 @@ class RestApiQueryEndpointTest {
     private lateinit var restApi: RestApi
     private lateinit var model: Model
 
-    @Before
+    @BeforeEach
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
@@ -33,7 +33,7 @@ class RestApiQueryEndpointTest {
         restApi = RestApi(0, basePath)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         restApi.stop()
     }

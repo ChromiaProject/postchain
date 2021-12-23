@@ -4,8 +4,8 @@ import mu.KLogging
 import net.postchain.devtools.AbstractSyncTest
 import net.postchain.devtools.currentHeight
 import org.awaitility.Awaitility
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
@@ -28,9 +28,9 @@ class MustSyncUntilTestNightly : AbstractSyncTest() {
      * Only 2 blocks are synced (to height 1). But Node 0 will not leave synchronizer until height 3 is reached.
      * Thus try block will time out.
      * In catch we check that we have not reached height 3, but only blocksToSynch-1 = 2-1 = 1
-    */
+     */
     @Test
-    @Ignore // This test was fixed in another branch, so ignore it here until merge
+    @Disabled // This test was fixed in another branch, so ignore it here until merge
     fun testSyncUntilNonExistingHeight() {
         mustSyncUntil = 3L
         try {

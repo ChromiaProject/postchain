@@ -4,7 +4,7 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.e2e.tools.parseLogLastHeight
 import net.postchain.e2e.tools.postgresUrl
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 

@@ -9,12 +9,12 @@ import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.devtools.chainRidOf
 import net.postchain.devtools.utils.configuration.NodeSetup
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.lang.Thread.sleep
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 const val commonContainerName = "postchainCont"
 const val firstContainerName = commonContainerName + "1"
@@ -29,13 +29,13 @@ val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
  * Bitbucket builds image on the fly.
  * Please note: Currently for the tests to pass, flag waitForRestart must be set.
  */
-@Ignore
+@Disabled
 class DirectoryIT : ManagedModeTest() {
 
     override val awaitDebugLog = false
     private val dockerClient: DockerClient = DockerClientFactory.create()
 
-    @Before
+    @BeforeEach
     fun setUp() {
         // If container UUTs already exist, remove them
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())

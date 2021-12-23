@@ -9,7 +9,7 @@ import net.postchain.gtv.*
 import net.postchain.gtx.GTXTransactionBodyData
 import net.postchain.gtx.GTXTransactionData
 import net.postchain.gtx.OpData
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class GTXMLTransactionEncodeTest {
 

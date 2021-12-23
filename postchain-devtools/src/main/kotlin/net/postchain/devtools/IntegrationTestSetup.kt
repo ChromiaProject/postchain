@@ -15,9 +15,9 @@ import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorWorker
 import org.apache.commons.configuration2.MapConfiguration
 import org.awaitility.kotlin.await
-import org.junit.After
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
@@ -60,7 +60,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
         System.out.println("TEST: $dbg")
     }
 
-    @After
+    @AfterEach
     override fun tearDown() {
         try {
             logger.debug("Integration test -- TEARDOWN")

@@ -5,8 +5,8 @@ package net.postchain.integrationtest
 import mu.KLogging
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.testinfra.TestTransaction
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.assertNotNull
 
 open class FullEbftTestNightlyCore : ConfigFileBasedIntegrationTest() {

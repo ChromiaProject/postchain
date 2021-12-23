@@ -7,8 +7,8 @@ import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse
 
 val myCS = SECP256K1CryptoSystem()

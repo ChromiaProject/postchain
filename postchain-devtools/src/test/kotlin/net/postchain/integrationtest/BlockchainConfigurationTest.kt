@@ -11,14 +11,14 @@ import net.postchain.gtx.GTXDataBuilder
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import org.apache.commons.lang3.RandomStringUtils
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class BlockchainConfigurationTest : IntegrationTestSetup() {
 
     // TODO: test is broken
-    @Test @Ignore
+    @Test@Disabled
     fun testMaxBlockSize() {
         val blockchainRid = BlockchainRid.buildFromHex("14C483C045F323ACD44298D3BECAAFFD672B1C43D273AB55C0C67F12C9D09014")
         configOverrides.setProperty("infrastructure", "base/test")

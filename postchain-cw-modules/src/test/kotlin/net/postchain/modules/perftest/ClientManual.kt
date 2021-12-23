@@ -7,7 +7,7 @@ import net.postchain.common.toHex
 import net.postchain.devtools.modules.ft.FTIntegrationTest
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXDataBuilder
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.util.*
 
 /**

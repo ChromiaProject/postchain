@@ -19,9 +19,9 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.hamcrest.Matchers.isEmptyString
 import org.hamcrest.core.IsEqual.equalTo
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 /**
  * [GetConfirmation] and [GetTx] endpoints have common part,
@@ -35,7 +35,7 @@ class RestApiGetConfirmationProofEndpointTest {
     private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
     private val txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-    @Before
+    @BeforeEach
     fun setup() {
         model = mock {
            on { chainIID } doReturn 1L
@@ -44,7 +44,7 @@ class RestApiGetConfirmationProofEndpointTest {
         restApi = RestApi(0, basePath)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         restApi.stop()
     }

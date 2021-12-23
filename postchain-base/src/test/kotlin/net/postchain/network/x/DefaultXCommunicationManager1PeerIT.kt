@@ -10,7 +10,8 @@ import net.postchain.core.UserMistake
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class DefaultXCommunicationManager1PeerIT {
 
@@ -47,19 +48,23 @@ class DefaultXCommunicationManager1PeerIT {
                 }
     }
 
-    @Test(expected = UserMistake::class)
+    @Test
     fun singlePeer_launching_with_empty_peers_will_result_in_exception() {
-        startTestContext(arrayOf(), pubKey)
+        assertThrows<UserMistake> {
+            startTestContext(arrayOf(), pubKey)
                 .use {
                     it.communicationManager.init()
                 }
+        }
     }
 
-    @Test(expected = UserMistake::class)
+    @Test
     fun singlePeer_launching_with_wrong_pubkey_will_result_in_exception() {
-        startTestContext(arrayOf(peerInfo), pubKey2)
+        assertThrows<UserMistake> {
+            startTestContext(arrayOf(peerInfo), pubKey2)
                 .use {
                     it.communicationManager.init()
                 }
+        }
     }
 }

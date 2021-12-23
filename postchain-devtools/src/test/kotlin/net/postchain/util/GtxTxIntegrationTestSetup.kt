@@ -10,7 +10,9 @@ import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtx.GTXTransactionFactory
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.Assert
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 /**
@@ -188,7 +190,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
 
         // Asserting best height equals to expected
         val best = queries.getBestHeight().get()
-        Assert.assertEquals(expectedHeight, best)
+       assertEquals(expectedHeight, best)
 
         for (height in 0..expectedHeight) {
             logger.info { "Verifying height $height" }
@@ -199,7 +201,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
 
             // Asserting txs count
             val txs = queries.getBlockTransactionRids(blockRids).get()
-            Assert.assertEquals(txPerBlock, txs.size)
+           assertEquals(txPerBlock, txs.size)
 
             // Asserting txs content
             for (tx in 0 until txPerBlock) {
@@ -210,7 +212,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
                 //val expectedTx = TestTransaction(height.toInt() * txPerBlock + tx)
                 val realTxRid = txs[tx]
                 logger.debug("Real TX RID: ${realTxRid.toHex()}")
-                Assert.assertArrayEquals(expectedTxRid, realTxRid)
+               assertArrayEquals(expectedTxRid, realTxRid)
             }
         }
     }

@@ -2,24 +2,20 @@
 
 package net.postchain.integrationtest
 
-import junitparams.JUnitParamsRunner
-import junitparams.Parameters
-import junitparams.naming.TestCaseName
 import net.postchain.integrationtest.multiple_chains.FullEbftMultipleChainsTestNightly
-import org.junit.Ignore
-import org.junit.Test
-import org.junit.runner.RunWith
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
-@RunWith(JUnitParamsRunner::class)
 class PostgreSQLFullEbftMultipleChainsTestNightly : FullEbftMultipleChainsTestNightly() {
 
-    @Test
-    @Parameters(
+    @ParameterizedTest(name = "[{index}] nodesCount: 1, blocksCount: {0}, txPerBlock: {1}")
+    @CsvSource(
             "1, 0", "2, 0", "10, 0"
             , "1, 1", "2, 1", "10, 1"
             , "1, 10", "2, 10", "10, 10"
     )
-    @TestCaseName("[{index}] nodesCount: 1, blocksCount: {0}, txPerBlock: {1}")
     fun runSingleNodeWithYTxPerBlock(blocksCount: Int, txPerBlock: Int) {
         runXNodesWithYTxPerBlock(
                 1,
@@ -34,14 +30,13 @@ class PostgreSQLFullEbftMultipleChainsTestNightly : FullEbftMultipleChainsTestNi
                 ))
     }
 
-    @Test
-    @Ignore // TODO: Ignored due to the fact tests often fail
-    @Parameters(
+    @Disabled // TODO: Ignored due to the fact tests often fail
+    @ParameterizedTest(name = "[{index}] nodesCount: 2, blocksCount: {0}, txPerBlock: {1}")
+    @CsvSource(
             "1, 0", "2, 0", "10, 0"
             , "1, 1", "2, 1", "10, 1"
             , "1, 10", "2, 10", "10, 10"
     )
-    @TestCaseName("[{index}] nodesCount: 2, blocksCount: {0}, txPerBlock: {1}")
     fun runTwoNodesWithYTxPerBlock(blocksCount: Int, txPerBlock: Int) {
         runXNodesWithYTxPerBlock(
                 2,
@@ -57,14 +52,13 @@ class PostgreSQLFullEbftMultipleChainsTestNightly : FullEbftMultipleChainsTestNi
                 ))
     }
 
-    @Test
-    @Ignore
-    @Parameters(
+    @Disabled
+    @ParameterizedTest(name ="[{index}] nodesCount: 5, blocksCount: {0}, txPerBlock: {1}")
+    @CsvSource(
             "1, 0", "2, 0", "10, 0"
             , "1, 1", "2, 1", "10, 1"
             , "1, 10", "2, 10", "10, 10"
     )
-    @TestCaseName("[{index}] nodesCount: 5, blocksCount: {0}, txPerBlock: {1}")
     fun runFiveNodesWithYTxPerBlock(blocksCount: Int, txPerBlock: Int) {
         runXNodesWithYTxPerBlock(
                 5,

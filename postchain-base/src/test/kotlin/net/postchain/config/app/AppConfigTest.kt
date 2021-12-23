@@ -3,9 +3,9 @@
 package net.postchain.config.app
 
 import assertk.assertions.isEmpty
+import org.junit.jupiter.api.Test
 import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
-import org.junit.Test
 
 class AppConfigTest {
 

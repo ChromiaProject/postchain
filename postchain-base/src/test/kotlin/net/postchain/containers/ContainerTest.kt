@@ -2,7 +2,7 @@ package net.postchain.containers
 
 import com.spotify.docker.client.DockerClient
 import net.postchain.containers.bpm.DockerClientFactory
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class ContainerTest {
 

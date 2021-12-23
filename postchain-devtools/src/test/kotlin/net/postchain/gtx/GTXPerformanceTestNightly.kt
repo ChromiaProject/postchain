@@ -2,8 +2,6 @@
 
 package net.postchain.gtx
 
-import junitparams.JUnitParamsRunner
-import junitparams.Parameters
 import mu.KLogging
 import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
@@ -17,12 +15,12 @@ import net.postchain.ebft.worker.ValidatorWorker
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.factory.GtxTransactionDataFactory
-import org.junit.Assert
-import org.junit.Test
-import org.junit.runner.RunWith
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import kotlin.system.measureNanoTime
 
-@RunWith(JUnitParamsRunner::class)
 class GTXPerformanceTestNightly : IntegrationTestSetup() {
 
     companion object : KLogging()
@@ -45,7 +43,7 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
                 total += makeTestTx(i.toLong(), "Hello", dummyBcRid).size
             }
         }
-        Assert.assertTrue(total > 1000)
+       assertTrue(total > 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
@@ -62,7 +60,7 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
                 total += gtxData.transactionBodyData.operations.size
             }
         }
-        Assert.assertTrue(total == 1000)
+       assertTrue(total == 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
@@ -81,7 +79,7 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
                 total += ttx.ops.size
             }
         }
-        Assert.assertTrue(total == 1000)
+       assertTrue(total == 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
@@ -98,15 +96,15 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
             for (rawTx in transactions) {
                 val ttx =  txFactory.decodeTransaction(rawTx) as GTXTransaction
                 total += ttx.ops.size
-                Assert.assertTrue(ttx.isCorrect())
+               assertTrue(ttx.isCorrect())
             }
         }
-        Assert.assertTrue(total == 1000)
+       assertTrue(total == 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
-    @Test
-    @Parameters(
+    @ParameterizedTest
+    @CsvSource(
             "1, 1000, 0", "1, 1000, 1",
             "4, 1000, 0", "4, 1000, 1"
     )

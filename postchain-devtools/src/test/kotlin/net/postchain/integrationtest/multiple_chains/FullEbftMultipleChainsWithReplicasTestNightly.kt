@@ -2,9 +2,6 @@
 
 package net.postchain.integrationtest.multiple_chains
 
-import junitparams.JUnitParamsRunner
-import junitparams.Parameters
-import junitparams.naming.TestCaseName
 import mu.KLogging
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.OnDemandBlockBuildingStrategy
@@ -14,14 +11,13 @@ import net.postchain.devtools.assertNodeConnectedWith
 import net.postchain.util.NodesTestHelper.selectAnotherRandNode
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.TEN_SECONDS
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Ignore
-import org.junit.Test
-import org.junit.runner.RunWith
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import kotlin.test.assertNotNull
 
-@RunWith(JUnitParamsRunner::class)
 class FullEbftMultipleChainsWithReplicasTestNightly : ConfigFileBasedIntegrationTest() {
 
     companion object : KLogging()
@@ -30,10 +26,9 @@ class FullEbftMultipleChainsWithReplicasTestNightly : ConfigFileBasedIntegration
         return nodes[nodeId].blockBuildingStrategy(chainId) as OnDemandBlockBuildingStrategy
     }
 
-    @Test
-    @Ignore // TODO: [et]: Fix this test
-    @Parameters("3, 0, 3, 2")
-    @TestCaseName("[{index}] nodeCount: {0}, replicaCount: {1}, blockCount: {2}, txPerBlock: {3}")
+    @Disabled // TODO: [et]: Fix this test
+    @ParameterizedTest(name = "[{index}] nodeCount: {0}, replicaCount: {1}, blockCount: {2}, txPerBlock: {3}")
+    @CsvSource("3, 0, 3, 2")
     fun runFiveNodesAndOneReplicaWithYTxPerBlock(nodeCount: Int, replicaCount: Int, blockCount: Int, txPerBlock: Int) {
         runXNodesWithReplicasWithYTxPerBlock(
                 nodeCount,

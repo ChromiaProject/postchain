@@ -6,8 +6,8 @@ import net.postchain.devtools.assertChainNotStarted
 import net.postchain.devtools.assertChainStarted
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 
 class SinglePeerReconnectionTest : ReconnectionTest() {
 
@@ -31,7 +31,7 @@ class SinglePeerReconnectionTest : ReconnectionTest() {
                 }
 
         // Asserting height is -1 for all peers
-        Assert.assertEquals(-1, queries(nodes[0]) { it.getBestHeight() })
+        assertEquals(-1, queries(nodes[0]) { it.getBestHeight() })
 
 
         buildBlock(0, tx0, tx1)

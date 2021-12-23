@@ -7,7 +7,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEqualTo
 import assertk.isContentEqualTo
 import net.postchain.common.hexStringToByteArray
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class BlockchainRidTest {
 

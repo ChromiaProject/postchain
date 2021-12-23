@@ -16,7 +16,7 @@ import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.MockCryptoSystem
 import net.postchain.gtv.Gtv
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.sql.Connection
 import kotlin.test.assertEquals
 

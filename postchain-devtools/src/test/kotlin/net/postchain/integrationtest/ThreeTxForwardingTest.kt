@@ -8,8 +8,10 @@ import net.postchain.common.toHex
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.testinfra.TestTransaction
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
+import java.util.concurrent.TimeUnit
 
 class ThreeTxForwardingTest : IntegrationTestSetup() {
 
@@ -27,7 +29,8 @@ class ThreeTxForwardingTest : IntegrationTestSetup() {
     private fun apiModel(nodeIndex: Int): Model =
             nodes[nodeIndex].getRestApiModel()
 
-    @Test(timeout = 2 * 60 * 1000L)
+    @Test
+    @Timeout(2, unit = TimeUnit.MINUTES)
     fun testTxNotForwardedIfPrimary() {
         val count = 3
         configOverrides.setProperty("testpeerinfos", createPeerInfos(count))
@@ -52,7 +55,7 @@ class ThreeTxForwardingTest : IntegrationTestSetup() {
         val bockQueries = nodes[2].getBlockchainInstance().getEngine().getBlockQueries()
         for (i in 0..2) {
             val blockData = bockQueries.getBlockAtHeight(i.toLong()).get()!!
-            Assert.assertEquals(3, blockData.transactions.size)
+            assertEquals(3, blockData.transactions.size)
         }
     }
 }

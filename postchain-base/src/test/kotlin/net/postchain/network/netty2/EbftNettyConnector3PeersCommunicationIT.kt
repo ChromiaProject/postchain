@@ -18,9 +18,9 @@ import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.FIVE_SECONDS
 import org.awaitility.Duration.TEN_SECONDS
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class EbftNettyConnector3PeersCommunicationIT {
 
@@ -35,7 +35,7 @@ class EbftNettyConnector3PeersCommunicationIT {
     private lateinit var context2: EbftTestContext
     private lateinit var context3: EbftTestContext
 
-    @Before
+    @BeforeEach
     fun setUp() {
         val privKey1 = cryptoSystem.getRandomBytes(32)
         val pubKey1 = secp256k1_derivePubKey(privKey1)
@@ -70,7 +70,7 @@ class EbftNettyConnector3PeersCommunicationIT {
         context3.init()
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         context1.shutdown()
         context2.shutdown()

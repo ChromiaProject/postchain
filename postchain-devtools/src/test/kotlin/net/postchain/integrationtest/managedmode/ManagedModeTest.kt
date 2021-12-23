@@ -13,8 +13,8 @@ import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.getModules
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 class ManagedModeTest : ConfigFileBasedIntegrationTest() {
 
@@ -64,7 +64,7 @@ class ManagedModeTest : ConfigFileBasedIntegrationTest() {
     }
 
     @Test
-    @Ignore
+   @Disabled
     fun singlePeer_launchesChain100AtHeight5_then_launchesChain101AtHeight10_then_stopsChain101AtHeight15() {
         val nodeConfig0 = "classpath:/net/postchain/managedmode/node0.properties"
         val blockchainConfig0 = "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_0_height_0.xml"
@@ -112,7 +112,7 @@ class ManagedModeTest : ConfigFileBasedIntegrationTest() {
     }
 
     @Test
-    @Ignore
+   @Disabled
     fun twoSeparatePeers_receiveEachOtherInPeerInfos_and_connectToEachOther() {
         val nodeConfig0 = "classpath:/net/postchain/managedmode/node0.properties"
         val nodeConfig1 = "classpath:/net/postchain/managedmode/node1.properties"

@@ -20,9 +20,9 @@ import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.FIVE_SECONDS
 import org.awaitility.Duration.TEN_SECONDS
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class IntNettyConnector2PeersCommunicationIT {
 
@@ -32,7 +32,7 @@ class IntNettyConnector2PeersCommunicationIT {
     private lateinit var context1: IntTestContext
     private lateinit var context2: IntTestContext
 
-    @Before
+    @BeforeEach
     fun setUp() {
         peerInfo1 = peerInfoFromPublicKey(byteArrayOf(0, 0, 0, 1))
         peerInfo2 = peerInfoFromPublicKey(byteArrayOf(0, 0, 0, 2))
@@ -46,7 +46,7 @@ class IntNettyConnector2PeersCommunicationIT {
         context2.peer.init(peerInfo2, context2.packetDecoder)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         context1.peer.shutdown()
         context2.peer.shutdown()

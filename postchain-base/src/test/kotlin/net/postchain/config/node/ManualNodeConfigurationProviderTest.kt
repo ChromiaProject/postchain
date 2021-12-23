@@ -8,7 +8,8 @@ import assertk.assertions.isSameAs
 import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
-import org.junit.Test
+import net.postchain.config.app.AppConfig
+import org.junit.jupiter.api.Test
 import java.time.Instant
 
 class ManualNodeConfigurationProviderTest {

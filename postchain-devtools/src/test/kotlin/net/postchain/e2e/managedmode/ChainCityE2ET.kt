@@ -10,10 +10,10 @@ import net.postchain.e2e.tools.parseLogLastHeight
 import net.postchain.e2e.tools.postgresUrl
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.*
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
-@Ignore
+@Disabled
 class ChainCityE2ET : End2EndTests() {
 
     @Test

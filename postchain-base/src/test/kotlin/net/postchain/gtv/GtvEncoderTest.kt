@@ -5,7 +5,7 @@ package net.postchain.gtv
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.toHex
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.math.BigInteger
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals

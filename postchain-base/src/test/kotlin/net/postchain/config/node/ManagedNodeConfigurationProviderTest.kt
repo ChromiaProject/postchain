@@ -9,7 +9,7 @@ import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.network.x.XPeerID
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 

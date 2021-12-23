@@ -5,9 +5,9 @@ package net.postchain.config.node
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.config.app.AppConfig
+import org.junit.jupiter.api.Test
 import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
-import org.junit.Test
 
 class NodeConfigTest {
 

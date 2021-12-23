@@ -12,7 +12,7 @@ import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.getModules
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class SinglePeerReconfigurationTest : ReconfigurationTest() {
 

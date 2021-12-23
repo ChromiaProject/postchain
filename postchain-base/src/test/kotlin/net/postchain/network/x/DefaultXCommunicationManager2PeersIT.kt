@@ -11,9 +11,9 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class DefaultXCommunicationManager2PeersIT {
 
@@ -32,7 +32,7 @@ class DefaultXCommunicationManager2PeersIT {
     private val privKey2 = cryptoSystem.getRandomBytes(32)
     private val pubKey2 = secp256k1_derivePubKey(privKey2)
 
-    @Before
+    @BeforeEach
     fun setUp() {
         peerInfo1 = peerInfoFromPublicKey(pubKey1)
         peerInfo2 = peerInfoFromPublicKey(pubKey2)
@@ -52,7 +52,7 @@ class DefaultXCommunicationManager2PeersIT {
         context2.communicationManager.init()
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         context1.shutdown()
         context2.shutdown()

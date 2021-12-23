@@ -1,17 +1,17 @@
 package net.postchain.ebft.heartbeat
 
-import org.mockito.kotlin.*
-import net.postchain.core.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.MockStorage
 import net.postchain.config.node.NodeConfig
+import net.postchain.core.BlockchainRid
 import net.postchain.network.masterslave.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.masterslave.protocol.MsMessage
 import net.postchain.network.masterslave.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.masterslave.slave.SlaveConnectionManager
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
@@ -58,7 +58,7 @@ class RemoteConfigCheckerTest {
         verify(connManager, never()).sendMessageToMaster(eq(chainId), any())
     }
 
-    @Ignore
+    @Disabled
     @Test
     fun testHeartbeatCheckPassed_intervalCheckFailed_and_configRequested_then_timeoutCheck() {
         val nodeConfig: NodeConfig = mock {

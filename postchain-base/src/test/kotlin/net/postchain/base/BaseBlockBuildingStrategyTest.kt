@@ -11,8 +11,8 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import nl.komponents.kovenant.Promise
 import org.awaitility.Awaitility.await
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
 
 class BaseBlockBuildingStrategyTest {
@@ -51,8 +51,7 @@ class BaseBlockBuildingStrategyTest {
         }
     }
 
-    @Test
-    @Ignore
+    @Test @Disabled
     fun test_after_POS131() {
         // Mock
         val strategyData: Gtv = mock() {

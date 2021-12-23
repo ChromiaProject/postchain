@@ -9,8 +9,8 @@ import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQ
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQUEST_METHOD
 import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_BLOCKCHAIN_RID
 import net.postchain.api.rest.json.JsonFactory
-import org.junit.After
-import org.junit.Before
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import spark.Request
 import spark.Route
 import spark.Service
@@ -25,7 +25,7 @@ class RestApiRedirectTest {
     private val gson = JsonFactory.makeJson()
     private lateinit var http: Service
 
-    @Before
+    @BeforeEach
     fun setUp() {
         http = ignite()!!
         http.port(9999)
@@ -57,7 +57,7 @@ class RestApiRedirectTest {
         }
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         http.stop()
     }

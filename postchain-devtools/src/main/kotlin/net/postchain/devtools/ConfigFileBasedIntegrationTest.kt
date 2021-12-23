@@ -18,8 +18,9 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
-import org.junit.After
-import org.junit.Assert
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import java.io.File
 
 // Legacy code still use this old name, don't want to break compatibility.
@@ -50,7 +51,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         const val DEFAULT_CONFIG_FILE = "config.properties"
     }
 
-    @After
+    @AfterEach
     override fun tearDown() {
         try {
             logger.debug("Integration test -- TEARDOWN")
@@ -93,15 +94,15 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     protected fun verifyBlockchainTransactions(node: PostchainTestNode) {
         val expectAtLeastHeight = expectedSuccessRids.keys.reduce { acc, l -> maxOf(l, acc) }
         val bestHeight = getBestHeight(node)
-        Assert.assertTrue(bestHeight >= expectAtLeastHeight)
+        assertTrue(bestHeight >= expectAtLeastHeight)
         for (height in 0..bestHeight) {
             val txRidsAtHeight = getTxRidsAtHeight(node, height)
 
             val expectedRidsAtHeight = expectedSuccessRids[height]
             if (expectedRidsAtHeight == null) {
-                Assert.assertArrayEquals(arrayOf(), txRidsAtHeight)
+                assertArrayEquals(arrayOf(), txRidsAtHeight)
             } else {
-                Assert.assertArrayEquals(expectedRidsAtHeight.toTypedArray(), txRidsAtHeight)
+                assertArrayEquals(expectedRidsAtHeight.toTypedArray(), txRidsAtHeight)
             }
         }
     }

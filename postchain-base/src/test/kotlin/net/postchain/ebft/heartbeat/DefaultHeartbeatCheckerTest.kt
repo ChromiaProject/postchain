@@ -1,9 +1,9 @@
 package net.postchain.ebft.heartbeat
 
+import net.postchain.config.node.NodeConfig
+import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import net.postchain.config.node.NodeConfig
-import org.junit.Test
 import kotlin.test.assertFalse
 
 class DefaultHeartbeatCheckerTest {

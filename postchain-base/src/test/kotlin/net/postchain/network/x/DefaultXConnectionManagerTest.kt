@@ -16,8 +16,9 @@ import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.apache.commons.lang3.reflect.FieldUtils
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -36,7 +37,7 @@ class DefaultXConnectionManagerTest {
 
     private lateinit var unknownPeerInfo: PeerInfo
 
-    @Before
+    @BeforeEach
     fun setUp() {
         val b1 = BlockchainRid.buildRepeat(0x01)
         val b2 = BlockchainRid.buildRepeat(0x02)
@@ -154,12 +155,14 @@ class DefaultXConnectionManagerTest {
         connectionManager.shutdown()
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun connectChainPeer_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().connectChainPeer(1, peerInfo1.peerId())
+        assertThrows<ProgrammerMistake> {
+            emptyManager().connectChainPeer(1, peerInfo1.peerId())
+        }
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun connectChainPeer_connects_unknown_peer_with_exception() {
         // Given
         val communicationConfig: PeerCommConfiguration = emptyCommConf()
@@ -170,11 +173,13 @@ class DefaultXConnectionManagerTest {
         }
 
         // When / Then exception
-        DefaultXConnectionManager(
+        assertThrows<ProgrammerMistake> {
+            DefaultXConnectionManager(
                 connectorFactory, mock(), mock(), cryptoSystem
-        ).apply {
-            connectChain(chainPeerConfig, false, mock()) // Without connecting to peers
-            connectChainPeer(1, unknownPeerInfo.peerId())
+            ).apply {
+                connectChain(chainPeerConfig, false, mock()) // Without connecting to peers
+                connectChainPeer(1, unknownPeerInfo.peerId())
+            }
         }
     }
 
@@ -248,9 +253,11 @@ class DefaultXConnectionManagerTest {
         connectionManager.shutdown()
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun disconnectChainPeer_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().disconnectChainPeer(1L, peerInfo1.peerId())
+        assertThrows<ProgrammerMistake> {
+            emptyManager().disconnectChainPeer(1L, peerInfo1.peerId())
+        }
     }
 
     @Test
@@ -258,14 +265,18 @@ class DefaultXConnectionManagerTest {
         emptyManager().disconnectChain(1, mock())
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun isPeerConnected_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().isPeerConnected(1, peerInfo1.peerId())
+        assertThrows<ProgrammerMistake> {
+            emptyManager().isPeerConnected(1, peerInfo1.peerId())
+        }
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun getConnectedPeers_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().getConnectedPeers(1)
+        assertThrows<ProgrammerMistake> {
+            emptyManager().getConnectedPeers(1)
+        }
     }
 
     @Test
@@ -335,9 +346,11 @@ class DefaultXConnectionManagerTest {
         connectionManager.shutdown()
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun sendPacket_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().sendPacket({ byteArrayOf() }, 1, peerInfo2.peerId())
+        assertThrows<ProgrammerMistake> {
+            emptyManager().sendPacket({ byteArrayOf() }, 1, peerInfo2.peerId())
+        }
     }
 
     @Test
@@ -380,9 +393,11 @@ class DefaultXConnectionManagerTest {
         connectionManager.shutdown()
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun broadcastPacket_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().broadcastPacket({ byteArrayOf() }, 1)
+        assertThrows<ProgrammerMistake> {
+            emptyManager().broadcastPacket({ byteArrayOf() }, 1)
+        }
     }
 
     private fun emptyManager() = DefaultXConnectionManager(connectorFactory, mock(), mock(), SECP256K1CryptoSystem())
