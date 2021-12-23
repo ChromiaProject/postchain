@@ -5,7 +5,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.4.2-SNAPSHOT</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-base</module>
@@ -47,10 +47,10 @@
         <awaitility.version>3.1.2</awaitility.version>
 
         <!-- Logging -->
-        <kotlin-logging.version>1.6.26</kotlin-logging.version>
-        <slf4j.version>1.7.26</slf4j.version>
-        <log4j2.version>2.11.2</log4j2.version>
-        <jackson.version>2.10.1</jackson.version>
+        <kotlin-logging.version>1.12.5</kotlin-logging.version>
+        <slf4j.version>1.7.32</slf4j.version>
+        <log4j2.version>2.16.0</log4j2.version>
+        <jackson.version>2.13.0</jackson.version>
 
         <!-- 3rd party -->
         <httpclient.version>4.5.3</httpclient.version>
@@ -129,7 +129,7 @@
             <!-- Kotlin -->
             <dependency>
                 <groupId>org.jetbrains.kotlin</groupId>
-                <artifactId>kotlin-stdlib</artifactId>
+                <artifactId>kotlin-stdlib-jdk8</artifactId> <!-- Contains extension methods for jdk8+ (Streams, autocloseable etc -->
                 <version>${kotlin.version}</version>
             </dependency>
             <dependency>
@@ -351,6 +351,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <useNativeGit>true</useNativeGit> <!-- git worktree does not work with JGit implementation -->
                     <includeOnlyProperties>
                         <includeOnlyProperty>^git\.branch$</includeOnlyProperty>
                         <includeOnlyProperty>^git\.build\.(time|version)$</includeOnlyProperty>

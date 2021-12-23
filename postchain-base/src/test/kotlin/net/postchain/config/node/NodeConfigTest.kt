@@ -5,6 +5,8 @@ package net.postchain.config.node
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
+import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
 import org.junit.Test
 
 class NodeConfigTest {
@@ -29,10 +31,10 @@ class NodeConfigTest {
         assertk.assert(nodeConfig.infrastructure).isEqualTo("ebft")
 
         assertk.assert(nodeConfig.databaseDriverclass).isEmpty()
-        assertk.assert(nodeConfig.databaseUrl).isEmpty()
-        assertk.assert(nodeConfig.databaseSchema).isEqualTo("public")
-        assertk.assert(nodeConfig.databaseUsername).isEmpty()
-        assertk.assert(nodeConfig.databasePassword).isEmpty()
+        assertIsEmptyOrEqualsToEnvVar(nodeConfig.databaseUrl, "POSTCHAIN_DB_URL")
+        assertIsDefaultOrEqualsToEnvVar(nodeConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
+        assertIsEmptyOrEqualsToEnvVar(nodeConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
+        assertIsEmptyOrEqualsToEnvVar(nodeConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
 
         assertk.assert(nodeConfig.privKey).isEmpty()
         assertk.assert(nodeConfig.privKeyByteArray.isEmpty())
