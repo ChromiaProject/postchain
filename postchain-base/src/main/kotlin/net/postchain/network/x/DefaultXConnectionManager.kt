@@ -346,12 +346,21 @@ class DefaultXConnectionManager<PacketType>(
                     }
                 }
                 direction.OUTGOING -> {
-                    logger.error( "${logger(descriptor)}: onPeerDisconnected() - How can we never "+
-                                "have seen chain: ${peerName(descriptor.peerId)} , direction: ${descriptor.dir}, " +
-                                "blockchainRID = ${descriptor.blockchainRID}) . "
-                    )
-                    connection.close()
-                    return
+                    val oldChainID = disconnectedChainIDforBlockchainRID[descriptor.blockchainRID]
+                    if (oldChainID != null) {
+                        // If we disconnected, this is expected.
+                        logger.debug { "${logger(descriptor)}: onPeerDisconnected() - Had to get chainIid: " +
+                                    "$oldChainID from the backup."
+                        }
+                        oldChainID
+                    } else {
+                        logger.error( "${logger(descriptor)}: onPeerDisconnected() - How can we never have seen " +
+                                    "chain: from peer: ${peerName(descriptor.peerId)} , direction: " +
+                                    "${descriptor.dir}, blockchainRID = ${descriptor.blockchainRID}) . "
+                        )
+                        connection.close()
+                        return
+                    }
                 }
         }
 
