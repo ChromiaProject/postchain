@@ -53,7 +53,8 @@ object StorageBuilder {
     }
 
     private fun setCurrentSchema(dataSource: DataSource, schema: String, db: DatabaseAccess) {
-        dataSource.connection.use { connection ->
+
+        dataSource.connection.let { connection ->
             db.setCurrentSchema(connection, schema)
             connection.commit()
         }
@@ -87,7 +88,7 @@ object StorageBuilder {
     }
 
     private fun wipeDatabase(dataSource: DataSource, appConfig: AppConfig, db: DatabaseAccess) {
-        dataSource.connection.use { connection ->
+        dataSource.connection.let { connection ->
             if (db.isSchemaExists(connection, appConfig.databaseSchema)) {
                 db.dropSchemaCascade(connection, appConfig.databaseSchema)
                 connection.commit()
@@ -96,7 +97,7 @@ object StorageBuilder {
     }
 
     private fun createSchemaIfNotExists(dataSource: DataSource, schema: String, db: DatabaseAccess) {
-        dataSource.connection.use { connection ->
+        dataSource.connection.let { connection ->
             if (!db.isSchemaExists(connection, schema)) {
                 db.createSchema(connection, schema)
                 connection.commit()
@@ -105,7 +106,7 @@ object StorageBuilder {
     }
 
     private fun createTablesIfNotExists(dataSource: DataSource, db: DatabaseAccess) {
-        dataSource.connection.use { connection ->
+        dataSource.connection.let { connection ->
             db.initializeApp(connection, expectedDbVersion = 2) // TODO: [et]: Extract version
             connection.commit()
         }

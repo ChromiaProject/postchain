@@ -2,7 +2,7 @@
 
 package net.postchain.network.x
 
-import com.nhaarman.mockitokotlin2.*
+import org.mockito.kotlin.*
 import mu.KLogging
 import net.postchain.common.hexStringToByteArray
 import org.awaitility.Awaitility

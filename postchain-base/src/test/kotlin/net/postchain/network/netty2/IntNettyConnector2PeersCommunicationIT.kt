@@ -5,14 +5,15 @@ package net.postchain.network.netty2
 import assertk.assert
 import assertk.assertions.isIn
 import assertk.isContentEqualTo
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.times
-import com.nhaarman.mockitokotlin2.verify
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
+import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.common.Utils
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
@@ -33,8 +34,8 @@ class IntNettyConnector2PeersCommunicationIT {
 
     @Before
     fun setUp() {
-        peerInfo1 = PeerInfo("localhost", Utils.findFreePort(), byteArrayOf(0, 0, 0, 1))
-        peerInfo2 = PeerInfo("localhost", Utils.findFreePort(), byteArrayOf(0, 0, 0, 2))
+        peerInfo1 = peerInfoFromPublicKey(byteArrayOf(0, 0, 0, 1))
+        peerInfo2 = peerInfoFromPublicKey(byteArrayOf(0, 0, 0, 2))
 
         // Creating
         context1 = IntTestContext(peerInfo1, arrayOf(peerInfo1, peerInfo2))
@@ -104,5 +105,4 @@ class IntNettyConnector2PeersCommunicationIT {
                     assert(actualPackets2.thirdValue.byteArrayKeyOf()).isIn(*expected2)
                 }
     }
-
 }

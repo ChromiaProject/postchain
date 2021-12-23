@@ -247,7 +247,7 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
             if (GTXSchemaManager.getModuleVersion(ctx, moduleName) == null) {
                 try {
                     val sql = readModuleFileContent(filename)
-                    ctx.conn.createStatement().use {
+                    ctx.conn.createStatement().let {
                         it.execute(sql)
                     }
                     GTXSchemaManager.setModuleVersion(ctx, moduleName, 0)

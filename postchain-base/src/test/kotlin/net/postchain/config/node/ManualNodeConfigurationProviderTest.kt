@@ -3,7 +3,9 @@
 package net.postchain.config.node
 
 import assertk.assertions.containsExactly
-import com.nhaarman.mockitokotlin2.mock
+import assertk.assertions.isEqualTo
+import assertk.assertions.isSameAs
+import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import org.junit.Test

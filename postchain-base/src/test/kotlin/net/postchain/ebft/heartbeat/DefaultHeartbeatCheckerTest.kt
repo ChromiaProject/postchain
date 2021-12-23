@@ -1,7 +1,7 @@
 package net.postchain.ebft.heartbeat
 
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import net.postchain.config.node.NodeConfig
 import org.junit.Test
 import kotlin.test.assertFalse

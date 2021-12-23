@@ -2,6 +2,8 @@
 
 package net.postchain.api.rest.endpoint
 
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
@@ -9,7 +11,6 @@ import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRID
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TransactionStatus
-import org.easymock.EasyMock.*
 import org.hamcrest.Matchers.equalToIgnoringCase
 import org.junit.After
 import org.junit.Before
@@ -31,8 +32,10 @@ class RestApiGetStatusEndpointTest {
 
     @Before
     fun setup() {
-        model = createMock(Model::class.java)
-        expect(model.chainIID).andReturn(1L).anyTimes()
+        model = mock {
+            on { chainIID } doReturn 1L
+            on { getStatus(TxRID(txHashHex.hexStringToByteArray())) } doReturn ApiStatus(TransactionStatus.CONFIRMED)
+        }
 
         restApi = RestApi(0, basePath, null, null)
     }
@@ -44,37 +47,23 @@ class RestApiGetStatusEndpointTest {
 
     @Test
     fun test_getStatus_ok() {
-        expect(model.getStatus(TxRID(txHashHex.hexStringToByteArray())))
-                .andReturn(ApiStatus(TransactionStatus.CONFIRMED))
-
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/tx/$blockchainRID/$txHashHex/status")
-                .then()
-                .statusCode(200)
-                .body("status", equalToIgnoringCase("CONFIRMED"))
-
-        verify(model)
+            .get("/tx/$blockchainRID/$txHashHex/status")
+            .then()
+            .statusCode(200)
+            .body("status", equalToIgnoringCase("CONFIRMED"))
     }
 
     @Test
     fun test_getStatus_ok_via_ChainIid() {
-        expect(model.getStatus(TxRID(txHashHex.hexStringToByteArray())))
-                .andReturn(ApiStatus(TransactionStatus.CONFIRMED))
-
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/tx/iid_${chainIid.toInt().toString()}/$txHashHex/status")
-                .then()
-                .statusCode(200)
-                .body("status", equalToIgnoringCase("CONFIRMED"))
-
-        verify(model)
+            .get("/tx/iid_${chainIid.toInt().toString()}/$txHashHex/status")
+            .then()
+            .statusCode(200)
+            .body("status", equalToIgnoringCase("CONFIRMED"))
     }
 }
