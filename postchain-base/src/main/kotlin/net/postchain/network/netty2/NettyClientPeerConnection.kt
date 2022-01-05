@@ -24,7 +24,7 @@ class NettyClientPeerConnection<PacketType>(
     companion object : KLogging()
 
     private val nettyClient = NettyClient()
-    private lateinit var context: ChannelHandlerContext
+    private var context: ChannelHandlerContext? = null
     private var packetHandler: XPacketHandler? = null
     private lateinit var onDisconnected: () -> Unit
 
@@ -44,10 +44,9 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun channelActive(ctx: ChannelHandlerContext?) {
-        //logger.debug("Activate channel ---")
         ctx?.let {
             context = ctx
-            context.writeAndFlush(buildIdentPacket())
+            context!!.writeAndFlush(buildIdentPacket())
         }
     }
 
@@ -68,14 +67,19 @@ class NettyClientPeerConnection<PacketType>(
         packetHandler = handler
     }
 
-    override fun sendPacket(packet: LazyPacket) {
+    override fun sendPacket(packet: LazyPacket): Boolean {
         //logger.debug("Sending package ---")
-        context.writeAndFlush(Transport.wrapMessage(packet()))
+        return if (context == null) {
+            false
+        } else {
+            context!!.writeAndFlush(Transport.wrapMessage(packet()))
+            true
+        }
     }
 
     override fun remoteAddress(): String {
-        return if (::context.isInitialized)
-            context.channel().remoteAddress().toString()
+        return if (context != null)
+            context!!.channel().remoteAddress().toString()
         else ""
     }
 
