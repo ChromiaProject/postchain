@@ -65,7 +65,21 @@
             <name>ProjectRepo</name>
             <url>file://${project.basedir}/lib</url>
         </repository>
+        <repository>
+            <id>gitlab-maven</id>
+            <url>https://gitlab.com/api/v4/projects/32294340/packages/maven</url>
+        </repository>
     </repositories>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>gitlab-maven</id>
+            <url>https://gitlab.com/api/v4/projects/32294340/packages/maven</url>
+        </snapshotRepository>
+        <repository>
+            <id>gitlab-maven</id>
+            <url>https://gitlab.com/api/v4/projects/32294340/packages/maven</url>
+        </repository>
+    </distributionManagement>
 
     <!-- Global dependencies -->
     <dependencies>
