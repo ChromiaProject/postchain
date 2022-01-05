@@ -44,7 +44,6 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun channelActive(ctx: ChannelHandlerContext?) {
-        logger.debug { "channelActive() - begin ctx: ${ctx?.toString()} - " }
         ctx?.let {
             context = ctx
             context!!.writeAndFlush(buildIdentPacket())
@@ -52,7 +51,6 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
-        logger.debug { "channelInactive() - begin ctx: ${ctx?.toString()} - " }
         onDisconnected()
     }
 
