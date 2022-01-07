@@ -349,8 +349,6 @@ val awaitDebugLog = true
 fun awaitDebug(dbg: String) {
     if (awaitDebugLog) {
         println("TEST: $dbg")
-    } else {
-        sleep(1) // Causes a race condition on CI in testRecursive without this.
     }
 }
 
