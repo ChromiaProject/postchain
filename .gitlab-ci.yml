@@ -3,14 +3,14 @@ image: maven:3.8.4-jdk-11
 deploy:
   stage: deploy
   only:
-    - main
+    - dev
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci deploy
 
 build:
   stage: build
   except:
-    - main
+    - dev
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
