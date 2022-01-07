@@ -396,12 +396,7 @@ class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
 
     override fun findNextConfigurationHeight(blockchainRIDRaw: ByteArray, height: Long): Long? {
         val l = bridToConfs[BlockchainRid(blockchainRIDRaw)] ?: return null
-        for (h in l.keys) {
-            if (h > height) {
-                return h
-            }
-        }
-        return null
+        return l.keys.filter { h -> h > height }.minOrNull()
     }
 
     override fun getPeerInfos(): Array<PeerInfo> {
