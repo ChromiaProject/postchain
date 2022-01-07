@@ -340,7 +340,7 @@ class TestManagedBlockchainProcessManager(blockchainInfrastructure: BlockchainIn
     }
 }
 
-val awaitDebugLog = false
+val awaitDebugLog = true
 
 /**
  * Sometimes we want to monitor how long we are waiting and WHAT we are weighting for, then we can turn on this flag.
@@ -348,7 +348,9 @@ val awaitDebugLog = false
  */
 fun awaitDebug(dbg: String) {
     if (awaitDebugLog) {
-        System.out.println("TEST: $dbg")
+        println("TEST: $dbg")
+    } else {
+        sleep(1) // Causes a race condition on CI in testRecursive without this.
     }
 }
 
