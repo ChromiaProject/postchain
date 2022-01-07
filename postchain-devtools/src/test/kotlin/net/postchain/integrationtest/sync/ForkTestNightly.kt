@@ -139,7 +139,6 @@ class ForkTestNightly : ManagedModeTest() {
      * (chain3 isn't on the pic, but it starts out as a chain1 fork and moves to be a chain2 fork at height 19.
      *  Rather tricky IMO)
      */
-    @Disabled
     @Test
     fun testRecursiveFork() {
         val (c1, c2) = makeFork()
