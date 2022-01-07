@@ -595,7 +595,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             }
             if (!job.blockCommitting) {
                 unfinishedTrace("Committing block for $job")
-                job.blockCommitting = true
                 commitBlock(job, bTrace)
             }
         }
@@ -631,6 +630,9 @@ class FastSynchronizer(private val workerContext: WorkerContext,
      */
     private fun commitBlock(job: Job, bTrace: BlockTrace?) {
         if (shutdown.get()) return
+
+        // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
+        job.blockCommitting = true
 
         if (addBlockCompletionPromise?.isDone() == true) {
             addBlockCompletionPromise = null
