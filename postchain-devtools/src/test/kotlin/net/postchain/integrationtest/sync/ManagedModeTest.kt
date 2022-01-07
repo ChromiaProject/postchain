@@ -340,7 +340,7 @@ class TestManagedBlockchainProcessManager(blockchainInfrastructure: BlockchainIn
     }
 }
 
-val awaitDebugLog = true
+val awaitDebugLog = false
 
 /**
  * Sometimes we want to monitor how long we are waiting and WHAT we are weighting for, then we can turn on this flag.
