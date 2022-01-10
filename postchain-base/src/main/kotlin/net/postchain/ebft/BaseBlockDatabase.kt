@@ -8,6 +8,7 @@ import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.deferred
+import nl.komponents.kovenant.task
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -104,26 +105,12 @@ class BaseBlockDatabase(
      * This is why we there is no use setting the [BlockTrace] for this method, we have to send the bTrace instance
      *
      * @param block to be added
-     * @param prevCompletionPromise is the promise for the previous block (by the time we access this promise it
-     *                              will be "done").
      * @param existingBTrace is the trace data of the block we have at current moment. For production this is "null"
      */
-    override fun addBlock(block: BlockDataWithWitness, prevCompletionPromise: CompletionPromise?,
-                          existingBTrace: BlockTrace?): Promise<Unit, Exception> {
+    override fun addBlock(block: BlockDataWithWitness, existingBTrace: BlockTrace?): Promise<Unit, Exception> {
         queuedBlockCount.incrementAndGet()
         return runOpAsync("addBlock ${block.header.blockRID.toHex()}") {
             queuedBlockCount.decrementAndGet()
-            if (prevCompletionPromise != null) {
-                if (!prevCompletionPromise.isSuccess()) {
-                    if (prevCompletionPromise.isFailure()) {
-                        throw BDBAbortException(block, prevCompletionPromise)
-                    } else {
-                        // The [ThreadPoolExecutor] guarantees prev promise will be "done" at this point.
-                        // If we get here the caller must have sent the incorrect promise.
-                        throw ProgrammerMistake("Previous completion is unfinished ${prevCompletionPromise.isDone()}")
-                    }
-                }
-            }
             addBlockLog("Begin")
             maybeRollback()
             val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
@@ -139,6 +126,8 @@ class BaseBlockDatabase(
                 theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
                 addBlockLog("Done commit", theBlockBuilder.getBTrace())
             }
+        }.fail {
+            if (it !is PmEngineIsAlreadyClosed) throw BDBAbortException(block)
         }
     }
 

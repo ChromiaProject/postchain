@@ -13,6 +13,7 @@ import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.message.*
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.x.XPeerID
+import nl.komponents.kovenant.then
 import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -586,18 +587,23 @@ class FastSynchronizer(private val workerContext: WorkerContext,
 
     private fun commitJobsAsNecessary(bTrace: BlockTrace?) {
         // We have to make sure blocks are committed in the correct order. If we are missing a block we have to wait for it.
-        for (job in jobs.values) {
-            if (shutdown.get()) return
 
-            // The values are iterated in key-ascending order (see TreeMap)
+        var promise: CompletionPromise? = null
+        jobs.values.forEach { job ->
+            if (shutdown.get()) return
             if (job.block == null) {
                 // The next block to be committed hasn't arrived yet
                 unfinishedTrace("Done. Next job, $job, to commit hasn't arrived yet.")
                 return
             }
+
             if (!job.blockCommitting) {
                 unfinishedTrace("Committing block for $job")
-                commitBlock(job, bTrace)
+                if (promise == null) {
+                    promise = commitBlock(job, bTrace)
+                } else {
+                    promise!!.success { commitBlock(job, bTrace) }
+                }
             }
         }
     }
@@ -630,18 +636,13 @@ class FastSynchronizer(private val workerContext: WorkerContext,
      * previous block failed to commit. Instead we start next commit only after the previous commit was
      * successfully finished.
      */
-    private fun commitBlock(job: Job, bTrace: BlockTrace?) {
+    private fun commitBlock(job: Job, bTrace: BlockTrace?): CompletionPromise {
         // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
         job.blockCommitting = true
 
-        if (addBlockCompletionPromise?.isDone() == true) {
-            addBlockCompletionPromise = null
-        }
-
         // We are free to commit this Job, go on and add it to DB
         // (this is usually slow and is therefore handled via a promise).
-        addBlockCompletionPromise = blockDatabase
-                .addBlock(job.block!!, addBlockCompletionPromise, bTrace)
+        return blockDatabase.addBlock(job.block!!, bTrace)
                 .fail {
                     // peer and try another peer
                     if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {

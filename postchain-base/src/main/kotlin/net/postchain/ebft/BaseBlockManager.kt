@@ -90,7 +90,7 @@ class BaseBlockManager(
                         null // Use null for performance
                     }
 
-                    blockDB.addBlock(block, null, bTrace)
+                    blockDB.addBlock(block, bTrace)
                 }, {
                     if (statusManager.onHeightAdvance(height + 1)) {
                         currentBlock = null

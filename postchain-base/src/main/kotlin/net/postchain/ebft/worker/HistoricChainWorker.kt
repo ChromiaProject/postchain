@@ -19,6 +19,7 @@ import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import nl.komponents.kovenant.Promise
+import nl.komponents.kovenant.then
 import java.lang.Thread.sleep
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
@@ -215,14 +216,12 @@ class HistoricChainWorker(val workerContext: WorkerContext,
                     } else {
                         val bTrace: BlockTrace? = getCopyBTrace(heightToCopy)
                         if (!shutdown.get() && readMoreBlocks.get()) {
-                            pendingPromise = newBlockDatabase.addBlock(historicBlock, pendingPromise, bTrace)
-                            val myHeightToCopy = heightToCopy
-                            pendingPromise.success {
-                                copyTrace("Successfully added", bTrace, myHeightToCopy) // Now we should have the block RID in the debug
-                            }
-                            pendingPromise.fail {
-                                copyErr("Failed to add", myHeightToCopy, it)
-                                readMoreBlocks.set(false)
+                            if (pendingPromise == null) {
+                                pendingPromise = addBlock(newBlockDatabase, historicBlock, bTrace, heightToCopy, readMoreBlocks)
+                            } else {
+                                pendingPromise.success {
+                                    addBlock(newBlockDatabase, historicBlock, bTrace, heightToCopy, readMoreBlocks)
+                                }
                             }
                             copyLog("Got promise to add", heightToCopy)
                             heightToCopy += 1
@@ -238,6 +237,17 @@ class HistoricChainWorker(val workerContext: WorkerContext,
             storage.closeReadConnection(fromCtx)
         }
     }
+
+    private fun addBlock(newBlockDatabase: BlockDatabase, historicBlock: BlockDataWithWitness, bTrace: BlockTrace?, heightToCopy: Long, readMoreBlocks: AtomicBoolean) =
+            newBlockDatabase.addBlock(historicBlock, bTrace)
+                    .success {
+                        copyTrace("Successfully added", bTrace, heightToCopy) // Now we should have the block RID in the debug
+                    }
+                    .fail {
+                        copyErr("Failed to add", heightToCopy, it)
+                        readMoreBlocks.set(false)
+                    }
+
 
     /**
      * Cannot use blocking wait (i.e. Promise.get()) b/c the blockchain might shut down in the meantime
