@@ -8,6 +8,7 @@ import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainRid
+import net.postchain.core.ProgrammerMistake
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.NodeDiagnosticContext
@@ -15,11 +16,12 @@ import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
 import net.postchain.managed.DirectoryDataSource
-import net.postchain.network.masterslave.master.DefaultMasterCommunicationManager
-import net.postchain.network.masterslave.master.DefaultMasterConnectionManager
-import net.postchain.network.masterslave.master.MasterConnectionManager
-import net.postchain.network.netty2.NettyConnectorFactory
+import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
+import net.postchain.network.mastersub.master.MasterCommunicationManager
+import net.postchain.network.mastersub.master.MasterConnectionManager
+import net.postchain.network.mastersub.master.MasterConnectionManagerFactory
 import java.nio.file.Path
+
 
 open class DefaultMasterSyncInfra(
         nodeConfigProvider: NodeConfigurationProvider,
@@ -29,18 +31,24 @@ open class DefaultMasterSyncInfra(
         nodeDiagnosticContext
 ), MasterSyncInfra {
 
+    var masterConnectionManager: MasterConnectionManager? = null
+
     override fun init() {
-        connectionManager = DefaultMasterConnectionManager(
-                NettyConnectorFactory(),
+         val masterFactory = MasterConnectionManagerFactory(
                 EbftPacketEncoderFactory(),
                 EbftPacketDecoderFactory(),
                 SECP256K1CryptoSystem(),
                 nodeConfig
         )
+        masterConnectionManager = masterFactory.getMasterConnectionManager() //
+        connectionManager = masterFactory.getPeerConnectionManager()
 
         fillDiagnosticContext()
     }
 
+    /**
+     * We create a new [MasterCommunicationManager] for every new BC process we make.
+     */
     override fun makeMasterBlockchainProcess(
             processName: BlockchainProcessName,
             chainId: Long,
@@ -50,12 +58,17 @@ open class DefaultMasterSyncInfra(
             containerChainDir: Path
     ): ContainerBlockchainProcess {
 
+        if (masterConnectionManager == null) {
+            throw ProgrammerMistake("Cannot create BC process before we have called init() on the DefaultMasterSyncInfra.")
+        }
+
         val communicationManager = DefaultMasterCommunicationManager(
                 nodeConfig,
                 chainId,
                 blockchainRid,
                 peersCommConfigFactory,
-                connectionManager as MasterConnectionManager,
+                connectionManager,
+                masterConnectionManager!!,
                 dataSource,
                 processName
         ).apply { init() }

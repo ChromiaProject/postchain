@@ -19,7 +19,7 @@ import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import nl.komponents.kovenant.task
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
@@ -68,9 +68,9 @@ class ValidatorSyncManager(
         }
     }
 
-    private val signersIds = workerContext.signers.map { XPeerID(it) }
-    private fun indexOfValidator(peerId: XPeerID): Int = signersIds.indexOf(peerId)
-    private fun validatorAtIndex(index: Int): XPeerID = signersIds[index]
+    private val signersIds = workerContext.signers.map { NodeRid(it) }
+    private fun indexOfValidator(peerId: NodeRid): Int = signersIds.indexOf(peerId)
+    private fun validatorAtIndex(index: Int): NodeRid = signersIds[index]
 
     /**
      * Handle incoming messages

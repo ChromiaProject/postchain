@@ -6,15 +6,15 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainRid
-import net.postchain.network.masterslave.MsMessageHandler
-import net.postchain.network.masterslave.protocol.*
-import net.postchain.network.masterslave.slave.SlaveConnectionManager
+import net.postchain.network.mastersub.MsMessageHandler
+import net.postchain.network.mastersub.protocol.*
+import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class RemoteConfigChecker(
         nodeConfig: NodeConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
-        val connectionManager: SlaveConnectionManager
+        val connectionManager: SubConnectionManager
 ) : DefaultHeartbeatChecker(nodeConfig, chainId), MsMessageHandler {
 
     companion object : KLogging()

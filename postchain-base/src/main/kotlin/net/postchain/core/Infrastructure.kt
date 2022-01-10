@@ -105,7 +105,7 @@ enum class Infrastructure(vararg val key: String) {
 
     // Container chains
     EbftManagedContainerMaster("ebft-managed-container-master"),
-    EbftContainerSlave("ebft-container-slave"),
+    EbftContainerSub("ebft-container-sub"),
     EbftManagedChromia0ContainerMaster("ebft-managed-chromia0-container-master"),
 
     // Tests

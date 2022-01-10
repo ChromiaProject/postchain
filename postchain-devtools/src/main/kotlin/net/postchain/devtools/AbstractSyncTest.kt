@@ -15,7 +15,7 @@ import net.postchain.core.NODE_ID_NA
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 
 open class AbstractSyncTest : IntegrationTestSetup() {
@@ -117,7 +117,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         updateCache(newSetup, testNode)
     }
 
-    protected fun startOldNode(nodeIndex: Int, peerInfoMap: Map<XPeerID, PeerInfo>, brid: BlockchainRid) {
+    protected fun startOldNode(nodeIndex: Int, peerInfoMap: Map<NodeRid, PeerInfo>, brid: BlockchainRid) {
         val peers = peerInfoMap.values.toTypedArray()
         val newSetup = createNodeSetup(nodeIndex, peers[nodeIndex])
         configureSingleNodeSetup(newSetup)

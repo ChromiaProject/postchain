@@ -13,7 +13,7 @@ import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.message.*
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -121,7 +121,7 @@ class FastSynchronizer(
     var blockHeight: Long = blockQueries.getBestHeight().get()
         private set
 
-    inner class Job(val height: Long, var peerId: XPeerID) {
+    inner class Job(val height: Long, var peerId: NodeRid) {
         var header: BlockHeader? = null
         var witness: BlockWitness? = null
         var block: BlockDataWithWitness? = null
@@ -332,7 +332,7 @@ class FastSynchronizer(
         // 2) Mark it as unresponsive and not maybeLegacy on second appearance
         // The result is that we won't send legacy request to that peer, since it's marked
         // unresponsive.
-        val legacyPeers = mutableSetOf<XPeerID>()
+        val legacyPeers = mutableSetOf<NodeRid>()
         for (j in jobs.values) {
             if (j.hasRestartFailed) {
                 if (j.startTime + params.jobTimeout < now) {
@@ -397,13 +397,13 @@ class FastSynchronizer(
         return startJob(blockHeight + jobs.size + 1)
     }
 
-    private fun sendLegacyRequest(height: Long): XPeerID? {
+    private fun sendLegacyRequest(height: Long): NodeRid? {
         val peers = peerStatuses.getLegacyPeers(height).intersect(configuredPeers)
         if (peers.isEmpty()) return null
         return communicationManager.sendToRandomPeer(GetBlockAtHeight(height), peers)
     }
 
-    private fun sendRequest(height: Long): XPeerID? {
+    private fun sendRequest(height: Long): NodeRid? {
         val now = System.currentTimeMillis()
         val excludedPeers = peerStatuses.exclNonSyncable(height, now)
         val peers = configuredPeers.minus(excludedPeers)
@@ -441,7 +441,7 @@ class FastSynchronizer(
         }
     }
 
-    private fun debugJobString(j: Job?, requestedHeight: Long, peerId: XPeerID): String {
+    private fun debugJobString(j: Job?, requestedHeight: Long, peerId: NodeRid): String {
         var out = ", Received: height: $requestedHeight , peerId: $peerId"
         if (j != null) {
             out += ", Requested (job): $j"
@@ -449,7 +449,7 @@ class FastSynchronizer(
         return out
     }
 
-    private fun handleBlockHeader(peerId: XPeerID, header: ByteArray, witness: ByteArray, requestedHeight: Long): Boolean {
+    private fun handleBlockHeader(peerId: NodeRid, header: ByteArray, witness: ByteArray, requestedHeight: Long): Boolean {
         val j = jobs[requestedHeight]
 
         // Didn't expect header for this height or from this peer
@@ -548,7 +548,7 @@ class FastSynchronizer(
         return header.blockHeaderRec.getHeight()
     }
 
-    private fun handleUnfinishedBlock(peerId: XPeerID, header: ByteArray, txs: List<ByteArray>) {
+    private fun handleUnfinishedBlock(peerId: NodeRid, header: ByteArray, txs: List<ByteArray>) {
         val h = blockchainConfiguration.decodeBlockHeader(header)
         if (h !is BaseBlockHeader) {
             throw BadDataMistake(BadDataType.BAD_MESSAGE, "Expected BaseBlockHeader")
@@ -613,7 +613,7 @@ class FastSynchronizer(
     /**
      * This is used for syncing from old nodes that doesn't have this new FastSynchronizer algorithm
      */
-    private fun handleCompleteBlock(peerId: XPeerID, blockData: MessageBlockData, height: Long, witness: ByteArray) {
+    private fun handleCompleteBlock(peerId: NodeRid, blockData: MessageBlockData, height: Long, witness: ByteArray) {
         // We expect height to be the requested height. If the peer didn't have the block we wouldn't
         // get any block at all.
         if (!peerStatuses.isMaybeLegacy(peerId)) {

@@ -7,6 +7,7 @@ import net.postchain.ebft.heartbeat.HeartbeatListener
 
 interface Shutdownable {
     fun shutdown()
+    //fun isShutdown() // TODO: Olle: shouldn't we have this too, so many are using a flag for this
 }
 
 interface Synchronizable {
