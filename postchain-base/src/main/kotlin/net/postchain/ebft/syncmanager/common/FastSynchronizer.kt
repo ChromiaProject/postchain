@@ -640,22 +640,18 @@ class FastSynchronizer(private val workerContext: WorkerContext,
 
         // We are free to commit this Job, go on and add it to DB
         // (this is usually slow and is therefore handled via a promise).
-        val p = blockDatabase.addBlock(job.block!!, addBlockCompletionPromise, bTrace)
-        addBlockCompletionPromise = p
-        p.success { _ ->
-            finishedJobs.add(job)
-        }
-        p.fail {
-            // We got an invalid block from peer. Let's blacklist this
-            // peer and try another peer
-            if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
-                warn("Exception committing block $job: ${it.message}")
-            } else {
-                warn("Exception committing block $job", it)
-            }
-            job.addBlockException = it
-            finishedJobs.add(job)
-        }
+        addBlockCompletionPromise = blockDatabase
+                .addBlock(job.block!!, addBlockCompletionPromise, bTrace)
+                .fail {
+                    // peer and try another peer
+                    if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
+                        warn("Exception committing block $job: ${it.message}")
+                    } else {
+                        warn("Exception committing block $job", it)
+                    }
+                    job.addBlockException = it
+                 }
+                 .always { finishedJobs.add(job) }
     }
 
     private fun processMessages() {
