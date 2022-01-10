@@ -587,6 +587,8 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     private fun commitJobsAsNecessary(bTrace: BlockTrace?) {
         // We have to make sure blocks are committed in the correct order. If we are missing a block we have to wait for it.
         for (job in jobs.values) {
+            if (shutdown.get()) return
+
             // The values are iterated in key-ascending order (see TreeMap)
             if (job.block == null) {
                 // The next block to be committed hasn't arrived yet
@@ -629,8 +631,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
      * successfully finished.
      */
     private fun commitBlock(job: Job, bTrace: BlockTrace?) {
-        if (shutdown.get()) return
-
         // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
         job.blockCommitting = true
 
