@@ -15,9 +15,7 @@ import org.glassfish.hk2.api.DescriptorType
  *
  * @property ChainWCType is the type of [ChainWithConnections] we store in this collection
  */
-class ChainsWithConnections<HandlerType, NodeConnectionType, ChainWCType>(
-    // Nothing
-  ) where ChainWCType : ChainWithConnections<NodeConnectionType, HandlerType> // Had to look this up. Is "where" the idiomatic way?
+class ChainsWithConnections<HandlerType, NodeConnectionType, ChainWCType: ChainWithConnections<NodeConnectionType, HandlerType>>
 {
 
     private val chainsWithConnections: MutableMap<Long, ChainWCType> = mutableMapOf()
