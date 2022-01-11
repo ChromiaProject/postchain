@@ -13,9 +13,14 @@ import org.glassfish.hk2.api.DescriptorType
  *
  * Note: Potentially this abstraction is premature (Currently only Peer connections use this)
  *
+ * @property HandlerType is the message handler type
+ * @property NodeConnectionType specifies the exact type of connection to be used
  * @property ChainWCType is the type of [ChainWithConnections] we store in this collection
  */
-class ChainsWithConnections<HandlerType, NodeConnectionType, ChainWCType: ChainWithConnections<NodeConnectionType, HandlerType>>
+class ChainsWithConnections<
+        HandlerType,
+        NodeConnectionType,
+        ChainWCType: ChainWithConnections<NodeConnectionType, HandlerType>> ()
 {
 
     private val chainsWithConnections: MutableMap<Long, ChainWCType> = mutableMapOf()

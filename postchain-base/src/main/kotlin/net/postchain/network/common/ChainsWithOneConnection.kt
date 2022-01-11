@@ -9,10 +9,15 @@ import net.postchain.core.ProgrammerMistake
  * NOTE: It's differs from the [ChainsWithConnections] since it uses BC RID as key internally.
  *       (I assume this is an attempt to get free of the problems with the BC RID <-> BC IID caching?)
  *       We hide the internal workings as best we can in here
+ *
+ * @property HandlerType is the message handler type
+ * @property NodeConnectionType specifies the exact type of connection to be used
+ * @property ChainWCType is the type of [ChainWithOneConnection] we store in this collection
  */
-class ChainsWithOneConnection<HandlerType, NodeConnectionType, ChainWCType>(
-    // Nothing
-) where ChainWCType : ChainWithOneConnection<NodeConnectionType, HandlerType> // Had to look this up. Is "where" the idiomatic way?
+class ChainsWithOneConnection<
+        HandlerType,
+        NodeConnectionType,
+        ChainWCType: ChainWithOneConnection<NodeConnectionType, HandlerType>>
 {
 
     private val chainsWithOneConnection: MutableMap<BlockchainRid, ChainWCType> = mutableMapOf()
