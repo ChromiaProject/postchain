@@ -41,7 +41,7 @@ typealias CompletionPromise = Promise<Unit, java.lang.Exception>
 
 interface BlockDatabase {
     fun getQueuedBlockCount(): Int
-    fun addBlock(block: BlockDataWithWitness, dependsOn: CompletionPromise?, bTrace: BlockTrace?): CompletionPromise // add a complete block after the current one
+    fun addBlock(block: BlockDataWithWitness, bTrace: BlockTrace?): CompletionPromise // add a complete block after the current one
     fun loadUnfinishedBlock(block: BlockData): Promise<Signature, Exception> // returns block signature if successful
     fun commitBlock(signatures: Array<Signature?>): CompletionPromise
     fun buildBlock(): Promise<Pair<BlockData, Signature>, Exception>

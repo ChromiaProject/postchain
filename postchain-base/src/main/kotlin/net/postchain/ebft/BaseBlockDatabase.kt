@@ -3,14 +3,12 @@
 package net.postchain.ebft
 
 import mu.KLogging
+import net.postchain.async.AsynchronousTaskQueue
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.deferred
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -30,16 +28,7 @@ class BaseBlockDatabase(
         val nodeIndex: Int
 ) : BlockDatabase {
 
-    // The executor will only execute one thing at a time, in order
-    private val executor = ThreadPoolExecutor(1, 1,
-            0L, TimeUnit.MILLISECONDS,
-            LinkedBlockingQueue<Runnable>(),
-            { r: Runnable ->
-                Thread(r, "$nodeIndex-BaseBlockDatabaseWorker")
-                        .apply {
-                            isDaemon = true // So it can't block the JVM from exiting if still running
-                        }
-            })
+    private val taskQueue = AsynchronousTaskQueue(logger, "$nodeIndex-BaseBlockDatabaseWorker")
 
     private var blockBuilder: ManagedBlockBuilder? = null
     private var witnessBuilder: MultiSigBlockWitnessBuilder? = null
@@ -49,39 +38,13 @@ class BaseBlockDatabase(
 
     fun stop() {
         logger.debug("stop() - Begin, node: $nodeIndex")
-        executor.shutdownNow()
-        executor.awaitTermination(1000, TimeUnit.MILLISECONDS) // TODO: [et]: 1000 ms
+        taskQueue.shutdownQueue()
         maybeRollback()
         logger.debug("stop() - End, node: $nodeIndex")
     }
 
     override fun getQueuedBlockCount(): Int {
         return queuedBlockCount.get()
-    }
-
-    private fun <RT> runOpAsync(name: String, op: () -> RT): Promise<RT, Exception> {
-        if (logger.isTraceEnabled) {
-            logger.trace("runOpAsync() - $nodeIndex putting job $name on queue")
-        }
-
-        val deferred = deferred<RT, Exception>()
-        executor.execute {
-            try {
-                if (logger.isTraceEnabled) {
-                    logger.trace("Starting job $name")
-                }
-                val res = op()
-                if (logger.isTraceEnabled) {
-                    logger.trace("Finished job $name")
-                }
-                deferred.resolve(res)
-            } catch (e: Exception) {
-                logger.debug("Failed job $name", e) // Shouldn't this be at leas WARN?
-                deferred.reject(e)
-            }
-        }
-
-        return deferred.promise
     }
 
     private fun maybeRollback() {
@@ -104,26 +67,12 @@ class BaseBlockDatabase(
      * This is why we there is no use setting the [BlockTrace] for this method, we have to send the bTrace instance
      *
      * @param block to be added
-     * @param prevCompletionPromise is the promise for the previous block (by the time we access this promise it
-     *                              will be "done").
      * @param existingBTrace is the trace data of the block we have at current moment. For production this is "null"
      */
-    override fun addBlock(block: BlockDataWithWitness, prevCompletionPromise: CompletionPromise?,
-                          existingBTrace: BlockTrace?): Promise<Unit, Exception> {
+    override fun addBlock(block: BlockDataWithWitness, existingBTrace: BlockTrace?): Promise<Unit, Exception> {
         queuedBlockCount.incrementAndGet()
-        return runOpAsync("addBlock ${block.header.blockRID.toHex()}") {
+        return taskQueue.queueTask("addBlock ${block.header.blockRID.toHex()}", true) {
             queuedBlockCount.decrementAndGet()
-            if (prevCompletionPromise != null) {
-                if (!prevCompletionPromise.isSuccess()) {
-                    if (prevCompletionPromise.isFailure()) {
-                        throw BDBAbortException(block, prevCompletionPromise)
-                    } else {
-                        // The [ThreadPoolExecutor] guarantees prev promise will be "done" at this point.
-                        // If we get here the caller must have sent the incorrect promise.
-                        throw ProgrammerMistake("Previous completion is unfinished ${prevCompletionPromise.isDone()}")
-                    }
-                }
-            }
             addBlockLog("Begin")
             maybeRollback()
             val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
@@ -143,7 +92,7 @@ class BaseBlockDatabase(
     }
 
     override fun loadUnfinishedBlock(block: BlockData): Promise<Signature, Exception> {
-        return runOpAsync("loadUnfinishedBlock ${block.header.blockRID.toHex()}") {
+        return taskQueue.queueTask("loadUnfinishedBlock ${block.header.blockRID.toHex()}") {
             maybeRollback()
             val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
             if (exception != null) {
@@ -161,7 +110,7 @@ class BaseBlockDatabase(
     }
 
     override fun commitBlock(signatures: Array<Signature?>): Promise<Unit, Exception> {
-        return runOpAsync("commitBlock") {
+        return taskQueue.queueTask("commitBlock") {
             // TODO: process signatures
             blockBuilder!!.commit(witnessBuilder!!.getWitness())
             blockBuilder = null
@@ -170,7 +119,7 @@ class BaseBlockDatabase(
     }
 
     override fun buildBlock(): Promise<Pair<BlockData, Signature>, Exception> {
-        return runOpAsync("buildBlock") {
+        return taskQueue.queueTask("buildBlock") {
             maybeRollback()
             val (theBlockBuilder, exception) = engine.buildBlock()
             if (exception != null) {

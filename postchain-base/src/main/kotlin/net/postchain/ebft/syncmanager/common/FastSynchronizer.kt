@@ -106,9 +106,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     private val peerStatuses = PeerStatuses(params)
     private var lastJob: Job? = null
 
-    // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
-    private var addBlockCompletionPromise: CompletionPromise? = null
-
     // This is the communication mechanism from the async commitBlock callback to main loop
     private val finishedJobs = LinkedBlockingQueue<Job>()
 
@@ -457,16 +454,16 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         if (peerId != j.peerId) {
             var dbg = debugJobString(j, requestedHeight, peerId)
             peerStatuses.maybeBlacklist(
-                peerId,
-                "Synch: Why do we receive a header from a peer when we didn't ask this peer? $dbg"
+                    peerId,
+                    "Synch: Why do we receive a header from a peer when we didn't ask this peer? $dbg"
             )
             return false
         }
         if (j.header != null) {
             var dbg = debugJobString(j, requestedHeight, peerId)
             peerStatuses.maybeBlacklist(
-                peerId,
-                "Synch: Why do we receive a header when we already have the header? $dbg"
+                    peerId,
+                    "Synch: Why do we receive a header when we already have the header? $dbg"
             )
             return false
         }
@@ -586,7 +583,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
 
     private fun commitJobsAsNecessary(bTrace: BlockTrace?) {
         // We have to make sure blocks are committed in the correct order. If we are missing a block we have to wait for it.
-        for (job in jobs.values) {
+        jobs.values.forEach { job ->
             if (shutdown.get()) return
 
             // The values are iterated in key-ascending order (see TreeMap)
@@ -634,24 +631,14 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
         job.blockCommitting = true
 
-        if (addBlockCompletionPromise?.isDone() == true) {
-            addBlockCompletionPromise = null
-        }
-
         // We are free to commit this Job, go on and add it to DB
         // (this is usually slow and is therefore handled via a promise).
-        addBlockCompletionPromise = blockDatabase
-                .addBlock(job.block!!, addBlockCompletionPromise, bTrace)
+        blockDatabase.addBlock(job.block!!, bTrace)
                 .fail {
-                    // peer and try another peer
-                    if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
-                        warn("Exception committing block $job: ${it.message}")
-                    } else {
-                        warn("Exception committing block $job", it)
-                    }
+                    warn("Exception committing block $job", it)
                     job.addBlockException = it
-                 }
-                 .always { finishedJobs.add(job) }
+                }
+                .always { finishedJobs.add(job) }
     }
 
     private fun processMessages() {

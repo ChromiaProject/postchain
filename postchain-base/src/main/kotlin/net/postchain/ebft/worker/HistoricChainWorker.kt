@@ -215,7 +215,7 @@ class HistoricChainWorker(val workerContext: WorkerContext,
                     } else {
                         val bTrace: BlockTrace? = getCopyBTrace(heightToCopy)
                         if (!shutdown.get() && readMoreBlocks.get()) {
-                            pendingPromise = newBlockDatabase.addBlock(historicBlock, pendingPromise, bTrace)
+                            pendingPromise = newBlockDatabase.addBlock(historicBlock, bTrace)
                             val myHeightToCopy = heightToCopy
                             pendingPromise.success {
                                 copyTrace("Successfully added", bTrace, myHeightToCopy) // Now we should have the block RID in the debug
