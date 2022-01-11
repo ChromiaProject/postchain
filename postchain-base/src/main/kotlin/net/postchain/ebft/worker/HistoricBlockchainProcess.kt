@@ -36,8 +36,8 @@ import kotlin.concurrent.thread
  * 4 Goto 1
  *
  */
-class HistoricChainWorker(val workerContext: WorkerContext,
-                          val historicBlockchainContext: HistoricBlockchainContext) : BlockchainProcess {
+class HistoricBlockchainProcess(val workerContext: WorkerContext,
+                                val historicBlockchainContext: HistoricBlockchainContext) : BlockchainProcess {
 
     override fun getEngine() = workerContext.engine
 

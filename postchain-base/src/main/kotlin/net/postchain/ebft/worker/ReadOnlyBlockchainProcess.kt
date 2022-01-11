@@ -11,7 +11,7 @@ import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 
-class ReadOnlyWorker(val workerContext: WorkerContext) : BlockchainProcess {
+class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : BlockchainProcess {
 
     companion object : KLogging()
 
@@ -25,12 +25,17 @@ class ReadOnlyWorker(val workerContext: WorkerContext) : BlockchainProcess {
             getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
 
     init {
-
-        val params = FastSyncParameters()
-        params.jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout
+        val params = FastSyncParameters(jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout)
 
         fastSynchronizer = FastSynchronizer(workerContext,
-                blockDatabase, params)
+                blockDatabase,
+                params
+        )
+
+        startProcess()
+    }
+
+    private fun startProcess() {
         thread(name = "replicaSync-${workerContext.processName}") {
             fastSynchronizer.syncUntilShutdown()
             done.countDown()

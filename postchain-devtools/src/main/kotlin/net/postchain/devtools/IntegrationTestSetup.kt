@@ -12,7 +12,7 @@ import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
-import net.postchain.ebft.worker.ValidatorWorker
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import org.apache.commons.configuration2.MapConfiguration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
@@ -217,7 +217,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
             nodeSetup.chainsToSign.forEach { chainIid ->
                 val process = testNodeMap[nodeSetup.sequenceNumber]!!.getBlockchainInstance(chainIid.toLong())
                 await.until {
-                    if (process is ValidatorWorker) {
+                    if (process is ValidatorBlockchainProcess) {
                         !process.syncManager.isInFastSync()
                     } else {
                         true

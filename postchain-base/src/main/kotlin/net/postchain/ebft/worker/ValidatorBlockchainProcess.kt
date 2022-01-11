@@ -21,7 +21,7 @@ import kotlin.concurrent.thread
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorWorker(val workerContext: WorkerContext) : BlockchainProcess {
+class ValidatorBlockchainProcess(val workerContext: WorkerContext) : BlockchainProcess {
 
     companion object : KLogging()
 

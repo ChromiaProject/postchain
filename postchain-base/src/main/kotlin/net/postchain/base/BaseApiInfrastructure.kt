@@ -5,13 +5,12 @@ package net.postchain.base
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.model.PostchainEBFTModel
-import net.postchain.ebft.worker.ValidatorWorker
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
 
 class BaseApiInfrastructure(
         nodeConfigProvider: NodeConfigurationProvider,
@@ -41,7 +40,7 @@ class BaseApiInfrastructure(
             val engine = process.getEngine()
             val apiModel: PostchainModel
 
-            if (process is ValidatorWorker) { // TODO: EBFT-specific code, but pretty harmless
+            if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
                         engine.getConfiguration().chainID,
                         process.nodeStateTracker,

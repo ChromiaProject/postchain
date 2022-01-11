@@ -13,9 +13,9 @@ import net.postchain.debug.DiagnosticProperty.BLOCKCHAIN
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.message.Message
-import net.postchain.ebft.worker.HistoricChainWorker
-import net.postchain.ebft.worker.ReadOnlyWorker
-import net.postchain.ebft.worker.ValidatorWorker
+import net.postchain.ebft.worker.HistoricBlockchainProcess
+import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
 import net.postchain.network.netty2.NettyConnectorFactory
@@ -96,19 +96,19 @@ class EBFTSynchronizationInfrastructure(
                         nodeConfig, unregisterBlockchainDiagnosticData)
 
             }
-            HistoricChainWorker(workerContext, historicBlockchainContext).also {
+            HistoricBlockchainProcess(workerContext, historicBlockchainContext).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_SIGNER) {
                     "TODO: Implement getHeight()"
                 }
             }
         } else if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
-            ValidatorWorker(workerContext).also {
+            ValidatorBlockchainProcess(workerContext).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_SIGNER) {
                     it.syncManager.getHeight().toString()
                 }
             }
         } else {
-            ReadOnlyWorker(workerContext).also {
+            ReadOnlyBlockchainProcess(workerContext).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_REPLICA) {
                     it.getHeight().toString()
                 }
@@ -124,7 +124,7 @@ class EBFTSynchronizationInfrastructure(
     override fun restartBlockchainProcess(process: BlockchainProcess) {
         var fastSyncStatus = true
         val chainID = process.getEngine().getConfiguration().chainID
-        if (process is ValidatorWorker) {
+        if (process is ValidatorBlockchainProcess) {
             fastSyncStatus = process.isInFastSyncMode()
         }
         startWithFastSync[chainID] = fastSyncStatus
