@@ -45,9 +45,10 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     private val fastSynchronizer: FastSynchronizer
     private var historicSynchronizer: FastSynchronizer? = null
-    private val done = CountDownLatch(1)
     private val shutdown = AtomicBoolean(false)
     private val storage = (workerContext.engine as BaseBlockchainEngine).storage
+    private val blockDatabase: BaseBlockDatabase // Not good to have explicit type here..
+    private val process: Thread
 
     // Logging only
     var blockTrace: BlockTrace? = null // For logging only
@@ -60,22 +61,28 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     init {
         val engine = getEngine()
         myBRID = engine.getConfiguration().blockchainRid
-        val blockDatabase = BaseBlockDatabase(
+        blockDatabase = BaseBlockDatabase(
                 engine, engine.getBlockQueries(), NODE_ID_READ_ONLY)
-        val params = FastSyncParameters()
+        val params = workerContext.nodeConfig.let { conf ->
+             FastSyncParameters(
+                    exitDelay = conf.fastSyncExitDelay,
+                    jobTimeout = conf.fastSyncJobTimeout
+            )
+        }
         myNodeConf = workerContext.nodeConfig
         procName = BlockchainProcessName(myNodeConf.pubKey, myBRID)
 
-        params.exitDelay = myNodeConf.fastSyncExitDelay
-        params.jobTimeout = myNodeConf.fastSyncJobTimeout
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
+        process = startProcess()
+    }
 
-        thread(name = "historicSync-${workerContext.processName}") {
+    private fun startProcess(): Thread {
+        return thread(name = "historicSync-${workerContext.processName}") {
             try {
                 val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
 
                 while (!shutdown.get()) {
-                    val bestHeightSoFar = engine.getBlockQueries().getBestHeight().get()
+                    val bestHeightSoFar = getEngine().getBlockQueries().getBestHeight().get()
                     initDebug("Historic sync bc ${myBRID}, height: ${bestHeightSoFar}")
 
                     // try local sync first
@@ -88,7 +95,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                     // try syncing via network
                     for (brid in chainsToSyncFrom) {
                         if (shutdown.get()) break
-                        copyBlocksNetwork(brid, myBRID, blockDatabase, params)
+                        copyBlocksNetwork(brid, myBRID, blockDatabase, fastSynchronizer.params)
                         if (shutdown.get()) break // Check before sleep
                         initTrace("Network synch go sleep")
                         sleep(1000)
@@ -108,7 +115,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                     logger.error(e) { "$procName Error syncing forkchain - stopping db" }
                 } finally {
                     initTrace("Sync done, countdown latches")
-                    done.countDown()
                 }
             }
         }
@@ -285,7 +291,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         historicSynchronizer?.shutdown()
         fastSynchronizer.shutdown()
         shutdownDebug("Wait for complete shutdown")
-        done.await()
+        process.join()
         shutdownDebug("Shutdown finished")
         workerContext.shutdown()
     }

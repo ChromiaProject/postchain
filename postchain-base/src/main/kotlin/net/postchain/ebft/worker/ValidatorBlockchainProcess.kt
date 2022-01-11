@@ -25,7 +25,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : BlockchainP
 
     companion object : KLogging()
 
-    private lateinit var updateLoop: Thread
+    private val process: Thread
     private val shutdown = AtomicBoolean(false)
 
     private val blockDatabase: BaseBlockDatabase
@@ -71,15 +71,15 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : BlockchainP
                 workerContext.communicationManager)
 
         statusManager.recomputeStatus()
-        startUpdateLoop(syncManager)
+        process = startProcess(syncManager)
     }
 
     /**
-     * Create and run the [updateLoop] thread
+     * Create and run the [process] thread
      * @param syncManager the syncronization manager
      */
-    protected fun startUpdateLoop(syncManager: SyncManager) {
-        updateLoop = thread(name = "updateLoop-${workerContext.processName}") {
+    fun startProcess(syncManager: SyncManager): Thread {
+        return thread(name = "updateLoop-${workerContext.processName}") {
             while (!shutdown.get()) {
                 try {
                     syncManager.update()
@@ -98,7 +98,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : BlockchainP
         shutdowDebug("Begin")
         syncManager.shutdown()
         shutdown.set(true)
-        updateLoop.join()
+        process.join()
         blockDatabase.stop()
         workerContext.shutdown()
         shutdowDebug("End")

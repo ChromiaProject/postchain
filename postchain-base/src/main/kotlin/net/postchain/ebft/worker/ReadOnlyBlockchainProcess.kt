@@ -19,10 +19,10 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : BlockchainPr
 
     private val fastSynchronizer: FastSynchronizer
 
-    private val done = CountDownLatch(1)
-
     private val blockDatabase = BaseBlockDatabase(
             getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
+
+    private val process: Thread
 
     init {
         val params = FastSyncParameters(jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout)
@@ -32,13 +32,12 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : BlockchainPr
                 params
         )
 
-        startProcess()
+        process = startProcess()
     }
 
-    private fun startProcess() {
-        thread(name = "replicaSync-${workerContext.processName}") {
+    private fun startProcess(): Thread {
+        return thread(name = "replicaSync-${workerContext.processName}") {
             fastSynchronizer.syncUntilShutdown()
-            done.countDown()
         }
     }
 
@@ -49,7 +48,7 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : BlockchainPr
         fastSynchronizer.shutdown()
         blockDatabase.stop()
         shutdownDebug("Wait for \"done\"")
-        done.await()
+        process.join()
         workerContext.shutdown()
         shutdownDebug("End")
     }
