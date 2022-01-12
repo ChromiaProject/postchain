@@ -100,18 +100,21 @@ class EBFTSynchronizationInfrastructure(
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_SIGNER) {
                     "TODO: Implement getHeight()"
                 }
+                it.start()
             }
         } else if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
             ValidatorBlockchainProcess(workerContext).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_SIGNER) {
                     it.syncManager.getHeight().toString()
                 }
+                it.start()
             }
         } else {
             ReadOnlyBlockchainProcess(workerContext).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_REPLICA) {
                     it.getHeight().toString()
                 }
+                it.start()
             }
         }
     }

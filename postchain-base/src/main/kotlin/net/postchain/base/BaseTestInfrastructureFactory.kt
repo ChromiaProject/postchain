@@ -17,6 +17,8 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
     // Need this stuff to make this test class look a bit "normal"
     val processName: BlockchainProcessName = BlockchainProcessName("?", blockchainEngine.getConfiguration().blockchainRid)
 
+    override fun start() { }
+
     override fun shutdown() {
         shutdownDebug("Begin")
         blockchainEngine.shutdown()

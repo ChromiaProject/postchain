@@ -11,15 +11,13 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
     val logger =  NamedKLogging(this::class.java.simpleName).logger
 
     private val shutdown = AtomicBoolean(false)
-    internal val process: Thread
-
-    init {
-        process = thread(name = processName) { main() }
-    }
+    internal lateinit var process: Thread
 
     fun isShuttingDown() = shutdown.get()
 
-    abstract fun action()
+    final override fun start() {
+        process = thread(name = processName) { main() }
+    }
 
     private fun main() {
         try {
@@ -31,9 +29,14 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
         }
     }
 
+    protected abstract fun action()
+
     override fun shutdown() {
         shutdown.set(true)
+        if (alreadyShutdown()) return
         logger.debug { "Shutting down process $processName" }
         process.join()
     }
+
+    private fun alreadyShutdown() = !::process.isInitialized || !process.isAlive
 }
