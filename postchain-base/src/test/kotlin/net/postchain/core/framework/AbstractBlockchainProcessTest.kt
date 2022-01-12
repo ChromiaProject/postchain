@@ -30,13 +30,9 @@ internal class AbstractBlockchainProcessTest {
 
 }
 
-class DummyBlockchainProcess(private val testAction: () -> Unit): AbstractBlockchainProcess() {
-
-    override fun processName() = "TestProcess"
-
+class DummyBlockchainProcess(private val testAction: () -> Unit): AbstractBlockchainProcess("TestProcess") {
 
     override fun action() {
         testAction()
     }
-
 }

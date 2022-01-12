@@ -19,7 +19,7 @@ import java.lang.Thread.sleep
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess() {
+class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess(workerContext.processName.toString()) {
 
     companion object : KLogging()
 
@@ -69,8 +69,6 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
         startProcess()
     }
 
-    override fun processName(): String = "updateLoop-${workerContext.processName}"
-
     override fun action() {
         syncManager.update()
         sleep(20)
@@ -96,15 +94,5 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
         if (logger.isDebugEnabled) {
             logger.debug("${workerContext.processName} shutdown() - $str")
         }
-    }
-
-    private fun startUpdateLog(str: String) {
-        if (logger.isTraceEnabled) {
-            logger.trace("${workerContext.processName} startUpdateLoop() -- $str")
-        }
-    }
-
-    private fun startUpdateErr(str: String, e: Exception) {
-        logger.error("${workerContext.processName} startUpdateLoop() -- $str", e)
     }
 }

@@ -1,21 +1,19 @@
 package net.postchain.core.framework
 
-import mu.KLogging
+import mu.NamedKLogging
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
-abstract class AbstractBlockchainProcess : BlockchainProcess {
+abstract class AbstractBlockchainProcess(private val processName: String) : BlockchainProcess {
 
-    companion object : KLogging() // TODO: Use logger from child classes
+    val logger =  NamedKLogging(this::class.java.simpleName).logger
 
     private val shutdown = AtomicBoolean(false)
     internal lateinit var process: Thread
 
     fun isShuttingDown() = shutdown.get()
-
-    abstract fun processName(): String
 
     abstract fun action()
 
@@ -25,12 +23,12 @@ abstract class AbstractBlockchainProcess : BlockchainProcess {
                 action()
             }
         } catch (e: Exception) {
-            logger.error(e) { "Process ${processName()} stopped unexpectedly" }
+            logger.error(e) { "Process $processName stopped unexpectedly" }
         }
     }
 
     fun startProcess() {
-        process = thread(name = processName()) { main() }
+        process = thread(name = processName) { main() }
     }
 
     override fun getEngine(): BlockchainEngine {
@@ -40,7 +38,7 @@ abstract class AbstractBlockchainProcess : BlockchainProcess {
     override fun shutdown() {
         shutdown.set(true)
         if (alreadyShutdown()) return
-        logger.debug { "Shutting down process ${processName()}" }
+        logger.debug { "Shutting down process $processName" }
         process.join()
     }
 

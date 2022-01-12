@@ -9,7 +9,7 @@ import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 
-class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess() {
+class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess(workerContext.processName.toString()) {
 
     companion object : KLogging()
 
@@ -30,8 +30,6 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
 
         startProcess()
     }
-
-    override fun processName(): String = "replicaSync-${workerContext.processName}"
 
     override fun action() {
         fastSynchronizer.syncUntil { isShuttingDown() }

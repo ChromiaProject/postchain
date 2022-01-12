@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  */
 class HistoricBlockchainProcess(val workerContext: WorkerContext,
-                                val historicBlockchainContext: HistoricBlockchainContext) : AbstractBlockchainProcess() {
+                                val historicBlockchainContext: HistoricBlockchainContext) : AbstractBlockchainProcess(workerContext.processName.toString()) {
 
     override fun getEngine() = workerContext.engine
 
@@ -72,8 +72,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
         startProcess()
     }
-
-    override fun processName(): String = "historicSync-${workerContext.processName}"
 
     override fun action() {
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
