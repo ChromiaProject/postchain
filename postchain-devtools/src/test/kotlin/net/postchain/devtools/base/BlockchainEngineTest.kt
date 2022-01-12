@@ -27,7 +27,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     fun testBuildBlock() {
         val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config.xml")
         val node = nodes[0]
-        val txQueue = node.getBlockchainInstance().getEngine().getTransactionQueue()
+        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
 
         txQueue.enqueue(TestTransaction(0))
         buildBlockAndCommit(node)
@@ -106,7 +106,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
 
         val blockData = createBlockWithTxAndCommit(node0, 2)
 
-        val bc = node1.getBlockchainInstance().getEngine().getConfiguration() as TestBlockchainConfiguration
+        val bc = node1.getBlockchainInstance().blockchainEngine.getConfiguration() as TestBlockchainConfiguration
         // Make the tx invalid on follower. Should discard whole block
         bc.transactionFactory.specialTxs[0] = ErrorTransaction(0, true, false)
         try {
@@ -184,7 +184,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     private fun createBlockWithTx(node: PostchainTestNode, txCount: Int, startId: Int = 0): BlockBuilder {
-        val engine = node.getBlockchainInstance().getEngine()
+        val engine = node.getBlockchainInstance().blockchainEngine
         (startId until startId + txCount).forEach {
             engine.getTransactionQueue().enqueue(TestTransaction(it))
         }
@@ -192,7 +192,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     private fun loadUnfinishedAndCommit(node: PostchainTestNode, blockData: BlockData) {
-        val (blockBuilder, exception) = node.getBlockchainInstance().getEngine().loadUnfinishedBlock(blockData)
+        val (blockBuilder, exception) = node.getBlockchainInstance().blockchainEngine.loadUnfinishedBlock(blockData)
         if (exception != null) {
             throw exception
         } else {

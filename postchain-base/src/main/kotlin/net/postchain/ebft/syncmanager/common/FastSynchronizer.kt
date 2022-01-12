@@ -158,10 +158,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         }
     }
 
-    fun syncUntilShutdown() {
-        syncUntil { false }
-    }
-
     /**
      * Terminology:
      * current = our current view of the system

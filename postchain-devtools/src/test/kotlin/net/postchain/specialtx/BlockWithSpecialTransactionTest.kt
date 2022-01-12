@@ -58,7 +58,7 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         // --------------------
         // Needed to create TXs
         // --------------------
-        val blockchainRID: BlockchainRid = nodes[0].getBlockchainInstance().getEngine().getConfiguration().blockchainRid
+        val blockchainRID: BlockchainRid = nodes[0].getBlockchainInstance().blockchainEngine.getConfiguration().blockchainRid
         val module = SpecialTxTestGTXModule() // Had to build a special module for this test
         val cs = SECP256K1CryptoSystem()
         gtxTxFactory = GTXTransactionFactory(blockchainRID, module, cs)
@@ -98,7 +98,7 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         // --------------------
         val expectedNumberOfTxs = 3
 
-        val bockQueries = nodes[0].getBlockchainInstance().getEngine().getBlockQueries()
+        val bockQueries = nodes[0].getBlockchainInstance().blockchainEngine.getBlockQueries()
         for (i in 0..2) {
 
             val blockData = bockQueries.getBlockAtHeight(i.toLong()).get()!!

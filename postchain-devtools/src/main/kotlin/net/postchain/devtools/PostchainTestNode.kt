@@ -126,15 +126,15 @@ class PostchainTestNode(
     }
 
     fun transactionQueue(chainId: Long = DEFAULT_CHAIN_IID): TransactionQueue {
-        return getBlockchainInstance(chainId).getEngine().getTransactionQueue()
+        return getBlockchainInstance(chainId).blockchainEngine.getTransactionQueue()
     }
 
     fun blockQueries(chainId: Long = DEFAULT_CHAIN_IID): BlockQueries {
-        return getBlockchainInstance(chainId).getEngine().getBlockQueries()
+        return getBlockchainInstance(chainId).blockchainEngine.getBlockQueries()
     }
 
     fun blockBuildingStrategy(chainId: Long = DEFAULT_CHAIN_IID): BlockBuildingStrategy {
-        return getBlockchainInstance(chainId).getEngine().getBlockBuildingStrategy()
+        return getBlockchainInstance(chainId).blockchainEngine.getBlockBuildingStrategy()
     }
 
     fun networkTopology(chainId: Long = DEFAULT_CHAIN_IID): Map<String, String> {
@@ -158,6 +158,6 @@ class PostchainTestNode(
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
 
     private fun blockchainRID(process: BlockchainProcess): String {
-        return process.getEngine().getConfiguration().blockchainRid.toHex()
+        return process.blockchainEngine.getConfiguration().blockchainRid.toHex()
     }
 }

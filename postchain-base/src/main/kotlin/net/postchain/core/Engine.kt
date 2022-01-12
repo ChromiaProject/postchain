@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockTrace
 
 interface Shutdownable {
@@ -30,7 +29,8 @@ interface BlockchainEngine : Shutdownable {
 }
 
 interface BlockchainProcess {
-    fun getEngine(): BlockchainEngine
+    val blockchainEngine: BlockchainEngine
+    fun start()
     fun shutdown()
 }
 

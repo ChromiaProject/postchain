@@ -4,29 +4,24 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
+import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.core.BlockchainEngine
-import net.postchain.core.BlockchainProcess
 import net.postchain.core.NodeStateTracker
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.StatusManager
-import net.postchain.ebft.syncmanager.SyncManager
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.concurrent.thread
+import java.lang.Thread.sleep
 
 /**
  * A blockchain instance worker
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorWorker(val workerContext: WorkerContext) : BlockchainProcess {
+class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess(workerContext.processName.toString(), workerContext.engine) {
 
     companion object : KLogging()
-
-    private lateinit var updateLoop: Thread
-    private val shutdown = AtomicBoolean(false)
 
     private val blockDatabase: BaseBlockDatabase
     val syncManager: ValidatorSyncManager
@@ -34,29 +29,22 @@ class ValidatorWorker(val workerContext: WorkerContext) : BlockchainProcess {
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
 
-    fun isInFastSyncMode(): Boolean {
-        return syncManager.isInFastSync()
-    }
-
-    override fun getEngine(): BlockchainEngine {
-        return workerContext.engine
-    }
 
     init {
-        val bestHeight = getEngine().getBlockQueries().getBestHeight().get()
+        val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
         statusManager = BaseStatusManager(
                 workerContext.signers.size,
                 workerContext.nodeId,
                 bestHeight + 1)
 
         blockDatabase = BaseBlockDatabase(
-                getEngine(), getEngine().getBlockQueries(), workerContext.nodeId)
+                blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeId)
 
         val blockManager = BaseBlockManager(
                 workerContext.processName,
                 blockDatabase,
                 statusManager,
-                getEngine().getBlockBuildingStrategy())
+                blockchainEngine.getBlockBuildingStrategy())
 
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
@@ -67,28 +55,17 @@ class ValidatorWorker(val workerContext: WorkerContext) : BlockchainProcess {
                 nodeStateTracker)
 
         networkAwareTxQueue = NetworkAwareTxQueue(
-                getEngine().getTransactionQueue(),
+                blockchainEngine.getTransactionQueue(),
                 workerContext.communicationManager)
 
         statusManager.recomputeStatus()
-        startUpdateLoop(syncManager)
     }
 
-    /**
-     * Create and run the [updateLoop] thread
-     * @param syncManager the syncronization manager
-     */
-    protected fun startUpdateLoop(syncManager: SyncManager) {
-        updateLoop = thread(name = "updateLoop-${workerContext.processName}") {
-            while (!shutdown.get()) {
-                try {
-                    syncManager.update()
-                    Thread.sleep(20)
-                } catch (e: Exception) {
-                    startUpdateErr("Failing to update", e)
-                }
-            }
-        }
+    fun isInFastSyncMode() = syncManager.isInFastSync()
+
+    override fun action() {
+        syncManager.update()
+        sleep(20)
     }
 
     /**
@@ -97,8 +74,7 @@ class ValidatorWorker(val workerContext: WorkerContext) : BlockchainProcess {
     override fun shutdown() {
         shutdowDebug("Begin")
         syncManager.shutdown()
-        shutdown.set(true)
-        updateLoop.join()
+        super.shutdown()
         blockDatabase.stop()
         workerContext.shutdown()
         shutdowDebug("End")
@@ -112,15 +88,5 @@ class ValidatorWorker(val workerContext: WorkerContext) : BlockchainProcess {
         if (logger.isDebugEnabled) {
             logger.debug("${workerContext.processName} shutdown() - $str")
         }
-    }
-
-    private fun startUpdateLog(str: String) {
-        if (logger.isTraceEnabled) {
-            logger.trace("${workerContext.processName} startUpdateLoop() -- $str")
-        }
-    }
-
-    private fun startUpdateErr(str: String, e: Exception) {
-        logger.error("${workerContext.processName} startUpdateLoop() -- $str", e)
     }
 }

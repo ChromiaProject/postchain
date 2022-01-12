@@ -24,7 +24,7 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         configOverrides.setProperty("infrastructure", "base/test")
         val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config_max_block_size.xml")
         val node = nodes[0]
-        val txQueue = node.getBlockchainInstance().getEngine().getTransactionQueue()
+        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
 
         txQueue.enqueue(buildTransaction(blockchainRid, RandomStringUtils.randomAlphanumeric(1024)))
         buildBlockAndCommit(node)
@@ -50,7 +50,7 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         configOverrides.setProperty("infrastructure", "base/test")
         val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config_max_transaction_size.xml")
         val node = nodes[0]
-        val txQueue = node.getBlockchainInstance().getEngine().getTransactionQueue()
+        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
 
         // over 2mb
         txQueue.enqueue(buildTransaction(blockchainRid, "${RandomStringUtils.randomAlphanumeric(1024 * 1024 * 2)}-test"))

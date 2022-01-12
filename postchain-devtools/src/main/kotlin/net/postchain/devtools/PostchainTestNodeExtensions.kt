@@ -37,7 +37,7 @@ fun PostchainTestNode.assertNodeConnectedWith(chainId: Long, vararg nodes: Postc
 }
 
 fun <T> PostchainTestNode.query(chainId: Long, action: (BlockQueries) -> Promise<T, Exception>): T? {
-    return retrieveBlockchain(chainId)?.getEngine()?.getBlockQueries()?.run {
+    return retrieveBlockchain(chainId)?.blockchainEngine?.getBlockQueries()?.run {
         action(this)
     }?.get()
 }
@@ -79,7 +79,7 @@ fun PostchainTestNode.awaitHeight(chainId: Long, height: Long) {
 fun PostchainTestNode.enqueueTxs(chainId: Long, vararg txs: Transaction): Boolean {
     return retrieveBlockchain(chainId)
         ?.let { process ->
-            val txQueue = process.getEngine().getTransactionQueue()
+            val txQueue = process.blockchainEngine.getTransactionQueue()
             txs.forEach { txQueue.enqueue(it) }
             true
         }
@@ -93,7 +93,7 @@ fun PostchainTestNode.enqueueTxsAndAwaitBuiltBlock(chainId: Long, height: Long, 
 
 fun PostchainTestNode.getModules(chainId: Long = PostchainTestNode.DEFAULT_CHAIN_IID): Array<GTXModule> {
     val configuration = retrieveBlockchain(chainId)
-            ?.getEngine()
+            ?.blockchainEngine
             ?.getConfiguration()
 
     return when (configuration) {
