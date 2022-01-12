@@ -11,6 +11,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
+import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.BaseBlockDatabase
@@ -20,9 +21,7 @@ import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import nl.komponents.kovenant.Promise
 import java.lang.Thread.sleep
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.concurrent.thread
 
 /**
  * Worker that synchronizes a blockchain using blocks from another blockchain, historicBrid.
@@ -36,82 +35,56 @@ import kotlin.concurrent.thread
  * 4 Goto 1
  *
  */
-class HistoricChainWorker(val workerContext: WorkerContext,
-                          val historicBlockchainContext: HistoricBlockchainContext) : BlockchainProcess {
-
-    override fun getEngine() = workerContext.engine
-
-    val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
-
-    private val fastSynchronizer: FastSynchronizer
-    private var historicSynchronizer: FastSynchronizer? = null
-    private val done = CountDownLatch(1)
-    private val shutdown = AtomicBoolean(false)
-    private val storage = (workerContext.engine as BaseBlockchainEngine).storage
-
-    // Logging only
-    var blockTrace: BlockTrace? = null // For logging only
-    val myNodeConf: NodeConfig // For logging only
-    val myBRID: BlockchainRid // For logging only
-    val procName: BlockchainProcessName // For logging only
+class HistoricBlockchainProcess(val workerContext: WorkerContext,
+                                val historicBlockchainContext: HistoricBlockchainContext) : AbstractBlockchainProcess(workerContext.processName.toString(), workerContext.engine) {
 
     companion object : KLogging()
 
-    init {
-        val engine = getEngine()
-        myBRID = engine.getConfiguration().blockchainRid
-        val blockDatabase = BaseBlockDatabase(
-                engine, engine.getBlockQueries(), NODE_ID_READ_ONLY)
-        val params = FastSyncParameters()
-        myNodeConf = workerContext.nodeConfig
-        procName = BlockchainProcessName(myNodeConf.pubKey, myBRID)
+    val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
 
-        params.exitDelay = myNodeConf.fastSyncExitDelay
-        params.jobTimeout = myNodeConf.fastSyncJobTimeout
-        fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
+    private var historicSynchronizer: FastSynchronizer? = null
+    private val storage = (workerContext.engine as BaseBlockchainEngine).storage
+    private val blockDatabase = BaseBlockDatabase(
+        blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
+    private val fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, workerContext.nodeConfig.let { conf ->
+        FastSyncParameters(
+            exitDelay = conf.fastSyncExitDelay,
+            jobTimeout = conf.fastSyncJobTimeout
+        )
+    })
 
-        thread(name = "historicSync-${workerContext.processName}") {
-            try {
-                val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
+    // Logging only
+    var blockTrace: BlockTrace? = null // For logging only
+    val myBRID = blockchainEngine.getConfiguration().blockchainRid
+    val myNodeConf = workerContext.nodeConfig
+    val procName = BlockchainProcessName(myNodeConf.pubKey, myBRID)
 
-                while (!shutdown.get()) {
-                    val bestHeightSoFar = engine.getBlockQueries().getBestHeight().get()
-                    initDebug("Historic sync bc ${myBRID}, height: ${bestHeightSoFar}")
+    override fun action() {
+        val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
 
-                    // try local sync first
-                    for (brid in chainsToSyncFrom) {
-                        if (shutdown.get()) break
-                        if (brid == myBRID) continue
-                        copyBlocksLocally(brid, blockDatabase)
-                    }
+        val bestHeightSoFar = blockchainEngine.getBlockQueries().getBestHeight().get()
+        initDebug("Historic sync bc ${myBRID}, height: ${bestHeightSoFar}")
 
-                    // try syncing via network
-                    for (brid in chainsToSyncFrom) {
-                        if (shutdown.get()) break
-                        copyBlocksNetwork(brid, myBRID, blockDatabase, params)
-                        if (shutdown.get()) break // Check before sleep
-                        initTrace("Network synch go sleep")
-                        sleep(1000)
-                        initTrace("Network synch waking up")
-                    }
-                    if (shutdown.get()) break // Check before sleep
-                    initTrace("Network synch full go sleep")
-                    sleep(1000)
-                    initTrace("Network synch full waking up")
-                }
-            } catch (e: Exception) {
-                logger.error(e) { "$procName Error syncing forkchain" }
-            } finally {
-                try {
-                    blockDatabase.stop()
-                } catch (e: Exception) {
-                    logger.error(e) { "$procName Error syncing forkchain - stopping db" }
-                } finally {
-                    initTrace("Sync done, countdown latches")
-                    done.countDown()
-                }
-            }
+        // try local sync first
+        for (brid in chainsToSyncFrom) {
+            if (isShuttingDown()) break
+            if (brid == myBRID) continue
+            copyBlocksLocally(brid, blockDatabase)
         }
+
+        // try syncing via network
+        for (brid in chainsToSyncFrom) {
+            if (isShuttingDown()) break
+            copyBlocksNetwork(brid, myBRID, blockDatabase, fastSynchronizer.params)
+            if (isShuttingDown()) break // Check before sleep
+            initTrace("Network synch go sleep")
+            sleep(1000)
+            initTrace("Network synch waking up")
+        }
+        if (isShuttingDown()) return // Check before sleep
+        initTrace("Network synch full go sleep")
+        sleep(1000)
+        initTrace("Network synch full waking up")
     }
 
     /**
@@ -151,7 +124,7 @@ class HistoricChainWorker(val workerContext: WorkerContext,
     }
 
     private fun getBlockFromStore(blockStore: BaseBlockStore, ctx: EContext, height: Long): BlockDataWithWitness? {
-        val blockchainConfiguration = getEngine().getConfiguration()
+        val blockchainConfiguration = blockchainEngine.getConfiguration()
         val blockRID = blockStore.getBlockRID(ctx, height)
         if (blockRID == null) {
             return null
@@ -194,7 +167,7 @@ class HistoricChainWorker(val workerContext: WorkerContext,
         try {
             lastHeight = fromBstore.getLastBlockHeight(fromCtx)
             if (lastHeight == -1L) return // no block = nothing to do
-            val ourHeight = getEngine().getBlockQueries().getBestHeight().get()
+            val ourHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
             if (lastHeight > ourHeight) {
                 if (ourHeight > -1L) {
                     // Just a verification of Block RID being the same
@@ -203,7 +176,7 @@ class HistoricChainWorker(val workerContext: WorkerContext,
                 heightToCopy = ourHeight + 1
                 var pendingPromise: CompletionPromise? = null
                 val readMoreBlocks = AtomicBoolean(true)
-                while (!shutdown.get() && readMoreBlocks.get()) {
+                while (!isShuttingDown() && readMoreBlocks.get()) {
                     if (newBlockDatabase.getQueuedBlockCount() > 3) {
                         sleep(1)
                         continue
@@ -214,7 +187,7 @@ class HistoricChainWorker(val workerContext: WorkerContext,
                         break
                     } else {
                         val bTrace: BlockTrace? = getCopyBTrace(heightToCopy)
-                        if (!shutdown.get() && readMoreBlocks.get()) {
+                        if (!isShuttingDown() && readMoreBlocks.get()) {
                             pendingPromise = newBlockDatabase.addBlock(historicBlock, pendingPromise, bTrace)
                             val myHeightToCopy = heightToCopy
                             pendingPromise.success {
@@ -246,7 +219,7 @@ class HistoricChainWorker(val workerContext: WorkerContext,
      * @return "true" if we got something from the promise, "false" if we have a shutdown
      */
     private fun awaitPromise(pendingPromise: Promise<Unit, java.lang.Exception>, height: Long): Boolean {
-        while (!shutdown.get()) {
+        while (!isShuttingDown()) {
             if (pendingPromise.isDone()) {
                 awaitTrace("done", height)
                 return true
@@ -268,7 +241,7 @@ class HistoricChainWorker(val workerContext: WorkerContext,
      */
     private fun verifyBlockAtHeightIsTheSame(fromBstore: BaseBlockStore, fromCtx: EContext, ourHeight: Long) {
         val historictBlockRID = BlockchainRid(fromBstore.getBlockRID(fromCtx, ourHeight)!!)
-        val ourLastBlockRID = BlockchainRid(getEngine().getBlockQueries().getBlockRid(ourHeight).get()!!)
+        val ourLastBlockRID = BlockchainRid(blockchainEngine.getBlockQueries().getBlockRid(ourHeight).get()!!)
         if (historictBlockRID != ourLastBlockRID) {
             throw BadDataMistake(BadDataType.OTHER,
                     "Historic blockchain and fork chain disagree on block RID at height" +
@@ -277,15 +250,13 @@ class HistoricChainWorker(val workerContext: WorkerContext,
     }
 
     override fun shutdown() {
-        if (shutdown.get()) {
+        if (isShuttingDown()) {
             shutdownDebug("Historic worker already shutting ")
         }
         shutdownDebug("Historic worker shutting down")
-        shutdown.set(true)
         historicSynchronizer?.shutdown()
-        fastSynchronizer.shutdown()
-        shutdownDebug("Wait for complete shutdown")
-        done.await()
+        super.shutdown()
+        blockDatabase.stop()
         shutdownDebug("Shutdown finished")
         workerContext.shutdown()
     }

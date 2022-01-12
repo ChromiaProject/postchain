@@ -74,7 +74,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
 
     // TODO: [et]: Check out nullability for return value
     protected fun enqueueTx(node: PostchainTestNode, data: ByteArray, expectedConfirmationHeight: Long): Transaction? {
-        val blockchainEngine = node.getBlockchainInstance().getEngine()
+        val blockchainEngine = node.getBlockchainInstance().blockchainEngine
         val tx = blockchainEngine.getConfiguration().getTransactionFactory().decodeTransaction(data)
         enqueueTransactions(node, tx)
 
@@ -87,7 +87,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     }
 
     protected fun enqueueTransactions(node: PostchainTestNode, vararg txs: Transaction) {
-        val txQueue = node.getBlockchainInstance().getEngine().getTransactionQueue()
+        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
         txs.forEach { txQueue.enqueue(it) }
     }
 
@@ -321,7 +321,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     open fun createPeerInfos(nodeCount: Int): Array<PeerInfo> = createPeerInfosWithReplicas(nodeCount, 0)
 
     protected fun strategy(node: PostchainTestNode): OnDemandBlockBuildingStrategy {
-        return node.getBlockchainInstance().getEngine().getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
+        return node.getBlockchainInstance().blockchainEngine.getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
     }
 
     protected fun buildBlock(toHeight: Int, vararg txs: TestTransaction) {

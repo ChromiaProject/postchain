@@ -83,7 +83,7 @@ class FTBasicIntegrationTest : FTIntegrationTest() {
 
         makeSureBlockIsBuiltCorrectly()
 
-        val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
+        val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
         val balance = blockQueries.query(
                 """{"type"="ft_get_balance",
                     "account_id"="${aliceAccountID.toHex()}",

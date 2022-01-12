@@ -316,7 +316,7 @@ class TestManagedBlockchainProcessManager(blockchainInfrastructure: BlockchainIn
             return null
         }
         val process = blockchainProcesses[chainId]!!
-        val queries = process.getEngine().getBlockQueries()
+        val queries = process.blockchainEngine.getBlockQueries()
         val height = queries.getBestHeight().get()
         lastHeightStarted[chainId] = height
         return blockchainRid
