@@ -10,20 +10,16 @@ import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 
-class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
+class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 
     companion object : KLogging()
 
     // Need this stuff to make this test class look a bit "normal"
-    val processName: BlockchainProcessName = BlockchainProcessName("?", _engine.getConfiguration().blockchainRid)
-
-    override fun getEngine(): BlockchainEngine {
-        return _engine
-    }
+    val processName: BlockchainProcessName = BlockchainProcessName("?", blockchainEngine.getConfiguration().blockchainRid)
 
     override fun shutdown() {
         shutdownDebug("Begin")
-        _engine.shutdown()
+        blockchainEngine.shutdown()
         shutdownDebug("End")
     }
 

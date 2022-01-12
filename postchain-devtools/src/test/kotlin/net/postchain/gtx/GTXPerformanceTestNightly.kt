@@ -119,7 +119,7 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
 
             val engine = nodes[statusManager.primaryIndex()]
                     .getBlockchainInstance()
-                    .getEngine()
+                    .blockchainEngine
             val txFactory = engine
                     .getConfiguration()
                     .getTransactionFactory()

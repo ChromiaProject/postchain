@@ -117,13 +117,13 @@ class EBFTSynchronizationInfrastructure(
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {
-        val chainID = process.getEngine().getConfiguration().chainID
+        val chainID = process.blockchainEngine.getConfiguration().chainID
         startWithFastSync.remove(chainID) // remove status when process is gone
     }
 
     override fun restartBlockchainProcess(process: BlockchainProcess) {
         var fastSyncStatus = true
-        val chainID = process.getEngine().getConfiguration().chainID
+        val chainID = process.blockchainEngine.getConfiguration().chainID
         if (process is ValidatorBlockchainProcess) {
             fastSyncStatus = process.isInFastSyncMode()
         }

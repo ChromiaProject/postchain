@@ -52,9 +52,9 @@ class EsplixIntegrationTest : IntegrationTestSetup() {
         fun buildBlockAndCommitWithTx(data: ByteArray, fail: Boolean = false) {
             currentBlockHeight += 1
             try {
-                val tx = node.getBlockchainInstance().getEngine().getConfiguration().getTransactionFactory().decodeTransaction(data)
-                node.getBlockchainInstance().getEngine().getTransactionQueue().enqueue(tx)
-                buildBlockAndCommit(node.getBlockchainInstance().getEngine())
+                val tx = node.getBlockchainInstance().blockchainEngine.getConfiguration().getTransactionFactory().decodeTransaction(data)
+                node.getBlockchainInstance().blockchainEngine.getTransactionQueue().enqueue(tx)
+                buildBlockAndCommit(node.getBlockchainInstance().blockchainEngine)
                assertEquals(currentBlockHeight, getBestHeight(node))
                 val txSz = getTxRidsAtHeight(node, currentBlockHeight).size
                 if (fail)
@@ -112,13 +112,13 @@ class EsplixIntegrationTest : IntegrationTestSetup() {
                 bcRid)
         buildBlockAndCommitWithTx(postMessageTx4, true)
 
-        val msg1 = node.getBlockchainInstance().getEngine().getBlockQueries().query(
+        val msg1 = node.getBlockchainInstance().blockchainEngine.getBlockQueries().query(
                 """{"type":"R4getMessages",
                     "chainID":"${chainID.toHex()}",
                     "maxHits":1
                    }""")
         println(msg1.get())
-        val msg2 = node.getBlockchainInstance().getEngine().getBlockQueries().query(
+        val msg2 = node.getBlockchainInstance().blockchainEngine.getBlockQueries().query(
                 """{"type":"R4getMessages",
                     "chainID":"${chainID.toHex()}",
                     "sinceMessageID":"${messageID.toHex()}",

@@ -36,9 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  */
 class HistoricBlockchainProcess(val workerContext: WorkerContext,
-                                val historicBlockchainContext: HistoricBlockchainContext) : AbstractBlockchainProcess(workerContext.processName.toString()) {
-
-    override fun getEngine() = workerContext.engine
+                                val historicBlockchainContext: HistoricBlockchainContext) : AbstractBlockchainProcess(workerContext.processName.toString(), workerContext.engine) {
 
     val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
 
@@ -56,10 +54,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     companion object : KLogging()
 
     init {
-        val engine = getEngine()
-        myBRID = engine.getConfiguration().blockchainRid
+        myBRID = blockchainEngine.getConfiguration().blockchainRid
         blockDatabase = BaseBlockDatabase(
-                engine, engine.getBlockQueries(), NODE_ID_READ_ONLY)
+                blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
         val params = workerContext.nodeConfig.let { conf ->
              FastSyncParameters(
                     exitDelay = conf.fastSyncExitDelay,
@@ -76,7 +73,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     override fun action() {
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
 
-        val bestHeightSoFar = getEngine().getBlockQueries().getBestHeight().get()
+        val bestHeightSoFar = blockchainEngine.getBlockQueries().getBestHeight().get()
         initDebug("Historic sync bc ${myBRID}, height: ${bestHeightSoFar}")
 
         // try local sync first
@@ -138,7 +135,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     }
 
     private fun getBlockFromStore(blockStore: BaseBlockStore, ctx: EContext, height: Long): BlockDataWithWitness? {
-        val blockchainConfiguration = getEngine().getConfiguration()
+        val blockchainConfiguration = blockchainEngine.getConfiguration()
         val blockRID = blockStore.getBlockRID(ctx, height)
         if (blockRID == null) {
             return null
@@ -181,7 +178,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         try {
             lastHeight = fromBstore.getLastBlockHeight(fromCtx)
             if (lastHeight == -1L) return // no block = nothing to do
-            val ourHeight = getEngine().getBlockQueries().getBestHeight().get()
+            val ourHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
             if (lastHeight > ourHeight) {
                 if (ourHeight > -1L) {
                     // Just a verification of Block RID being the same
@@ -255,7 +252,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
      */
     private fun verifyBlockAtHeightIsTheSame(fromBstore: BaseBlockStore, fromCtx: EContext, ourHeight: Long) {
         val historictBlockRID = BlockchainRid(fromBstore.getBlockRID(fromCtx, ourHeight)!!)
-        val ourLastBlockRID = BlockchainRid(getEngine().getBlockQueries().getBlockRid(ourHeight).get()!!)
+        val ourLastBlockRID = BlockchainRid(blockchainEngine.getBlockQueries().getBlockRid(ourHeight).get()!!)
         if (historictBlockRID != ourLastBlockRID) {
             throw BadDataMistake(BadDataType.OTHER,
                     "Historic blockchain and fork chain disagree on block RID at height" +
@@ -269,7 +266,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         }
         shutdownDebug("Historic worker shutting down")
         historicSynchronizer?.shutdown()
-        fastSynchronizer.shutdown()
         super.shutdown()
         blockDatabase.stop()
         shutdownDebug("Shutdown finished")

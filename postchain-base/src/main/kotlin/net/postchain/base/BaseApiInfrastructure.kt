@@ -37,7 +37,7 @@ class BaseApiInfrastructure(
 
     override fun connectProcess(process: BlockchainProcess) {
         if (restApi != null) {
-            val engine = process.getEngine()
+            val engine = process.blockchainEngine
             val apiModel: PostchainModel
 
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
@@ -72,6 +72,6 @@ class BaseApiInfrastructure(
     }
 
     private fun blockchainRID(process: BlockchainProcess): String {
-        return process.getEngine().getConfiguration().blockchainRid.toHex()
+        return process.blockchainEngine.getConfiguration().blockchainRid.toHex()
     }
 }

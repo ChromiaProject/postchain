@@ -9,16 +9,14 @@ import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 
-class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess(workerContext.processName.toString()) {
+class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess(workerContext.processName.toString(), workerContext.engine) {
 
     companion object : KLogging()
-
-    override fun getEngine() = workerContext.engine
 
     private val fastSynchronizer: FastSynchronizer
 
     private val blockDatabase = BaseBlockDatabase(
-            getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
+            blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
 
     init {
         val params = FastSyncParameters(jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout)
@@ -39,9 +37,8 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
 
     override fun shutdown() {
         shutdownDebug("Begin")
-        fastSynchronizer.shutdown()
-        blockDatabase.stop()
         super.shutdown()
+        blockDatabase.stop()
         workerContext.shutdown()
         shutdownDebug("End")
     }

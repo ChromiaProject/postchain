@@ -6,7 +6,7 @@ import net.postchain.core.BlockchainProcess
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
-abstract class AbstractBlockchainProcess(private val processName: String) : BlockchainProcess {
+abstract class AbstractBlockchainProcess(private val processName: String, override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 
     val logger =  NamedKLogging(this::class.java.simpleName).logger
 
@@ -29,10 +29,6 @@ abstract class AbstractBlockchainProcess(private val processName: String) : Bloc
 
     fun startProcess() {
         process = thread(name = processName) { main() }
-    }
-
-    override fun getEngine(): BlockchainEngine {
-        TODO("Not yet implemented")
     }
 
     override fun shutdown() {

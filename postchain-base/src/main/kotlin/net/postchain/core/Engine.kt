@@ -30,7 +30,7 @@ interface BlockchainEngine : Shutdownable {
 }
 
 interface BlockchainProcess {
-    fun getEngine(): BlockchainEngine
+    val blockchainEngine: BlockchainEngine
     fun shutdown()
 }
 

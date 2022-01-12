@@ -19,7 +19,7 @@ import java.lang.Thread.sleep
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess(workerContext.processName.toString()) {
+class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess(workerContext.processName.toString(), workerContext.engine) {
 
     companion object : KLogging()
 
@@ -33,25 +33,21 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
         return syncManager.isInFastSync()
     }
 
-    override fun getEngine(): BlockchainEngine {
-        return workerContext.engine
-    }
-
     init {
-        val bestHeight = getEngine().getBlockQueries().getBestHeight().get()
+        val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
         statusManager = BaseStatusManager(
                 workerContext.signers.size,
                 workerContext.nodeId,
                 bestHeight + 1)
 
         blockDatabase = BaseBlockDatabase(
-                getEngine(), getEngine().getBlockQueries(), workerContext.nodeId)
+                blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeId)
 
         val blockManager = BaseBlockManager(
                 workerContext.processName,
                 blockDatabase,
                 statusManager,
-                getEngine().getBlockBuildingStrategy())
+                blockchainEngine.getBlockBuildingStrategy())
 
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
@@ -62,7 +58,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
                 nodeStateTracker)
 
         networkAwareTxQueue = NetworkAwareTxQueue(
-                getEngine().getTransactionQueue(),
+                blockchainEngine.getTransactionQueue(),
                 workerContext.communicationManager)
 
         statusManager.recomputeStatus()
