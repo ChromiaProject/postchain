@@ -79,7 +79,7 @@ class SingleNodeManual : IntegrationTestSetup() {
     }
 
     private fun txCount(node: PostchainTestNode): Pair<Long, Int> {
-        return node.getBlockchainInstance().getEngine().getBlockQueries().let { blockQueries ->
+        return node.getBlockchainInstance().blockchainEngine.getBlockQueries().let { blockQueries ->
             val bestHeight = blockQueries.getBestHeight().get()
             var txCount = (0..bestHeight).fold(0) { count, height ->
                 val blockRid = blockQueries.getBlockRid(height).get()!!

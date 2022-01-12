@@ -83,7 +83,7 @@ class DefaultXCommunicationManager<PacketType>(
             sendPacket(packet, randomPeer)
             return randomPeer!!
         } catch (e: Exception) {
-            logger.error("Could not send package to random peer: ${peerName(randomPeer.toString())} because: ${e.message}")
+            logger.error("Could not send package to random peer: ${peerName(randomPeer.toString())} because: ${e.message}", e)
             return null
         }
     }

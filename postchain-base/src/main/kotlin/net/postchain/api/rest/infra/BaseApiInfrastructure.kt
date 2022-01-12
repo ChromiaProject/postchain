@@ -11,7 +11,7 @@ import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.model.PostchainEBFTModel
-import net.postchain.ebft.worker.ValidatorWorker
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
 
 open class BaseApiInfrastructure(
         val nodeConfigProvider: NodeConfigurationProvider,
@@ -38,10 +38,10 @@ open class BaseApiInfrastructure(
 
     override fun connectProcess(process: BlockchainProcess) {
         if (restApi != null) {
-            val engine = process.getEngine()
+            val engine = process.blockchainEngine
             val apiModel: PostchainModel
 
-            if (process is ValidatorWorker) { // TODO: EBFT-specific code, but pretty harmless
+            if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
                         engine.getConfiguration().chainID,
                         process.nodeStateTracker,
@@ -73,6 +73,6 @@ open class BaseApiInfrastructure(
     }
 
     private fun bridOf(process: BlockchainProcess): String {
-        return process.getEngine().getConfiguration().blockchainRid.toHex()
+        return process.blockchainEngine.getConfiguration().blockchainRid.toHex()
     }
 }

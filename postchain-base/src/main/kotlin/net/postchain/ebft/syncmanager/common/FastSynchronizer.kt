@@ -167,10 +167,6 @@ class FastSynchronizer(
         }
     }
 
-    fun syncUntilShutdown() {
-        syncUntil { false }
-    }
-
     /**
      * Terminology:
      * current = our current view of the system
@@ -596,6 +592,8 @@ class FastSynchronizer(
     private fun commitJobsAsNecessary(bTrace: BlockTrace?) {
         // We have to make sure blocks are committed in the correct order. If we are missing a block we have to wait for it.
         for (job in jobs.values) {
+            if (shutdown.get()) return
+
             // The values are iterated in key-ascending order (see TreeMap)
             if (job.block == null) {
                 // The next block to be committed hasn't arrived yet
@@ -604,7 +602,6 @@ class FastSynchronizer(
             }
             if (!job.blockCommitting) {
                 unfinishedTrace("Committing block for $job")
-                job.blockCommitting = true
                 commitBlock(job, bTrace)
             }
         }
@@ -639,7 +636,8 @@ class FastSynchronizer(
      * successfully finished.
      */
     private fun commitBlock(job: Job, bTrace: BlockTrace?) {
-        if (shutdown.get()) return
+        // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
+        job.blockCommitting = true
 
         if (addBlockCompletionPromise?.isDone() == true) {
             addBlockCompletionPromise = null
@@ -647,23 +645,18 @@ class FastSynchronizer(
 
         // We are free to commit this Job, go on and add it to DB
         // (this is usually slow and is therefore handled via a promise).
-        val p = blockDatabase.addBlock(job.block!!, addBlockCompletionPromise, bTrace)
-        addBlockCompletionPromise = p
-        p.success {
-            finishedJobs.add(job)
-            lastBlockTimestamp = (job.header!! as BaseBlockHeader).timestamp
-        }
-        p.fail {
-            // We got an invalid block from peer. Let's blacklist this
-            // peer and try another peer
-            if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
-                warn("Exception committing block $job: ${it.message}")
-            } else {
-                warn("Exception committing block $job", it)
-            }
-            job.addBlockException = it
-            finishedJobs.add(job)
-        }
+        addBlockCompletionPromise = blockDatabase
+                .addBlock(job.block!!, addBlockCompletionPromise, bTrace)
+                .fail {
+                    // peer and try another peer
+                    if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
+                        warn("Exception committing block $job: ${it.message}")
+                    } else {
+                        warn("Exception committing block $job", it)
+                    }
+                    job.addBlockException = it
+                 }
+                 .always { finishedJobs.add(job) }
     }
 
     private fun processMessages(exitCondition: () -> Boolean) {

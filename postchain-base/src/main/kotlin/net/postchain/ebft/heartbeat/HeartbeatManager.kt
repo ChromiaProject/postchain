@@ -53,7 +53,6 @@ class DefaultHeartbeatManager(val nodeConfig: NodeConfig) : HeartbeatManager {
         logger.debug { "Heartbeat event received: timestamp $timestamp" }
         listeners.forEach {
             it.onHeartbeat(event)
-            logger.debug { "Heartbeat event sent to ${it.name}: timestamp $timestamp" }
         }
     }
 }

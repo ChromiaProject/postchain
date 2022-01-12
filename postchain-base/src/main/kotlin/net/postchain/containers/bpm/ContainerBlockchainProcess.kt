@@ -34,10 +34,10 @@ class DefaultContainerBlockchainProcess(
 
     companion object : KLogging()
 
-    override val name: String = processName.toString()
     private var lastHeight = -1L
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
+        logger.debug { "Heartbeat event sent to ${processName}: timestamp ${heartbeatEvent.timestamp}" }
         communicationManager.sendHeartbeatToSlave(heartbeatEvent)
     }
 
@@ -69,5 +69,5 @@ class DefaultContainerBlockchainProcess(
         onShutdown()
     }
 
-    override fun toString(): String = name
+    override fun toString(): String = processName.toString()
 }

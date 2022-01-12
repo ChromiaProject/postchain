@@ -8,7 +8,7 @@ import net.postchain.network.XPacketEncoder
 
 interface XPeerConnection {
     fun accept(handler: XPacketHandler)
-    fun sendPacket(packet: LazyPacket)
+    fun sendPacket(packet: LazyPacket): Boolean
     fun remoteAddress(): String
     fun close()
     fun descriptor(): XPeerConnectionDescriptor

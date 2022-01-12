@@ -30,7 +30,8 @@ interface BlockchainEngine : Shutdownable {
 }
 
 interface BlockchainProcess : HeartbeatListener {
-    fun getEngine(): BlockchainEngine
+    val blockchainEngine: BlockchainEngine
+    fun start()
     fun shutdown()
 }
 

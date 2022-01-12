@@ -14,7 +14,10 @@ import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 
+private const val NETTY_TIMEOUT = 20L
+
 open class DefaultXConnectionManager<PacketType>(
+
         private val connectorFactory: XConnectorFactory<PacketType>,
         private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
         private val packetDecoderFactory: XPacketDecoderFactory<PacketType>,
@@ -23,6 +26,7 @@ open class DefaultXConnectionManager<PacketType>(
 
     companion object : KLogging()
 
+    private val MAX_RETRIES = 3
     private var connector: XConnector<PacketType>? = null
     private lateinit var peersConnectionStrategy: PeersConnectionStrategy
 
@@ -154,18 +158,36 @@ open class DefaultXConnectionManager<PacketType>(
     }
 
     @Synchronized
-    override fun sendPacket(data: LazyPacket, chainId: Long, peerId: XPeerID) {
-        val chain = chains[chainId] ?: throw ProgrammerMistake("Chain ID not found: $chainId")
-        chain.connections[peerId]?.sendPacket(data)
+    override fun sendPacket(data: LazyPacket, chainID: Long, peerID: XPeerID) {
+        val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
+        val conn = chain.connections[peerID]
+        if (conn != null) {
+            sendPacketWithRetries(conn, data, peerID)
+        }
+    }
+
+    private fun sendPacketWithRetries(conn: XPeerConnection, data: LazyPacket, peerID: XPeerID?) {
+        var retries = 0
+        while (retries < MAX_RETRIES && !conn.sendPacket(data)) {
+            logger.error { "sendPacket() - Failed to send packet to peer ${peerID?.shortString()}. Retrying..." }
+            Thread.sleep(NETTY_TIMEOUT)
+            retries++
+        }
+        if (retries == MAX_RETRIES) logger.error { "sendPacket() - Could not recover from connection... channel inactive." }
     }
 
     @Synchronized
     override fun broadcastPacket(data: LazyPacket, chainId: Long) {
         // TODO: lazypacket might be computed multiple times
         val chain = chains[chainId] ?: throw ProgrammerMistake("Chain ID not found: $chainId")
-        chain.connections.forEach { (_, conn) ->
-            conn.sendPacket(data)
+        val failedConnections = mutableListOf<XPeerConnection>()
+        chain.connections.forEach { (peerId, conn) ->
+            if (!conn.sendPacket(data)) {
+                logger.warn("broadcastPacket() - Failed to broadcast packet to ${peerId.shortString()}. ${failedConnections.size}");
+                failedConnections.add(conn)
+            }
         }
+        failedConnections.forEach { sendPacketWithRetries(it, data, null) }
     }
 
     @Synchronized
