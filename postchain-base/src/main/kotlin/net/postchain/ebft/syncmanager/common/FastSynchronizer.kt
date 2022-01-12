@@ -16,7 +16,6 @@ import net.postchain.network.x.XPeerID
 import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.atomic.AtomicBoolean
 import net.postchain.ebft.message.BlockData as MessageBlockData
 import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
 
@@ -98,7 +97,8 @@ data class FastSyncParameters(var resurrectDrainedTime: Long = 10000,
  */
 class FastSynchronizer(private val workerContext: WorkerContext,
                        val blockDatabase: BlockDatabase,
-                       val params: FastSyncParameters
+                       val params: FastSyncParameters,
+                       val isProcessRunning: () -> Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
@@ -130,13 +130,11 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         }
     }
 
-    private val shutdown = AtomicBoolean(false)
-
     fun syncUntil(exitCondition: () -> Boolean) {
         try {
             blockHeight = blockQueries.getBestHeight().get()
             syncDebug("Start", blockHeight)
-            while (!shutdown.get() && !exitCondition()) {
+            while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
                 processMessages()
                 processDoneJobs()
@@ -206,10 +204,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             }
             done
         }
-    }
-
-    fun shutdown() {
-        shutdown.set(true)
     }
 
     private fun awaitCommits() {
@@ -583,7 +577,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     private fun commitJobsAsNecessary(bTrace: BlockTrace?) {
         // We have to make sure blocks are committed in the correct order. If we are missing a block we have to wait for it.
         for (job in jobs.values) {
-            if (shutdown.get()) return
+            if (!isProcessRunning()) return
 
             // The values are iterated in key-ascending order (see TreeMap)
             if (job.block == null) {

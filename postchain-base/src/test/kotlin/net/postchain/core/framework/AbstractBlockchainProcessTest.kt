@@ -8,9 +8,9 @@ import org.awaitility.Duration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import java.lang.IllegalArgumentException
 import java.lang.Thread.sleep
 import java.util.concurrent.TimeUnit
+import kotlin.IllegalArgumentException
 
 internal class AbstractBlockchainProcessTest {
 
@@ -31,6 +31,8 @@ internal class AbstractBlockchainProcessTest {
 }
 
 class DummyBlockchainProcess(private val testAction: () -> Unit): AbstractBlockchainProcess("TestProcess", mock(BlockchainEngine::class.java)) {
+
+    override fun cleanup() { }
 
     override fun action() {
         testAction()

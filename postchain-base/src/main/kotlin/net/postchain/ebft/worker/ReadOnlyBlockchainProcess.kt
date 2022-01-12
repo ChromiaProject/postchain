@@ -17,28 +17,20 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
             blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
 
     private val fastSynchronizer = FastSynchronizer(
-        workerContext,
-        blockDatabase,
-        FastSyncParameters(jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout)
+            workerContext,
+            blockDatabase,
+            FastSyncParameters(jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout),
+            ::isProcessRunning
     )
 
     override fun action() {
-        fastSynchronizer.syncUntil { isShuttingDown() }
+        fastSynchronizer.syncUntil { !isProcessRunning() }
     }
 
     fun getHeight(): Long = fastSynchronizer.blockHeight
 
-    override fun shutdown() {
-        shutdownDebug("Begin")
-        super.shutdown()
+    override fun cleanup() {
         blockDatabase.stop()
         workerContext.shutdown()
-        shutdownDebug("End")
-    }
-
-    private fun shutdownDebug(str: String) {
-        if (logger.isDebugEnabled) {
-            logger.debug("${workerContext.processName}: shutdown() - $str.")
-        }
     }
 }

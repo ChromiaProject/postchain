@@ -13,7 +13,6 @@ import net.postchain.ebft.rest.contract.serialize
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
 import net.postchain.ebft.syncmanager.StatusLogInterval
-import net.postchain.ebft.syncmanager.SyncManager
 import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
@@ -30,8 +29,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val statusManager: StatusManager,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
-                           private val nodeStateTracker: NodeStateTracker
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager), SyncManager {
+                           private val nodeStateTracker: NodeStateTracker,
+                           isProcessRunning: () -> Boolean
+) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(10000, statusManager)
     private val statusSender = StatusSender(1000, statusManager, workerContext.communicationManager)
@@ -55,7 +55,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         params.exitDelay = nodeConfig.fastSyncExitDelay
         params.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
         params.jobTimeout = nodeConfig.fastSyncJobTimeout
-        fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
+        fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params, isProcessRunning)
 
         // Init useFastSyncAlgorithm
         val lastHeight = blockQueries.getBestHeight().get()
@@ -366,7 +366,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      * Process peer messages, how we should proceed with the current block, updating the revolt tracker and
      * notify peers of our current status.
      */
-    override fun update() {
+    fun update() {
         if (useFastSyncAlgorithm) {
             if (logger.isDebugEnabled) {
                 logger.debug("$processName Using fast sync") // Doesn't happen very often
@@ -422,9 +422,5 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
     fun isInFastSync(): Boolean {
         return useFastSyncAlgorithm
-    }
-
-    fun shutdown() {
-        fastSynchronizer.shutdown()
     }
 }

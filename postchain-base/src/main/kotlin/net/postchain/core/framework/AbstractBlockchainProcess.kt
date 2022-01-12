@@ -10,29 +10,45 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
 
     val logger =  NamedKLogging(this::class.java.simpleName).logger
 
-    private val shutdown = AtomicBoolean(false)
+    private val running = AtomicBoolean(true)
     internal lateinit var process: Thread
 
-    fun isShuttingDown() = shutdown.get()
+    fun isProcessRunning() = running.get()
 
     final override fun start() {
+        running.set(true)
         process = thread(name = processName) { main() }
     }
 
     private fun main() {
         try {
-            while (!isShuttingDown()) {
+            while (isProcessRunning()) {
                 action()
             }
         } catch (e: Exception) {
             logger.error(e) { "Process $processName stopped unexpectedly" }
+        } finally {
+            try {
+                logger.debug { "Cleanup up resources" }
+                cleanup()
+            } catch (e: Exception) {
+                logger.error { "Failed to free resources on shutdown!" }
+            }
         }
     }
 
+    /**
+     * Action to be performed repeatedly on a separate thread
+     */
     protected abstract fun action()
 
-    override fun shutdown() {
-        shutdown.set(true)
+    /**
+     * Clean up any resources and connections used by this process
+     */
+    protected abstract fun cleanup()
+
+    final override fun shutdown() {
+        running.set(false)
         if (alreadyShutdown()) return
         logger.debug { "Shutting down process $processName" }
         process.join()

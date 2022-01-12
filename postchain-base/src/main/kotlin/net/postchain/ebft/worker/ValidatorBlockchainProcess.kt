@@ -5,7 +5,6 @@ package net.postchain.ebft.worker
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
 import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.core.BlockchainEngine
 import net.postchain.core.NodeStateTracker
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
@@ -52,7 +51,9 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
                 statusManager,
                 blockManager,
                 blockDatabase,
-                nodeStateTracker)
+                nodeStateTracker,
+                ::isProcessRunning
+                )
 
         networkAwareTxQueue = NetworkAwareTxQueue(
                 blockchainEngine.getTransactionQueue(),
@@ -68,25 +69,8 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
         sleep(20)
     }
 
-    /**
-     * Stop the postchain node
-     */
-    override fun shutdown() {
-        shutdowDebug("Begin")
-        syncManager.shutdown()
-        super.shutdown()
+    override fun cleanup() {
         blockDatabase.stop()
         workerContext.shutdown()
-        shutdowDebug("End")
-    }
-
-    // --------
-    // Logging
-    // --------
-
-    private fun shutdowDebug(str: String) {
-        if (logger.isDebugEnabled) {
-            logger.debug("${workerContext.processName} shutdown() - $str")
-        }
     }
 }
