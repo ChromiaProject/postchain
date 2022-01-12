@@ -3,15 +3,13 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
-import net.postchain.core.BlockchainProcess
+import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
-import java.util.concurrent.CountDownLatch
-import kotlin.concurrent.thread
 
-class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : BlockchainProcess {
+class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess() {
 
     companion object : KLogging()
 
@@ -22,8 +20,6 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : BlockchainPr
     private val blockDatabase = BaseBlockDatabase(
             getEngine(), getEngine().getBlockQueries(), NODE_ID_READ_ONLY)
 
-    private val process: Thread
-
     init {
         val params = FastSyncParameters(jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout)
 
@@ -32,13 +28,13 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : BlockchainPr
                 params
         )
 
-        process = startProcess()
+        startProcess()
     }
 
-    private fun startProcess(): Thread {
-        return thread(name = "replicaSync-${workerContext.processName}") {
-            fastSynchronizer.syncUntilShutdown()
-        }
+    override fun processName(): String = "replicaSync-${workerContext.processName}"
+
+    override fun action() {
+        fastSynchronizer.syncUntil { isShuttingDown() }
     }
 
     fun getHeight(): Long = fastSynchronizer.blockHeight
@@ -47,8 +43,7 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : BlockchainPr
         shutdownDebug("Begin")
         fastSynchronizer.shutdown()
         blockDatabase.stop()
-        shutdownDebug("Wait for \"done\"")
-        process.join()
+        super.shutdown()
         workerContext.shutdown()
         shutdownDebug("End")
     }

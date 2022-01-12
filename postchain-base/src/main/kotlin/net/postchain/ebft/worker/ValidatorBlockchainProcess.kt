@@ -4,29 +4,24 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
+import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.core.BlockchainEngine
-import net.postchain.core.BlockchainProcess
 import net.postchain.core.NodeStateTracker
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.StatusManager
-import net.postchain.ebft.syncmanager.SyncManager
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.concurrent.thread
+import java.lang.Thread.sleep
 
 /**
  * A blockchain instance worker
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorBlockchainProcess(val workerContext: WorkerContext) : BlockchainProcess {
+class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess() {
 
     companion object : KLogging()
-
-    private val process: Thread
-    private val shutdown = AtomicBoolean(false)
 
     private val blockDatabase: BaseBlockDatabase
     val syncManager: ValidatorSyncManager
@@ -71,24 +66,14 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : BlockchainP
                 workerContext.communicationManager)
 
         statusManager.recomputeStatus()
-        process = startProcess(syncManager)
+        startProcess()
     }
 
-    /**
-     * Create and run the [process] thread
-     * @param syncManager the syncronization manager
-     */
-    fun startProcess(syncManager: SyncManager): Thread {
-        return thread(name = "updateLoop-${workerContext.processName}") {
-            while (!shutdown.get()) {
-                try {
-                    syncManager.update()
-                    Thread.sleep(20)
-                } catch (e: Exception) {
-                    startUpdateErr("Failing to update", e)
-                }
-            }
-        }
+    override fun processName(): String = "updateLoop-${workerContext.processName}"
+
+    override fun action() {
+        syncManager.update()
+        sleep(20)
     }
 
     /**
@@ -97,8 +82,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : BlockchainP
     override fun shutdown() {
         shutdowDebug("Begin")
         syncManager.shutdown()
-        shutdown.set(true)
-        process.join()
+        super.shutdown()
         blockDatabase.stop()
         workerContext.shutdown()
         shutdowDebug("End")
