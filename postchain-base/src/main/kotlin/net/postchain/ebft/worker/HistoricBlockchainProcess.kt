@@ -38,37 +38,26 @@ import java.util.concurrent.atomic.AtomicBoolean
 class HistoricBlockchainProcess(val workerContext: WorkerContext,
                                 val historicBlockchainContext: HistoricBlockchainContext) : AbstractBlockchainProcess(workerContext.processName.toString(), workerContext.engine) {
 
+    companion object : KLogging()
+
     val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
 
-    private val fastSynchronizer: FastSynchronizer
     private var historicSynchronizer: FastSynchronizer? = null
     private val storage = (workerContext.engine as BaseBlockchainEngine).storage
-    private val blockDatabase: BaseBlockDatabase // Not good to have explicit type here..
+    private val blockDatabase = BaseBlockDatabase(
+        blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
+    private val fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, workerContext.nodeConfig.let { conf ->
+        FastSyncParameters(
+            exitDelay = conf.fastSyncExitDelay,
+            jobTimeout = conf.fastSyncJobTimeout
+        )
+    })
 
     // Logging only
     var blockTrace: BlockTrace? = null // For logging only
-    val myNodeConf: NodeConfig // For logging only
-    val myBRID: BlockchainRid // For logging only
-    val procName: BlockchainProcessName // For logging only
-
-    companion object : KLogging()
-
-    init {
-        myBRID = blockchainEngine.getConfiguration().blockchainRid
-        blockDatabase = BaseBlockDatabase(
-                blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
-        val params = workerContext.nodeConfig.let { conf ->
-             FastSyncParameters(
-                    exitDelay = conf.fastSyncExitDelay,
-                    jobTimeout = conf.fastSyncJobTimeout
-            )
-        }
-        myNodeConf = workerContext.nodeConfig
-        procName = BlockchainProcessName(myNodeConf.pubKey, myBRID)
-
-        fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params)
-        startProcess()
-    }
+    val myBRID = blockchainEngine.getConfiguration().blockchainRid
+    val myNodeConf = workerContext.nodeConfig
+    val procName = BlockchainProcessName(myNodeConf.pubKey, myBRID)
 
     override fun action() {
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)

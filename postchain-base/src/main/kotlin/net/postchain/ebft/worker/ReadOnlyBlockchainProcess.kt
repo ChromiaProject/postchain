@@ -13,21 +13,14 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
 
     companion object : KLogging()
 
-    private val fastSynchronizer: FastSynchronizer
-
     private val blockDatabase = BaseBlockDatabase(
             blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
 
-    init {
-        val params = FastSyncParameters(jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout)
-
-        fastSynchronizer = FastSynchronizer(workerContext,
-                blockDatabase,
-                params
-        )
-
-        startProcess()
-    }
+    private val fastSynchronizer = FastSynchronizer(
+        workerContext,
+        blockDatabase,
+        FastSyncParameters(jobTimeout = workerContext.nodeConfig.fastSyncJobTimeout)
+    )
 
     override fun action() {
         fastSynchronizer.syncUntil { isShuttingDown() }

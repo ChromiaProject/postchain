@@ -17,7 +17,6 @@ internal class AbstractBlockchainProcessTest {
     @Test
     fun `Process is started and stopped successfully`() {
         val process = DummyBlockchainProcess { sleep(1) }
-        process.startProcess()
         assert(process.process.isAlive).isTrue()
         process.shutdown()
         assert(process.process.isAlive).isFalse()
@@ -26,7 +25,6 @@ internal class AbstractBlockchainProcessTest {
     @Test
     fun `Action throws should stop process`() {
         val process = DummyBlockchainProcess { throw IllegalArgumentException() }
-        process.startProcess()
         await.atMost(Duration(1, TimeUnit.SECONDS)).until { !process.process.isAlive }
     }
 
