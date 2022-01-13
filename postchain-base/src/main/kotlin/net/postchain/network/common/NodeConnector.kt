@@ -36,9 +36,6 @@ interface NodeConnector<PacketType, DescriptorType> {
 
 }
 
-/**
- * TODO: Olle: Is this only to hide that we are using Netty? If so, why isn't this also used by [DefaultMasterConnectionManager]
- */
 /* (Maybe I'm wrong removing this, b/c it might have a conceptual use I don't yet understand)
 interface NodeConnectorFactory<PacketType, HandlerType, DescriptorType> {
     fun createConnector(

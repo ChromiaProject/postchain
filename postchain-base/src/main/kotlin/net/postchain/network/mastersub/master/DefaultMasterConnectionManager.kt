@@ -16,8 +16,8 @@ import net.postchain.network.mastersub.protocol.MsMessage
  */
 class DefaultMasterConnectionManager(
         val nodeConfig: NodeConfig
-) : MasterConnectionManager,  // Adding methods very similar to those in [PeerConnectionManager] but for sub-nodes ( see idea above)
-    MasterConnectorEvents  // Adding methods very similar to those in [ConnectionLifecycle] but for sub-nodes (see idea above)
+) : MasterConnectionManager,
+    MasterConnectorEvents
 {
 
     companion object : KLogging()

@@ -5,7 +5,7 @@ import net.postchain.network.common.NodeConnection
 import net.postchain.network.mastersub.MsMessageHandler
 
 /**
- * Pretty simple stuff, mostly here for symmetry
+ *
  */
 class ChainWithOneSubConnection (val config: SubChainConfig):
     ChainWithOneConnection<NodeConnection<MsMessageHandler, MasterConnectionDescriptor>, MsMessageHandler>  // Type magic

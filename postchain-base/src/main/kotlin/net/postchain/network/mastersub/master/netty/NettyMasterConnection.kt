@@ -5,6 +5,7 @@ package net.postchain.network.mastersub.master.netty
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
+import net.postchain.core.ProgrammerMistake
 import net.postchain.network.common.NodeConnection
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.master.MasterConnectionDescriptor
@@ -74,6 +75,7 @@ class NettyMasterConnection :
     }
 
     override fun descriptor(): MasterConnectionDescriptor {
-        return connectionDescriptor!! // TODO: Olle: will this work?
+        return connectionDescriptor?:
+            throw ProgrammerMistake("Illegal to access Connection Descriptor before MsHandshakeMessage arrived.")
     }
 }
