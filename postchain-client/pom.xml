@@ -14,6 +14,9 @@
     <packaging>jar</packaging>
 
     <name>Postchain Client</name>
+    <description>
+        A kotlin client which can be used to post transactions and query data against Postchain’s REST API.
+    </description>
 
     <dependencies>
         <!-- Kotlin -->
