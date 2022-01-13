@@ -198,7 +198,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             val packet = BlockSignature(blockRID, net.postchain.ebft.message.Signature(it.subjectID, it.data))
             communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
         } fail {
-            logger.debug("$processName: Error sending BlockSignature", it)
+            logger.debug(it) { "$processName: Error sending BlockSignature" }
         }
     }
 
@@ -238,7 +238,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun fetchBlockAtHeight(height: Long) {
         val nodeIndex = selectRandomNode { it.height > height } ?: return
-        logger.debug("$processName: Fetching block at height $height from node $nodeIndex")
+        logger.debug{ "$processName: Fetching block at height $height from node $nodeIndex" }
         communicationManager.sendPacket(GetBlockAtHeight(height), validatorAtIndex(nodeIndex))
     }
 
@@ -250,7 +250,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun fetchCommitSignatures(blockRID: ByteArray, nodes: Array<Int>) {
         val message = GetBlockSignature(blockRID)
-        logger.debug("$processName: Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}")
+        logger.debug{ "$processName: Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}" }
         nodes.forEach {
             communicationManager.sendPacket(message, validatorAtIndex(it))
         }
@@ -266,7 +266,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         val nodeIndex = selectRandomNode {
             it.height == height && (it.blockRID?.contentEquals(blockRID) ?: false)
         } ?: return
-        logger.debug("$processName: Fetching unfinished block with RID ${blockRID.toHex()} from node $nodeIndex ")
+        logger.debug{ "$processName: Fetching unfinished block with RID ${blockRID.toHex()} from node $nodeIndex " }
         communicationManager.sendPacket(GetUnfinishedBlock(blockRID), validatorAtIndex(nodeIndex))
     }
 
@@ -311,7 +311,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             } else {
                 "(prim = ${statusManager.primaryIndex()}),"
             }
-            logger.debug("$processName: (Fast sync) Height: $currentBlockHeight. My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent")
+            logger.debug{ "$processName: (Fast sync) Height: $currentBlockHeight. My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
         }
         for ((idx, ns) in statusManager.nodeStatuses.withIndex()) {
             val blockRID = ns.blockRID
@@ -340,7 +340,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             } else {
                 "(prim = ${statusManager.primaryIndex()}),"
             }
-            logger.debug("$processName: My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent")
+            logger.debug{ "$processName: My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
         }
         for ((idx, ns) in statusManager.nodeStatuses.withIndex()) {
             val blockRID = ns.blockRID
