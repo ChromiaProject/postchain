@@ -15,7 +15,7 @@ class ManualBlockchainConfigurationProvider : BlockchainConfigurationProvider {
         val height = DatabaseAccess.of(eContext).getLastBlockHeight(eContext)
         val currentConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height)
         val nextConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height + 1)
-        logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight (currentConfigHeight: $currentConfigHeight)")
+        logger.debug{ "needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight (currentConfigHeight: $currentConfigHeight)" }
         return (currentConfigHeight != nextConfigHeight)
     }
 
