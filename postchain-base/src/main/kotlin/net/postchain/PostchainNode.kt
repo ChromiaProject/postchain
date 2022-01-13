@@ -86,7 +86,7 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
         return if (logger.isDebugEnabled) {
             val x = processManager.retrieveBlockchain(chainId)
             if (x == null) {
-                logger.trace("WARN why didn't we find the blockchain for chainId: $chainId on node: ${nodeConfigProvider.getConfiguration().pubKey}?")
+                logger.trace{ "WARN why didn't we find the blockchain for chainId: $chainId on node: ${nodeConfigProvider.getConfiguration().pubKey}?" }
                 null
             } else {
                 val procName = BlockchainProcessName(nodeConfigProvider.getConfiguration().pubKey, x.getEngine().getConfiguration().blockchainRid)

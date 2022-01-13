@@ -39,7 +39,7 @@ open class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvi
             val blockchainRID = dba.getBlockchainRid(eContext)
             val height = dba.getLastBlockHeight(eContext)
             val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRID!!.data, height)
-            logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight")
+            logger.debug{ "needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight" }
             return (nextConfigHeight != null) && (nextConfigHeight == height + 1)
         }
 

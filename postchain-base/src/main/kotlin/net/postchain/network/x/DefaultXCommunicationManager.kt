@@ -102,10 +102,10 @@ class DefaultXCommunicationManager<PacketType>(
         try {
             // packet decoding should not be synchronized so we can make
             // use of parallel processing in different threads
-            logger.trace("receiving a packet from peer: ${peerID.byteArray.toHex()}")
+            logger.trace{ "receiving a packet from peer: ${peerID.byteArray.toHex()}" }
             val decodedPacket = packetDecoder.decodePacket(peerID.byteArray, packet)
             synchronized(this) {
-                logger.trace("Successfully decoded the package, now adding it ")
+                logger.trace{ "Successfully decoded the package, now adding it " }
                 inboundPackets.add(peerID to decodedPacket)
             }
         } catch (e: BadDataMistake) {
