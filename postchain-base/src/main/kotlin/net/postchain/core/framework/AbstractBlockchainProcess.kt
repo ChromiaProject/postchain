@@ -10,7 +10,7 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
 
     val logger =  NamedKLogging(this::class.java.simpleName).logger
 
-    private val running = AtomicBoolean(true)
+    private val running = AtomicBoolean(false)
     internal lateinit var process: Thread
 
     fun isProcessRunning() = running.get()
@@ -27,6 +27,7 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
             }
         } catch (e: Exception) {
             logger.error(e) { "Process $processName stopped unexpectedly" }
+            running.set(false)
         } finally {
             try {
                 logger.debug { "Cleanup up resources" }
