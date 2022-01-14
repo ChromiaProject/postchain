@@ -9,9 +9,7 @@ import net.postchain.configurations.GTXTestModule
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
-import net.postchain.devtools.PostchainTestNode
-import net.postchain.ebft.worker.ValidatorWorker
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.factory.GtxTransactionDataFactory
@@ -115,13 +113,13 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
 
         var txId = 0
-        val statusManager = (nodes[0].getBlockchainInstance() as ValidatorWorker).statusManager
+        val statusManager = (nodes[0].getBlockchainInstance() as ValidatorBlockchainProcess).statusManager
         for (i in 0 until blocksCount) {
             val txs = (1..txPerBlock).map { makeTestTx(1, (txId++).toString(), blockchainRid) }
 
             val engine = nodes[statusManager.primaryIndex()]
                     .getBlockchainInstance()
-                    .getEngine()
+                    .blockchainEngine
             val txFactory = engine
                     .getConfiguration()
                     .getTransactionFactory()

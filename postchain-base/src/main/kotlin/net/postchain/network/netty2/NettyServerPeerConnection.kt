@@ -16,7 +16,7 @@ class NettyServerPeerConnection<PacketType>(
         private val packetDecoder: XPacketDecoder<PacketType>
 ) : NettyPeerConnection() {
 
-    private lateinit var context: ChannelHandlerContext
+    private var context: ChannelHandlerContext? = null
     private var peerPacketHandler: PeerPacketHandler? = null
     private var peerConnectionDescriptor: PeerConnectionDescriptor? = null
 
@@ -29,18 +29,23 @@ class NettyServerPeerConnection<PacketType>(
         this.peerPacketHandler = packetHandler
     }
 
-    override fun sendPacket(packet: LazyPacket) {
-        context.writeAndFlush(Transport.wrapMessage(packet()))
+    override fun sendPacket(packet: LazyPacket): Boolean {
+        return if (context == null) {
+            false
+        } else {
+            context!!.writeAndFlush(Transport.wrapMessage(packet()))
+            true
+        }
     }
 
     override fun remoteAddress(): String {
-        return if (::context.isInitialized)
-            context.channel().remoteAddress().toString()
+        return if (context != null)
+            context!!.channel().remoteAddress().toString()
         else ""
     }
 
     override fun close() {
-        context.close()
+        context?.close()
     }
 
     override fun descriptor(): PeerConnectionDescriptor {

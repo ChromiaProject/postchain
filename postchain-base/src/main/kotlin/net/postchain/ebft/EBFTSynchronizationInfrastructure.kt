@@ -16,9 +16,9 @@ import net.postchain.ebft.heartbeat.Chain0HeartbeatChecker
 import net.postchain.ebft.heartbeat.DefaultHeartbeatChecker
 import net.postchain.ebft.heartbeat.HeartbeatChecker
 import net.postchain.ebft.message.Message
-import net.postchain.ebft.worker.HistoricChainWorker
-import net.postchain.ebft.worker.ReadOnlyWorker
-import net.postchain.ebft.worker.ValidatorWorker
+import net.postchain.ebft.worker.HistoricBlockchainProcess
+import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
 import net.postchain.network.common.*
@@ -113,22 +113,25 @@ open class EBFTSynchronizationInfrastructure(
                 )
 
             }
-            HistoricChainWorker(workerContext, historicBlockchainContext).also {
+            HistoricBlockchainProcess(workerContext, historicBlockchainContext).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_HISTORIC_REPLICA) {
                     "TODO: Implement getHeight()"
                 }
+                it.start()
             }
         } else if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
-            ValidatorWorker(workerContext).also {
+            ValidatorBlockchainProcess(workerContext).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_VALIDATOR) {
                     it.syncManager.getHeight().toString()
                 }
+                it.start()
             }
         } else {
-            ReadOnlyWorker(workerContext).also {
+            ReadOnlyBlockchainProcess(workerContext).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_REPLICA) {
                     it.getHeight().toString()
                 }
+                it.start()
             }
         }
     }
@@ -139,14 +142,14 @@ open class EBFTSynchronizationInfrastructure(
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {
-        val chainID = process.getEngine().getConfiguration().chainID
+        val chainID = process.blockchainEngine.getConfiguration().chainID
         startWithFastSync.remove(chainID) // remove status when process is gone
     }
 
     override fun restartBlockchainProcess(process: BlockchainProcess) {
         var fastSyncStatus = true
-        val chainID = process.getEngine().getConfiguration().chainID
-        if (process is ValidatorWorker) {
+        val chainID = process.blockchainEngine.getConfiguration().chainID
+        if (process is ValidatorBlockchainProcess) {
             fastSyncStatus = process.isInFastSyncMode()
         }
         startWithFastSync[chainID] = fastSyncStatus

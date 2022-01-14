@@ -163,7 +163,7 @@ class TestContainerManagedBlockchainProcessManager(blockchainInfrastructure: Mas
         }
         if (chainId == 0L) { //only chain0 is run on master, all other chains in containers
             val process = blockchainProcesses[chainId]!!
-            val queries = process.getEngine().getBlockQueries()
+            val queries = process.blockchainEngine.getBlockQueries()
             val height = queries.getBestHeight().get()
             lastHeightStarted[chainId] = height
         } else { //receiving heights asynchronous from subnodes' status messages

@@ -9,7 +9,7 @@ package net.postchain.network.common
  */
 interface NodeConnection<HandlerType, DescriptorType> {
     fun accept(handler: HandlerType)
-    fun sendPacket(packet: LazyPacket)
+    fun sendPacket(packet: LazyPacket): Boolean
     fun remoteAddress(): String
     fun close()
     fun descriptor(): DescriptorType

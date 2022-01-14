@@ -13,21 +13,18 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.HeartbeatChecker
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 
-class TestBlockchainProcess(val _engine: BlockchainEngine) : BlockchainProcess {
+class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 
     companion object : KLogging()
 
     // Need this stuff to make this test class look a bit "normal"
-    override val name: String = BlockchainProcessName("?", _engine.getConfiguration().blockchainRid)
-            .toString()
+    val name: String = BlockchainProcessName("?", blockchainEngine.getConfiguration().blockchainRid).toString()
 
-    override fun getEngine(): BlockchainEngine {
-        return _engine
-    }
+    override fun start() { }
 
     override fun shutdown() {
         shutdownDebug("Begin")
-        _engine.shutdown()
+        blockchainEngine.shutdown()
         shutdownDebug("End")
     }
 

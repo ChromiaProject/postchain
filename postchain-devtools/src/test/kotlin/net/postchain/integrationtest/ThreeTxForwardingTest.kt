@@ -18,7 +18,7 @@ class ThreeTxForwardingTest : IntegrationTestSetup() {
     private fun strat(node: PostchainTestNode): ThreeTxStrategy {
         return node
                 .getBlockchainInstance()
-                .getEngine()
+                .blockchainEngine
                 .getBlockBuildingStrategy() as ThreeTxStrategy
     }
 
@@ -52,7 +52,7 @@ class ThreeTxForwardingTest : IntegrationTestSetup() {
         apiModel(2).postTransaction(tx(8))
         strat(nodes[2]).awaitCommitted(2)
 
-        val bockQueries = nodes[2].getBlockchainInstance().getEngine().getBlockQueries()
+        val bockQueries = nodes[2].getBlockchainInstance().blockchainEngine.getBlockQueries()
         for (i in 0..2) {
             val blockData = bockQueries.getBlockAtHeight(i.toLong()).get()!!
             assertEquals(3, blockData.transactions.size)

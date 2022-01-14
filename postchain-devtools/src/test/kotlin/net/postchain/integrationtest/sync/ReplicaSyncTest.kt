@@ -26,7 +26,7 @@ class ReplicaSyncTest : AbstractSyncTest() {
     @Test
     fun testRemove() {
         assertThrows<ConditionTimeoutException> {
-            Awaitility.await().atMost(7, TimeUnit.SECONDS).until {
+            Awaitility.await().atMost(30, TimeUnit.SECONDS).until { // Slower machines cannot finish on 7 secs.
                 runSyncTest(1, 2, setOf(1), setOf(0), 1)
                 true
             }

@@ -6,7 +6,6 @@ import net.postchain.devtools.chainRidOf
 import net.postchain.devtools.currentHeight
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.core.NodeRid
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test

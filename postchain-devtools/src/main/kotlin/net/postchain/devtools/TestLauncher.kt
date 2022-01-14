@@ -195,7 +195,7 @@ class TestLauncher : IntegrationTestSetup() {
                     failures.add(TransactionFailure(blockHeight.toLong(), it.txIdx,
                             Exception("Transaction should fail")))
                 } else if (!present && !it.isFailure) {
-                    val engine = node.getBlockchainInstance().getEngine()
+                    val engine = node.getBlockchainInstance().blockchainEngine
                     val reason = engine.getTransactionQueue().getRejectionReason(txRID)
                     failures.add(TransactionFailure(blockHeight.toLong(), it.txIdx, reason))
                 }
