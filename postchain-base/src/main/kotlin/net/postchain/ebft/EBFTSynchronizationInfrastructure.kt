@@ -21,8 +21,9 @@ import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
-import net.postchain.network.netty2.NettyConnectorFactory
-import net.postchain.network.x.*
+import net.postchain.network.common.*
+import net.postchain.network.mastersub.master.MasterConnectionManager
+import net.postchain.network.peer.*
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
@@ -32,7 +33,7 @@ open class EBFTSynchronizationInfrastructure(
 ) : SynchronizationInfrastructure {
 
     val nodeConfig get() = nodeConfigProvider.getConfiguration()
-    lateinit var connectionManager: XConnectionManager
+    lateinit var connectionManager: ConnectionManager
     protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<String, () -> Any>>()
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
 
@@ -41,8 +42,7 @@ open class EBFTSynchronizationInfrastructure(
     }
 
     override fun init() {
-        connectionManager = DefaultXConnectionManager(
-                NettyConnectorFactory(),
+        connectionManager = DefaultPeerConnectionManager(
                 EbftPacketEncoderFactory(),
                 EbftPacketDecoderFactory(),
                 SECP256K1CryptoSystem()
@@ -176,7 +176,7 @@ open class EBFTSynchronizationInfrastructure(
         val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, effectiveRid)
         val packetDecoder = EbftPacketDecoder(relevantPeerCommConfig)
 
-        return DefaultXCommunicationManager(
+        return DefaultPeerCommunicationManager(
                 connectionManager,
                 relevantPeerCommConfig,
                 blockchainConfig.chainID,
@@ -193,7 +193,7 @@ open class EBFTSynchronizationInfrastructure(
             historicBlockchainContext: HistoricBlockchainContext,
             ancBrid: BlockchainRid
     ): PeerCommConfiguration {
-        val myPeerID = XPeerID(nodeConfig.pubKeyByteArray)
+        val myPeerID = NodeRid(nodeConfig.pubKeyByteArray)
         val peersThatServeAncestorBrid = historicBlockchainContext.ancestors[ancBrid]!!
 
         val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
@@ -222,8 +222,8 @@ open class EBFTSynchronizationInfrastructure(
             blockchainConfig: BaseBlockchainConfiguration,
             historicBlockchainContext: HistoricBlockchainContext? = null
     ): PeerCommConfiguration {
-        val myPeerID = XPeerID(nodeConfig.pubKeyByteArray)
-        val signers = blockchainConfig.signers.map { XPeerID(it) }
+        val myPeerID = NodeRid(nodeConfig.pubKeyByteArray)
+        val signers = blockchainConfig.signers.map { NodeRid(it) }
         val signersReplicas = signers.flatMap {
             nodeConfig.nodeReplicas[it] ?: listOf()
         }
@@ -251,7 +251,7 @@ open class EBFTSynchronizationInfrastructure(
         nodeDiagnosticContext.addProperty(BLOCKCHAIN) {
             val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
 
-            connectionManager.getPeersTopology().forEach { (blockchainRid, topology) ->
+            connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
                 diagnosticData.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
                     properties.apply {
                         put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS.prettyName) { topology }

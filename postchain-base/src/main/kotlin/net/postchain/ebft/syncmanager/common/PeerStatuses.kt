@@ -1,7 +1,7 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 
 /**
  * Keeps track of peer's statuses. The currently trackeed statuses are
@@ -192,7 +192,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         }
     }
 
-    private val statuses = HashMap<XPeerID, KnownState>()
+    private val statuses = HashMap<NodeRid, KnownState>()
 
     private fun resurrectDrainedAndUnresponsivePeers(now: Long) {
         statuses.forEach {
@@ -205,7 +205,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
      * @param now is our current time (we want to send it to keep this pure = testable)
      * @return the nodes we SHOULDN'T sync
      */
-    fun exclNonSyncable(height: Long, now: Long): Set<XPeerID> {
+    fun exclNonSyncable(height: Long, now: Long): Set<NodeRid> {
         resurrectDrainedAndUnresponsivePeers(now)
         val excluded = statuses.filter {
             val state = it.value
@@ -216,11 +216,11 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
 
     }
 
-    fun getLegacyPeers(height: Long): Set<XPeerID> {
+    fun getLegacyPeers(height: Long): Set<NodeRid> {
         return statuses.filterValues { it.isMaybeLegacy() && it.isSyncable(height) }.keys
     }
 
-    fun drained(peerId: XPeerID, height: Long, now: Long) {
+    fun drained(peerId: NodeRid, height: Long, now: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
             logger.warn("We tried to get block from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
@@ -234,7 +234,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         status.drained(height, now)
     }
 
-    fun headerReceived(peerId: XPeerID, height: Long) {
+    fun headerReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
             logger.warn("We got a header from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
@@ -243,7 +243,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         status.headerReceived(height)
     }
 
-    fun statusReceived(peerId: XPeerID, height: Long) {
+    fun statusReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
             logger.warn("Got status from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
@@ -257,7 +257,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
      * @param desc is the text we will log, surrounding the circumstances.
      *             (This could be caused by a bug, if so it has to be traced)
      */
-    fun unresponsive(peerId: XPeerID, desc: String) {
+    fun unresponsive(peerId: NodeRid, desc: String) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
             return
@@ -265,7 +265,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         status.unresponsive(desc, System.currentTimeMillis())
     }
 
-    fun setMaybeLegacy(peerId: XPeerID, isLegacy: Boolean) {
+    fun setMaybeLegacy(peerId: NodeRid, isLegacy: Boolean) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
             return
@@ -278,13 +278,13 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         status.maybeLegacy(isLegacy)
     }
 
-    fun isMaybeLegacy(peerId: XPeerID): Boolean {
+    fun isMaybeLegacy(peerId: NodeRid): Boolean {
         return stateOf(peerId).isMaybeLegacy()
     }
-    fun isConfirmedModern(peerId: XPeerID): Boolean {
+    fun isConfirmedModern(peerId: NodeRid): Boolean {
         return stateOf(peerId).isConfirmedModern()
     }
-    fun confirmModern(peerId: XPeerID) {
+    fun confirmModern(peerId: NodeRid) {
         stateOf(peerId).confirmedModern()
     }
 
@@ -295,26 +295,26 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
      * @param desc is the text we will log, surrounding the circumstances.
      *             (This could be caused by a bug, if so it has to be traced)
      */
-    fun maybeBlacklist(peerId: XPeerID, desc: String) {
+    fun maybeBlacklist(peerId: NodeRid, desc: String) {
         stateOf(peerId).blacklist(desc, System.currentTimeMillis())
     }
 
-    private fun stateOf(peerId: XPeerID): KnownState {
+    private fun stateOf(peerId: NodeRid): KnownState {
         return statuses.computeIfAbsent(peerId) { KnownState(params) }
     }
 
     /**
      * Adds the peer if it doesn't exist. Do nothing if it exists.
      */
-    fun addPeer(peerId: XPeerID) {
+    fun addPeer(peerId: NodeRid) {
         stateOf(peerId)
     }
 
-    fun isBlacklisted(xPeerId: XPeerID): Boolean {
+    fun isBlacklisted(xPeerId: NodeRid): Boolean {
         return stateOf(xPeerId).isBlacklisted()
     }
 
-    fun getSyncable(height: Long): Set<XPeerID> {
+    fun getSyncable(height: Long): Set<NodeRid> {
         return statuses.filterValues { it.isSyncable(height) }.map {it.key}.toSet()
     }
 

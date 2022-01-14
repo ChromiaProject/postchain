@@ -252,7 +252,7 @@ open class BaseBlockchainProcessManager(
         // TODO: [et]: Fix links to EBFT entities
         val topology = ((blockchainInfrastructure as BaseBlockchainInfrastructure)
                 .defaultSynchronizationInfrastructure as? EBFTSynchronizationInfrastructure)
-                ?.connectionManager?.getPeersTopology(chainId)
+                ?.connectionManager?.getNodesTopology(chainId)
                 ?.mapKeys {
                     peerName(it.key)
                 }

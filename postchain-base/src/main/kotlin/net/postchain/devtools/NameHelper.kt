@@ -3,7 +3,7 @@
 package net.postchain.devtools
 
 import net.postchain.common.toHex
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 
 object NameHelper {
 
@@ -11,7 +11,13 @@ object NameHelper {
 
     fun peerName(pubKey: ByteArray): String = shorten(pubKey.toHex())
 
-    fun peerName(peerId: XPeerID): String = shorten(peerId.toString())
+    fun peerName(peerId: NodeRid?): String {
+        return if (peerId != null) {
+            shorten(peerId.toString())
+        } else {
+            "null"
+        }
+    }
 
     fun shortHash(byteArrayHash: ByteArray): String = shorten(byteArrayHash.toHex())
 

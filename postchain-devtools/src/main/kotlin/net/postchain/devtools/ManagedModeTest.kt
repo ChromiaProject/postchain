@@ -24,7 +24,7 @@ import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -438,7 +438,7 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
     // Brid -> (height -> Pair(BlockchainConfiguration, binaryBlockchainConfig)
     val bridToConfs: MutableMap<BlockchainRid, MutableMap<Long, Pair<BlockchainConfiguration, ByteArray>>> = mutableMapOf()
     private val chainToNodeSet: MutableMap<BlockchainRid, NodeSet> = mutableMapOf()
-    private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<XPeerID>>()
+    private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<NodeRid>>()
 
     override fun getPeerListVersion(): Long {
         return 1L
@@ -487,23 +487,23 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         return emptyMap()
     }
 
-    override fun getNodeReplicaMap(): Map<XPeerID, List<XPeerID>> {
+    override fun getNodeReplicaMap(): Map<NodeRid, List<NodeRid>> {
         return mapOf()
     }
 
-    override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<XPeerID>> {
-        val result = mutableMapOf<BlockchainRid, List<XPeerID>>()
+    override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>> {
+        val result = mutableMapOf<BlockchainRid, List<NodeRid>>()
         chainToNodeSet.keys.union(extraReplicas.keys).forEach {
             val replicaSet = chainToNodeSet[it]?.replicas ?: emptySet()
-            val replicas = replicaSet.map { XPeerID(KeyPairHelper.pubKey(it)) }.toMutableSet()
+            val replicas = replicaSet.map { NodeRid(KeyPairHelper.pubKey(it)) }.toMutableSet()
             replicas.addAll(extraReplicas[it] ?: emptySet())
             result.put(it, replicas.toList())
         }
         return result
     }
 
-    fun addExtraReplica(brid: BlockchainRid, replica: XPeerID) {
-        extraReplicas.computeIfAbsent(brid) { mutableSetOf<XPeerID>() }.add(replica)
+    fun addExtraReplica(brid: BlockchainRid, replica: NodeRid) {
+        extraReplicas.computeIfAbsent(brid) { mutableSetOf<NodeRid>() }.add(replica)
     }
 
     private fun key(brid: BlockchainRid, height: Long): Key {
