@@ -11,20 +11,16 @@ import net.postchain.core.NodeRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.EbftPacketDecoderFactory
-import net.postchain.ebft.EbftPacketEncoderFactory
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 import net.postchain.network.common.*
 import net.postchain.network.netty2.NettyPeerConnection
-import net.postchain.network.netty2.NettyPeerConnector
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.lang.Exception
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -259,7 +255,7 @@ class DefaultPeerConnectionManagerTest {
     @Test
     fun disconnectChainPeer_will_result_in_exception_if_chain_is_not_connected() {
         assertThrows<ProgrammerMistake> {
-            emptyManager().disconnectChainNode(1L, peerInfo1.peerId())
+            emptyManager().disconnectChainPeer(1L, peerInfo1.peerId())
         }
     }
 
@@ -320,7 +316,7 @@ class DefaultPeerConnectionManagerTest {
 
 
             // When / Disconnecting peer1
-            disconnectChainNode(1L, peerInfo1.peerId())
+            disconnectChainPeer(1L, peerInfo1.peerId())
             // Then
             // - isPeerConnected
             assertFalse { isPeerConnected(1L, peerInfo1.peerId()) }

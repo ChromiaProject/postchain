@@ -21,7 +21,7 @@ interface PeerConnectionManager : ConnectionManager {
     /**
      * Disconnect a specific node from the given chain
      */
-    fun disconnectChainNode(chainId: Long, nodeId: NodeRid)
+    fun disconnectChainPeer(chainId: Long, nodeId: NodeRid)
 
     /**
      * @return "true" if the given node is connected to the given chain.

@@ -235,7 +235,7 @@ open class DefaultPeerConnectionManager<PacketType>(
 
 
     @Synchronized
-    override fun disconnectChainNode(chainId: Long, peerId: NodeRid) {
+    override fun disconnectChainPeer(chainId: Long, peerId: NodeRid) {
         val chain = chainsWithConnections.getOrThrow(chainId)
         val conn = chain.getConnection(peerId)
         if (conn != null) {
@@ -298,7 +298,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                 logger.debug { "${logger(descriptor)}: onPeerConnected() - Peer already connected: peer = ${peerName(descriptor.nodeId)}" }
                 val isOriginalOutgoing = originalConn.descriptor().isOutgoing()
                 if (peersConnectionStrategy.duplicateConnectionDetected(chainID, isOriginalOutgoing, descriptor.nodeId)) {
-                    disconnectChainNode(chainID, descriptor.nodeId!!)
+                    disconnectChainPeer(chainID, descriptor.nodeId!!)
                     chain.setConnection(descriptor.nodeId, connection)
                     logger.debug { "${logger(descriptor)}: onPeerConnected() - Peer connected and replaced previous " +
                             " connection: peer = ${peerName(descriptor.nodeId)}" }
