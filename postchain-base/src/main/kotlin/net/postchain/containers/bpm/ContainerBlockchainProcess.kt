@@ -7,7 +7,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.DirectoryDataSource
-import net.postchain.network.masterslave.master.MasterCommunicationManager
+import net.postchain.network.mastersub.master.MasterCommunicationManager
 import java.nio.file.Path
 
 interface ContainerBlockchainProcess : HeartbeatListener {
@@ -37,8 +37,9 @@ class DefaultContainerBlockchainProcess(
     private var lastHeight = -1L
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
+        communicationManager.sendHeartbeatToSub(heartbeatEvent)
         logger.debug { "Heartbeat event sent to ${processName}: timestamp ${heartbeatEvent.timestamp}" }
-        communicationManager.sendHeartbeatToSlave(heartbeatEvent)
+        communicationManager.sendHeartbeatToSub(heartbeatEvent)
     }
 
     // TODO: [et]: Transfer only (init) config0

@@ -25,14 +25,15 @@ import net.postchain.ebft.message.SignedMessage
 import net.postchain.ebft.message.Status
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.network.masterslave.MsMessageHandler
-import net.postchain.network.masterslave.master.DefaultMasterCommunicationManager
-import net.postchain.network.masterslave.master.MasterConnectionManager
-import net.postchain.network.masterslave.master.SlaveChainConfig
-import net.postchain.network.masterslave.protocol.MsDataMessage
-import net.postchain.network.masterslave.protocol.MsMessage
-import net.postchain.network.masterslave.protocol.MsSubnodeStatusMessage
-import net.postchain.network.x.PeersCommConfigFactory
+import net.postchain.network.common.ConnectionManager
+import net.postchain.network.mastersub.MsMessageHandler
+import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
+import net.postchain.network.mastersub.master.MasterConnectionManager
+import net.postchain.network.mastersub.master.SubChainConfig
+import net.postchain.network.mastersub.protocol.MsDataMessage
+import net.postchain.network.mastersub.protocol.MsMessage
+import net.postchain.network.mastersub.protocol.MsSubnodeStatusMessage
+import net.postchain.network.peer.PeersCommConfigFactory
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
@@ -41,20 +42,21 @@ import java.util.concurrent.ConcurrentHashMap
  */
 
 class TestMasterCommunicationManager(
-        nodeConfig: NodeConfig,
-        chainId: Long,
-        blockchainRid: BlockchainRid,
-        peersCommConfigFactory: PeersCommConfigFactory,
-        private val masterConnectionManager: MasterConnectionManager,
-        private val dataSource: DirectoryDataSource,
-        private val processName: BlockchainProcessName
+    nodeConfig: NodeConfig,
+    chainId: Long,
+    blockchainRid: BlockchainRid,
+    peersCommConfigFactory: PeersCommConfigFactory,
+    private val connMgr: ConnectionManager,
+    private val masterConnMgr: MasterConnectionManager,
+    private val dataSource: DirectoryDataSource,
+    private val processName: BlockchainProcessName
 ) : DefaultMasterCommunicationManager(nodeConfig, chainId, blockchainRid, peersCommConfigFactory,
-        masterConnectionManager, dataSource, processName) {
+        connMgr, masterConnMgr, dataSource, processName) {
     override fun init() {
-
-        val testPacketConsumer = (dataSource as MockDirectoryDataSource).getSubnodeInterceptor(slavePacketConsumer(), blockchainRid)
-        val slaveChainConfig = SlaveChainConfig(chainId, blockchainRid, testPacketConsumer)
-        masterConnectionManager.connectSlaveChain(processName, slaveChainConfig)
+        System.out.println("++ (Mock Master Comm Mgr) Adding sub node interceptor for BC RID: ${blockchainRid.toShortHex()} ")
+        val testPacketConsumer = (dataSource as MockDirectoryDataSource).getSubnodeInterceptor(subnodePacketConsumer(), blockchainRid)
+        val slaveChainConfig = SubChainConfig(chainId, blockchainRid, testPacketConsumer)
+        masterConnMgr.connectSubChain(processName, slaveChainConfig)
     }
 }
 
@@ -77,7 +79,8 @@ class TestMasterSyncInfra(
                 chainId,
                 blockchainRid,
                 peersCommConfigFactory,
-                connectionManager as MasterConnectionManager,
+                connectionManager,
+                masterConnectionManager!!,
                 dataSource,
                 processName
         ).apply { init() }
@@ -113,7 +116,7 @@ class TestDirectoryMasterInfraFactory : MasterManagedEbftInfraFactory() {
         nodeConfig = nodeConfigProvider.getConfiguration()
         dataSource = nodeConfig.appConfig.config.get(MockDirectoryDataSource::class.java, "infrastructure.datasource")!!
 
-        val syncInfra = TestMasterSyncInfra(nodeConfigProvider, nodeDiagnosticContext)
+        val syncInfra = TestMasterSyncInfra(nodeConfigProvider, nodeDiagnosticContext, )
 
         val apiInfra = DefaultMasterApiInfra(nodeConfigProvider, nodeDiagnosticContext)
         return TestMasterBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, dataSource)
@@ -195,6 +198,8 @@ class TestPacketConsumer(var subconsumer: MsMessageHandler?) : MsMessageHandler 
     var subnodeStatus = -2L
 
     override fun onMessage(message: MsMessage) {
+        System.out.println("++ Message found in TestPacketConsumer, type: ${message.type}")
+
         // Do things used by tests
         when (message) {
             is MsDataMessage -> {

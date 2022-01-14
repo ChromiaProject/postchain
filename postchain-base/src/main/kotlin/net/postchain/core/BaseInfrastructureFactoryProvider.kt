@@ -5,7 +5,7 @@ package net.postchain.core
 import net.postchain.base.BaseTestInfrastructureFactory
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.infra.MasterManagedEbftInfraFactory
-import net.postchain.containers.infra.SlaveEbftInfraFactory
+import net.postchain.containers.infra.SubEbftInfraFactory
 import net.postchain.core.Infrastructure.*
 import net.postchain.ebft.BaseEBFTInfrastructureFactory
 import net.postchain.managed.Chromia0InfrastructureFactory
@@ -27,7 +27,7 @@ class BaseInfrastructureFactoryProvider : InfrastructureFactoryProvider {
 
             // Container chains
             in EbftManagedContainerMaster.key -> MasterManagedEbftInfraFactory::class.java
-            in EbftContainerSlave.key -> SlaveEbftInfraFactory::class.java
+            in EbftContainerSub.key -> SubEbftInfraFactory::class.java
             in EbftManagedChromia0ContainerMaster.key -> Class.forName(infra) // TODO: [POS-129]: Will be implemented
 
             // Tests

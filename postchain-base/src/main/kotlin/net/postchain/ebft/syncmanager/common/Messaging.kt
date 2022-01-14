@@ -4,7 +4,7 @@ import mu.KLogging
 import net.postchain.core.BlockQueries
 import net.postchain.ebft.message.*
 import net.postchain.network.CommunicationManager
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 
 abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<Message>) {
     companion object: KLogging()
@@ -26,10 +26,10 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
     /**
      * Send message to node including the block at [height]. This is a response to the [GetBlockAtHeight] request.
      *
-     * @param peerId XPeerID of receiving node
+     * @param peerId NodeRid of receiving node
      * @param height requested block height
      */
-    fun sendBlockAtHeight(peerId: XPeerID, height: Long) {
+    fun sendBlockAtHeight(peerId: NodeRid, height: Long) {
         val blockData = blockQueries.getBlockAtHeight(height).get()
         if (blockData == null) {
             logger.debug("No block at height $height, as requested by $peerId")
@@ -39,7 +39,7 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
         communicationManager.sendPacket(packet, peerId)
     }
 
-    fun sendBlockHeaderAndBlock(peerID: XPeerID, requestedHeight: Long, myHeight: Long) {
+    fun sendBlockHeaderAndBlock(peerID: NodeRid, requestedHeight: Long, myHeight: Long) {
         logger.trace("GetBlockHeaderAndBlock from peer $peerID for height $requestedHeight, myHeight is $myHeight")
 
         if (myHeight == -1L) {
@@ -72,7 +72,7 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
         communicationManager.sendPacket(unfinishedBlock, peerID)
     }
 
-    private fun sendHeader(peerID: XPeerID, header: ByteArray, witness: ByteArray, sentHeight: Long, requestedHeight: Long): BlockHeader {
+    private fun sendHeader(peerID: NodeRid, header: ByteArray, witness: ByteArray, sentHeight: Long, requestedHeight: Long): BlockHeader {
         val h = BlockHeader(header, witness, requestedHeight)
         logger.trace("Replying with BlockHeader at height $sentHeight to peer $peerID for requested height $requestedHeight")
         communicationManager.sendPacket(h, peerID)

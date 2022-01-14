@@ -47,7 +47,7 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
 
         // Setting up params for container node
         config.setProperty("configuration.provider.node", NodeConfigProviders.Manual.name.toLowerCase())
-        config.setProperty("infrastructure", Infrastructure.EbftContainerSlave.get())
+        config.setProperty("infrastructure", Infrastructure.EbftContainerSub.get())
 
         // DB
         if (config.containsKey("subnode.database.url")) {

@@ -8,7 +8,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -187,7 +187,7 @@ class ManagedNodeConfigurationProviderTest {
         assertEquals(expectedMerged, result.toSet())
     }
 
-    fun p(s: Int): XPeerID {
-        return XPeerID(byteArrayOf(s.toByte()))
+    fun p(s: Int): NodeRid {
+        return NodeRid(byteArrayOf(s.toByte()))
     }
 }

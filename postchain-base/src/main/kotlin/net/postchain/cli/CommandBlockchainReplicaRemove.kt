@@ -5,7 +5,6 @@ import com.beust.jcommander.Parameters
 import net.postchain.core.BlockchainRid
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import net.postchain.network.x.XPeerID
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 

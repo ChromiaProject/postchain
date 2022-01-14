@@ -5,10 +5,10 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.MockStorage
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainRid
-import net.postchain.network.masterslave.protocol.MsFindNextBlockchainConfigMessage
-import net.postchain.network.masterslave.protocol.MsMessage
-import net.postchain.network.masterslave.protocol.MsNextBlockchainConfigMessage
-import net.postchain.network.masterslave.slave.SlaveConnectionManager
+import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
+import net.postchain.network.mastersub.protocol.MsMessage
+import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
+import net.postchain.network.mastersub.subnode.SubConnectionManager
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
@@ -26,7 +26,7 @@ class RemoteConfigCheckerTest {
         val nodeConfig: NodeConfig = mock {
             on { heartbeatEnabled } doReturn (true)
         }
-        val connManager: SlaveConnectionManager = mock()
+        val connManager: SubConnectionManager = mock()
         val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager)
 
         // No interaction
@@ -45,7 +45,7 @@ class RemoteConfigCheckerTest {
             on { heartbeatEnabled } doReturn (true)
             on { heartbeatTimeout } doReturn 20_000L
         }
-        val connManager: SlaveConnectionManager = mock()
+        val connManager: SubConnectionManager = mock()
         val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager)
 
         // Interaction: Register the first Heartbeat event
@@ -68,7 +68,7 @@ class RemoteConfigCheckerTest {
             on { remoteConfigRequestInterval } doReturn 10_000L
             on { remoteConfigTimeout } doReturn 20_000L
         }
-        val connManager: SlaveConnectionManager = mock()
+        val connManager: SubConnectionManager = mock()
         val mockBlockchainConfigProvider: BlockchainConfigurationProvider = mock {
             on { findNextConfigurationHeight(any(), any()) } doReturn 0
         }
