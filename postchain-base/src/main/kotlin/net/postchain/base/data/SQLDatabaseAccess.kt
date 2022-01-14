@@ -8,7 +8,6 @@ import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.network.x.XPeerID
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
 import java.sql.Connection
@@ -609,7 +608,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return true
     }
 
-    override fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<XPeerID>> {
+    override fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<NodeRid>> {
 
         val query = "SELECT * FROM ${tableBlockchainReplicas()}"
 
@@ -621,7 +620,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         MutableList is thus a list of rows in the table.
          */
         return raw.groupBy(keySelector = { BlockchainRid((it[TABLE_REPLICAS_FIELD_BRID] as String).hexStringToByteArray()) },
-                valueTransform = { XPeerID((it[TABLE_REPLICAS_FIELD_PUBKEY] as String).hexStringToByteArray()) })
+                valueTransform = { NodeRid((it[TABLE_REPLICAS_FIELD_PUBKEY] as String).hexStringToByteArray()) })
     }
 
     override fun getBlockchainsToReplicate(ctx: AppContext, pubkey: String): Set<BlockchainRid> {

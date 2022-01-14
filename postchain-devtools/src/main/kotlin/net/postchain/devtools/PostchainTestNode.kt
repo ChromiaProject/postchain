@@ -142,7 +142,7 @@ class PostchainTestNode(
         // TODO: [et]: Fix type casting
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure)
                 .defaultSynchronizationInfrastructure as EBFTSynchronizationInfrastructure)
-                .connectionManager.getPeersTopology(chainId)
+                .connectionManager.getNodesTopology(chainId)
                 .mapKeys { pubKeyToConnection ->
                     pubKeyToConnection.key.toString()
                 }

@@ -5,7 +5,7 @@ import net.postchain.core.BlockchainRid
 import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.gtv.GtvFactory
 import net.postchain.managed.DirectoryDataSource
-import net.postchain.network.masterslave.MsMessageHandler
+import net.postchain.network.mastersub.MsMessageHandler
 
 
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {

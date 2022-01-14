@@ -28,5 +28,5 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
 
 interface MasterBlockchainInfra : BlockchainInfrastructure, MasterSyncInfra
 
-interface SlaveSyncInfra : SynchronizationInfrastructure
+interface SubSyncInfra : SynchronizationInfrastructure
 

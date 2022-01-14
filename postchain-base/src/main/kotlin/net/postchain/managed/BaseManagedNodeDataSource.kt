@@ -8,7 +8,7 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockQueries
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import java.time.Instant
 
 open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeConfig) : ManagedNodeDataSource {
@@ -98,7 +98,7 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: 
         }
     }
 
-    override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<XPeerID>> {
+    override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>> {
         val blockchains = computeBlockchainList()
 
         // Rell: query nm_get_blockchain_replica_node_map(blockchain_rids: list<byte_array>): list<list<byte_array>>
@@ -111,12 +111,12 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: 
 
         return blockchains.mapIndexed { i, brid ->
             BlockchainRid(brid) to if (i < replicas.size) {
-                replicas[i].asArray().map { XPeerID(it.asByteArray()) }
+                replicas[i].asArray().map { NodeRid(it.asByteArray()) }
             } else emptyList()
         }.toMap()
     }
 
-    override fun getNodeReplicaMap(): Map<XPeerID, List<XPeerID>> {
+    override fun getNodeReplicaMap(): Map<NodeRid, List<NodeRid>> {
         // Rell: query nm_get_node_replica_map(): list<list<byte_array>>
         // [ [ key_peer_id, replica_peer_id_1, replica_peer_id_2, ...], ...]
         val peersReplicas = queries.query(
@@ -127,7 +127,7 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: 
         return peersReplicas
                 .map(Gtv::asArray)
                 .filter { it.isNotEmpty() }
-                .map { it -> it.map { XPeerID(it.asByteArray()) } }
+                .map { it -> it.map { NodeRid(it.asByteArray()) } }
                 .map { peerAndReplicas_ ->
                     peerAndReplicas_.first() to peerAndReplicas_.drop(1)
                 }.toMap()
