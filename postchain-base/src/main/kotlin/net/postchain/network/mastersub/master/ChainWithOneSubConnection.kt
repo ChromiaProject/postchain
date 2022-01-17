@@ -1,18 +1,16 @@
 package net.postchain.network.mastersub.master
 
 import net.postchain.network.common.ChainWithOneConnection
-import net.postchain.network.common.NodeConnection
 import net.postchain.network.mastersub.MsMessageHandler
 
 /**
  *
  */
-class ChainWithOneSubConnection (val config: SubChainConfig):
-    ChainWithOneConnection<NodeConnection<MsMessageHandler, MasterConnectionDescriptor>, MsMessageHandler>  // Type magic
-{
+class ChainWithOneSubConnection(val config: SubChainConfig) :
+        ChainWithOneConnection<MasterConnection, MsMessageHandler> {
 
     // Maximum ONE connection
-    var conn: NodeConnection<MsMessageHandler, MasterConnectionDescriptor>? = null
+    var conn: MasterConnection? = null
 
     // ---------------------------
     // Trivial impl of the interface
@@ -22,7 +20,7 @@ class ChainWithOneSubConnection (val config: SubChainConfig):
     override fun getPacketHandler() = config.messageHandler
     override fun isConnected() = conn != null
     override fun getConnection() = conn
-    override fun setConnection(newConn: NodeConnection<MsMessageHandler, MasterConnectionDescriptor>) {
+    override fun setConnection(newConn: MasterConnection) {
         conn = newConn
     }
 

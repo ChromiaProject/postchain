@@ -2,16 +2,14 @@ package net.postchain.network.netty2
 
 import io.netty.channel.ChannelInboundHandlerAdapter
 import mu.KLogging
-import net.postchain.network.common.NodeConnection
 import net.postchain.core.NodeRid
-import net.postchain.network.peer.PeerConnectionDescriptor
-import net.postchain.network.peer.PeerPacketHandler
+import net.postchain.network.peer.PeerConnection
 
-abstract class NettyPeerConnection:
-    ChannelInboundHandlerAdapter(),
-    NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>
-{
-    companion object: KLogging()
+abstract class NettyPeerConnection :
+        ChannelInboundHandlerAdapter(),
+        PeerConnection {
+
+    companion object : KLogging()
 
     fun handleSafely(nodeId: NodeRid?, handler: () -> Unit) {
         try {

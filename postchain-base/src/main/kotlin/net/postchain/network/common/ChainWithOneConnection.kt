@@ -39,5 +39,4 @@ interface ChainWithOneConnection<NodeConnectionType, PacketHandler> {
 
     fun log(): String = "chainIid: ${getChainIid()}, blockchainRid: ${getBlockchainRid().toShortHex()}"
 
-
 }

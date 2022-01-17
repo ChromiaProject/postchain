@@ -12,15 +12,14 @@ import net.postchain.core.ProgrammerMistake
  *
  * @property HandlerType is the message handler type
  * @property NodeConnectionType specifies the exact type of connection to be used
- * @property ChainWCType is the type of [ChainWithOneConnection] we store in this collection
+ * @property ChainType is the type of [ChainWithOneConnection] we store in this collection
  */
 class ChainsWithOneConnection<
         HandlerType,
         NodeConnectionType,
-        ChainWCType: ChainWithOneConnection<NodeConnectionType, HandlerType>>
-{
+        ChainType : ChainWithOneConnection<NodeConnectionType, HandlerType>> {
 
-    private val chainsWithOneConnection: MutableMap<BlockchainRid, ChainWCType> = mutableMapOf()
+    private val chainsWithOneConnection: MutableMap<BlockchainRid, ChainType> = mutableMapOf()
 
     // --------------
     // Accessors
@@ -37,7 +36,7 @@ class ChainsWithOneConnection<
     }
 
     @Synchronized
-    fun get(chainIid: Long): ChainWCType? {
+    fun get(chainIid: Long): ChainType? {
         for (ch in chainsWithOneConnection.values) {
             if (ch.getChainIid() == chainIid) {
                 return ch
@@ -49,12 +48,12 @@ class ChainsWithOneConnection<
     fun get(bcRid: BlockchainRid) = chainsWithOneConnection[bcRid]
 
     @Synchronized
-    fun getOrThrow(chainIid: Long): ChainWCType {
+    fun getOrThrow(chainIid: Long): ChainType {
         return get(chainIid) ?: throw ProgrammerMistake("Chain ID not found: $chainIid")
     }
 
     @Synchronized
-    fun getOrThrow(bcRid: BlockchainRid): ChainWCType {
+    fun getOrThrow(bcRid: BlockchainRid): ChainType {
         return chainsWithOneConnection[bcRid] ?: throw ProgrammerMistake("Chain RID not found: ${bcRid.toHex()}")
     }
 
@@ -63,7 +62,7 @@ class ChainsWithOneConnection<
     // --------------
 
     @Synchronized
-    fun add(chain: ChainWCType) {
+    fun add(chain: ChainType) {
         chainsWithOneConnection[chain.getBlockchainRid()] = chain
     }
 
@@ -71,10 +70,10 @@ class ChainsWithOneConnection<
      * We only remove the item here WITHOUT closing!!
      */
     @Synchronized
-    fun remove(chainIid: Long): ChainWCType? {
+    fun remove(chainIid: Long): ChainType? {
         val ch = get(chainIid)
         return if (ch != null) {
-            removeAndClose(ch!!.getBlockchainRid())
+            removeAndClose(ch.getBlockchainRid())
         } else {
             null
         }
@@ -84,7 +83,7 @@ class ChainsWithOneConnection<
      * We only remove the item here WITHOUT closing!!
      */
     @Synchronized
-    fun removeAndClose(bcRid: BlockchainRid): ChainWCType? {
+    fun removeAndClose(bcRid: BlockchainRid): ChainType? {
         val chain = chainsWithOneConnection.remove(bcRid)
         chain?.removeAndCloseConnection()
         return chain

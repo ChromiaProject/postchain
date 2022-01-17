@@ -1,19 +1,19 @@
 package net.postchain.network.mastersub.master
 
 import mu.KLogging
-import net.postchain.core.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.node.NodeConfig
+import net.postchain.core.BlockchainRid
+import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.*
-import net.postchain.network.common.ConnectionManager
+import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
-import net.postchain.core.NodeRid
-import net.postchain.network.peer.PeerPacketHandler
 
 /**
  * Manages communication for the give chain
@@ -22,14 +22,14 @@ import net.postchain.network.peer.PeerPacketHandler
  * the messages ourselves we wrap them in [MsMessage] and pass them on to the correct sub-node.
  */
 open class DefaultMasterCommunicationManager(
-    val nodeConfig: NodeConfig,
-    val chainId: Long,
-    val blockchainRid: BlockchainRid,
-    private val peersCommConfigFactory: PeersCommConfigFactory,
-    private val connectionManager: ConnectionManager, // (We don't need "peer" conn mgr here, so we're keeping it tight)
-    private val masterConnectionManager: MasterConnectionManager,
-    private val dataSource: DirectoryDataSource,
-    private val processName: BlockchainProcessName
+        val nodeConfig: NodeConfig,
+        val chainId: Long,
+        val blockchainRid: BlockchainRid,
+        private val peersCommConfigFactory: PeersCommConfigFactory,
+        private val connectionManager: ConnectionManager, // (We don't need "peer" conn mgr here, so we're keeping it tight)
+        private val masterConnectionManager: MasterConnectionManager,
+        private val dataSource: DirectoryDataSource,
+        private val processName: BlockchainProcessName
 ) : MasterCommunicationManager {
 
     companion object : KLogging()
@@ -40,8 +40,10 @@ open class DefaultMasterCommunicationManager(
     }
 
     override fun sendHeartbeatToSub(heartbeatEvent: HeartbeatEvent) {
-        logger.trace { "${process()}: Sending a heartbeat packet to subnode: blockchainRid: " +
-                "${blockchainRid.toShortHex()} " }
+        logger.trace {
+            "${process()}: Sending a heartbeat packet to subnode: blockchainRid: " +
+                    "${blockchainRid.toShortHex()} "
+        }
         val message = MsHeartbeatMessage(blockchainRid.data, heartbeatEvent.timestamp)
         masterConnectionManager.sendPacketToSub(message)
     }
@@ -49,8 +51,10 @@ open class DefaultMasterCommunicationManager(
     fun subnodePacketConsumer(): MsMessageHandler {
         return object : MsMessageHandler {
             override fun onMessage(message: MsMessage) {
-                logger.trace { "${process()}: Receiving a message ${message.javaClass.simpleName} from subnode: " +
-                        "blockchainRid = ${blockchainRid.toShortHex()}" }
+                logger.trace {
+                    "${process()}: Receiving a message ${message.javaClass.simpleName} from subnode: " +
+                            "blockchainRid = ${blockchainRid.toShortHex()}"
+                }
 
                 when (message) {
                     is MsHandshakeMessage -> {
@@ -67,8 +71,10 @@ open class DefaultMasterCommunicationManager(
                     }
 
                     is MsFindNextBlockchainConfigMessage -> {
-                        logger.debug { "${process()}: BlockchainConfig requested by subnode: blockchainRid: " +
-                                "${blockchainRid.toShortHex()}" }
+                        logger.debug {
+                            "${process()}: BlockchainConfig requested by subnode: blockchainRid: " +
+                                    "${blockchainRid.toShortHex()}"
+                        }
                         val nextHeight = dataSource.findNextConfigurationHeight(message.blockchainRid, message.currentHeight)
                         val config = if (nextHeight == null) {
                             null
@@ -111,7 +117,7 @@ open class DefaultMasterCommunicationManager(
 
         val peersCommConfig = peersCommConfigFactory.create(nodeConfig, blockchainRid, peers, null)
 
-        val packetHandler = object: PeerPacketHandler {
+        val packetHandler = object : PeerPacketHandler {
             override fun handle(data: ByteArray, nodeId: NodeRid) {
                 consumePacket(nodeId, data)
             }
@@ -142,9 +148,11 @@ open class DefaultMasterCommunicationManager(
                 nodeConfig.pubKeyByteArray, // Can be omitted?
                 packet)
 
-        logger.trace { "${process()}: Sending a brid ${BlockchainRid(message.blockchainRid).toShortHex()} packet " +
-                        "from peer: ${message.source.toHex()} " +
-                        "to subnode: ${message.destination.toHex()} " }
+        logger.trace {
+            "${process()}: Sending a brid ${BlockchainRid(message.blockchainRid).toShortHex()} packet " +
+                    "from peer: ${message.source.toHex()} " +
+                    "to subnode: ${message.destination.toHex()} "
+        }
         masterConnectionManager.sendPacketToSub(message)
 
         logger.trace { "${process()}: consumePacket() - end" }
@@ -153,8 +161,6 @@ open class DefaultMasterCommunicationManager(
     override fun shutdown() {
         val prefixFun: () -> String = { processName.toString() }
         connectionManager.disconnectChain(prefixFun, chainId)
-
-        masterConnectionManager.shutdown()
     }
 
     private fun process(): String {

@@ -4,19 +4,17 @@ import mu.KLogging
 import net.postchain.network.common.ChainWithOneConnection
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsDataMessage
-import net.postchain.network.peer.XChainPeersConfiguration
-import net.postchain.network.common.NodeConnection
 import net.postchain.network.mastersub.protocol.MsMessage
+import net.postchain.network.peer.XChainPeersConfiguration
 
 
 /**
  * A chain running on a sub node only has one connection: to the master.
  */
-class ChainWithOneMasterConnection (
-    val config: XChainPeersConfiguration,
-    msMessageHandlerSupplier: (Long) -> MsMessageHandler?
-) :  ChainWithOneConnection<NodeConnection<MsMessageHandler, SubConnectionDescriptor>, MsMessageHandler>  // Type magic
-{
+class ChainWithOneMasterConnection(
+        val config: XChainPeersConfiguration,
+        msMessageHandlerSupplier: (Long) -> MsMessageHandler?
+) : ChainWithOneConnection<SubConnection, MsMessageHandler> {
 
     companion object : KLogging()
 
@@ -37,7 +35,7 @@ class ChainWithOneMasterConnection (
     }
 
     // Maximum ONE connection: to the master
-    var conn: NodeConnection<MsMessageHandler, SubConnectionDescriptor>? = null
+    var conn: SubConnection? = null
 
 
     // ---------------------------
@@ -48,7 +46,7 @@ class ChainWithOneMasterConnection (
     override fun getPacketHandler() = msMessageHandler
     override fun isConnected() = conn != null
     override fun getConnection() = conn
-    override fun setConnection(newConn: NodeConnection<MsMessageHandler, SubConnectionDescriptor>) {
+    override fun setConnection(newConn: SubConnection) {
         conn = newConn
     }
 

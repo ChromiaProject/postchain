@@ -12,17 +12,15 @@ import net.postchain.network.netty2.NettyPeerConnection
  * On top of the basics it keeps track of what chain has what connections using [XChainPeersConfiguration]
  * and [NodeRid].
  */
-class ChainWithPeerConnections (
-    val iid: Long,
-    val peerConfig: XChainPeersConfiguration,
-    private val connectAll: Boolean
-) : ChainWithConnections<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>, PeerPacketHandler> {
+class ChainWithPeerConnections(
+        val iid: Long,
+        val peerConfig: XChainPeersConfiguration,
+        private val connectAll: Boolean
+) : ChainWithConnections<PeerConnection, PeerPacketHandler> {
 
     val bcRid = peerConfig.blockchainRid // Just take it from the config
 
-    private val connections = mutableMapOf<
-            NodeRid,
-            NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
+    private val connections = mutableMapOf<NodeRid, PeerConnection>()
 
     override fun getChainIid(): Long = iid
     override fun getBlockchainRid(): BlockchainRid = bcRid
@@ -43,13 +41,13 @@ class ChainWithPeerConnections (
     // Connections
     // ----------
     override fun isConnected(nodeId: NodeRid) = connections.containsKey(nodeId)
-    override fun getConnection(peerId: NodeRid) = connections[peerId]
-    override fun getAllConnections(): List<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>> {
+    override fun getConnection(nodeId: NodeRid) = connections[nodeId]
+    override fun getAllConnections(): List<PeerConnection> {
         return connections.values.toList()
     }
 
-    override fun setConnection(peerId: NodeRid, conn: NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>) {
-        connections[peerId] = conn
+    override fun setConnection(nodeId: NodeRid, conn: PeerConnection) {
+        connections[nodeId] = conn
     }
 
     override fun closeConnections() {
@@ -57,18 +55,18 @@ class ChainWithPeerConnections (
         connections.clear()
     }
 
-    override fun removeAndCloseConnection(peerId: NodeRid) {
-        connections.remove(peerId)
-            ?.close()
+    override fun removeAndCloseConnection(nodeId: NodeRid) {
+        connections.remove(nodeId)
+                ?.close()
     }
 
     // ----------
     // Debug
     // ----------
     override fun getNodeTopology(): Map<NodeRid, String> {
-        return connections?.mapValues { connection ->
+        return connections.mapValues { connection ->
             (if (connection.value.descriptor()
-                    .isOutgoing()
+                            .isOutgoing()
             ) "c-s" else "s-c") + ", " + connection.value.remoteAddress()
         }
     }

@@ -24,9 +24,9 @@ interface NodeConnector<PacketType, DescriptorType> {
      * Makes sure the network implementation (ex: Netty) connects to the given node
      */
     fun connectNode(
-        connectionDescriptor: DescriptorType,
-        peerInfo: PeerInfo,
-        packetEncoder: XPacketEncoder<PacketType>
+            connectionDescriptor: DescriptorType,
+            peerInfo: PeerInfo,
+            packetEncoder: XPacketEncoder<PacketType>
     )
 
     /**
@@ -35,13 +35,3 @@ interface NodeConnector<PacketType, DescriptorType> {
     fun shutdown()
 
 }
-
-/* (Maybe I'm wrong removing this, b/c it might have a conceptual use I don't yet understand)
-interface NodeConnectorFactory<PacketType, HandlerType, DescriptorType> {
-    fun createConnector(
-            myPeerInfo: PeerInfo,
-            packetDecoder: XPacketDecoder<PacketType>,
-            eventReceiver: ConnectionLifecycle<HandlerType, DescriptorType>
-    ): NodeConnector<PacketType, DescriptorType>
-}
- */

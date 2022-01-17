@@ -7,7 +7,8 @@ import io.netty.channel.ChannelHandlerContext
 import mu.KLogging
 import net.postchain.core.ProgrammerMistake
 import net.postchain.network.XPacketDecoder
-import net.postchain.network.common.*
+import net.postchain.network.common.LazyPacket
+import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerConnectionDescriptor
 import net.postchain.network.peer.PeerConnectionDescriptorFactory
 import net.postchain.network.peer.PeerPacketHandler
@@ -20,13 +21,13 @@ class NettyServerPeerConnection<PacketType>(
     private var peerPacketHandler: PeerPacketHandler? = null
     private var peerConnectionDescriptor: PeerConnectionDescriptor? = null
 
-    private var onConnectedHandler: ((NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>) -> Unit)? = null
-    private var onDisconnectedHandler: ((NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>) -> Unit)? = null
+    private var onConnectedHandler: ((PeerConnection) -> Unit)? = null
+    private var onDisconnectedHandler: ((PeerConnection) -> Unit)? = null
 
-    companion object: KLogging()
+    companion object : KLogging()
 
-    override fun accept(packetHandler: PeerPacketHandler) {
-        this.peerPacketHandler = packetHandler
+    override fun accept(handler: PeerPacketHandler) {
+        this.peerPacketHandler = handler
     }
 
     override fun sendPacket(packet: LazyPacket): Boolean {
@@ -52,12 +53,12 @@ class NettyServerPeerConnection<PacketType>(
         return peerConnectionDescriptor ?: throw ProgrammerMistake("Descriptor is null")
     }
 
-    fun onConnected(handler: (NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>) -> Unit): NettyServerPeerConnection<PacketType> {
+    fun onConnected(handler: (PeerConnection) -> Unit): NettyServerPeerConnection<PacketType> {
         this.onConnectedHandler = handler
         return this
     }
 
-    fun onDisconnected(handler: (NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>) -> Unit): NettyServerPeerConnection<PacketType> {
+    fun onDisconnected(handler: (PeerConnection) -> Unit): NettyServerPeerConnection<PacketType> {
         this.onDisconnectedHandler = handler
         return this
     }

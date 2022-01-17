@@ -1,27 +1,27 @@
 package net.postchain.network.peer
 
 import net.postchain.core.BlockchainRid
+import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.IdentPacketInfo
 import net.postchain.network.common.ConnectionDescriptor
 import net.postchain.network.common.ConnectionDirection
-import net.postchain.core.NodeRid
 
 /**
  * Describes a peer-2-peer connection
  */
 class PeerConnectionDescriptor(
-    val bcRid: BlockchainRid,
-    val nodeId: NodeRid,
-    val dir: ConnectionDirection
+        val bcRid: BlockchainRid,
+        val nodeId: NodeRid,
+        val dir: ConnectionDirection
 ) : ConnectionDescriptor(bcRid) {
 
     fun isOutgoing() = (dir == ConnectionDirection.OUTGOING)
 
     fun loggingPrefix(): String {
         return BlockchainProcessName(
-            nodeId.toString(),
-           bcRid
+                nodeId.toString(),
+                bcRid
         ).toString()
     }
 
@@ -38,9 +38,9 @@ object PeerConnectionDescriptorFactory {
      */
     fun createFromIdentPacketInfo(identPacketInfo: IdentPacketInfo): PeerConnectionDescriptor {
         return PeerConnectionDescriptor(
-            identPacketInfo.blockchainRid,
-            identPacketInfo.nodeId,
-            ConnectionDirection.INCOMING
+                identPacketInfo.blockchainRid,
+                identPacketInfo.nodeId,
+                ConnectionDirection.INCOMING
         )
     }
 
