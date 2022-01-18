@@ -47,7 +47,7 @@ class TestMasterCommunicationManager(
 ) : DefaultMasterCommunicationManager(nodeConfig, chainId, blockchainRid, peersCommConfigFactory,
         masterConnectionManager, dataSource, processName) {
     override fun init() {
-
+        logger.info { "init() (TEST) - $processName, chainId: $chainId, bc RID: ${blockchainRid.toShortHex()}, " }
         val testPacketConsumer = (dataSource as MockDirectoryDataSource).getSubnodeInterceptor(slavePacketConsumer(), blockchainRid)
         val slaveChainConfig = SlaveChainConfig(chainId, blockchainRid, testPacketConsumer)
         masterConnectionManager.connectSlaveChain(processName, slaveChainConfig)

@@ -31,7 +31,7 @@ val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
  */
 class DirectoryIT : ManagedModeTest() {
 
-    override val awaitDebugLog = false
+    override val awaitDebugLog = true
     private val dockerClient: DockerClient = DockerClientFactory.create()
 
     @Before
@@ -45,6 +45,11 @@ class DirectoryIT : ManagedModeTest() {
                 dockerClient.removeContainer(it.id())
             }
         }
+    }
+
+    override fun tearDown() {
+        super.tearDown()
+        removeContainers()
     }
 
     /**

@@ -41,7 +41,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     companion object : KLogging()
 
-    open val awaitDebugLog = false
+    open val awaitDebugLog = true
 
     /**
      * If we want to monitor how long we are waiting and WHAT we are waiting for, then we can turn on this flag.
