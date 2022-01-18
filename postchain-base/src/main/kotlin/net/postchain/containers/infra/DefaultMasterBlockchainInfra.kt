@@ -39,4 +39,9 @@ open class DefaultMasterBlockchainInfra(
     override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) {
         masterApiInfra.disconnectContainerProcess(process)
     }
+
+    override fun shutdown() {
+        masterApiInfra.shutdown()
+        masterSyncInfra.shutdown()
+    }
 }

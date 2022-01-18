@@ -1,6 +1,7 @@
 package net.postchain.network.mastersub.subnode
 
 import mu.KLogging
+import net.postchain.core.NodeRid
 import net.postchain.network.common.ChainWithOneConnection
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsDataMessage
@@ -30,7 +31,7 @@ class ChainWithOneMasterConnection (
         override fun onMessage(message: MsMessage) {
             logger.debug { "onMessage() - Begin: Message type: ${message.type} " }
             when (message) {
-                is MsDataMessage -> config.peerPacketHandler
+                is MsDataMessage -> config.peerPacketHandler.handle(message.xPacket, NodeRid(message.source))
                 else -> msMessageHandlerSupplier(config.chainId)?.onMessage(message)
             }
         }

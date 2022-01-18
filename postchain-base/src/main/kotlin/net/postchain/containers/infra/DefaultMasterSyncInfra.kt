@@ -100,4 +100,8 @@ open class DefaultMasterSyncInfra(
 
     override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) = Unit
 
+    override fun shutdown() {
+        super.shutdown()
+        masterConnectionManager?.shutdown()
+    }
 }
