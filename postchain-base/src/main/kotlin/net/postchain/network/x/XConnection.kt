@@ -8,7 +8,7 @@ import net.postchain.network.XPacketEncoder
 
 interface XPeerConnection {
     fun accept(handler: XPacketHandler)
-    fun sendPacket(packet: LazyPacket): Boolean
+    fun sendPacket(packet: LazyPacket)
     fun remoteAddress(): String
     fun close()
     fun descriptor(): XPeerConnectionDescriptor
@@ -21,6 +21,7 @@ interface XConnectorEvents {
 
 interface XConnector<PacketType> {
     fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>)
+
     // TODO: [et]: Two different structures for one thing
     fun connectPeer(peerConnectionDescriptor: XPeerConnectionDescriptor, peerInfo: PeerInfo, packetEncoder: XPacketEncoder<PacketType>)
     fun shutdown()
