@@ -10,6 +10,7 @@ import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.devtools.chainRidOf
 import org.apache.commons.configuration2.Configuration
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.lang.Thread.sleep
@@ -36,6 +37,10 @@ class DirectoryIT : ManagedModeTest() {
 
     @Before
     fun setUp() {
+        removeContainers()
+    }
+
+    private fun removeContainers() {
         // If container UUTs already exist, remove them
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         all.forEach {
