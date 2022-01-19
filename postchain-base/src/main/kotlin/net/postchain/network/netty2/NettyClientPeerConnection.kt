@@ -35,10 +35,11 @@ class NettyClientPeerConnection<PacketType>(
 
         nettyClient.apply {
             setChannelHandler(this@NettyClientPeerConnection)
-            val future = connect(peerAddress()).await()
-            if (!future.isSuccess) {
-                logger.info("Connection failed", future.cause().message)
-                onDisconnected()
+            connect(peerAddress()).await().apply {
+                if (!isSuccess) {
+                    logger.info("Connection failed", cause().message)
+                    onDisconnected()
+                }
             }
         }
     }
