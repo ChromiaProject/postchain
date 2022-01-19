@@ -163,7 +163,7 @@ class DefaultXConnectionManager<PacketType>(
     override fun broadcastPacket(data: LazyPacket, chainID: Long) {
         // TODO: lazypacket might be computed multiple times
         val chain = chains[chainID] ?: throw ProgrammerMistake("Chain ID not found: $chainID")
-        chain.connections.forEach { (_, conn) ->
+        chain.connections.values.forEach { conn ->
             conn.sendPacket(data)
         }
     }
