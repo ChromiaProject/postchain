@@ -9,6 +9,7 @@ import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.devtools.chainRidOf
 import net.postchain.devtools.utils.configuration.NodeSetup
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -38,6 +39,7 @@ class DirectoryIT : ManagedModeTest() {
         removeContainers()
     }
 
+    @AfterEach
     override fun tearDown() {
         super.tearDown()
         removeContainers()
@@ -134,18 +136,26 @@ class DirectoryIT : ManagedModeTest() {
     override fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
         val pm = nodes[index].processManager as TestContainerManagedBlockchainProcessManager
         // await subnode ready for heartbeat:
-        val sleepTime = 1_000L
+        val sleepTime = 10_000L
         while (dataSource(index).subnodeInterceptors[chainRidOf(chainId)]?.subnodeStatus == null) {
             buildBlock(c0)
             sleep(sleepTime)
+            printContainerLogs()
         }
         // need to continue building blocks on c0 (heartbeat) until subnode has started:
         while (dataSource(index).subnodeInterceptors[chainRidOf(chainId)]?.subnodeStatus == -2L) {
             buildBlock(c0)
             sleep(sleepTime)
+            printContainerLogs()
         }
         //await a specific (configuration height-1)
         pm.awaitStarted(index, chainId, atLeastHeight)
+    }
+
+    private fun printContainerLogs() {
+        logger.debug { "++++++++++ PRINTING CONTAINER LOGS ++++++++++++++" }
+        logger.debug { getCont1Logs() }
+        logger.debug { "++++++++++ END OF CONTAINER LOGS ++++++++++++++" }
     }
 
     override fun awaitHeight(chainId: Long, height: Long) {
@@ -209,7 +219,7 @@ class DirectoryIT : ManagedModeTest() {
      */
     private fun getCont1Logs(): String {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        val cont1 = all.find { it.names()?.get(0)?.startsWith("/$firstContainerName") ?: false }
+        val cont1 = all.find { it.names()?.get(0)?.contains(firstContainerName) ?: false }
         return if (cont1 != null) {
             dockerClient.logs(cont1.id(), LogsParam.stdout(), LogsParam.tail(50))
                     .readFully()
