@@ -35,6 +35,15 @@ class DirectoryIT : ManagedModeTest() {
 
     @BeforeEach
     fun setUp() {
+        removeContainers()
+    }
+
+    override fun tearDown() {
+        super.tearDown()
+        removeContainers()
+    }
+
+    private fun removeContainers() {
         // If container UUTs already exist, remove them
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         all.forEach {
