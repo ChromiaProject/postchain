@@ -34,7 +34,7 @@ variables:
   # Improve performance with overlayfs.
   DOCKER_DRIVER: overlay2
   # Master host when running docker tests
-  POSTCHAIN_TEST_MASTER_HOST: 172.17.0.1
+  POSTCHAIN_TEST_MASTER_HOST: docker
 
 services:
   - postgres
