@@ -12,6 +12,7 @@ build:
   except:
     - dev
   script:
+    - export POSTCHAIN_TEST_MASTER_HOST=$(getent hosts docker | awk '{ print $1 }')
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify -Dit.test=DirectoryIT -DfailIfNoTests=false -DskipSurefire=true
 
 variables:
@@ -33,8 +34,6 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   # Improve performance with overlayfs.
   DOCKER_DRIVER: overlay2
-  # Master host when running docker tests
-  POSTCHAIN_TEST_MASTER_HOST: docker
 
 services:
   - postgres
