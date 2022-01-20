@@ -9,10 +9,10 @@ import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.MockManagedNodeDataSource
 import net.postchain.devtools.chainRidOf
 import net.postchain.devtools.utils.configuration.NodeSetup
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.lang.Thread.sleep
 
@@ -29,7 +29,6 @@ val blockchainDistribution: Map<String, List<BlockchainRid>> = mapOf(
  * Bitbucket builds image on the fly.
  * Please note: Currently for the tests to pass, flag waitForRestart must be set.
  */
-@Disabled
 class DirectoryIT : ManagedModeTest() {
 
     override val awaitDebugLog = false
@@ -37,6 +36,16 @@ class DirectoryIT : ManagedModeTest() {
 
     @BeforeEach
     fun setUp() {
+        removeContainers()
+    }
+
+    @AfterEach
+    override fun tearDown() {
+        super.tearDown()
+        removeContainers()
+    }
+
+    private fun removeContainers() {
         // If container UUTs already exist, remove them
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         all.forEach {
@@ -202,7 +211,7 @@ class DirectoryIT : ManagedModeTest() {
      */
     private fun getCont1Logs(): String {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        val cont1 = all.find { it.names()?.get(0)?.startsWith("/$firstContainerName") ?: false }
+        val cont1 = all.find { it.names()?.get(0)?.contains(firstContainerName) ?: false }
         return if (cont1 != null) {
             dockerClient.logs(cont1.id(), LogsParam.stdout(), LogsParam.tail(50))
                     .readFully()
