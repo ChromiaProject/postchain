@@ -14,15 +14,14 @@ import net.postchain.core.ProgrammerMistake
  *
  * @property HandlerType is the message handler type
  * @property NodeConnectionType specifies the exact type of connection to be used
- * @property ChainWCType is the type of [ChainWithConnections] we store in this collection
+ * @property ChainType is the type of [ChainWithConnections] we store in this collection
  */
 class ChainsWithConnections<
         HandlerType,
         NodeConnectionType,
-        ChainWCType: ChainWithConnections<NodeConnectionType, HandlerType>> ()
-{
+        ChainType : ChainWithConnections<NodeConnectionType, HandlerType>> {
 
-    private val chainsWithConnections: MutableMap<Long, ChainWCType> = mutableMapOf()
+    private val chainsWithConnections: MutableMap<Long, ChainType> = mutableMapOf()
 
     // --------------
     // Accessors
@@ -37,9 +36,8 @@ class ChainsWithConnections<
     fun get(chainIid: Long) = chainsWithConnections[chainIid]
 
     @Synchronized
-    fun getOrThrow(chainIid: Long): ChainWCType {
-        val chain = chainsWithConnections[chainIid] ?: throw ProgrammerMistake("Chain ID not found: $chainIid")
-        return chain
+    fun getOrThrow(chainIid: Long): ChainType {
+        return chainsWithConnections[chainIid] ?: throw ProgrammerMistake("Chain ID not found: $chainIid")
     }
 
 
@@ -48,7 +46,7 @@ class ChainsWithConnections<
     // --------------
 
     @Synchronized
-    fun add(chain: ChainWCType) {
+    fun add(chain: ChainType) {
         chainsWithConnections[chain.getChainIid()] = chain
     }
 
@@ -56,7 +54,7 @@ class ChainsWithConnections<
      * We only remove the item here WITHOUT closing!!
      */
     @Synchronized
-    fun remove(chainIid: Long): ChainWCType? {
+    fun remove(chainIid: Long): ChainType? {
         return chainsWithConnections.remove(chainIid)
     }
 
@@ -86,18 +84,14 @@ class ChainsWithConnections<
 
     fun getNodesTopology(): Map<String, Map<String, String>> {
         return chainsWithConnections
-            .mapKeys { (id, chain) -> id to chain.getBlockchainRid().toHex() }
-            .mapValues { (idToRid, _) -> getNodesTopology(idToRid.first).mapKeys { (k, _) -> k.toString() } }
-            .mapKeys { (idToRid, _) -> idToRid.second }
+                .mapKeys { (id, chain) -> id to chain.getBlockchainRid().toHex() }
+                .mapValues { (idToRid, _) -> getNodesTopology(idToRid.first).mapKeys { (k, _) -> k.toString() } }
+                .mapKeys { (idToRid, _) -> idToRid.second }
     }
 
     fun getNodesTopology(chainID: Long): Map<NodeRid, String> {
         val chain = get(chainID)
-        return if (chain != null) {
-            chain.getNodeTopology()
-        } else {
-            emptyMap()
-        }
+        return chain?.getNodeTopology() ?: emptyMap()
     }
 
     fun getStats(): String {

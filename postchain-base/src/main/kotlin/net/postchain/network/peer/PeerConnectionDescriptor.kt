@@ -1,11 +1,11 @@
 package net.postchain.network.peer
 
 import net.postchain.core.BlockchainRid
+import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.IdentPacketInfo
 import net.postchain.network.common.ConnectionDescriptor
 import net.postchain.network.common.ConnectionDirection
-import net.postchain.core.NodeRid
 
 /**
  * Describes a peer-2-peer connection
@@ -21,7 +21,7 @@ class PeerConnectionDescriptor(
     fun loggingPrefix(): String {
         return BlockchainProcessName(
             nodeId.toString(),
-           bcRid
+            bcRid
         ).toString()
     }
 

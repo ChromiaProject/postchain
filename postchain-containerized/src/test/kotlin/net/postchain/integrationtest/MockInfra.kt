@@ -116,7 +116,7 @@ class TestDirectoryMasterInfraFactory : MasterManagedEbftInfraFactory() {
         nodeConfig = nodeConfigProvider.getConfiguration()
         dataSource = nodeConfig.appConfig.config.get(MockDirectoryDataSource::class.java, "infrastructure.datasource")!!
 
-        val syncInfra = TestMasterSyncInfra(nodeConfigProvider, nodeDiagnosticContext, )
+        val syncInfra = TestMasterSyncInfra(nodeConfigProvider, nodeDiagnosticContext)
 
         val apiInfra = DefaultMasterApiInfra(nodeConfigProvider, nodeDiagnosticContext)
         return TestMasterBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, dataSource)

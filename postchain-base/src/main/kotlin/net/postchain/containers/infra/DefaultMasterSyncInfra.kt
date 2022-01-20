@@ -31,16 +31,16 @@ open class DefaultMasterSyncInfra(
         nodeDiagnosticContext
 ), MasterSyncInfra {
 
-    var masterConnectionManager: MasterConnectionManager? = null
+    lateinit var masterConnectionManager: MasterConnectionManager
 
     override fun init() {
-         val masterFactory = MasterConnectionManagerFactory(
+        val masterFactory = MasterConnectionManagerFactory(
                 EbftPacketEncoderFactory(),
                 EbftPacketDecoderFactory(),
                 SECP256K1CryptoSystem(),
                 nodeConfig
         )
-        masterConnectionManager = masterFactory.getMasterConnectionManager() //
+        masterConnectionManager = masterFactory.getMasterConnectionManager()
         connectionManager = masterFactory.getPeerConnectionManager()
 
         fillDiagnosticContext()
@@ -58,7 +58,7 @@ open class DefaultMasterSyncInfra(
             containerChainDir: Path
     ): ContainerBlockchainProcess {
 
-        if (masterConnectionManager == null) {
+        if (!::masterConnectionManager.isInitialized) {
             throw ProgrammerMistake("Cannot create BC process before we have called init() on the DefaultMasterSyncInfra.")
         }
 
@@ -68,7 +68,7 @@ open class DefaultMasterSyncInfra(
                 blockchainRid,
                 peersCommConfigFactory,
                 connectionManager,
-                masterConnectionManager!!,
+                masterConnectionManager,
                 dataSource,
                 processName
         ).apply { init() }
@@ -99,5 +99,10 @@ open class DefaultMasterSyncInfra(
     }
 
     override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) = Unit
+
+    override fun shutdown() {
+        super.shutdown()
+        masterConnectionManager.shutdown()
+    }
 
 }

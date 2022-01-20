@@ -35,13 +35,3 @@ interface NodeConnector<PacketType, DescriptorType> {
     fun shutdown()
 
 }
-
-/* (Maybe I'm wrong removing this, b/c it might have a conceptual use I don't yet understand)
-interface NodeConnectorFactory<PacketType, HandlerType, DescriptorType> {
-    fun createConnector(
-            myPeerInfo: PeerInfo,
-            packetDecoder: XPacketDecoder<PacketType>,
-            eventReceiver: ConnectionLifecycle<HandlerType, DescriptorType>
-    ): NodeConnector<PacketType, DescriptorType>
-}
- */
