@@ -92,12 +92,9 @@ if [ "$1" = 'postgres' ]; then
 			echo "host all all all $authMethod"
 		} >> "$PGDATA/pg_hba.conf"
 
-		# internal start of server in order to allow set-up using psql-client
-		# does not listen on external TCP/IP and waits until start finishes
+		# starting the database server
 		PGUSER="${PGUSER:-postgres}" \
-		pg_ctl -D "$PGDATA" \
-			-o "-c listen_addresses='localhost'" \
-			-w start
+		pg_ctl -D "$PGDATA" -w start
 
 		file_env 'POSTGRES_USER' 'postgres'
 		file_env 'POSTGRES_DB' "$POSTGRES_USER"
@@ -134,19 +131,13 @@ if [ "$1" = 'postgres' ]; then
 			echo
 		done
 
-		PGUSER="${PGUSER:-postgres}" \
-		pg_ctl -D "$PGDATA" -m fast -w stop
-
 		echo
 		echo 'PostgreSQL init process complete; ready for start up.'
 		echo
         else
-                # internal start of server in order to allow set-up using psql-client
-                # does not listen on external TCP/IP and waits until start finishes
+                # starting the database server
                 PGUSER="${PGUSER:-postgres}" \
-                pg_ctl -D "$PGDATA" \
-                        -o "-c listen_addresses='localhost'" \
-                        -w start
+                pg_ctl -D "$PGDATA" -w start
 
                 file_env 'POSTGRES_USER' 'postgres'
                 file_env 'POSTGRES_DB' "$POSTGRES_USER"
@@ -165,9 +156,6 @@ if [ "$1" = 'postgres' ]; then
                         echo
                 done
 
-                PGUSER="${PGUSER:-postgres}" \
-                pg_ctl -D "$PGDATA" -m fast -w stop
-
                 echo
                 echo 'PostgreSQL REinit process complete; ready for start up.'
                 echo
@@ -178,5 +166,3 @@ if [ -f /circleconfig/postgres/customizations ] && [ -s /circleconfig/postgres/c
 then
 	. /circleconfig/postgres/customizations
 fi
-
-exec "$@"

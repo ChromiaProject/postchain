@@ -131,13 +131,14 @@ class DefaultMasterConnectionManager(
         }
     }
 
-    @Synchronized
     override fun shutdown() {
-        if (!isShutDown) {
+        synchronized(this) {
+            if (isShutDown) return
             isShutDown = true
             chainsWithOneSubConnection.removeAllAndClose()
-            masterConnector.shutdown()
         }
+        // The shutdown is intentionally called outside the sync-block to avoid deadlock
+        masterConnector.shutdown()
     }
 
     private fun buildProcessName(descriptor: MasterConnectionDescriptor): String = BlockchainProcessName(
