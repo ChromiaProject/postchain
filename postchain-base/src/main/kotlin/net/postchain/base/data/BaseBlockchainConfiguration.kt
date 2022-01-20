@@ -6,7 +6,6 @@ import mu.KLogging
 import net.postchain.base.*
 import net.postchain.core.*
 import net.postchain.getBFTRequiredSignatureCount
-import java.lang.ClassCastException
 
 open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurationData)
     : BlockchainConfiguration {
@@ -128,9 +127,9 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
 
         try {
             return ctor.newInstance(configData, this, blockQueries, txQueue) as BlockBuildingStrategy
-        } catch(e: java.lang.reflect.InvocationTargetException) {
+        } catch (e: java.lang.reflect.InvocationTargetException) {
             throw ProgrammerMistake("The constructor of the block building strategy given was " +
-                    "unable to finish finish. Class name given: $strategyClassName," +
+                    "unable to finish. Class name given: $strategyClassName," +
                     " class found=$strategyClass, ctor=$ctor, Msg: ${e.message}")
         }
     }

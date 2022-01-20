@@ -8,10 +8,10 @@ import io.netty.channel.ChannelInboundHandlerAdapter
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.network.common.LazyPacket
-import net.postchain.network.common.NodeConnection
 import net.postchain.network.mastersub.MsMessageHandler
-import net.postchain.network.mastersub.protocol.MsHandshakeMessage
 import net.postchain.network.mastersub.protocol.MsCodec
+import net.postchain.network.mastersub.protocol.MsHandshakeMessage
+import net.postchain.network.mastersub.subnode.SubConnection
 import net.postchain.network.mastersub.subnode.SubConnectionDescriptor
 import net.postchain.network.netty2.NettyClient
 import net.postchain.network.netty2.Transport
@@ -22,7 +22,7 @@ import java.net.SocketAddress
 class NettySubConnection(
         private val masterNode: PeerInfo,
         private val connectionDescriptor: SubConnectionDescriptor
-) : ChannelInboundHandlerAdapter(), NodeConnection<MsMessageHandler, SubConnectionDescriptor> {
+) : ChannelInboundHandlerAdapter(), SubConnection {
 
     companion object : KLogging()
 

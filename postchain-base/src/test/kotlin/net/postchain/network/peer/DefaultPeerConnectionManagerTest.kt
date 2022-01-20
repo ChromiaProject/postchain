@@ -27,7 +27,6 @@ import kotlin.test.assertTrue
 class DefaultPeerConnectionManagerTest {
 
     private val blockchainRid = BlockchainRid.buildRepeat(0x01)
-    //private lateinit var connectorFactory: NodeConnectorFactory<Int>
 
     private lateinit var peerInfo1: PeerInfo
     private lateinit var peerConnectionDescriptor1: PeerConnectionDescriptor
@@ -332,7 +331,7 @@ class DefaultPeerConnectionManagerTest {
             disconnectChain(mock(), 1L)
             // Then
             val internalChains = FieldUtils.readField(this, "chainsWithConnections", true)
-                    as ChainsWithConnections<PeerPacketHandler, NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>, ChainWithPeerConnections>
+                    as ChainsWithConnections<PeerPacketHandler, PeerConnection, ChainWithPeerConnections>
             assertTrue { internalChains.isEmpty() }
         }
 

@@ -2,9 +2,8 @@
 
 package net.postchain.network.peer
 
-import net.postchain.network.common.ConnectionManager
 import net.postchain.core.NodeRid
-import net.postchain.network.common.NetworkTopology
+import net.postchain.network.common.ConnectionManager
 
 /**
  * This interface extends the [ConnectionManager] with various operations where you can manage the individual
@@ -21,7 +20,7 @@ interface PeerConnectionManager : ConnectionManager {
     /**
      * Disconnect a specific node from the given chain
      */
-    fun disconnectChainPeer(chainId: Long, nodeId: NodeRid)
+    fun disconnectChainPeer(chainId: Long, peerId: NodeRid)
 
     /**
      * @return "true" if the given node is connected to the given chain.
@@ -34,4 +33,3 @@ interface PeerConnectionManager : ConnectionManager {
     fun getConnectedPeers(chainId: Long): List<NodeRid>
 
 }
-
