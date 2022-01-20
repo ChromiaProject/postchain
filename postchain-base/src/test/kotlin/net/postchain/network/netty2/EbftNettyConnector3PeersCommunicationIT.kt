@@ -14,6 +14,7 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.network.common.NodeConnection
+import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeerConnectionDescriptor
 import org.awaitility.Awaitility.await
@@ -91,9 +92,9 @@ class EbftNettyConnector3PeersCommunicationIT {
         context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.buildPacketEncoder())
 
         // Waiting for all connections to be established
-        val connection1 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
-        val connection2 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
-        val connection3 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
+        val connection1 = argumentCaptor<PeerConnection>()
+        val connection2 = argumentCaptor<PeerConnection>()
+        val connection3 = argumentCaptor<PeerConnection>()
         await().atMost(FIVE_SECONDS)
                 .untilAsserted {
                     // 1

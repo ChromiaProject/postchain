@@ -39,7 +39,6 @@ class DefaultContainerBlockchainProcess(
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
         communicationManager.sendHeartbeatToSub(heartbeatEvent)
         logger.debug { "Heartbeat event sent to ${processName}: timestamp ${heartbeatEvent.timestamp}" }
-        communicationManager.sendHeartbeatToSub(heartbeatEvent)
     }
 
     // TODO: [et]: Transfer only (init) config0

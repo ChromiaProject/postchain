@@ -13,6 +13,7 @@ import net.postchain.core.byteArrayKeyOf
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.network.common.NodeConnection
+import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeerConnectionDescriptor
 import org.awaitility.Awaitility.await
@@ -79,9 +80,9 @@ class IntNettyConnector3PeersReconnectionIT {
         context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder)
 
         // Waiting for all connections to be established
-        val connection1 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
-        val connection2 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
-        val connection3 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
+        val connection1 = argumentCaptor<PeerConnection>()
+        val connection2 = argumentCaptor<PeerConnection>()
+        val connection3 = argumentCaptor<PeerConnection>()
         await().atMost(FIVE_SECONDS)
                 .untilAsserted {
                     // 1
@@ -106,7 +107,7 @@ class IntNettyConnector3PeersReconnectionIT {
         // Disconnecting: peer3 disconnects from peer1 and peer2
         stopContext(context3)
 
-        val connectionCapture1 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
+        val connectionCapture1 = argumentCaptor<PeerConnection>()
         val disconnectNodeDescriptor2 = argumentCaptor<PeerConnectionDescriptor>()
         await().atMost(TEN_SECONDS)
                 .untilAsserted {
@@ -154,9 +155,9 @@ class IntNettyConnector3PeersReconnectionIT {
         context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder)
 
         // Waiting for all connections to be established
-        val connection1_2 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
-        val connection2_2 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
-        val connection3_2 = argumentCaptor<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>()
+        val connection1_2 = argumentCaptor<PeerConnection>()
+        val connection2_2 = argumentCaptor<PeerConnection>()
+        val connection3_2 = argumentCaptor<PeerConnection>()
         await().atMost(FIVE_SECONDS)
                 .untilAsserted {
                     // 1

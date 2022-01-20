@@ -11,13 +11,7 @@ object NameHelper {
 
     fun peerName(pubKey: ByteArray): String = shorten(pubKey.toHex())
 
-    fun peerName(peerId: NodeRid?): String {
-        return if (peerId != null) {
-            shorten(peerId.toString())
-        } else {
-            "null"
-        }
-    }
+    fun peerName(peerId: NodeRid): String = shorten(peerId.toString())
 
     fun shortHash(byteArrayHash: ByteArray): String = shorten(byteArrayHash.toHex())
 

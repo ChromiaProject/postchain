@@ -1,11 +1,10 @@
 package net.postchain.network.mastersub.master
 
 import mu.KLogging
-import net.postchain.core.BlockchainRid
 import net.postchain.config.node.NodeConfig
+import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ChainsWithOneConnection
-import net.postchain.network.common.NodeConnection
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.master.netty.NettyMasterConnector
 import net.postchain.network.mastersub.protocol.MsCodec
@@ -15,10 +14,8 @@ import net.postchain.network.mastersub.protocol.MsMessage
  * Enables the master node to pass on messages to one sub-node.
  */
 class DefaultMasterConnectionManager(
-        val nodeConfig: NodeConfig
-) : MasterConnectionManager,
-    MasterConnectorEvents
-{
+    val nodeConfig: NodeConfig
+) : MasterConnectionManager, MasterConnectorEvents {
 
     companion object : KLogging()
 
@@ -29,10 +26,9 @@ class DefaultMasterConnectionManager(
         init(nodeConfig.masterPort)
     }
 
-    // Damn, too much type magic
     private val chainsWithOneSubConnection = ChainsWithOneConnection<
             MsMessageHandler,
-            NodeConnection<MsMessageHandler, MasterConnectionDescriptor>,
+            MasterConnection,
             ChainWithOneSubConnection>()
 
     @Synchronized
@@ -47,7 +43,7 @@ class DefaultMasterConnectionManager(
             if (chainsWithOneSubConnection.hasChain(subChainConfig.blockchainRid)) {
                 // TODO: Olle: This needs some explanation. Why do we "disconnect" and then "connect" on an existing connection? Do we expect it to be stale?
                 logger.info("$processName: connectSubChain() - This chain is already connected, disconnecting " +
-                        "old sub-node connection first. $logMsg" )
+                        "old sub-node connection first. $logMsg")
                 disconnectSubChain(processName, subChainConfig.chainId)
             }
             chainsWithOneSubConnection.add(ChainWithOneSubConnection(subChainConfig))
@@ -59,17 +55,17 @@ class DefaultMasterConnectionManager(
     override fun sendPacketToSub(message: MsMessage) {
         logger.debug { "sendPacketToSub() - begin, type: ${message.type}" }
         val bcRid = BlockchainRid(message.blockchainRid)
-        val subNode =  chainsWithOneSubConnection.get(bcRid)
-        if (subNode != null) {
-            val conn = subNode?.getConnection()
+        val chain = chainsWithOneSubConnection.get(bcRid)
+        if (chain != null) {
+            val conn = chain.getConnection()
             if (conn != null) {
-                conn?.sendPacket { MsCodec.encode(message) }
+                conn.sendPacket { MsCodec.encode(message) }
                 logger.trace { "sendPacketToSub() - end: message sent" }
             } else {
                 logger.debug { "sendPacketToSub() - end: conn not found" }
             }
         } else {
-            logger.debug { "sendPacketToSub() - end: Sub-node not found" }
+            logger.debug { "sendPacketToSub() - end: chain not found: ${bcRid.toShortHex()}" }
         }
     }
 
@@ -89,7 +85,7 @@ class DefaultMasterConnectionManager(
     @Synchronized
     override fun onSubConnected(
         descriptor: MasterConnectionDescriptor,
-        connection: NodeConnection<MsMessageHandler, MasterConnectionDescriptor>
+        connection: MasterConnection
     ): MsMessageHandler? {
         val processName = buildProcessName(descriptor)
         logger.info { "$processName: Subnode connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
@@ -118,7 +114,7 @@ class DefaultMasterConnectionManager(
     @Synchronized
     override fun onSubDisconnected(
         descriptor: MasterConnectionDescriptor,
-        connection: NodeConnection<MsMessageHandler, MasterConnectionDescriptor>
+        connection: MasterConnection
     ) {
         val processName = buildProcessName(descriptor)
         logger.debug { "$processName: Subnode disconnected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
@@ -135,15 +131,16 @@ class DefaultMasterConnectionManager(
         }
     }
 
+    @Synchronized
     override fun shutdown() {
-        synchronized(this) {
+        if (!isShutDown) {
+            isShutDown = true
             chainsWithOneSubConnection.removeAllAndClose()
+            masterConnector.shutdown()
         }
-        masterConnector.shutdown()
-        isShutDown = true
     }
 
     private fun buildProcessName(descriptor: MasterConnectionDescriptor): String = BlockchainProcessName(
-            nodeConfig.pubKey, descriptor.blockchainRid
+        nodeConfig.pubKey, descriptor.blockchainRid
     ).toString()
 }
