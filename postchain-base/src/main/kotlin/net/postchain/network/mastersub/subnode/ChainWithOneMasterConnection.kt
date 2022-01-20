@@ -12,8 +12,8 @@ import net.postchain.network.peer.XChainPeersConfiguration
  * A chain running on a sub node only has one connection: to the master.
  */
 class ChainWithOneMasterConnection(
-        val config: XChainPeersConfiguration,
-        msMessageHandlerSupplier: (Long) -> MsMessageHandler?
+    val config: XChainPeersConfiguration,
+    msMessageHandlerSupplier: (Long) -> MsMessageHandler?
 ) : ChainWithOneConnection<SubConnection, MsMessageHandler> {
 
     companion object : KLogging()

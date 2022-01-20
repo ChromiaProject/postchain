@@ -6,8 +6,8 @@ import net.postchain.core.NodeRid
 import net.postchain.network.peer.PeerConnection
 
 abstract class NettyPeerConnection :
-        ChannelInboundHandlerAdapter(),
-        PeerConnection {
+    ChannelInboundHandlerAdapter(),
+    PeerConnection {
 
     companion object : KLogging()
 

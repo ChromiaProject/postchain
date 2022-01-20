@@ -24,9 +24,9 @@ interface NodeConnector<PacketType, DescriptorType> {
      * Makes sure the network implementation (ex: Netty) connects to the given node
      */
     fun connectNode(
-            connectionDescriptor: DescriptorType,
-            peerInfo: PeerInfo,
-            packetEncoder: XPacketEncoder<PacketType>
+        connectionDescriptor: DescriptorType,
+        peerInfo: PeerInfo,
+        packetEncoder: XPacketEncoder<PacketType>
     )
 
     /**

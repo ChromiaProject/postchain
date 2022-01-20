@@ -33,7 +33,7 @@ interface SubConnectionManager : ConnectionManager {
  * much like a regular peer would.
  */
 class DefaultSubConnectionManager(
-        private val nodeConfig: NodeConfig
+    private val nodeConfig: NodeConfig
 ) : SubConnectionManager, SubConnectorEvents {
 
     companion object : KLogging()
@@ -56,9 +56,9 @@ class DefaultSubConnectionManager(
      */
     @Synchronized
     override fun connectChain(
-            chainPeersConfig: XChainPeersConfiguration,
-            autoConnectAll: Boolean,
-            loggingPrefix: () -> String
+        chainPeersConfig: XChainPeersConfiguration,
+        autoConnectAll: Boolean,
+        loggingPrefix: () -> String
     ) {
         logger.debug { "${loggingPrefix()}: Connecting master chain: ${chainPeersConfig.log()}" }
 
@@ -82,9 +82,9 @@ class DefaultSubConnectionManager(
         logger.info { "${logger(chain)}: Connecting to master node: ${chain.log()}" }
 
         val masterNode = PeerInfo(
-                nodeConfig.masterHost,
-                nodeConfig.masterPort,
-                byteArrayOf() // It's not necessary here
+            nodeConfig.masterHost,
+            nodeConfig.masterPort,
+            byteArrayOf() // It's not necessary here
         )
 
         val connectionDescriptor = SubConnectionDescriptor(chain.config.blockchainRid, chain.peers)
@@ -102,10 +102,11 @@ class DefaultSubConnectionManager(
         val chain = chains.getOrThrow(chainId)
         if (chain.isConnected()) {
             val message = MsDataMessage(
-                    chain.config.blockchainRid.data,
-                    nodeConfig.pubKeyByteArray,
-                    nodeRid.byteArray,
-                    data())
+                chain.config.blockchainRid.data,
+                nodeConfig.pubKeyByteArray,
+                nodeRid.byteArray,
+                data()
+            )
             chain.getConnection()!!.sendPacket { MsCodec.encode(message) }
         } else {
             logger.error("${logger(chain)}: sendPacket() - Master is disconnected so cannot send packet to ${chain.log()}")
@@ -154,8 +155,8 @@ class DefaultSubConnectionManager(
 
     @Synchronized
     override fun onMasterConnected(
-            descriptor: SubConnectionDescriptor,
-            connection: SubConnection
+        descriptor: SubConnectionDescriptor,
+        connection: SubConnection
     ): MsMessageHandler? {
 
         logger.info { "${logger(descriptor)}: Master node connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
@@ -182,8 +183,8 @@ class DefaultSubConnectionManager(
 
     @Synchronized
     override fun onMasterDisconnected(
-            descriptor: SubConnectionDescriptor,
-            connection: SubConnection
+        descriptor: SubConnectionDescriptor,
+        connection: SubConnection
     ) {
         logger.info { "${logger(descriptor)}: Master node disconnected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
 
@@ -244,7 +245,7 @@ class DefaultSubConnectionManager(
     }
 
     private fun loggerPrefix(blockchainRid: BlockchainRid): String =
-            BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
+        BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
 
     private fun logger(descriptor: SubConnectionDescriptor): String = loggerPrefix(descriptor.blockchainRid)
 

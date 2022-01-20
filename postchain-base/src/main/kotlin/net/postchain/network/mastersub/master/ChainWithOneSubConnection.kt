@@ -7,7 +7,7 @@ import net.postchain.network.mastersub.MsMessageHandler
  *
  */
 class ChainWithOneSubConnection(val config: SubChainConfig) :
-        ChainWithOneConnection<MasterConnection, MsMessageHandler> {
+    ChainWithOneConnection<MasterConnection, MsMessageHandler> {
 
     // Maximum ONE connection
     var conn: MasterConnection? = null

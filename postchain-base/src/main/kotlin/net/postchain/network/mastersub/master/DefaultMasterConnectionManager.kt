@@ -14,7 +14,7 @@ import net.postchain.network.mastersub.protocol.MsMessage
  * Enables the master node to pass on messages to one sub-node.
  */
 class DefaultMasterConnectionManager(
-        val nodeConfig: NodeConfig
+    val nodeConfig: NodeConfig
 ) : MasterConnectionManager, MasterConnectorEvents {
 
     companion object : KLogging()
@@ -84,8 +84,8 @@ class DefaultMasterConnectionManager(
 
     @Synchronized
     override fun onSubConnected(
-            descriptor: MasterConnectionDescriptor,
-            connection: MasterConnection
+        descriptor: MasterConnectionDescriptor,
+        connection: MasterConnection
     ): MsMessageHandler? {
         val processName = buildProcessName(descriptor)
         logger.info { "$processName: Subnode connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
@@ -113,8 +113,8 @@ class DefaultMasterConnectionManager(
 
     @Synchronized
     override fun onSubDisconnected(
-            descriptor: MasterConnectionDescriptor,
-            connection: MasterConnection
+        descriptor: MasterConnectionDescriptor,
+        connection: MasterConnection
     ) {
         val processName = buildProcessName(descriptor)
         logger.debug { "$processName: Subnode disconnected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
@@ -141,6 +141,6 @@ class DefaultMasterConnectionManager(
     }
 
     private fun buildProcessName(descriptor: MasterConnectionDescriptor): String = BlockchainProcessName(
-            nodeConfig.pubKey, descriptor.blockchainRid
+        nodeConfig.pubKey, descriptor.blockchainRid
     ).toString()
 }

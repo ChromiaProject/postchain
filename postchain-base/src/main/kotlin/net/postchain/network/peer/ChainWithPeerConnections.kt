@@ -3,7 +3,6 @@ package net.postchain.network.peer
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.network.common.ChainWithConnections
-import net.postchain.network.common.NodeConnection
 import net.postchain.network.netty2.NettyPeerConnection
 
 /**
@@ -13,9 +12,9 @@ import net.postchain.network.netty2.NettyPeerConnection
  * and [NodeRid].
  */
 class ChainWithPeerConnections(
-        val iid: Long,
-        val peerConfig: XChainPeersConfiguration,
-        private val connectAll: Boolean
+    val iid: Long,
+    val peerConfig: XChainPeersConfiguration,
+    private val connectAll: Boolean
 ) : ChainWithConnections<PeerConnection, PeerPacketHandler> {
 
     val bcRid = peerConfig.blockchainRid // Just take it from the config
@@ -65,9 +64,11 @@ class ChainWithPeerConnections(
     // ----------
     override fun getNodeTopology(): Map<NodeRid, String> {
         return connections.mapValues { connection ->
-            (if (connection.value.descriptor()
-                            .isOutgoing()
-            ) "c-s" else "s-c") + ", " + connection.value.remoteAddress()
+            (if (connection.value.descriptor().isOutgoing())
+                "c-s"
+            else
+                "s-c") +
+                    ", " + connection.value.remoteAddress()
         }
     }
 }

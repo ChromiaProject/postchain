@@ -15,16 +15,16 @@ import net.postchain.network.peer.PeerConnectionManager
  * Note that when the node shuts down, both these Conn Mgrs should shut down.
  */
 class MasterConnectionManagerFactory<PacketType>(
-        packetEncoderFactory: XPacketEncoderFactory<PacketType>,
-        packetDecoderFactory: XPacketDecoderFactory<PacketType>,
-        cryptoSystem: CryptoSystem,
-        val nodeConfig: NodeConfig
+    packetEncoderFactory: XPacketEncoderFactory<PacketType>,
+    packetDecoderFactory: XPacketDecoderFactory<PacketType>,
+    cryptoSystem: CryptoSystem,
+    val nodeConfig: NodeConfig
 ) {
 
     private val peerConnectionManager = DefaultPeerConnectionManager(
-            packetEncoderFactory,
-            packetDecoderFactory,
-            cryptoSystem
+        packetEncoderFactory,
+        packetDecoderFactory,
+        cryptoSystem
     )
 
     private val masterConnectionManager = DefaultMasterConnectionManager(

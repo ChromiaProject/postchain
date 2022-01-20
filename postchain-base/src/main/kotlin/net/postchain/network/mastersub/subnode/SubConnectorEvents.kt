@@ -5,12 +5,12 @@ import net.postchain.network.mastersub.MsMessageHandler
 interface SubConnectorEvents {
 
     fun onMasterConnected(
-            descriptor: SubConnectionDescriptor,
-            connection: SubConnection
+        descriptor: SubConnectionDescriptor,
+        connection: SubConnection
     ): MsMessageHandler?
 
     fun onMasterDisconnected(
-            descriptor: SubConnectionDescriptor,
-            connection: SubConnection
+        descriptor: SubConnectionDescriptor,
+        connection: SubConnection
     )
 }

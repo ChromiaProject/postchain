@@ -22,14 +22,14 @@ import net.postchain.network.peer.XChainPeersConfiguration
  * the messages ourselves we wrap them in [MsMessage] and pass them on to the correct sub-node.
  */
 open class DefaultMasterCommunicationManager(
-        val nodeConfig: NodeConfig,
-        val chainId: Long,
-        val blockchainRid: BlockchainRid,
-        private val peersCommConfigFactory: PeersCommConfigFactory,
-        private val connectionManager: ConnectionManager, // (We don't need "peer" conn mgr here, so we're keeping it tight)
-        private val masterConnectionManager: MasterConnectionManager,
-        private val dataSource: DirectoryDataSource,
-        private val processName: BlockchainProcessName
+    val nodeConfig: NodeConfig,
+    val chainId: Long,
+    val blockchainRid: BlockchainRid,
+    private val peersCommConfigFactory: PeersCommConfigFactory,
+    private val connectionManager: ConnectionManager, // (We don't need "peer" conn mgr here, so we're keeping it tight)
+    private val masterConnectionManager: MasterConnectionManager,
+    private val dataSource: DirectoryDataSource,
+    private val processName: BlockchainProcessName
 ) : MasterCommunicationManager {
 
     companion object : KLogging()
@@ -64,9 +64,9 @@ open class DefaultMasterCommunicationManager(
 
                     is MsDataMessage -> {
                         connectionManager.sendPacket(
-                                { message.xPacket },
-                                chainId,
-                                NodeRid(message.destination)
+                            { message.xPacket },
+                            chainId,
+                            NodeRid(message.destination)
                         )
                     }
 
@@ -89,17 +89,16 @@ open class DefaultMasterCommunicationManager(
                         val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config)
                         masterConnectionManager.sendPacketToSub(response)
                         logger.debug {
-                            "${process()}: BlockchainConfig sent to subnode: " +
-                                    "blockchainRid: ${blockchainRid.toShortHex()}, " +
-                                    "nextHeight: $nextHeight, config size: ${config?.size}"
+                            "${process()}: BlockchainConfig sent to subnode: blockchainRid: " +
+                                    "${blockchainRid.toShortHex()}, nextHeight: $nextHeight, config size: " +
+                                    "${config?.size}"
                         }
                     }
 
                     is MsSubnodeStatusMessage -> {
                         logger.debug {
-                            "${process()}: Subnode status: " +
-                                    "blockchainRid: ${BlockchainRid(message.blockchainRid).toShortHex()}, " +
-                                    "height: ${message.height}"
+                            "${process()}: Subnode status: blockchainRid: " +
+                                    "${BlockchainRid(message.blockchainRid).toShortHex()}, height: ${message.height}"
                         }
                     }
                 }
@@ -143,15 +142,15 @@ open class DefaultMasterCommunicationManager(
         logger.trace { "${process()}: consumePacket() - Receiving a packet from peer: ${nodeId.byteArray.toHex()}" }
 
         val message = MsDataMessage(
-                blockchainRid.data,
-                nodeId.byteArray, // sender
-                nodeConfig.pubKeyByteArray, // Can be omitted?
-                packet)
+            blockchainRid.data,
+            nodeId.byteArray, // sender
+            nodeConfig.pubKeyByteArray, // Can be omitted?
+            packet
+        )
 
         logger.trace {
             "${process()}: Sending a brid ${BlockchainRid(message.blockchainRid).toShortHex()} packet " +
-                    "from peer: ${message.source.toHex()} " +
-                    "to subnode: ${message.destination.toHex()} "
+                    "from peer: ${message.source.toHex()} to subnode: ${message.destination.toHex()} "
         }
         masterConnectionManager.sendPacketToSub(message)
 
