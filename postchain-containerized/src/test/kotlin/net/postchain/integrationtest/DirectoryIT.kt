@@ -136,26 +136,18 @@ class DirectoryIT : ManagedModeTest() {
     override fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
         val pm = nodes[index].processManager as TestContainerManagedBlockchainProcessManager
         // await subnode ready for heartbeat:
-        val sleepTime = 10_000L
+        val sleepTime = 1_000L
         while (dataSource(index).subnodeInterceptors[chainRidOf(chainId)]?.subnodeStatus == null) {
             buildBlock(c0)
             sleep(sleepTime)
-            printContainerLogs()
         }
         // need to continue building blocks on c0 (heartbeat) until subnode has started:
         while (dataSource(index).subnodeInterceptors[chainRidOf(chainId)]?.subnodeStatus == -2L) {
             buildBlock(c0)
             sleep(sleepTime)
-            printContainerLogs()
         }
         //await a specific (configuration height-1)
         pm.awaitStarted(index, chainId, atLeastHeight)
-    }
-
-    private fun printContainerLogs() {
-        logger.debug { "++++++++++ PRINTING CONTAINER LOGS ++++++++++++++" }
-        logger.debug { getCont1Logs() }
-        logger.debug { "++++++++++ END OF CONTAINER LOGS ++++++++++++++" }
     }
 
     override fun awaitHeight(chainId: Long, height: Long) {
