@@ -12,6 +12,8 @@ build:
   except:
     - dev
   script:
+    - hostname -I
+    - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}')
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify -Dit.test=DirectoryIT -DfailIfNoTests=false -DskipSurefire=true
 
 variables:
@@ -34,7 +36,6 @@ variables:
   # Improve performance with overlayfs.
   DOCKER_DRIVER: overlay2
   FF_NETWORK_PER_BUILD: 1
-  POSTCHAIN_TEST_MASTER_HOST: build
 
 services:
   - postgres
