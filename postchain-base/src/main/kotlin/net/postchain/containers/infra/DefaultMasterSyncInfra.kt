@@ -20,6 +20,7 @@ import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
 import net.postchain.network.mastersub.master.MasterConnectionManagerFactory
+import net.postchain.network.peer.PeerConnectionManager
 import java.nio.file.Path
 
 
@@ -67,7 +68,7 @@ open class DefaultMasterSyncInfra(
                 chainId,
                 blockchainRid,
                 peersCommConfigFactory,
-                connectionManager,
+                connectionManager as PeerConnectionManager,
                 masterConnectionManager,
                 dataSource,
                 processName

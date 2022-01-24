@@ -44,7 +44,7 @@ class DefaultPeersConnectionStrategy(val connectionManager: PeerConnectionManage
         timerQueue.schedule({
             try {
                 // Connect to all unconnected peers
-                val connectedPeers = connectionManager.getConnectedPeers(chainID)
+                val connectedPeers = connectionManager.getConnectedNodes(chainID)
                 for (wantedPeerId in peerIds) {
                     if (wantedPeerId !in connectedPeers) {
                         connectionManager.connectChainPeer(chainID, wantedPeerId)

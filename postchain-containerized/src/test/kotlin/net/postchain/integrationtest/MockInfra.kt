@@ -25,7 +25,6 @@ import net.postchain.ebft.message.SignedMessage
 import net.postchain.ebft.message.Status
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
@@ -33,6 +32,7 @@ import net.postchain.network.mastersub.master.SubChainConfig
 import net.postchain.network.mastersub.protocol.MsDataMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsSubnodeStatusMessage
+import net.postchain.network.peer.PeerConnectionManager
 import net.postchain.network.peer.PeersCommConfigFactory
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
@@ -42,18 +42,18 @@ import java.util.concurrent.ConcurrentHashMap
  */
 
 class TestMasterCommunicationManager(
-    nodeConfig: NodeConfig,
-    chainId: Long,
-    blockchainRid: BlockchainRid,
-    peersCommConfigFactory: PeersCommConfigFactory,
-    private val connMgr: ConnectionManager,
-    private val masterConnMgr: MasterConnectionManager,
-    private val dataSource: DirectoryDataSource,
-    private val processName: BlockchainProcessName
+        nodeConfig: NodeConfig,
+        chainId: Long,
+        blockchainRid: BlockchainRid,
+        peersCommConfigFactory: PeersCommConfigFactory,
+        private val connMgr: PeerConnectionManager,
+        private val masterConnMgr: MasterConnectionManager,
+        private val dataSource: DirectoryDataSource,
+        private val processName: BlockchainProcessName
 ) : DefaultMasterCommunicationManager(nodeConfig, chainId, blockchainRid, peersCommConfigFactory,
         connMgr, masterConnMgr, dataSource, processName) {
     override fun init() {
-        System.out.println("++ (Mock Master Comm Mgr) Adding sub node interceptor for BC RID: ${blockchainRid.toShortHex()} ")
+        println("++ (Mock Master Comm Mgr) Adding sub node interceptor for BC RID: ${blockchainRid.toShortHex()} ")
         val testPacketConsumer = (dataSource as MockDirectoryDataSource).getSubnodeInterceptor(subnodePacketConsumer(), blockchainRid)
         val slaveChainConfig = SubChainConfig(chainId, blockchainRid, testPacketConsumer)
         masterConnMgr.connectSubChain(processName, slaveChainConfig)
@@ -79,8 +79,8 @@ class TestMasterSyncInfra(
                 chainId,
                 blockchainRid,
                 peersCommConfigFactory,
-                connectionManager,
-                masterConnectionManager!!,
+                connectionManager as PeerConnectionManager,
+                masterConnectionManager,
                 dataSource,
                 processName
         ).apply { init() }
