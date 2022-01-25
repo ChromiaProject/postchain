@@ -2,13 +2,16 @@
 
 package net.postchain.base.merkle
 
+import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.merkle.proof.MerkleProofElement
 import net.postchain.base.merkle.proof.ProofHashedLeaf
 import net.postchain.base.merkle.proof.ProofNode
 import net.postchain.base.merkle.proof.ProofValueLeaf
 import net.postchain.common.data.Hash
+import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.*
 import net.postchain.gtv.merkle.GtvBinaryTree
+import net.postchain.gtv.merkle.GtvMerkleBasics
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
 import net.postchain.gtv.merkle.proof.ProofNodeGtvDictHead
@@ -17,9 +20,9 @@ import kotlin.math.pow
 
 /**
  * The purpose of these classes ([PrintableBinaryTree] and [PTreeElement] etc) is to be able to
- * visualize different types of trees and merkle pathes.
+ * visualize different types of trees and merkle paths.
  *
- * (It turned out that the easiest way was to populate a tree with empty nodes
+ * (It turned out that the easiest way was to populate a tree with empty nodes,
  * so we always draw a "complete" full binary tree, even if the source tree
  * lacks parts.)
  */
@@ -33,7 +36,7 @@ class PContentNode(val content: String, val left: PTreeElement, val right: PTree
 class PLeaf(val content: String, val pathLeaf: Boolean): PTreeElement()
 
 /**
- * We use empty elements to make it easier to draw non existing parts of the tree
+ * We use empty elements to make it easier to draw non-existing parts of the tree
  */
 open class PEmptyElement: PTreeElement()
 class PEmptyLeaf: PEmptyElement()
@@ -201,6 +204,8 @@ object PrintableTreeFactory {
 class TreePrinter {
 
     var buf: StringBuffer = StringBuffer()
+    var proof: List<String> = mutableListOf()
+    var pos: Int = 0
 
     fun printNode(treePrintable: PrintableBinaryTree): String {
         //println("begin -----------------")
@@ -214,6 +219,45 @@ class TreePrinter {
         return buf.toString()
     }
 
+    fun getMerkleProof(treePrintable: PrintableBinaryTree): Pair<List<Hash>, Int> {
+        proof = mutableListOf()
+        val root = treePrintable.root
+        val maxLevel: Int = maxLevel(root)
+
+        val tmpList = arrayListOf(root)
+        printNodeInternal(tmpList, 1, maxLevel, 0)
+        proof = proof.dropLast(1).reversed()
+        return Pair(proof.map {
+                              it.hexStringToByteArray()
+        }, pos-1)
+    }
+
+    fun verifyMerkleProof(proofs: List<Hash>, pos: Int, leaf: Gtv): Hash {
+        val hashedLeaf = MerkleBasics.hashingFun(
+            byteArrayOf(MerkleBasics.HASH_PREFIX_LEAF) + GtvEncoder.encodeGtv(leaf),
+            SECP256K1CryptoSystem()
+        )
+        var r = hashedLeaf
+        val last = proofs.size - 1
+        for (i: Int in 0 until last) {
+            r = if (((pos shr i) and 1) != 0) {
+                val byteArraySum = byteArrayOf(MerkleBasics.HASH_PREFIX_NODE) + proofs[i] + r
+                MerkleBasics.hashingFun(byteArraySum, SECP256K1CryptoSystem())
+            } else {
+                val byteArraySum = byteArrayOf(MerkleBasics.HASH_PREFIX_NODE) + r + proofs[i]
+                MerkleBasics.hashingFun(byteArraySum, SECP256K1CryptoSystem())
+            }
+        }
+        r = if (((pos shr last) and 1) != 0) {
+            val byteArraySum = byteArrayOf(GtvMerkleBasics.HASH_PREFIX_NODE_GTV_DICT) + proofs[last] + r
+            MerkleBasics.hashingFun(byteArraySum, SECP256K1CryptoSystem())
+        } else {
+            val byteArraySum = byteArrayOf(GtvMerkleBasics.HASH_PREFIX_NODE_GTV_DICT) + r + proofs[last]
+            MerkleBasics.hashingFun(byteArraySum, SECP256K1CryptoSystem())
+        }
+        return r
+    }
+
     private fun printNodeInternal(nodes: ArrayList<PTreeElement>, level: Int, maxLevel: Int, compensateFirstSpaces: Int) {
         //println("Internal -----------------")
         if (nodes.isEmpty())
@@ -221,7 +265,7 @@ class TreePrinter {
 
         val floor: Int = maxLevel - level
         val numberTwo = 2.0
-        val endgeLines: Int = (numberTwo.pow(maxOf(floor-1, 0))).toInt()
+        val edgeLines: Int = (numberTwo.pow(maxOf(floor-1, 0))).toInt()
         val firstSpaces: Int = (numberTwo.pow(floor) - 1 + compensateFirstSpaces).toInt()
         val betweenSpaces: Int = (numberTwo.pow(floor+1) - 1).toInt()
 
@@ -230,7 +274,7 @@ class TreePrinter {
 
         printWhitespaces(firstSpaces)
 
-        var compensateForEmptNodes = compensateFirstSpaces
+        var compensateForEmptyNodes = compensateFirstSpaces
         var leafCount = 0
 
         val newNodes = arrayListOf<PTreeElement>()
@@ -246,7 +290,7 @@ class TreePrinter {
                     }
                     newNodes.add(node.left)
                     newNodes.add(node.right)
-                    compensateForEmptNodes += leafCount * (betweenSpaces + 1)
+                    compensateForEmptyNodes += leafCount * (betweenSpaces + 1)
                 }
                 is PContentNode -> {
                     if (node.pathLeaf) {
@@ -254,23 +298,26 @@ class TreePrinter {
                     } else {
                         buf.append(node.content)
                     }
+                    proof = proof.plus(node.content)
                     newNodes.add(node.left)
                     newNodes.add(node.right)
-                    compensateForEmptNodes += leafCount * (betweenSpaces + 1)
+                    compensateForEmptyNodes += leafCount * (betweenSpaces + 1)
                 }
                 is PEmptyNode -> {
                     buf.append(".") // No data to print // print(node.data)
                     newNodes.add(node.left)
                     newNodes.add(node.right)
-                    compensateForEmptNodes += leafCount * (betweenSpaces + 1)
+                    compensateForEmptyNodes += leafCount * (betweenSpaces + 1)
                 }
                 is PLeaf -> {
                     leafCount++
                     if (node.pathLeaf) {
+                        pos = leafCount
                         buf.append("*" + node.content)
                     } else {
                         buf.append(node.content)
                     }
+                    proof = proof.plus(node.content)
                 }
                 is PEmptyLeaf -> {
                     leafCount++
@@ -280,48 +327,47 @@ class TreePrinter {
 
             printWhitespaces(betweenSpaces)
         }
-        buf.appendln("")
+        buf.appendLine("")
 
-        for (i in 1..endgeLines) {
-            for (j in 0..(nodes.size - 1)) {
-                //println("edgeLine: $i ,node: $j, firstpaces: $firstSpaces")
+        for (i in 1..edgeLines) {
+            for (j in 0 until nodes.size) {
+                //println("edgeLine: $i ,node: $j, first spaces: $firstSpaces")
                 printWhitespaces(firstSpaces - i)
-                val tmpNode = nodes.get(j)
 
-                when(tmpNode) {
+                when(nodes[j]) {
                     is PNode -> {
                         buf.append("/")
                         printWhitespaces(i + i -1)
                         buf.append("\\")
-                        printWhitespaces(endgeLines + endgeLines - i)
+                        printWhitespaces(edgeLines + edgeLines - i)
                     }
                     is PContentNode -> {
                         printWhitespaces(i + i + 1)
-                        printWhitespaces(endgeLines + endgeLines - i)
+                        printWhitespaces(edgeLines + edgeLines - i)
                     }
                     is PEmptyNode -> {
                         printWhitespaces(i + i + 1)
-                        printWhitespaces(endgeLines + endgeLines - i)
+                        printWhitespaces(edgeLines + edgeLines - i)
                     }
                     is PLeaf -> {
                         printWhitespaces(i + 1)
-                        printWhitespaces(endgeLines + endgeLines)
+                        printWhitespaces(edgeLines + edgeLines)
                     }
                     is PEmptyLeaf -> {
                         printWhitespaces(i + 1)
-                        printWhitespaces(endgeLines + endgeLines)
+                        printWhitespaces(edgeLines + edgeLines)
                     }
                 }
             }
 
-            buf.appendln("")
+            buf.appendLine("")
         }
 
         printNodeInternal(newNodes, (level + 1), maxLevel, 0)
     }
 
     private fun printWhitespaces(count: Int) {
-        for (i in 0..(count-1)) {
+        for (i in 0 until count) {
             buf.append(" ")
         }
     }

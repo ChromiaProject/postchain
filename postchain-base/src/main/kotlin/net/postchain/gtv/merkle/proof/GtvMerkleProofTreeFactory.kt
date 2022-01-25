@@ -31,25 +31,25 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
      * Note that the [GtvBinaryTree] already has marked all elements that should be proven, so all we have to
      * do now is to convert the rest to hashes.
      *
-     * @param orginalTree is the tree we will use
+     * @param originalTree is the tree we will use
      * @param calculator is the class we use for hash calculation
      */
     fun buildFromBinaryTree(
-            orginalTree: GtvBinaryTree,
-            calculator: MerkleHashCalculator<Gtv>
+        originalTree: GtvBinaryTree,
+        calculator: MerkleHashCalculator<Gtv>
     ): GtvMerkleProofTree {
         if (logger.isTraceEnabled) {
             logger.trace("--------------------------------------------")
             logger.trace("--- Converting binary tree to proof tree ---")
             logger.trace("--------------------------------------------")
         }
-        val rootElement = buildFromBinaryTreeInternal(orginalTree.root, calculator)
+        val rootElement = buildFromBinaryTreeInternal(originalTree.root, calculator)
         if (logger.isTraceEnabled) {
             logger.trace("--------------------------------------------")
             logger.trace("--- /Converting binary tree to proof tree --")
             logger.trace("--------------------------------------------")
         }
-        return GtvMerkleProofTree(rootElement, orginalTree.root.getNrOfBytes())
+        return GtvMerkleProofTree(rootElement, originalTree.root.getNrOfBytes())
     }
 
     override fun buildFromBinaryTreeInternal(

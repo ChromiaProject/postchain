@@ -81,7 +81,7 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
      * 0 -> just a hash
      * 1 -> value to be proven
      * 2 -> a node
-     * (we can add more in sub classes)
+     * (we can add more in subclasses)
      */
     fun serializeToGtv(): GtvArray {
         return serializeToGtvInternal(this.root)

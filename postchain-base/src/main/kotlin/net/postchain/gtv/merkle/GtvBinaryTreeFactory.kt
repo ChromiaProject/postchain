@@ -30,7 +30,7 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
     /**
      * Generic builder.
      * @param gtv will take any damn thing
-     * @param gtvPaths will tell us what element that are path leafs
+     * @param gtvPaths will tell us what element that are path leaves
      */
     fun buildFromGtvAndPath(gtv: Gtv, gtvPaths: GtvPathSet): GtvBinaryTree {
         if (logger.isTraceEnabled) {
@@ -78,7 +78,6 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
      *
      * @param leaf we should turn into a tree element
      * @param gtvPaths
-     * @param memoization is not used for this leaf (since we know it's not in cache) but might be used below
      * @return the tree element we created.
      */
     override fun innerHandleLeaf(leaf: Gtv, gtvPaths: GtvPathSet): BinaryTreeElement {

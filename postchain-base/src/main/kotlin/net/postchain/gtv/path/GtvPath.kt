@@ -48,7 +48,7 @@ class GtvPath(pathElements: List<GtvPathElement>): Path<GtvPathElement>(pathElem
         return sb.toString()
     }
 
-    // All the relevalt [GtvPathElement] subclasses should have equals overridden.
+    // All the relevant [GtvPathElement] subclasses should have equals overridden.
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

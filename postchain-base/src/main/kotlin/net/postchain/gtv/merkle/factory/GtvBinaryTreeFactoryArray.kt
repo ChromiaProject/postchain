@@ -19,7 +19,7 @@ object GtvBinaryTreeFactoryArray {
 
     /**
      * There are 2 edge cases here:
-     * - When the args is empty. -> We return a top node with two empty leafs
+     * - When the args is empty. -> We return a top node with two empty leaves
      * - When there is only one element. -> We set the right element as empty
      */
     fun buildFromGtvArray(gtvArray: GtvArray, gtvPaths: GtvPathSet): BinaryTreeElement {

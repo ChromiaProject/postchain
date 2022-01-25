@@ -16,7 +16,7 @@ import net.postchain.gtv.GtvEncoder.encodeGtv
  * @param gtv to serialize
  * @return the byte array containing serialized data
  */
-fun serializeGtvToByteArary(gtv: Gtv): ByteArray {
+fun serializeGtvToByteArray(gtv: Gtv): ByteArray {
     return when (gtv) {
         is GtvNull      -> encodeGtv(gtv)
         is GtvInteger   -> encodeGtv(gtv)
@@ -42,13 +42,13 @@ class GtvMerkleHashCalculator(cryptoSystem: CryptoSystem):
     }
 
     /**
-     * Leafs hashes are prefixed to tell them apart from internal nodes
+     * Leaf hashes are prefixed to tell them apart from internal nodes
      *
      * @param value The leaf
      * @return Returns the hash of the leaf.
      */
     override fun calculateLeafHash(value: Gtv): Hash {
-        return calculateHashOfValueInternal(value, ::serializeGtvToByteArary, MerkleBasics::hashingFun)
+        return calculateHashOfValueInternal(value, ::serializeGtvToByteArray, MerkleBasics::hashingFun)
     }
 
     override fun isContainerProofValueLeaf(value: Gtv): Boolean {
