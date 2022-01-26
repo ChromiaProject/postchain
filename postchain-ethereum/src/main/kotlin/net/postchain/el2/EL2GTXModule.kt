@@ -4,6 +4,9 @@ package net.postchain.el2
 
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.merkle.MerkleBasics
+import net.postchain.base.merkle.PrintableTreeFactory
+import net.postchain.base.merkle.TreePrinter
 import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotPageStore
@@ -17,6 +20,9 @@ import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.MerkleTree
+import net.postchain.gtv.path.GtvPath
+import net.postchain.gtv.path.GtvPathFactory
+import net.postchain.gtv.path.GtvPathSet
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 
@@ -131,26 +137,32 @@ private fun blockHeaderData(
 }
 
 private fun el2MerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Long): Gtv {
+    val cryptoSystem = SECP256K1CryptoSystem()
     val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
-    val bh = BaseBlockHeader(db.getBlockHeader(ctx, blockRid), SECP256K1CryptoSystem()).blockHeaderRec
-    val ds = SimpleDigestSystem(SHA256)
-    val merkleTree = MerkleTree(bh.gtvExtra.asDict(), ds)
-    val path = merkleTree.getMerklePath(EL2)
-    val proofs = merkleTree.getMerkleProof(path)
+    val bh = BaseBlockHeader(db.getBlockHeader(ctx, blockRid), cryptoSystem).blockHeaderRec
+    val gtvExtra = bh.gtvExtra
+    val path: Array<Any> = arrayOf(EL2)
+    val gtvPath: GtvPath = GtvPathFactory.buildFromArrayOfPointers(path)
+    val gtvPaths = GtvPathSet(setOf(gtvPath))
+    val calculator = GtvMerkleHashCalculator(cryptoSystem)
+    val extraProofTree = gtvExtra.generateProof(gtvPaths, calculator)
+    val printer = TreePrinter()
+    val printableBinaryTree = PrintableTreeFactory.buildPrintableTreeFromProofTree(extraProofTree)
+    val merkleProofs = printer.getMerkleProof(printableBinaryTree)
+    val proofs = merkleProofs.first
+    val el2Position = merkleProofs.second
     var gtvProofs: List<GtvByteArray> = listOf()
     for (proof in proofs) {
         gtvProofs = gtvProofs.plus(gtv(proof))
     }
-    val el2Leaf = bh.gtvExtra[EL2]!!
-    val el2HashedLeaf = ds.hash(
-        ds.digest(encodeGtv(GtvString(EL2))),
-        ds.digest(encodeGtv(el2Leaf))
-    )
+    val el2Leaf = gtvExtra[EL2]!!
+    val el2HashedLeaf = MerkleBasics.hashingFun(
+        byteArrayOf(MerkleBasics.HASH_PREFIX_LEAF) + encodeGtv(el2Leaf), cryptoSystem)
     return gtv(
         "el2Leaf" to gtv(el2Leaf),
         "el2HashedLeaf" to gtv(el2HashedLeaf),
-        "el2Position" to gtv(path.toLong()),
-        "extraRoot" to gtv(merkleTree.getMerkleRoot()),
+        "el2Position" to gtv(el2Position.toLong()),
+        "extraRoot" to gtv(gtvExtra.merkleHash(calculator)),
         "extraMerkleProofs" to gtv(gtvProofs))
 }
 

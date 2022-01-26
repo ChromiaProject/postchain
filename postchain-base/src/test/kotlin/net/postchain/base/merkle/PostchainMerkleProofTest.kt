@@ -19,8 +19,9 @@ class PostchainMerkleProofTest {
     val cryptoSystem = SECP256K1CryptoSystem()
 
     @Test
-    fun testMerkle() {
+    fun testMerkleProofForGtvDictionary() {
 
+        // create postchain block header extra data that be used in EL2 and other extensions
         val gtvExtra = GtvDictionary.build(mapOf(
             "b" to GtvByteArray("11".hexStringToByteArray()),
             "i" to GtvByteArray("12".hexStringToByteArray()),

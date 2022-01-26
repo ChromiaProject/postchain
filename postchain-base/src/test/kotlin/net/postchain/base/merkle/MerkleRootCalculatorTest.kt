@@ -4,7 +4,6 @@ package net.postchain.base.merkle
 
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
