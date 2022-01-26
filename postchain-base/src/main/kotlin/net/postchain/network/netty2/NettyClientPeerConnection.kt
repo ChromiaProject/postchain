@@ -24,29 +24,31 @@ class NettyClientPeerConnection<PacketType>(
     companion object : KLogging()
 
     private val nettyClient = NettyClient()
-    private var context: ChannelHandlerContext? = null
+    private lateinit var context: ChannelHandlerContext
     private var packetHandler: XPacketHandler? = null
+    private lateinit var onConnected: () -> Unit
     private lateinit var onDisconnected: () -> Unit
 
     fun open(onConnected: () -> Unit, onDisconnected: () -> Unit) {
+        this.onConnected = onConnected
         this.onDisconnected = onDisconnected
 
         nettyClient.apply {
             setChannelHandler(this@NettyClientPeerConnection)
-            val future = connect(peerAddress()).await()
-            if (future.isSuccess) {
-                onConnected()
-            } else {
-                logger.info("Connection failed", future.cause().message)
-                onDisconnected()
+            connect(peerAddress()).await().apply {
+                if (!isSuccess) {
+                    logger.info("Connection failed", cause().message)
+                    onDisconnected()
+                }
             }
         }
     }
 
     override fun channelActive(ctx: ChannelHandlerContext?) {
         ctx?.let {
-            context = ctx
-            context!!.writeAndFlush(buildIdentPacket())
+            context = it
+            context.writeAndFlush(buildIdentPacket())
+            onConnected()
         }
     }
 
@@ -67,19 +69,13 @@ class NettyClientPeerConnection<PacketType>(
         packetHandler = handler
     }
 
-    override fun sendPacket(packet: LazyPacket): Boolean {
-        //logger.debug("Sending package ---")
-        return if (context == null) {
-            false
-        } else {
-            context!!.writeAndFlush(Transport.wrapMessage(packet()))
-            true
-        }
+    override fun sendPacket(packet: LazyPacket) {
+        context.writeAndFlush(Transport.wrapMessage(packet()))
     }
 
     override fun remoteAddress(): String {
-        return if (context != null)
-            context!!.channel().remoteAddress().toString()
+        return if (::context.isInitialized)
+            context.channel().remoteAddress().toString()
         else ""
     }
 
