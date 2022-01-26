@@ -69,10 +69,10 @@ library Postchain {
         bytes memory blockHeader,
         Data.EL2ProofData memory proof
     ) public pure returns (bytes32, bytes32, bytes32) {
-        require(Hash.hashGtvBytes64Leaf(proof.el2Leaf) == proof.el2HashedLeaf, "Postchain: invalid EL2 data");
+        require(Hash.hashGtvBytes64Leaf(proof.el2Leaf) == proof.el2HashedLeaf, "Postchain: invalid el2 extra data");
         bytes32 blockRid = _decodeBlockHeader(blockHeader);
         if (!proof.extraMerkleProofs.verifySHA256(proof.el2HashedLeaf, proof.el2Position, proof.extraRoot)) {
-            revert("Postchain: invalid el2 extra data");
+            revert("Postchain: invalid el2 extra merkle proof");
         }
         return (blockRid, _bytesToBytes32(proof.el2Leaf, 0), _bytesToBytes32(proof.el2Leaf, 32));
     }
