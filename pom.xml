@@ -10,7 +10,6 @@
         <module>postchain-common</module>
         <module>postchain-base</module>
         <module>postchain-devtools</module>
-        <module>postchain-cw-modules</module>
         <module>postchain-docker</module>
         <module>postchain-client</module>
         <module>postchain-distribution</module>
