@@ -23,6 +23,17 @@ library Hash {
                 uint8(0x4), // DER ByteArray tag
                 uint8(32),
                 value
-            ));
+        ));
+    }
+
+    function hashGtvBytes64Leaf(bytes memory value) public pure returns (bytes32) {
+        return sha256(abi.encodePacked(
+                uint8(0x1),  // Gtv merkle tree leaf prefix
+                uint8(0xA1), // // Gtv ByteArray tag: CONTEXT_CLASS, CONSTRUCTED, 1
+                uint8(64 + 2),
+                uint8(0x4), // DER ByteArray tag
+                uint8(64),
+                value
+        ));
     }
 }
