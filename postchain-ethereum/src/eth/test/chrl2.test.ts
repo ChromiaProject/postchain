@@ -324,7 +324,6 @@ describe("ChrL2", () => {
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
                 let extraDataMerkleRoot = "04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A1"
-                let extraDataMerkleRootHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(extraDataMerkleRoot))
                 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
@@ -336,7 +335,7 @@ describe("ChrL2", () => {
                 let node6 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
                 let node56 = postchainMerkleNodeHash([0x00, node5, node6])
                 let node1234 = postchainMerkleNodeHash([0x00, node12, node34])
-                let node5678 = postchainMerkleNodeHash([0x00, node56, extraDataMerkleRootHashedLeaf])
+                let node5678 = postchainMerkleNodeHash([0x00, node56, DecodeHexStringToByteArray(extraDataMerkleRoot)])
 
                 let blockRid = postchainMerkleNodeHash([0x7, node1234, node5678])
                 let maliciousBlockRid = postchainMerkleNodeHash([0x7, node1234, node1234])
@@ -346,14 +345,14 @@ describe("ChrL2", () => {
                                     merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
                                     node4.substring(2, node4.length), node5.substring(2, node5.length),
                                     dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
-                                    extraDataMerkleRootHashedLeaf.substring(2, extraDataMerkleRootHashedLeaf.length)
+                                    extraDataMerkleRoot
                 )
 
                 maliciousBlockHeader = maliciousBlockHeader.concat(blockchainRid, maliciousBlockRid.substring(2, maliciousBlockRid.length), previousBlockRid, 
                                     merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
                                     node4.substring(2, node4.length), node5.substring(2, node5.length),
                                     dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
-                                    extraDataMerkleRootHashedLeaf.substring(2, extraDataMerkleRootHashedLeaf.length)
+                                    extraDataMerkleRoot
                 )
 
                 let sig = await appNodes.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
@@ -392,7 +391,7 @@ describe("ChrL2", () => {
                     el2Leaf: DecodeHexStringToByteArray(el2Leaf),
                     el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
                     el2Position: 1,
-                    extraRoot: DecodeHexStringToByteArray(extraRoot.substring(2, extraRoot.length)),
+                    extraRoot: DecodeHexStringToByteArray("04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A2"),
                     extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }
                 let maliciousEl2Proof = {
@@ -410,7 +409,7 @@ describe("ChrL2", () => {
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid event')
                 await expect(chrL2Instance.withdraw_request(data, eventProof,
-                    DecodeHexStringToByteArray(blockHeader), 
+                    DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], invalidEl2Leaf)
                 ).to.be.revertedWith('Postchain: invalid el2 extra data')
                 await expect(chrL2Instance.withdraw_request(data, eventProof,
