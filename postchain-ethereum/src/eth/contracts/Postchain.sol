@@ -70,7 +70,8 @@ library Postchain {
         Data.EL2ProofData memory proof
     ) public pure returns (bytes32, bytes32, bytes32) {
         require(Hash.hashGtvBytes64Leaf(proof.el2Leaf) == proof.el2HashedLeaf, "Postchain: invalid el2 extra data");
-        bytes32 blockRid = _decodeBlockHeader(blockHeader);
+        (bytes32 blockRid, bytes32 extraDataHashedLeaf) = _decodeBlockHeader(blockHeader);
+        require(Hash.hashGtvBytes32Leaf(proof.extraRoot) == extraDataHashedLeaf, "Postchain: invalid extra data root");
         if (!proof.extraMerkleProofs.verifySHA256(proof.el2HashedLeaf, proof.el2Position, proof.extraRoot)) {
             revert("Postchain: invalid el2 extra merkle proof");
         }
@@ -79,7 +80,7 @@ library Postchain {
 
     function _decodeBlockHeader(
         bytes memory blockHeader
-    ) internal pure returns (bytes32) {
+    ) internal pure returns (bytes32, bytes32) {
         BlockHeaderData memory header = abi.decode(blockHeader, (BlockHeaderData));
 
         bytes32 node12 = sha256(abi.encodePacked(
@@ -119,7 +120,7 @@ library Postchain {
             ));
 
         if (blockRid != header.blockRid) revert("Postchain: invalid block header");
-        return blockRid;
+        return (blockRid, header.extraDataHashedLeaf);
     }
 
     function _calculateBFTRequiredNum(uint total) internal pure returns (uint) {
