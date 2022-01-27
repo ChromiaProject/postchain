@@ -120,40 +120,40 @@ describe("ChrL2", () => {
                 const [everyone] = await ethers.getSigners()
                 const merkleInstance = new MerkleProof__factory(merkleProofInterface, everyone).attach(merkleAddress)
 
-                expect(await merkleInstance.verifySHA256(["0xA5C806BAC2FE5EE9B94C853516BE3ACD6C24EC8E3E7F468D1D5F0494D96BBEAD"], 
-                                                        "0x2A025E08855DB73B6B696E234238F758B287A05B70E77683180249A3E6B83CB6", 
-                                                        0, 
-                                                        "0xCC83016CFB173EBB09D25C6DB68912882142D800F4A1E29B9A8DAB3F6A663EEC")).to.be.true;
+                expect(await merkleInstance.verifySHA256(["0xC7CBFEFDF46A4F2F925389E660604B7E68246802F25581C1493F2673EA2F71F1"],
+                                                        "0x480DE19560D2D0DE62AD9306F1156B08CD543626AC1F28134E32C6A2FECB357A",
+                                                        1,
+                                                        "0x120FF48AA20416DF00C6EBC29260BD1B07588536E7BB1D835BDFECD4D7E51F78")).to.be.true;
 
                 expect(await merkleInstance.verifySHA256([
-                                                            "0x1AC31D93DC1ED9234E3CB37A914577307B8E6BD278081747F45C2E68A7A683F7",
-                                                            "0xBCA9E961400F9CEC29BF56A4B72C599E691C66C401F38BE08962B0181475C1D2",
-                                                            "0x05458528249F5FCDC287D5691098766CEC2C56AD8B4F0062E2E88EE509E2434B",
-                                                            "0xAF0E006FF87C7162DFE509F57E5AF8AC5D7AE460FD7BFD149D6FC587BD314F90"
+                                                            "0xC7CBFEFDF46A4F2F925389E660604B7E68246802F25581C1493F2673EA2F71F1",
+                                                            "0x501D248FE65EBBF15B771F8C8CDC574942F9A07EE0C1A43D4459BB70E3088A10",
+                                                            "0x1F2E3EC0A1D920108BF193452F9176BAF9F018B1FB3CFD308DC45DA12D323A07",
+                                                            "0x204D463AADD2DB5530FA5F673B863FBB2D4A84B70A32EC7069A4C0114ABD7A3A"
                                                         ], 
-                                                        "0xF43F729546C85598FD7F7FC62D56A30A90B997437F931F0C99639DA271537ED0", 
-                                                        6, 
-                                                        "0xA87CA2938A45DCAE3954023977E174946FE4251B6E8D43C7ABB49F91F208F3D4")).to.be.true;
+                                                        "0x480DE19560D2D0DE62AD9306F1156B08CD543626AC1F28134E32C6A2FECB357A",
+                                                        5,
+                                                        "0xA89A933C4C741C222DA106103E59ADA7F45281592708F31207821A89C5E7CE40")).to.be.true;
             })
 
-            it("Invalid SHA256 merkle proof", async () => {
+            it("Invalid SHA256 merkle proof due to incorrect merkle root", async () => {
                 const [everyone] = await ethers.getSigners()
                 const merkleInstance = new MerkleProof__factory(merkleProofInterface, everyone).attach(merkleAddress)
 
-                expect(await merkleInstance.verifySHA256(["0xA5C806BAC2FE5EE9B94C853516BE3ACD6C24EC8E3E7F468D1D5F0494D96BBEAD"], 
-                                                        "0x2A025E08855DB73B6B696E234238F758B287A05B70E77683180249A3E6B83CB6", 
-                                                        1, // wrong proof leaf position
-                                                        "0xCC83016CFB173EBB09D25C6DB68912882142D800F4A1E29B9A8DAB3F6A663EEC")).to.be.false;
+                expect(await merkleInstance.verifySHA256(["0xC7CBFEFDF46A4F2F925389E660604B7E68246802F25581C1493F2673EA2F71F1"],
+                                                        "0x480DE19560D2D0DE62AD9306F1156B08CD543626AC1F28134E32C6A2FECB357A",
+                                                        1,
+                                                        "0x120FF48AA20416DF00C6EBC29260BD1B07588536E7BB1D835BDFECD4D7E51F79")).to.be.false;
 
                 expect(await merkleInstance.verifySHA256([
-                                                            "0x1AC31D93DC1ED9234E3CB37A914577307B8E6BD278081747F45C2E68A7A683F7",
-                                                            "0xBCA9E961400F9CEC29BF56A4B72C599E691C66C401F38BE08962B0181475C1D2",
-                                                            "0x05458528249F5FCDC287D5691098766CEC2C56AD8B4F0062E2E88EE509E2434B",
-                                                            "0xAF0E006FF87C7162DFE509F57E5AF8AC5D7AE460FD7BFD149D6FC587BD314F90"
-                                                        ], 
-                                                        "0xF43F729546C85598FD7F7FC62D56A30A90B997437F931F0C99639DA271537ED0", 
-                                                        5, // wrong proof leaf position
-                                                        "0xA87CA2938A45DCAE3954023977E174946FE4251B6E8D43C7ABB49F91F208F3D4")).to.be.false;
+                                                            "0xC7CBFEFDF46A4F2F925389E660604B7E68246802F25581C1493F2673EA2F71F1",
+                                                            "0x501D248FE65EBBF15B771F8C8CDC574942F9A07EE0C1A43D4459BB70E3088A10",
+                                                            "0x1F2E3EC0A1D920108BF193452F9176BAF9F018B1FB3CFD308DC45DA12D323A07",
+                                                            "0x204D463AADD2DB5530FA5F673B863FBB2D4A84B70A32EC7069A4C0114ABD7A3A"
+                                                        ],
+                                                        "0x480DE19560D2D0DE62AD9306F1156B08CD543626AC1F28134E32C6A2FECB357A",
+                                                        5,
+                                                        "0xA89A933C4C741C222DA106103E59ADA7F45281592708F31207821A89C5E7CE41")).to.be.false;
             })
         })        
     })
