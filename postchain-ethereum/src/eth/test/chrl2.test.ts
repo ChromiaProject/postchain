@@ -292,20 +292,20 @@ describe("ChrL2", () => {
                 let log = logs[0]
                 const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
-                const contractAdress = hexZeroPad(tokenAddress, 32)
+                const contractAddress = hexZeroPad(tokenAddress, 32)
                 const toAddress = hexZeroPad(user.address, 32)
                 const amount = log.data
                 let event: string = ''
                 event = event.concat(serialNumber.substring(2, serialNumber.length))
-                event = event.concat(contractAdress.substring(2, contractAdress.length))
+                event = event.concat(contractAddress.substring(2, contractAddress.length))
                 event = event.concat(toAddress.substring(2, toAddress.length))
                 event = event.concat(amount.substring(2, amount.length))
 
-                // swap toAddress and contractAdress position to make maliciousEvent
+                // swap toAddress and contractAddress position to make maliciousEvent
                 let maliciousEvent: string = ''
                 maliciousEvent = maliciousEvent.concat(serialNumber.substring(2, serialNumber.length))
                 maliciousEvent = maliciousEvent.concat(toAddress.substring(2, toAddress.length))
-                maliciousEvent = maliciousEvent.concat(contractAdress.substring(2, contractAdress.length))
+                maliciousEvent = maliciousEvent.concat(contractAddress.substring(2, contractAddress.length))
                 maliciousEvent = maliciousEvent.concat(amount.substring(2, amount.length))
 
                 let data = DecodeHexStringToByteArray(event)
@@ -377,9 +377,16 @@ describe("ChrL2", () => {
                 let el2Proof = {
                     el2Leaf: DecodeHexStringToByteArray(el2Leaf),
                     el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
-                    el2Position: 0,
-                    extraRoot: DecodeHexStringToByteArray(extraRoot.substring(2, extraRoot.length)),
-                    extraMerkleProofs: [],
+                    el2Position: 1,
+                    extraRoot: DecodeHexStringToByteArray("04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A1"),
+                    extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
+                }
+                let invalidEl2Leaf = {
+                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
+                    el2HashedLeaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
+                    el2Position: 1,
+                    extraRoot: DecodeHexStringToByteArray("04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A1"),
+                    extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }
                 let maliciousEl2Proof = {
                     el2Leaf: DecodeHexStringToByteArray(el2Leaf),
@@ -391,44 +398,48 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")                        
                     ],
                 }
-                await expect(chrL2Instance.withdraw_request(maliciousData, eventProof, 
-                    DecodeHexStringToByteArray(blockHeader), 
+                await expect(chrL2Instance.withdraw_request(maliciousData, eventProof,
+                    DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid event')
-                await expect(chrL2Instance.withdraw_request(data, eventProof, 
-                    DecodeHexStringToByteArray(maliciousBlockHeader), 
+                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                    DecodeHexStringToByteArray(blockHeader), 
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], invalidEl2Leaf)
+                ).to.be.revertedWith('Postchain: invalid el2 extra data')
+                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                    DecodeHexStringToByteArray(maliciousBlockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid block header')
-                await expect(chrL2Instance.withdraw_request(data, eventProof, 
-                    DecodeHexStringToByteArray(blockHeader), 
+                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                    DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], maliciousEl2Proof)
-                ).to.be.revertedWith('Postchain: invalid el2 extra data')
-                await expect(chrL2Instance.withdraw_request(data, maliciousEventProof, 
+                ).to.be.revertedWith('Postchain: invalid el2 extra merkle proof')
+                await expect(chrL2Instance.withdraw_request(data, maliciousEventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('ChrL2: invalid merkle proof')
-                await expect(chrL2Instance.withdraw_request(data, eventProof, 
-                    DecodeHexStringToByteArray(blockHeader), 
+                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                    DecodeHexStringToByteArray(blockHeader),
                     [], el2Proof)
                 ).to.be.revertedWith('ChrL2: block signature is invalid')
 
-                await expect(chrL2Instance.withdraw_request(data, eventProof, 
-                    DecodeHexStringToByteArray(blockHeader), 
+                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                    DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.emit(chrL2Instance, "WithdrawRequest")
                 .withArgs(user.address, tokenAddress, toDeposit)
 
-                await expect(chrL2Instance.withdraw_request(data, eventProof, 
-                    DecodeHexStringToByteArray(blockHeader), 
+                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                    DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('ChrL2: event hash was already used')
 
                 await expect(chrL2Instance.withdraw(
-                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
+                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     deployer.address)).to.revertedWith("ChrL2: no fund for the beneficiary")
 
                 await expect(chrL2Instance.withdraw(
-                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
+                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     user.address)).to.revertedWith("ChrL2: not mature enough to withdraw the fund")
 
                 // force mining 100 blocks
@@ -439,7 +450,7 @@ describe("ChrL2", () => {
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
                 expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
                 await expect(chrL2Instance.withdraw(
-                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)), 
+                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     deployer.address)).to.be.revertedWith('ChrL2: no fund for the beneficiary')
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
