@@ -2,21 +2,20 @@
 
 package net.postchain.base.snapshot
 
-import junit.framework.TestCase
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.GtvNull
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.math.BigInteger
 import java.util.*
-import kotlin.test.Test
+import kotlin.test.assertEquals
 
-class MerkleTest : TestCase() {
+class MerkleTest {
 
     private val leafHashes = TreeMap<Long, Hash>()
     private val ds = SimpleDigestSystem(KECCAK256)
@@ -24,8 +23,8 @@ class MerkleTest : TestCase() {
     private lateinit var snapshot: TestSnapshotPageStore
     private lateinit var event: TestEventPageStore
 
-    public override fun setUp() {
-        super.setUp()
+    @BeforeEach
+    fun setUp() {
         snapshot = TestSnapshotPageStore(2, ds)
         event = TestEventPageStore(2, ds)
         leafHashes[0] = "044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d".hexStringToByteArray()
@@ -37,6 +36,7 @@ class MerkleTest : TestCase() {
         leafHashes[7] = "52f1a9b320cab38e5da8a8f97989383aab0a49165fc91c737310e4f7e9821021".hexStringToByteArray()
     }
 
+    @Test
     fun testUpdateSnapshot_3pages() {
         val stateRootHash = snapshot.updateSnapshot( 1, leafHashes)
         val l01 = ds.hash(leafHashes[0]!!, leafHashes[1]!!)
@@ -51,6 +51,7 @@ class MerkleTest : TestCase() {
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
+    @Test
     fun testUpdateSnapshot_4pages() {
         leafHashes[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()
         leafHashes[9] = "d2f8f61201b2b11a78d6e866abc9c3db2ae8631fa656bfe5cb53668255367afb".hexStringToByteArray()
@@ -71,6 +72,7 @@ class MerkleTest : TestCase() {
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
+    @Test
     fun testUpdateSnapshot_4pages_Multiple_Blocks() {
         leafHashes[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()
         leafHashes[9] = "d2f8f61201b2b11a78d6e866abc9c3db2ae8631fa656bfe5cb53668255367afb".hexStringToByteArray()
@@ -99,6 +101,7 @@ class MerkleTest : TestCase() {
         assertEquals(stateRootHash.toHex(), root.toHex())
     }
 
+    @Test
     fun testUpdateSnapshot_6pages_Multiple_Blocks() {
         leafHashes[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()
         leafHashes[9] = "d2f8f61201b2b11a78d6e866abc9c3db2ae8631fa656bfe5cb53668255367afb".hexStringToByteArray()
@@ -155,6 +158,7 @@ class MerkleTest : TestCase() {
         assertEquals(stateRootHash2.toHex(), root2.toHex())
     }
 
+    @Test
     fun testUpdateSnapshot_6pages_Single_Block() {
         leafHashes[2] = "ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray()
         leafHashes[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()

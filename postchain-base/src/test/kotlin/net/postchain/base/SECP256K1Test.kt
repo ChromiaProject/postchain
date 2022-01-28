@@ -2,7 +2,6 @@
 
 package net.postchain.base
 
-import junit.framework.TestCase
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper.privKey
@@ -10,8 +9,9 @@ import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.gtxml.GTXMLTransactionParser
 import net.postchain.gtx.gtxml.TransactionContext
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SECP256K1Test {
@@ -102,7 +102,7 @@ class SECP256K1Test {
         val pubkey = "02e8bc920faad314f9859dd94d8ba0e62888f35ae572e1ebf80912033670b3e793".hexStringToByteArray()
         val address = getEthereumAddress(pubkey)
         val expected = "f4A8c3ef8a8968DA1680e22F289Fe0d5360755b4".hexStringToByteArray()
-        TestCase.assertTrue(expected.contentEquals(address))
+        assertTrue(expected.contentEquals(address))
     }
 
     @Test
@@ -111,6 +111,6 @@ class SECP256K1Test {
         val address = getEthereumAddress(pubkey)
         val checksumAddress = toChecksumAddress(address.toHex())
         val expected = "0x17d2C9EAb8d3BeDf39497c1A176eaEedfc3075CB"
-        TestCase.assertEquals(expected, checksumAddress)
+        assertEquals(expected, checksumAddress)
     }
 }

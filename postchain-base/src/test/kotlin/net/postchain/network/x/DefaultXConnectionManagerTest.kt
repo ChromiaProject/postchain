@@ -11,7 +11,6 @@ import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.devtools.isContentEqualTo
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 import net.postchain.network.util.peerInfoFromPublicKey

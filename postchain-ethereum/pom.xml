@@ -5,14 +5,13 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.4.0-SNAPSHOT</version>
+        <version>3.4.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>postchain-ethereum</artifactId>
 
     <properties>
-        <spongycastle.core.version>1.56.0.0</spongycastle.core.version>
         <executable-classifier>jar-with-dependencies</executable-classifier>
         <dist-classifier>dist</dist-classifier>
     </properties>
@@ -22,35 +21,29 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-base</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.madgag.spongycastle</groupId>
             <artifactId>core</artifactId>
-            <version>${spongycastle.core.version}</version>
         </dependency>
         <dependency>
             <groupId>com.madgag.spongycastle</groupId>
             <artifactId>prov</artifactId>
-            <version>${spongycastle.core.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.web3j</groupId>
             <artifactId>core</artifactId>
-            <version>4.8.4</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>4.9.1</version>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -66,7 +59,6 @@
             <plugin>
                 <artifactId>kotlin-maven-plugin</artifactId>
                 <groupId>org.jetbrains.kotlin</groupId>
-                <version>${kotlin.version}</version>
                 <executions>
                     <execution>
                         <id>compile</id>
@@ -129,7 +121,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>${maven.assembly.plugin.version}</version>
                 <executions>
                     <execution>
                         <id>make-executable-jar</id>

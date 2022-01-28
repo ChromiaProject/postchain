@@ -1,6 +1,5 @@
 package net.postchain.gtv.merkle
 
-import junit.framework.TestCase
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.SHA256
 import net.postchain.common.hexStringToByteArray
@@ -10,9 +9,14 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvString
 import java.math.BigInteger
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-class MerkleTreeTest : TestCase() {
+class MerkleTreeTest {
 
+    @Test
     fun testGetMerkleProof_1() {
         val ds = SimpleDigestSystem(SHA256)
         val dict = HashMap<String, Gtv>()
@@ -28,6 +32,7 @@ class MerkleTreeTest : TestCase() {
         assertEquals(root.toHex(), el2.toHex())
     }
 
+    @Test
     fun testGetMerkleProof_2() {
         val ds = SimpleDigestSystem(SHA256)
         val dict = HashMap<String, Gtv>()
@@ -50,6 +55,7 @@ class MerkleTreeTest : TestCase() {
         assertFalse(tree.verifyMerkleProof(proof1, pos0, icmf))
     }
 
+    @Test
     fun testGetMerkleProof_10() {
         val ds = SimpleDigestSystem(SHA256)
         val dict = HashMap<String, Gtv>()

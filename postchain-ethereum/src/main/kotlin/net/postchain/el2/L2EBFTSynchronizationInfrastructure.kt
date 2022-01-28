@@ -23,7 +23,7 @@ class EL2SynchronizationInfrastructureExtension(
 ) : SynchronizationInfrastructureExtension {
 
     override fun connectProcess(process: BlockchainProcess) {
-        val engine = process.getEngine()
+        val engine = process.blockchainEngine
         val cfg = engine.getConfiguration()
         if (cfg is GTXBlockchainConfiguration) {
             val exs = cfg.module.getSpecialTxExtensions()
