@@ -4,7 +4,8 @@ package net.postchain.network.x
 
 import assertk.assert
 import assertk.assertions.isEmpty
-import com.nhaarman.mockitokotlin2.*
+import assertk.isContentEqualTo
+import org.mockito.kotlin.*
 import net.postchain.base.*
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
@@ -13,9 +14,11 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.isContentEqualTo
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.apache.commons.lang3.reflect.FieldUtils
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -35,12 +38,14 @@ class DefaultXConnectionManagerTest {
 
     private lateinit var unknownPeerInfo: PeerInfo
 
-    @Before
+    @BeforeEach
     fun setUp() {
-        // TODO: [et]: Make dynamic ports
-        peerInfo1 = PeerInfo("localhost", 3331, byteArrayOf(0x01))
-        peerInfo2 = PeerInfo("localhost", 3332, byteArrayOf(0x02))
-        unknownPeerInfo = PeerInfo("localhost", 3333, byteArrayOf(0x03))
+        val b1 = BlockchainRid.buildRepeat(0x01)
+        val b2 = BlockchainRid.buildRepeat(0x02)
+        val b3 = BlockchainRid.buildRepeat(0x03)
+        peerInfo1 = peerInfoFromPublicKey(b1.data)
+        peerInfo2 = peerInfoFromPublicKey(b2.data)
+        unknownPeerInfo = peerInfoFromPublicKey(b3.data)
 
         peerConnectionDescriptor1 = XPeerConnectionDescriptor(peerInfo1.peerId(), blockchainRid)
         peerConnectionDescriptor2 = XPeerConnectionDescriptor(peerInfo2.peerId(), blockchainRid)
@@ -150,12 +155,14 @@ class DefaultXConnectionManagerTest {
         connectionManager.shutdown()
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun connectChainPeer_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().connectChainPeer(1, peerInfo1.peerId())
+        assertThrows<ProgrammerMistake> {
+            emptyManager().connectChainPeer(1, peerInfo1.peerId())
+        }
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun connectChainPeer_connects_unknown_peer_with_exception() {
         // Given
         val communicationConfig: PeerCommConfiguration = emptyCommConf()
@@ -166,11 +173,13 @@ class DefaultXConnectionManagerTest {
         }
 
         // When / Then exception
-        DefaultXConnectionManager(
+        assertThrows<ProgrammerMistake> {
+            DefaultXConnectionManager(
                 connectorFactory, mock(), mock(), cryptoSystem
-        ).apply {
-            connectChain(chainPeerConfig, false, mock()) // Without connecting to peers
-            connectChainPeer(1, unknownPeerInfo.peerId())
+            ).apply {
+                connectChain(chainPeerConfig, false, mock()) // Without connecting to peers
+                connectChainPeer(1, unknownPeerInfo.peerId())
+            }
         }
     }
 
@@ -240,14 +249,15 @@ class DefaultXConnectionManagerTest {
         // Then
         verify(chainPeerConfig, atLeast(3)).chainID
         verify(chainPeerConfig, times(6)).commConfiguration
-        verify(chainPeerConfig, times(1 + 2 + 1 + 2)).blockchainRID
 
         connectionManager.shutdown()
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun disconnectChainPeer_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().disconnectChainPeer(1L, peerInfo1.peerId())
+        assertThrows<ProgrammerMistake> {
+            emptyManager().disconnectChainPeer(1L, peerInfo1.peerId())
+        }
     }
 
     @Test
@@ -255,14 +265,18 @@ class DefaultXConnectionManagerTest {
         emptyManager().disconnectChain(1, mock())
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun isPeerConnected_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().isPeerConnected(1, peerInfo1.peerId())
+        assertThrows<ProgrammerMistake> {
+            emptyManager().isPeerConnected(1, peerInfo1.peerId())
+        }
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun getConnectedPeers_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().getConnectedPeers(1)
+        assertThrows<ProgrammerMistake> {
+            emptyManager().getConnectedPeers(1)
+        }
     }
 
     @Test
@@ -330,9 +344,11 @@ class DefaultXConnectionManagerTest {
         connectionManager.shutdown()
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun sendPacket_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().sendPacket({ byteArrayOf() }, 1, peerInfo2.peerId())
+        assertThrows<ProgrammerMistake> {
+            emptyManager().sendPacket({ byteArrayOf() }, 1, peerInfo2.peerId())
+        }
     }
 
     @Test
@@ -368,16 +384,18 @@ class DefaultXConnectionManagerTest {
         // Then / verify and assert
         verify(connection1, times(0)).sendPacket(any())
         argumentCaptor<LazyPacket>().apply {
-            verify(connection2, times(1)).sendPacket(capture())
+            verify(connection2, times(3)).sendPacket(capture())
             assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
         connectionManager.shutdown()
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun broadcastPacket_will_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().broadcastPacket({ byteArrayOf() }, 1)
+        assertThrows<ProgrammerMistake> {
+            emptyManager().broadcastPacket({ byteArrayOf() }, 1)
+        }
     }
 
     private fun emptyManager() = DefaultXConnectionManager(connectorFactory, mock(), mock(), cryptoSystem)
@@ -420,11 +438,11 @@ class DefaultXConnectionManagerTest {
 
         // Then / verify and assert
         argumentCaptor<LazyPacket>().apply {
-            verify(connection1, times(1)).sendPacket(capture())
+            verify(connection1, times(4)).sendPacket(capture()) // 4 = initial attempt + 3 retries
             assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
         argumentCaptor<LazyPacket>().apply {
-            verify(connection2, times(1)).sendPacket(capture())
+            verify(connection2, times(4)).sendPacket(capture()) // 4 = initial attempt + 3 retries
             assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 

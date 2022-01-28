@@ -11,11 +11,12 @@ import net.postchain.base.secp256k1_derivePubKey
 import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class DefaultXCommunicationManager2PeersIT {
 
@@ -34,11 +35,10 @@ class DefaultXCommunicationManager2PeersIT {
     private val privKey2 = cryptoSystem.getRandomBytes(32)
     private val pubKey2 = secp256k1_derivePubKey(privKey2)
 
-    @Before
+    @BeforeEach
     fun setUp() {
-        // TODO: [et]: Make dynamic ports
-        peerInfo1 = PeerInfo("localhost", 3331, pubKey1)
-        peerInfo2 = PeerInfo("localhost", 3332, pubKey2)
+        peerInfo1 = peerInfoFromPublicKey(pubKey1)
+        peerInfo2 = peerInfoFromPublicKey(pubKey2)
         val peers = arrayOf(peerInfo1, peerInfo2)
 
         // Creating
@@ -55,7 +55,7 @@ class DefaultXCommunicationManager2PeersIT {
         context2.communicationManager.init()
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         context1.shutdown()
         context2.shutdown()

@@ -2,8 +2,8 @@
 
 package net.postchain.integrationtest.config
 
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
@@ -15,12 +15,12 @@ import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.assertNodeConnectedWith
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.After
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
-@Ignore
+@Disabled
 class ManualNodeConfigProviderTest : ConfigFileBasedIntegrationTest() {
 
     private val peerInfos = arrayOf(
@@ -38,7 +38,7 @@ class ManualNodeConfigProviderTest : ConfigFileBasedIntegrationTest() {
                     "0203C6150397F7E4197FF784A8D74357EF20DAF1D09D823FFF8D3FC9150CBAE85D".hexStringToByteArray())
     )
 
-    @Before
+    @BeforeEach
     fun setUp() {
         setUpNode(0)
         setUpNode(1)
@@ -46,7 +46,7 @@ class ManualNodeConfigProviderTest : ConfigFileBasedIntegrationTest() {
         setUpNode(3)
     }
 
-    @After
+    @AfterEach
     override fun tearDown() {
         tearDownNode(0)
         tearDownNode(1)

@@ -3,7 +3,7 @@ package net.postchain.integrationtest.sync
 import mu.KLogging
 import net.postchain.devtools.currentHeight
 import org.awaitility.Awaitility
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
@@ -12,8 +12,9 @@ import kotlin.test.assertEquals
  */
 class MustSyncUntilTest : AbstractSyncTest() {
 
-    private companion object: KLogging()
-    val chainID: Long =  0L //In AbstractSyncTest, chainID is hard coded to 0L.
+    private companion object : KLogging()
+
+    val chainID: Long = 0L //In AbstractSyncTest, chainID is hard coded to 0L.
     override var mustSyncUntil = 1L //default value is -1
     val signers = 2
     val replicas = 0
@@ -28,13 +29,13 @@ class MustSyncUntilTest : AbstractSyncTest() {
     fun testSyncUntilNonExistingHeight() {
         mustSyncUntil = 3L
         try {
-            Awaitility.await().atMost(9, TimeUnit.SECONDS).until {
+            Awaitility.await().atMost(15, TimeUnit.SECONDS).until {
                 runSyncTest(signers, replicas, setOf(syncNodeIndex), setOf(), blocksToSync)
                 true
             }
         } catch (e: org.awaitility.core.ConditionTimeoutException) {
             val actual = nodes[syncNodeIndex].currentHeight(chainID)
-            assertEquals((blocksToSync-1).toLong(), actual)
+            assertEquals((blocksToSync - 1).toLong(), actual)
         }
     }
 

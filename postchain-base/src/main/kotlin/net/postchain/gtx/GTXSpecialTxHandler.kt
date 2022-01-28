@@ -14,7 +14,13 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 
-
+/**
+ * Holds various info regarding special TXs used by an extension, when a Spec TX is needed and how to create Spec TX etc.
+ *
+ * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
+ * (examples: BBB Ext and Sync Ext).
+ * To see how it all goes together, see: doc/extension_classes.graphml
+ */
 interface GTXSpecialTxExtension {
     fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem)
     fun getRelevantOps(): Set<String>
@@ -24,6 +30,9 @@ interface GTXSpecialTxExtension {
                                   bctx: BlockEContext, ops: List<OpData>): Boolean
 }
 
+/**
+ * Auto TX adds "__begin_block" and "__end_block" to the block.
+ */
 class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
     var wantBegin: Boolean = false
     var wantEnd: Boolean = false
@@ -37,6 +46,10 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
 
     override fun getRelevantOps() = _relevantOps
 
+    /**
+     * (Alex:) We only add the "__begin_.." and "__end.." if they are used by the Rell programmer writing the module,
+     * so we must check the module for these operations before we know if they are relevant.
+     */
     override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         val ops = module.getOperations()
         if (OP_BEGIN_BLOCK in ops) {

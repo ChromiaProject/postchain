@@ -15,7 +15,8 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXTransactionBodyData
 import net.postchain.gtx.GTXTransactionData
 import net.postchain.gtx.OpData
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class GTXMLTransactionParserAutoSignTest {
     val blockchainRID = BlockchainRid.buildFromHex("1234567812345678123456781234567812345678123456781234567812345678")
@@ -83,14 +84,17 @@ class GTXMLTransactionParserAutoSignTest {
         assert(actual).isEqualTo(expectedTx)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun autoSign_autosigning_no_signer_throws_exception() {
         val xml = readResourceFile("tx_no_signer.xml")
 
-        GTXMLTransactionParser.parseGTXMLTransaction(xml,
+        assertThrows<java.lang.IllegalArgumentException> {
+            GTXMLTransactionParser.parseGTXMLTransaction(
+                xml,
                 TransactionContext(null, mapOf(), true, mapOf()),
                 MockCryptoSystem()
-                )
+            )
+        }
     }
 
     @Test

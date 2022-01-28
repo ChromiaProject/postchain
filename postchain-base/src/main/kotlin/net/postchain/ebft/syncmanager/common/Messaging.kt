@@ -32,7 +32,7 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
     fun sendBlockAtHeight(peerId: XPeerID, height: Long) {
         val blockData = blockQueries.getBlockAtHeight(height).get()
         if (blockData == null) {
-            logger.debug("No block at height $height, as requested by $peerId")
+            logger.debug{ "No block at height $height, as requested by $peerId" }
             return
         }
         val packet = CompleteBlock(BlockData(blockData.header.rawData, blockData.transactions), height, blockData.witness.getRawData())
@@ -40,7 +40,7 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
     }
 
     fun sendBlockHeaderAndBlock(peerID: XPeerID, requestedHeight: Long, myHeight: Long) {
-        logger.trace("GetBlockHeaderAndBlock from peer $peerID for height $requestedHeight, myHeight is $myHeight")
+        logger.trace{ "GetBlockHeaderAndBlock from peer $peerID for height $requestedHeight, myHeight is $myHeight" }
 
         if (myHeight == -1L) {
             sendHeader(peerID, byteArrayOf(), byteArrayOf(), -1, requestedHeight)
@@ -68,13 +68,13 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
         }
 
         val unfinishedBlock = UnfinishedBlock(blockData.header.rawData, blockData.transactions)
-        logger.trace("Replying with UnfinishedBlock to peer $peerID for height $requestedHeight")
+        logger.trace{ "Replying with UnfinishedBlock to peer $peerID for height $requestedHeight" }
         communicationManager.sendPacket(unfinishedBlock, peerID)
     }
 
     private fun sendHeader(peerID: XPeerID, header: ByteArray, witness: ByteArray, sentHeight: Long, requestedHeight: Long): BlockHeader {
         val h = BlockHeader(header, witness, requestedHeight)
-        logger.trace("Replying with BlockHeader at height $sentHeight to peer $peerID for requested height $requestedHeight")
+        logger.trace{ "Replying with BlockHeader at height $sentHeight to peer $peerID for requested height $requestedHeight" }
         communicationManager.sendPacket(h, peerID)
         return h
     }

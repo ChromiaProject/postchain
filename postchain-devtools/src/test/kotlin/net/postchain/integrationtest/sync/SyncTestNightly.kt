@@ -1,17 +1,14 @@
 package net.postchain.integrationtest.sync
 
 import mu.KLogging
-import org.junit.Test
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 
-@RunWith(Parameterized::class)
-class SyncTestNightly(val signers: Int, val replicas: Int, val syncIndex: Set<Int>, val stopIndex: Set<Int>, val blocksToSync: Int) : AbstractSyncTest() {
+class SyncTestNightly : AbstractSyncTest() {
 
-    private companion object : KLogging() {
+    companion object : KLogging() {
 
         @JvmStatic
-        @Parameterized.Parameters
         fun testArguments() = listOf(
                 // Empty blockchain
                 arrayOf(1, 1, setOf(0), setOf<Int>(), 0),
@@ -31,11 +28,14 @@ class SyncTestNightly(val signers: Int, val replicas: Int, val syncIndex: Set<In
 
                 // Multi node multi blocks
                 arrayOf(4, 4, setOf(0, 1, 2, 4, 5), setOf<Int>(3, 6), 50)
+
         )
     }
 
-    @Test
-    fun sync() {
+    @ParameterizedTest
+    @MethodSource("testArguments")
+    fun sync(signers: Int, replicas: Int, syncIndex: Set<Int>, stopIndex: Set<Int>, blocksToSync: Int) {
+        System.out.println("++ Sync Nightly, -------- Signs: $signers Repls: $replicas SyncIdx: ${syncIndex?.size} StopIdx: ${stopIndex?.size} blocks: $blocksToSync ------------------")
         runSyncTest(signers, replicas, syncIndex, stopIndex, blocksToSync)
     }
 }

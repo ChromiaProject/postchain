@@ -8,7 +8,7 @@ import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.NODE_ID_TODO
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class SinglePeerDoubleChainsDependencyTest : ConfigFileBasedIntegrationTest() {
 

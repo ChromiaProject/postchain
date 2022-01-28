@@ -48,7 +48,7 @@ open class BaseBlockManager(
                     synchronized(statusManager) {
                         onFailure(err)
                         processing = false
-                        logger.debug("Error in runDBOp()", err)
+                        logger.debug(err) { "Error in runDBOp()" }
                     }
                 }
             }
@@ -198,7 +198,7 @@ open class BaseBlockManager(
                 blockDB.setBlockTrace(BlockTrace.build(processName, currentBlock?.header?.blockRID, heightIntent))
             } catch (e: java.lang.Exception) {
                 // Doesn't matter
-                logger.trace("$processName: ERROR where adding bTrace.", e);
+                logger.trace(e) { "$processName: ERROR where adding bTrace." }
             }
         }
     }

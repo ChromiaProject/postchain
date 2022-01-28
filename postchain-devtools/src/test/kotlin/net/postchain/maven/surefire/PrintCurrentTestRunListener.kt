@@ -2,11 +2,8 @@
 
 package net.postchain.maven.surefire
 
-import org.junit.runner.Description
-import org.junit.runner.Result
-import org.junit.runner.notification.RunListener
 
-class PrintCurrentTestRunListener : RunListener() {
+/*class PrintCurrentTestRunListener : RunListener() {
 
     @Throws(Exception::class)
     override fun testRunStarted(description: Description) {
@@ -32,4 +29,4 @@ class PrintCurrentTestRunListener : RunListener() {
                 ", failures: ${result.failureCount}" +
                 ", ignored: ${result.ignoreCount}")
     }
-}
+}*/

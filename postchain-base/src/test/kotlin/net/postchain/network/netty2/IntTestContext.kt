@@ -2,10 +2,10 @@
 
 package net.postchain.network.netty2
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.doAnswer
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.core.Shutdownable
 import net.postchain.network.x.XConnectorEvents

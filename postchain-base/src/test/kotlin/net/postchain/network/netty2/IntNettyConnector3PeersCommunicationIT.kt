@@ -4,22 +4,24 @@ package net.postchain.network.netty2
 
 import assertk.assert
 import assertk.assertions.isIn
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.times
-import com.nhaarman.mockitokotlin2.verify
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
+import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.network.x.XPeerConnection
 import net.postchain.network.x.XPeerConnectionDescriptor
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.FIVE_SECONDS
 import org.awaitility.Duration.TEN_SECONDS
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class IntNettyConnector3PeersCommunicationIT {
 
@@ -31,11 +33,11 @@ class IntNettyConnector3PeersCommunicationIT {
     private lateinit var context2: IntTestContext
     private lateinit var context3: IntTestContext
 
-    @Before
+    @BeforeEach
     fun setUp() {
-        peerInfo1 = PeerInfo("localhost", 3331, byteArrayOf(0, 0, 0, 1))
-        peerInfo2 = PeerInfo("localhost", 3332, byteArrayOf(0, 0, 0, 2))
-        peerInfo3 = PeerInfo("localhost", 3333, byteArrayOf(0, 0, 0, 3))
+        peerInfo1 = peerInfoFromPublicKey(byteArrayOf(0, 0, 0, 1))
+        peerInfo2 = peerInfoFromPublicKey(byteArrayOf(0, 0, 0, 2))
+        peerInfo3 = peerInfoFromPublicKey(byteArrayOf(0, 0, 0, 3))
 
         // Starting contexts
         context1 = startContext(peerInfo1)
@@ -43,7 +45,7 @@ class IntNettyConnector3PeersCommunicationIT {
         context3 = startContext(peerInfo3)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         stopContext(context1)
         stopContext(context2)

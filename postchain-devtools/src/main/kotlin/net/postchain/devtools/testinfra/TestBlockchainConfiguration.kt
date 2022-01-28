@@ -24,6 +24,6 @@ open class TestBlockchainConfiguration(
 
     override fun initializeDB(ctx: EContext) {
         super.initializeDB(ctx)
-        logger.debug("++ TEST ONLY ++: Running TestBlockchainConfiguration - means DB for modules NOT initialized! ++ TEST ONLY ++")
+        logger.debug{ "++ TEST ONLY ++: Running TestBlockchainConfiguration - means DB for modules NOT initialized! ++ TEST ONLY ++" }
     }
 }

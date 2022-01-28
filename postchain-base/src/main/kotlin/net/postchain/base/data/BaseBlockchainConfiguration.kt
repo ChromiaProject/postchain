@@ -2,12 +2,16 @@
 
 package net.postchain.base.data
 
+import mu.KLogging
 import net.postchain.base.*
 import net.postchain.core.*
 import net.postchain.getBFTRequiredSignatureCount
+import java.lang.ClassCastException
 
 open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurationData)
     : BlockchainConfiguration {
+
+    companion object : KLogging()
 
     override val traits = setOf<String>()
     val cryptoSystem = SECP256K1CryptoSystem()
@@ -109,7 +113,12 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
         if (strategyClassName == "") {
             return BaseBlockBuildingStrategy(configData, this, blockQueries, txQueue)
         }
-        val strategyClass = Class.forName(strategyClassName)
+        val strategyClass = try {
+            Class.forName(strategyClassName)
+        } catch (e: ClassNotFoundException) {
+            throw UserMistake("The block building strategy given was in the configuration is invalid, " +
+                    "Class name given: $strategyClassName.")
+        }
 
         val ctor = strategyClass.getConstructor(
                 BaseBlockchainConfigurationData::class.java,
@@ -117,7 +126,13 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
                 BlockQueries::class.java,
                 TransactionQueue::class.java)
 
-        return ctor.newInstance(configData, this, blockQueries, txQueue) as BlockBuildingStrategy
+        try {
+            return ctor.newInstance(configData, this, blockQueries, txQueue) as BlockBuildingStrategy
+        } catch(e: java.lang.reflect.InvocationTargetException) {
+            throw ProgrammerMistake("The constructor of the block building strategy given was " +
+                    "unable to finish finish. Class name given: $strategyClassName," +
+                    " class found=$strategyClass, ctor=$ctor, Msg: ${e.message}")
+        }
     }
 }
 

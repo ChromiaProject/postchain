@@ -68,7 +68,7 @@ class PostchainTestNode(
 
         return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
-            logger.debug("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}")
+            logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
             DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
             BaseConfigurationDataStore.addConfigurationData(eContext, 0, blockchainConfig)
             brid
@@ -79,7 +79,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
-            logger.debug("Adding configuration for chain: $chainId, height: $height")
+            logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
             brid
@@ -126,15 +126,15 @@ class PostchainTestNode(
     }
 
     fun transactionQueue(chainId: Long = DEFAULT_CHAIN_IID): TransactionQueue {
-        return getBlockchainInstance(chainId).getEngine().getTransactionQueue()
+        return getBlockchainInstance(chainId).blockchainEngine.getTransactionQueue()
     }
 
     fun blockQueries(chainId: Long = DEFAULT_CHAIN_IID): BlockQueries {
-        return getBlockchainInstance(chainId).getEngine().getBlockQueries()
+        return getBlockchainInstance(chainId).blockchainEngine.getBlockQueries()
     }
 
     fun blockBuildingStrategy(chainId: Long = DEFAULT_CHAIN_IID): BlockBuildingStrategy {
-        return getBlockchainInstance(chainId).getEngine().getBlockBuildingStrategy()
+        return getBlockchainInstance(chainId).blockchainEngine.getBlockBuildingStrategy()
     }
 
     fun networkTopology(chainId: Long = DEFAULT_CHAIN_IID): Map<String, String> {
@@ -158,6 +158,6 @@ class PostchainTestNode(
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
 
     private fun blockchainRID(process: BlockchainProcess): String {
-        return process.getEngine().getConfiguration().blockchainRid.toHex()
+        return process.blockchainEngine.getConfiguration().blockchainRid.toHex()
     }
 }

@@ -10,8 +10,8 @@ import net.postchain.gtv.merkle.MixArrayDictToGtvBinaryTreeHelper
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class MixArrayDictToGtvBinaryTreeTest {
 
@@ -58,7 +58,7 @@ class MixArrayDictToGtvBinaryTreeTest {
 
         val treePrintout = buildTreeOfDict1WithSubArray4()
         //println(treeHolder.treePrintout)
-        Assert.assertEquals(expectedTree.trim(), treePrintout.trim())
+       assertEquals(expectedTree.trim(), treePrintout.trim())
     }
 
     @Test
@@ -81,6 +81,6 @@ class MixArrayDictToGtvBinaryTreeTest {
         val treePrintout = buildTreeOfDict1WithSubArray4(gtvPath)
         //println(treeHolder.treePrintout)
 
-        Assert.assertEquals(expectedTreeWithPath.trim(), treePrintout.trim())
+       assertEquals(expectedTreeWithPath.trim(), treePrintout.trim())
     }
 }

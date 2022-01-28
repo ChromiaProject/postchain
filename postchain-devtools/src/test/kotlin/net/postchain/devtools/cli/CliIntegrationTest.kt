@@ -15,8 +15,8 @@ import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NODE_ID_NA
 import org.apache.commons.dbutils.handlers.ScalarHandler
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 import kotlin.test.*
 
@@ -34,7 +34,7 @@ class CliIntegrationTest {
         return Paths.get(javaClass.getResource("/net/postchain/devtools/cli/${name}").toURI()).toString()
     }
 
-    @Before
+    @BeforeEach
     fun setup() {
         // this wipes the data base.
         StorageBuilder.buildStorage(appConfig, NODE_ID_NA, true)

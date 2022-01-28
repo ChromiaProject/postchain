@@ -5,7 +5,7 @@ package net.postchain.cli
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.toHex
 import org.bitcoinj.crypto.MnemonicCode
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class CliCommandTest {

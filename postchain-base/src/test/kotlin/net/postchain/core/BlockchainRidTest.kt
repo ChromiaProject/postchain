@@ -5,9 +5,9 @@ package net.postchain.core
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEqualTo
+import assertk.isContentEqualTo
 import net.postchain.common.hexStringToByteArray
-import net.postchain.devtools.isContentEqualTo
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class BlockchainRidTest {
 

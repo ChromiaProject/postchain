@@ -3,15 +3,15 @@
 package net.postchain.sandbox
 
 import mu.KLogging
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 class Log4jTest {
 
     companion object : KLogging()
 
     @Test
-    @Ignore
+    @Disabled
     fun test() {
         var i = 0
         while (true) {

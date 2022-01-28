@@ -30,7 +30,7 @@ class Chromia0BlockchainProcessManager(
         withReadConnection(storage, chainId) { eContext ->
             val dba = DatabaseAccess.of(eContext)
             val blockRID = dba.getLastBlockRid(eContext, chainId)
-            val chain0Engine = blockchainProcesses[0L]!!.getEngine()
+            val chain0Engine = blockchainProcesses[0L]!!.blockchainEngine
             if (blockRID != null) {
                 val blockHeader = dba.getBlockHeader(eContext, blockRID)
                 val witnessData = dba.getWitnessData(eContext, blockRID)

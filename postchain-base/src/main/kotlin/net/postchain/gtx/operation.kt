@@ -13,7 +13,9 @@ class GTXOpMistake(message: String, opData: ExtOpData, argPos: Int? = null, caus
         cause)
 
 abstract class GTXOperation(val data: ExtOpData) : Transactor {
-    override fun isSpecial(): Boolean = false
+    override fun isSpecial(): Boolean {
+        return data.opName.startsWith("__")  // We used to return "false" here always, but that wos just too confusing IMO
+    }
 }
 
 class SimpleGTXOperation(data: ExtOpData,
@@ -26,10 +28,6 @@ class SimpleGTXOperation(data: ExtOpData,
 
     override fun isCorrect(): Boolean {
         return isCorrectF()
-    }
-
-    override fun isSpecial(): Boolean {
-        return data.opName.startsWith("__")
     }
 }
 

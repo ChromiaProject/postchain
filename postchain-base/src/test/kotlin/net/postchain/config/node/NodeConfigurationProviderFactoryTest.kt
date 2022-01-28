@@ -4,11 +4,11 @@ package net.postchain.config.node
 
 import assertk.assert
 import assertk.assertions.isInstanceOf
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory.createProvider
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class NodeConfigurationProviderFactoryTest {
 

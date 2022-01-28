@@ -54,7 +54,7 @@ abstract class AbstractIntegration {
     protected fun buildBlockAndCommit(node: PostchainTestNode) {
         commitBlock(node
                 .getBlockchainInstance()
-                .getEngine()
+                .blockchainEngine
                 .buildBlock()
                 .first)
     }
@@ -77,12 +77,12 @@ abstract class AbstractIntegration {
     }
 
     protected fun getTxRidsAtHeight(node: PostchainTestNode, height: Long): Array<ByteArray> {
-        val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
+        val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
         val blockRid = blockQueries.getBlockRid(height).get()
         return blockQueries.getBlockTransactionRids(blockRid!!).get().toTypedArray()
     }
 
     protected fun getBestHeight(node: PostchainTestNode): Long {
-        return node.getBlockchainInstance().getEngine().getBlockQueries().getBestHeight().get()
+        return node.getBlockchainInstance().blockchainEngine.getBlockQueries().getBestHeight().get()
     }
 }

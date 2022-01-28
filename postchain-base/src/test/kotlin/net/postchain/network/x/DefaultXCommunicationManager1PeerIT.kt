@@ -10,9 +10,11 @@ import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.secp256k1_derivePubKey
 import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class DefaultXCommunicationManager1PeerIT {
 
@@ -25,7 +27,7 @@ class DefaultXCommunicationManager1PeerIT {
     private val privKey2 = cryptoSystem.getRandomBytes(32)
     private val pubKey2 = secp256k1_derivePubKey(privKey2)
 
-    private val peerInfo = PeerInfo("localhost", 3331, pubKey)
+    private val peerInfo = peerInfoFromPublicKey(pubKey)
 
     private fun startTestContext(peers: Array<PeerInfo>, pubKey: ByteArray): EbftIntegrationTestContext {
         val peerConfiguration = BasePeerCommConfiguration.build(
@@ -49,19 +51,23 @@ class DefaultXCommunicationManager1PeerIT {
                 }
     }
 
-    @Test(expected = UserMistake::class)
+    @Test
     fun singlePeer_launching_with_empty_peers_will_result_in_exception() {
-        startTestContext(arrayOf(), pubKey)
+        assertThrows<UserMistake> {
+            startTestContext(arrayOf(), pubKey)
                 .use {
                     it.communicationManager.init()
                 }
+        }
     }
 
-    @Test(expected = UserMistake::class)
+    @Test
     fun singlePeer_launching_with_wrong_pubkey_will_result_in_exception() {
-        startTestContext(arrayOf(peerInfo), pubKey2)
+        assertThrows<UserMistake> {
+            startTestContext(arrayOf(peerInfo), pubKey2)
                 .use {
                     it.communicationManager.init()
                 }
+        }
     }
 }

@@ -73,12 +73,20 @@ class DefaultXCommunicationManager<PacketType>(
     }
 
     override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<XPeerID>): XPeerID? {
+        var randomPeer: XPeerID? = null
         try {
-            val peer = connectionManager.getConnectedPeers(chainID).intersect(amongPeers).random()
-            logger.trace { "$processName: sendToRandomPeer($packet, ${peerName(peer.toString())})" }
-            sendPacket(packet, peer)
-            return peer
+            val possiblePeers = connectionManager.getConnectedPeers(chainID).intersect(amongPeers)
+            if (possiblePeers.isEmpty()) {
+                return null // We don't want to apply random to an empty list b/c throwing exception is too expensive.
+            }
+            randomPeer = possiblePeers.random()
+            if (logger.isTraceEnabled) {
+                logger.trace("$processName: sendToRandomPeer($packet, ${peerName(randomPeer.toString())})")
+            }
+            sendPacket(packet, randomPeer)
+            return randomPeer!!
         } catch (e: Exception) {
+            logger.error("Could not send package to random peer: ${peerName(randomPeer.toString())} because: ${e.message}", e)
             return null
         }
     }
@@ -94,10 +102,10 @@ class DefaultXCommunicationManager<PacketType>(
         try {
             // packet decoding should not be synchronized so we can make
             // use of parallel processing in different threads
-            logger.trace("receiving a packet from peer: ${peerID.byteArray.toHex()}")
+            logger.trace{ "receiving a packet from peer: ${peerID.byteArray.toHex()}" }
             val decodedPacket = packetDecoder.decodePacket(peerID.byteArray, packet)
             synchronized(this) {
-                logger.trace("Successfully decoded the package, now adding it ")
+                logger.trace{ "Successfully decoded the package, now adding it " }
                 inboundPackets.add(peerID to decodedPacket)
             }
         } catch (e: BadDataMistake) {

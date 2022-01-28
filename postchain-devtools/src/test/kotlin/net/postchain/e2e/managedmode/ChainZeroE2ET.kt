@@ -8,13 +8,13 @@ import net.postchain.common.toHex
 import net.postchain.e2e.tools.*
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.*
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 
 // Ignoring because these tests often fail on Travis, and they're also not testing currently building version
 // of Postchain, but some old released hard-coded version. See End2EndTests.
-@Ignore
+@Disabled
 class ChainZeroE2ET : End2EndTests() {
 
     companion object : KLogging()

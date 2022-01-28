@@ -4,6 +4,8 @@ import mu.KLogging
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
+import org.apache.commons.configuration2.Configuration
+import org.apache.commons.configuration2.PropertiesConfiguration
 
 
 /**
@@ -15,15 +17,18 @@ import net.postchain.devtools.PostchainTestNode
  * @property chainsToRead the blockchains this node should have a read only copy of (SET because no duplicates allowed)
  * @property pubKeyHex is the pub key
  * @property privKeyHex is the private key
+ * @property nodeSpecificConfigs are configurations that will be only for this node (usually nodes share config most
+ *                       settings, but this can be useful sometimes)
  * @property configurationProvider is the configuration provider for the node
  */
 data class NodeSetup(
-        val sequenceNumber: NodeSeqNumber,
-        val chainsToSign: Set<Int>,
-        val chainsToRead: Set<Int>,
-        val pubKeyHex: String,
-        val privKeyHex: String,
-        var configurationProvider: NodeConfigurationProvider? = null // We might not set this at first
+    val sequenceNumber: NodeSeqNumber,
+    val chainsToSign: Set<Int>,
+    val chainsToRead: Set<Int>,
+    val pubKeyHex: String,
+    val privKeyHex: String,
+    val nodeSpecificConfigs: Configuration = PropertiesConfiguration(),
+    var configurationProvider: NodeConfigurationProvider? = null // We might not set this at first
 ) {
 
     companion object : KLogging() {
@@ -114,7 +119,10 @@ data class NodeSetup(
             logger.debug("Node ${sequenceNumber.nodeNumber}: Chain is already running: chainId: ${chain.chainId}")
         } else {
             logger.debug("Node ${sequenceNumber.nodeNumber}: Begin starting $chainLogType chainId: ${chain.chainId}")
-            chain.prepareBlockchainOnNode(chain, node)
+            chain.prepareBlockchainOnNode(
+                chain,
+                node
+            )  // Don't think this is needed, since we could have put the setting in the setup
             node.startBlockchain(chain.chainId.toLong())
             logger.debug("Node ${sequenceNumber.nodeNumber}: Finished starting $chainLogType chainId: ${chain.chainId}")
         }

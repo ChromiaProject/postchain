@@ -9,9 +9,10 @@ import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -44,7 +45,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
 
         verifyBlockchainTransactions(node)
 
-        val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
+        val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
         assertFailsWith<UserMistake> {
             blockQueries.query("""{tdype: 'test_get_value'}""").get()
         }
@@ -97,7 +98,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         enqueueTx(node, makeTx(0, "k", "v", bcRid), 0)
         buildBlockAndCommit(node)
         verifyBlockchainTransactions(node)
-        val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
+        val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
         val gson = make_gtv_gson()
         var result = blockQueries.query("""{type: 'test_get_value', q_key: 'k', q_value : 'v'}""").get()
         var gtxResult = gson.fromJson<Gtv>(result, Gtv::class.java) as GtvArray
@@ -115,7 +116,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         buildBlockAndCommit(node)
         verifyBlockchainTransactions(node)
 
-        val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
+        val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
         var result = blockQueries.query("""{type: 'test_null_value'}""").get()
         val gson = make_gtv_gson()
         var gtxResult = gson.fromJson<Gtv>(result, Gtv::class.java)

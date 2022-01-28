@@ -8,7 +8,8 @@ import net.postchain.core.BlockchainRid
 import net.postchain.devtools.MockCryptoSystem
 import net.postchain.gtx.GTXTransactionBodyData
 import net.postchain.gtx.GTXTransactionData
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class GTXMLTransactionParserBlockchainRIDTest {
     val blockchainRID = BlockchainRid.buildRepeat(0x0A)
@@ -102,7 +103,7 @@ class GTXMLTransactionParserBlockchainRIDTest {
         assert(actual).isEqualTo(expectedTx)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGTXMLTransaction_in_context_with_blockchainRID_not_equal_to_context_one() {
         val xml = """
             <transaction blockchainRID="0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A">
@@ -112,8 +113,12 @@ class GTXMLTransactionParserBlockchainRIDTest {
 
         val blockchainRID1 = BlockchainRid.buildRepeat(0x01)
 
-        GTXMLTransactionParser.parseGTXMLTransaction(xml,
+        assertThrows<java.lang.IllegalArgumentException> {
+            GTXMLTransactionParser.parseGTXMLTransaction(
+                xml,
                 TransactionContext(blockchainRID1),
-                MockCryptoSystem())
+                MockCryptoSystem()
+            )
+        }
     }
 }

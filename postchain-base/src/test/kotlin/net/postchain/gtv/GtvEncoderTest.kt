@@ -6,9 +6,7 @@ import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import org.junit.Ignore
-import org.junit.Test
-import java.lang.IllegalArgumentException
+import org.junit.jupiter.api.Test
 import java.math.BigInteger
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
