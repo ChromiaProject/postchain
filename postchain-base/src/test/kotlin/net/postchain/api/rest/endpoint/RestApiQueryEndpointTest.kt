@@ -60,9 +60,7 @@ class RestApiQueryEndpointTest {
     }
 
     /**
-     * The idea here is to see what happens when the model throws an exception during "query()" execution.
-     * Will the exception be logged?
-     * (The reason we doubt this behaviour is due to POS-186)
+     * The idea here is to test that RestApi can handle when the model throws an exception during "query()" execution.
      */
     @Test
     fun test_query_error() {
@@ -74,11 +72,7 @@ class RestApiQueryEndpointTest {
         // Throw here
         whenever(model.query(query)).thenThrow(IllegalStateException("Bad bad stuff."))
 
-        try {
-            restApi.attachModel(blockchainRID, model)
-        } catch (e: Exception) {
-            fail("Should not bang during attachModel(): $e")
-        }
+        restApi.attachModel(blockchainRID, model)
 
         try {
             RestAssured.given().basePath(basePath).port(restApi.actualPort())
