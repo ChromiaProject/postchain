@@ -2,9 +2,6 @@
 
 package net.postchain.api.rest.endpoint
 
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import io.restassured.RestAssured
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.Query
@@ -16,6 +13,10 @@ import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 class RestApiQueryEndpointTest {
 
@@ -51,11 +52,44 @@ class RestApiQueryEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
+            .body(queryString)
+            .post("/query/$blockchainRID")
+            .then()
+            .statusCode(200)
+            .body(equalTo(answerString))
+    }
+
+    /**
+     * The idea here is to see what happens when the model throws an exception during "query()" execution.
+     * Will the exception be logged?
+     * (The reason we doubt this behaviour is due to POS-186)
+     */
+    @Test
+    fun test_query_error() {
+        val queryString = """{"a"="b", "c"=3}"""
+        val query = Query(queryString)
+
+        val answerString = """{"error":"Bad bad stuff."}"""
+
+        // Throw here
+        whenever(model.query(query)).thenThrow(IllegalStateException("Bad bad stuff."))
+
+        try {
+            restApi.attachModel(blockchainRID, model)
+        } catch (e: Exception) {
+            fail("Should not bang during attachModel(): $e")
+        }
+
+        try {
+            RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .body(queryString)
                 .post("/query/$blockchainRID")
                 .then()
-                .statusCode(200)
+                .statusCode(500)
                 .body(equalTo(answerString))
+        } catch (e: Exception) {
+            fail("Should not bang during query, since the exception is converted to 500 message: $e")
+        }
     }
 
     @Test
