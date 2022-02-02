@@ -17,6 +17,7 @@ import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.subnode.netty.NettySubConnector
 import net.postchain.network.peer.XChainPeersConfiguration
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
 
 /**
@@ -57,7 +58,7 @@ class DefaultSubConnectionManager(
             MsMessageHandler,
             SubConnection,
             ChainWithOneMasterConnection>()
-    private val connectedPeers = mutableMapOf<BlockchainRid, List<NodeRid>>()
+    private val connectedPeers = ConcurrentHashMap<BlockchainRid, List<NodeRid>>()
 
     private val preAddedMsMessageHandlers = mutableMapOf<Long, MsMessageHandler>()
     private val reconnectionTimer = Timer("Reconnection timer")

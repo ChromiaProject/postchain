@@ -32,7 +32,7 @@ class DefaultPeerCommunicationManager<PacketType>(
     var connected = false
 
     /**
-     * Main job during init() is to connect our chain using the [PeerConnectionManager].
+     * Main job during init() is to connect our chain using the [ConnectionManager].
      */
     @Synchronized
     override fun init() {

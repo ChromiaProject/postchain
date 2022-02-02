@@ -8,9 +8,9 @@ import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.*
-import net.postchain.network.peer.PeerConnectionManager
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
@@ -27,7 +27,7 @@ open class DefaultMasterCommunicationManager(
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         private val peersCommConfigFactory: PeersCommConfigFactory,
-        private val peerConnectionManager: PeerConnectionManager, // (We don't need "peer" conn mgr here, so we're keeping it tight)
+        private val connectionManager: ConnectionManager,
         private val masterConnectionManager: MasterConnectionManager,
         private val dataSource: DirectoryDataSource,
         private val processName: BlockchainProcessName
@@ -43,7 +43,7 @@ open class DefaultMasterCommunicationManager(
 
         // Scheduling SendConnectedPeers task
         sendConnectedPeersTask = scheduleTask(nodeConfig.containerSendConnectedPeersPeriod) {
-            val peers = peerConnectionManager.getConnectedNodes(chainId)
+            val peers = connectionManager.getConnectedNodes(chainId)
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.byteArray })
             masterConnectionManager.sendPacketToSub(msg)
         }
@@ -73,7 +73,7 @@ open class DefaultMasterCommunicationManager(
                     }
 
                     is MsDataMessage -> {
-                        peerConnectionManager.sendPacket(
+                        connectionManager.sendPacket(
                                 { message.xPacket },
                                 chainId,
                                 NodeRid(message.destination)
@@ -132,13 +132,13 @@ open class DefaultMasterCommunicationManager(
         }
         val peersConfig = XChainPeersConfiguration(chainId, blockchainRid, peersCommConfig, packetHandler)
 
-        peerConnectionManager.connectChain(peersConfig, true) { processName.toString() }
+        connectionManager.connectChain(peersConfig, true) { processName.toString() }
     }
 
     private fun disconnectChainPeers() {
         logger.info { "${process()}: Disconnecting chain peers" }
         val prefixFun: () -> String = { processName.toString() }
-        peerConnectionManager.disconnectChain(prefixFun, chainId)
+        connectionManager.disconnectChain(prefixFun, chainId)
     }
 
     /**
@@ -173,7 +173,7 @@ open class DefaultMasterCommunicationManager(
         }
 
         val prefixFun: () -> String = { processName.toString() }
-        peerConnectionManager.disconnectChain(prefixFun, chainId)
+        connectionManager.disconnectChain(prefixFun, chainId)
     }
 
     private fun process(): String {
