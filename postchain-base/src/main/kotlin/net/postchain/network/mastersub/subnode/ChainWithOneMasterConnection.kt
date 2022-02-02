@@ -57,8 +57,6 @@ class ChainWithOneMasterConnection(
     }
 
     fun addMsMessageHandler(handler: MsMessageHandler?) {
-        if (handler != null) {
-            msMessageHandlers.add(handler)
-        }
+        handler?.let { msMessageHandlers.add(it) }
     }
 }

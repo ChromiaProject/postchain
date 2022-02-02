@@ -3,6 +3,7 @@
 package net.postchain.network.peer
 
 import assertk.assert
+import assertk.assertions.isEmpty
 import assertk.isContentEqualTo
 import net.postchain.base.*
 import net.postchain.core.BlockchainRid
@@ -265,7 +266,7 @@ class DefaultPeerConnectionManagerTest {
 
     @Test
     fun getConnectedPeers_returns_emptyList_if_chain_is_not_connected() {
-        assertTrue(emptyManager().getConnectedNodes(1).isEmpty())
+        assert(emptyManager().getConnectedNodes(1)).isEmpty()
     }
 
     @Test
@@ -295,7 +296,7 @@ class DefaultPeerConnectionManagerTest {
             assertFalse { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assert(getConnectedNodes(1L).toTypedArray().isEmpty())
+            assert(getConnectedNodes(1L).toTypedArray()).isEmpty()
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(mockConnection(peerConnectionDescriptor1))

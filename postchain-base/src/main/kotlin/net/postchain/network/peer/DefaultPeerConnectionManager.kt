@@ -302,11 +302,7 @@ open class DefaultPeerConnectionManager<PacketType>(
             val originalConn = chain.getConnection(descriptor.nodeId)
             if (originalConn != null) {
                 logger.debug {
-                    "${logger(descriptor)}: onPeerConnected() - Peer already connected: peer = ${
-                        peerName(
-                                descriptor.nodeId
-                        )
-                    }"
+                    "${logger(descriptor)}: onPeerConnected() - Peer already connected: peer = ${peerName(descriptor.nodeId)}"
                 }
                 val isOriginalOutgoing = originalConn.descriptor().isOutgoing()
                 if (peersConnectionStrategy.duplicateConnectionDetected(

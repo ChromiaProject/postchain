@@ -27,8 +27,9 @@ import kotlin.concurrent.schedule
 interface SubConnectionManager : ConnectionManager {
 
     /**
-     * Adds MsMessage handlers for the chain [chainId] before it starts running.
-     * (before the call of connectChain()).
+     * Call this method before [connectChain] to add MsMessage handler for chain [chainId].
+     * [SubConnectionManager] will add this handler into the Ms-Message Pipeline of chain [chainId]
+     * when [connectChain] will be called.
      */
     fun preAddMsMessageHandler(chainId: Long, handler: MsMessageHandler)
 
@@ -72,9 +73,6 @@ class DefaultSubConnectionManager(
         }
     }
 
-    /**
-     *
-     */
     @Synchronized
     override fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String) {
         logger.debug { "${loggingPrefix()}: Connecting master chain: ${chainPeersConfig.log()}" }
