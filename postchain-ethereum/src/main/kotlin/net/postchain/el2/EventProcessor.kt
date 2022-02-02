@@ -176,16 +176,22 @@ class EthereumEventProcessor(
         )
         filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
 
-        val out = readEventsFromLog(filter)
-        val toBlock: Array<Gtv> = arrayOf(gtv(lastEthBlock.block.number), gtv(lastEthBlock.block.hash))
-        return Pair(toBlock, out)
+        return try {
+            val out = readEventsFromLog(filter)
+            val toBlock: Array<Gtv> = arrayOf(gtv(lastEthBlock.block.number), gtv(lastEthBlock.block.hash))
+            Pair(toBlock, out)
+        } catch (e: Exception) {
+            logger.error("Error when reading ethereum logs", e)
+            // Make sure we don't return the block on error, so we don't miss anything
+            Pair(emptyArray(), emptyList())
+        }
     }
 
     private fun readEventsFromLog(filter: EthFilter): List<Array<Gtv>> {
         val parsedEvents = mutableListOf<Array<Gtv>>()
         val ethereumLogs = web3c.web3j.ethGetLogs(filter).send()
         if (ethereumLogs.hasError()) {
-            logger.error("Cannot read data from eth via web3j", ethereumLogs.error)
+            throw Exception("Cannot read data from eth via web3j, error code: '${ethereumLogs.error.code}' and message: ${ethereumLogs.error.message}")
         } else {
             ethereumLogs.result.forEach {
                 val log = (it as EthLog.LogObject).get()
