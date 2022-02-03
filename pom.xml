@@ -50,18 +50,7 @@
         <kotlin-logging.version>1.12.5</kotlin-logging.version>
         <slf4j.version>1.7.32</slf4j.version>
         <log4j2.version>2.17.1</log4j2.version>
-
-        <!--
-	        TODO: POS-180: Switched from 2.13.x back to 2.12.x because of
-	        Exception in thread "main" java.lang.NoSuchMethodError: 'com.fasterxml.jackson.core.io.ContentReference com.fasterxml.jackson.dataformat.yaml.YAMLFactory._createContentReference(java.lang.Object)'
-                at com.fasterxml.jackson.dataformat.yaml.YAMLFactory.createParser(YAMLFactory.java:367)
-                at com.fasterxml.jackson.dataformat.yaml.YAMLFactory.createParser(YAMLFactory.java:15)
-                at com.fasterxml.jackson.databind.ObjectMapper.readTree(ObjectMapper.java:2321)
-                at org.apache.logging.log4j.core.config.json.JsonConfiguration.<init>(JsonConfiguration.java:62)
-                at org.apache.logging.log4j.core.config.yaml.YamlConfiguration.<init>(YamlConfiguration.java:33)
-                at org.apache.logging.log4j.core.config.yaml.YamlConfigurationFactory.getConfiguration(YamlConfigurationFactory.java:66)
-        -->
-        <jackson.version>2.12.6</jackson.version>
+        <jackson.version>2.13.1</jackson.version>
 
         <!-- 3rd party -->
         <httpclient.version>4.5.3</httpclient.version>
