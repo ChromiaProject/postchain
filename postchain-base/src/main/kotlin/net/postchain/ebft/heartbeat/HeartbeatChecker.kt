@@ -36,7 +36,7 @@ open class DefaultHeartbeatChecker(val nodeConfig: NodeConfig, chainId: Long) : 
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
         heartbeat = heartbeatEvent
-        debug { "$pref Heartbeat event registered: $heartbeat" }
+        logger.debug { "$pref Heartbeat event registered: $heartbeat" }
     }
 
     override fun checkHeartbeat(timestamp: Long): Boolean {
@@ -69,9 +69,4 @@ open class DefaultHeartbeatChecker(val nodeConfig: NodeConfig, chainId: Long) : 
         }
     }
 
-    private fun debug(msg: () -> Any?) {
-        if (logger.isDebugEnabled) {
-            logger.debug(msg)
-        }
-    }
 }

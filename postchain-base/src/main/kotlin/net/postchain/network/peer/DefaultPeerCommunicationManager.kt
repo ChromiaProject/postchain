@@ -5,23 +5,25 @@ package net.postchain.network.peer
 import mu.KLogging
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.toHex
-import net.postchain.core.*
+import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainRid
+import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.network.common.ConnectionManager
 import net.postchain.network.CommunicationManager
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
-import net.postchain.network.mastersub.subnode.SubConnectionManager
+import net.postchain.network.common.ConnectionManager
 
 class DefaultPeerCommunicationManager<PacketType>(
-    val connectionManager: ConnectionManager,
-    val config: PeerCommConfiguration,
-    val chainId: Long,
-    val blockchainRid: BlockchainRid,
-    private val packetEncoder: XPacketEncoder<PacketType>,
-    private val packetDecoder: XPacketDecoder<PacketType>,
-    protected val processName: BlockchainProcessName
+        val connectionManager: ConnectionManager,
+        val config: PeerCommConfiguration,
+        val chainId: Long,
+        val blockchainRid: BlockchainRid,
+        private val packetEncoder: XPacketEncoder<PacketType>,
+        private val packetDecoder: XPacketDecoder<PacketType>,
+        protected val processName: BlockchainProcessName
 ) : CommunicationManager<PacketType> {
 
     companion object : KLogging()
@@ -30,7 +32,7 @@ class DefaultPeerCommunicationManager<PacketType>(
     var connected = false
 
     /**
-     * Main job during init() is to connect our chain using the [PeerConnectionManager].
+     * Main job during init() is to connect our chain using the [ConnectionManager].
      */
     @Synchronized
     override fun init() {
@@ -77,52 +79,27 @@ class DefaultPeerCommunicationManager<PacketType>(
     }
 
     /**
-     * We need to handle random peer differently depending if we are in a subnode or if we are connected to peers
-     *
-     * TODO: Olle: should this be a class for "Sub Comm Mgr" instead of this runtime switch?
+     * Sends the packet to a peer selected by random.
      *
      * @param packet is the data to send
      * @param amongPeers is the set of nodes acceptable to send to
      * @return a randomly picked peer from the give set that has an open connection, or "null" if none found.
      */
     override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): NodeRid? {
-        var randomPeer: NodeRid? = null
-        when (connectionManager) {
-            is PeerConnectionManager -> {
-                // 1. This is the case for "normal" nodes and master nodes
-                val possiblePeers = connectionManager.getConnectedPeers(chainId).intersect(amongPeers)
-                if (possiblePeers.isEmpty()) {
-                    return null // We don't want to apply random to an empty list b/c throwing exception is too expensive.
-                }
-                randomPeer = possiblePeers.random()
-                if (logger.isTraceEnabled) {
-                    logger.trace("$processName: sendToRandomPeer($packet, ${peerName(randomPeer.toString())})")
-                }
-            }
-            is SubConnectionManager -> {
-                // 2. We are in a sub-node so we don't have access to the active peer connections (only the master does)
-                // Therefore we get the cached connection data that we got from master.
-
-                throw ProgrammerMistake("Not impl") //TODO: Olle:
-
-                logger.debug {
-                    "$processName: sendToRandomPeer($packet, ${peerName(randomPeer.toString())}) - sub node"
-                }
-
-
-            }
-            else -> {
-                throw ProgrammerMistake( "The connectionManager is not a Peer Conn Mgr nor a Sub Conn Mgr, " +
-                            "giving up. $connectionManager."
-                )
-            }
-        }
+        var peer: NodeRid? = null
         return try {
-            sendPacket(packet, randomPeer!!)
-            randomPeer!!
+            val possiblePeers = connectionManager.getConnectedNodes(chainId).intersect(amongPeers)
+            if (possiblePeers.isEmpty()) {
+                return null // We don't want to apply random to an empty list b/c throwing exception is too expensive.
+            }
+            peer = possiblePeers.random()
+            if (logger.isTraceEnabled) {
+                logger.trace("$processName: sendToRandomPeer($packet, ${peerName(peer.toString())})")
+            }
+            sendPacket(packet, peer)
+            peer
         } catch (e: Exception) {
-            logger.error("Could not send package to random peer: ${peerName(randomPeer.toString())} " +
-                    "because: ${e.message}")
+            logger.error("Could not send package to random peer: ${peer?.let { peerName(it) }} because: ${e.message}", e)
             null
         }
     }
@@ -142,10 +119,10 @@ class DefaultPeerCommunicationManager<PacketType>(
              * Packet decoding should not be synchronized so we can make
              * use of parallel processing in different threads
              */
-            logger.trace {"Receiving a packet from peer: ${peerId.byteArray.toHex()}"}
+            logger.trace { "Receiving a packet from peer: ${peerId.byteArray.toHex()}" }
             val decodedPacket = packetDecoder.decodePacket(peerId.byteArray, packet)
             synchronized(this) {
-                logger.trace {"Successfully decoded the package, now adding it "}
+                logger.trace { "Successfully decoded the package, now adding it " }
                 inboundPackets.add(peerId to decodedPacket)
             }
         } catch (e: BadDataMistake) {

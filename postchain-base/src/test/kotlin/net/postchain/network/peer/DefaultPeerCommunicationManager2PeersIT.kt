@@ -67,10 +67,10 @@ class DefaultPeerCommunicationManager2PeersIT {
         // Waiting for all connections to be established
         await().atMost(Duration.FIVE_SECONDS)
                 .untilAsserted {
-                    val actual1 = context1.connectionManager.getConnectedPeers(context1.chainId)
+                    val actual1 = context1.connectionManager.getConnectedNodes(context1.chainId)
                     assert(actual1).containsExactly(peerInfo2.pubKey.byteArrayKeyOf())
 
-                    val actual2 = context2.connectionManager.getConnectedPeers(context2.chainId)
+                    val actual2 = context2.connectionManager.getConnectedNodes(context2.chainId)
                     assert(actual2).containsExactly(peerInfo1.pubKey.byteArrayKeyOf())
                 }
 

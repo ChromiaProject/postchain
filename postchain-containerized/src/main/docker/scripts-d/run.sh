@@ -52,6 +52,13 @@ then
   . ./$TARGET_DIR/env-peers.sh
   scripts/postchain.sh peerinfo-add -nc $TARGET_DIR/node-config.properties -h $NODE_HOST -p $NODE_PORT -pk $NODE_PUBKEY
 
+  if [ -e "./$TARGET_DIR/env-genesis-peer.sh" ]
+  then
+    echo "Adding genesis peer-info ..."
+    . ./$TARGET_DIR/env-genesis-peer.sh
+    scripts/postchain.sh peerinfo-add -nc $TARGET_DIR/node-config.properties -h $GENESIS_NODE_HOST -p $GENESIS_NODE_PORT -pk $GENESIS_NODE_PUBKEY
+  fi
+
   touch $ALREADY_INITED
 
 fi

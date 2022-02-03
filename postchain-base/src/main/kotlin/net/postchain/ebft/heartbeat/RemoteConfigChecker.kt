@@ -1,8 +1,11 @@
 package net.postchain.ebft.heartbeat
 
 import mu.KLogging
-import net.postchain.base.*
+import net.postchain.base.BaseConfigurationDataStore
+import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainRid
@@ -27,7 +30,7 @@ class RemoteConfigChecker(
     private var responseTimestamp: Long = 0L
 
     init {
-        connectionManager.setMsMessageHandler(chainId, this)
+        connectionManager.preAddMsMessageHandler(chainId, this)
     }
 
     override fun checkHeartbeat(timestamp: Long): Boolean {
@@ -57,7 +60,7 @@ class RemoteConfigChecker(
                 "> nodeConfig.remoteConfigRequestInterval (${nodeConfig.remoteConfigRequestInterval}) is $intervalCheck"
         if (intervalCheck) {
             intervalLogger.registerOnly(3 to intervalCheck)
-            debug { "$pref Requesting of remote BlockchainConfig is required: $details" }
+            logger.debug { "$pref Requesting of remote BlockchainConfig is required: $details" }
 
             val (height, nextHeight) = withReadConnection(storage, chainId) { ctx ->
                 val height = DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
@@ -65,7 +68,7 @@ class RemoteConfigChecker(
             }
             val message = MsFindNextBlockchainConfigMessage(blockchainRid.data, height, nextHeight)
             connectionManager.sendMessageToMaster(chainId, message)
-            debug {
+            logger.debug {
                 "$pref Remote BlockchainConfig requested: " +
                         "blockchainRid: ${blockchainRid.toShortHex()}, " +
                         "height: $height, nextHeight: $nextHeight"
@@ -103,7 +106,7 @@ class RemoteConfigChecker(
             }
 
             is MsNextBlockchainConfigMessage -> {
-                debug {
+                logger.debug {
                     "$pref Remote BlockchainConfig received: " +
                             "chainId: $chainId, " +
                             "${BlockchainRid(message.blockchainRid).toShortHex()}, " +
@@ -116,22 +119,17 @@ class RemoteConfigChecker(
 
                 val details = "chainId: $chainId, nextHeight: ${message.nextHeight}, remote config length: ${message.rawConfig?.size}"
                 if (message.rawConfig != null) {
-                    debug { "$pref Remote config is going to be stored: $details" }
+                    logger.debug { "$pref Remote config is going to be stored: $details" }
                     withWriteConnection(storage, chainId) { ctx ->
                         BaseConfigurationDataStore.addConfigurationData(ctx, message.nextHeight!!, message.rawConfig)
                         true
                     }
-                    debug { "$pref Remote config stored: $details" }
+                    logger.debug { "$pref Remote config stored: $details" }
                 } else {
-                    debug { "$pref No new remote config: $details" }
+                    logger.debug { "$pref No new remote config: $details" }
                 }
             }
         }
     }
 
-    private fun debug(msg: () -> Any?) {
-        if (logger.isDebugEnabled) {
-            logger.debug(msg)
-        }
-    }
 }

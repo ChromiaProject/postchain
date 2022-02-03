@@ -13,24 +13,20 @@ import net.postchain.network.peer.XChainPeersConfiguration
  * A chain running on a sub node only has one connection: to the master.
  */
 class ChainWithOneMasterConnection(
-    val config: XChainPeersConfiguration,
-    msMessageHandlerSupplier: (Long) -> MsMessageHandler?
+        val config: XChainPeersConfiguration
 ) : ChainWithOneConnection<SubConnection, MsMessageHandler> {
 
     companion object : KLogging()
 
     val peers: List<ByteArray> = (config.commConfiguration as SubPeerCommConfig).peers
-
-    val msMessageHandler: MsMessageHandler = object : MsMessageHandler {
-
-        /**
-         * If the [MsMessage] is a wrapped EBFT message [MsDataMessage], when we use the
-         */
+    private val msMessageHandlers = mutableListOf<MsMessageHandler>()
+    private val msMessagePipeline: MsMessageHandler = object : MsMessageHandler {
         override fun onMessage(message: MsMessage) {
-            logger.debug { "onMessage() - Begin: Message type: ${message.type} " }
             when (message) {
                 is MsDataMessage -> config.peerPacketHandler.handle(message.xPacket, NodeRid(message.source))
-                else -> msMessageHandlerSupplier(config.chainId)?.onMessage(message)
+                else -> {
+                    msMessageHandlers.forEach { h -> h.onMessage(message) }
+                }
             }
         }
     }
@@ -44,7 +40,7 @@ class ChainWithOneMasterConnection(
     // ----------------------------
     override fun getChainIid() = config.chainId
     override fun getBlockchainRid() = config.blockchainRid
-    override fun getPacketHandler() = msMessageHandler
+    override fun getPacketHandler() = msMessagePipeline
     override fun isConnected() = conn != null
     override fun getConnection() = conn
     override fun setConnection(newConn: SubConnection) {
@@ -60,4 +56,7 @@ class ChainWithOneMasterConnection(
         conn = null
     }
 
+    fun addMsMessageHandler(handler: MsMessageHandler?) {
+        handler?.let { msMessageHandlers.add(it) }
+    }
 }
