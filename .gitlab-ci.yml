@@ -12,7 +12,7 @@ build:
   except:
     - dev
   script:
-    - mvn $MAVEN_CLI_OPTS -DskipTests verify
+    - mvn $MAVEN_CLI_OPTS verify
 
 variables:
   # This will suppress any download for dependencies and plugins or upload messages which would clutter the console log.
