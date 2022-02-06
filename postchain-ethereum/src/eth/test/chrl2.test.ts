@@ -323,7 +323,7 @@ describe("ChrL2", () => {
                 let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
-                let extraDataMerkleRoot = "04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A1"
+                let extraDataMerkleRoot = "FC3424F7E05AEE1F9085ACAFC981261CA1EA3A9A28DDA88C809C06B94F68C6A6"
                 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
@@ -377,14 +377,14 @@ describe("ChrL2", () => {
                     el2Leaf: DecodeHexStringToByteArray(el2Leaf),
                     el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
                     el2Position: 1,
-                    extraRoot: DecodeHexStringToByteArray("04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A1"),
+                    extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
                     extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }
                 let invalidEl2Leaf = {
                     el2Leaf: DecodeHexStringToByteArray(el2Leaf),
                     el2HashedLeaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
                     el2Position: 1,
-                    extraRoot: DecodeHexStringToByteArray("04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A1"),
+                    extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
                     extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }
                 let invalidExtraDataRoot = {
@@ -398,7 +398,7 @@ describe("ChrL2", () => {
                     el2Leaf: DecodeHexStringToByteArray(el2Leaf),
                     el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
                     el2Position: 0,
-                    extraRoot: DecodeHexStringToByteArray("04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A1"),
+                    extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
                     extraMerkleProofs: [
                         DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
                         DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")                        
