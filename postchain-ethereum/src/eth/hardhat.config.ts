@@ -53,7 +53,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       accounts: {
-        mnemonic: MNEMONIC,
+        mnemonic: "",
       },
       chainId: chainIds.hardhat,
       // See https://github.com/sc-forks/solidity-coverage/issues/652
