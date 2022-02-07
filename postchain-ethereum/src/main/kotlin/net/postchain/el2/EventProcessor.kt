@@ -120,7 +120,7 @@ class EthereumEventProcessor(
                         arrayOf(
                             gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
                             gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                            gtv(contract.contractAddress), gtv(event.owner), gtv(event.token), gtv(event.value)
+                            gtv(contract.contractAddress), gtv(event.owner.toString()), gtv(event.token.toString()), gtv(event.value.value)
                         )
                     )
                 }, {
@@ -184,7 +184,7 @@ class EthereumEventProcessor(
                         arrayOf(
                             gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
                             gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                            gtv(contract.contractAddress), gtv(event.owner), gtv(event.token), gtv(event.value)
+                            gtv(contract.contractAddress), gtv(event.owner.toString()), gtv(event.token.toString()), gtv(event.value.value)
                         )
                     )
                 }, {
