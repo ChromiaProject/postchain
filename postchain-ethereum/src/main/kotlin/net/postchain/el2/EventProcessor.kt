@@ -12,20 +12,12 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.OpData
-import okhttp3.OkHttpClient
 import org.web3j.abi.EventEncoder
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.Web3jService
 import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.core.DefaultBlockParameterName
-import org.web3j.protocol.http.HttpService
-import org.web3j.protocol.ipc.UnixIpcService
-import org.web3j.protocol.ipc.WindowsIpcService
-import org.web3j.tx.ClientTransactionManager
-import org.web3j.tx.gas.DefaultGasProvider
 import java.math.BigInteger
 import java.util.*
-import java.util.concurrent.TimeUnit
+import kotlin.streams.toList
 
 interface EventProcessor {
     fun shutdown()
@@ -78,27 +70,16 @@ class L2TestEventProcessor(
 }
 
 class EthereumEventProcessor(
-    url: String,
-    contractAddress: String,
+    private val web3c: Web3Connector,
+    private val contract: ChrL2,
+    private val readOffset: BigInteger,
     blockQueries: BlockQueries
 ) : BaseEventProcessor(blockQueries) {
 
     private val events: Queue<ChrL2.DepositedEventResponse> = LinkedList()
     private val subscription: Disposable
-    private var web3c: Web3Connector
-    private var contract: ChrL2
 
     init {
-        val web3jConfig = Web3jConfig()
-        val web3j = Web3j.build(web3jConfig.buildService(url))
-        web3c = Web3Connector(web3j, contractAddress)
-        contract = ChrL2.load(
-            web3c.contractAddress,
-            web3c.web3j,
-            ClientTransactionManager(web3c.web3j, "0x0"),
-            DefaultGasProvider()
-        )
-
         val nextBlockHeight = getNextUnprocessedBlockHeight()
         val from = if (nextBlockHeight != null) {
             DefaultBlockParameter.valueOf(nextBlockHeight)
@@ -118,7 +99,6 @@ class EthereumEventProcessor(
 
     override fun shutdown() {
         subscription.dispose()
-        web3c.shutdown()
     }
 
     override fun isValidEventData(ops: Array<OpData>): Boolean {
@@ -158,9 +138,16 @@ class EthereumEventProcessor(
     }
 
     override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
-        val to = web3c.web3j.ethBlockNumber().send().blockNumber.minus(BigInteger.valueOf(100L))
+        val currentBlockHeight = web3c.web3j.ethBlockNumber().send().blockNumber
+        if (currentBlockHeight < readOffset) {
+            logger.debug { "Not enough blocks built on ethereum yet, current height: $currentBlockHeight, offset: $readOffset" }
+            return Pair(emptyArray(), emptyList())
+        }
+
+        val to = currentBlockHeight.minus(readOffset)
+
         val lastEthBlock = web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(to), false).send()
-        val from = getNextUnprocessedBlockHeight() ?: to.minus(BigInteger.valueOf(100L))
+        val from = getNextUnprocessedBlockHeight() ?: maxOf(BigInteger.ZERO, to.minus(BigInteger.valueOf(100L)))
 
         val out = parseEvents(from, to)
         val toBlock: Array<Gtv> = arrayOf(gtv(lastEthBlock.block.number), gtv(lastEthBlock.block.hash))
@@ -173,33 +160,27 @@ class EthereumEventProcessor(
             return null
         }
 
-        val blockHeight = block.asDict()["eth_block_height"] ?: throw ProgrammerMistake("Last eth block has no height stored")
+        val blockHeight =
+            block.asDict()["eth_block_height"] ?: throw ProgrammerMistake("Last eth block has no height stored")
         return blockHeight.asBigInteger().plus(BigInteger.ONE)
     }
 
     @Synchronized
     private fun parseEvents(from: BigInteger, to: BigInteger): List<Array<Gtv>> {
-        val out = mutableListOf<Array<Gtv>>()
-        var nextLogEvent = events.peek()
-        while (nextLogEvent != null && nextLogEvent.log.blockNumber <= to) {
-            val event = events.poll()
-            if (event.log.blockNumber >= from) {
-                out.add(
-                    arrayOf(
-                        gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
-                        gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                        gtv(contract.contractAddress), gtv(event.owner), gtv(event.token), gtv(event.value)
-                    )
+        return events.stream()
+            .filter { it.log.blockNumber >= from && it.log.blockNumber <= to }
+            .map {
+                arrayOf<Gtv>(
+                    gtv(it.log.blockNumber), gtv(it.log.blockHash), gtv(it.log.transactionHash),
+                    gtv(it.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
+                    gtv(contract.contractAddress), gtv(it.owner.toString()), gtv(it.token.toString()), gtv(it.value.value)
                 )
-            }
-            nextLogEvent = events.peek()
-        }
-        return out
+            }.toList()
     }
 
     @Synchronized
     private fun processLogEvent(event: ChrL2.DepositedEventResponse) {
-        // See if we can prune any old events every time we have filled 100 blocks
+        // See if we can prune any old events every time we have filled 100 blocks (so we don't always do it)
         // to avoid queue filling up on the nodes that are not BP
         if (!events.isEmpty() && events.size % 100 == 0) {
             val nextBlockHeight = getNextUnprocessedBlockHeight()
@@ -218,34 +199,5 @@ class EthereumEventProcessor(
             events.poll()
             nextLogEvent = events.peek()
         }
-    }
-}
-
-class Web3jConfig {
-    fun buildService(clientAddress: String?): Web3jService {
-        val web3jService: Web3jService
-        if (clientAddress == null || clientAddress == "") {
-            web3jService = HttpService(createOkHttpClient())
-        } else if (clientAddress.startsWith("http")) {
-            web3jService = HttpService(clientAddress, createOkHttpClient(), false)
-        } else if (System.getProperty("os.name").toLowerCase().startsWith("win")) {
-            web3jService = WindowsIpcService(clientAddress)
-        } else {
-            web3jService = UnixIpcService(clientAddress)
-        }
-        return web3jService
-    }
-
-    private fun createOkHttpClient(): OkHttpClient {
-        val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-        configureTimeouts(builder)
-        return builder.build()
-    }
-
-    private fun configureTimeouts(builder: OkHttpClient.Builder) {
-        val tos = 300L
-        builder.connectTimeout(tos, TimeUnit.SECONDS)
-        builder.readTimeout(tos, TimeUnit.SECONDS) // Sets the socket timeout too
-        builder.writeTimeout(tos, TimeUnit.SECONDS)
     }
 }

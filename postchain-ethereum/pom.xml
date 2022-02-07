@@ -50,6 +50,21 @@
             <artifactId>postchain-devtools</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.web3j</groupId>
+            <artifactId>web3j-unit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito.kotlin</groupId>
+            <artifactId>mockito-kotlin</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -78,7 +93,6 @@
                         <configuration>
                             <sourceDirs>
                                 <sourceDir>src/test/kotlin</sourceDir>
-                                <sourceDir>target/generated-sources</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
@@ -114,12 +128,14 @@
                     <contract>
                         <includes>
                             <include>ChrL2</include>
+                            <include>TestToken</include>
                         </includes>
                     </contract>
                     <soliditySourceFiles>
                         <directory>${project.basedir}/src/eth/contracts</directory>
                         <includes>
                             <include>ChrL2.sol</include>
+                            <include>token/TestToken.sol</include>
                         </includes>
                     </soliditySourceFiles>
                     <sourceDestination>${project.basedir}/target/generated-sources</sourceDestination>
@@ -130,6 +146,43 @@
                             <goal>generate-sources</goal>
                         </goals>
                     </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <!-- NB! Set <version> to the latest released version of frontend-maven-plugin, like in README.md -->
+                <version>1.12.1</version>
+
+                <configuration>
+                    <workingDirectory>${project.basedir}/src/eth</workingDirectory>
+                    <installDirectory>target</installDirectory>
+                </configuration>
+
+                <executions>
+
+                    <execution>
+                        <id>install node and yarn</id>
+                        <goals>
+                            <goal>install-node-and-yarn</goal>
+                        </goals>
+                        <configuration>
+                            <nodeVersion>v16.13.2</nodeVersion>
+                            <yarnVersion>v1.22.17</yarnVersion>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>yarn install</id>
+                        <goals>
+                            <goal>yarn</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install</arguments>
+                        </configuration>
+                    </execution>
+
                 </executions>
             </plugin>
         </plugins>
@@ -154,7 +207,6 @@
                                     <archive>
                                         <manifest>
                                             <mainClass>net.postchain.AppKt</mainClass>
-                                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
                                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                                         </manifest>

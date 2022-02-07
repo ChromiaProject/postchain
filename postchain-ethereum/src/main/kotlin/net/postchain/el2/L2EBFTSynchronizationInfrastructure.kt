@@ -5,9 +5,14 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtx.GTXBlockchainConfiguration
+import org.web3j.protocol.Web3j
+import org.web3j.tx.ClientTransactionManager
+import org.web3j.tx.gas.DefaultGasProvider
+import java.math.BigInteger
 
-data class EVML2Config (val url: String, val contract: String)
+data class EVML2Config(val url: String, val contract: String)
 
 fun BaseBlockchainConfigurationData.getEL2Data(): EVML2Config {
     val evmL2 = this.data["evm_l2"]
@@ -17,10 +22,8 @@ fun BaseBlockchainConfigurationData.getEL2Data(): EVML2Config {
     return EVML2Config(url, contract)
 }
 
-class EL2SynchronizationInfrastructureExtension(
-    nodeConfigProvider: NodeConfigurationProvider,
-    nodeDiagnosticContext: NodeDiagnosticContext
-) : SynchronizationInfrastructureExtension {
+class EL2SynchronizationInfrastructureExtension : SynchronizationInfrastructureExtension {
+    private lateinit var web3c: Web3Connector
 
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
@@ -36,9 +39,20 @@ class EL2SynchronizationInfrastructureExtension(
             }
             if (el2Ext != null) {
                 val el2Config = cfg.configData.getEL2Data()
+                val web3jConfig = Web3jConfig()
+                val web3j = Web3j.build(web3jConfig.buildService(el2Config.url))
+                web3c = Web3Connector(web3j, el2Config.contract)
+                val contract = ChrL2.load(
+                    web3c.contractAddress,
+                    web3c.web3j,
+                    ClientTransactionManager(web3c.web3j, "0x0"),
+                    DefaultGasProvider()
+                )
+
                 val eventProcessor = EthereumEventProcessor(
-                    el2Config.url,
-                    el2Config.contract,
+                    web3c,
+                    contract,
+                    BigInteger.valueOf(100),
                     engine.getBlockQueries()
                 )
                 el2Ext.useEventProcessor(eventProcessor)
@@ -46,5 +60,9 @@ class EL2SynchronizationInfrastructureExtension(
         }
     }
 
-    override fun shutdown() {}
+    override fun shutdown() {
+        if (::web3c.isInitialized) {
+            web3c.shutdown()
+        }
+    }
 }
