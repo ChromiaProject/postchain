@@ -15,6 +15,8 @@ import org.web3j.abi.EventEncoder
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.Web3jService
 import org.web3j.protocol.core.DefaultBlockParameter
+import org.web3j.protocol.core.methods.request.EthFilter
+import org.web3j.protocol.core.methods.response.EthLog
 import org.web3j.protocol.http.HttpService
 import org.web3j.protocol.ipc.UnixIpcService
 import org.web3j.protocol.ipc.WindowsIpcService
@@ -110,24 +112,15 @@ class EthereumEventProcessor(
     }
 
     override fun getEventDataAtBlockHeight(height: BigInteger): List<Array<Gtv>> {
-        val out = mutableListOf<Array<Gtv>>()
         val blockHeight = DefaultBlockParameter.valueOf(height)
-        contract
-            .depositedEventFlowable(blockHeight, blockHeight)
-            .subscribe(
-                { event ->
-                    out.add(
-                        arrayOf(
-                            gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
-                            gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                            gtv(contract.contractAddress), gtv(event.owner), gtv(event.token), gtv(event.value)
-                        )
-                    )
-                }, {
-                    logger.warn("Cannot read data from eth via web3j", it)
-                }
-            )
-        return out
+        val filter = EthFilter(
+            blockHeight,
+            blockHeight,
+            contract.contractAddress
+        )
+        filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
+
+        return readEventsFromLog(filter)
     }
 
     override fun isValidEventData(ops: Array<OpData>): Boolean {
@@ -167,7 +160,6 @@ class EthereumEventProcessor(
     }
 
     override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
-        val out = mutableListOf<Array<Gtv>>()
         val to = web3c.web3j.ethBlockNumber().send().blockNumber.minus(BigInteger.valueOf(100L))
         val lastEthBlock = web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(to), false).send()
         val block = blockQueries.query("get_last_eth_block", gtv(mutableMapOf())).get()
@@ -176,23 +168,50 @@ class EthereumEventProcessor(
         } else {
             block.asDict()["eth_block_height"]!!.asBigInteger().plus(BigInteger.ONE)
         }
-        contract
-            .depositedEventFlowable(DefaultBlockParameter.valueOf(from), DefaultBlockParameter.valueOf(to))
-            .subscribe(
-                { event ->
-                    out.add(
-                        arrayOf(
-                            gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
-                            gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                            gtv(contract.contractAddress), gtv(event.owner), gtv(event.token), gtv(event.value)
-                        )
+
+        val filter = EthFilter(
+            DefaultBlockParameter.valueOf(from),
+            DefaultBlockParameter.valueOf(to),
+            contract.contractAddress
+        )
+        filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
+
+        return try {
+            val out = readEventsFromLog(filter)
+            val toBlock: Array<Gtv> = arrayOf(gtv(lastEthBlock.block.number), gtv(lastEthBlock.block.hash))
+            Pair(toBlock, out)
+        } catch (e: Exception) {
+            logger.error("Error when reading ethereum logs", e)
+            // Make sure we don't return the block on error, so we don't miss anything
+            Pair(emptyArray(), emptyList())
+        }
+    }
+
+    private fun readEventsFromLog(filter: EthFilter): List<Array<Gtv>> {
+        val parsedEvents = mutableListOf<Array<Gtv>>()
+        val ethereumLogs = web3c.web3j.ethGetLogs(filter).send()
+        if (ethereumLogs.hasError()) {
+            throw Exception("Cannot read data from eth via web3j, error code: '${ethereumLogs.error.code}' and message: ${ethereumLogs.error.message}")
+        } else {
+            ethereumLogs.result.forEach {
+                val log = (it as EthLog.LogObject).get()
+                val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, log)
+                parsedEvents.add(
+                    arrayOf(
+                        gtv(it.blockNumber),
+                        gtv(it.blockHash),
+                        gtv(it.transactionHash),
+                        gtv(it.logIndex),
+                        gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
+                        gtv(contract.contractAddress),
+                        gtv(eventParameters.indexedValues[0].value as String),       // owner
+                        gtv(eventParameters.indexedValues[1].value as String),       // token
+                        gtv(eventParameters.nonIndexedValues[0].value as BigInteger) // value
                     )
-                }, {
-                    logger.warn("Cannot read data from eth via web3j", it)
-                }
-            )
-        val toBlock: Array<Gtv> = arrayOf(gtv(lastEthBlock.block.number), gtv(lastEthBlock.block.hash))
-        return Pair(toBlock, out)
+                )
+            }
+        }
+        return parsedEvents
     }
 }
 
