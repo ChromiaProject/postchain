@@ -1,10 +1,12 @@
 package net.postchain.el2
 
+import io.reactivex.disposables.Disposable
 import mu.KLogging
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
+import net.postchain.core.ProgrammerMistake
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -15,18 +17,19 @@ import org.web3j.abi.EventEncoder
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.Web3jService
 import org.web3j.protocol.core.DefaultBlockParameter
+import org.web3j.protocol.core.DefaultBlockParameterName
 import org.web3j.protocol.http.HttpService
 import org.web3j.protocol.ipc.UnixIpcService
 import org.web3j.protocol.ipc.WindowsIpcService
 import org.web3j.tx.ClientTransactionManager
 import org.web3j.tx.gas.DefaultGasProvider
 import java.math.BigInteger
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 interface EventProcessor {
     fun shutdown()
     fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>>
-    fun getEventDataAtBlockHeight(height: BigInteger): List<Array<Gtv>>
     fun isValidEventData(ops: Array<OpData>): Boolean
 }
 
@@ -56,14 +59,6 @@ class L2TestEventProcessor(
         return Pair(arrayOf(), out)
     }
 
-    override fun getEventDataAtBlockHeight(height: BigInteger): List<Array<Gtv>> {
-        val out = mutableListOf<Array<Gtv>>()
-        for (i in 1..10) {
-            out.add(generateData(height.toLong(), i))
-        }
-        return out
-    }
-
     override fun isValidEventData(ops: Array<OpData>): Boolean {
         return true
     }
@@ -88,6 +83,8 @@ class EthereumEventProcessor(
     blockQueries: BlockQueries
 ) : BaseEventProcessor(blockQueries) {
 
+    private val events: Queue<ChrL2.DepositedEventResponse> = LinkedList()
+    private val subscription: Disposable
     private var web3c: Web3Connector
     private var contract: ChrL2
 
@@ -101,33 +98,27 @@ class EthereumEventProcessor(
             ClientTransactionManager(web3c.web3j, "0x0"),
             DefaultGasProvider()
         )
+
+        val nextBlockHeight = getNextUnprocessedBlockHeight()
+        val from = if (nextBlockHeight != null) {
+            DefaultBlockParameter.valueOf(nextBlockHeight)
+        } else {
+            DefaultBlockParameter.valueOf(DefaultBlockParameterName.LATEST.name)
+        }
+        subscription = contract
+            .depositedEventFlowable(from, DefaultBlockParameter.valueOf(DefaultBlockParameterName.LATEST.name))
+            .subscribe(
+                ::processLogEvent
+            ) {
+                logger.error("Cannot read data from eth via web3j", it)
+            }
     }
 
     companion object : KLogging()
 
     override fun shutdown() {
+        subscription.dispose()
         web3c.shutdown()
-    }
-
-    override fun getEventDataAtBlockHeight(height: BigInteger): List<Array<Gtv>> {
-        val out = mutableListOf<Array<Gtv>>()
-        val blockHeight = DefaultBlockParameter.valueOf(height)
-        contract
-            .depositedEventFlowable(blockHeight, blockHeight)
-            .subscribe(
-                { event ->
-                    out.add(
-                        arrayOf(
-                            gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
-                            gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                            gtv(contract.contractAddress), gtv(event.owner.toString()), gtv(event.token.toString()), gtv(event.value.value)
-                        )
-                    )
-                }, {
-                    logger.warn("Cannot read data from eth via web3j", it)
-                }
-            )
-        return out
     }
 
     override fun isValidEventData(ops: Array<OpData>): Boolean {
@@ -167,32 +158,66 @@ class EthereumEventProcessor(
     }
 
     override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
-        val out = mutableListOf<Array<Gtv>>()
         val to = web3c.web3j.ethBlockNumber().send().blockNumber.minus(BigInteger.valueOf(100L))
         val lastEthBlock = web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(to), false).send()
-        val block = blockQueries.query("get_last_eth_block", gtv(mutableMapOf())).get()
-        val from = if (block == GtvNull) {
-            to.minus(BigInteger.valueOf(100L))
-        } else {
-            block.asDict()["eth_block_height"]!!.asBigInteger().plus(BigInteger.ONE)
-        }
-        contract
-            .depositedEventFlowable(DefaultBlockParameter.valueOf(from), DefaultBlockParameter.valueOf(to))
-            .subscribe(
-                { event ->
-                    out.add(
-                        arrayOf(
-                            gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
-                            gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                            gtv(contract.contractAddress), gtv(event.owner.toString()), gtv(event.token.toString()), gtv(event.value.value)
-                        )
-                    )
-                }, {
-                    logger.warn("Cannot read data from eth via web3j", it)
-                }
-            )
+        val from = getNextUnprocessedBlockHeight() ?: to.minus(BigInteger.valueOf(100L))
+
+        val out = parseEvents(from, to)
         val toBlock: Array<Gtv> = arrayOf(gtv(lastEthBlock.block.number), gtv(lastEthBlock.block.hash))
         return Pair(toBlock, out)
+    }
+
+    private fun getNextUnprocessedBlockHeight(): BigInteger? {
+        val block = blockQueries.query("get_last_eth_block", gtv(mutableMapOf())).get()
+        if (block == GtvNull) {
+            return null
+        }
+
+        val blockHeight = block.asDict()["eth_block_height"] ?: throw ProgrammerMistake("Last eth block has no height stored")
+        return blockHeight.asBigInteger().plus(BigInteger.ONE)
+    }
+
+    @Synchronized
+    private fun parseEvents(from: BigInteger, to: BigInteger): List<Array<Gtv>> {
+        val out = mutableListOf<Array<Gtv>>()
+        var nextLogEvent = events.peek()
+        while (nextLogEvent != null && nextLogEvent.log.blockNumber <= to) {
+            val event = events.poll()
+            if (event.log.blockNumber >= from) {
+                out.add(
+                    arrayOf(
+                        gtv(event.log.blockNumber), gtv(event.log.blockHash), gtv(event.log.transactionHash),
+                        gtv(event.log.logIndex), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
+                        gtv(contract.contractAddress), gtv(event.owner), gtv(event.token), gtv(event.value)
+                    )
+                )
+            }
+            nextLogEvent = events.peek()
+        }
+        return out
+    }
+
+    @Synchronized
+    private fun processLogEvent(event: ChrL2.DepositedEventResponse) {
+        // See if we can prune any old events every time we have filled 100 blocks
+        // to avoid queue filling up on the nodes that are not BP
+        if (!events.isEmpty() && events.size % 100 == 0) {
+            val nextBlockHeight = getNextUnprocessedBlockHeight()
+
+            if (nextBlockHeight != null) {
+                pruneEvents(nextBlockHeight)
+            }
+        }
+
+        events.add(event)
+    }
+
+    private fun pruneEvents(to: BigInteger) {
+        var nextLogEvent = events.peek()
+        while (nextLogEvent != null && nextLogEvent.log.blockNumber <= to) {
+            events.poll()
+            nextLogEvent = events.peek()
+        }
     }
 }
 
