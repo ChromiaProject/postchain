@@ -2,8 +2,8 @@
 
 package net.postchain.containers.infra
 
-import net.postchain.core.BlockchainRid
 import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.core.BlockchainRid
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.heartbeat.HeartbeatChecker
@@ -16,14 +16,15 @@ class DefaultSubSyncInfra(
         nodeConfigProvider: NodeConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext,
         peersCommConfigFactory: PeersCommConfigFactory
-) : EBFTSynchronizationInfrastructure( // TODO: Olle: Do we need this?
+) : EBFTSynchronizationInfrastructure(
         nodeConfigProvider,
         nodeDiagnosticContext,
         peersCommConfigFactory
 ), SubSyncInfra {
 
     override fun init() {
-        connectionManager = DefaultSubConnectionManager(nodeConfig) // TODO: Olle: this is no longer a PeerConnectionManager
+        connectionManager = DefaultSubConnectionManager(nodeConfig)
+        fillDiagnosticContext()
     }
 
     override fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {

@@ -2,19 +2,19 @@
 
 package net.postchain.network.peer
 
-import org.mockito.kotlin.*
 import mu.KLogging
-import net.postchain.core.NodeRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.NodeRid
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.*
 import java.lang.Thread.sleep
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class DefaultPeersConnectionStrategyTest {
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     val peer1 = NodeRid("111111".hexStringToByteArray())
     val peer2 = NodeRid("222222".hexStringToByteArray())
@@ -23,7 +23,7 @@ class DefaultPeersConnectionStrategyTest {
     val peerCaptor = argumentCaptor<NodeRid>()
     val peerCaptor2 = argumentCaptor<NodeRid>()
     val chainCaptor = argumentCaptor<Long>()
-    val connMan : PeerConnectionManager = mock()
+    val connMan: PeerConnectionManager = mock()
 
     fun testConnectAll(me: NodeRid, peerIds: Set<NodeRid>, expectedConns: Set<NodeRid>): DefaultPeersConnectionStrategy {
         val strategy = sut(me)
@@ -34,7 +34,7 @@ class DefaultPeersConnectionStrategyTest {
 
         reset(connMan)
         val expectedResidual = peerIds.subtract(expectedConns)
-        whenever(connMan.getConnectedPeers(0)).thenReturn(expectedConns.toList())
+        whenever(connMan.getConnectedNodes(0)).thenReturn(expectedConns.toList())
 
         Awaitility.await().atMost(1, TimeUnit.SECONDS).untilAsserted {
             verify(connMan, times(expectedResidual.size)).connectChainPeer(chainCaptor.capture(), peerCaptor2.capture())

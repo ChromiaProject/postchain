@@ -22,7 +22,6 @@ import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
 import net.postchain.network.common.*
-import net.postchain.network.mastersub.master.MasterConnectionManager
 import net.postchain.network.peer.*
 
 @Suppress("JoinDeclarationAndAssignment")

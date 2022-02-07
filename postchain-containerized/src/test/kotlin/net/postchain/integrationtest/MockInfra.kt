@@ -42,18 +42,18 @@ import java.util.concurrent.ConcurrentHashMap
  */
 
 class TestMasterCommunicationManager(
-    nodeConfig: NodeConfig,
-    chainId: Long,
-    blockchainRid: BlockchainRid,
-    peersCommConfigFactory: PeersCommConfigFactory,
-    private val connMgr: ConnectionManager,
-    private val masterConnMgr: MasterConnectionManager,
-    private val dataSource: DirectoryDataSource,
-    private val processName: BlockchainProcessName
+        nodeConfig: NodeConfig,
+        chainId: Long,
+        blockchainRid: BlockchainRid,
+        peersCommConfigFactory: PeersCommConfigFactory,
+        private val connMgr: ConnectionManager,
+        private val masterConnMgr: MasterConnectionManager,
+        private val dataSource: DirectoryDataSource,
+        private val processName: BlockchainProcessName
 ) : DefaultMasterCommunicationManager(nodeConfig, chainId, blockchainRid, peersCommConfigFactory,
         connMgr, masterConnMgr, dataSource, processName) {
     override fun init() {
-        System.out.println("++ (Mock Master Comm Mgr) Adding sub node interceptor for BC RID: ${blockchainRid.toShortHex()} ")
+        println("++ (Mock Master Comm Mgr) Adding sub node interceptor for BC RID: ${blockchainRid.toShortHex()} ")
         val testPacketConsumer = (dataSource as MockDirectoryDataSource).getSubnodeInterceptor(subnodePacketConsumer(), blockchainRid)
         val slaveChainConfig = SubChainConfig(chainId, blockchainRid, testPacketConsumer)
         masterConnMgr.connectSubChain(processName, slaveChainConfig)
@@ -80,7 +80,7 @@ class TestMasterSyncInfra(
                 blockchainRid,
                 peersCommConfigFactory,
                 connectionManager,
-                masterConnectionManager!!,
+                masterConnectionManager,
                 dataSource,
                 processName
         ).apply { init() }

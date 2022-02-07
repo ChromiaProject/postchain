@@ -27,9 +27,4 @@ interface PeerConnectionManager : ConnectionManager {
      */
     fun isPeerConnected(chainId: Long, peerId: NodeRid): Boolean
 
-    /**
-     * @return all nodes connected to the given chain
-     */
-    fun getConnectedPeers(chainId: Long): List<NodeRid>
-
 }

@@ -11,11 +11,13 @@ import net.postchain.network.common.ConnectionManager
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsCodec
+import net.postchain.network.mastersub.protocol.MsConnectedPeersMessage
 import net.postchain.network.mastersub.protocol.MsDataMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.subnode.netty.NettySubConnector
 import net.postchain.network.peer.XChainPeersConfiguration
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
 
 /**
@@ -23,8 +25,19 @@ import kotlin.concurrent.schedule
  * [net.postchain.network.mastersub.master.MasterConnectionManager] of master node.
  */
 interface SubConnectionManager : ConnectionManager {
-    fun setMsMessageHandler(chainId: Long, handler: MsMessageHandler)
+
+    /**
+     * Call this method before [connectChain] to add MsMessage handler for chain [chainId].
+     * [SubConnectionManager] will add this handler into the Ms-Message Pipeline of chain [chainId]
+     * when [connectChain] will be called.
+     */
+    fun preAddMsMessageHandler(chainId: Long, handler: MsMessageHandler)
+
+    /**
+     * Sends a [MsMessage] to the Master node
+     */
     fun sendMessageToMaster(chainId: Long, message: MsMessage)
+
 }
 
 
@@ -33,7 +46,7 @@ interface SubConnectionManager : ConnectionManager {
  * much like a regular peer would.
  */
 class DefaultSubConnectionManager(
-    private val nodeConfig: NodeConfig
+        private val nodeConfig: NodeConfig
 ) : SubConnectionManager, SubConnectorEvents {
 
     companion object : KLogging()
@@ -46,20 +59,22 @@ class DefaultSubConnectionManager(
             MsMessageHandler,
             SubConnection,
             ChainWithOneMasterConnection>()
+    private val connectedPeers = ConcurrentHashMap<BlockchainRid, List<NodeRid>>()
 
-    private val msMessageHandlers = mutableMapOf<Long, MsMessageHandler>()
+    private val preAddedMsMessageHandlers = mutableMapOf<Long, MsMessageHandler>()
     private val reconnectionTimer = Timer("Reconnection timer")
     private var isShutDown = false
 
-    /**
-     *
-     */
+    private val connectedPeersHandler: MsMessageHandler = object : MsMessageHandler {
+        override fun onMessage(message: MsMessage) {
+            if (message is MsConnectedPeersMessage) {
+                connectedPeers[BlockchainRid(message.blockchainRid)] = message.connectedPeers.map(::NodeRid)
+            }
+        }
+    }
+
     @Synchronized
-    override fun connectChain(
-        chainPeersConfig: XChainPeersConfiguration,
-        autoConnectAll: Boolean,
-        loggingPrefix: () -> String
-    ) {
+    override fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String) {
         logger.debug { "${loggingPrefix()}: Connecting master chain: ${chainPeersConfig.log()}" }
 
         if (isShutDown) {
@@ -69,7 +84,9 @@ class DefaultSubConnectionManager(
                 disconnectChain(loggingPrefix, chainPeersConfig.chainId)
             }
 
-            val chain = ChainWithOneMasterConnection(chainPeersConfig) { chainId -> msMessageHandlers[chainId] }
+            val chain = ChainWithOneMasterConnection(chainPeersConfig)
+            chain.addMsMessageHandler(preAddedMsMessageHandlers.remove(chainPeersConfig.chainId))
+            chain.addMsMessageHandler(connectedPeersHandler)
             chains.add(chain)
             connectToMaster(chain)
 
@@ -82,9 +99,9 @@ class DefaultSubConnectionManager(
         logger.info { "${logger(chain)}: Connecting to master node: ${chain.log()}" }
 
         val masterNode = PeerInfo(
-            nodeConfig.masterHost,
-            nodeConfig.masterPort,
-            byteArrayOf() // It's not necessary here
+                nodeConfig.masterHost,
+                nodeConfig.masterPort,
+                byteArrayOf() // It's not necessary here
         )
 
         val connectionDescriptor = SubConnectionDescriptor(chain.config.blockchainRid, chain.peers)
@@ -102,10 +119,10 @@ class DefaultSubConnectionManager(
         val chain = chains.getOrThrow(chainId)
         if (chain.isConnected()) {
             val message = MsDataMessage(
-                chain.config.blockchainRid.data,
-                nodeConfig.pubKeyByteArray,
-                nodeRid.byteArray,
-                data()
+                    chain.config.blockchainRid.data,
+                    nodeConfig.pubKeyByteArray,
+                    nodeRid.byteArray,
+                    data()
             )
             chain.getConnection()!!.sendPacket { MsCodec.encode(message) }
         } else {
@@ -121,6 +138,11 @@ class DefaultSubConnectionManager(
         }
     }
 
+    override fun getConnectedNodes(chainId: Long): List<NodeRid> {
+        return chains.get(chainId)
+                ?.let { connectedPeers[it.getBlockchainRid()] }
+                ?: emptyList()
+    }
 
     @Synchronized
     override fun disconnectChain(loggingPrefix: () -> String, chainId: Long) {
@@ -155,8 +177,8 @@ class DefaultSubConnectionManager(
 
     @Synchronized
     override fun onMasterConnected(
-        descriptor: SubConnectionDescriptor,
-        connection: SubConnection
+            descriptor: SubConnectionDescriptor,
+            connection: SubConnection
     ): MsMessageHandler? {
 
         logger.info { "${logger(descriptor)}: Master node connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
@@ -171,20 +193,20 @@ class DefaultSubConnectionManager(
             chain.isConnected() -> {
                 logger.debug { "${logger(descriptor)}: Master node already connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 // Don't close connection here, just return handler
-                chain.msMessageHandler
+                chain.getPacketHandler()
             }
             else -> {
                 logger.debug { "${logger(descriptor)}: Master node connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 chain.setConnection(connection)
-                chain.msMessageHandler
+                chain.getPacketHandler()
             }
         }
     }
 
     @Synchronized
     override fun onMasterDisconnected(
-        descriptor: SubConnectionDescriptor,
-        connection: SubConnection
+            descriptor: SubConnectionDescriptor,
+            connection: SubConnection
     ) {
         logger.info { "${logger(descriptor)}: Master node disconnected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
 
@@ -207,8 +229,8 @@ class DefaultSubConnectionManager(
     //  [SubConnectionManager] impl
     // ----------------------------------
 
-    override fun setMsMessageHandler(chainId: Long, handler: MsMessageHandler) {
-        msMessageHandlers[chainId] = handler
+    override fun preAddMsMessageHandler(chainId: Long, handler: MsMessageHandler) {
+        preAddedMsMessageHandlers[chainId] = handler
     }
 
     override fun sendMessageToMaster(chainId: Long, message: MsMessage) {
@@ -245,10 +267,9 @@ class DefaultSubConnectionManager(
     }
 
     private fun loggerPrefix(blockchainRid: BlockchainRid): String =
-        BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
+            BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
 
     private fun logger(descriptor: SubConnectionDescriptor): String = loggerPrefix(descriptor.blockchainRid)
 
     private fun logger(chain: ChainWithOneMasterConnection): String = loggerPrefix(chain.config.blockchainRid)
-
 }

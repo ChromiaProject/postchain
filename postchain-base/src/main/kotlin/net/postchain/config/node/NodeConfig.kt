@@ -52,6 +52,9 @@ open class NodeConfig(val appConfig: AppConfig) {
     val slaveHost: String
         get() = config.getString("containerChains.slaveHost", "localhost")
 
+    val containerSendConnectedPeersPeriod: Long
+        get() = config.getLong("container.send-connected-peers-period", 60_000L)
+
     val runningContainersAtStartRegexp: String
         get() = config.getString("container.healthcheck.runningContainersAtStartRegexp", "")
     val runningContainersCheckPeriod: Int // In number of blocks of chain0, set 0 to disable a check
@@ -207,15 +210,14 @@ open class NodeConfig(val appConfig: AppConfig) {
 
     // Tests / Containers and Dapps TestMode
     val containersTestmode: Boolean
-        get() = config.getBoolean("containers.testmode", false)
+        get() = config.getBoolean("container.testmode", false)
 
     val containersTestmodeResourceLimitsRAM: Long
-        get() = config.getLong("containers.testmode.resource-limits-ram", -1)
+        get() = config.getLong("container.testmode.resource-limits-ram", -1)
     val containersTestmodeResourceLimitsCPU: Long
-        get() = config.getLong("containers.testmode.resource-limits-cpu", -1)
+        get() = config.getLong("container.testmode.resource-limits-cpu", -1)
     val containersTestmodeResourceLimitsSTORAGE: Long
-        get() = config.getLong("containers.testmode.resource-limits-storage", -1)
-
+        get() = config.getLong("container.testmode.resource-limits-storage", -1)
 
     /*
         Example:

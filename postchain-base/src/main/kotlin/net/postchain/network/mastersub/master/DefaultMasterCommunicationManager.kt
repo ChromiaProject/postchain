@@ -14,6 +14,7 @@ import net.postchain.network.mastersub.protocol.*
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
+import java.util.*
 
 /**
  * Manages communication for the give chain
@@ -22,21 +23,30 @@ import net.postchain.network.peer.XChainPeersConfiguration
  * the messages ourselves we wrap them in [MsMessage] and pass them on to the correct sub-node.
  */
 open class DefaultMasterCommunicationManager(
-    val nodeConfig: NodeConfig,
-    val chainId: Long,
-    val blockchainRid: BlockchainRid,
-    private val peersCommConfigFactory: PeersCommConfigFactory,
-    private val connectionManager: ConnectionManager, // (We don't need "peer" conn mgr here, so we're keeping it tight)
-    private val masterConnectionManager: MasterConnectionManager,
-    private val dataSource: DirectoryDataSource,
-    private val processName: BlockchainProcessName
-) : MasterCommunicationManager {
+        val nodeConfig: NodeConfig,
+        val chainId: Long,
+        val blockchainRid: BlockchainRid,
+        private val peersCommConfigFactory: PeersCommConfigFactory,
+        private val connectionManager: ConnectionManager,
+        private val masterConnectionManager: MasterConnectionManager,
+        private val dataSource: DirectoryDataSource,
+        private val processName: BlockchainProcessName
+) : AbstractMasterCommunicationManager() {
 
     companion object : KLogging()
+
+    private lateinit var sendConnectedPeersTask: TimerTask
 
     override fun init() {
         val subnodeChainConfig = SubChainConfig(chainId, blockchainRid, subnodePacketConsumer())
         masterConnectionManager.connectSubChain(processName, subnodeChainConfig)
+
+        // Scheduling SendConnectedPeers task
+        sendConnectedPeersTask = scheduleTask(nodeConfig.containerSendConnectedPeersPeriod) {
+            val peers = connectionManager.getConnectedNodes(chainId)
+            val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.byteArray })
+            masterConnectionManager.sendPacketToSub(msg)
+        }
     }
 
     override fun sendHeartbeatToSub(heartbeatEvent: HeartbeatEvent) {
@@ -64,16 +74,15 @@ open class DefaultMasterCommunicationManager(
 
                     is MsDataMessage -> {
                         connectionManager.sendPacket(
-                            { message.xPacket },
-                            chainId,
-                            NodeRid(message.destination)
+                                { message.xPacket },
+                                chainId,
+                                NodeRid(message.destination)
                         )
                     }
 
                     is MsFindNextBlockchainConfigMessage -> {
                         logger.debug {
-                            "${process()}: BlockchainConfig requested by subnode: blockchainRid: " +
-                                    "${blockchainRid.toShortHex()}"
+                            "${process()}: BlockchainConfig requested by subnode: blockchainRid: " + blockchainRid.toShortHex()
                         }
                         val nextHeight = dataSource.findNextConfigurationHeight(message.blockchainRid, message.currentHeight)
                         val config = if (nextHeight == null) {
@@ -142,10 +151,10 @@ open class DefaultMasterCommunicationManager(
         logger.trace { "${process()}: consumePacket() - Receiving a packet from peer: ${nodeId.byteArray.toHex()}" }
 
         val message = MsDataMessage(
-            blockchainRid.data,
-            nodeId.byteArray, // sender
-            nodeConfig.pubKeyByteArray, // Can be omitted?
-            packet
+                blockchainRid.data,
+                nodeId.byteArray, // sender
+                nodeConfig.pubKeyByteArray, // Can be omitted?
+                packet
         )
 
         logger.trace {
@@ -158,6 +167,11 @@ open class DefaultMasterCommunicationManager(
     }
 
     override fun shutdown() {
+        // Canceling SendConnectedPeers task
+        if (::sendConnectedPeersTask.isInitialized) {
+            sendConnectedPeersTask.cancel()
+        }
+
         val prefixFun: () -> String = { processName.toString() }
         connectionManager.disconnectChain(prefixFun, chainId)
     }

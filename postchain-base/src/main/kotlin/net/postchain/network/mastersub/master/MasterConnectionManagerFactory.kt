@@ -9,7 +9,7 @@ import net.postchain.network.peer.PeerConnectionManager
 
 /**
  * This class makes:
- * - the [ConnectionManager], needed for the peer network and
+ * - the [PeerConnectionManager], needed for the peer network and
  * - the [MasterConnectionManager] needed for the connections with the sub-nodes
  *
  * Note that when the node shuts down, both these Conn Mgrs should shut down.

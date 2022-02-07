@@ -42,7 +42,7 @@ class DefaultPeerCommunicationManager1PeerIT {
                     // Waiting for all connections to be established
                     await().atMost(Duration.FIVE_SECONDS)
                             .untilAsserted {
-                                val actual = context.connectionManager.getConnectedPeers(context.chainId)
+                                val actual = context.connectionManager.getConnectedNodes(context.chainId)
                                 assert(actual).isEmpty()
                             }
                 }
