@@ -100,9 +100,13 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
             bytes memory symbol;
             bytes memory tokenURI;
             (success, name) = address(nft).staticcall(abi.encodeWithSignature("name()"));
+            require(success, "ChrL2: cannot get nft name");
             (success, symbol) = address(nft).staticcall(abi.encodeWithSignature("symbol()"));
+            require(success, "ChrL2: cannot get nft symbol");
             (success, tokenURI) = address(nft).staticcall(abi.encodeWithSignature("tokenURI(uint256)", tokenId));
-            emit DepositedNFT(msg.sender, nft, tokenId, name, symbol, tokenURI);
+            require(success, "ChrL2: cannot get nft token URI");
+            emit DepositedNFT(msg.sender, nft, tokenId,
+                abi.decode(name, (bytes)), abi.decode(symbol, (bytes)), abi.decode(tokenURI, (bytes)));
         }
         emit DepositedNFT(msg.sender, nft, tokenId, "", "", "");
         return true;
