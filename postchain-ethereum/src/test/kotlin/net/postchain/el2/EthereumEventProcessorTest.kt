@@ -48,18 +48,18 @@ class EthereumEventProcessorTest {
 
         // Deploy a test token that we mint and then approve transfer of coins to chrL2 contract
         val testToken = TestToken.deploy(web3j, transactionManager, gasProvider).send()
-        testToken.mint(Address(transactionManager.fromAddress), Uint256(BigInteger.valueOf(100))).send()
-        testToken.approve(Address(chrL2.contractAddress), Uint256(BigInteger.valueOf(100))).send()
+        testToken.mint(Address(transactionManager.fromAddress), Uint256(BigInteger.valueOf(50))).send()
+        testToken.approve(Address(chrL2.contractAddress), Uint256(BigInteger.valueOf(50))).send()
 
         // Deposit to postchain
-        for (i in 1..10) {
+        for (i in 1..5) {
             chrL2.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
         }
 
         Awaitility.await()
             .atMost(Duration.ONE_MINUTE)
             .untilAsserted {
-                assertTrue(ethereumEventProcessor.getEventData().second.size == 10)
+                assertTrue(ethereumEventProcessor.getEventData().second.size == 5)
             }
 
         // validate events
@@ -76,8 +76,8 @@ class EthereumEventProcessorTest {
         assertTrue(ethereumEventProcessor.getEventData().second.isEmpty())
 
         // One more final transaction
-        testToken.mint(Address(transactionManager.fromAddress), Uint256(BigInteger.valueOf(100))).send()
-        testToken.approve(Address(chrL2.contractAddress), Uint256(BigInteger.valueOf(100))).send()
+        testToken.mint(Address(transactionManager.fromAddress), Uint256(BigInteger.TEN)).send()
+        testToken.approve(Address(chrL2.contractAddress), Uint256(BigInteger.TEN)).send()
         chrL2.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
 
         Awaitility.await()

@@ -140,7 +140,7 @@ class EthereumEventProcessor(
     override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
         val currentBlockHeight = web3c.web3j.ethBlockNumber().send().blockNumber
         if (currentBlockHeight < readOffset) {
-            logger.debug { "Not enough blocks built on ethereum yet, current height: $currentBlockHeight, offset: $readOffset" }
+            logger.debug { "Not enough blocks built on ethereum yet, current height: $currentBlockHeight, read offset: $readOffset" }
             return Pair(emptyArray(), emptyList())
         }
 
@@ -181,7 +181,7 @@ class EthereumEventProcessor(
     @Synchronized
     private fun processLogEvent(event: ChrL2.DepositedEventResponse) {
         // See if we can prune any old events every time we have filled 100 blocks (so we don't always do it)
-        // to avoid queue filling up on the nodes that are not BP
+        // to avoid queue filling up events on the nodes that are not BP
         if (!events.isEmpty() && events.size % 100 == 0) {
             val nextBlockHeight = getNextUnprocessedBlockHeight()
 
@@ -193,9 +193,9 @@ class EthereumEventProcessor(
         events.add(event)
     }
 
-    private fun pruneEvents(to: BigInteger) {
+    private fun pruneEvents(upToHeight: BigInteger) {
         var nextLogEvent = events.peek()
-        while (nextLogEvent != null && nextLogEvent.log.blockNumber <= to) {
+        while (nextLogEvent != null && nextLogEvent.log.blockNumber <= upToHeight) {
             events.poll()
             nextLogEvent = events.peek()
         }
