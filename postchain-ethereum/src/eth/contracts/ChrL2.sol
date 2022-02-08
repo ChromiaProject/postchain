@@ -188,7 +188,7 @@ contract ChrL2 is IERC721Receiver {
         require(_owners[wd.nft][tokenId] != address(0), "ChrL2: nft token id does not exist or was already claimed");
         wd.isWithdraw = true;
         _owners[wd.nft][tokenId] = address(0);
-        wd.nft.transferFrom(address(this), beneficiary, tokenId);
+        wd.nft.safeTransferFrom(address(this), beneficiary, tokenId);
         emit WithdrawalNFT(beneficiary, wd.nft, tokenId);
     } 
 }
