@@ -13,8 +13,7 @@ import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
-import org.web3j.EVMTest
-import org.web3j.NodeType
+import org.web3j.EVMComposeTest
 import org.web3j.abi.datatypes.Address
 import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.generated.Uint256
@@ -25,7 +24,7 @@ import java.math.BigInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@EVMTest(NodeType.BESU)
+@EVMComposeTest("src/test/resources/geth-compose/docker-compose.yml", "node1", 8545)
 class EthereumEventProcessorTest {
 
     @Test

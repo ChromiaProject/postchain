@@ -206,6 +206,7 @@
                                     <archive>
                                         <manifest>
                                             <mainClass>net.postchain.AppKt</mainClass>
+                                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
                                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                                         </manifest>
