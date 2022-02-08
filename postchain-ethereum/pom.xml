@@ -50,6 +50,13 @@
             <artifactId>postchain-devtools</artifactId>
         </dependency>
 
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+        </dependency>
+
+        <!-- Test -->
         <dependency>
             <groupId>org.web3j</groupId>
             <artifactId>web3j-unit</artifactId>
