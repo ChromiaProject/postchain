@@ -404,42 +404,42 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")                        
                     ],
                 }
-                await expect(chrL2Instance.withdraw_request(maliciousData, eventProof,
+                await expect(chrL2Instance.withdrawRequest(maliciousData, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid event')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], invalidEl2Leaf)
                 ).to.be.revertedWith('Postchain: invalid el2 extra data')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], invalidExtraDataRoot)
                 ).to.be.revertedWith('Postchain: invalid extra data root')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(maliciousBlockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid block header')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], maliciousEl2Proof)
                 ).to.be.revertedWith('Postchain: invalid el2 extra merkle proof')
-                await expect(chrL2Instance.withdraw_request(data, maliciousEventProof,
+                await expect(chrL2Instance.withdrawRequest(data, maliciousEventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('ChrL2: invalid merkle proof')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [], el2Proof)
                 ).to.be.revertedWith('ChrL2: block signature is invalid')
 
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.emit(chrL2Instance, "WithdrawRequest")
                 .withArgs(user.address, tokenAddress, toDeposit)
 
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('ChrL2: event hash was already used')

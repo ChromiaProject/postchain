@@ -5,6 +5,7 @@ import "./utils/cryptography/Hash.sol";
 import "./utils/cryptography/ECDSA.sol";
 import "./utils/cryptography/MerkleProof.sol";
 import "./token/ERC20.sol";
+import "./token/ERC721.sol";
 import "./Data.sol";
 
 library Postchain {
@@ -16,6 +17,13 @@ library Postchain {
         ERC20 token;
         address beneficiary;
         uint256 amount;
+    }
+
+    struct EventNFT {
+        uint256 serialNumber;
+        IERC721 nft;
+        address beneficiary;
+        uint256 tokenId;
     }
 
     struct BlockHeaderData {
@@ -63,6 +71,15 @@ library Postchain {
         }
         return (evt.token, evt.beneficiary, evt.amount);
     }
+
+    function verifyEventNFT(bytes32 _hash, bytes memory _event) public pure returns (IERC721, address, uint256) {
+        EventNFT memory evt = abi.decode(_event, (EventNFT));
+        bytes32 hash = keccak256(_event);
+        if (hash != _hash) {
+            revert('Postchain: invalid event');
+        }
+        return (evt.nft, evt.beneficiary, evt.tokenId);
+    }    
 
     function verifyBlockHeader(
         bytes memory blockHeader,

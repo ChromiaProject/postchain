@@ -2,36 +2,17 @@
 pragma solidity ^0.8.0;
 
 import "./Postchain.sol";
-
-/**
- * @title ERC721 token receiver interface
- * @dev Interface for any contract that wants to support safeTransfers
- * from ERC721 asset contracts.
- */
-interface IERC721Receiver {
-    /**
-     * @dev Whenever an {IERC721} `tokenId` token is transferred to this contract via {IERC721-safeTransferFrom}
-     * by `operator` from `from`, this function is called.
-     *
-     * It must return its Solidity selector to confirm the token transfer.
-     * If any other value is returned or the interface is not implemented by the recipient, the transfer will be reverted.
-     *
-     * The selector can be obtained in Solidity with `IERC721Receiver.onERC721Received.selector`.
-     */
-    function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    ) external returns (bytes4);
-}
+import "./token/ERC721Receiver.sol";
+import "./token/ERC721.sol";
 
 contract ChrL2 is IERC721Receiver {
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
 
     mapping(ERC20 => uint256) public _balances;
+    mapping(IERC721 => mapping(uint256 => address)) public _owners;
     mapping (bytes32 => Withdraw) public _withdraw;
+    mapping (bytes32 => WithdrawNFT) public _withdrawNFT;
     address[] public directoryNodes;
     address[] public appNodes;
 
@@ -46,9 +27,20 @@ contract ChrL2 is IERC721Receiver {
         bool isWithdraw;
     }
 
+    struct WithdrawNFT {
+        IERC721 nft;
+        address beneficiary;
+        uint256 tokenId;
+        uint256 block_number;
+        bool isWithdraw;
+    }
+
     event Deposited(address indexed owner, ERC20 indexed token, uint256 value);
+    event DepositedNFT(address indexed owner, IERC721 indexed nft, uint256 tokenId);
     event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
+    event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
+    event WithdrawalNFT(address indexed beneficiary, IERC721 indexed nft, uint256 tokenId);
 
     constructor(address[] memory _directoryNodes, address[] memory _appNodes) {
         directoryNodes = _directoryNodes;
@@ -96,21 +88,49 @@ contract ChrL2 is IERC721Receiver {
         return true;
     }
 
-    function withdraw_request(
+    function depositNFT(IERC721 nft, uint256 tokenId) public returns (bool) {
+        nft.safeTransferFrom(msg.sender, address(this), tokenId);
+        _owners[nft][tokenId] = msg.sender;
+        emit DepositedNFT(msg.sender, nft, tokenId);
+        return true;
+    }
+
+    function withdrawRequest(
         bytes memory _event,
         Data.EventProof memory eventProof,
         bytes memory blockHeader,
         bytes[] memory sigs,
         Data.EL2ProofData memory el2Proof
     ) public {
+        _withdrawRequest(eventProof, blockHeader, sigs, el2Proof);
+        _events[eventProof.leaf] = _updateWithdraw(eventProof.leaf, _event); // mark the event hash was already used.
+    }
+
+    function withdrawRequestNFT(
+        bytes memory _event,
+        Data.EventProof memory eventProof,
+        bytes memory blockHeader,
+        bytes[] memory sigs,
+        Data.EL2ProofData memory el2Proof
+    ) public {
+
+        _withdrawRequest(eventProof, blockHeader, sigs, el2Proof);
+        _events[eventProof.leaf] = _updateWithdrawNFT(eventProof.leaf, _event); // mark the event hash was already used.
+    }
+
+    function _withdrawRequest(
+        Data.EventProof memory eventProof,
+        bytes memory blockHeader,
+        bytes[] memory sigs,
+        Data.EL2ProofData memory el2Proof        
+    ) internal view {
         require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
         {
             (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
             if (!Postchain.isValidSignatures(blockRid, sigs, appNodes)) revert("ChrL2: block signature is invalid");
             if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("ChrL2: invalid merkle proof");
         }
-
-        _events[eventProof.leaf] = _updateWithdraw(eventProof.leaf, _event); // mark the event hash was already used.
+        return;
     }
 
     function _updateWithdraw(bytes32 hash, bytes memory _event) internal returns (bool) {
@@ -120,7 +140,7 @@ contract ChrL2 is IERC721Receiver {
             require(amount > 0 && amount <= _balances[token], "ChrL2: invalid amount to make request withdraw");
             wd.token = token;
             wd.beneficiary = beneficiary;
-            wd.amount += amount;
+            wd.amount = amount;
             wd.block_number = block.number + 50;
             wd.isWithdraw = false;
             _withdraw[hash] = wd;
@@ -128,6 +148,22 @@ contract ChrL2 is IERC721Receiver {
         }
         return true;
     }
+
+    function _updateWithdrawNFT(bytes32 hash, bytes memory _event) internal returns (bool) {
+        WithdrawNFT storage wd = _withdrawNFT[hash];
+        {
+            (IERC721 nft, address beneficiary, uint256 tokenId) = hash.verifyEventNFT(_event);
+            require(_owners[nft][tokenId] != address(0), "ChrL2: invalid token id to make request withdraw");
+            wd.nft = nft;
+            wd.beneficiary = beneficiary;
+            wd.tokenId = tokenId;
+            wd.block_number = block.number + 50;
+            wd.isWithdraw = false;
+            _withdrawNFT[hash] = wd;
+            emit WithdrawRequestNFT(beneficiary, nft, tokenId);
+        }
+        return true;
+    } 
 
     function withdraw(bytes32 _hash, address payable beneficiary) public {
         Withdraw storage wd = _withdraw[_hash];
@@ -142,4 +178,17 @@ contract ChrL2 is IERC721Receiver {
         wd.token.transfer(beneficiary, value);
         emit Withdrawal(beneficiary, wd.token, value);
     }
+
+    function withdrawNFT(bytes32 _hash, address payable beneficiary) public {
+        WithdrawNFT storage wd = _withdrawNFT[_hash];
+        uint tokenId = wd.tokenId;
+        require(wd.beneficiary == beneficiary, "ChrL2: no nft for the beneficiary");
+        require(wd.block_number <= block.number, "ChrL2: not mature enough to withdraw the nft");
+        require(wd.isWithdraw == false, "ChrL2: nft was already claimed");
+        require(_owners[wd.nft][tokenId] != address(0), "ChrL2: nft token id does not exist or was already claimed");
+        wd.isWithdraw = true;
+        _owners[wd.nft][tokenId] = address(0);
+        wd.nft.transferFrom(address(this), beneficiary, tokenId);
+        emit WithdrawalNFT(beneficiary, wd.nft, tokenId);
+    } 
 }
