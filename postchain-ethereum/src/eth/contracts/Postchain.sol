@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import "./utils/cryptography/Hash.sol";
 import "./utils/cryptography/ECDSA.sol";
 import "./utils/cryptography/MerkleProof.sol";
-import "./token/ERC20.sol";
-import "./token/ERC721.sol";
 import "./Data.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library Postchain {
     using EC for bytes32;
@@ -14,7 +14,7 @@ library Postchain {
 
     struct Event {
         uint256 serialNumber;
-        ERC20 token;
+        IERC20 token;
         address beneficiary;
         uint256 amount;
     }
@@ -63,7 +63,7 @@ library Postchain {
         return (_actualSignature >= _requiredSignature);
     }
 
-    function verifyEvent(bytes32 _hash, bytes memory _event) public pure returns (ERC20, address, uint256) {
+    function verifyEvent(bytes32 _hash, bytes memory _event) public pure returns (IERC20, address, uint256) {
         Event memory evt = abi.decode(_event, (Event));
         bytes32 hash = keccak256(_event);
         if (hash != _hash) {

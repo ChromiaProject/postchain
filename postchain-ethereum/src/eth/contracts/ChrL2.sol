@@ -2,15 +2,17 @@
 pragma solidity ^0.8.0;
 
 import "./Postchain.sol";
-import "./token/ERC721Receiver.sol";
-import "./token/ERC721.sol";
-import "./security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
 contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
 
-    mapping(ERC20 => uint256) public _balances;
+    mapping(IERC20 => uint256) public _balances;
     mapping(IERC721 => mapping(uint256 => address)) public _owners;
     mapping (bytes32 => Withdraw) public _withdraw;
     mapping (bytes32 => WithdrawNFT) public _withdrawNFT;
@@ -21,7 +23,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     mapping (bytes32 => bool) private _events;
 
     struct Withdraw {
-        ERC20 token;
+        IERC20 token;
         address beneficiary;
         uint256 amount;
         uint256 block_number;
@@ -36,11 +38,11 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         bool isWithdraw;
     }
 
-    event Deposited(address indexed owner, ERC20 indexed token, uint256 value);
-    event DepositedNFT(address indexed owner, IERC721 indexed nft, uint256 tokenId);
-    event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
+    event Deposited(address indexed owner, IERC20 indexed token, uint256 value);
+    event DepositedNFT(address indexed owner, IERC721 indexed nft, uint256 tokenId, bytes name, bytes symbol, bytes tokenURI);
+    event WithdrawRequest(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
-    event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
+    event Withdrawal(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawalNFT(address indexed beneficiary, IERC721 indexed nft, uint256 tokenId);
 
     constructor(address[] memory _directoryNodes, address[] memory _appNodes) {
@@ -82,7 +84,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         return true;
     }
 
-    function deposit(ERC20 token, uint256 amount) public returns (bool) {
+    function deposit(IERC20 token, uint256 amount) public returns (bool) {
         token.transferFrom(msg.sender, address(this), amount);
         _balances[token] += amount;
         emit Deposited(msg.sender, token, amount);
@@ -92,7 +94,17 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     function depositNFT(IERC721 nft, uint256 tokenId) public returns (bool) {
         nft.safeTransferFrom(msg.sender, address(this), tokenId);
         _owners[nft][tokenId] = msg.sender;
-        emit DepositedNFT(msg.sender, nft, tokenId);
+        if (nft.supportsInterface(type(IERC721Metadata).interfaceId)) {
+            bool success;
+            bytes memory name;
+            bytes memory symbol;
+            bytes memory tokenURI;
+            (success, name) = address(nft).call(abi.encodeWithSignature("name()"));
+            (success, symbol) = address(nft).call(abi.encodeWithSignature("symbol()"));
+            (success, tokenURI) = address(nft).call(abi.encodeWithSignature("tokenURI(uint256)", tokenId));
+            emit DepositedNFT(msg.sender, nft, tokenId, name, symbol, tokenURI);
+        }
+        emit DepositedNFT(msg.sender, nft, tokenId, "", "", "");
         return true;
     }
 
@@ -137,7 +149,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     function _updateWithdraw(bytes32 hash, bytes memory _event) internal returns (bool) {
         Withdraw storage wd = _withdraw[hash];
         {
-            (ERC20 token, address beneficiary, uint256 amount) = hash.verifyEvent(_event);
+            (IERC20 token, address beneficiary, uint256 amount) = hash.verifyEvent(_event);
             require(amount > 0 && amount <= _balances[token], "ChrL2: invalid amount to make request withdraw");
             wd.token = token;
             wd.beneficiary = beneficiary;
