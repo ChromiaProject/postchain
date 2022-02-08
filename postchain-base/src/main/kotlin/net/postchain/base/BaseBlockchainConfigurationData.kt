@@ -58,6 +58,11 @@ class BaseBlockchainConfigurationData(
         return stratDict?.get(KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS)?.asInteger() ?: 100
     }
 
+    fun getQueueCapacity(): Int {
+        val stratDict = data[KEY_BLOCKSTRATEGY]
+        return stratDict?.get(KEY_BLOCKSTRATEGY_QUEUE_CAPACITY)?.asInteger()?.toInt() ?: 36000 // Default 2 minutes during 300 tps load
+    }
+
     fun getDependenciesAsList(): List<BlockchainRelatedInfo> {
         val dep = data[KEY_DEPENDENCIES]
         return if (dep != null) {
@@ -93,6 +98,7 @@ class BaseBlockchainConfigurationData(
         const val KEY_BLOCKSTRATEGY_NAME = "name"
         const val KEY_BLOCKSTRATEGY_MAXBLOCKSIZE = "maxblocksize"
         const val KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS = "maxblocktransactions"
+        const val KEY_BLOCKSTRATEGY_QUEUE_CAPACITY = "queuecapacity"
 
         const val KEY_CONFIGURATIONFACTORY = "configurationfactory"
 
