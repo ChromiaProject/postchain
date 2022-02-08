@@ -4,8 +4,9 @@ pragma solidity ^0.8.0;
 import "./Postchain.sol";
 import "./token/ERC721Receiver.sol";
 import "./token/ERC721.sol";
+import "./security/ReentrancyGuard.sol";
 
-contract ChrL2 is IERC721Receiver {
+contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
 
@@ -101,7 +102,7 @@ contract ChrL2 is IERC721Receiver {
         bytes memory blockHeader,
         bytes[] memory sigs,
         Data.EL2ProofData memory el2Proof
-    ) public {
+    ) public nonReentrant {
         _withdrawRequest(eventProof, blockHeader, sigs, el2Proof);
         _events[eventProof.leaf] = _updateWithdraw(eventProof.leaf, _event); // mark the event hash was already used.
     }
@@ -112,7 +113,7 @@ contract ChrL2 is IERC721Receiver {
         bytes memory blockHeader,
         bytes[] memory sigs,
         Data.EL2ProofData memory el2Proof
-    ) public {
+    ) public nonReentrant {
 
         _withdrawRequest(eventProof, blockHeader, sigs, el2Proof);
         _events[eventProof.leaf] = _updateWithdrawNFT(eventProof.leaf, _event); // mark the event hash was already used.
@@ -165,7 +166,7 @@ contract ChrL2 is IERC721Receiver {
         return true;
     } 
 
-    function withdraw(bytes32 _hash, address payable beneficiary) public {
+    function withdraw(bytes32 _hash, address payable beneficiary) public nonReentrant {
         Withdraw storage wd = _withdraw[_hash];
         require(wd.beneficiary == beneficiary, "ChrL2: no fund for the beneficiary");
         require(wd.block_number <= block.number, "ChrL2: not mature enough to withdraw the fund");
@@ -179,7 +180,7 @@ contract ChrL2 is IERC721Receiver {
         emit Withdrawal(beneficiary, wd.token, value);
     }
 
-    function withdrawNFT(bytes32 _hash, address payable beneficiary) public {
+    function withdrawNFT(bytes32 _hash, address payable beneficiary) public nonReentrant {
         WithdrawNFT storage wd = _withdrawNFT[_hash];
         uint tokenId = wd.tokenId;
         require(wd.beneficiary == beneficiary, "ChrL2: no nft for the beneficiary");
