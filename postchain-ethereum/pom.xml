@@ -164,6 +164,9 @@
                 <configuration>
                     <workingDirectory>${project.basedir}/src/eth</workingDirectory>
                     <installDirectory>target</installDirectory>
+                    <environmentVariables>
+                        <TS_NODE_TRANSPILE_ONLY>true</TS_NODE_TRANSPILE_ONLY>
+                    </environmentVariables>
                 </configuration>
 
                 <executions>
@@ -186,6 +189,16 @@
                         </goals>
                         <configuration>
                             <arguments>install</arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>yarn hardhat compile</id>
+                        <goals>
+                            <goal>yarn</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>exec hardhat compile</arguments>
                         </configuration>
                     </execution>
 
