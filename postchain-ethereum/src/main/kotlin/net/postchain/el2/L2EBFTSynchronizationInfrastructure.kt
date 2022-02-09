@@ -1,10 +1,8 @@
 package net.postchain.el2
 
 import net.postchain.base.BaseBlockchainConfigurationData
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtx.GTXBlockchainConfiguration
 import org.web3j.protocol.Web3j
@@ -24,6 +22,7 @@ fun BaseBlockchainConfigurationData.getEL2Data(): EVML2Config {
 
 class EL2SynchronizationInfrastructureExtension : SynchronizationInfrastructureExtension {
     private lateinit var web3c: Web3Connector
+    private lateinit var eventProcessor: EthereumEventProcessor
 
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
@@ -42,6 +41,7 @@ class EL2SynchronizationInfrastructureExtension : SynchronizationInfrastructureE
                 val web3jConfig = Web3jConfig()
                 val web3j = Web3j.build(web3jConfig.buildService(el2Config.url))
                 web3c = Web3Connector(web3j, el2Config.contract)
+
                 val contract = ChrL2.load(
                     web3c.contractAddress,
                     web3c.web3j,
@@ -49,18 +49,22 @@ class EL2SynchronizationInfrastructureExtension : SynchronizationInfrastructureE
                     DefaultGasProvider()
                 )
 
-                val eventProcessor = EthereumEventProcessor(
+                eventProcessor = EthereumEventProcessor(
                     web3c,
                     contract,
                     BigInteger.valueOf(100),
-                    engine.getBlockQueries()
+                    engine
                 )
+                eventProcessor.start()
                 el2Ext.useEventProcessor(eventProcessor)
             }
         }
     }
 
     override fun shutdown() {
+        if (::eventProcessor.isInitialized) {
+            eventProcessor.shutdown()
+        }
         if (::web3c.isInitialized) {
             web3c.shutdown()
         }

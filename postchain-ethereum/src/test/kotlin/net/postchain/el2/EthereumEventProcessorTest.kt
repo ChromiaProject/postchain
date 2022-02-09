@@ -1,6 +1,7 @@
 package net.postchain.el2
 
 import net.postchain.core.BlockQueries
+import net.postchain.core.BlockchainEngine
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.ethereum.contracts.TestToken
 import net.postchain.gtv.Gtv
@@ -39,8 +40,10 @@ class EthereumEventProcessorTest {
         )
 
     private val gasProvider = DefaultGasProvider()
+    // This could be any private key but value must match in /geth-compose/geth/key.txt
+    // and the address created must be added to /geth-compose/geth/test.json
     private val credentials = Credentials
-        .create("0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63")
+        .create("0x0000000000000000000000000000000001000000000000000000000000000000")
     private lateinit var web3j: Web3j
     private lateinit var transactionManager: TransactionManager
 
@@ -69,6 +72,7 @@ class EthereumEventProcessorTest {
 
     @AfterEach
     fun tearDown() {
+        web3j.shutdown()
         gethContainer.stop()
     }
 
@@ -83,8 +87,12 @@ class EthereumEventProcessorTest {
         val blockQueriesMock: BlockQueries = mock {
             on { query(eq("get_last_eth_block"), any()) } doReturn getMockedBlockHeightResponse(null)
         }
+        val engineMock: BlockchainEngine = mock {
+            on { getBlockQueries() } doReturn blockQueriesMock
+        }
 
-        val ethereumEventProcessor = EthereumEventProcessor(web3c, chrL2, BigInteger.ZERO, blockQueriesMock)
+        val ethereumEventProcessor = EthereumEventProcessor(web3c, chrL2, BigInteger.ZERO, engineMock)
+        ethereumEventProcessor.start()
 
         // Deploy a test token that we mint and then approve transfer of coins to chrL2 contract
         val testToken = TestToken.deploy(web3j, transactionManager, gasProvider).send()
@@ -130,6 +138,8 @@ class EthereumEventProcessorTest {
         assertEquals(transactionManager.fromAddress, lastEvent[6].asString()) // owner
         assertEquals(testToken.contractAddress, lastEvent[7].asString()) // token
         assertEquals(BigInteger.TEN, lastEvent[8].asBigInteger()) // value
+
+        ethereumEventProcessor.shutdown()
     }
 
     fun getMockedBlockHeightResponse(height: BigInteger?): Promise<Gtv, Exception> {
