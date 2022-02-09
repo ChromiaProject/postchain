@@ -11,28 +11,69 @@ import net.postchain.gtx.OpData
 import nl.komponents.kovenant.Promise
 import org.awaitility.Awaitility
 import org.awaitility.Duration
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
-import org.web3j.EVMComposeTest
+import org.testcontainers.containers.wait.strategy.Wait
 import org.web3j.abi.datatypes.Address
 import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.generated.Uint256
+import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
+import org.web3j.protocol.http.HttpService
+import org.web3j.tx.FastRawTransactionManager
 import org.web3j.tx.TransactionManager
-import org.web3j.tx.gas.ContractGasProvider
+import org.web3j.tx.gas.DefaultGasProvider
+import org.web3j.tx.response.PollingTransactionReceiptProcessor
 import java.math.BigInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@EVMComposeTest("src/test/resources/geth-compose/docker-compose.yml", "node1", 8545)
 class EthereumEventProcessorTest {
 
+    private val gethContainer = GethContainer()
+        .withExposedService(
+            "geth", 8545,
+            Wait.forListeningPort()
+        )
+
+    private val gasProvider = DefaultGasProvider()
+    private val credentials = Credentials
+        .create("0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63")
+    private lateinit var web3j: Web3j
+    private lateinit var transactionManager: TransactionManager
+
+    @BeforeEach
+    fun setup() {
+        gethContainer.start()
+
+        val gethHost = gethContainer.getServiceHost("geth", 8545)
+        val gethPort = gethContainer.getServicePort("geth", 8545)
+        web3j = Web3j.build(
+            HttpService(
+                "http://$gethHost:$gethPort"
+            )
+        )
+
+        transactionManager = FastRawTransactionManager(
+            web3j,
+            credentials,
+            PollingTransactionReceiptProcessor(
+                web3j,
+                1000,
+                30
+            )
+        )
+    }
+
+    @AfterEach
+    fun tearDown() {
+        gethContainer.stop()
+    }
+
     @Test
-    fun `Deposit events on ethereum should be parsed and validated`(
-        web3j: Web3j,
-        transactionManager: TransactionManager,
-        gasProvider: ContractGasProvider
-    ) {
+    fun `Deposit events on ethereum should be parsed and private validated`() {
         // Deploy ChrL2 contract
         val mockNodes = DynamicArray(Address::class.java)
         val chrL2 = ChrL2.deploy(web3j, transactionManager, gasProvider, mockNodes, mockNodes).send()

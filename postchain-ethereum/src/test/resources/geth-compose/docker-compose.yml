@@ -1,6 +1,6 @@
 version: '3'
 services:
-  node1:
+  geth:
     image: ethereum/client-go
     ports:
       - 8545:8545
