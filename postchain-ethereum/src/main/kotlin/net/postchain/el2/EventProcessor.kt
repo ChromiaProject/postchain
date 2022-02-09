@@ -78,7 +78,7 @@ class EthereumEventProcessor(
     private var lastReadBlockHeight: BigInteger?
 
     init {
-        lastReadBlockHeight = getNextUnprocessedBlockHeight()
+        lastReadBlockHeight = getLastEthereumBlockHeight()
     }
 
     companion object : KLogging()
@@ -97,7 +97,7 @@ class EthereumEventProcessor(
         val to = currentBlockHeight.minus(readOffset)
 
         val from = if (lastReadBlockHeight != null) {
-            DefaultBlockParameter.valueOf(lastReadBlockHeight!!.add(BigInteger.ONE))
+            DefaultBlockParameter.valueOf(lastReadBlockHeight!!.plus(BigInteger.ONE))
         } else {
             DefaultBlockParameter.valueOf(DefaultBlockParameterName.LATEST.name)
         }
@@ -158,7 +158,7 @@ class EthereumEventProcessor(
     }
 
     override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
-        val from = getNextUnprocessedBlockHeight() ?: BigInteger.ZERO
+        val from = getLastEthereumBlockHeight()?.plus(BigInteger.ONE) ?: BigInteger.ZERO
 
         // If we have any old events in the queue prior to next unprocessed block we may prune them
         pruneEvents(from)
@@ -166,7 +166,7 @@ class EthereumEventProcessor(
         return parseEvents()
     }
 
-    private fun getNextUnprocessedBlockHeight(): BigInteger? {
+    private fun getLastEthereumBlockHeight(): BigInteger? {
         val block = blockchainEngine.getBlockQueries().query("get_last_eth_block", gtv(mutableMapOf())).get()
         if (block == GtvNull) {
             return null
@@ -175,7 +175,7 @@ class EthereumEventProcessor(
         val blockHeight = block.asDict()["eth_block_height"]
             ?: throw ProgrammerMistake("Last eth block has no height stored")
 
-        return blockHeight.asBigInteger().plus(BigInteger.ONE)
+        return blockHeight.asBigInteger()
     }
 
     @Synchronized
