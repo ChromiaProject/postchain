@@ -25,4 +25,8 @@ contract ERC721Mock is ERC721 {
     function burn(uint256 tokenId) public {
         _burn(tokenId);
     }
+
+    function _baseURI() internal view virtual override returns (string memory) {
+        return "https://gateway.pinata.cloud/ipfs/QmR5NAV7vCi5oobK2wKNKcM5QAyCCzCg2wysZXwhCYbBLs/";
+    }
 }

@@ -22,6 +22,7 @@ describe("Non Fungible Token", () => {
     let appNodes: SignerWithAddress;
     const name = "CRYPTOPUNKS";
     const symbol = "Ͼ";
+    const baseURI = "https://gateway.pinata.cloud/ipfs/QmR5NAV7vCi5oobK2wKNKcM5QAyCCzCg2wysZXwhCYbBLs/";
 
     beforeEach(async () => {
         const [deployer] = await ethers.getSigners()
@@ -68,9 +69,11 @@ describe("Non Fungible Token", () => {
             const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
             const tokenApproveInstance = new ERC721Mock__factory(user).attach(nftAddress)
             await tokenApproveInstance.setApprovalForAll(chrL2Address, true)
+            let tokenURI = await tokenApproveInstance.tokenURI(tokenId)
+            expect(tokenURI).to.eq(baseURI+tokenId.toString())
             await expect(chrL2Instance.depositNFT(nftAddress, tokenId))
                     .to.emit(chrL2Instance, "DepositedNFT")
-                    .withArgs(user.address, nftAddress, tokenId, name, symbol, "")
+                    .withArgs(user.address, nftAddress, tokenId, name, symbol, tokenURI)
 
             expect(await tokenInstance.balanceOf(chrL2Address)).to.eq(1)
             expect(await tokenInstance.ownerOf(tokenId)).to.eq(chrL2Address)
