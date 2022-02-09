@@ -186,7 +186,6 @@
                         </goals>
                         <configuration>
                             <arguments>install</arguments>
-                            <arguments>test</arguments>
                         </configuration>
                     </execution>
 
