@@ -22,12 +22,18 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     // Each postchain event will be used to claim only one time.
     mapping (bytes32 => bool) private _events;
 
+    enum Status {
+        Pending,
+        Withdrawable,
+        Withdrawn
+    }
+
     struct Withdraw {
         IERC20 token;
         address beneficiary;
         uint256 amount;
         uint256 block_number;
-        bool isWithdraw;
+        Status status;
     }
 
     struct WithdrawNFT {
@@ -35,11 +41,12 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         address beneficiary;
         uint256 tokenId;
         uint256 block_number;
-        bool isWithdraw;
+        Status status;
     }
 
     event Deposited(address indexed owner, IERC20 indexed token, uint256 value);
-    event DepositedNFT(address indexed owner, IERC721 indexed nft, uint256 tokenId, bytes name, bytes symbol, bytes tokenURI);
+    event DepositedNFT(address indexed owner, IERC721 indexed nft, uint256 tokenId,
+        string name, string symbol, string tokenURI);
     event WithdrawRequest(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
     event Withdrawal(address indexed beneficiary, IERC20 indexed token, uint256 value);
@@ -106,7 +113,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
             (success, tokenURI) = address(nft).staticcall(abi.encodeWithSignature("tokenURI(uint256)", tokenId));
             require(success, "ChrL2: cannot get nft token URI");
             emit DepositedNFT(msg.sender, nft, tokenId,
-                abi.decode(name, (bytes)), abi.decode(symbol, (bytes)), abi.decode(tokenURI, (bytes)));
+                abi.decode(name, (string)), abi.decode(symbol, (string)), abi.decode(tokenURI, (string)));
         }
         emit DepositedNFT(msg.sender, nft, tokenId, "", "", "");
         return true;
@@ -159,7 +166,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
             wd.beneficiary = beneficiary;
             wd.amount = amount;
             wd.block_number = block.number + 50;
-            wd.isWithdraw = false;
+            wd.status = Status.Withdrawable;
             _withdraw[hash] = wd;
             emit WithdrawRequest(beneficiary, token, amount);
         }
@@ -175,7 +182,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
             wd.beneficiary = beneficiary;
             wd.tokenId = tokenId;
             wd.block_number = block.number + 50;
-            wd.isWithdraw = false;
+            wd.status = Status.Withdrawable;
             _withdrawNFT[hash] = wd;
             emit WithdrawRequestNFT(beneficiary, nft, tokenId);
         }
@@ -186,9 +193,9 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         Withdraw storage wd = _withdraw[_hash];
         require(wd.beneficiary == beneficiary, "ChrL2: no fund for the beneficiary");
         require(wd.block_number <= block.number, "ChrL2: not mature enough to withdraw the fund");
-        require(wd.isWithdraw == false, "ChrL2: fund was already claimed");
+        require(wd.status == Status.Withdrawable, "ChrL2: fund is pending or was already claimed");
         require(wd.amount > 0 && wd.amount <= _balances[wd.token], "ChrL2: not enough amount to withdraw");
-        wd.isWithdraw = true;
+        wd.status = Status.Withdrawn;
         uint value = wd.amount;
         wd.amount = 0;
         _balances[wd.token] -= value;
@@ -201,9 +208,9 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         uint tokenId = wd.tokenId;
         require(wd.beneficiary == beneficiary, "ChrL2: no nft for the beneficiary");
         require(wd.block_number <= block.number, "ChrL2: not mature enough to withdraw the nft");
-        require(wd.isWithdraw == false, "ChrL2: nft was already claimed");
+        require(wd.status == Status.Withdrawable, "ChrL2: nft is pending or was already claimed");
         require(_owners[wd.nft][tokenId] != address(0), "ChrL2: nft token id does not exist or was already claimed");
-        wd.isWithdraw = true;
+        wd.status = Status.Withdrawn;
         _owners[wd.nft][tokenId] = address(0);
         wd.nft.safeTransferFrom(address(this), beneficiary, tokenId);
         emit WithdrawalNFT(beneficiary, wd.nft, tokenId);

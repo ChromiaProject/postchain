@@ -471,7 +471,7 @@ describe("ChrL2", () => {
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint)
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
-                    user.address)).to.be.revertedWith('ChrL2: fund was already claimed')
+                    user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
             }
         })
     })
