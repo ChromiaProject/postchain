@@ -189,6 +189,16 @@
                         </configuration>
                     </execution>
 
+                    <execution>
+                        <id>yarn hardhat test</id>
+                        <goals>
+                            <goal>yarn</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>exec hardhat test</arguments>
+                        </configuration>
+                    </execution>
+
                 </executions>
             </plugin>
         </plugins>
