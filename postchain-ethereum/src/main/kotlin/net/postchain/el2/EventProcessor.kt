@@ -160,10 +160,7 @@ class EthereumEventProcessor(
     override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
         val from = getLastEthereumBlockHeight()?.plus(BigInteger.ONE) ?: BigInteger.ZERO
 
-        // If we have any old events in the queue prior to next unprocessed block we may prune them
-        pruneEvents(from)
-
-        return parseEvents()
+        return parseEvents(from)
     }
 
     private fun getLastEthereumBlockHeight(): BigInteger? {
@@ -184,7 +181,15 @@ class EthereumEventProcessor(
     }
 
     @Synchronized
-    private fun parseEvents(): Pair<Array<Gtv>, List<Array<Gtv>>> {
+    private fun processLogEvent(log: Log) {
+        events.add(log)
+    }
+
+    @Synchronized
+    private fun parseEvents(from: BigInteger): Pair<Array<Gtv>, List<Array<Gtv>>> {
+        // If we have any old older events in the queue we may prune them
+        pruneEvents(from)
+
         if (events.isEmpty()) {
             logger.debug("No events to process yet")
             return Pair(emptyArray(), emptyList())
@@ -210,12 +215,6 @@ class EthereumEventProcessor(
         return Pair(toBlock, out)
     }
 
-    @Synchronized
-    private fun processLogEvent(log: Log) {
-        events.add(log)
-    }
-
-    @Synchronized
     private fun pruneEvents(upToHeight: BigInteger) {
         var nextLogEvent = events.peek()
         while (nextLogEvent != null && nextLogEvent.blockNumber <= upToHeight) {
