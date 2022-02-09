@@ -99,7 +99,7 @@ class EthereumEventProcessor(
         val from = if (lastReadBlockHeight != null) {
             DefaultBlockParameter.valueOf(lastReadBlockHeight!!.plus(BigInteger.ONE))
         } else {
-            DefaultBlockParameter.valueOf(DefaultBlockParameterName.LATEST.name)
+            DefaultBlockParameter.valueOf(DefaultBlockParameterName.EARLIEST.name)
         }
 
         val filter = EthFilter(from, DefaultBlockParameter.valueOf(to), contract.contractAddress)

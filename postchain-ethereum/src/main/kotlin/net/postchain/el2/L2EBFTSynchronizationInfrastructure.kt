@@ -1,8 +1,10 @@
 package net.postchain.el2
 
 import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtx.GTXBlockchainConfiguration
 import org.web3j.protocol.Web3j
@@ -20,7 +22,10 @@ fun BaseBlockchainConfigurationData.getEL2Data(): EVML2Config {
     return EVML2Config(url, contract)
 }
 
-class EL2SynchronizationInfrastructureExtension : SynchronizationInfrastructureExtension {
+class EL2SynchronizationInfrastructureExtension(
+    nodeConfigProvider: NodeConfigurationProvider,
+    nodeDiagnosticContext: NodeDiagnosticContext
+) : SynchronizationInfrastructureExtension {
     private lateinit var web3c: Web3Connector
     private lateinit var eventProcessor: EthereumEventProcessor
 
