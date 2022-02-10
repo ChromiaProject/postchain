@@ -18,6 +18,11 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
+/**
+ * ProgrammerMistake -> 500
+ * "Any standard exception" -> 500
+ * UserMistake -> 400
+ */
 class RestApiQueryEndpointTest {
 
     private val basePath = "/api/v1"
@@ -61,6 +66,8 @@ class RestApiQueryEndpointTest {
 
     /**
      * The idea here is to test that RestApi can handle when the model throws an exception during "query()" execution.
+     *
+     * "Standard exceptions" -> 500
      */
     @Test
     fun test_query_error() {
@@ -86,27 +93,9 @@ class RestApiQueryEndpointTest {
         }
     }
 
-    @Test
-    fun test_query_UserError() {
-        val queryString = """{"a"="b", "c"=3}"""
-        val query = Query(queryString)
-
-        val answerMessage = "expected error"
-        val answerBody = """{"error":"expected error"}"""
-
-        whenever(model.query(query)).thenThrow(
-                UserMistake(answerMessage))
-
-        restApi.attachModel(blockchainRID, model)
-
-        RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(queryString)
-                .post("/query/$blockchainRID")
-                .then()
-                .statusCode(400)
-                .body(equalTo(answerBody))
-    }
-
+    /**
+     * ProgrammerMistake -> 500
+     */
     @Test
     fun test_query_other_error() {
         val queryString = """{"a"="b", "c"=3}"""
@@ -125,6 +114,30 @@ class RestApiQueryEndpointTest {
                 .then()
                 .statusCode(500)
                 .body(equalTo(answerBody))
+    }
+
+    /**
+     * UserMistake -> 400
+     */
+    @Test
+    fun test_query_UserError() {
+        val queryString = """{"a"="b", "c"=3}"""
+        val query = Query(queryString)
+
+        val answerMessage = "expected error"
+        val answerBody = """{"error":"expected error"}"""
+
+        whenever(model.query(query)).thenThrow(
+            UserMistake(answerMessage))
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+            .body(queryString)
+            .post("/query/$blockchainRID")
+            .then()
+            .statusCode(400)
+            .body(equalTo(answerBody))
     }
 
     @Test

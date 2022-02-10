@@ -85,10 +85,9 @@ open class BaseBlockchainInfrastructure(
         val storage = StorageBuilder.buildStorage(
                 nodeConfigProvider.getConfiguration().appConfig, NODE_ID_TODO)
 
-        // TODO: [et]: Maybe extract 'queuecapacity' param from ''
         val transactionQueue = BaseTransactionQueue(
-                (configuration as BaseBlockchainConfiguration)
-                        .configData.getBlockBuildingStrategy()?.get("queuecapacity")?.asInteger()?.toInt() ?: 2500)
+                (configuration as BaseBlockchainConfiguration) // TODO: Olle: Is this conversion harmless?
+                        .configData.getQueueCapacity())
 
         return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue)
                 .apply {
