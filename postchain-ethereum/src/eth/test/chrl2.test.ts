@@ -325,7 +325,7 @@ describe("ChrL2", () => {
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
                 let extraDataMerkleRoot = "FC3424F7E05AEE1F9085ACAFC981261CA1EA3A9A28DDA88C809C06B94F68C6A6"
-                
+
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
                 let node12 = postchainMerkleNodeHash([0x00, node1, node2])
@@ -361,7 +361,7 @@ describe("ChrL2", () => {
                                     DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
                                     DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
                                 ]
-                                
+         
                 let eventProof = {
                     leaf: DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     position: 0,
@@ -371,9 +371,8 @@ describe("ChrL2", () => {
                     leaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
                     position: 0,
                     merkleProofs: merkleProof,
-                }                
+                }
                 let el2HashedLeaf = hashGtvBytes64Leaf(DecodeHexStringToByteArray(el2Leaf))
-                let extraRoot = el2HashedLeaf
                 let el2Proof = {
                     el2Leaf: DecodeHexStringToByteArray(el2Leaf),
                     el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
