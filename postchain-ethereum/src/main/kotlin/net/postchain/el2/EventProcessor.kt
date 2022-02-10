@@ -20,8 +20,6 @@ import org.web3j.protocol.core.methods.response.Log
 import java.lang.Thread.sleep
 import java.math.BigInteger
 import java.util.*
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 import kotlin.streams.toList
 
 interface EventProcessor {
