@@ -183,12 +183,21 @@
                     </execution>
 
                     <execution>
-                        <id>yarn install and compile</id>
+                        <id>yarn install</id>
                         <goals>
                             <goal>yarn</goal>
                         </goals>
                         <configuration>
                             <arguments>install</arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>yarn hardhat compile</id>
+                        <goals>
+                            <goal>yarn</goal>
+                        </goals>
+                        <configuration>
                             <arguments>exec hardhat compile</arguments>
                         </configuration>
                     </execution>
