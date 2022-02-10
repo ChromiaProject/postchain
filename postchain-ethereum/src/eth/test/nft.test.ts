@@ -6,6 +6,10 @@ import { ChrL2LibraryAddresses } from "../src/types/factories/ChrL2__factory";
 import { MerkleProofLibraryAddresses } from "../src/types/factories/MerkleProof__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { PostchainLibraryAddresses } from "../src/types/factories/Postchain__factory";
+import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
+import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
+import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash } from "./utils"
+import { intToHex } from "ethjs-util";
 
 
 chai.use(solidity);
@@ -56,7 +60,7 @@ describe("Non Fungible Token", () => {
         chrL2Address = chrL2Contract.address
     });
 
-    describe("Deposit", async () => {
+    describe("Deposit NFT", async () => {
         it("User can deposit NFT to target smartcontract", async () => {
             const [deployer, user] = await ethers.getSigners()
             const tokenInstance = new ERC721Mock__factory(deployer).attach(nftAddress)
@@ -77,6 +81,121 @@ describe("Non Fungible Token", () => {
 
             expect(await tokenInstance.balanceOf(chrL2Address)).to.eq(1)
             expect(await tokenInstance.ownerOf(tokenId)).to.eq(chrL2Address)
+        })
+    })
+
+    describe("Withdraw NFT", async () => {
+        it("User can withdraw NFT by providing properly proof data", async () => {
+            const [deployer, user] = await ethers.getSigners()
+            const tokenInstance = new ERC721Mock__factory(deployer).attach(nftAddress)
+            const tokenId = 8888
+
+            await tokenInstance.mint(user.address, tokenId)
+            expect(await tokenInstance.balanceOf(user.address)).to.eq(1)
+            expect(await tokenInstance.ownerOf(tokenId)).to.eq(user.address)
+
+            const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
+            const tokenApproveInstance = new ERC721Mock__factory(user).attach(nftAddress)
+            await tokenApproveInstance.setApprovalForAll(chrL2Address, true)
+            let tx: ContractTransaction = await chrL2Instance.depositNFT(nftAddress, tokenId)
+            let receipt: ContractReceipt = await tx.wait()
+            let logs = receipt.events?.filter((x) =>  {return x.event == 'DepositedNFT'})
+            if (logs !== undefined) {
+                let log = logs[0]
+                const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)
+                const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
+                const contractAddress = hexZeroPad(nftAddress, 32)
+                const toAddress = hexZeroPad(user.address, 32)
+                let id: BigNumber = log.args ? log.args["tokenId"] : BigNumber.from(0)
+                const tokenIdHex = hexZeroPad(id.toHexString(), 32)
+                let event: string = ''
+                event = event.concat(serialNumber.substring(2, serialNumber.length))
+                event = event.concat(contractAddress.substring(2, contractAddress.length))
+                event = event.concat(toAddress.substring(2, toAddress.length))
+                event = event.concat(tokenIdHex.substring(2, tokenIdHex.length))
+
+                let data = DecodeHexStringToByteArray(event)
+                let hashEventLeaf = keccak256(data)
+                let hashRootEvent = keccak256(keccak256(hashEventLeaf))
+                let state = blockNumber.substring(2, blockNumber.length).concat(event)
+                let hashRootState = keccak256(DecodeHexStringToByteArray(state))
+                let el2Leaf = hashRootEvent.substring(2, hashRootEvent.length).concat(hashRootState.substring(2, hashRootState.length))
+
+                let blockchainRid = "977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"
+                let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
+                let merkleRootHash = "96defe74f43fcf2d12a1844bcd7a3a7bcb0d4fa191776953dae3f1efb508d866"
+                let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
+                let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
+                let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
+                let extraDataMerkleRoot = "138C7AB3DFD4310722D953B4A37D0302C62CE29BD89EBD4517CB1CD2A87659F8"
+
+                let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
+                let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
+                let node12 = postchainMerkleNodeHash([0x00, node1, node2])
+                let node3 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
+                let node4 = keccak256(DecodeHexStringToByteArray("1629878444220"))
+                let node34 = postchainMerkleNodeHash([0x00, node3, node4])
+                let node5 = keccak256(DecodeHexStringToByteArray("46"))
+                let node6 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
+                let node56 = postchainMerkleNodeHash([0x00, node5, node6])
+                let node1234 = postchainMerkleNodeHash([0x00, node12, node34])
+                let node5678 = postchainMerkleNodeHash([0x00, node56, DecodeHexStringToByteArray(extraDataMerkleRoot)])
+
+                let blockRid = postchainMerkleNodeHash([0x7, node1234, node5678])
+                let blockHeader: BytesLike = ''
+                blockHeader = blockHeader.concat(blockchainRid, blockRid.substring(2, blockRid.length), previousBlockRid,
+                                    merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
+                                    node4.substring(2, node4.length), node5.substring(2, node5.length),
+                                    dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
+                                    extraDataMerkleRoot
+                )
+
+                let sig = await appNodes.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
+
+                let merkleProof = [
+                    DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
+                    DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
+                ]
+
+                let eventProof = {
+                    leaf: DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
+                    position: 0,
+                    merkleProofs: merkleProof,
+                }
+
+                let el2HashedLeaf = hashGtvBytes64Leaf(DecodeHexStringToByteArray(el2Leaf))
+
+                let el2Proof = {
+                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
+                    el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
+                    el2Position: 1,
+                    extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
+                    extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
+                }
+
+                await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
+                    DecodeHexStringToByteArray(blockHeader),
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
+                ).to.emit(chrL2Instance, "WithdrawRequestNFT")
+                .withArgs(user.address, nftAddress, tokenId)
+
+                // force mining 100 blocks
+                for (let i = 0; i < 100; i++) {
+                    await ethers.provider.send('evm_mine', [])
+                }
+
+                expect(await tokenInstance.balanceOf(chrL2Address)).to.eq(1)
+                expect(await tokenInstance.ownerOf(tokenId)).to.eq(chrL2Address)
+
+                await expect(chrL2Instance.withdrawNFT(
+                    DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
+                    user.address))
+                .to.emit(chrL2Instance, "WithdrawalNFT")
+                .withArgs(user.address, nftAddress, tokenId)
+
+                expect(await tokenInstance.balanceOf(user.address)).to.eq(1)
+                expect(await tokenInstance.ownerOf(tokenId)).to.eq(user.address)
+            }
         })
     })
 })

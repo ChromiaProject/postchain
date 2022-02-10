@@ -9,6 +9,7 @@ import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
 import { PostchainLibraryAddresses } from "../src/types/factories/Postchain__factory";
 import { ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
+import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash } from "./utils"
 
 chai.use(solidity);
 const { expect } = chai;
@@ -476,28 +477,3 @@ describe("ChrL2", () => {
         })
     })
 })
-
-var DecodeHexStringToByteArray = function (hexString: string) {
-    var result = [];
-    while (hexString.length >= 2) { 
-        result.push(parseInt(hexString.substring(0, 2), 16))
-        hexString = hexString.substring(2, hexString.length)
-    }
-    return result;
-}
-
-var postchainMerkleNodeHash = function(values: any[]): string {
-    return ethers.utils.soliditySha256(['uint8', 'bytes32', 'bytes32'], values)
-}
-
-var hashGtvBytes32Leaf = function (data: BytesLike): string {
-    var result: string = ''
-    result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes32'], [0x1, 0xA1, 32+2, 0x4, 32, data])
-    return result
-}
-
-var hashGtvBytes64Leaf = function (data: BytesLike): string {
-    var result: string = ''
-    result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA1, 64+2, 0x4, 64, data])
-    return result
-}
