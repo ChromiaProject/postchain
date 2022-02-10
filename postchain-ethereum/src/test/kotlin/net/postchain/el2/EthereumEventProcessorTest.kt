@@ -91,7 +91,7 @@ class EthereumEventProcessorTest {
             on { getBlockQueries() } doReturn blockQueriesMock
         }
 
-        val ethereumEventProcessor = EthereumEventProcessor(web3c, chrL2, BigInteger.ZERO, engineMock)
+        val ethereumEventProcessor = EthereumEventProcessor(web3c, chrL2, BigInteger.ONE, engineMock)
         ethereumEventProcessor.start()
 
         // Deploy a test token that we mint and then approve transfer of coins to chrL2 contract
