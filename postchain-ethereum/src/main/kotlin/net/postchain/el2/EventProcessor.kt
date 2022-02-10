@@ -75,11 +75,7 @@ class EthereumEventProcessor(
 ) : EventProcessor, AbstractBlockchainProcess("ethereum-event-processor", blockchainEngine) {
 
     private val events: Queue<Log> = LinkedList()
-    private var lastReadBlockHeight: BigInteger?
-
-    init {
-        lastReadBlockHeight = getLastEthereumBlockHeight()
-    }
+    private var lastReadLogBlockHeight = BigInteger.valueOf(-1)
 
     companion object : KLogging()
 
@@ -89,34 +85,33 @@ class EthereumEventProcessor(
             sleep(1000)
         }
 
+        val lastCommittedBlock = getLastCommittedEthereumBlockHeight()
+        val from = if (lastCommittedBlock != null) {
+            // Skip ahead if we are behind last committed block
+            maxOf(lastReadLogBlockHeight, lastCommittedBlock).plus(BigInteger.ONE)
+        } else {
+            lastReadLogBlockHeight.plus(BigInteger.ONE)
+        }
+
         val currentBlockHeight = web3c.web3j.ethBlockNumber().send().blockNumber
-        if (currentBlockHeight < readOffset) {
-            logger.debug { "Not enough blocks built on ethereum yet, current height: $currentBlockHeight, read offset: $readOffset" }
+        val to = currentBlockHeight.minus(readOffset)
+        if (to < BigInteger.ZERO || to < from) {
+            logger.debug { "No new blocks to read at height: $currentBlockHeight" }
+            // Sleep a bit until next attempt
+            sleep(500)
             return
         }
-        val to = currentBlockHeight.minus(readOffset)
 
-        val from = if (lastReadBlockHeight != null) {
-            DefaultBlockParameter.valueOf(lastReadBlockHeight!!.plus(BigInteger.ONE))
-        } else {
-            DefaultBlockParameter.valueOf(DefaultBlockParameterName.EARLIEST.name)
-        }
-
-        val filter = EthFilter(from, DefaultBlockParameter.valueOf(to), contract.contractAddress)
+        val filter = EthFilter(DefaultBlockParameter.valueOf(from), DefaultBlockParameter.valueOf(to), contract.contractAddress)
         filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
 
         val logResponse = web3c.web3j.ethGetLogs(filter).send()
         if (logResponse.hasError()) {
-            logger.error("Cannot read data from eth via web3j", logResponse.error)
+            logger.error("Cannot read data from ethereum via web3j", logResponse.error.message)
         } else {
-            logResponse.result.forEach {
-                val log = (it as EthLog.LogObject).get()
-                processLogEvent(log)
-            }
-            lastReadBlockHeight = to
+            processLogEvents(logResponse.logs)
+            lastReadLogBlockHeight = to
         }
-        // Sleep a bit until next query
-        sleep(500)
     }
 
     override fun cleanup() {}
@@ -158,12 +153,12 @@ class EthereumEventProcessor(
     }
 
     override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
-        val from = getLastEthereumBlockHeight()?.plus(BigInteger.ONE) ?: BigInteger.ZERO
+        val from = getLastCommittedEthereumBlockHeight()?.plus(BigInteger.ONE) ?: BigInteger.ZERO
 
         return parseEvents(from)
     }
 
-    private fun getLastEthereumBlockHeight(): BigInteger? {
+    private fun getLastCommittedEthereumBlockHeight(): BigInteger? {
         val block = blockchainEngine.getBlockQueries().query("get_last_eth_block", gtv(mutableMapOf())).get()
         if (block == GtvNull) {
             return null
@@ -181,8 +176,11 @@ class EthereumEventProcessor(
     }
 
     @Synchronized
-    private fun processLogEvent(log: Log) {
-        events.add(log)
+    private fun processLogEvents(logs: List<EthLog.LogResult<Any>>) {
+        logs.forEach {
+            val log = (it as EthLog.LogObject).get()
+            events.add(log)
+        }
     }
 
     @Synchronized
