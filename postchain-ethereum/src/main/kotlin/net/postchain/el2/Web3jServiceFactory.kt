@@ -7,7 +7,7 @@ import org.web3j.protocol.ipc.UnixIpcService
 import org.web3j.protocol.ipc.WindowsIpcService
 import java.util.concurrent.TimeUnit
 
-class Web3jConfig {
+object Web3jServiceFactory {
     fun buildService(clientAddress: String?): Web3jService {
         val web3jService: Web3jService
         if (clientAddress == null || clientAddress == "") {

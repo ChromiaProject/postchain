@@ -43,8 +43,7 @@ class EL2SynchronizationInfrastructureExtension(
             }
             if (el2Ext != null) {
                 val el2Config = cfg.configData.getEL2Data()
-                val web3jConfig = Web3jConfig()
-                val web3j = Web3j.build(web3jConfig.buildService(el2Config.url))
+                val web3j = Web3j.build(Web3jServiceFactory.buildService(el2Config.url))
                 web3c = Web3Connector(web3j, el2Config.contract)
 
                 val contract = ChrL2.load(
