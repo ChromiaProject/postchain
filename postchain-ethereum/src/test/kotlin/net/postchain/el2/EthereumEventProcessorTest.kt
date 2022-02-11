@@ -113,22 +113,24 @@ class EthereumEventProcessorTest {
             }
 
         // validate events
-        val eventsToValidate = ethereumEventProcessor.getEventData().second
+        val eventData = ethereumEventProcessor.getEventData()
+        val eventsToValidate = eventData.second
             .map { OpData(OP_ETH_EVENT, it) }
             .toTypedArray()
         assertTrue(ethereumEventProcessor.isValidEventData(eventsToValidate))
 
-        val lastBlockNumber = web3c.web3j.ethBlockNumber().send().blockNumber
+        // Mock that the block was validated and committed to DB
+        val eventDataBlockNumber = eventData.first.first().asBigInteger()
         whenever(blockQueriesMock.query(eq("get_last_eth_block"), any()))
-            .doReturn(getMockedBlockHeightResponse(lastBlockNumber))
+            .doReturn(getMockedBlockHeightResponse(eventDataBlockNumber))
 
-        // Assert things before last committed block is not included
+        // Assert events before last committed block are not included now
         assertTrue(ethereumEventProcessor.getEventData().second.isEmpty())
 
         // One more final transaction
-        testToken.mint(Address(transactionManager.fromAddress), Uint256(BigInteger.TEN)).send()
-        testToken.approve(Address(chrL2.contractAddress), Uint256(BigInteger.TEN)).send()
-        chrL2.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
+        testToken.mint(Address(transactionManager.fromAddress), Uint256(BigInteger.ONE)).send()
+        testToken.approve(Address(chrL2.contractAddress), Uint256(BigInteger.ONE)).send()
+        chrL2.deposit(Address(testToken.contractAddress), Uint256(BigInteger.ONE)).send()
 
         Awaitility.await()
             .atMost(Duration.ONE_MINUTE)
@@ -137,9 +139,10 @@ class EthereumEventProcessorTest {
             }
 
         val lastEvent = ethereumEventProcessor.getEventData().second.first()
+        // Check that data in the event matches what we sent
         assertEquals(transactionManager.fromAddress, lastEvent[6].asString()) // owner
         assertEquals(testToken.contractAddress, lastEvent[7].asString()) // token
-        assertEquals(BigInteger.TEN, lastEvent[8].asBigInteger()) // value
+        assertEquals(BigInteger.ONE, lastEvent[8].asBigInteger()) // value
 
         ethereumEventProcessor.shutdown()
     }

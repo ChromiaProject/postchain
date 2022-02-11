@@ -277,7 +277,7 @@ class EthereumEventProcessor(
     ): T {
         val response = request.send()
         if (response.hasError()) {
-            logger.error("Web3j rewuest failed with error code: ${response.error.code} and message: ${response.error.message}")
+            logger.error("Web3j request failed with error code: ${response.error.code} and message: ${response.error.message}")
 
             if (maxRetries != null && maxRetries > 0) {
                 if (retryTimeout > 0) {
