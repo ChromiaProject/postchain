@@ -13,6 +13,8 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtx.OpData
 import org.web3j.abi.EventEncoder
 import org.web3j.protocol.core.DefaultBlockParameter
+import org.web3j.protocol.core.Request
+import org.web3j.protocol.core.Response
 import org.web3j.protocol.core.methods.request.EthFilter
 import org.web3j.protocol.core.methods.response.EthBlock
 import org.web3j.protocol.core.methods.response.EthLog
@@ -106,11 +108,15 @@ class EthereumEventProcessor(
             lastReadLogBlockHeight + BigInteger.ONE
         }
 
-        val currentBlockHeight = web3c.web3j.ethBlockNumber().send().blockNumber
-        val to = if (lastCommittedBlock != null) {
-            minOf(currentBlockHeight, lastCommittedBlock + BigInteger.valueOf(MAX_READ_AHEAD))
+        val currentBlockHeight = sendWeb3jRequestWithRetry(web3c.web3j.ethBlockNumber()).blockNumber
+        // Pacing the reading of blocks so that we don't overflow the events queue
+        val to = if (lastReadLogBlockHeight == BigInteger.ZERO) {
+            // Just read up to current block on first read
+            currentBlockHeight
+        } else if (lastCommittedBlock != null) {
+            minOf(currentBlockHeight, lastCommittedBlock + getMaxReadAheadAmount())
         } else {
-            minOf(currentBlockHeight, BigInteger.valueOf(MAX_READ_AHEAD))
+            minOf(currentBlockHeight, getMaxReadAheadAmount())
         }
 
         if (to < from) {
@@ -127,12 +133,8 @@ class EthereumEventProcessor(
         )
         filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
 
-        val logResponse = web3c.web3j.ethGetLogs(filter).send()
-        if (logResponse.hasError()) {
-            logger.error("Cannot read data from ethereum via web3j", logResponse.error.message)
-        } else {
-            processLogEvents(logResponse.logs, to)
-        }
+        val logResponse = sendWeb3jRequestWithRetry(web3c.web3j.ethGetLogs(filter))
+        processLogEvents(logResponse.logs, to)
     }
 
     override fun cleanup() {}
@@ -149,9 +151,14 @@ class EthereumEventProcessor(
             if (op.opName == OP_ETH_BLOCK) {
                 // We don't store all blocks, so we need to go fetch it over network
                 val lastEthBlock =
-                    web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(op.args[0].asBigInteger()), false)
-                        .send()
-                if (lastEthBlock.block.hash != op.args[1].asString()) {
+                    sendWeb3jRequestWithRetry(
+                        web3c.web3j.ethGetBlockByNumber(
+                            DefaultBlockParameter.valueOf(op.args[0].asBigInteger()),
+                            false
+                        ), 3, 0
+                    )
+
+                if (lastEthBlock.hasError() || lastEthBlock.block.hash != op.args[1].asString()) {
                     return false
                 }
             }
@@ -225,9 +232,9 @@ class EthereumEventProcessor(
 
     private fun isTooFarAhead(lastCommittedBlock: BigInteger?): Boolean {
         return if (lastCommittedBlock == null) {
-            lastReadLogBlockHeight >= BigInteger.valueOf(MAX_READ_AHEAD)
+            lastReadLogBlockHeight >= getMaxReadAheadAmount()
         } else {
-            lastReadLogBlockHeight - lastCommittedBlock >= BigInteger.valueOf(MAX_READ_AHEAD)
+            lastReadLogBlockHeight - lastCommittedBlock >= getMaxReadAheadAmount()
         }
     }
 
@@ -238,10 +245,16 @@ class EthereumEventProcessor(
             events.add(log)
         }
         lastReadLogBlockHeight = fetchedToHeight
+
+        // Fetch and store the block at read offset for the consumer thread (so it can emit it along with prior events)
         if (fetchedToHeight - readOffset >= BigInteger.ZERO) {
             readOffsetBlock =
-                web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(fetchedToHeight - readOffset), false)
-                    .send().block
+                sendWeb3jRequestWithRetry(
+                    web3c.web3j.ethGetBlockByNumber(
+                        DefaultBlockParameter.valueOf(fetchedToHeight - readOffset),
+                        false
+                    )
+                ).block
         }
     }
 
@@ -251,5 +264,29 @@ class EthereumEventProcessor(
             events.poll()
             nextLogEvent = events.peek()
         }
+    }
+
+    private fun getMaxReadAheadAmount(): BigInteger {
+        return BigInteger.valueOf(MAX_READ_AHEAD) + readOffset
+    }
+
+    private fun <T : Response<*>> sendWeb3jRequestWithRetry(
+        request: Request<*, T>,
+        maxRetries: Int? = null,
+        retryTimeout: Long = 500
+    ): T {
+        val response = request.send()
+        if (response.hasError()) {
+            logger.error("Web3j rewuest failed with error code: ${response.error.code} and message: ${response.error.message}")
+
+            if (maxRetries != null && maxRetries > 0) {
+                if (retryTimeout > 0) {
+                    sleep(retryTimeout)
+                }
+                return sendWeb3jRequestWithRetry(request, maxRetries - 1)
+            }
+        }
+
+        return response
     }
 }
