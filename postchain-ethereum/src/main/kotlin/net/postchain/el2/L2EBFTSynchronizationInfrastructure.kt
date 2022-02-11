@@ -12,14 +12,15 @@ import org.web3j.tx.ClientTransactionManager
 import org.web3j.tx.gas.DefaultGasProvider
 import java.math.BigInteger
 
-data class EVML2Config(val url: String, val contract: String)
+data class EVML2Config(val url: String, val contract: String, val contractDeployBlock: BigInteger)
 
 fun BaseBlockchainConfigurationData.getEL2Data(): EVML2Config {
     val evmL2 = this.data["evm_l2"]
     val eth = evmL2!!["eth"]
     val url = eth!!["url"]!!.asString()
     val contract = eth["contract"]!!.asString()
-    return EVML2Config(url, contract)
+    val contractDeployBlock = eth["contractDeployBlock"]!!.asBigInteger()
+    return EVML2Config(url, contract, contractDeployBlock)
 }
 
 class EL2SynchronizationInfrastructureExtension(
@@ -57,6 +58,7 @@ class EL2SynchronizationInfrastructureExtension(
                     web3c,
                     contract,
                     BigInteger.valueOf(100),
+                    el2Config.contractDeployBlock,
                     engine
                 )
                 eventProcessor.start()

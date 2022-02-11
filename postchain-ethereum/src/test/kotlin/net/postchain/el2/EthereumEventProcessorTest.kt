@@ -42,6 +42,7 @@ class EthereumEventProcessorTest {
         )
 
     private val gasProvider = DefaultGasProvider()
+
     // This could be any private key but value must match in /geth-compose/geth/key.txt
     // and the address created must be added to /geth-compose/geth/test.json
     private val credentials = Credentials
@@ -93,7 +94,11 @@ class EthereumEventProcessorTest {
             on { getBlockQueries() } doReturn blockQueriesMock
         }
 
-        val ethereumEventProcessor = EthereumEventProcessor(web3c, chrL2, BigInteger.ONE, engineMock)
+        val contractDeployTransactionHash = chrL2.transactionReceipt.get().transactionHash
+        val contractDeployBlockNumber = web3j.ethGetTransactionByHash(contractDeployTransactionHash)
+            .send().result.blockNumber
+        val ethereumEventProcessor =
+            EthereumEventProcessor(web3c, chrL2, BigInteger.ONE, contractDeployBlockNumber, engineMock)
         ethereumEventProcessor.start()
 
         // Deploy a test token that we mint and then approve transfer of coins to chrL2 contract

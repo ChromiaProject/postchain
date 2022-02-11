@@ -78,11 +78,12 @@ class EthereumEventProcessor(
     private val web3c: Web3Connector,
     private val contract: ChrL2,
     private val readOffset: BigInteger,
+    private val contractDeployBlock: BigInteger,
     blockchainEngine: BlockchainEngine
 ) : EventProcessor, AbstractBlockchainProcess("ethereum-event-processor", blockchainEngine) {
 
     private val events: Queue<Log> = LinkedList()
-    private var lastReadLogBlockHeight = BigInteger.valueOf(-1)
+    private var lastReadLogBlockHeight = contractDeployBlock
     private lateinit var readOffsetBlock: EthBlock.Block
 
     companion object {
@@ -110,13 +111,10 @@ class EthereumEventProcessor(
 
         val currentBlockHeight = sendWeb3jRequestWithRetry(web3c.web3j.ethBlockNumber()).blockNumber
         // Pacing the reading of blocks so that we don't overflow the events queue
-        val to = if (lastReadLogBlockHeight == BigInteger.ZERO) {
-            // Just read up to current block on first read
-            currentBlockHeight
-        } else if (lastCommittedBlock != null) {
+        val to = if (lastCommittedBlock != null) {
             minOf(currentBlockHeight, lastCommittedBlock + getMaxReadAheadAmount())
         } else {
-            minOf(currentBlockHeight, getMaxReadAheadAmount())
+            minOf(currentBlockHeight, contractDeployBlock + getMaxReadAheadAmount())
         }
 
         if (to < from) {
