@@ -78,7 +78,7 @@ class EthereumEventProcessor(
     private val web3c: Web3Connector,
     private val contract: ChrL2,
     private val readOffset: BigInteger,
-    private val contractDeployBlock: BigInteger,
+    contractDeployBlock: BigInteger,
     blockchainEngine: BlockchainEngine
 ) : EventProcessor, AbstractBlockchainProcess("ethereum-event-processor", blockchainEngine) {
 
@@ -87,21 +87,17 @@ class EthereumEventProcessor(
     private lateinit var readOffsetBlock: EthBlock.Block
 
     companion object {
-        // The idea here is to not read too far ahead since we risk filling up our event queue too much
-        private const val MAX_READ_AHEAD = 500L
+        // The idea here is to avoid too big log queries and
+        // also potentially filling up our event queue too much
+        private const val MAX_READ_AHEAD = 10_000L
+        private const val MAX_QUEUE_SIZE = 1_000L
     }
 
     /**
      * Producer thread will read events from ethereum ond add to queue in this action. Main thread will consume them.
      */
     override fun action() {
-        var lastCommittedBlock = getLastCommittedEthereumBlockHeight()
-        while (isTooFarAhead(lastCommittedBlock)) {
-            logger.debug("Wait for last committed block to increase until we read more")
-            sleep(1000)
-            lastCommittedBlock = getLastCommittedEthereumBlockHeight()
-        }
-
+        val lastCommittedBlock = getLastCommittedEthereumBlockHeight()
         val from = if (lastCommittedBlock != null) {
             // Skip ahead if we are behind last committed block
             maxOf(lastReadLogBlockHeight, lastCommittedBlock) + BigInteger.ONE
@@ -110,12 +106,8 @@ class EthereumEventProcessor(
         }
 
         val currentBlockHeight = sendWeb3jRequestWithRetry(web3c.web3j.ethBlockNumber()).blockNumber
-        // Pacing the reading of blocks so that we don't overflow the events queue
-        val to = if (lastCommittedBlock != null) {
-            minOf(currentBlockHeight, lastCommittedBlock + getMaxReadAheadAmount())
-        } else {
-            minOf(currentBlockHeight, contractDeployBlock + getMaxReadAheadAmount())
-        }
+        // Pacing the reading of logs
+        val to = minOf(currentBlockHeight, from + BigInteger.valueOf(MAX_READ_AHEAD))
 
         if (to < from) {
             logger.debug { "No new blocks to read. We are at height: $to" }
@@ -132,7 +124,20 @@ class EthereumEventProcessor(
         filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
 
         val logResponse = sendWeb3jRequestWithRetry(web3c.web3j.ethGetLogs(filter))
-        processLogEvents(logResponse.logs, to)
+        // Fetch and store the block at read offset for the consumer thread (so it can emit it along with prior events)
+        val newReadOffsetBlock = if (to - readOffset >= BigInteger.ZERO) {
+            sendWeb3jRequestWithRetry(
+                web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(to - readOffset), false)
+            ).block
+        } else {
+            null
+        }
+        processLogEventsAndUpdateOffsets(logResponse.logs, to, newReadOffsetBlock)
+
+        while (isQueueFull()) {
+            logger.debug("Wait for events to be consumed until we read more")
+            sleep(500)
+        }
     }
 
     override fun cleanup() {}
@@ -148,24 +153,38 @@ class EthereumEventProcessor(
         for (op in ops) {
             if (op.opName == OP_ETH_BLOCK) {
                 // We don't store all blocks, so we need to go fetch it over network
-                val lastEthBlock =
-                    sendWeb3jRequestWithRetry(
-                        web3c.web3j.ethGetBlockByNumber(
-                            DefaultBlockParameter.valueOf(op.args[0].asBigInteger()),
-                            false
-                        ), 3, 0
-                    )
+                val blockNumber = op.args[0].asBigInteger()
+                val lastEthBlock = sendWeb3jRequestWithRetry(
+                    web3c.web3j.ethGetBlockByNumber(
+                        DefaultBlockParameter.valueOf(blockNumber),
+                        false
+                    ), 3, 0
+                )
 
                 if (lastEthBlock.hasError() || lastEthBlock.block.hash != op.args[1].asString()) {
                     return false
                 }
             }
             if (op.opName == OP_ETH_EVENT) {
-                // We have stored the events, so we can just check for them, no network call needed
+                val eventBlockNumber = op.args[0].asBigInteger()
                 val eventTransactionHash = op.args[2].asString()
                 val eventLogIndex = op.args[3].asBigInteger()
-                val event = events.find { it.transactionHash == eventTransactionHash && it.logIndex == eventLogIndex }
-                if (event == null || !isMatchingEvents(op.args, event)) {
+
+                val eventLog = if (eventBlockNumber > lastReadLogBlockHeight) {
+                    // Checking over network if we are behind
+                    val eventTransaction =
+                        sendWeb3jRequestWithRetry(web3c.web3j.ethGetTransactionReceipt(eventTransactionHash), 3, 0)
+                    if (eventTransaction.hasError() || !eventTransaction.transactionReceipt.isPresent) {
+                        null
+                    } else {
+                        eventTransaction.transactionReceipt.get().logs.find { it.logIndex == eventLogIndex }
+                    }
+                } else {
+                    // We have stored the event, so we can just check for it, no network call needed
+                    events.find { it.transactionHash == eventTransactionHash && it.logIndex == eventLogIndex }
+                }
+
+                if (eventLog == null || !isMatchingEvents(op.args, eventLog)) {
                     return false
                 }
             }
@@ -228,32 +247,25 @@ class EthereumEventProcessor(
         return blockHeight.asBigInteger()
     }
 
-    private fun isTooFarAhead(lastCommittedBlock: BigInteger?): Boolean {
-        return if (lastCommittedBlock == null) {
-            lastReadLogBlockHeight >= getMaxReadAheadAmount()
-        } else {
-            lastReadLogBlockHeight - lastCommittedBlock >= getMaxReadAheadAmount()
-        }
-    }
-
     @Synchronized
-    private fun processLogEvents(logs: List<EthLog.LogResult<Any>>, fetchedToHeight: BigInteger) {
+    private fun processLogEventsAndUpdateOffsets(
+        logs: List<EthLog.LogResult<Any>>,
+        newLastReadLogBlockHeight: BigInteger,
+        newReadOffsetBlock: EthBlock.Block?
+    ) {
         logs.forEach {
             val log = (it as EthLog.LogObject).get()
             events.add(log)
         }
-        lastReadLogBlockHeight = fetchedToHeight
-
-        // Fetch and store the block at read offset for the consumer thread (so it can emit it along with prior events)
-        if (fetchedToHeight - readOffset >= BigInteger.ZERO) {
-            readOffsetBlock =
-                sendWeb3jRequestWithRetry(
-                    web3c.web3j.ethGetBlockByNumber(
-                        DefaultBlockParameter.valueOf(fetchedToHeight - readOffset),
-                        false
-                    )
-                ).block
+        lastReadLogBlockHeight = newLastReadLogBlockHeight
+        if (newReadOffsetBlock != null) {
+            readOffsetBlock = newReadOffsetBlock
         }
+    }
+
+    @Synchronized
+    private fun isQueueFull(): Boolean {
+        return events.size > MAX_QUEUE_SIZE
     }
 
     private fun pruneEvents(lastCommittedBlock: BigInteger) {
@@ -262,10 +274,6 @@ class EthereumEventProcessor(
             events.poll()
             nextLogEvent = events.peek()
         }
-    }
-
-    private fun getMaxReadAheadAmount(): BigInteger {
-        return BigInteger.valueOf(MAX_READ_AHEAD) + readOffset
     }
 
     private fun <T : Response<*>> sendWeb3jRequestWithRetry(
