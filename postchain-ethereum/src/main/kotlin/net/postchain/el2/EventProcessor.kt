@@ -132,7 +132,10 @@ class EthereumEventProcessor(
         } else {
             null
         }
-        processLogEventsAndUpdateOffsets(logResponse.logs, to, newReadOffsetBlock)
+        val sortedLogs = logResponse.logs
+            .map { (it as EthLog.LogObject).get() }
+            .sortedBy { it.blockNumber }
+        processLogEventsAndUpdateOffsets(sortedLogs, to, newReadOffsetBlock)
 
         while (isQueueFull()) {
             logger.debug("Wait for events to be consumed until we read more")
@@ -249,14 +252,11 @@ class EthereumEventProcessor(
 
     @Synchronized
     private fun processLogEventsAndUpdateOffsets(
-        logs: List<EthLog.LogResult<Any>>,
+        logs: List<Log>,
         newLastReadLogBlockHeight: BigInteger,
         newReadOffsetBlock: EthBlock.Block?
     ) {
-        logs.forEach {
-            val log = (it as EthLog.LogObject).get()
-            events.add(log)
-        }
+        events.addAll(logs)
         lastReadLogBlockHeight = newLastReadLogBlockHeight
         if (newReadOffsetBlock != null) {
             readOffsetBlock = newReadOffsetBlock
