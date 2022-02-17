@@ -5,8 +5,8 @@ import "./utils/cryptography/Hash.sol";
 import "./utils/cryptography/ECDSA.sol";
 import "./utils/cryptography/MerkleProof.sol";
 import "./Data.sol";
-import "../node_modules/@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "../node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 library Postchain {
     using EC for bytes32;
