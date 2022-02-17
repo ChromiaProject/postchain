@@ -58,9 +58,15 @@ class BaseBlockchainConfigurationData(
         return stratDict?.get(KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS)?.asInteger() ?: 100
     }
 
+    /**
+     * Note on POS-198: We actually do want the TX queue to fill up fast, b/c the client should display this
+     * info to the user (spinning ball etc) so that the client understands that the system is down.
+     * Alex spoke about making TX resend automatic, after a pause, when 503 error is returned, so that no action
+     * from the user's side has to be taken to eventually get the TX into the queue.
+     */
     fun getQueueCapacity(): Int {
         val stratDict = data[KEY_BLOCKSTRATEGY]
-        return stratDict?.get(KEY_BLOCKSTRATEGY_QUEUE_CAPACITY)?.asInteger()?.toInt() ?: 36000 // Default 2 minutes during 300 tps load
+        return stratDict?.get(KEY_BLOCKSTRATEGY_QUEUE_CAPACITY)?.asInteger()?.toInt() ?: 2500 // 5 seconds (if 500 tps)
     }
 
     fun getDependenciesAsList(): List<BlockchainRelatedInfo> {
