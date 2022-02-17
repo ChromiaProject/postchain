@@ -143,6 +143,9 @@
                             <include>TestToken</include>
                         </includes>
                     </contract>
+                    <pathPrefixes>
+                        <pathPrefix>@openzeppelin=../node_modules/@openzeppelin</pathPrefix>
+                    </pathPrefixes>
                     <soliditySourceFiles>
                         <directory>${project.basedir}/src/eth/contracts</directory>
                         <includes>
