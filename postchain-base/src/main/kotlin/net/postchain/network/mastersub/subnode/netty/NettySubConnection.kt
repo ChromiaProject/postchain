@@ -27,11 +27,13 @@ class NettySubConnection(
     companion object : KLogging()
 
     private val nettyClient = NettyClient()
-    private var context: ChannelHandlerContext? = null
+    private lateinit var context: ChannelHandlerContext
     private var messageHandler: MsMessageHandler? = null
+    private lateinit var onConnected: () -> Unit
     private lateinit var onDisconnected: () -> Unit
 
     fun open(onConnected: () -> Unit, onDisconnected: () -> Unit) {
+        this.onConnected = onConnected
         this.onDisconnected = onDisconnected
 
         nettyClient.apply {
@@ -49,7 +51,8 @@ class NettySubConnection(
     override fun channelActive(ctx: ChannelHandlerContext?) {
         ctx?.let {
             context = ctx
-            context?.writeAndFlush(buildHandshakePacket())
+            context.writeAndFlush(buildHandshakePacket())
+            onConnected()
         }
     }
 
@@ -68,19 +71,13 @@ class NettySubConnection(
         messageHandler = handler
     }
 
-    override fun sendPacket(packet: LazyPacket): Boolean {
-        return if (context == null) {
-            false
-        } else {
-            context!!.writeAndFlush(Transport.wrapMessage(packet()))
-            true
-        }
-
+    override fun sendPacket(packet: LazyPacket) {
+        context.writeAndFlush(Transport.wrapMessage(packet()))
     }
 
     override fun remoteAddress(): String {
-        return if (context != null)
-            context!!.channel().remoteAddress().toString()
+        return if (::context.isInitialized)
+            context.channel().remoteAddress().toString()
         else ""
     }
 

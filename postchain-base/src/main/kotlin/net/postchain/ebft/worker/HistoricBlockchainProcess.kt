@@ -44,12 +44,16 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     private val storage = (workerContext.engine as BaseBlockchainEngine).storage
     private val blockDatabase = BaseBlockDatabase(
         blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
-    private val fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, workerContext.nodeConfig.let { conf ->
-        FastSyncParameters(
-            exitDelay = conf.fastSyncExitDelay,
-            jobTimeout = conf.fastSyncJobTimeout
-        )
-    })
+    private val fastSynchronizer = FastSynchronizer(
+            workerContext, blockDatabase,
+            workerContext.nodeConfig.let { conf ->
+                FastSyncParameters(
+                    exitDelay = conf.fastSyncExitDelay,
+                    jobTimeout = conf.fastSyncJobTimeout
+                )
+            },
+            ::isProcessRunning
+    )
 
     // Logging only
     var blockTrace: BlockTrace? = null // For logging only
@@ -63,21 +67,21 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
         // try local sync first
         for (brid in chainsToSyncFrom) {
-            if (isShuttingDown()) break
+            if (!isProcessRunning()) break
             if (brid == myBRID) continue
             copyBlocksLocally(brid, blockDatabase)
         }
 
         // try syncing via network
         for (brid in chainsToSyncFrom) {
-            if (isShuttingDown()) break
+            if (!isProcessRunning()) break
             copyBlocksNetwork(brid, myBRID, blockDatabase, fastSynchronizer.params)
-            if (isShuttingDown()) break // Check before sleep
+            if (!isProcessRunning()) break // Check before sleep
             initTrace("Network synch go sleep")
             sleep(1000)
             initTrace("Network synch waking up")
         }
-        if (isShuttingDown()) return // Check before sleep
+        if (!isProcessRunning()) return // Check before sleep
         initTrace("Network synch full go sleep")
         sleep(1000)
         initTrace("Network synch full waking up")
@@ -108,7 +112,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                 netDebug("Try network sync using historic BRID since chainId $localChainID is new")
                 try {
                     val historicWorkerContext = historicBlockchainContext.contextCreator(brid)
-                    historicSynchronizer = FastSynchronizer(historicWorkerContext, blockDatabase, params)
+                    historicSynchronizer = FastSynchronizer(historicWorkerContext, blockDatabase, params, ::isProcessRunning)
                     historicSynchronizer!!.syncUntilResponsiveNodesDrained()
                     netDebug("Done network sync")
                     historicWorkerContext.communicationManager.shutdown()
@@ -172,7 +176,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                 heightToCopy = ourHeight + 1
                 var pendingPromise: CompletionPromise? = null
                 val readMoreBlocks = AtomicBoolean(true)
-                while (!isShuttingDown() && readMoreBlocks.get()) {
+                while (isProcessRunning() && readMoreBlocks.get()) {
                     if (newBlockDatabase.getQueuedBlockCount() > 3) {
                         sleep(1)
                         continue
@@ -183,7 +187,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                         break
                     } else {
                         val bTrace: BlockTrace? = getCopyBTrace(heightToCopy)
-                        if (!isShuttingDown() && readMoreBlocks.get()) {
+                        if (isProcessRunning() && readMoreBlocks.get()) {
                             pendingPromise = newBlockDatabase.addBlock(historicBlock, pendingPromise, bTrace)
                             val myHeightToCopy = heightToCopy
                             pendingPromise.success {
@@ -215,7 +219,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
      * @return "true" if we got something from the promise, "false" if we have a shutdown
      */
     private fun awaitPromise(pendingPromise: Promise<Unit, java.lang.Exception>, height: Long): Boolean {
-        while (!isShuttingDown()) {
+        while (isProcessRunning()) {
             if (pendingPromise.isDone()) {
                 awaitTrace("done", height)
                 return true
@@ -245,16 +249,11 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         }
     }
 
-    override fun shutdown() {
-        if (isShuttingDown()) {
-            shutdownDebug("Historic worker already shutting ")
-        }
+    override fun cleanup() {
         shutdownDebug("Historic worker shutting down")
-        historicSynchronizer?.shutdown()
-        super.shutdown()
         blockDatabase.stop()
-        shutdownDebug("Shutdown finished")
         workerContext.shutdown()
+        shutdownDebug("Shutdown finished")
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
@@ -358,5 +357,4 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             logger.debug("shutdown() - $str, at height: ${this.fastSynchronizer.blockHeight}, the block that's causing the shutdown: $blockTrace")
         }
     }
-
 }

@@ -48,11 +48,11 @@ class BaseBlockDatabase(
     companion object : KLogging()
 
     fun stop() {
-        logger.debug("stop() - Begin, node: $nodeIndex")
+        logger.debug{ "stop() - Begin, node: $nodeIndex" }
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS) // TODO: [et]: 1000 ms
         maybeRollback()
-        logger.debug("stop() - End, node: $nodeIndex")
+        logger.debug{ "stop() - End, node: $nodeIndex" }
     }
 
     override fun getQueuedBlockCount(): Int {
@@ -76,7 +76,7 @@ class BaseBlockDatabase(
                 }
                 deferred.resolve(res)
             } catch (e: Exception) {
-                logger.debug("Failed job $name", e) // Shouldn't this be at leas WARN?
+                logger.debug(e) { "Failed job $name" } // Shouldn't this be at leas WARN?
                 deferred.reject(e)
             }
         }
@@ -85,9 +85,9 @@ class BaseBlockDatabase(
     }
 
     private fun maybeRollback() {
-        logger.trace("maybeRollback() node: $nodeIndex.")
+        logger.trace{ "maybeRollback() node: $nodeIndex." }
         if (blockBuilder != null) {
-            logger.debug("maybeRollback() node: $nodeIndex, blockBuilder is not null.")
+            logger.debug{ "maybeRollback() node: $nodeIndex, blockBuilder is not null." }
         }
         blockBuilder?.rollback()
         blockBuilder = null
@@ -193,7 +193,7 @@ class BaseBlockDatabase(
                 witnessBuilder!!.applySignature(s)
                 true
             } catch (e: Exception) {
-                logger.debug("Signature invalid", e)
+                logger.debug(e) { "Signature invalid" }
                 false
             }
         } else {

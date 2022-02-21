@@ -17,36 +17,31 @@ class NettyServerPeerConnection<PacketType>(
         private val packetDecoder: XPacketDecoder<PacketType>
 ) : NettyPeerConnection() {
 
-    private var context: ChannelHandlerContext? = null
+    private lateinit var context: ChannelHandlerContext
     private var peerPacketHandler: PeerPacketHandler? = null
     private var peerConnectionDescriptor: PeerConnectionDescriptor? = null
 
     private var onConnectedHandler: ((PeerConnection) -> Unit)? = null
     private var onDisconnectedHandler: ((PeerConnection) -> Unit)? = null
 
-    companion object : KLogging()
+    companion object: KLogging()
 
     override fun accept(handler: PeerPacketHandler) {
         this.peerPacketHandler = handler
     }
 
-    override fun sendPacket(packet: LazyPacket): Boolean {
-        return if (context == null) {
-            false
-        } else {
-            context!!.writeAndFlush(Transport.wrapMessage(packet()))
-            true
-        }
+    override fun sendPacket(packet: LazyPacket) {
+        context.writeAndFlush(Transport.wrapMessage(packet()))
     }
 
     override fun remoteAddress(): String {
-        return if (context != null)
-            context!!.channel().remoteAddress().toString()
+        return if (::context.isInitialized)
+            context.channel().remoteAddress().toString()
         else ""
     }
 
     override fun close() {
-        context?.close()
+        context.close()
     }
 
     override fun descriptor(): PeerConnectionDescriptor {

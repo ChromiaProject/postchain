@@ -40,8 +40,7 @@ open class PostchainModel(
             TransactionResult.INVALID -> throw InvalidTnxException("Transaction is invalid")
             TransactionResult.DUPLICATE -> throw DuplicateTnxException("Transaction already in queue")
             TransactionResult.UNKNOWN -> throw UserMistake("Unknown error")
-            else -> {
-            }
+            TransactionResult.OK -> {} // Do nothing
         }
         TimeLog.end("PostchainModel.postTransaction().enqueue", nonce)
     }

@@ -53,7 +53,9 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
                 statusManager,
                 blockManager,
                 blockDatabase,
-                nodeStateTracker)
+                nodeStateTracker,
+                ::isProcessRunning
+                )
 
         networkAwareTxQueue = NetworkAwareTxQueue(
                 blockchainEngine.getTransactionQueue(),
@@ -69,26 +71,9 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
         sleep(20)
     }
 
-    /**
-     * Stop the postchain node
-     */
-    override fun shutdown() {
-        shutdowDebug("Begin")
-        syncManager.shutdown()
-        super.shutdown()
+    override fun cleanup() {
         blockDatabase.stop()
         workerContext.shutdown()
-        shutdowDebug("End")
-    }
-
-    // --------
-    // Logging
-    // --------
-
-    private fun shutdowDebug(str: String) {
-        if (logger.isDebugEnabled) {
-            logger.debug("${workerContext.processName} shutdown() - $str")
-        }
     }
 
     override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {

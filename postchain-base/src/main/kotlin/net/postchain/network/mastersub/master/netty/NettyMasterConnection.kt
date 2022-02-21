@@ -29,18 +29,13 @@ class NettyMasterConnection :
         this.messageHandler = handler
     }
 
-    override fun sendPacket(packet: LazyPacket): Boolean {
-        return if (context == null) {
-            false
-        } else {
-            context!!.writeAndFlush(Transport.wrapMessage(packet()))
-            true
-        }
+    override fun sendPacket(packet: LazyPacket) {
+        context.writeAndFlush(Transport.wrapMessage(packet()))
     }
 
     override fun remoteAddress(): String {
-        return if (context != null)
-            context!!.channel().remoteAddress().toString()
+        return if (::context.isInitialized)
+            context.channel().remoteAddress().toString()
         else ""
     }
 
