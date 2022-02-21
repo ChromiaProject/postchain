@@ -13,7 +13,7 @@ open class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvi
     private lateinit var dataSource: ManagedNodeDataSource
     private val systemProvider = ManualBlockchainConfigurationProvider()
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     fun setDataSource(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource
@@ -39,7 +39,7 @@ open class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvi
             val blockchainRID = dba.getBlockchainRid(eContext)
             val height = dba.getLastBlockHeight(eContext)
             val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRID!!.data, height)
-            logger.debug{ "needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight" }
+            logger.debug { "needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight" }
             return (nextConfigHeight != null) && (nextConfigHeight == height + 1)
         }
 
