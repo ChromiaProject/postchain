@@ -31,7 +31,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
-                           isProcessRunning: () -> Boolean
+                           private val isProcessRunning: () -> Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(10000, statusManager)
@@ -44,7 +44,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private val processName = workerContext.processName
     private var useFastSyncAlgorithm: Boolean
     private val fastSynchronizer: FastSynchronizer
-    private val shutdown = AtomicBoolean(false)
 
     companion object : KLogging()
 
@@ -79,7 +78,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
             while (!workerContext.heartbeatChecker.checkHeartbeat(getLastBlockTimestamp())) {
-                if (shutdown.get()) return
+                if (!isProcessRunning()) return
                 Thread.sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
             }
 

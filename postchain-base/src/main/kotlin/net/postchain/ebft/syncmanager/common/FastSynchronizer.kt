@@ -661,7 +661,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
             while (!workerContext.heartbeatChecker.checkHeartbeat(lastBlockTimestamp)) {
-                if (isProcessRunning() || exitCondition()) return
+                if (!isProcessRunning() || exitCondition()) return
                 sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
             }
 
