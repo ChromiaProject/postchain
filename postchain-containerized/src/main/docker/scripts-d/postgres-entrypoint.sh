@@ -54,9 +54,12 @@ if [ "$1" = 'postgres' ]; then
 	chown -R "$(id -u)" "$PGDATA" 2>/dev/null || :
 	chmod 700 "$PGDATA" 2>/dev/null || :
 
-	# look specifically for PG_VERSION, as it is expected in the DB dir
-	if [ ! -s "$PGDATA/PG_VERSION" ]; then
+	# Look to see if we marked the db as initialized
+  ALREADY_INITED=$PGDATA/.db-initialized
+  if [ ! -e $ALREADY_INITED ]; then
 		file_env 'POSTGRES_INITDB_ARGS'
+		# Clean up data directory if there is anything in it
+		rm -rf $PGDATA/*
 		if [ "$POSTGRES_INITDB_XLOGDIR" ]; then
 			export POSTGRES_INITDB_ARGS="$POSTGRES_INITDB_ARGS --xlogdir $POSTGRES_INITDB_XLOGDIR"
 		fi
@@ -130,6 +133,8 @@ if [ "$1" = 'postgres' ]; then
 			esac
 			echo
 		done
+
+		touch $ALREADY_INITED
 
 		echo
 		echo 'PostgreSQL init process complete; ready for start up.'
