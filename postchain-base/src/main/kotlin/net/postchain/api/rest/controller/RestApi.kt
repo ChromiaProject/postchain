@@ -151,7 +151,9 @@ class RestApi(
                     throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
                 }
 
-                logger.debug("""Request body : {"tx": "${tx.bytes.sliceArray(0 until maxLength).toHex()}" }""")
+                logger.debug{ """
+                    Request body : {"tx": "${tx.bytes.sliceArray(0 until maxLength).toHex()}" } 
+                """.trimIndent() }
                 if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
                     throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
                 }
@@ -299,7 +301,7 @@ class RestApi(
     }
 
     private fun handlePostQuery(request: Request): String {
-        logger.debug("Request body: ${request.body()}")
+        logger.debug{ "Request body: ${request.body()}" }
         return model(request)
                 .query(Query(request.body()))
                 .json

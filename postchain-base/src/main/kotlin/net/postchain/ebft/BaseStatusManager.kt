@@ -140,10 +140,10 @@ class BaseStatusManager(
             return false
         }
 
-        logger.debug("Advancing block height from ${myStatus.height} to $nextHeight ...")
+        logger.debug{ "Advancing block height from ${myStatus.height} to $nextHeight ..." }
         (myStatus.height until nextHeight).forEach { _ -> advanceHeight() }
 
-        logger.debug("Current state: ${myStatus.height}")
+        logger.debug{ "Current state: ${myStatus.height}" }
         return true
     }
 
@@ -418,7 +418,7 @@ class BaseStatusManager(
             if (count >= this.quorum) {
                 // check if we have (2f+1) commit signatures including ours, in that case we signal commit intent.
                 intent = CommitBlockIntent
-                logger.debug("setting CommitBlockIntent for idx: $myIndex ")
+                logger.debug{ "setting CommitBlockIntent for idx: $myIndex " }
                 return true
             } else {
                 // otherwise we set intent to FetchCommitSignatureIntent with current blockRID and list of nodes which

@@ -28,9 +28,7 @@ class OnDemandBlockBuildingStrategy(
     }
 
     fun buildBlocksUpTo(height: Long) {
-        if (logger.isTraceEnabled) {
-            logger.trace("buildBlocksUpTo() - height: $height")
-        }
+        logger.trace{ "buildBlocksUpTo() - height: $height" }
         upToHeight = height
     }
 
@@ -48,7 +46,7 @@ class OnDemandBlockBuildingStrategy(
         }
         while (committedHeight < height) {
             blocks.take()
-            logger.debug("awaitCommitted() - took a block height: $height, committedHeight: $committedHeight")
+            logger.debug{ "awaitCommitted() - took a block height: $height, committedHeight: $committedHeight" }
         }
         var x = -2
         if (this.blockQueries != null) {

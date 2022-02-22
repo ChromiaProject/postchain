@@ -10,7 +10,10 @@
         -->
         <dict>
             <entry key="name">
-                <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+                <string>net.postchain.devtools.OnDemandBlockBuildingStrategy</string>
+            </entry>
+            <entry key="queuecapacity">
+                <int>1</int> <!-- This is a very small number, and that is the aim of the test -->
             </entry>
         </dict>
     </entry>
@@ -39,7 +42,8 @@
         <dict>
             <entry key="modules">
                 <array>
-                    <string>net.postchain.modules.esplix_r4.BaseEsplixModuleFactory</string>
+                    <string>net.postchain.configurations.GTXTestModule</string>
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>
             </entry>
         </dict>

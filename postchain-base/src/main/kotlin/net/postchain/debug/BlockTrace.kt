@@ -68,7 +68,7 @@ class BlockTrace(
             if (procName != null) {
                 if (other.procName != null) {
                     if (procName != other.procName) {
-                        logger.debug("Why do node/BC info differ? me: ${toString()}, they: $other" )
+                        logger.debug{ "Why do node/BC info differ? me: ${toString()}, they: $other" }
                     } else {
                         // Same, do nothing
                     }
@@ -82,7 +82,7 @@ class BlockTrace(
             if (blockRid != null) {
                 if (other.blockRid != null) {
                     if (blockRid != other.blockRid) {
-                        logger.debug("Why do block RID differ? me: ${toString()}, they: $other" )
+                        logger.debug{ "Why do block RID differ? me: ${toString()}, they: $other" }
                     } else {
                         //Same, do nothing
                     }
@@ -95,7 +95,7 @@ class BlockTrace(
             if (height != null) {
                 if (other.height != null) {
                     if (height != other.height) {
-                        logger.debug("Why do block height differ? me: ${toString()}, they: $other" )
+                        logger.debug{ "Why do block height differ? me: ${toString()}, they: $other" }
                     } else {
                         //Same, do nothing
                     }
