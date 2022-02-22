@@ -99,7 +99,7 @@ class BaseStorage(
             fn()
             context.conn.releaseSavepoint(savepoint)
         } catch (e: Exception) {
-            logger.debug("Exception in savepoint $savepointName", e)
+            logger.debug(e) { "Exception in savepoint $savepointName" }
             context.conn.rollback(savepoint)
             exception = e
         }
@@ -111,12 +111,12 @@ class BaseStorage(
         try {
             (readDataSource as? AutoCloseable)?.close()
         } catch (e: SQLException) {
-            logger.debug("SQLException in BaseStorage.close()", e)
+            logger.debug(e) { "SQLException in BaseStorage.close()" }
         }
         try {
             (writeDataSource as? AutoCloseable)?.close()
         } catch (e: SQLException) {
-            logger.debug("SQLException in BaseStorage.close()", e)
+            logger.debug(e) { "SQLException in BaseStorage.close()" }
         }
 
     }

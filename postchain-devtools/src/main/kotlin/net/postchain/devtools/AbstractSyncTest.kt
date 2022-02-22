@@ -52,7 +52,8 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         val blockchainPreSetup =
                 BlockchainPreSetup.simpleBuild(chainId, (0 until signerNodeCount).map { NodeSeqNumber(it) })
         val blockchainSetup = BlockchainSetup.buildFromGtv(chainId, blockchainPreSetup.toGtvConfig(mapOf()))
-        System.out.println("++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: ${blockchainSetup.bcGtv[BaseBlockchainConfigurationData.KEY_BLOCKSTRATEGY]} ")
+        val strategyClassName = blockchainSetup.bcGtv[BaseBlockchainConfigurationData.KEY_BLOCKSTRATEGY]?.asDict()?.get("name")?.asString()
+        println("++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: $strategyClassName")
 
         // 2. Get NodeSetup
         var i = 0

@@ -47,10 +47,10 @@ class NettyServer {
     }
 
     fun shutdown() {
-        logger.debug("Shutting down NettyServer")
+        logger.debug{ "Shutting down NettyServer" }
         try {
             eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).sync()
-            logger.debug("Shutting down NettyServer done")
+            logger.debug{ "Shutting down NettyServer done" }
         } catch (t: Throwable) {
             logger.debug("Shutting down NettyServer failed", t)
         }

@@ -22,9 +22,13 @@ class ManualBlockchainConfigurationProvider : BlockchainConfigurationProvider {
     override fun needsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
         val height = DatabaseAccess.of(eContext).getLastBlockHeight(eContext)
         val currentConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height)
-        val nextConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height + 1)
-        logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight (currentConfigHeight: $currentConfigHeight)")
-        return (currentConfigHeight != nextConfigHeight)
+        val nextBlockConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height + 1)
+        logger.debug {
+            "needsConfigurationChange() - height: $height" +
+                    ", current config height: $currentConfigHeight" +
+                    ", next block config height: $nextBlockConfigHeight"
+        }
+        return currentConfigHeight != nextBlockConfigHeight
     }
 
     override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {

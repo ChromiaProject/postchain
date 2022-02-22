@@ -17,7 +17,7 @@ object DependenciesValidator : KLogging() {
 
         // Verify all dependencies
         for (dep in dependencies) {
-            logger.debug("Validating")
+            logger.debug{ "Validating" }
             val chainId = db.getChainId(ctx, dep.blockchainRid)
             if (chainId == null) {
                 throw BadDataMistake(BadDataType.BAD_CONFIGURATION,

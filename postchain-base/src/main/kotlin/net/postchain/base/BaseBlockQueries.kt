@@ -60,7 +60,7 @@ open class BaseBlockQueries(
             try {
                 operation(ctx)
             } catch (e: Exception) {
-                logger.trace("An error occurred", e)
+                logger.trace(e) { "An error occurred" }
                 throw e
             } finally {
                 storage.closeReadConnection(ctx)
