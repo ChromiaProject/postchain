@@ -18,9 +18,10 @@ import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import nl.komponents.kovenant.task
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The ValidatorSyncManager handles communications with our peers.
@@ -30,7 +31,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
-                           isProcessRunning: () -> Boolean
+                           private val isProcessRunning: () -> Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(10000, statusManager)
@@ -65,15 +66,22 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
     }
 
-    private val signersIds = workerContext.signers.map { XPeerID(it) }
-    private fun indexOfValidator(peerId: XPeerID): Int = signersIds.indexOf(peerId)
-    private fun validatorAtIndex(index: Int): XPeerID = signersIds[index]
+    private val signersIds = workerContext.signers.map { NodeRid(it) }
+    private fun indexOfValidator(peerId: NodeRid): Int = signersIds.indexOf(peerId)
+    private fun validatorAtIndex(index: Int): NodeRid = signersIds[index]
 
     /**
      * Handle incoming messages
      */
     private fun dispatchMessages() {
         for (packet in communicationManager.getPackets()) {
+            // We do heartbeat check for each network message because
+            // communicationManager.getPackets() might give a big portion of messages.
+            while (!workerContext.heartbeatChecker.checkHeartbeat(getLastBlockTimestamp())) {
+                if (!isProcessRunning()) return
+                Thread.sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
+            }
+
             val (xPeerId, message) = packet
 
             val nodeIndex = indexOfValidator(xPeerId)
@@ -274,7 +282,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      * Process our intent latest intent
      */
     private fun processIntent() {
-        val intent = blockManager.getBlockIntent()
+        val intent = blockManager.processBlockIntent()
+
         if (intent == processingIntent) {
             if (intent is DoNothingIntent) return
             if (Date().time > processingIntentDeadline) {
@@ -285,6 +294,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         } else {
             currentTimeout = defaultTimeout
         }
+
         when (intent) {
             DoNothingIntent -> Unit
             is FetchBlockAtHeightIntent -> if (!useFastSyncAlgorithm) {
@@ -413,6 +423,13 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 }
             }
         }
+    }
+
+    private fun getLastBlockTimestamp(): Long {
+        // The field blockManager.lastBlockTimestamp will be set to non-null value
+        // after the first block db operation. So we read lastBlockTimestamp value from db
+        // until blockManager.lastBlockTimestamp is non-null.
+        return blockManager.lastBlockTimestamp ?: blockQueries.getLastBlockTimestamp().get()
     }
 
     fun getHeight(): Long {

@@ -39,7 +39,7 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
             println("Tx with the operation has been posted: $opName(${args.joinToString()})")
 
         } catch (e: Exception) {
-            println(e)
+            e.printStackTrace()
         }
     }
 

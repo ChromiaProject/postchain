@@ -12,6 +12,7 @@ build:
   except:
     - dev
   script:
+    - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
 variables:
@@ -33,6 +34,8 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   # Improve performance with overlayfs.
   DOCKER_DRIVER: overlay2
+  # This creates a network and attaches both the build job container and dind container to it so that they can talk
+  FF_NETWORK_PER_BUILD: 1
 
 services:
   - postgres

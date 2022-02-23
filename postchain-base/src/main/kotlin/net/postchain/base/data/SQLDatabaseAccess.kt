@@ -8,7 +8,6 @@ import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.network.x.XPeerID
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
 import java.sql.Connection
@@ -116,8 +115,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     override fun finalizeBlock(ctx: BlockEContext, header: BlockHeader) {
         val sql = "UPDATE ${tableBlocks(ctx)} SET block_rid = ?, block_header_data = ?, timestamp = ? WHERE block_iid = ?"
-        queryRunner.update(ctx.conn, sql,
-                header.blockRID, header.rawData, (header as BaseBlockHeader).timestamp, ctx.blockIID
+        queryRunner.update(
+                ctx.conn, sql, header.blockRID, header.rawData, (header as BaseBlockHeader).timestamp, ctx.blockIID
         )
     }
 
@@ -171,6 +170,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, longRes) ?: -1L
     }
 
+    override fun getLastBlockTimestamp(ctx: EContext): Long {
+        val sql = "SELECT timestamp FROM ${tableBlocks(ctx)} ORDER BY block_iid DESC LIMIT 1"
+        return queryRunner.query(ctx.conn, sql, longRes) ?: -1L
+    }
+
     override fun getLastBlockRid(ctx: EContext, chainId: Long): ByteArray? {
         val sql = "SELECT block_rid FROM ${tableBlocks(chainId)} ORDER BY block_height DESC LIMIT 1"
         return queryRunner.query(ctx.conn, sql, nullableByteArrayRes)
@@ -193,11 +197,6 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 throw ProgrammerMistake("Incorrect query getBlockHeightInfo got many lines (${res.size})")
             }
         }
-    }
-
-    override fun getLastBlockTimestamp(ctx: EContext): Long {
-        val sql = "SELECT timestamp FROM ${tableBlocks(ctx)} ORDER BY block_iid DESC LIMIT 1"
-        return queryRunner.query(ctx.conn, sql, longRes) ?: -1L
     }
 
     override fun getTxRIDsAtHeight(ctx: EContext, height: Long): Array<ByteArray> {
@@ -388,7 +387,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 queryRunner.update(connection, cmdCreateTableMustSyncUntil())
             }
         } else {
-            logger.info("Meta table does not exist! Assume database does not exist and create it (version: $expectedDbVersion).")
+            logger.info("Meta table does not exist. Assume database does not exist and create it (version: $expectedDbVersion).")
             queryRunner.update(connection, cmdCreateTableMeta())
             val sql = "INSERT INTO ${tableMeta()} (key, value) values ('version', ?)"
             queryRunner.update(connection, sql, expectedDbVersion)
@@ -481,6 +480,16 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             FROM ${tableConfigurations(ctx)} 
             WHERE height <= ? 
             ORDER BY height DESC LIMIT 1
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, nullableLongRes, height)
+    }
+
+    override fun findNextConfigurationHeight(ctx: EContext, height: Long): Long? {
+        val sql = """
+            SELECT height 
+            FROM ${tableConfigurations(ctx)} 
+            WHERE height > ? 
+            ORDER BY height LIMIT 1
         """.trimIndent()
         return queryRunner.query(ctx.conn, sql, nullableLongRes, height)
     }
@@ -599,7 +608,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return true
     }
 
-    override fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<XPeerID>> {
+    override fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<NodeRid>> {
 
         val query = "SELECT * FROM ${tableBlockchainReplicas()}"
 
@@ -611,10 +620,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         MutableList is thus a list of rows in the table.
          */
         return raw.groupBy(keySelector = { BlockchainRid((it[TABLE_REPLICAS_FIELD_BRID] as String).hexStringToByteArray()) },
-                valueTransform = { XPeerID((it[TABLE_REPLICAS_FIELD_PUBKEY] as String).hexStringToByteArray()) })
+                valueTransform = { NodeRid((it[TABLE_REPLICAS_FIELD_PUBKEY] as String).hexStringToByteArray()) })
     }
 
-    override fun getBlockchainsToReplicate(ctx: AppContext, pubkey: String): Set<BlockchainRid>  {
+    override fun getBlockchainsToReplicate(ctx: AppContext, pubkey: String): Set<BlockchainRid> {
         val query = "SELECT $TABLE_REPLICAS_FIELD_BRID FROM ${tableBlockchainReplicas()} WHERE $TABLE_REPLICAS_FIELD_PUBKEY = ?"
 
         val result = queryRunner.query(ctx.conn, query, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubkey)
@@ -673,10 +682,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         Each MutableMap represents a row in the table.
         MutableList is thus a list of rows in the table.
          */
-        return raw.map {
+        return raw.associate {
             it[TABLE_SYNC_UNTIL_FIELD_CHAIN_IID] as Long to
                     it[TABLE_SYNC_UNTIL_FIELD_HEIGHT] as Long
-        }.toMap()
+        }
     }
 
     override fun getChainIds(ctx: AppContext): Map<BlockchainRid, Long> {
@@ -684,10 +693,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val raw: MutableList<MutableMap<String, Any>> = queryRunner.query(
                 ctx.conn, sql, MapListHandler())
 
-        return raw.map {
-            BlockchainRid(it["blockchain_rid"] as ByteArray) to
-                    it["chain_iid"] as Long
-        }.toMap()
+        return raw.associate {
+            BlockchainRid(it["blockchain_rid"] as ByteArray) to it["chain_iid"] as Long
+        }
     }
 
     fun tableExists(connection: Connection, tableName: String): Boolean {
@@ -698,7 +706,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             // Avoid wildcard '_' in SQL. Eg: if you pass "employee_salary" that should return something
             // employeesalary which we don't expect
             if (rs.getString("TABLE_SCHEM").equals(connection.schema, true)
-                    && rs.getString("TABLE_NAME").equals(tableName0, true)) {
+                    && rs.getString("TABLE_NAME").equals(tableName0, true)
+            ) {
                 return true
             }
         }

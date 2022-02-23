@@ -13,6 +13,7 @@
         <module>postchain-docker</module>
         <module>postchain-client</module>
         <module>postchain-distribution</module>
+        <module>postchain-containerized</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -30,8 +31,11 @@
         <!-- Maven -->
         <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
         <maven.surefire.plugin.version>2.22.1</maven.surefire.plugin.version>
+        <maven.failsafe.plugin.version>2.22.2</maven.failsafe.plugin.version>
+        <docker.maven.plugin.version>0.38.0</docker.maven.plugin.version>
         <maven.compiler.plugin.version>3.5.1</maven.compiler.plugin.version>
         <maven.assembly.plugin.version>3.2.0</maven.assembly.plugin.version>
+        <skipSurefireTests>false</skipSurefireTests>
 
         <!-- Testing -->
         <junit.version>5.8.2</junit.version>
@@ -44,8 +48,8 @@
         <!-- Logging -->
         <kotlin-logging.version>1.12.5</kotlin-logging.version>
         <slf4j.version>1.7.32</slf4j.version>
-        <log4j2.version>2.16.0</log4j2.version>
-        <jackson.version>2.13.0</jackson.version>
+        <log4j2.version>2.17.1</log4j2.version>
+        <jackson.version>2.13.1</jackson.version>
 
         <!-- 3rd party -->
         <postgresql.version>42.2.11</postgresql.version>
@@ -539,6 +543,18 @@
             </plugin>
 
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire.plugin.version}</version>
+                <configuration>
+                    <!-- skips surefire tests without skipping failsafe tests.
+         Property value seems to magically default to false (e.g.: mvn verify -DskipSurefireTests=true)-->
+<!--                    <skipTests>${skipSurefireTests}</skipTests>-->
+                </configuration>
+            </plugin>
+
+
+            <plugin>
                 <groupId>external.atlassian.jgitflow</groupId>
                 <artifactId>jgitflow-maven-plugin</artifactId>
                 <version>${jgitflow.maven.plugin.version}</version>
@@ -576,16 +592,30 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>${maven.surefire.plugin.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/*Test.java</include>
-                                <include>**/*IT.java</include>
+<!--                                <include>**/*IT.java</include>  Do NOT un-comment this line. *IT is for failsafe tests (used in postchian-containerized), not for long surefire tests. For other time consuming integration tests, use postfix Nightly instead. -->
                                 <include>**/*Nightly.java</include>
+                                <include>**/*IntegrationTest.java</include>
                                 <include>**/*E2ET.*</include>
                                 <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
                             </includes>
+<!--                            <skipTests>${skipSurefireTests}</skipTests>-->
                         </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>${maven.failsafe.plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>

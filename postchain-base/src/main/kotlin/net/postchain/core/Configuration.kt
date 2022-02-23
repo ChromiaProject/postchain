@@ -14,6 +14,7 @@ import net.postchain.gtv.Gtv
 interface BlockchainConfiguration {
     val chainID: Long
     val blockchainRid: BlockchainRid
+    val signers: List<ByteArray>
     val effectiveBlockchainRID: BlockchainRid
     val traits: Set<String>
     val syncInfrastructureName: DynamicClassName?

@@ -121,15 +121,15 @@ fun lastBlockInfoQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
 }
 
 fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
-    val dba : SQLDatabaseAccess = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+    val dba: SQLDatabaseAccess = DatabaseAccess.of(ctx) as SQLDatabaseAccess
     val argsDict = args as GtvDictionary
     val txRID = argsDict["txRID"]!!.asByteArray(true)
     val info = dba.getBlockInfo(ctx, txRID)
-    val timestamp = dba.queryRunner.query(ctx.conn,"SELECT timestamp FROM blocks WHERE block_iid = ?",
+    val timestamp = dba.queryRunner.query(ctx.conn, "SELECT timestamp FROM blocks WHERE block_iid = ?",
             ScalarHandler<Long>(), info.blockIid)
-    val blockRID = dba.queryRunner.query(ctx.conn,"SELECT block_rid FROM blocks WHERE block_iid = ?",
+    val blockRID = dba.queryRunner.query(ctx.conn, "SELECT block_rid FROM blocks WHERE block_iid = ?",
             ScalarHandler<ByteArray>(), info.blockIid)
-    val blockHeight = dba.queryRunner.query(ctx.conn,"SELECT block_height FROM blocks WHERE block_iid = ?",
+    val blockHeight = dba.queryRunner.query(ctx.conn, "SELECT block_height FROM blocks WHERE block_iid = ?",
             ScalarHandler<Long>(), info.blockIid)
     return gtv(
             "timestamp" to gtv(timestamp),
@@ -142,18 +142,21 @@ fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
  * Module that should be included in the [CompositeGTXModule] of all "normal/real world" DApp modules.
  * It holds some standard things that are very useful, bordering on mandatory.
  */
-class StandardOpsGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(
-    GtxNop.OP_NAME to ::GtxNop,
-    GtxTimeB.OP_NAME to ::GtxTimeB
-), mapOf(
-    "last_block_info" to ::lastBlockInfoQuery,
-    "tx_confirmation_time" to ::txConfirmationTime
-)
+class StandardOpsGTXModule : SimpleGTXModule<Unit>(
+        Unit,
+        mapOf(
+                GtxNop.OP_NAME to ::GtxNop,
+                GtxTimeB.OP_NAME to ::GtxTimeB
+        ),
+        mapOf(
+                "last_block_info" to ::lastBlockInfoQuery,
+                "tx_confirmation_time" to ::txConfirmationTime
+        )
 ) {
     private val stxs = mutableListOf<GTXSpecialTxExtension>(
-        // We put the Auto Extension here, since it's sort of "standard" (and anyways all "real life" configurations
-        // will import StandardOps and  thus get access to this extension).
-        GTXAutoSpecialTxExtension()
+            // We put the Auto Extension here, since it's sort of "standard" (and anyways all "real life" configurations
+            // will import StandardOps and  thus get access to this extension).
+            GTXAutoSpecialTxExtension()
     )
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = stxs.toList()

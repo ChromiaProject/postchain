@@ -7,7 +7,6 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
 import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
-import net.postchain.base.peerId
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import org.junit.jupiter.api.Test
@@ -25,7 +24,7 @@ class ManualNodeConfigurationProviderTest {
         val actual = arrayOf(peerInfo1, peerInfo0)
 
         // Mock
-        val mockStorage = MockStorage.mock(expected)
+        val mockStorage = MockStorage.mockAppContext(expected)
 
         // SUT
         val provider = ManualNodeConfigurationProvider(mock()) { mockStorage }

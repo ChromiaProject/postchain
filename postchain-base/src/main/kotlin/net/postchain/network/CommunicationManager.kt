@@ -2,14 +2,16 @@
 
 package net.postchain.network
 
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 
 interface CommunicationManager<PacketType> {
     fun init()
-    //fun peerMap(): Map<XPeerID, PeerInfo>
-    fun getPackets(): MutableList<Pair<XPeerID, PacketType>>
-    fun sendPacket(packet: PacketType, recipient: XPeerID)
+
+    //fun peerMap(): Map<NodeRid, PeerInfo>
+    fun getPackets(): MutableList<Pair<NodeRid, PacketType>>
+    fun sendPacket(packet: PacketType, recipient: NodeRid)
     fun broadcastPacket(packet: PacketType)
+
     /**
      * Sends the packet to a peer selected by random.
      *
@@ -18,6 +20,6 @@ interface CommunicationManager<PacketType> {
      * @return the selected peer that the packet was sent to. If there
      * were no peers available, null is returned.
      */
-    fun sendToRandomPeer(packet: PacketType, amongPeers: Set<XPeerID>): XPeerID?
+    fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): NodeRid?
     fun shutdown()
 }

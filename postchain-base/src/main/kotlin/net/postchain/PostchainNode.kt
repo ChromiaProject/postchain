@@ -3,17 +3,13 @@
 package net.postchain
 
 import mu.KLogging
-import net.postchain.core.BlockchainRid
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.BaseInfrastructureFactoryProvider
-import net.postchain.core.BlockchainInfrastructure
-import net.postchain.core.BlockchainProcessManager
-import net.postchain.core.Shutdownable
+import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.devtools.PeerNameHelper.peerName
+import net.postchain.devtools.NameHelper.peerName
 import nl.komponents.kovenant.Kovenant
 
 /**
@@ -30,7 +26,7 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
     init {
         Kovenant.context {
             workerContext.dispatcher {
-                name = "BGwork"
+                name = "main"
                 concurrentTasks = 5
             }
         }
@@ -43,6 +39,7 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
 
         diagnosticContext.addProperty(DiagnosticProperty.VERSION, getVersion())
         diagnosticContext.addProperty(DiagnosticProperty.PUB_KEY, nodeConfigProvider.getConfiguration().pubKey)
+        diagnosticContext.addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
     }
 
     fun startBlockchain(chainId: Long): BlockchainRid? {

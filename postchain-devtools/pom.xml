@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright (c) 2020 ChromaWay AB. See README for license information. -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
@@ -12,6 +13,7 @@
 
     <properties>
         <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
+        <assertk.version>0.10</assertk.version>
     </properties>
 
     <dependencies>
@@ -119,27 +121,6 @@
 
     <build>
         <plugins>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven.surefire.plugin.version}</version>
-                <configuration>
-                    <properties>
-                        <property>
-                            <name>listener</name>
-                            <value>net.postchain.maven.surefire.PrintCurrentTestRunListener</value>
-                        </property>
-                    </properties>
-                    <includes>
-                        <include>**/*Test.java</include>
-                        <include>**/*IT.java</include>
-                        <!--                        <include>**/*Nightly.java</include>-->
-                        <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
-                    </includes>
-                </configuration>
-            </plugin>
-
             <!-- Exporting test classes for other modules' integration tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -153,19 +134,19 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
 
     <profiles>
         <profile>
+            <!-- Cannot add this listener in parent pom (as long as it is not located on top  level), so adding it here
+             to the ci profile instead. Most tests are in devtools anyway -->
             <id>ci</id>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
-                        <version>${maven.surefire.plugin.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/*Test.java</include>

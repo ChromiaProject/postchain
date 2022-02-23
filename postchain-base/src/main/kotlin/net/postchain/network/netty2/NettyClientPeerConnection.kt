@@ -8,24 +8,24 @@ import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.network.XPacketEncoder
-import net.postchain.network.x.LazyPacket
-import net.postchain.network.x.XPacketHandler
-import net.postchain.network.x.XPeerConnectionDescriptor
+import net.postchain.network.common.LazyPacket
+import net.postchain.network.peer.PeerConnectionDescriptor
+import net.postchain.network.peer.PeerPacketHandler
 import nl.komponents.kovenant.task
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 
 class NettyClientPeerConnection<PacketType>(
-        val peerInfo: PeerInfo,
+        private val peerInfo: PeerInfo,
         private val packetEncoder: XPacketEncoder<PacketType>,
-        private val descriptor: XPeerConnectionDescriptor
+        private val descriptor: PeerConnectionDescriptor
 ) : NettyPeerConnection() {
 
     companion object : KLogging()
 
     private val nettyClient = NettyClient()
+    private var peerPacketHandler: PeerPacketHandler? = null
     private lateinit var context: ChannelHandlerContext
-    private var packetHandler: XPacketHandler? = null
     private lateinit var onConnected: () -> Unit
     private lateinit var onDisconnected: () -> Unit
 
@@ -58,15 +58,15 @@ class NettyClientPeerConnection<PacketType>(
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         handleSafely(peerInfo.peerId()) {
-            packetHandler?.invoke(
+            peerPacketHandler?.handle(
                     Transport.unwrapMessage(msg as ByteBuf),
                     peerInfo.peerId())
             (msg as ByteBuf).release()
         }
     }
 
-    override fun accept(handler: XPacketHandler) {
-        packetHandler = handler
+    override fun accept(packetHandler: PeerPacketHandler) {
+        peerPacketHandler = packetHandler
     }
 
     override fun sendPacket(packet: LazyPacket) {
@@ -85,9 +85,7 @@ class NettyClientPeerConnection<PacketType>(
         }
     }
 
-    override fun descriptor(): XPeerConnectionDescriptor {
-        return descriptor
-    }
+    override fun descriptor(): PeerConnectionDescriptor = descriptor
 
     private fun peerAddress(): SocketAddress {
         return InetSocketAddress(peerInfo.host, peerInfo.port)
@@ -95,6 +93,6 @@ class NettyClientPeerConnection<PacketType>(
 
     private fun buildIdentPacket(): ByteBuf {
         return Transport.wrapMessage(
-                packetEncoder.makeIdentPacket(peerInfo.pubKey))
+                packetEncoder.makeIdentPacket(peerInfo.getNodeRid()))
     }
 }

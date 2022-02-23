@@ -8,7 +8,9 @@ pipelines:
         caches:
           - maven
         script:
+          - export POSTCHAIN_TEST_MASTER_HOST=172.17.0.1
           - export TESTCONTAINERS_RYUK_DISABLED=true
+#          - mvn -e -B -P ci clean verify -DskipSurefireTests=true
           - mvn -e -B -P ci clean install
         services:
           - postgres
