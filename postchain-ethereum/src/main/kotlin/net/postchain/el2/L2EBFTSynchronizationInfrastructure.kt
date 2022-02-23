@@ -60,8 +60,7 @@ class EL2SynchronizationInfrastructureExtension(
                     BigInteger.valueOf(100),
                     el2Config.contractDeployBlock,
                     engine
-                )
-                eventProcessor.start()
+                ).apply { start() }
                 el2Ext.useEventProcessor(eventProcessor)
             }
         }
