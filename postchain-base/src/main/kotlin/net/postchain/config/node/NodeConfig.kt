@@ -94,7 +94,7 @@ open class NodeConfig(val appConfig: AppConfig) {
      */
     // Enables/disables heartbeat check
     val heartbeatEnabled: Boolean
-        get() = config.getBoolean("heartbeat.enabled", true)
+        get() = config.getBoolean("heartbeat.enabled", false)
 
     val heartbeatTestmode: Boolean
         get() = config.getBoolean("heartbeat.testmode", false)
