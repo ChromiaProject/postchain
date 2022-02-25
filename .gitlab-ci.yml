@@ -1,6 +1,11 @@
 image: maven:3.8.4-jdk-11
 
+.setup:
+  before_script:
+    - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
+
 deploy:
+  extends: .setup
   stage: deploy
   only:
     - dev
@@ -8,11 +13,11 @@ deploy:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci deploy
 
 build:
+  extends: .setup
   stage: build
   except:
     - dev
   script:
-    - export POSTCHAIN_TEST_MASTER_HOST=$(hostname -I | awk '{print $1}') # Finds the IP of the build job container
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
 variables:
