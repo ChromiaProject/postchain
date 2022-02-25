@@ -54,6 +54,12 @@ open class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvi
         }
     }
 
+    override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
+        val db = DatabaseAccess.of(eContext)
+        val brid = db.getBlockchainRid(eContext)
+        return dataSource.findNextConfigurationHeight(brid!!.data, height)
+    }
+
     private fun getConfigurationFromDataSource(eContext: EContext): ByteArray? {
         val dba = DatabaseAccess.of(eContext)
         /* val newCtx = BaseEContext(eContext.conn,

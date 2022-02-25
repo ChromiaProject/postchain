@@ -11,6 +11,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.heartbeat.HeartbeatChecker
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
@@ -35,6 +36,8 @@ open class BaseBlockchainInfrastructure(
         subjectID = pubKey
         syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
     }
+
+    override fun init() {}
 
     override fun shutdown() {
         for (infra in syncInfraCache.values)
@@ -131,12 +134,14 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainProcess(
-        processName: BlockchainProcessName, engine: BlockchainEngine,
+        processName: BlockchainProcessName,
+        engine: BlockchainEngine,
+        heartbeatChecker: HeartbeatChecker,
         historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val conf = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastucture(conf.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, historicBlockchainContext)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, heartbeatChecker, historicBlockchainContext)
         if (conf is BaseBlockchainConfiguration) {
             for (extName in conf.syncInfrastructureExtensionNames) {
                 getSynchronizationInfrastuctureExtension(extName).connectProcess(process)
@@ -144,6 +149,10 @@ open class BaseBlockchainInfrastructure(
         }
         apiInfrastructure.connectProcess(process)
         return process
+    }
+
+    override fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {
+        return defaultSynchronizationInfrastructure.makeHeartbeatChecker(chainId, blockchainRid)
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {

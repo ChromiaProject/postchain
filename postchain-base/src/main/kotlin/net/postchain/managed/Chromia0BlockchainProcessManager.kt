@@ -23,8 +23,30 @@ class Chromia0BlockchainProcessManager(
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext
-) : ManagedBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider,
-        blockchainConfigProvider, nodeDiagnosticContext) {
+) : ManagedBlockchainProcessManager(
+        blockchainInfrastructure,
+        nodeConfigProvider,
+        blockchainConfigProvider,
+        nodeDiagnosticContext) {
+
+    override fun buildRestartHandler(chainId: Long): RestartHandler {
+        val baseHandler = super.buildRestartHandler(chainId)
+        if (chainId == 0L)
+            return baseHandler
+        else {
+            return { blockTimestamp: Long, blockTrace: BlockTrace? ->
+                rhTrace("Begin", chainId, blockTrace)
+                try {
+                    anchorLastBlock(chainId)
+                    rhTrace("Anchored", chainId, blockTrace)
+                } catch (e: Exception) {
+                    logger.error("Error when anchoring $e", e)
+                    e.printStackTrace()
+                }
+                baseHandler(blockTimestamp, blockTrace)
+            }
+        }
+    }
 
     private fun anchorLastBlock(chainId: Long) {
         withReadConnection(storage, chainId) { eContext ->
@@ -55,25 +77,6 @@ class Chromia0BlockchainProcessManager(
                         txb.serialize()
                 )
                 chain0Engine.getTransactionQueue().enqueue(tx)
-            }
-        }
-    }
-
-    override fun buildRestartHandler(chainId: Long): RestartHandler {
-        val baseHandler = super.buildRestartHandler(chainId)
-        if (chainId == 0L)
-            return baseHandler
-        else {
-            return {
-                rhTrace("Begin", chainId, it)
-                try {
-                    anchorLastBlock(chainId)
-                    rhTrace("Anchored", chainId, it)
-                } catch (e: Exception) {
-                    logger.error("Error when anchoring $e", e)
-                    e.printStackTrace()
-                }
-                baseHandler(it)
             }
         }
     }

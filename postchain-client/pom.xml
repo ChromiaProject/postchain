@@ -16,6 +16,10 @@
     <name>Postchain Client</name>
 
     <properties>
+        <assertk.version>0.10</assertk.version>
+        <rest-assured.version>3.1.1</rest-assured.version>
+        <httpclient.version>4.5.3</httpclient.version>
+
         <executable-classifier>jar-with-dependencies</executable-classifier>
     </properties>
 
@@ -93,20 +97,6 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
             </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven.surefire.plugin.version}</version>
-                <configuration>
-                    <includes>
-                        <include>**/*Test.java</include>
-                    </includes>
-                </configuration>
-            </plugin>
-
-
-
         </plugins>
     </build>
 

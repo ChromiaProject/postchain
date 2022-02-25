@@ -62,7 +62,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
             peerInfos = null
             expectedSuccessRids = mutableMapOf()
             configOverrides.clear()
-            logger.debug("teadDown() done")
+            logger.debug("tearDown() done")
         } catch (t: Throwable) {
             logger.error("tearDown() failed", t)
         }
@@ -148,7 +148,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         if (preWipeDatabase) {
             StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
         }
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
         val nodeConfig = nodeConfigProvider.getConfiguration()
 
         nodesNames[nodeConfig.pubKey] = "$nodeIndex"
@@ -239,7 +239,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         if (preWipeDatabase) {
             StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
         }
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
 
         val node = PostchainTestNode(nodeConfigProvider)
                 .also { nodes.add(it) }
@@ -293,6 +293,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         }
 
         baseConfig.setProperty("fastsync.exit_delay", if (nodeCount == 1) 0 else 1000)
+        baseConfig.setProperty("heartbeat.enabled", false)
 
         val appConfig = CompositeConfiguration().apply {
             addConfiguration(configOverrides)

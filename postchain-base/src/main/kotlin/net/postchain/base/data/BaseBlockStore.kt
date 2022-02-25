@@ -99,10 +99,17 @@ class BaseBlockStore : BlockStore {
     override fun getBlock(ctx: EContext, blockRID: ByteArray, hashesOnly: Boolean): BlockDetail? {
         val db = DatabaseAccess.of(ctx)
         val blockInfo = db.getBlock(ctx, blockRID) ?: return null
-        var txDetails = listOf<TxDetail>()
-        txDetails = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
-        val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, SECP256K1CryptoSystem()) // TODO can I do this on the node or is it too computational expensive
-        return BlockDetail(blockInfo.blockRid, blockHeaderDecoded.prevBlockRID, blockInfo.blockHeader, blockInfo.blockHeight, txDetails, blockInfo.witness, blockInfo.timestamp)
+        val txDetails = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
+        // TODO can I do this on the node or is it too computational expensive
+        val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, SECP256K1CryptoSystem())
+        return BlockDetail(
+                blockInfo.blockRid,
+                blockHeaderDecoded.prevBlockRID,
+                blockInfo.blockHeader,
+                blockInfo.blockHeight,
+                txDetails,
+                blockInfo.witness,
+                blockInfo.timestamp)
     }
 
     override fun getBlocks(ctx: EContext, blockTime: Long, limit: Int, hashesOnly: Boolean): List<BlockDetail> {

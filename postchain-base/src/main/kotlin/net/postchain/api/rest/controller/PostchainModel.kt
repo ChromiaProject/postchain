@@ -54,6 +54,7 @@ open class PostchainModel(
     override fun getTransactionInfo(txRID: TxRID): TransactionInfoExt? {
         return blockQueries.getTransactionInfo(txRID.bytes).get()
     }
+
     override fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt> {
         return blockQueries.getTransactionsInfo(beforeTime, limit).get()
     }
@@ -98,5 +99,9 @@ open class PostchainModel(
 
     override fun debugQuery(subQuery: String?): String {
         return debugInfoQuery.queryDebugInfo(subQuery)
+    }
+
+    override fun toString(): String {
+        return "${this.javaClass.simpleName}(chainId=$chainIID)"
     }
 }

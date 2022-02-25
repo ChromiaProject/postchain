@@ -19,7 +19,7 @@ class ComparableTransaction(val tx: Transaction) {
     }
 }
 
-val MAX_REJECTED = 1000
+const val MAX_REJECTED = 1000
 
 /**
  * Transaction queue for transactions received from peers
