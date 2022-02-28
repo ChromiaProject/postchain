@@ -5,22 +5,30 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtx.GTXBlockchainConfiguration
+import org.web3j.protocol.Web3j
+import org.web3j.tx.ClientTransactionManager
+import org.web3j.tx.gas.DefaultGasProvider
+import java.math.BigInteger
 
-data class EVML2Config (val url: String, val contract: String)
+data class EVML2Config(val url: String, val contract: String, val contractDeployBlock: BigInteger)
 
 fun BaseBlockchainConfigurationData.getEL2Data(): EVML2Config {
     val evmL2 = this.data["evm_l2"]
     val eth = evmL2!!["eth"]
     val url = eth!!["url"]!!.asString()
     val contract = eth["contract"]!!.asString()
-    return EVML2Config(url, contract)
+    val contractDeployBlock = eth["contractDeployBlock"]!!.asBigInteger()
+    return EVML2Config(url, contract, contractDeployBlock)
 }
 
 class EL2SynchronizationInfrastructureExtension(
     nodeConfigProvider: NodeConfigurationProvider,
     nodeDiagnosticContext: NodeDiagnosticContext
 ) : SynchronizationInfrastructureExtension {
+    private lateinit var web3c: Web3Connector
+    private lateinit var eventProcessor: EthereumEventProcessor
 
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
@@ -36,15 +44,34 @@ class EL2SynchronizationInfrastructureExtension(
             }
             if (el2Ext != null) {
                 val el2Config = cfg.configData.getEL2Data()
-                val eventProcessor = EthereumEventProcessor(
-                    el2Config.url,
-                    el2Config.contract,
-                    engine.getBlockQueries()
+                val web3j = Web3j.build(Web3jServiceFactory.buildService(el2Config.url))
+                web3c = Web3Connector(web3j, el2Config.contract)
+
+                val contract = ChrL2.load(
+                    web3c.contractAddress,
+                    web3c.web3j,
+                    ClientTransactionManager(web3c.web3j, "0x0"),
+                    DefaultGasProvider()
                 )
+
+                eventProcessor = EthereumEventProcessor(
+                    web3c,
+                    contract,
+                    BigInteger.valueOf(100),
+                    el2Config.contractDeployBlock,
+                    engine
+                ).apply { start() }
                 el2Ext.useEventProcessor(eventProcessor)
             }
         }
     }
 
-    override fun shutdown() {}
+    override fun shutdown() {
+        if (::eventProcessor.isInitialized) {
+            eventProcessor.shutdown()
+        }
+        if (::web3c.isInitialized) {
+            web3c.shutdown()
+        }
+    }
 }

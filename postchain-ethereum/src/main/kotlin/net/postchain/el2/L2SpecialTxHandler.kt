@@ -37,13 +37,13 @@ class EL2SpecialTxExtension : GTXSpecialTxExtension {
         if (position == SpecialTransactionPosition.Begin) {
             val data = proc.getEventData()
             val ops = mutableListOf<OpData>()
-            val block = data.first
-            if (block.isNotEmpty()) {
-                ops.add(OpData(OP_ETH_BLOCK, block))
-            }
             val events = data.second
             for (event in events) {
                 ops.add(OpData(OP_ETH_EVENT, event))
+            }
+            val block = data.first
+            if (block.isNotEmpty()) {
+                ops.add(OpData(OP_ETH_BLOCK, block))
             }
             return ops
         }
