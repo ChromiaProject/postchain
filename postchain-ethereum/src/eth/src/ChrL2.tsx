@@ -33,7 +33,7 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
     const name = await tokenContract.name();
     const symbol = await tokenContract.symbol();
     const decimals = await tokenContract.decimals();
-    let balance = await client.query('__eth_balance_of', { "token": tokenAddress.toLowerCase(), "beneficiary": account.toLowerCase() })
+    let balance = await client.query('eth_balance_of', { "token": tokenAddress.toLowerCase(), "beneficiary": account.toLowerCase() })
     let withdraws = await client.query('get_withdrawal', {
       'token': tokenAddress.toLowerCase(),
       'beneficiary': account.toLowerCase()
@@ -246,7 +246,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
       let sender = util.makeKeyPair()
       var tx = client.newTransaction([sender.pubKey])
       let amount = ethers.BigNumber.from(withdrawAmount).mul(ethers.BigNumber.from(10).pow(unit)).toString()
-      tx.addOperation("__withdraw", tokenAddress.toLowerCase(), account.toLowerCase(), parseInt(amount))
+      tx.addOperation("withdraw", tokenAddress.toLowerCase(), account.toLowerCase(), parseInt(amount))
       tx.sign(sender.privKey, sender.pubKey)
       let txRID = tx.getTxRID()
       tx.send((err) => {

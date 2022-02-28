@@ -90,7 +90,7 @@ operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash:
     update balance (amount += token_amount);
 }
 
-operation __withdraw(token: text, beneficiary: text, w_amount: integer) {
+operation withdraw(token: text, beneficiary: text, w_amount: integer) {
     val b = eth_balance @ { token, beneficiary };
     require(b.amount >= w_amount, "Balance is too low");
     update b(amount -= w_amount);
@@ -130,7 +130,7 @@ query get_withdrawal(token: text, beneficiary: text) {
     return eth_withdraw @* { token, beneficiary } (@sort_desc .serial, .token, .beneficiary, .amount);
 }
 
-query __eth_balance_of(token: text, beneficiary: text): integer {
+query eth_balance_of(token: text, beneficiary: text): integer {
     val b = eth_balance @? { token, beneficiary } (.amount);
     if (empty(b)) {
         return 0;
