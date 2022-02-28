@@ -13,7 +13,7 @@ class EL2TestSynchronizationInfrastructureExtension(
 
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
-        val proc = L2TestEventProcessor(engine.getBlockQueries())
+        val proc = L2TestEventProcessor()
         val gtxModule = (engine.getConfiguration() as GTXBlockchainConfiguration).module
         val txExtensions = gtxModule.getSpecialTxExtensions()
         for (te in txExtensions) {
