@@ -10,9 +10,7 @@
         <module>postchain-common</module>
         <module>postchain-base</module>
         <module>postchain-devtools</module>
-        <module>postchain-docker</module>
         <module>postchain-client</module>
-        <module>postchain-distribution</module>
         <module>postchain-containerized</module>
     </modules>
     <packaging>pom</packaging>
