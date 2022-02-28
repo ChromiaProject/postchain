@@ -123,6 +123,8 @@ class EthereumEventProcessorTest {
             .map { OpData(OP_ETH_EVENT, it) }
             .toTypedArray()
         assertTrue(ethereumEventProcessor.isValidEventData(eventsToValidate))
+        // Test if NoOp version can also validate
+        assertTrue(NoOpEventProcessor().isValidEventData(eventsToValidate))
 
         // Mock that the block was validated and committed to DB
         val eventDataBlockNumber = eventData.first.first().asBigInteger()

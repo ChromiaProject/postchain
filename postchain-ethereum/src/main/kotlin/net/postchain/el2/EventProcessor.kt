@@ -1,5 +1,6 @@
 package net.postchain.el2
 
+import mu.KLogging
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
@@ -66,6 +67,59 @@ class L2TestEventProcessor : EventProcessor {
             gtv(contractAddress), gtv(from), gtv(to), gtv(BigInteger.valueOf(i.toLong()))
         )
     }
+}
+
+/**
+ * This event processor is used for nodes that are not connected to ethereum.
+ * No EIF special operations will be produced and no operations will be validated against ethereum.
+ */
+class NoOpEventProcessor : EventProcessor {
+
+    companion object : KLogging()
+
+    override fun shutdown() {}
+
+    override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> = Pair(emptyArray(), emptyList())
+
+    /**
+     * We can at least validate structure
+     */
+    override fun isValidEventData(ops: Array<OpData>): Boolean {
+        for (op in ops) {
+            when (op.opName) {
+                OP_ETH_BLOCK -> {
+                    if (!isValidEthereumBlockFormat(op.args)) {
+                        return false
+                    }
+                }
+                OP_ETH_EVENT -> {
+                    if (!isValidEthereumEventFormat(op.args)) {
+                        return false
+                    }
+                }
+                else -> {
+                    logger.error("Unknown operation: ${op.opName}")
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    private fun isValidEthereumEventFormat(opArgs: Array<Gtv>) = opArgs.size == 9 &&
+            opArgs[0].asPrimitive() is BigInteger &&
+            opArgs[1].asPrimitive() is String &&
+            opArgs[2].asPrimitive() is String &&
+            opArgs[3].asPrimitive() is BigInteger &&
+            opArgs[4].asString() == EventEncoder.encode(ChrL2.DEPOSITED_EVENT) &&
+            opArgs[5].asPrimitive() is String &&
+            opArgs[6].asPrimitive() is String &&
+            opArgs[7].asPrimitive() is String &&
+            opArgs[8].asPrimitive() is BigInteger
+
+    private fun isValidEthereumBlockFormat(opArgs: Array<Gtv>) = opArgs.size == 2 &&
+            opArgs[0].asPrimitive() is BigInteger &&
+            opArgs[1].asPrimitive() is String
 }
 
 /**
@@ -154,40 +208,46 @@ class EthereumEventProcessor(
         }
 
         for (op in ops) {
-            if (op.opName == OP_ETH_BLOCK) {
-                // We don't store all blocks, so we need to go fetch it over network
-                val blockNumber = op.args[0].asBigInteger()
-                val lastEthBlock = sendWeb3jRequestWithRetry(
-                    web3c.web3j.ethGetBlockByNumber(
-                        DefaultBlockParameter.valueOf(blockNumber),
-                        false
-                    ), 3, 0
-                )
+            when (op.opName) {
+                OP_ETH_BLOCK -> {
+                    // We don't store all blocks, so we need to go fetch it over network
+                    val blockNumber = op.args[0].asBigInteger()
+                    val lastEthBlock = sendWeb3jRequestWithRetry(
+                        web3c.web3j.ethGetBlockByNumber(
+                            DefaultBlockParameter.valueOf(blockNumber),
+                            false
+                        ), 3, 0
+                    )
 
-                if (lastEthBlock.hasError() || lastEthBlock.block.hash != op.args[1].asString()) {
-                    return false
-                }
-            }
-            if (op.opName == OP_ETH_EVENT) {
-                val eventBlockNumber = op.args[0].asBigInteger()
-                val eventTransactionHash = op.args[2].asString()
-                val eventLogIndex = op.args[3].asBigInteger()
-
-                val eventLog = if (eventBlockNumber > lastReadLogBlockHeight) {
-                    // Checking over network if we are behind
-                    val eventTransaction =
-                        sendWeb3jRequestWithRetry(web3c.web3j.ethGetTransactionReceipt(eventTransactionHash), 3, 0)
-                    if (eventTransaction.hasError() || !eventTransaction.transactionReceipt.isPresent) {
-                        null
-                    } else {
-                        eventTransaction.transactionReceipt.get().logs.find { it.logIndex == eventLogIndex }
+                    if (lastEthBlock.hasError() || lastEthBlock.block.hash != op.args[1].asString()) {
+                        return false
                     }
-                } else {
-                    // We have stored the event, so we can just check for it, no network call needed
-                    events.find { it.transactionHash == eventTransactionHash && it.logIndex == eventLogIndex }
                 }
+                OP_ETH_EVENT -> {
+                    val eventBlockNumber = op.args[0].asBigInteger()
+                    val eventTransactionHash = op.args[2].asString()
+                    val eventLogIndex = op.args[3].asBigInteger()
 
-                if (eventLog == null || !isMatchingEvents(op.args, eventLog)) {
+                    val eventLog = if (eventBlockNumber > lastReadLogBlockHeight) {
+                        // Checking over network if we are behind
+                        val eventTransaction =
+                            sendWeb3jRequestWithRetry(web3c.web3j.ethGetTransactionReceipt(eventTransactionHash), 3, 0)
+                        if (eventTransaction.hasError() || !eventTransaction.transactionReceipt.isPresent) {
+                            null
+                        } else {
+                            eventTransaction.transactionReceipt.get().logs.find { it.logIndex == eventLogIndex }
+                        }
+                    } else {
+                        // We have stored the event, so we can just check for it, no network call needed
+                        events.find { it.transactionHash == eventTransactionHash && it.logIndex == eventLogIndex }
+                    }
+
+                    if (eventLog == null || !isMatchingEvents(op.args, eventLog)) {
+                        return false
+                    }
+                }
+                else -> {
+                    logger.error("Unknown operation: ${op.opName}")
                     return false
                 }
             }

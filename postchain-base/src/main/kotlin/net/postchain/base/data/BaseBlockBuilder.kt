@@ -86,10 +86,13 @@ open class BaseBlockBuilder(
         for (x in extensions) x.init(this.bctx, this)
         if (buildingNewBlock
                 && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.Begin)) {
-            appendTransaction(specialTxHandler.createSpecialTransaction(
-                    SpecialTransactionPosition.Begin,
-                    bctx
-            ))
+            val specialTransaction = specialTxHandler.createSpecialTransaction(
+                SpecialTransactionPosition.Begin,
+                bctx
+            )
+            if (specialTransaction != null) {
+                appendTransaction(specialTransaction)
+            }
         }
     }
 
@@ -268,8 +271,15 @@ open class BaseBlockBuilder(
     }
 
     override fun finalizeBlock(): BlockHeader {
-        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End))
-            appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.End, bctx))
+        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End)) {
+            val specialTransaction = specialTxHandler.createSpecialTransaction(
+                SpecialTransactionPosition.Begin,
+                bctx
+            )
+            if (specialTransaction != null) {
+                appendTransaction(specialTransaction)
+            }
+        }
 
         return super.finalizeBlock()
     }
