@@ -121,7 +121,7 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
         extraRoot: "0x" + el2MerkleProof.extraRoot,
         extraMerkleProofs: extraMerkleProofs,
       }
-      const calldata = chrl2.interface.encodeFunctionData("withdraw_request", [eventData, evtProof, blockHeader, sigs, el2Proof])
+      const calldata = chrl2.interface.encodeFunctionData("withdrawRequest", [eventData, evtProof, blockHeader, sigs, el2Proof])
       const txPrams = {
         to: chrL2Address,
         value: '0x0',
