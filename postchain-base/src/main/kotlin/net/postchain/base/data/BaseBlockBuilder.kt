@@ -273,7 +273,7 @@ open class BaseBlockBuilder(
     override fun finalizeBlock(): BlockHeader {
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End)) {
             val specialTransaction = specialTxHandler.createSpecialTransaction(
-                SpecialTransactionPosition.Begin,
+                SpecialTransactionPosition.End,
                 bctx
             )
             if (specialTransaction != null) {
