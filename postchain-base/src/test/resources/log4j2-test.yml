@@ -14,7 +14,6 @@ Configuration:
   Appenders:
     Console:
       name: ConsoleAppender
-      target: SYSTEM_OUT
       PatternLayout:
         pattern: ${logpattern}
     RollingFile:

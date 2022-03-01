@@ -7,23 +7,21 @@ Configuration:
       - name: logs
         value: "logs"
       - name: logfile
-        value: "postchain-devtools.log"
+        value: "postchain-devtools"
       - name: logpattern
         value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
 
   Appenders:
     Console:
       - name: ConsoleAppender
-        target: SYSTEM_OUT
         PatternLayout:
           pattern: ${logpattern}
       - name: SimpleConsoleAppender
-        target: SYSTEM_OUT
         PatternLayout:
           pattern: "+++ %msg +++%n"
     RollingFile:
       - name: FileAppender
-        fileName: "${logs}/${logfile}"
+        fileName: "${logs}/${logfile}.log"
         filePattern: "${logs}/${logfile}.%d{yyyy-MM-dd-hh-mm}.log"
         Policies:
           SizeBasedTriggeringPolicy:
@@ -33,7 +31,7 @@ Configuration:
         PatternLayout:
           pattern: ${logpattern}
       - name: SimpleFileAppender
-        fileName: "${logs}/${logfile}"
+        fileName: "${logs}/${logfile}.log"
         filePattern: "${logs}/${logfile}.%d{yyyy-MM-dd-hh-mm}.log"
         Policies:
           SizeBasedTriggeringPolicy:
@@ -61,6 +59,13 @@ Configuration:
           - ref: FileAppender
 
       - name: net.postchain.devtools.IntegrationTestSetup
+        level: debug
+        additivity: false
+        AppenderRef:
+          - ref: SimpleConsoleAppender
+          - ref : SimpleFileAppender
+
+      - name: net.postchain.devtools.ConfigFileBasedIntegrationTest
         level: debug
         additivity: false
         AppenderRef:
