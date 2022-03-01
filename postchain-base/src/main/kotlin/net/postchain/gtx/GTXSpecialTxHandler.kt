@@ -10,7 +10,6 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
-import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 
