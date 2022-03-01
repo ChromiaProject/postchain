@@ -4,12 +4,12 @@ Configuration:
 
   Properties:
     Property:
-      - name: logs
-        value: "logs"
-      - name: logfile
-        value: "postchain-devtools.log"
-      - name: logpattern
-        value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+    - name: logs
+      value: "logs"
+    - name: logfile
+      value: "debug.log"
+    - name: logpattern
+      value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
 
   Appenders:
     Console:
@@ -25,7 +25,7 @@ Configuration:
         SizeBasedTriggeringPolicy:
           size: 1 MB
       DefaultRollOverStrategy:
-        max: 10
+          max: 10
       PatternLayout:
         pattern: ${logpattern}
 
@@ -34,14 +34,21 @@ Configuration:
     Root:
       level: warn
       AppenderRef:
-        - ref: ConsoleAppender
-        - ref: FileAppender
+      - ref: ConsoleAppender
+      - ref: FileAppender
 
     Logger:
 
-      - name: net.postchain
-        level: debug
-        additivity: false
-        AppenderRef:
-          - ref: ConsoleAppender
-          - ref: FileAppender
+    - name: net.postchain
+      level: debug
+      additivity: false
+      AppenderRef:
+      - ref: ConsoleAppender
+      - ref: FileAppender
+
+    - name: net.postchain.base.BaseBlockchainProcessManager
+      level: debug
+      additivity: false
+      AppenderRef:
+      - ref: ConsoleAppender
+      - ref: FileAppender

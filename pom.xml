@@ -602,12 +602,20 @@
                                 <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
                             </includes>
 <!--                            <skipTests>${skipSurefireTests}</skipTests>-->
+                            <systemPropertyVariables>
+                                <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml</log4j.configurationFile>
+                            </systemPropertyVariables>
                         </configuration>
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>${maven.failsafe.plugin.version}</version>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml</log4j.configurationFile>
+                            </systemPropertyVariables>
+                        </configuration>
                         <executions>
                             <execution>
                                 <goals>
