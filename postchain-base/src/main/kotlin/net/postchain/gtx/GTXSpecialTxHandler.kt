@@ -10,7 +10,6 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
-import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 
@@ -129,7 +128,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         return extensions.any { it.needsSpecialTransaction(position) }
     }
 
-    override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction {
+    override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction? {
         val b = GTXDataBuilder(blockchainRID, arrayOf(), cs)
         for (x in extensions) {
             if (x.needsSpecialTransaction(position)) {
@@ -139,8 +138,8 @@ open class GTXSpecialTxHandler(val module: GTXModule,
             }
         }
         if (b.operations.isEmpty()) {
-            // no extension emitted an operation - add nop
-            b.addOperation("nop", arrayOf(GtvFactory.gtv(cs.getRandomBytes(32))))
+            // There is no point building this empty transaction, it would any way be marked as spam
+            return null
         }
         return factory.decodeTransaction(b.serialize())
     }
