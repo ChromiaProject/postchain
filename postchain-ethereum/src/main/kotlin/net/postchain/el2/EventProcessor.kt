@@ -31,44 +31,6 @@ interface EventProcessor {
     fun isValidEventData(ops: Array<OpData>): Boolean
 }
 
-class L2TestEventProcessor : EventProcessor {
-
-    private val ds = SimpleDigestSystem(KECCAK256)
-
-    private var lastBlock = 0
-
-    override fun shutdown() {
-        return
-    }
-
-    override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
-        val out = mutableListOf<Array<Gtv>>()
-        val start = lastBlock + 1
-        for (i in start..start + 10) {
-            lastBlock++
-            out.add(generateData(i.toLong(), i))
-        }
-        return Pair(arrayOf(), out)
-    }
-
-    override fun isValidEventData(ops: Array<OpData>): Boolean {
-        return true
-    }
-
-    private fun generateData(height: Long, i: Int): Array<Gtv> {
-        val blockHash = ds.digest(BigInteger.valueOf(i.toLong()).toByteArray()).toHex()
-        val transactionHash = ds.digest(BigInteger.valueOf((100 - i).toLong()).toByteArray()).toHex()
-        val contractAddress = ds.digest(BigInteger.valueOf(999L).toByteArray()).toHex()
-        val from = ds.digest(BigInteger.valueOf(1L).toByteArray()).toHex()
-        val to = ds.digest(BigInteger.valueOf(2L).toByteArray()).toHex()
-        return arrayOf(
-            gtv(height), gtv(blockHash), gtv(transactionHash),
-            gtv(i.toLong()), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-            gtv(contractAddress), gtv(from), gtv(to), gtv(BigInteger.valueOf(i.toLong()))
-        )
-    }
-}
-
 /**
  * This event processor is used for nodes that are not connected to ethereum.
  * No EIF special operations will be produced and no operations will be validated against ethereum.
