@@ -155,7 +155,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         if (preWipeDatabase) {
             StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
         }
-        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
         val nodeConfig = nodeConfigProvider.getConfiguration()
 
         nodesNames[nodeConfig.pubKey] = "$nodeIndex"
@@ -246,7 +246,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         if (preWipeDatabase) {
             StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
         }
-        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
 
         val node = PostchainTestNode(nodeConfigProvider)
                 .also { nodes.add(it) }

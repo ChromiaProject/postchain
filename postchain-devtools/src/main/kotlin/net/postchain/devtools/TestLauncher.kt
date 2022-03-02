@@ -51,7 +51,7 @@ class TestLauncher : IntegrationTestSetup() {
 
     private fun createTestNode(configFile: String, blockchainConfigFile: String): PostchainTestNode {
         val appConfig = AppConfig.fromPropertiesFile(configFile)
-        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
 
         /*
         // TODO: Fix this hack
