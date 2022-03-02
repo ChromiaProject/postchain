@@ -20,7 +20,7 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
     fun reconfigurationAtHeight_is_successful() {
         // Node config
         val appConfig = createAppConfig(0, 1, DEFAULT_CONFIG_FILE)
-        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
         val chainId = nodeConfigProvider.getConfiguration().activeChainIds.first().toLong()
 
         // Chains configs
