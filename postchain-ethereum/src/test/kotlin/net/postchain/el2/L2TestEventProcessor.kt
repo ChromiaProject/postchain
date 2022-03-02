@@ -1,4 +1,4 @@
-package net.postchain.devtools.eif
+package net.postchain.el2
 
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.KECCAK256
