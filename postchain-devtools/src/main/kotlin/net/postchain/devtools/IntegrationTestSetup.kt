@@ -3,6 +3,7 @@
 package net.postchain.devtools
 
 import mu.KLogging
+import mu.Marker
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
@@ -14,12 +15,18 @@ import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import org.apache.commons.configuration2.MapConfiguration
+import org.apache.logging.log4j.core.impl.Log4jLogEvent
+import org.apache.logging.log4j.core.impl.LogEventFactory
+import org.apache.logging.log4j.message.Message
+import org.apache.logging.log4j.message.SimpleMessage
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
+import org.slf4j.LoggerFactory
+import java.util.logging.LogManager
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
@@ -53,33 +60,33 @@ open class IntegrationTestSetup : AbstractIntegration() {
      */
     fun awaitLog(dbg: String) {
         if (awaitDebugLog) {
-            System.out.println("TEST: $dbg")
+            logger.info("TEST: $dbg")
         }
     }
 
     // For important test info we always want to log
     fun testLog(dbg: String) {
-        System.out.println("TEST: $dbg")
+        logger.info("TEST: $dbg")
     }
 
     @BeforeEach
     fun setup(testInfo: TestInfo) {
-        println("++ Starting test: ${testInfo.displayName} ++")
+        logger.info("Starting test: ${testInfo.displayName}")
     }
 
     @AfterEach
     override fun tearDown() {
         try {
-            logger.debug("Integration test -- TEARDOWN")
+            logger.info("Integration test -- TEARDOWN")
             nodes.forEach { it.shutdown() }
             nodes.clear()
             nodeMap.clear()
-            logger.debug("Closed nodes")
+            logger.info("Closed nodes")
             peerInfos = null
             expectedSuccessRids = mutableMapOf()
             configOverrides.clear()
             TestBlockchainRidCache.clear()
-            logger.debug("tearDown() done")
+            logger.info("tearDown() done")
         } catch (t: Throwable) {
             logger.error("tearDown() failed", t)
         }

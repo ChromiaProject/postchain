@@ -45,10 +45,10 @@ class PostchainTestNode(
         // But some test debugging cannot really be done the normal way so we need this strange looking thing
         when (processManager) {
             is BaseBlockchainProcessManager -> {
-                processManager.setToTest()
+                processManager.insideATest = true
             }
             is ManagedBlockchainProcessManager -> {
-                processManager.setToTest()
+                processManager.insideATest = true
             }
         }
     }

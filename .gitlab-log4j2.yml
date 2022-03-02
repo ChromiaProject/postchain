@@ -4,12 +4,12 @@ Configuration:
 
   Properties:
     Property:
-      - name: logs
-        value: "logs"
-      - name: logfile
-        value: "postchain-devtools"
-      - name: logpattern
-        value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+    - name: logs
+      value: "logs"
+    - name: logfile
+      value: "ci"
+    - name: logpattern
+      value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
 
   Appenders:
     Console:
@@ -41,18 +41,24 @@ Configuration:
         PatternLayout:
           pattern: "+++ %msg +++%n"
 
+
   Loggers:
 
     Root:
       level: warn
       AppenderRef:
-        - ref: ConsoleAppender
-        - ref: FileAppender
+      - ref: ConsoleAppender
+      - ref: FileAppender
 
     Logger:
 
       - name: net.postchain
         level: debug
+        additivity: false
+        AppenderRef:
+        - ref: ConsoleAppender
+          level: warn
+        - ref: FileAppender
 
       - name: net.postchain.devtools.IntegrationTestSetup
         level: debug

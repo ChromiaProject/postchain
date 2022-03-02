@@ -21,6 +21,8 @@ import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.TestInfo
 import java.io.File
 
 // Legacy code still use this old name, don't want to break compatibility.
@@ -49,6 +51,11 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
 
     companion object : KLogging() {
         const val DEFAULT_CONFIG_FILE = "config.properties"
+    }
+
+    @BeforeEach
+    fun setup(testInfo: TestInfo) {
+        logger.info("Starting test: ${testInfo.displayName}")
     }
 
     @AfterEach
