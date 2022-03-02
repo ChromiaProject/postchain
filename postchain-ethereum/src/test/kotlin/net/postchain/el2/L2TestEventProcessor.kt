@@ -3,7 +3,6 @@ package net.postchain.el2
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
-import net.postchain.el2.EventProcessor
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv

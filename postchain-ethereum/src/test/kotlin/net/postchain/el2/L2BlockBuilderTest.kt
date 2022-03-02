@@ -2,7 +2,6 @@ package net.postchain.el2
 
 import net.postchain.base.BlockchainRidFactory
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.getEthereumAddress
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.base.snapshot.SimpleDigestSystem
@@ -224,7 +223,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (i in 0..15) {
             enqueueTx(makeL2StateOp(bcRid, i.toLong()))
             val l = i.toLong()
-            val state = GtvEncoder.simpleEncodeGtv(
+            val state = SimpleGtvEncoder.encodeGtv(
                 gtv(
                     GtvInteger(l),
                     GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))
@@ -292,7 +291,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
-        val state = GtvEncoder.simpleEncodeGtv(
+        val state = SimpleGtvEncoder.encodeGtv(
             gtv(
                 GtvInteger(l),
                 GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))
@@ -376,7 +375,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (i in 1..4) {
             val l = i.toLong()
             enqueueTx(makeL2EventOp(bcRid, l))
-            val event = GtvEncoder.simpleEncodeGtv(
+            val event = SimpleGtvEncoder.encodeGtv(
                 gtv(
                     GtvInteger(l),
                     GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))
@@ -390,7 +389,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         for (i in 0..15) {
             val l = i.toLong()
             enqueueTx(makeL2StateOp(bcRid, l))
-            val state = GtvEncoder.simpleEncodeGtv(
+            val state = SimpleGtvEncoder.encodeGtv(
                 gtv(
                     GtvInteger(l),
                     GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))
@@ -466,7 +465,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         val l = 16L
         enqueueTx(makeL2StateOp(bcRid, l))
-        val state = GtvEncoder.simpleEncodeGtv(
+        val state = SimpleGtvEncoder.encodeGtv(
             gtv(
                 GtvInteger(l),
                 GtvByteArray(ds.digest(BigInteger.valueOf(l).toByteArray()))

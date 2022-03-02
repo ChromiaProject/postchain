@@ -1,9 +1,6 @@
 package net.postchain.el2
 
 import mu.KLogging
-import net.postchain.base.snapshot.SimpleDigestSystem
-import net.postchain.common.data.KECCAK256
-import net.postchain.common.toHex
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.framework.AbstractBlockchainProcess

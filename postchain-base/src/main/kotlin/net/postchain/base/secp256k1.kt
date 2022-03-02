@@ -3,7 +3,6 @@
 package net.postchain.base
 
 import net.postchain.common.data.Hash
-import net.postchain.common.data.KECCAK256
 import net.postchain.core.Signature
 import net.postchain.gtx.EMPTY_SIGNATURE
 import org.spongycastle.asn1.x9.X9IntegerConverter
@@ -141,7 +140,7 @@ fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
  * @param hash signed message
  * @param pubKey compress public key
  * @param signature signature without v
- * @return signature with v to run ecrecover properly on ethereum solidity smart contract
+ * @return signature with v to run ecrecover
  */
 fun encodeSignatureWithV(hash: ByteArray, pubKey: ByteArray, signature: ByteArray): ByteArray {
     val pub = decompressKey(pubKey)
@@ -166,39 +165,6 @@ fun decompressKey(pubKey: ByteArray): ByteArray {
         return pubKey
     }
     return CURVE.curve.decodePoint(pubKey).getEncoded(false).takeLast(64).toByteArray()
-}
-
-/**
- * Get ethereum address from compress public key
- */
-fun getEthereumAddress(pubKey: ByteArray): ByteArray {
-    val pub = CURVE.curve.decodePoint(pubKey).getEncoded(false).takeLast(64).toByteArray()
-    return digest(pub).takeLast(20).toByteArray()
-}
-
-fun toChecksumAddress(address: String): String {
-    val lowercaseAddress = Numeric.cleanHexPrefix(address).toLowerCase()
-    val addressHash = Numeric.cleanHexPrefix(Hashes.sha3String(lowercaseAddress))
-    val result = StringBuilder(lowercaseAddress.length + 2)
-    for (i in lowercaseAddress.indices) {
-        if (addressHash[i].toString().toInt(16) >= 8) {
-            result.append(lowercaseAddress[i].toString().toUpperCase())
-        } else {
-            result.append(lowercaseAddress[i])
-        }
-    }
-    return Numeric.prependHexPrefix(result.toString())
-}
-
-/**
- * Calculate the keccak256 hash digest of a message
- *
- * @param bytes A ByteArray of data consisting of the message we want the hash digest of
- * @return The keccak256 hash digest of [bytes]
- */
-fun digest(bytes: ByteArray): Hash {
-    val m = MessageDigestFactory.create(KECCAK256)
-    return m.digest(bytes)
 }
 
 // implementation is based on BitcoinJ ECKey code

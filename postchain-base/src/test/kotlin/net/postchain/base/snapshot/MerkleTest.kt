@@ -367,7 +367,7 @@ class MerkleTest {
             GtvFactory.gtv("000000000000000000000000e105ba42b66d08ac7ca7fc48c583599044a6dab3".hexStringToByteArray()),
             GtvFactory.gtv(300L)
         )
-        leafs.add(ds.digest(GtvEncoder.simpleEncodeGtv(data)))
+        leafs.add(ds.digest(GtvEncoder.encodeGtv(data)))
         val pos = 0L
         val root = event.writeEventTree(0, leafs)
         val proofs = event.getMerkleProof(0, pos)
