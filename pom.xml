@@ -164,6 +164,11 @@
                 <artifactId>postchain-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-ethereum</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- Logging -->
             <dependency>
