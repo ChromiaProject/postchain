@@ -1,10 +1,9 @@
 // Copyright (c) 2021 ChromaWay AB. See README for license information.
-package net.postchain.devtools.eif
+package net.postchain.el2
 
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.el2.EL2SpecialTxExtension
 import net.postchain.gtx.GTXBlockchainConfiguration
 
 class EL2TestSynchronizationInfrastructureExtension(
