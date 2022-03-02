@@ -4,7 +4,8 @@ package net.postchain.common
 
 import assertk.assert
 import assertk.isContentEqualTo
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class UtilsHexStringToByteArrayTest {
 
@@ -16,9 +17,9 @@ class UtilsHexStringToByteArrayTest {
         assert(actual).isContentEqualTo(expected)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun hexStringToByteArray_single_symbol_throws_exception() {
-        "0".hexStringToByteArray()
+        assertThrows<java.lang.IllegalArgumentException> { "0".hexStringToByteArray() }
     }
 
     @Test
@@ -45,8 +46,8 @@ class UtilsHexStringToByteArrayTest {
         assert(actual).isContentEqualTo(expected)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun hexStringToByteArray_not_hex_symbol_throws_exception() {
-        "tg".hexStringToByteArray()
+        assertThrows<java.lang.IllegalArgumentException> { "tg".hexStringToByteArray() }
     }
 }

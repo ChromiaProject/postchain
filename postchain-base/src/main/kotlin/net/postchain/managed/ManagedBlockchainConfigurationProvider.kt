@@ -8,12 +8,12 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
 
-class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvider {
+open class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvider {
 
     private lateinit var dataSource: ManagedNodeDataSource
     private val systemProvider = ManualBlockchainConfigurationProvider()
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     fun setDataSource(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource
@@ -39,7 +39,7 @@ class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvider {
             val blockchainRID = dba.getBlockchainRid(eContext)
             val height = dba.getLastBlockHeight(eContext)
             val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRID!!.data, height)
-            logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight")
+            logger.debug { "needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight" }
             return (nextConfigHeight != null) && (nextConfigHeight == height + 1)
         }
 
@@ -52,6 +52,12 @@ class ManagedBlockchainConfigurationProvider : BlockchainConfigurationProvider {
                 throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
             }
         }
+    }
+
+    override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
+        val db = DatabaseAccess.of(eContext)
+        val brid = db.getBlockchainRid(eContext)
+        return dataSource.findNextConfigurationHeight(brid!!.data, height)
     }
 
     private fun getConfigurationFromDataSource(eContext: EContext): ByteArray? {

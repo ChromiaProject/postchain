@@ -2,17 +2,17 @@ package net.postchain.base
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.eq
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import net.postchain.core.BlockQueries
 import net.postchain.core.TransactionQueue
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import nl.komponents.kovenant.Promise
 import org.awaitility.Awaitility.await
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
 
 class BaseBlockBuildingStrategyTest {
@@ -20,7 +20,7 @@ class BaseBlockBuildingStrategyTest {
     @Test
     fun test_before_POS131() {
         // Mock
-        val strategyData: Gtv = mock() {
+        val strategyData: Gtv = mock {
             on { get(eq("maxblocktime")) } doReturn GtvFactory.gtv(2000L)
             on { get(eq("blockdelay")) } doReturn GtvFactory.gtv(2000L)
             on { get(eq("maxblocktransactions")) } doReturn GtvFactory.gtv(100L)
@@ -51,7 +51,7 @@ class BaseBlockBuildingStrategyTest {
         }
     }
 
-    @Test @Ignore
+    @Test @Disabled
     fun test_after_POS131() {
         // Mock
         val strategyData: Gtv = mock() {

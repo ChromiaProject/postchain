@@ -8,23 +8,28 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders.*
 import net.postchain.core.NODE_ID_NA
 
-object NodeConfigurationProviderFactory {
+class NodeConfigurationProviderFactory(
+        private val storageFactory: (AppConfig) -> Storage = DEFAULT_STORAGE_FACTORY
+) {
 
-    val DEFAULT_STORAGE_FACTORY: (AppConfig) -> Storage = {
-        StorageBuilder.buildStorage(it, NODE_ID_NA)
+    companion object {
+        val DEFAULT_STORAGE_FACTORY: (AppConfig) -> Storage = {
+            StorageBuilder.buildStorage(it, NODE_ID_NA)
+        }
     }
 
-    fun createProvider(
-            appConfig: AppConfig,
-            storageFactory: (AppConfig) -> Storage = DEFAULT_STORAGE_FACTORY
-    ): NodeConfigurationProvider {
-
+    /**
+     * @param appConfig used to find the provider
+     * @param storageFactory
+     * @return the correct [NodeConfigurationProvider] based on [AppConfig]'s setting
+     */
+    fun createProvider(appConfig: AppConfig): NodeConfigurationProvider {
         return when (appConfig.nodeConfigProvider.toLowerCase()) {
             Legacy.name.toLowerCase() -> LegacyNodeConfigurationProvider(appConfig)
+            File.name.toLowerCase() -> FileNodeConfigurationProvider(appConfig)
             Manual.name.toLowerCase() -> ManualNodeConfigurationProvider(appConfig, storageFactory)
             Managed.name.toLowerCase() -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
-            // TODO: Change 'Legacy' to 'Manual' in v3.0
-            else -> LegacyNodeConfigurationProvider(appConfig)
+            else -> ManualNodeConfigurationProvider(appConfig, storageFactory)
         }
     }
 }

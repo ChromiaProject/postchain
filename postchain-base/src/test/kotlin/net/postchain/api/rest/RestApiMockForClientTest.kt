@@ -16,8 +16,8 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
-import org.junit.After
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Test
 
 class RestApiMockForClientManual {
     val listenPort = 49545
@@ -27,7 +27,7 @@ class RestApiMockForClientManual {
 
     companion object : KLogging()
 
-    @After
+    @AfterEach
     fun tearDown() {
         restApi.stop()
         logger.debug { "Stopped" }

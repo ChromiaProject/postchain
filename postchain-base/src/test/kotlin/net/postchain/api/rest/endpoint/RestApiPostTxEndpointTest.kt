@@ -2,15 +2,16 @@
 
 package net.postchain.api.rest.endpoint
 
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.common.toHex
-import org.easymock.EasyMock.*
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class RestApiPostTxEndpointTest {
 
@@ -19,15 +20,16 @@ class RestApiPostTxEndpointTest {
     private lateinit var restApi: RestApi
     private lateinit var model: Model
 
-    @Before
+    @BeforeEach
     fun setup() {
-        model = createMock(Model::class.java)
-        expect(model.chainIID).andReturn(1L).anyTimes()
+        model = mock {
+            on { chainIID } doReturn 1L
+        }
 
         restApi = RestApi(0, basePath)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         restApi.stop()
     }
@@ -36,7 +38,6 @@ class RestApiPostTxEndpointTest {
     fun test_postTx_Ok() {
         val txHexString = "hello".toByteArray().toHex()
         model.postTransaction(ApiTx(txHexString))
-        replay(model)
 
         restApi.attachModel(blockchainRID, model)
 
@@ -45,14 +46,10 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(200)
-
-        verify(model)
     }
 
     @Test
     fun test_postTx_when_empty_message_then_400_received() {
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -60,14 +57,10 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(400)
-
-        verify(model)
     }
 
     @Test
     fun test_postTx_when_missing_tx_property_then_400_received() {
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -75,14 +68,10 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(400)
-
-        verify(model)
     }
 
     @Test
     fun test_postTx_when_empty_tx_property_then_400_received() {
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -90,14 +79,10 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(400)
-
-        verify(model)
     }
 
     @Test
     fun test_postTx_when_tx_property_not_hex_then_400_received() {
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -105,14 +90,10 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(400)
-
-        verify(model)
     }
 
     @Test
     fun test_postTx_when_invalid_json_then_400_received() {
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -120,14 +101,10 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(400)
-
-        verify(model)
     }
 
     @Test
     fun test_postTx_when_blockchainRID_too_long_then_400_received() {
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -135,14 +112,10 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/${blockchainRID}0000")
                 .then()
                 .statusCode(400)
-
-        verify(model)
     }
 
     @Test
     fun test_postTx_when_blockchainRID_too_short_then_400_received() {
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -150,14 +123,10 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/${blockchainRID.substring(1)}")
                 .then()
                 .statusCode(400)
-
-        verify(model)
     }
 
     @Test
     fun test_postTx_when_blockchainRID_not_hex_then_400_received() {
-        replay(model)
-
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -165,7 +134,5 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/${blockchainRID.replaceFirst("a", "g")}")
                 .then()
                 .statusCode(400)
-
-        verify(model)
     }
 }

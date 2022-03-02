@@ -2,14 +2,15 @@
 
 package net.postchain.network.netty2
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.doAnswer
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.core.Shutdownable
-import net.postchain.network.x.XConnectorEvents
-import net.postchain.network.x.XPacketHandler
+import net.postchain.network.common.NodeConnectorEvents
+import net.postchain.network.peer.PeerConnectionDescriptor
+import net.postchain.network.peer.PeerPacketHandler
 
 class IntTestContext(
         ownerPeerInfo: PeerInfo,
@@ -18,14 +19,14 @@ class IntTestContext(
 
     var isShutdown = false
 
-    val packets: XPacketHandler = mock()
+    val packets: PeerPacketHandler = mock()
 
-    val events: XConnectorEvents = mock {
-        on { onPeerConnected(any()) } doReturn packets
-        on { onPeerDisconnected(any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
+    val events: NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> = mock {
+        on { onNodeConnected( any()) } doReturn packets
+        on { onNodeDisconnected(any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
     }
 
-    val peer = NettyConnector<Int>(events)
+    val peer = NettyPeerConnector<Int>(events)
 
     val packetEncoder = IntMockPacketEncoder(ownerPeerInfo)
 

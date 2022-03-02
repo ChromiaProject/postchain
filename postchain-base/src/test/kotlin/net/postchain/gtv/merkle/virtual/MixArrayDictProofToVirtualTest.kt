@@ -12,9 +12,9 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
 class MixArrayDictProofToVirtualTest {
 
@@ -41,7 +41,7 @@ class MixArrayDictProofToVirtualTest {
 
         try {
             val gtvNonExistincg =virtualGtv["one"]!![2]
-            Assert.fail()
+           fail()
         } catch (e: UserMistake) {
             // Nothing, it's what we expect
         }

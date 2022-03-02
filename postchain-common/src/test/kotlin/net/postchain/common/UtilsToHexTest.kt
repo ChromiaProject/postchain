@@ -4,7 +4,7 @@ package net.postchain.common
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class UtilsToHexTest {
 

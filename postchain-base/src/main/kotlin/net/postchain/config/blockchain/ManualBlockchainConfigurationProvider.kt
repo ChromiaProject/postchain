@@ -11,19 +11,27 @@ class ManualBlockchainConfigurationProvider : BlockchainConfigurationProvider {
 
     companion object : KLogging()
 
-    override fun needsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
-        val height = DatabaseAccess.of(eContext).getLastBlockHeight(eContext)
-        val currentConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height)
-        val nextConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height + 1)
-        logger.debug("needsConfigurationChange() - height: $height, next conf at: $nextConfigHeight (currentConfigHeight: $currentConfigHeight)")
-        return (currentConfigHeight != nextConfigHeight)
-    }
-
     override fun getConfiguration(eContext: EContext, chainId: Long): ByteArray? {
         val lastHeight = DatabaseAccess.of(eContext).getLastBlockHeight(eContext)
         val nextHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, lastHeight + 1)
         return nextHeight?.let {
             BaseConfigurationDataStore.getConfigurationData(eContext, it)!!
         }
+    }
+
+    override fun needsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
+        val height = DatabaseAccess.of(eContext).getLastBlockHeight(eContext)
+        val currentConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height)
+        val nextBlockConfigHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, height + 1)
+        logger.debug {
+            "needsConfigurationChange() - height: $height" +
+                    ", current config height: $currentConfigHeight" +
+                    ", next block config height: $nextBlockConfigHeight"
+        }
+        return currentConfigHeight != nextBlockConfigHeight
+    }
+
+    override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
+        return DatabaseAccess.of(eContext).findConfigurationHeightForBlock(eContext, height)
     }
 }

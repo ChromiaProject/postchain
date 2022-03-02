@@ -12,7 +12,7 @@ import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.getModules
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class SinglePeerReconfigurationTest : ReconfigurationTest() {
 
@@ -20,7 +20,7 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
     fun reconfigurationAtHeight_is_successful() {
         // Node config
         val appConfig = createAppConfig(0, 1, DEFAULT_CONFIG_FILE)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
         val chainId = nodeConfigProvider.getConfiguration().activeChainIds.first().toLong()
 
         // Chains configs

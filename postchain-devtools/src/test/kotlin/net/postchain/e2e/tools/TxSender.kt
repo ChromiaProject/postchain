@@ -1,6 +1,6 @@
 package net.postchain.e2e.tools
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.DefaultSigner

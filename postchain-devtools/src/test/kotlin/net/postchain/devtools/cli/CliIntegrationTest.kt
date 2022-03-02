@@ -3,7 +3,7 @@
 package net.postchain.devtools.cli
 
 import net.postchain.StorageBuilder
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
 import net.postchain.base.runStorageCommand
@@ -15,8 +15,8 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.NODE_ID_NA
 import org.apache.commons.dbutils.handlers.ScalarHandler
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 import kotlin.test.*
 
@@ -34,7 +34,7 @@ class CliIntegrationTest {
         return Paths.get(javaClass.getResource("/net/postchain/devtools/cli/${name}").toURI()).toString()
     }
 
-    @Before
+    @BeforeEach
     fun setup() {
         // this wipes the data base.
         StorageBuilder.buildStorage(appConfig, NODE_ID_NA, true)
@@ -92,7 +92,7 @@ class CliIntegrationTest {
     @Test
     fun testAddConfigurationPeersAdded() {
         // add peerinfos for the new signers.
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
         val peerinfos = nodeConfigProvider.getConfiguration().peerInfoMap
         for ((_, value) in peerinfos) {
             CliExecution.peerinfoAdd(nodeConfigPath, value.host, value.port, value.pubKey.toHex(),

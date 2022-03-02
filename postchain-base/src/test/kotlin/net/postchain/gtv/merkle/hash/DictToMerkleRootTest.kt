@@ -6,7 +6,7 @@ import net.postchain.base.merkle.TreeHelper
 import net.postchain.gtv.merkle.DictToGtvBinaryTreeHelper
 import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
 import net.postchain.gtv.merkleHashSummary
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 

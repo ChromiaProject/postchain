@@ -5,7 +5,7 @@ package net.postchain.config.node
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import org.apache.commons.configuration2.Configuration
 
 class LegacyNodeConfigurationProvider(private val appConfig: AppConfig) : NodeConfigurationProvider {
@@ -18,8 +18,8 @@ class LegacyNodeConfigurationProvider(private val appConfig: AppConfig) : NodeCo
 
     override fun close() {}
 
-    private fun createPeerInfoMap(config: Configuration): Map<XPeerID, PeerInfo> =
-            createPeerInfoCollection(config).map { XPeerID(it.pubKey) to it }.toMap()
+    private fun createPeerInfoMap(config: Configuration): Map<NodeRid, PeerInfo> =
+            createPeerInfoCollection(config).map { NodeRid(it.pubKey) to it }.toMap()
 
     /**
      * Retrieves peer information from config, including networking info and public keys
@@ -36,9 +36,9 @@ class LegacyNodeConfigurationProvider(private val appConfig: AppConfig) : NodeCo
             }
         }
 
-        // TODO: [et]: Refactor this
+        // Calculating the number of nodes
         var peerCount = 0
-        config.getKeys("node").forEach { peerCount++ }
+        config.getKeys("node").forEach { _ -> peerCount++ }
         peerCount /= 4
 
         return Array(peerCount) {

@@ -14,12 +14,14 @@ import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
 import net.postchain.gtv.merkle.proof.ProofValueGtvLeaf
 import net.postchain.gtv.path.ArrayGtvPathElement
-import org.easymock.EasyMock.*
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.hamcrest.Matchers.isEmptyString
 import org.hamcrest.core.IsEqual.equalTo
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 /**
  * [GetConfirmation] and [GetTx] endpoints have common part,
@@ -33,15 +35,16 @@ class RestApiGetConfirmationProofEndpointTest {
     private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
     private val txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
-    @Before
+    @BeforeEach
     fun setup() {
-        model = createMock(Model::class.java)
-        expect(model.chainIID).andReturn(1L).anyTimes()
+        model = mock {
+           on { chainIID } doReturn 1L
+        }
 
         restApi = RestApi(0, basePath)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         restApi.stop()
     }
@@ -69,10 +72,8 @@ class RestApiGetConfirmationProofEndpointTest {
                 buildDummyProof()
         )
 
-        expect(model.getConfirmationProof(TxRID(txHashHex.hexStringToByteArray())))
-                .andReturn(expectedObject)
-
-        replay(model)
+        whenever(model.getConfirmationProof(TxRID(txHashHex.hexStringToByteArray())))
+            .doReturn(expectedObject)
 
         restApi.attachModel(blockchainRID, model)
 
@@ -84,7 +85,5 @@ class RestApiGetConfirmationProofEndpointTest {
                 .body("blockHeader", equalTo("0A0B0C"))
                 .body("signatures.size()", equalTo(0))
                 .body("merkleProofTree.size()", equalTo(5))
-
-        verify(model)
     }
 }

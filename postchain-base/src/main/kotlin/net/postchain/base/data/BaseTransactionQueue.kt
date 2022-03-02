@@ -19,12 +19,12 @@ class ComparableTransaction(val tx: Transaction) {
     }
 }
 
-val MAX_REJECTED = 1000
+const val MAX_REJECTED = 1000
 
 /**
  * Transaction queue for transactions received from peers
  */
-class BaseTransactionQueue(queueCapacity: Int = 2500) : TransactionQueue {
+class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
 
     companion object : KLogging()
 
@@ -62,7 +62,7 @@ class BaseTransactionQueue(queueCapacity: Int = 2500) : TransactionQueue {
         val rid = ByteArrayKey(tx.getRID())
         synchronized(this) {
             if (queueMap.contains(rid)) {
-                logger.debug("Skipping $rid first test")
+                logger.debug{ "Skipping $rid first test" }
                 return TransactionResult.DUPLICATE
             }
         }
@@ -72,26 +72,26 @@ class BaseTransactionQueue(queueCapacity: Int = 2500) : TransactionQueue {
             if (tx.isCorrect()) {
                 synchronized(this) {
                     if (queueMap.contains(rid)) {
-                        logger.debug("Skipping $rid second test")
+                        logger.debug{ "Skipping $rid second test" }
                         return TransactionResult.DUPLICATE
                     }
                     if (queue.offer(comparableTx)) {
-                        logger.debug("Enqueued tx $rid")
+                        logger.debug{ "Enqueued tx $rid" }
                         queueMap.set(rid, comparableTx)
                         return TransactionResult.OK
                     } else {
-                        logger.debug("Skipping tx $rid, overloaded. Queue contains ${queue.size} elements")
+                        logger.debug{ "Skipping tx $rid, overloaded. Queue contains ${queue.size} elements" }
                         return TransactionResult.FULL
                     }
                 }
             } else {
-                logger.debug("Tx $rid didn't pass the check")
+                logger.debug { "Tx $rid didn't pass the check" }
                 rejectTransaction(tx, null)
                 return TransactionResult.INVALID
             }
 
         } catch (e: UserMistake) {
-            logger.debug("Tx $rid didn't pass the check: ${e.message}")
+            logger.debug{ "Tx $rid didn't pass the check: ${e.message}" }
             rejectTransaction(tx, e)
         }
 

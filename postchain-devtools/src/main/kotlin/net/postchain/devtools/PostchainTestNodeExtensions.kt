@@ -7,6 +7,7 @@ import assertk.assertions.isNull
 import net.postchain.core.BlockQueries
 import net.postchain.core.MultiSigBlockWitness
 import net.postchain.core.Signature
+import net.postchain.core.Transaction
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.Gtv
@@ -14,8 +15,8 @@ import net.postchain.gtx.CompositeGTXModule
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 import nl.komponents.kovenant.Promise
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 
 fun PostchainTestNode.addBlockchainAndStart(chainId: Long, blockchainConfig: Gtv) {
     val bcRid = addBlockchain(chainId, blockchainConfig)
@@ -36,7 +37,7 @@ fun PostchainTestNode.assertNodeConnectedWith(chainId: Long, vararg nodes: Postc
 }
 
 fun <T> PostchainTestNode.query(chainId: Long, action: (BlockQueries) -> Promise<T, Exception>): T? {
-    return retrieveBlockchain(chainId)?.getEngine()?.getBlockQueries()?.run {
+    return retrieveBlockchain(chainId)?.blockchainEngine?.getBlockQueries()?.run {
         action(this)
     }?.get()
 }
@@ -75,14 +76,14 @@ fun PostchainTestNode.awaitHeight(chainId: Long, height: Long) {
     strategy(chainId).awaitCommitted(height.toInt())
 }
 
-fun PostchainTestNode.enqueueTxs(chainId: Long, vararg txs: TestTransaction): Boolean {
+fun PostchainTestNode.enqueueTxs(chainId: Long, vararg txs: Transaction): Boolean {
     return retrieveBlockchain(chainId)
-            ?.let { process ->
-                val txQueue = process.getEngine().getTransactionQueue()
-                txs.forEach { txQueue.enqueue(it) }
-                true
-            }
-            ?: false
+        ?.let { process ->
+            val txQueue = process.blockchainEngine.getTransactionQueue()
+            txs.forEach { txQueue.enqueue(it) }
+            true
+        }
+        ?: false
 }
 
 fun PostchainTestNode.enqueueTxsAndAwaitBuiltBlock(chainId: Long, height: Long, vararg txs: TestTransaction) {
@@ -92,7 +93,7 @@ fun PostchainTestNode.enqueueTxsAndAwaitBuiltBlock(chainId: Long, height: Long, 
 
 fun PostchainTestNode.getModules(chainId: Long = PostchainTestNode.DEFAULT_CHAIN_IID): Array<GTXModule> {
     val configuration = retrieveBlockchain(chainId)
-            ?.getEngine()
+            ?.blockchainEngine
             ?.getConfiguration()
 
     return when (configuration) {

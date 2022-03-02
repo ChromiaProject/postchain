@@ -3,17 +3,14 @@
 package net.postchain
 
 import mu.KLogging
-import net.postchain.base.BlockchainRid
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.BaseInfrastructureFactoryProvider
-import net.postchain.core.BlockchainInfrastructure
-import net.postchain.core.BlockchainProcessManager
-import net.postchain.core.Shutdownable
+import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.devtools.PeerNameHelper.peerName
+import net.postchain.devtools.NameHelper.peerName
+import nl.komponents.kovenant.Kovenant
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
@@ -27,6 +24,13 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
     companion object : KLogging()
 
     init {
+        Kovenant.context {
+            workerContext.dispatcher {
+                name = "main"
+                concurrentTasks = 5
+            }
+        }
+
         val infrastructureFactory = BaseInfrastructureFactoryProvider().createInfrastructureFactory(nodeConfigProvider)
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(nodeConfigProvider, diagnosticContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
@@ -35,6 +39,7 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
 
         diagnosticContext.addProperty(DiagnosticProperty.VERSION, getVersion())
         diagnosticContext.addProperty(DiagnosticProperty.PUB_KEY, nodeConfigProvider.getConfiguration().pubKey)
+        diagnosticContext.addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
     }
 
     fun startBlockchain(chainId: Long): BlockchainRid? {
@@ -47,13 +52,13 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
 
     override fun shutdown() {
         // FYI: Order is important
-        logger.debug("${name()}: Stopping ProcessManager")
+        logger.info("${name()}: shutdown() - begin")
         processManager.shutdown()
-        logger.debug("${name()}: Stopping BlockchainInfrastructure")
+        logger.debug("${name()}: shutdown() - Stopping BlockchainInfrastructure")
         blockchainInfrastructure.shutdown()
-        logger.debug("${name()}: Closing NodeConfigurationProvider")
+        logger.debug("${name()}: shutdown() - Closing NodeConfigurationProvider")
         nodeConfigProvider.close()
-        logger.debug("${name()}: Stopped PostchainNode")
+        logger.info("${name()}: shutdown() - end")
     }
 
     private fun name(): String {
@@ -78,10 +83,10 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
         return if (logger.isDebugEnabled) {
             val x = processManager.retrieveBlockchain(chainId)
             if (x == null) {
-                logger.trace("WARN why didn't we find the blockchain for chainId: $chainId on node: ${nodeConfigProvider.getConfiguration().pubKey}?")
+                logger.trace{ "WARN why didn't we find the blockchain for chainId: $chainId on node: ${nodeConfigProvider.getConfiguration().pubKey}?" }
                 null
             } else {
-                val procName = BlockchainProcessName(nodeConfigProvider.getConfiguration().pubKey, x.getEngine().getConfiguration().blockchainRid)
+                val procName = BlockchainProcessName(nodeConfigProvider.getConfiguration().pubKey, x.blockchainEngine.getConfiguration().blockchainRid)
                 BlockTrace.buildBeforeBlock(procName)
             }
         } else {

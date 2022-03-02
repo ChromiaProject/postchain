@@ -4,7 +4,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.devtools.TestLegacyNodeConfigProducer
+import net.postchain.devtools.TestNodeConfigProducer
 import org.apache.commons.configuration2.CompositeConfiguration
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.MapConfiguration
@@ -16,11 +16,21 @@ import java.io.File
 
 /**
  * Will extract a [NodeConfigurationProvider] from a [NodeSetup].
+ *
+ * Background:
+ * The entire idea behind the "Setup" test structure is to avoid writing the "nodeX.properties" files, since they
+ * are so easy to guess from other data we have. This class does the bulk work when going from [NodeSetup] to the
+ * configuration prodvider needed to get a real [NodeConfig], so the chain becomes:
+ *
+ * [NodeSetup] -> [NodeConfigurationProvider] -> [NodeConfig]
  */
 object NodeConfigurationProviderGenerator {
 
     /**
      * Builds a [NodeConfigurationProvider] from the [NodeSetup]
+     *
+     * Note that the "manual" and "managed" mode generate similar node configurations, only the peer list is missing
+     * from the "managed" configuration.
      *
      * @param testName is the name of the test
      * @param configOverrides is the configurations we always want
@@ -36,35 +46,38 @@ object NodeConfigurationProviderGenerator {
             setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ): NodeConfigurationProvider {
 
-        // TODO [Olle] I'm uncertain about this: could the Logic in TestLegacyNodeConfProducer be the same for managed mode too?
         val baseConfig = when (systemSetup.nodeConfProvider) {
-            "legacy", "manual" -> TestLegacyNodeConfigProducer.createNodeConfig(testName, nodeSetup, systemSetup, null)
-            "managed" -> throw IllegalArgumentException("Managed not implemented yet") // TODO [Olle] Implement
-            else -> throw IllegalArgumentException("Don't know this provider")
+            "legacy", "manual" -> TestNodeConfigProducer.createLegacyNodeConfig(testName, nodeSetup, systemSetup, null)
+            "managed" -> TestNodeConfigProducer.createManagedNodeConfig(testName, nodeSetup, systemSetup, null)
+            else -> throw IllegalArgumentException("Don't know this provider: ${systemSetup.nodeConfProvider}")
         }
-        return buildBase(baseConfig, configOverrides, setupAction)
+        return buildBase(baseConfig, configOverrides, nodeSetup, setupAction)
     }
 
     /**
-     * Transforms the [PropertiesConfiguration] -> [CompositeConfig] -> [AppConfig] and use the [NodeConfigurationProviderFactory] to build a real instance.
+     * Transforms the [PropertiesConfiguration] -> [CompositeConfig] -> [AppConfig] and use the
+     * [NodeConfigurationProviderFactory] to build a real [NodeConfigurationProvider].
      *
      * @param baseConfig is the config we have built so far
      * @param configOverrides is the configurations we always want
+     * @param nodeSetup
      * @param setupAction is sometimes used to do an action on the setup
      * @return a conf provider where we have overidden the base config with the given overrides.
      */
     private fun buildBase(
-            baseConfig: Configuration,
-            configOverrides: MapConfiguration,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+        baseConfig: Configuration,
+        configOverrides: MapConfiguration,
+        nodeSetup: NodeSetup,
+        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ): NodeConfigurationProvider {
         val compositeConfig = CompositeConfiguration().apply {
+            addConfiguration(nodeSetup.nodeSpecificConfigs) // The node might have unique config settings, must add these first to "override"
             addConfiguration(configOverrides)
             addConfiguration(baseConfig)
         }
 
         val appConfig = AppConfig(compositeConfig)
-        val provider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val provider = NodeConfigurationProviderFactory().createProvider(appConfig)
 
         // Run the action, default won't do anything
         setupAction(appConfig, provider.getConfiguration())

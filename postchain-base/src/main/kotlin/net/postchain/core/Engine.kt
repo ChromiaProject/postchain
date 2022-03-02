@@ -2,11 +2,12 @@
 
 package net.postchain.core
 
-import net.postchain.base.BlockchainRid
 import net.postchain.debug.BlockTrace
+import net.postchain.ebft.heartbeat.HeartbeatListener
 
 interface Shutdownable {
     fun shutdown()
+    //fun isShutdown() // TODO: Olle: shouldn't we have this too, so many are using a flag for this
 }
 
 interface Synchronizable {
@@ -29,8 +30,9 @@ interface BlockchainEngine : Shutdownable {
     fun getConfiguration(): BlockchainConfiguration
 }
 
-interface BlockchainProcess {
-    fun getEngine(): BlockchainEngine
+interface BlockchainProcess : HeartbeatListener {
+    val blockchainEngine: BlockchainEngine
+    fun start()
     fun shutdown()
 }
 
@@ -41,5 +43,5 @@ interface BlockchainProcessManager : Shutdownable, Synchronizable {
 }
 
 // A return value of "true" means a restart is needed.
-typealias RestartHandler = (BlockTrace?) -> Boolean
+typealias RestartHandler = (blockTimestamp: Long, BlockTrace?) -> Boolean
 

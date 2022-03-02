@@ -2,12 +2,13 @@
 
 package net.postchain.network
 
-import net.postchain.base.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
-import net.postchain.base.PeerID
+import net.postchain.core.BlockchainRid
+import net.postchain.core.NodeRid
+
 
 interface XPacketEncoder<PacketType> {
-    fun makeIdentPacket(forPeer: PeerID): ByteArray
+    fun makeIdentPacket(forNode: NodeRid): ByteArray
     fun encodePacket(packet: PacketType): ByteArray
 }
 
@@ -26,7 +27,8 @@ interface XPacketDecoderFactory<PacketType> {
     fun create(config: PeerCommConfiguration): XPacketDecoder<PacketType>
 }
 
-data class IdentPacketInfo(val peerID: PeerID,
-                           val blockchainRID: BlockchainRid,
-                           val sessionKey: ByteArray? = null,
-                           val ephemeralPubKey: ByteArray? = null)
+data class IdentPacketInfo(
+        val nodeId: NodeRid, // It is *target* peer for outgoing packets and *source* peer for incoming packets.
+        val blockchainRid: BlockchainRid,
+        val sessionKey: ByteArray? = null,
+        val ephemeralPubKey: ByteArray? = null)

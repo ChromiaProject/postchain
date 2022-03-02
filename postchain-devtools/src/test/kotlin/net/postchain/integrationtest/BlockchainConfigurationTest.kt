@@ -2,7 +2,7 @@
 
 package net.postchain.integrationtest
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.configurations.GTXTestModule
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
@@ -12,9 +12,7 @@ import net.postchain.gtx.GTXDataBuilder
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import org.apache.commons.lang3.RandomStringUtils
-import org.junit.Assert
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class BlockchainConfigurationTest : IntegrationTestSetup() {
@@ -23,7 +21,7 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
     fun testMaxBlockSize() {
         val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config_max_block_size.xml")
         val node = nodes[0]
-        val engine = node.getBlockchainInstance().getEngine()
+        val engine = node.getBlockchainInstance().blockchainEngine
 
         // blockchain_config_max_block_size.xml was set maxblocksize is 150 bytes and maxtransaction is 4
         // the size of testtransaction is 40 bytes
@@ -53,7 +51,7 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         configOverrides.setProperty("infrastructure", "base/test")
         val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config_max_transaction_size.xml")
         val node = nodes[0]
-        val txQueue = node.getBlockchainInstance().getEngine().getTransactionQueue()
+        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
 
         // over 2mb
         txQueue.enqueue(buildTransaction(blockchainRid, "${RandomStringUtils.randomAlphanumeric(1024 * 1024 * 2)}-test"))

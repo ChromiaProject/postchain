@@ -2,12 +2,14 @@
 
 package net.postchain.base
 
-import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
+import net.postchain.core.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
+/**
+ *
+ */
 object BlockchainRidFactory {
 
     val cryptoSystem = SECP256K1CryptoSystem()
@@ -23,58 +25,5 @@ object BlockchainRidFactory {
         // Need to calculate it the RID, and we do it the usual way (same as merkle root of block)
         val bcBinary = data.merkleHash(merkleHashCalculator)
         return BlockchainRid(bcBinary)
-    }
-}
-
-data class BlockchainRid(val data: ByteArray) {
-
-    init {
-        if (data.size != 32) {
-            throw IllegalArgumentException("Wrong size of Blockchain RID, was ${data.size} should be 32 (64 characters)")
-        }
-    }
-
-    companion object {
-
-        val ZERO_RID = BlockchainRid(ByteArray(32))
-
-        fun buildFromHex(str: String) = BlockchainRid(str.hexStringToByteArray())
-
-        /**
-         * For test, build a full length BC RID by repeating a single digit as a byte
-         *
-         * @param b is the byte to be repeated
-         */
-        fun buildRepeat(b: Byte): BlockchainRid {
-            val bArr = ByteArray(32) { b }
-            return BlockchainRid(bArr)
-        }
-    }
-
-    fun toHex() = data.toHex()
-
-    fun toShortHex(): String {
-        return toHex().run {
-            "${take(2)}:${takeLast(2)}"
-        }
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as BlockchainRid
-
-        if (!data.contentEquals(other.data)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return data.contentHashCode()
-    }
-
-    override fun toString(): String {
-        return toHex()
     }
 }

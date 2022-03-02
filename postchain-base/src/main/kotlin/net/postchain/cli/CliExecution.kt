@@ -9,6 +9,7 @@ import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
+import net.postchain.core.BlockchainRid
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.EContext
@@ -42,11 +43,22 @@ object CliExecution {
             givenDependencies: List<BlockchainRelatedInfo> = listOf()
     ): BlockchainRid {
 
+        /**
+         * If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
+         */
+        fun getBrid(): BlockchainRid {
+            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+            val keyString = "brid.chainid." + chainId.toString()
+            val brid = if (appConfig.config.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.config.getString(keyString)) else
+                BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            return brid
+        }
+
         return runStorageCommand(nodeConfigFile, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
 
             fun init(): BlockchainRid {
-                val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+                val brid = getBrid()
                 db.initializeBlockchain(ctx, brid)
                 DependenciesValidator.validateBlockchainRids(ctx, givenDependencies)
                 BaseConfigurationDataStore.addConfigurationData(ctx, 0, blockchainConfig)
@@ -154,7 +166,7 @@ object CliExecution {
                     // throw error
                 } else if (!allowUnknownSigners) {
                     throw BadDataMistake(BadDataType.MISSING_PEERINFO,
-                            "Signer ${nodePubkey} does not exist in peerinfos.")
+                            "Signer $nodePubkey does not exist in peerinfos.")
                 }
             }
         }
@@ -208,7 +220,7 @@ object CliExecution {
     }
 
     fun runNode(nodeConfigFile: String, chainIds: List<Long>) {
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(
                 AppConfig.fromPropertiesFile(nodeConfigFile))
 
         with(PostchainNode(nodeConfigProvider)) {
@@ -256,7 +268,7 @@ object CliExecution {
 
     private fun tryCreateBasicDataSource(nodeConfigFile: String): Connection? {
         return try {
-            val nodeConfig = NodeConfigurationProviderFactory.createProvider(
+            val nodeConfig = NodeConfigurationProviderFactory().createProvider(
                     AppConfig.fromPropertiesFile(nodeConfigFile)
             ).getConfiguration()
 

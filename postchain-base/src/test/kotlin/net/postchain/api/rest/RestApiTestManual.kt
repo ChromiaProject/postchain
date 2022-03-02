@@ -3,9 +3,9 @@
 package net.postchain.api.rest
 
 import io.restassured.RestAssured.given
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.common.RestTools
+//import net.postchain.common.RestTools
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
 import net.postchain.devtools.KeyPairHelper.privKey
@@ -43,7 +43,7 @@ class RestApiTestManual {
 
         val transaction = GTXTransactionFactory(BlockchainRid.ZERO_RID, GTXTestModule(), cryptoSystem)
                 .decodeTransaction(txBytes)
-        RestTools.awaitConfirmed(port, blockchainRID!!.toHex(), transaction.getRID().toHex())
+        //RestTools.awaitConfirmed(port, blockchainRID!!.toHex(), transaction.getRID().toHex())
     }
 
     private fun buildTestTx(id: Long, value: String): ByteArray {

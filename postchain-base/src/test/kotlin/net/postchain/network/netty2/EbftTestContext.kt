@@ -2,26 +2,27 @@
 
 package net.postchain.network.netty2
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
-import net.postchain.base.BlockchainRid
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.ebft.EbftPacketDecoder
 import net.postchain.ebft.EbftPacketEncoder
 import net.postchain.ebft.message.Message
-import net.postchain.network.x.XConnectorEvents
-import net.postchain.network.x.XPacketHandler
+import net.postchain.network.common.NodeConnectorEvents
+import net.postchain.network.peer.PeerPacketHandler
+import net.postchain.network.peer.PeerConnectionDescriptor
 
 class EbftTestContext(val config: PeerCommConfiguration, val blockchainRid: BlockchainRid) {
 
-    val packets: XPacketHandler = mock()
+    val packets: PeerPacketHandler = mock()
 
-    val events: XConnectorEvents = mock {
-        on { onPeerConnected(any()) } doReturn packets
+    val events: NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> = mock {
+        on { onNodeConnected(any()) } doReturn packets
     }
 
-    val peer = NettyConnector<Message>(events)
+    val peer = NettyPeerConnector<Message>(events)
 
     fun init() = peer.init(config.myPeerInfo(), EbftPacketDecoder(config))
 

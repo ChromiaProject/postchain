@@ -5,7 +5,7 @@ package net.postchain.devtools
 import com.google.gson.GsonBuilder
 import mu.KLogging
 import net.postchain.StorageBuilder
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.gtxml.TestType
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
@@ -51,7 +51,7 @@ class TestLauncher : IntegrationTestSetup() {
 
     private fun createTestNode(configFile: String, blockchainConfigFile: String): PostchainTestNode {
         val appConfig = AppConfig.fromPropertiesFile(configFile)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
 
         /*
         // TODO: Fix this hack
@@ -195,7 +195,7 @@ class TestLauncher : IntegrationTestSetup() {
                     failures.add(TransactionFailure(blockHeight.toLong(), it.txIdx,
                             Exception("Transaction should fail")))
                 } else if (!present && !it.isFailure) {
-                    val engine = node.getBlockchainInstance().getEngine()
+                    val engine = node.getBlockchainInstance().blockchainEngine
                     val reason = engine.getTransactionQueue().getRejectionReason(txRID)
                     failures.add(TransactionFailure(blockHeight.toLong(), it.txIdx, reason))
                 }

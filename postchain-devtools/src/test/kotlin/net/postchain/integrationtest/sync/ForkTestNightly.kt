@@ -1,18 +1,23 @@
 package net.postchain.integrationtest.sync
 
-import net.postchain.base.PeerInfo
 import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.ManagedModeTest
+import net.postchain.devtools.chainRidOf
 import net.postchain.devtools.currentHeight
-import net.postchain.network.x.XPeerID
-import org.apache.commons.configuration2.Configuration
-import org.junit.Assert
-import org.junit.Test
-import org.junit.Ignore
+import net.postchain.devtools.utils.configuration.NodeSetup
+import net.postchain.core.NodeRid
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import java.lang.Thread.sleep
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ForkTestNightly : ManagedModeTest() {
+
+    // If you need a specific node to have a specific property, add it in here
+    val extraNodeProperties = mutableMapOf<Int, Map<String, Any>>()
 
     @Test
     fun testSyncManagedBlockchain() {
@@ -91,13 +96,13 @@ class ForkTestNightly : ManagedModeTest() {
         val nodeDataSource = dataSources(c1)[0]!!
         nodeDataSource.delBlockchain(chainRidOf(c1.chain))
         // Set node 1 as replica for c1 so that node 0 will use node 1 to cross-fetch blocks.
-        nodeDataSource.addExtraReplica(chainRidOf(c1.chain), XPeerID(KeyPairHelper.pubKey(1)))
+        nodeDataSource.addExtraReplica(chainRidOf(c1.chain), NodeRid(KeyPairHelper.pubKey(1)))
 
         restartNodeClean(0, c0, -1)
         val c2 = startNewBlockchain(setOf(0), setOf(), c1.chain)
         awaitHeight(c2, 10)
         c2.all().forEach {
-            Assert.assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
+           assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
         }
         assertCantBuildBlock(c2, 11)
     }
@@ -125,7 +130,7 @@ class ForkTestNightly : ManagedModeTest() {
         val c2 = startNewBlockchain(setOf(0), setOf(1), c1.chain)
         awaitHeight(c2, 10)
         c2.all().forEach {
-            Assert.assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
+           assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
         }
         assertCantBuildBlock(c2, 11)
     }
@@ -206,7 +211,7 @@ class ForkTestNightly : ManagedModeTest() {
      * To do this successfully we must do the different steps in succession, we cannot for example do step1 and step2
      * in parallel, since ConnMgr will not allow us to connect to the same chain  (chain2 on Node2) using different names.
      */
-    @Ignore // Incomplete test, never worked and probably incorrect setup.
+   @Disabled // Incomplete test, never worked and probably incorrect setup.
     @Test
     fun testAncestorNetworkThenLocally() {
         extraNodeProperties[0] = mapOf("blockchain_ancestors.${chainRidOf(3)}" to listOf(ancestor(2,2)))
@@ -403,18 +408,26 @@ class ForkTestNightly : ManagedModeTest() {
 //    }
 
     private fun ancestor(index: Int, blockchain: Long): String {
-        return "${XPeerID(KeyPairHelper.pubKey(index))}:${chainRidOf(blockchain)}"
+        return "${NodeRid(KeyPairHelper.pubKey(index))}:${chainRidOf(blockchain)}"
     }
 
-    val extraNodeProperties = mutableMapOf<Int, Map<String, Any>>()
-    override fun nodeConfigurationMap(nodeIndex: Int, peerInfo: PeerInfo): Configuration {
-        val propertyMap = super.nodeConfigurationMap(nodeIndex, peerInfo)
-        extraNodeProperties[nodeIndex]?.forEach { key, value -> propertyMap.setProperty(key, value) }
-        return propertyMap
+    /**
+     * Here we want to set properties on unique nodes via a special map, just transfer the property to the
+     * [NodeSetup] in question
+     */
+
+    override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+        super.addNodeConfigurationOverrides(nodeSetup) // Will jack into ManagedModeTest overrides (= set the specific "infrastructure" we need)
+        val nodesExtra = extraNodeProperties[nodeSetup.sequenceNumber.nodeNumber]
+        if (nodesExtra != null) {
+            for (key in nodesExtra.keys) {
+                nodeSetup.nodeSpecificConfigs.setProperty(key, nodesExtra[key])
+            }
+        }
     }
 
 
-    private fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
+    override fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
         awaitLog("========= AWAIT ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
         nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
         awaitLog("========= DONE WAITING ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
@@ -437,7 +450,7 @@ class ForkTestNightly : ManagedModeTest() {
     fun assertEqualAtHeight(chainOld: NodeSet, chainNew: NodeSet, height: Long) {
         val expectedBlockRid = nodes[chainOld.all().first()].blockQueries(chainOld.chain).getBlockRid(height).get()
         chainNew.all().forEach {
-            Assert.assertArrayEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get(), expectedBlockRid)
+           assertArrayEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get(), expectedBlockRid)
         }
     }
 
@@ -445,22 +458,8 @@ class ForkTestNightly : ManagedModeTest() {
     fun assertNotEqualAtHeight(chainOld: NodeSet, chainNew: NodeSet, height: Long) {
         val expectedBlockRid = nodes[chainOld.all().first()].blockQueries(chainOld.chain).getBlockRid(height).get()
         chainNew.all().forEach {
-            Assert.assertFalse(expectedBlockRid!!.contentEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get()!!))
+           assertFalse(expectedBlockRid!!.contentEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get()!!))
         }
-    }
-
-    private var chainId: Long = 1
-    fun startNewBlockchain(signers: Set<Int>, replicas: Set<Int>, historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf(), waitForRestart: Boolean = true): NodeSet {
-        assertTrue(signers.intersect(replicas).isEmpty())
-        val maxIndex = c0.all().size
-        signers.forEach { assertTrue(it < maxIndex ) }
-        replicas.forEach { assertTrue(it < maxIndex) }
-        val c = NodeSet(chainId++, signers, replicas)
-        newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
-        // Await blockchain started on all relevant nodes
-        if (waitForRestart)
-            awaitChainRestarted(c, -1)
-        return c
     }
 
     /**

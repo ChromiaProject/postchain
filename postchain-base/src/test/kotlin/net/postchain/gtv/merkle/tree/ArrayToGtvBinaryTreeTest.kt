@@ -11,8 +11,8 @@ import net.postchain.gtv.merkle.GtvTreeHelper
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class ArrayToGtvBinaryTreeTest {
 

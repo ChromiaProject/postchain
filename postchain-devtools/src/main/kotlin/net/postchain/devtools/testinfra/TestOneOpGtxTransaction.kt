@@ -20,20 +20,22 @@ import net.postchain.gtx.GTXTransactionFactory
  * @property op_name is the name of the operation
  * @property signers are the binary IDs of the sigers
  */
-class TestOneOpGtxTransaction(
-        val factory: GTXTransactionFactory,
-        val id: Int,
-        val op_name: String,
-        val signers: Array<ByteArray>) {
+open class TestOneOpGtxTransaction(
+    val factory: GTXTransactionFactory,
+    val id: Int,
+    val op_name: String,
+    val signers: Array<ByteArray>
+) {
 
 
-    private val blockchainRID = factory.blockchainRID
+    protected val blockchainRID = factory.blockchainRID
+
     // cryptoSystem is the system we will use to sign the transaction with
-    private val cryptoSystem = factory.cs
+    protected val cryptoSystem = factory.cs
 
     // Cache
-    private var cachedBuilder: GTXDataBuilder? = null
-    private var cachedGtxTx: GTXTransaction? = null
+    protected var cachedBuilder: GTXDataBuilder? = null
+    protected var cachedGtxTx: GTXTransaction? = null
 
     /**
      * If we are super lazy and want don't have any signers, we can use this constructor
@@ -86,7 +88,7 @@ class TestOneOpGtxTransaction(
      * We're delaying this to the last moment, but probably to no avail since we most likely need the
      * real GXT TX (that's why we are using this class, right)
      */
-    private fun buildTheTx() {
+    open fun buildTheTx() {
         val b = GTXDataBuilder(blockchainRID, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
         val arg0 = GtvFactory.gtv(1.toLong())
         val arg1 = GtvFactory.gtv("${id} and ${id}")

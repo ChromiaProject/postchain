@@ -2,7 +2,7 @@
 
 package net.postchain.core
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.debug.BlockTrace
 import net.postchain.gtv.Gtv
@@ -28,8 +28,9 @@ interface BlockStore {
     fun getChainId(ctx: EContext, blockchainRID: BlockchainRid): Long? // returns null if not found
     fun getBlockRID(ctx: EContext, height: Long): ByteArray? // returns null if height is out of range
     fun getLastBlockHeight(ctx: EContext): Long // height of the last block, first block has height 0
-    fun getBlockHeightInfo(ctx: EContext, blockchainRID: BlockchainRid): Pair<Long, Hash>?
     fun getLastBlockTimestamp(ctx: EContext): Long
+    fun getBlockHeightInfo(ctx: EContext, blockchainRID: BlockchainRid): Pair<Long, Hash>?
+
     //    fun getBlockData(ctx: EContext, blockRID: ByteArray): BlockData
     fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray
 
@@ -53,6 +54,7 @@ interface BlockStore {
 interface BlockQueries {
     fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception>
     fun getBestHeight(): Promise<Long, Exception>
+    fun getLastBlockTimestamp(): Promise<Long, Exception>
     fun getBlockRid(height: Long): Promise<ByteArray?, Exception>
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): Promise<BlockDataWithWitness?, Exception>
     fun getBlockHeader(blockRID: ByteArray): Promise<BlockHeader, Exception>
@@ -90,6 +92,7 @@ interface BlockBuilder {
     fun getBlockData(): BlockData
     fun getBlockWitnessBuilder(): BlockWitnessBuilder?
     fun commit(blockWitness: BlockWitness)
+
     // Just debug
     fun getBTrace(): BlockTrace? // Use this function to get quick debug info about the block, note: ONLY for logging!
     fun setBTrace(bTrace: BlockTrace)

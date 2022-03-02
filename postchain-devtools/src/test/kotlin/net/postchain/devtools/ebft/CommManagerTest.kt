@@ -17,7 +17,7 @@ class CommunicationManagerTest : IntegrationTest() {
 
     var commManagers = emptyList<CommManager<DummyMessage>>()
 
-    @After
+    @AfterEach
     fun tearDownCommManagers() {
         commManagers.forEach { it.stop() }
     }

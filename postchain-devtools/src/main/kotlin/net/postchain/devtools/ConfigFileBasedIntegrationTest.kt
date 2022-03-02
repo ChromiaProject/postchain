@@ -18,8 +18,9 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
-import org.junit.After
-import org.junit.Assert
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import java.io.File
 
 // Legacy code still use this old name, don't want to break compatibility.
@@ -50,7 +51,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         const val DEFAULT_CONFIG_FILE = "config.properties"
     }
 
-    @After
+    @AfterEach
     override fun tearDown() {
         try {
             logger.debug("Integration test -- TEARDOWN")
@@ -61,7 +62,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
             peerInfos = null
             expectedSuccessRids = mutableMapOf()
             configOverrides.clear()
-            logger.debug("teadDown() done")
+            logger.debug("tearDown() done")
         } catch (t: Throwable) {
             logger.error("tearDown() failed", t)
         }
@@ -73,7 +74,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
 
     // TODO: [et]: Check out nullability for return value
     protected fun enqueueTx(node: PostchainTestNode, data: ByteArray, expectedConfirmationHeight: Long): Transaction? {
-        val blockchainEngine = node.getBlockchainInstance().getEngine()
+        val blockchainEngine = node.getBlockchainInstance().blockchainEngine
         val tx = blockchainEngine.getConfiguration().getTransactionFactory().decodeTransaction(data)
         enqueueTransactions(node, tx)
 
@@ -86,22 +87,22 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     }
 
     protected fun enqueueTransactions(node: PostchainTestNode, vararg txs: Transaction) {
-        val txQueue = node.getBlockchainInstance().getEngine().getTransactionQueue()
+        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
         txs.forEach { txQueue.enqueue(it) }
     }
 
     protected fun verifyBlockchainTransactions(node: PostchainTestNode) {
         val expectAtLeastHeight = expectedSuccessRids.keys.reduce { acc, l -> maxOf(l, acc) }
         val bestHeight = getBestHeight(node)
-        Assert.assertTrue(bestHeight >= expectAtLeastHeight)
+        assertTrue(bestHeight >= expectAtLeastHeight)
         for (height in 0..bestHeight) {
             val txRidsAtHeight = getTxRidsAtHeight(node, height)
 
             val expectedRidsAtHeight = expectedSuccessRids[height]
             if (expectedRidsAtHeight == null) {
-                Assert.assertArrayEquals(arrayOf(), txRidsAtHeight)
+                assertArrayEquals(arrayOf(), txRidsAtHeight)
             } else {
-                Assert.assertArrayEquals(expectedRidsAtHeight.toTypedArray(), txRidsAtHeight)
+                assertArrayEquals(expectedRidsAtHeight.toTypedArray(), txRidsAtHeight)
             }
         }
     }
@@ -147,7 +148,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         if (preWipeDatabase) {
             StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
         }
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
         val nodeConfig = nodeConfigProvider.getConfiguration()
 
         nodesNames[nodeConfig.pubKey] = "$nodeIndex"
@@ -238,7 +239,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         if (preWipeDatabase) {
             StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
         }
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory().createProvider(appConfig)
 
         val node = PostchainTestNode(nodeConfigProvider)
                 .also { nodes.add(it) }
@@ -292,6 +293,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         }
 
         baseConfig.setProperty("fastsync.exit_delay", if (nodeCount == 1) 0 else 1000)
+        baseConfig.setProperty("heartbeat.enabled", false)
 
         val appConfig = CompositeConfiguration().apply {
             addConfiguration(configOverrides)
@@ -320,7 +322,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     open fun createPeerInfos(nodeCount: Int): Array<PeerInfo> = createPeerInfosWithReplicas(nodeCount, 0)
 
     protected fun strategy(node: PostchainTestNode): OnDemandBlockBuildingStrategy {
-        return node.getBlockchainInstance().getEngine().getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
+        return node.getBlockchainInstance().blockchainEngine.getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
     }
 
     protected fun buildBlock(toHeight: Int, vararg txs: TestTransaction) {

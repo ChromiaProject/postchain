@@ -6,10 +6,10 @@ import mu.KLogging
 import net.postchain.common.toHex
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.UserMistake
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 
 /**
- * Network nodes can be either signers or nodes that just want to read your data.
+ * Network nodes can be either signers/block builders or nodes that just want to read your data (= replicas).
  * The purpose of this class is to wrap both these entities
  *
  * The "read-only" nodes do not have to be known by the validator node, but we need some sort of
@@ -22,8 +22,8 @@ import net.postchain.network.x.XPeerID
  */
 class NetworkNodes(
         val myself: PeerInfo,
-        private val peerInfoMap: Map<XPeerID, PeerInfo>,
-        private val readOnlyNodeContacts: MutableMap<XPeerID, Int>) {
+        private val peerInfoMap: Map<NodeRid, PeerInfo>,
+        private val readOnlyNodeContacts: MutableMap<NodeRid, Int>) {
 
     private var nextTimestamp: Long = 0 // Increases once a day
 
@@ -31,12 +31,12 @@ class NetworkNodes(
         const val MAX_DAILY_REQUESTS = 1000 // TODO: What to put here?
         const val DAY_IN_MILLIS = 24 * 60 * 60 * 1000
 
-        fun buildNetworkNodes(peers: Collection<PeerInfo>, myKey: XPeerID): NetworkNodes {
+        fun buildNetworkNodes(peers: Collection<PeerInfo>, myKey: NodeRid): NetworkNodes {
             if (peers.isEmpty()) {
                 throw UserMistake("No peers have been configured for the network. Cannot proceed.")
             }
             var me: PeerInfo? = null
-            val peerMap = mutableMapOf<XPeerID, PeerInfo>()
+            val peerMap = mutableMapOf<NodeRid, PeerInfo>()
             for (peer in peers) {
                 val peerId =  peer.peerId()
                 if (peerId == myKey) {
@@ -62,10 +62,10 @@ class NetworkNodes(
         return !peerInfoMap.isEmpty()
     }
 
-    operator fun get(key: XPeerID): PeerInfo? = peerInfoMap[key]
+    operator fun get(key: NodeRid): PeerInfo? = peerInfoMap[key]
     operator fun get(key: ByteArray): PeerInfo? = peerInfoMap[ByteArrayKey(key)]
 
-    fun getPeerIds(): Set<XPeerID> {
+    fun getPeerIds(): Set<NodeRid> {
         return peerInfoMap.keys
     }
 
@@ -75,15 +75,13 @@ class NetworkNodes(
      * @return true if the node is not bothering us too much.
      */
     @Synchronized
-    fun isNodeBehavingWell(peerId: XPeerID, now: Long): Boolean {
+    fun isNodeBehavingWell(peerId: NodeRid, now: Long): Boolean {
 
         if (now > nextTimestamp) {
             val totalCalls = readOnlyNodeContacts.values.sum()
-            logger.info("------------------------------------")
             logger.info("Clearing the read-only node overuse counter. " +
                     "Number of read-only nodes in contact since yesterday: ${readOnlyNodeContacts.size}. " +
                     "Total calls from read-only nodes: $totalCalls")
-            logger.info("------------------------------------")
             nextTimestamp = now + DAY_IN_MILLIS
             readOnlyNodeContacts.clear()
         }

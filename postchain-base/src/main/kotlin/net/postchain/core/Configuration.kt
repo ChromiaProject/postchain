@@ -2,19 +2,23 @@
 
 package net.postchain.core
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.Storage
 import net.postchain.gtv.Gtv
 
 /**
- * BlockchainConfiguration is a stateless objects which describes
- * an individual blockchain instance within Postchain system
+ * [BlockchainConfiguration] describes an individual blockchain instance (within Postchain system).
+ * This type is also able to use the configuration settings to construct some core domain objects on its own
+ * (for example [BlockBuildingStrategy]).
  */
 interface BlockchainConfiguration {
     val chainID: Long
     val blockchainRid: BlockchainRid
+    val signers: List<ByteArray>
     val effectiveBlockchainRID: BlockchainRid
     val traits: Set<String>
+    val syncInfrastructureName: DynamicClassName?
+    val syncInfrastructureExtensionNames: List<DynamicClassName>
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader
     fun decodeWitness(rawWitness: ByteArray): BlockWitness
@@ -23,6 +27,7 @@ interface BlockchainConfiguration {
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun initializeDB(ctx: EContext)
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
+
 }
 
 interface ConfigurationDataStore {

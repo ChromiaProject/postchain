@@ -6,8 +6,9 @@ import net.postchain.common.data.Hash
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
 import net.postchain.gtv.merkleHash
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class MerkleRootCalculatorTest {
 
@@ -35,7 +36,7 @@ class MerkleRootCalculatorTest {
         val gtvArr = gtv(listOfHashes.map { gtv(it)})
         val merkleRoot = gtvArr.merkleHash(calculator)
 
-        Assert.assertEquals(expectedMerkleRootOf1, TreeHelper.convertToHex(merkleRoot))
+       assertEquals(expectedMerkleRootOf1, TreeHelper.convertToHex(merkleRoot))
     }
 
     @Test
@@ -63,6 +64,6 @@ class MerkleRootCalculatorTest {
         val gtvArr = gtv(listOfHashes.map { gtv(it)})
         val merkleRoot = gtvArr.merkleHash(calculator)
 
-        Assert.assertEquals(expectedMerkleRootOf4, TreeHelper.convertToHex(merkleRoot))
+       assertEquals(expectedMerkleRootOf4, TreeHelper.convertToHex(merkleRoot))
     }
 }
