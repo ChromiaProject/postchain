@@ -79,56 +79,52 @@ open class BaseBlockchainProcessManager(
                 stopBlockchain(chainId, bTrace, true)
 
                 startInfo("Starting of blockchain", chainId)
-                withReadWriteConnection(storage, chainId) { eContext ->
+                val blockchainConfig = withReadWriteConnection(storage, chainId) { eContext ->
                     val configuration = blockchainConfigProvider.getConfiguration(eContext, chainId)
                     if (configuration != null) {
-
-                        val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
+                        blockchainInfrastructure.makeBlockchainConfiguration(
                                 configuration, eContext, NODE_ID_AUTO, chainId)
-
-                        val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
-                        startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
-
-                        val x: RestartHandler = buildRestartHandler(chainId)
-                        val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
-                        startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
-
-                        /*
-                        Definition: cross-fetching is the process of downloading blocks from another blockchain
-                        over the peer-to-peer network. This is used when forking a chain when we don't have
-                        the old chain locally and we haven't been able to sync using the new chain rid.
-
-                        Problem: in order to cross-fetch blocks, we'd like to get the old blockchain's
-                        configuration (to find nodes to connect to). But that's difficult. We don't always
-                        have it, and we might not have the most recent configuration.
-
-                        If we don't have that, we can use the current blockchain's configuration to
-                        find nodes to sync from, since at least a quorum of the signers from old chain
-                        must also be signers of the new chain.
-
-                        To simplify things, we will always use current blockchain configuration to find
-                        nodes to cross-fetch from. We'll also use sync-nodes.
-                         */
-
-                        val histConf: HistoricBlockchainContext? =
-                                if (blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid) {
-                                    val ancestors = nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
-                                    HistoricBlockchainContext(blockchainConfig.effectiveBlockchainRID, ancestors
-                                            ?: emptyMap())
-                                } else null
-
-                        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
-
-                        startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
-                        blockchainConfig.blockchainRid
-
                     } else {
                         logger.error("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
                         null
                     }
+                } ?: return null
 
-                }
+                val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
+                startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
+                val x: RestartHandler = buildRestartHandler(chainId)
+                val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
+                startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
+
+                /*
+                Definition: cross-fetching is the process of downloading blocks from another blockchain
+                over the peer-to-peer network. This is used when forking a chain when we don't have
+                the old chain locally and we haven't been able to sync using the new chain rid.
+
+                Problem: in order to cross-fetch blocks, we'd like to get the old blockchain's
+                configuration (to find nodes to connect to). But that's difficult. We don't always
+                have it, and we might not have the most recent configuration.
+
+                If we don't have that, we can use the current blockchain's configuration to
+                find nodes to sync from, since at least a quorum of the signers from old chain
+                must also be signers of the new chain.
+
+                To simplify things, we will always use current blockchain configuration to find
+                nodes to cross-fetch from. We'll also use sync-nodes.
+                 */
+
+                val histConf: HistoricBlockchainContext? =
+                        if (blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid) {
+                            val ancestors = nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
+                            HistoricBlockchainContext(blockchainConfig.effectiveBlockchainRID, ancestors
+                                    ?: emptyMap())
+                        } else null
+
+                blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
+
+                startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
+                blockchainConfig.blockchainRid
             } catch (e: Exception) {
                 logger.error(e) { e.message }
                 null
