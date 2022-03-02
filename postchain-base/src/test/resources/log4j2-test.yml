@@ -40,14 +40,3 @@ Configuration:
 
     - name: net.postchain
       level: debug
-      additivity: false
-      AppenderRef:
-      - ref: ConsoleAppender
-      - ref: FileAppender
-
-    - name: net.postchain.base.BaseBlockchainProcessManager
-      level: debug
-      additivity: false
-      AppenderRef:
-      - ref: ConsoleAppender
-      - ref: FileAppender

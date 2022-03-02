@@ -53,10 +53,6 @@ Configuration:
 
       - name: net.postchain
         level: debug
-        additivity: false
-        AppenderRef:
-          - ref: ConsoleAppender
-          - ref: FileAppender
 
       - name: net.postchain.devtools.IntegrationTestSetup
         level: debug
