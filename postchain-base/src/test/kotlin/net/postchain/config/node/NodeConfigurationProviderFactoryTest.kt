@@ -17,9 +17,8 @@ class NodeConfigurationProviderFactoryTest {
             on { nodeConfigProvider } doReturn "legacy"
         }
         val mockStorage = MockStorage.mockAppContext()
-        val sut = NodeConfigurationProviderFactory { mockStorage }
 
-        assert(sut.createProvider(appConfig)).isInstanceOf(
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
                 LegacyNodeConfigurationProvider::class)
     }
 
@@ -29,9 +28,8 @@ class NodeConfigurationProviderFactoryTest {
             on { nodeConfigProvider } doReturn "Manual"
         }
         val mockStorage = MockStorage.mockAppContext()
-        val sut = NodeConfigurationProviderFactory { mockStorage }
 
-        assert(sut.createProvider(appConfig)).isInstanceOf(
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
                 ManualNodeConfigurationProvider::class)
     }
 
@@ -41,9 +39,8 @@ class NodeConfigurationProviderFactoryTest {
             on { nodeConfigProvider } doReturn "Managed"
         }
         val mockStorage = MockStorage.mockAppContext()
-        val sut = NodeConfigurationProviderFactory { mockStorage }
 
-        assert(sut.createProvider(appConfig)).isInstanceOf(
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
                 ManagedNodeConfigurationProvider::class)
     }
 
@@ -53,9 +50,8 @@ class NodeConfigurationProviderFactoryTest {
             on { nodeConfigProvider } doReturn "some-unknown-provider-here"
         }
         val mockStorage = MockStorage.mockAppContext()
-        val sut = NodeConfigurationProviderFactory { mockStorage }
 
-        assert(sut.createProvider(appConfig)).isInstanceOf(
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
                 ManualNodeConfigurationProvider::class)
     }
 
@@ -65,9 +61,8 @@ class NodeConfigurationProviderFactoryTest {
             on { nodeConfigProvider } doReturn ""
         }
         val mockStorage = MockStorage.mockAppContext()
-        val sut = NodeConfigurationProviderFactory { mockStorage }
 
-        assert(sut.createProvider(appConfig)).isInstanceOf(
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
                 ManualNodeConfigurationProvider::class)
     }
 }

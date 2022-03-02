@@ -8,14 +8,9 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders.*
 import net.postchain.core.NODE_ID_NA
 
-class NodeConfigurationProviderFactory(
-        private val storageFactory: (AppConfig) -> Storage = DEFAULT_STORAGE_FACTORY
-) {
-
-    companion object {
-        val DEFAULT_STORAGE_FACTORY: (AppConfig) -> Storage = {
-            StorageBuilder.buildStorage(it, NODE_ID_NA)
-        }
+object NodeConfigurationProviderFactory {
+    private val DEFAULT_STORAGE_FACTORY: (AppConfig) -> Storage = {
+        StorageBuilder.buildStorage(it, NODE_ID_NA)
     }
 
     /**
@@ -23,7 +18,10 @@ class NodeConfigurationProviderFactory(
      * @param storageFactory
      * @return the correct [NodeConfigurationProvider] based on [AppConfig]'s setting
      */
-    fun createProvider(appConfig: AppConfig): NodeConfigurationProvider {
+    fun createProvider(
+        appConfig: AppConfig,
+        storageFactory: (AppConfig) -> Storage = DEFAULT_STORAGE_FACTORY
+    ): NodeConfigurationProvider {
         return when (appConfig.nodeConfigProvider.toLowerCase()) {
             Legacy.name.toLowerCase() -> LegacyNodeConfigurationProvider(appConfig)
             File.name.toLowerCase() -> FileNodeConfigurationProvider(appConfig)
