@@ -1,4 +1,4 @@
-package net.postchain.eif
+package net.postchain.el2
 
 import net.postchain.base.BlockchainRidFactory
 import net.postchain.base.SECP256K1CryptoSystem
@@ -95,7 +95,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     @Test
     fun testL2BuildBlock() {
         configOverrides.setProperty("infrastructure", "base/test")
-        val nodes = createNodes(1, "/net/postchain/devtools/eif/blockchain_config.xml")
+        val nodes = createNodes(1, "/net/postchain/el2/blockchain_config.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
 
@@ -195,7 +195,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     @Test
     fun testL2UpdateSnapshot() {
         configOverrides.setProperty("infrastructure", "base/test")
-        val nodes = createNodes(1, "/net/postchain/devtools/eif/blockchain_config_1.xml")
+        val nodes = createNodes(1, "/net/postchain/el2/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
 
@@ -347,7 +347,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     @Test
     fun testL2EventAndUpdateSnapshot() {
         configOverrides.setProperty("infrastructure", "base/test")
-        val nodes = createNodes(1, "/net/postchain/devtools/eif/blockchain_config_1.xml")
+        val nodes = createNodes(1, "/net/postchain/el2/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
 
