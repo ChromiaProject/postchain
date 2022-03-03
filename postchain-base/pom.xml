@@ -214,10 +214,12 @@
                 <configuration>
                     <archive>
                         <manifest>
+                            <mainClass>net.postchain.AppKt</mainClass>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix/>
                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                            <mainClass>net.postchain.AppKt</mainClass>
+                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
                     </archive>
                 </configuration>

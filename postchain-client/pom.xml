@@ -92,6 +92,23 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>net.postchain.client.AppKt</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix/>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

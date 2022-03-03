@@ -133,10 +133,12 @@
                         <configuration>
                             <archive>
                                 <manifest>
+                                    <mainClass>net.postchain.devtools.AppKt</mainClass>
                                     <addClasspath>true</addClasspath>
                                     <classpathPrefix/>
-                                    <mainClass>net.postchain.devtools.AppKt</mainClass>
                                     <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                                    <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
+                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                                 </manifest>
                             </archive>
                         </configuration>
