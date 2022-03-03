@@ -6,7 +6,7 @@ import "./utils/cryptography/ECDSA.sol";
 import "./utils/cryptography/MerkleProof.sol";
 import "./Data.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 library Postchain {
     using EC for bytes32;
@@ -14,7 +14,7 @@ library Postchain {
 
     struct Event {
         uint256 serialNumber;
-        IERC20 token;
+        ERC20 token;
         address beneficiary;
         uint256 amount;
     }
@@ -63,7 +63,7 @@ library Postchain {
         return (_actualSignature >= _requiredSignature);
     }
 
-    function verifyEvent(bytes32 _hash, bytes memory _event) public pure returns (IERC20, address, uint256) {
+    function verifyEvent(bytes32 _hash, bytes memory _event) public pure returns (ERC20, address, uint256) {
         Event memory evt = abi.decode(_event, (Event));
         bytes32 hash = keccak256(_event);
         if (hash != _hash) {

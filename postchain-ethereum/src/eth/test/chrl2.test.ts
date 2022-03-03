@@ -7,7 +7,7 @@ import { MerkleProofLibraryAddresses } from "../src/types/factories/MerkleProof_
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
 import { PostchainLibraryAddresses } from "../src/types/factories/Postchain__factory";
-import { ContractReceipt, ContractTransaction } from "ethers";
+import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
 import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash } from "./utils"
 
@@ -265,7 +265,7 @@ describe("ChrL2", () => {
             await tokenApproveInstance.approve(chrL2Address, toDeposit)
             await expect(chrL2Instance.deposit(tokenAddress, toDeposit))
                     .to.emit(chrL2Instance, "Deposited")
-                    .withArgs(user.address, tokenAddress, toDeposit)
+                    .withArgs(user.address, tokenAddress, toDeposit, "ERC20", "Test Token", "TST", "")
 
             expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
             expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
@@ -295,19 +295,20 @@ describe("ChrL2", () => {
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
                 const contractAddress = hexZeroPad(tokenAddress, 32)
                 const toAddress = hexZeroPad(user.address, 32)
-                const amount = log.data
+                const amount: BigNumber = log.args ? log.args["value"] : BigNumber.from(0)
+                const amountHex = hexZeroPad(amount.toHexString(), 32)
                 let event: string = ''
                 event = event.concat(serialNumber.substring(2, serialNumber.length))
                 event = event.concat(contractAddress.substring(2, contractAddress.length))
                 event = event.concat(toAddress.substring(2, toAddress.length))
-                event = event.concat(amount.substring(2, amount.length))
+                event = event.concat(amountHex.substring(2, amountHex.length))
 
                 // swap toAddress and contractAddress position to make maliciousEvent
                 let maliciousEvent: string = ''
                 maliciousEvent = maliciousEvent.concat(serialNumber.substring(2, serialNumber.length))
                 maliciousEvent = maliciousEvent.concat(toAddress.substring(2, toAddress.length))
                 maliciousEvent = maliciousEvent.concat(contractAddress.substring(2, contractAddress.length))
-                maliciousEvent = maliciousEvent.concat(amount.substring(2, amount.length))
+                maliciousEvent = maliciousEvent.concat(amountHex.substring(2, amountHex.length))
 
                 let data = DecodeHexStringToByteArray(event)
                 let maliciousData = DecodeHexStringToByteArray(maliciousEvent)

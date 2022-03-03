@@ -76,8 +76,8 @@ describe("Non Fungible Token", () => {
             let tokenURI = await tokenApproveInstance.tokenURI(tokenId)
             expect(tokenURI).to.eq(baseURI+tokenId.toString())
             await expect(chrL2Instance.depositNFT(nftAddress, tokenId))
-                    .to.emit(chrL2Instance, "DepositedNFT")
-                    .withArgs(user.address, nftAddress, tokenId, name, symbol, tokenURI)
+                    .to.emit(chrL2Instance, "Deposited")
+                    .withArgs(user.address, nftAddress, tokenId, "ERC721", name, symbol, tokenURI)
 
             expect(await tokenInstance.balanceOf(chrL2Address)).to.eq(1)
             expect(await tokenInstance.ownerOf(tokenId)).to.eq(chrL2Address)
@@ -99,14 +99,14 @@ describe("Non Fungible Token", () => {
             await tokenApproveInstance.setApprovalForAll(chrL2Address, true)
             let tx: ContractTransaction = await chrL2Instance.depositNFT(nftAddress, tokenId)
             let receipt: ContractReceipt = await tx.wait()
-            let logs = receipt.events?.filter((x) =>  {return x.event == 'DepositedNFT'})
+            let logs = receipt.events?.filter((x) =>  {return x.event == 'Deposited'})
             if (logs !== undefined) {
                 let log = logs[0]
                 const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
                 const contractAddress = hexZeroPad(nftAddress, 32)
                 const toAddress = hexZeroPad(user.address, 32)
-                let id: BigNumber = log.args ? log.args["tokenId"] : BigNumber.from(0)
+                let id: BigNumber = log.args ? log.args["value"] : BigNumber.from(0)
                 const tokenIdHex = hexZeroPad(id.toHexString(), 32)
                 let event: string = ''
                 event = event.concat(serialNumber.substring(2, serialNumber.length))

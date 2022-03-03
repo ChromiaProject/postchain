@@ -5,14 +5,14 @@ import "./Postchain.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 
 contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
 
-    mapping(IERC20 => uint256) public _balances;
+    mapping(ERC20 => uint256) public _balances;
     mapping(IERC721 => mapping(uint256 => address)) public _owners;
     mapping (bytes32 => Withdraw) public _withdraw;
     mapping (bytes32 => WithdrawNFT) public _withdrawNFT;
@@ -29,7 +29,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     }
 
     struct Withdraw {
-        IERC20 token;
+        ERC20 token;
         address beneficiary;
         uint256 amount;
         uint256 block_number;
@@ -44,12 +44,14 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         Status status;
     }
 
-    event Deposited(address indexed owner, IERC20 indexed token, uint256 value);
-    event DepositedNFT(address indexed owner, IERC721 indexed nft, uint256 tokenId,
-        string name, string symbol, string tokenURI);
-    event WithdrawRequest(address indexed beneficiary, IERC20 indexed token, uint256 value);
+    /**
+     * @dev ERC20: value is token amount, ERC721: value is tokenId
+     */
+    event Deposited(address indexed owner, address indexed nft, uint256 value, 
+                    string tokenType, string name, string symbol, string tokenURI);
+    event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
-    event Withdrawal(address indexed beneficiary, IERC20 indexed token, uint256 value);
+    event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
     event WithdrawalNFT(address indexed beneficiary, IERC721 indexed nft, uint256 tokenId);
 
     constructor(address[] memory _directoryNodes, address[] memory _appNodes) {
@@ -91,10 +93,10 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         return true;
     }
 
-    function deposit(IERC20 token, uint256 amount) public returns (bool) {
+    function deposit(ERC20 token, uint256 amount) public returns (bool) {
         token.transferFrom(msg.sender, address(this), amount);
         _balances[token] += amount;
-        emit Deposited(msg.sender, token, amount);
+        emit Deposited(msg.sender, address(token), amount, "ERC20", token.name(), token.symbol(), "");
         return true;
     }
 
@@ -112,11 +114,11 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
             require(success, "ChrL2: cannot get nft symbol");
             (success, tokenURI) = address(nft).staticcall(abi.encodeWithSignature("tokenURI(uint256)", tokenId));
             require(success, "ChrL2: cannot get nft token URI");
-            emit DepositedNFT(msg.sender, nft, tokenId,
+            emit Deposited(msg.sender, address(nft), tokenId, "ERC721", 
                 abi.decode(name, (string)), abi.decode(symbol, (string)), abi.decode(tokenURI, (string)));
             return true;
         }
-        emit DepositedNFT(msg.sender, nft, tokenId, "", "", "");
+        emit Deposited(msg.sender, address(nft), tokenId, "ERC721", "", "", "");
         return true;
     }
 
@@ -161,7 +163,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     function _updateWithdraw(bytes32 hash, bytes memory _event) internal returns (bool) {
         Withdraw storage wd = _withdraw[hash];
         {
-            (IERC20 token, address beneficiary, uint256 amount) = hash.verifyEvent(_event);
+            (ERC20 token, address beneficiary, uint256 amount) = hash.verifyEvent(_event);
             require(amount > 0 && amount <= _balances[token], "ChrL2: invalid amount to make request withdraw");
             wd.token = token;
             wd.beneficiary = beneficiary;
