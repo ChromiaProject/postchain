@@ -72,13 +72,7 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
                         throw UserMistake("The path and structure don't match. We are at a leaf, but path elem is not a leaf: $pathElem ")
                     }
                 } else {
-                    val hashCarrier: Hash = if (content is GtvNull && content.getCachedMerkleHash() != null) {
-                        // Just to take care of the GtvNull case
-                        if (logger.isTraceEnabled) { logger.trace("Hash the leaf with GtvNull, no need to calculate since have the hash") }
-                        content.getCachedMerkleHash()!!.merkleHash
-                    } else {
-                        // We don't have paths and we are not in the root element, so we are free to look in cache
-                        if (content is GtvPrimitive) {
+                    val hashCarrier: Hash = if (content is GtvPrimitive) {
                             // Not GtvNull -> Make it a hash
                             if (logger.isTraceEnabled) { logger.debug("Hash the leaf with content: $content") }
                             val hashCarrier = calculator.calculateLeafHash(content)
@@ -86,7 +80,6 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
                         } else {
                             logger.warn("What is this leaf that's not a primitive? type: ${content.type}")
                             calculator.calculateLeafHash(content)
-                        }
                     }
                     ProofHashedLeaf(hashCarrier)
                 }
