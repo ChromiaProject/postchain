@@ -10,6 +10,7 @@ import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.StatusManager
+import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import java.lang.Thread.sleep
 
@@ -18,16 +19,16 @@ import java.lang.Thread.sleep
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess(workerContext.processName.toString(), workerContext.engine) {
+class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess("validator-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
 
     private val blockDatabase: BaseBlockDatabase
+    private val blockManager: BaseBlockManager
     val syncManager: ValidatorSyncManager
     val networkAwareTxQueue: NetworkAwareTxQueue
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
-
 
     init {
         val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
@@ -39,7 +40,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
         blockDatabase = BaseBlockDatabase(
                 blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeId)
 
-        val blockManager = BaseBlockManager(
+        blockManager = BaseBlockManager(
                 workerContext.processName,
                 blockDatabase,
                 statusManager,
@@ -47,7 +48,8 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
 
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
-        syncManager = ValidatorSyncManager(workerContext,
+        syncManager = ValidatorSyncManager(
+                workerContext,
                 statusManager,
                 blockManager,
                 blockDatabase,
@@ -72,5 +74,9 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
     override fun cleanup() {
         blockDatabase.stop()
         workerContext.shutdown()
+    }
+
+    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
+        workerContext.heartbeatChecker.onHeartbeat(heartbeatEvent)
     }
 }

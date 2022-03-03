@@ -6,12 +6,13 @@ import mu.KLogging
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
 import net.postchain.api.rest.controller.Model
+import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.devtools.PeerNameHelper.peerName
+import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
@@ -44,10 +45,10 @@ class PostchainTestNode(
         // But some test debugging cannot really be done the normal way so we need this strange looking thing
         when (processManager) {
             is BaseBlockchainProcessManager -> {
-                processManager.setToTest()
+                processManager.insideATest = true
             }
             is ManagedBlockchainProcessManager -> {
-                processManager.setToTest()
+                processManager.insideATest = true
             }
         }
     }
@@ -109,7 +110,7 @@ class PostchainTestNode(
     fun getRestApiModel(): Model {
         val blockchainProcess = processManager.retrieveBlockchain(DEFAULT_CHAIN_IID)!!
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
-                .restApi?.retrieveModel(blockchainRID(blockchainProcess))!!
+                .restApi?.retrieveModel(blockchainRID(blockchainProcess)) as Model
     }
 
     fun getRestApiHttpPort(): Int {
@@ -141,7 +142,7 @@ class PostchainTestNode(
         // TODO: [et]: Fix type casting
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure)
                 .defaultSynchronizationInfrastructure as EBFTSynchronizationInfrastructure)
-                .connectionManager.getPeersTopology(chainId)
+                .connectionManager.getNodesTopology(chainId)
                 .mapKeys { pubKeyToConnection ->
                     pubKeyToConnection.key.toString()
                 }

@@ -4,11 +4,10 @@ package net.postchain.config.node
 
 import assertk.assert
 import assertk.assertions.isInstanceOf
+import net.postchain.config.app.AppConfig
+import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigurationProviderFactory.createProvider
-import org.junit.jupiter.api.Test
 
 class NodeConfigurationProviderFactoryTest {
 
@@ -17,8 +16,9 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn "legacy"
         }
+        val mockStorage = MockStorage.mockAppContext()
 
-        assert(createProvider(appConfig)).isInstanceOf(
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
                 LegacyNodeConfigurationProvider::class)
     }
 
@@ -27,10 +27,9 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn "Manual"
         }
+        val mockStorage = MockStorage.mockAppContext()
 
-        val storageFactory = { _: AppConfig -> MockStorage.mock(emptyArray()) }
-
-        assert(createProvider(appConfig, storageFactory)).isInstanceOf(
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
                 ManualNodeConfigurationProvider::class)
     }
 
@@ -39,10 +38,9 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn "Managed"
         }
+        val mockStorage = MockStorage.mockAppContext()
 
-        val storageFactory = { _: AppConfig -> MockStorage.mock(emptyArray()) }
-
-        assert(createProvider(appConfig, storageFactory)).isInstanceOf(
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
                 ManagedNodeConfigurationProvider::class)
     }
 
@@ -51,9 +49,10 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn "some-unknown-provider-here"
         }
+        val mockStorage = MockStorage.mockAppContext()
 
-        assert(createProvider(appConfig)).isInstanceOf(
-                LegacyNodeConfigurationProvider::class)
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
+                ManualNodeConfigurationProvider::class)
     }
 
     @Test
@@ -61,8 +60,9 @@ class NodeConfigurationProviderFactoryTest {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn ""
         }
+        val mockStorage = MockStorage.mockAppContext()
 
-        assert(createProvider(appConfig)).isInstanceOf(
-                LegacyNodeConfigurationProvider::class)
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
+                ManualNodeConfigurationProvider::class)
     }
 }

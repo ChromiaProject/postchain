@@ -1,9 +1,11 @@
 package net.postchain.integrationtest.sync
 
 import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.ManagedModeTest
+import net.postchain.devtools.chainRidOf
 import net.postchain.devtools.currentHeight
 import net.postchain.devtools.utils.configuration.NodeSetup
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -94,7 +96,7 @@ class ForkTestNightly : ManagedModeTest() {
         val nodeDataSource = dataSources(c1)[0]!!
         nodeDataSource.delBlockchain(chainRidOf(c1.chain))
         // Set node 1 as replica for c1 so that node 0 will use node 1 to cross-fetch blocks.
-        nodeDataSource.addExtraReplica(chainRidOf(c1.chain), XPeerID(KeyPairHelper.pubKey(1)))
+        nodeDataSource.addExtraReplica(chainRidOf(c1.chain), NodeRid(KeyPairHelper.pubKey(1)))
 
         restartNodeClean(0, c0, -1)
         val c2 = startNewBlockchain(setOf(0), setOf(), c1.chain)
@@ -406,7 +408,7 @@ class ForkTestNightly : ManagedModeTest() {
 //    }
 
     private fun ancestor(index: Int, blockchain: Long): String {
-        return "${XPeerID(KeyPairHelper.pubKey(index))}:${chainRidOf(blockchain)}"
+        return "${NodeRid(KeyPairHelper.pubKey(index))}:${chainRidOf(blockchain)}"
     }
 
     /**
@@ -425,7 +427,7 @@ class ForkTestNightly : ManagedModeTest() {
     }
 
 
-    private fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
+    override fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
         awaitLog("========= AWAIT ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
         nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
         awaitLog("========= DONE WAITING ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
@@ -458,20 +460,6 @@ class ForkTestNightly : ManagedModeTest() {
         chainNew.all().forEach {
            assertFalse(expectedBlockRid!!.contentEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get()!!))
         }
-    }
-
-    private var chainId: Long = 1
-    fun startNewBlockchain(signers: Set<Int>, replicas: Set<Int>, historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf(), waitForRestart: Boolean = true): NodeSet {
-        assertTrue(signers.intersect(replicas).isEmpty())
-        val maxIndex = c0.all().size
-        signers.forEach { assertTrue(it < maxIndex ) }
-        replicas.forEach { assertTrue(it < maxIndex) }
-        val c = NodeSet(chainId++, signers, replicas)
-        newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
-        // Await blockchain started on all relevant nodes
-        if (waitForRestart)
-            awaitChainRestarted(c, -1)
-        return c
     }
 
     /**

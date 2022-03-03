@@ -4,6 +4,7 @@ import net.postchain.base.PeerCommConfiguration
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainEngine
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.heartbeat.HeartbeatChecker
 import net.postchain.ebft.message.Message
 import net.postchain.network.CommunicationManager
 
@@ -18,6 +19,7 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val nodeId: Int, // Rename to signerIndex
                     val communicationManager: CommunicationManager<Message>,
                     val peerCommConfiguration: PeerCommConfiguration,
+                    val heartbeatChecker: HeartbeatChecker,
                     val nodeConfig: NodeConfig,
                     val onShutdown: () -> Unit,
                     val startWithFastSync: Boolean = true // for ValidatorWorker

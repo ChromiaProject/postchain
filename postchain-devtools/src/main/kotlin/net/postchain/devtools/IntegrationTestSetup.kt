@@ -3,6 +3,7 @@
 package net.postchain.devtools
 
 import mu.KLogging
+import mu.Marker
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
@@ -14,12 +15,18 @@ import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import org.apache.commons.configuration2.MapConfiguration
+import org.apache.logging.log4j.core.impl.Log4jLogEvent
+import org.apache.logging.log4j.core.impl.LogEventFactory
+import org.apache.logging.log4j.message.Message
+import org.apache.logging.log4j.message.SimpleMessage
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
+import org.slf4j.LoggerFactory
+import java.util.logging.LogManager
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
@@ -43,7 +50,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     companion object : KLogging()
 
-    val awaitDebugLog = false
+    open val awaitDebugLog = false
 
     /**
      * If we want to monitor how long we are waiting and WHAT we are waiting for, then we can turn on this flag.
@@ -53,33 +60,33 @@ open class IntegrationTestSetup : AbstractIntegration() {
      */
     fun awaitLog(dbg: String) {
         if (awaitDebugLog) {
-            System.out.println("TEST: $dbg")
+            logger.info("TEST: $dbg")
         }
     }
 
     // For important test info we always want to log
     fun testLog(dbg: String) {
-        System.out.println("TEST: $dbg")
+        logger.info("TEST: $dbg")
     }
 
     @BeforeEach
     fun setup(testInfo: TestInfo) {
-        println("++ Starting test: ${testInfo.displayName} ++")
+        logger.info("Starting test: ${testInfo.displayName}")
     }
 
     @AfterEach
     override fun tearDown() {
         try {
-            logger.debug("Integration test -- TEARDOWN")
+            logger.info("Integration test -- TEARDOWN")
             nodes.forEach { it.shutdown() }
             nodes.clear()
             nodeMap.clear()
-            logger.debug("Closed nodes")
+            logger.info("Closed nodes")
             peerInfos = null
             expectedSuccessRids = mutableMapOf()
             configOverrides.clear()
             TestBlockchainRidCache.clear()
-            logger.debug("teadDown() done")
+            logger.info("tearDown() done")
         } catch (t: Throwable) {
             logger.error("tearDown() failed", t)
         }
@@ -249,7 +256,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
     /**
      * Override this in your test to add config overrides directly on the [NodeSetup] (for node specific configs).
      */
-    open fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {}
+    open fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+
+    }
 
     /**
      * Generates config for all [NodeSetup] objects
@@ -347,7 +356,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
         }
     }
 
-    protected fun awaitHeight(chainId: Long, height: Long) {
+    protected open fun awaitHeight(chainId: Long, height: Long) {
         awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
         awaitHeight(nodes, chainId, height)
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
@@ -355,9 +364,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     protected fun awaitHeight(nodes: List<PostchainTestNode>, chainId: Long, height: Long) {
         nodes.forEach {
-            awaitLog("++++++ AWAIT node RID: ${PeerNameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
+            awaitLog("++++++ AWAIT node RID: ${NameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
             it.awaitHeight(chainId, height)
-            awaitLog("++++++ WAIT OVER node RID: ${PeerNameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
+            awaitLog("++++++ WAIT OVER node RID: ${NameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
         }
     }
 

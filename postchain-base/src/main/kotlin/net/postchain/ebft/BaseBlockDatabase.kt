@@ -33,13 +33,13 @@ class BaseBlockDatabase(
     // The executor will only execute one thing at a time, in order
     private val executor = ThreadPoolExecutor(1, 1,
             0L, TimeUnit.MILLISECONDS,
-            LinkedBlockingQueue<Runnable>(),
-            { r: Runnable ->
-                Thread(r, "$nodeIndex-BaseBlockDatabaseWorker")
-                        .apply {
-                            isDaemon = true // So it can't block the JVM from exiting if still running
-                        }
-            })
+            LinkedBlockingQueue<Runnable>()
+    ) { r: Runnable ->
+        Thread(r, "$nodeIndex-BaseBlockDatabaseWorker")
+                .apply {
+                    isDaemon = true // So it can't block the JVM from exiting if still running
+                }
+    }
 
     private var blockBuilder: ManagedBlockBuilder? = null
     private var witnessBuilder: MultiSigBlockWitnessBuilder? = null

@@ -21,6 +21,8 @@ import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.TestInfo
 import java.io.File
 
 // Legacy code still use this old name, don't want to break compatibility.
@@ -51,6 +53,11 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         const val DEFAULT_CONFIG_FILE = "config.properties"
     }
 
+    @BeforeEach
+    fun setup(testInfo: TestInfo) {
+        logger.info("Starting test: ${testInfo.displayName}")
+    }
+
     @AfterEach
     override fun tearDown() {
         try {
@@ -62,7 +69,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
             peerInfos = null
             expectedSuccessRids = mutableMapOf()
             configOverrides.clear()
-            logger.debug("teadDown() done")
+            logger.debug("tearDown() done")
         } catch (t: Throwable) {
             logger.error("tearDown() failed", t)
         }
@@ -293,6 +300,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         }
 
         baseConfig.setProperty("fastsync.exit_delay", if (nodeCount == 1) 0 else 1000)
+        baseConfig.setProperty("heartbeat.enabled", false)
 
         val appConfig = CompositeConfiguration().apply {
             addConfiguration(configOverrides)

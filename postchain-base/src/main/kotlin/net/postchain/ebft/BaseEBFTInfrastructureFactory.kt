@@ -2,7 +2,7 @@
 
 package net.postchain.ebft
 
-import net.postchain.base.BaseApiInfrastructure
+import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -23,10 +23,8 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
             nodeConfigProvider: NodeConfigurationProvider,
             nodeDiagnosticContext: NodeDiagnosticContext
     ): BlockchainInfrastructure {
-
         val syncInfra = EBFTSynchronizationInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
         val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
-
         return BaseBlockchainInfrastructure(
                 nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext)
     }

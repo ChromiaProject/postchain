@@ -27,4 +27,3 @@ object BlockchainRidFactory {
         return BlockchainRid(bcBinary)
     }
 }
-

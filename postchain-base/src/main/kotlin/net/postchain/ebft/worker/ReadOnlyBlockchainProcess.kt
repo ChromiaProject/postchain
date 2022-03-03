@@ -6,10 +6,11 @@ import mu.KLogging
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.ebft.BaseBlockDatabase
+import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 
-class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess(workerContext.processName.toString(), workerContext.engine) {
+class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess("replica-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
 
@@ -25,6 +26,10 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
 
     override fun action() {
         fastSynchronizer.syncUntil { !isProcessRunning() }
+    }
+
+    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
+        workerContext.heartbeatChecker.onHeartbeat(heartbeatEvent)
     }
 
     fun getHeight(): Long = fastSynchronizer.blockHeight
