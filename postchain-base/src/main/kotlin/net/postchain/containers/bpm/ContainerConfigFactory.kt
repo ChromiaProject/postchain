@@ -45,8 +45,8 @@ object ContainerConfigFactory {
 
         /**
          * Rest API port binding.
-         * If nodeConfig.restApiPost == -1 => no communication with API => no binding needed.
-         * If nodeConfig.restApiPost > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
+         * If nodeConfig.restApiPort == -1 => no communication with API => no binding needed.
+         * If nodeConfig.restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
          * control here and know that it is always free.
          * DockerPort must be both node and container specific and cannot be -1 or 0 (at least not allowed in Ubuntu.)
          * Therefore, use random port selection
