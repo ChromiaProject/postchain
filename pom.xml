@@ -391,11 +391,18 @@
         </dependencies>
     </dependencyManagement>
 
+
+
     <build>
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
         <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
         <pluginManagement>
             <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.2.0</version>
+                </plugin>
                 <plugin>
                     <groupId>org.jetbrains.kotlin</groupId>
                     <artifactId>kotlin-maven-plugin</artifactId>
@@ -501,44 +508,6 @@
             </plugin>
 
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>properties-maven-plugin</artifactId>
-                <version>1.0.0</version>
-                <executions>
-                    <execution>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>write-project-properties</goal>
-                        </goals>
-                        <configuration>
-                            <outputFile>${project.build.outputDirectory}/${project.artifactId}-maven.properties
-                            </outputFile>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.1.1</version>
-                <executions>
-                    <execution>
-                        <id>analyze</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>list</goal>
-                        </goals>
-                        <configuration>
-                            <outputFile>${project.build.outputDirectory}/${project.artifactId}-dependencies.txt
-                            </outputFile>
-                            <sort>true</sort>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
                 <groupId>external.atlassian.jgitflow</groupId>
                 <artifactId>jgitflow-maven-plugin</artifactId>
                 <version>${jgitflow.maven.plugin.version}</version>
@@ -578,15 +547,10 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <includes>
-                                <include>**/*Test.java</include>
-<!--                                <include>**/*IT.java</include>  Do NOT un-comment this line. *IT is for failsafe tests (used in postchian-containerized), not for long surefire tests. For other time consuming integration tests, use postfix Nightly instead. -->
                                 <include>**/*Nightly.java</include>
-                                <include>**/*IntegrationTest.java</include>
-                                <include>**/*E2ET.*</include>
-                                <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
                             </includes>
-<!--                            <skipTests>${skipSurefireTests}</skipTests>-->
                             <systemPropertyVariables>
+                                <!--suppress UnresolvedMavenProperty -->
                                 <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml</log4j.configurationFile>
                             </systemPropertyVariables>
                         </configuration>
@@ -597,6 +561,7 @@
                         <version>${maven.failsafe.plugin.version}</version>
                         <configuration>
                             <systemPropertyVariables>
+                                <!--suppress UnresolvedMavenProperty -->
                                 <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml</log4j.configurationFile>
                             </systemPropertyVariables>
                         </configuration>

@@ -1,6 +1,7 @@
 <!-- Copyright (c) 2020 ChromaWay AB. See README for license information. -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>postchain</artifactId>
@@ -14,8 +15,6 @@
     <url>http://postchain.org</url>
     <properties>
         <main-class>net.postchain.AppKt</main-class>
-        <executable-classifier>jar-with-dependencies</executable-classifier>
-        <dist-classifier>dist</dist-classifier>
 
     </properties>
 
@@ -216,6 +215,11 @@
                     <archive>
                         <manifest>
                             <mainClass>net.postchain.AppKt</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix/>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
                     </archive>
                 </configuration>
@@ -252,57 +256,4 @@
             </plugin>
         </plugins>
     </build>
-
-    <!-- TODO: Remove this profile -->
-    <profiles>
-        <profile>
-            <id>assembly</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <version>${maven.assembly.plugin.version}</version>
-                        <executions>
-                            <execution>
-                                <id>make-executable-jar</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <archive>
-                                        <manifest>
-                                            <mainClass>net.postchain.AppKt</mainClass>
-                                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
-                                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                                        </manifest>
-                                        <manifestEntries>
-                                            <Class-Path>backend.jar</Class-Path>
-                                        </manifestEntries>
-                                    </archive>
-                                    <descriptorRefs>
-                                        <descriptorRef>${executable-classifier}</descriptorRef>
-                                    </descriptorRefs>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>make-archive</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>src/main/assembly/targz.xml</descriptor>
-                                    </descriptors>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>

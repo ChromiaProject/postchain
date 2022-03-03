@@ -14,14 +14,9 @@
     <packaging>jar</packaging>
 
     <name>Postchain Client</name>
-
-    <properties>
-        <assertk.version>0.10</assertk.version>
-        <rest-assured.version>3.1.1</rest-assured.version>
-        <httpclient.version>4.5.3</httpclient.version>
-
-        <executable-classifier>jar-with-dependencies</executable-classifier>
-    </properties>
+    <description>
+        A kotlin client which can be used to post transactions and query data against Postchain’s REST API.
+    </description>
 
     <dependencies>
         <!-- Kotlin -->
@@ -97,41 +92,23 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>net.postchain.client.AppKt</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix/>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
-
-    <!-- TODO: Remove this profile -->
-    <profiles>
-        <profile>
-            <id>assembly</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-assembly-plugin</artifactId>
-                        <version>${maven.assembly.plugin.version}</version>
-                        <executions>
-                            <execution>
-                                <id>make-executable-jar</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <archive>
-                                        <manifest>
-                                            <mainClass>net.postchain.client.AppKt</mainClass>
-                                        </manifest>
-                                    </archive>
-                                    <descriptorRefs>
-                                        <descriptorRef>${executable-classifier}</descriptorRef>
-                                    </descriptorRefs>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
