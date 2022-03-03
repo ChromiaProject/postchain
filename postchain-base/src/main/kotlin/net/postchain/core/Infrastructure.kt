@@ -7,7 +7,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.ebft.heartbeat.HeartbeatChecker
+import net.postchain.ebft.heartbeat.HeartbeatListener
 
 /**
  * Responsible blockchain process lifecycle, i.e. creating, exiting and restarting blockchain processes.
@@ -22,14 +22,14 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatChecker: HeartbeatChecker,
+            heartbeatListener: HeartbeatListener,
             historicBlockchainContext: HistoricBlockchainContext? = null
     ): BlockchainProcess
 
     /**
-     * Creates [HeartbeatChecker] for specific BlockchainProcess
+     * Creates [HeartbeatListener] for specific BlockchainProcess
      */
-    fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker
+    fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener
 
     /**
      * Call this hook upon blockchain process restart.

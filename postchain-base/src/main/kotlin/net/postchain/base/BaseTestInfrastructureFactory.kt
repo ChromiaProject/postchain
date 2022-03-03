@@ -10,7 +10,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.ebft.heartbeat.HeartbeatChecker
+import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 
 class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
@@ -33,8 +33,6 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
             logger.debug("$name: shutdown() - $str.")
         }
     }
-
-    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) = Unit
 }
 
 
@@ -45,14 +43,14 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatChecker: HeartbeatChecker,
+            heartbeatListener: HeartbeatListener,
             historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }
 
-    override fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {
-        return object : HeartbeatChecker {
+    override fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
+        return object : HeartbeatListener {
             override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) = Unit
             override fun checkHeartbeat(timestamp: Long): Boolean = true
         }

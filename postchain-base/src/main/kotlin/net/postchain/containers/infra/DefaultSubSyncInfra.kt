@@ -6,8 +6,8 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainRid
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
-import net.postchain.ebft.heartbeat.HeartbeatChecker
-import net.postchain.ebft.heartbeat.RemoteConfigChecker
+import net.postchain.ebft.heartbeat.HeartbeatListener
+import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
 import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import net.postchain.network.peer.PeersCommConfigFactory
@@ -27,7 +27,7 @@ class DefaultSubSyncInfra(
         fillDiagnosticContext()
     }
 
-    override fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {
-        return RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connectionManager as SubConnectionManager)
+    override fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
+        return RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainRid, connectionManager as SubConnectionManager)
     }
 }
