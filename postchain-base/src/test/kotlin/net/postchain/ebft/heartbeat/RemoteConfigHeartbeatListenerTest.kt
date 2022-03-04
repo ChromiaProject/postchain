@@ -15,7 +15,7 @@ import org.mockito.kotlin.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
-class RemoteConfigCheckerTest {
+class RemoteConfigHeartbeatListenerTest {
 
     private val chainId = 0L
     private val blockchainRid = BlockchainRid.ZERO_RID
@@ -27,7 +27,7 @@ class RemoteConfigCheckerTest {
             on { heartbeatEnabled } doReturn (true)
         }
         val connManager: SubConnectionManager = mock()
-        val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager)
+        val sut = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainRid, connManager)
 
         // No interaction
         // ...
@@ -46,7 +46,7 @@ class RemoteConfigCheckerTest {
             on { heartbeatTimeout } doReturn 20_000L
         }
         val connManager: SubConnectionManager = mock()
-        val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager)
+        val sut = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainRid, connManager)
 
         // Interaction: Register the first Heartbeat event
         sut.onHeartbeat(HeartbeatEvent(now - 30_000L))
@@ -72,7 +72,7 @@ class RemoteConfigCheckerTest {
         val mockBlockchainConfigProvider: BlockchainConfigurationProvider = mock {
             on { findNextConfigurationHeight(any(), any()) } doReturn 0
         }
-        val sut = RemoteConfigChecker(nodeConfig, chainId, blockchainRid, connManager).apply {
+        val sut = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainRid, connManager).apply {
             storage = MockStorage.mockEContext(chainId)
             blockchainConfigProvider = mockBlockchainConfigProvider
         }

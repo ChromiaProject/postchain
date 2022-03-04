@@ -11,7 +11,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.ebft.heartbeat.HeartbeatChecker
+import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
@@ -134,14 +134,14 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        heartbeatChecker: HeartbeatChecker,
-        historicBlockchainContext: HistoricBlockchainContext?
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            heartbeatListener: HeartbeatListener,
+            historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val conf = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastucture(conf.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, heartbeatChecker, historicBlockchainContext)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener, historicBlockchainContext)
         if (conf is BaseBlockchainConfiguration) {
             for (extName in conf.syncInfrastructureExtensionNames) {
                 getSynchronizationInfrastuctureExtension(extName).connectProcess(process)
@@ -151,8 +151,8 @@ open class BaseBlockchainInfrastructure(
         return process
     }
 
-    override fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {
-        return defaultSynchronizationInfrastructure.makeHeartbeatChecker(chainId, blockchainRid)
+    override fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
+        return defaultSynchronizationInfrastructure.makeHeartbeatListener(chainId, blockchainRid)
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {

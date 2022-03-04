@@ -15,9 +15,7 @@ import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.util.peerInfoFromPublicKey
-import net.postchain.network.common.NodeConnection
 import net.postchain.network.peer.PeerConnection
-import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeerConnectionDescriptor
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.FIVE_SECONDS

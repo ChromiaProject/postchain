@@ -10,7 +10,6 @@ import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.StatusManager
-import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import java.lang.Thread.sleep
 
@@ -74,9 +73,5 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
     override fun cleanup() {
         blockDatabase.stop()
         workerContext.shutdown()
-    }
-
-    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-        workerContext.heartbeatChecker.onHeartbeat(heartbeatEvent)
     }
 }

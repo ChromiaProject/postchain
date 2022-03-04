@@ -12,9 +12,9 @@ import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticProperty.BLOCKCHAIN
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.ebft.heartbeat.Chain0HeartbeatChecker
-import net.postchain.ebft.heartbeat.DefaultHeartbeatChecker
-import net.postchain.ebft.heartbeat.HeartbeatChecker
+import net.postchain.ebft.heartbeat.Chain0HeartbeatListener
+import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
+import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.message.Message
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
@@ -57,7 +57,7 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatChecker: HeartbeatChecker,
+            heartbeatListener: HeartbeatListener,
             historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration() as BaseBlockchainConfiguration // TODO: [et]: Resolve type cast
@@ -71,7 +71,7 @@ open class EBFTSynchronizationInfrastructure(
                 blockchainConfig.configData.context.nodeID,
                 buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration),
                 peerCommConfiguration,
-                heartbeatChecker,
+                heartbeatListener,
                 nodeConfig,
                 unregisterBlockchainDiagnosticData,
                 getStartWithFastSyncValue(blockchainConfig.chainID)
@@ -106,7 +106,7 @@ open class EBFTSynchronizationInfrastructure(
                         blockchainConfig.configData.context.nodeID,
                         histCommManager,
                         historicPeerCommConfiguration,
-                        heartbeatChecker,
+                        heartbeatListener,
                         nodeConfig,
                         unregisterBlockchainDiagnosticData
                 )
@@ -135,9 +135,9 @@ open class EBFTSynchronizationInfrastructure(
         }
     }
 
-    override fun makeHeartbeatChecker(chainId: Long, blockchainRid: BlockchainRid): HeartbeatChecker {
-        return if (chainId == 0L) Chain0HeartbeatChecker()
-        else DefaultHeartbeatChecker(nodeConfig, chainId)
+    override fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
+        return if (chainId == 0L) Chain0HeartbeatListener()
+        else DefaultHeartbeatListener(nodeConfig, chainId)
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {

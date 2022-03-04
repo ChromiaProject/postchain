@@ -29,7 +29,7 @@ class DefaultHeartbeatManager(val nodeConfig: NodeConfig) : HeartbeatManager {
     companion object : KLogging()
 
     private val listeners: MutableSet<HeartbeatListener> =
-            Collections.newSetFromMap(ConcurrentHashMap<HeartbeatListener, Boolean>())
+            Collections.newSetFromMap(ConcurrentHashMap())
 
     override fun addListener(listener: HeartbeatListener) {
         listeners.add(listener)

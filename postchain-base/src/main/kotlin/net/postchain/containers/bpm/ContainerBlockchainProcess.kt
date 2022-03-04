@@ -18,6 +18,8 @@ interface ContainerBlockchainProcess : HeartbeatListener {
 
     fun transferConfigsToContainer()
     fun shutdown()
+
+    override fun checkHeartbeat(timestamp: Long) = true
 }
 
 class DefaultContainerBlockchainProcess(

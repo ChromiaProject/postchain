@@ -6,7 +6,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import kotlin.test.assertFalse
 
-class DefaultHeartbeatCheckerTest {
+class DefaultHeartbeatListenerTest {
 
     private val chainId = 0L
     private val now = System.currentTimeMillis()
@@ -16,7 +16,7 @@ class DefaultHeartbeatCheckerTest {
         val nodeConfig: NodeConfig = mock {
             on { heartbeatEnabled } doReturn (false)
         }
-        val sut = DefaultHeartbeatChecker(nodeConfig, chainId)
+        val sut = DefaultHeartbeatListener(nodeConfig, chainId)
 
         // No Heartbeat event registered, but Heartbeat Check passed
         assert(sut.checkHeartbeat(now))
@@ -27,7 +27,7 @@ class DefaultHeartbeatCheckerTest {
         val nodeConfig: NodeConfig = mock {
             on { heartbeatEnabled } doReturn (true)
         }
-        val sut = DefaultHeartbeatChecker(nodeConfig, chainId)
+        val sut = DefaultHeartbeatListener(nodeConfig, chainId)
 
         // No Heartbeat event registered, then Heartbeat check failed
         assertFalse(sut.checkHeartbeat(now))
@@ -39,7 +39,7 @@ class DefaultHeartbeatCheckerTest {
             on { heartbeatEnabled } doReturn (true)
             on { heartbeatTimeout } doReturn 20_000L
         }
-        val sut = DefaultHeartbeatChecker(nodeConfig, chainId)
+        val sut = DefaultHeartbeatListener(nodeConfig, chainId)
 
         // Register the first Heartbeat event
         sut.onHeartbeat(HeartbeatEvent(now - 10_000L))
@@ -54,7 +54,7 @@ class DefaultHeartbeatCheckerTest {
             on { heartbeatEnabled } doReturn (true)
             on { heartbeatTimeout } doReturn 20_000L
         }
-        val sut = DefaultHeartbeatChecker(nodeConfig, chainId)
+        val sut = DefaultHeartbeatListener(nodeConfig, chainId)
 
         // Register Heartbeat event
         sut.onHeartbeat(HeartbeatEvent(now - 30_000L))

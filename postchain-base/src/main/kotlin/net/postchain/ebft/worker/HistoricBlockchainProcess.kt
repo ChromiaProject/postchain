@@ -11,11 +11,9 @@ import net.postchain.base.withReadConnection
 import net.postchain.core.*
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.BlockTrace
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
-import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import nl.komponents.kovenant.Promise
@@ -254,10 +252,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         blockDatabase.stop()
         workerContext.shutdown()
         shutdownDebug("Shutdown finished")
-    }
-
-    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) {
-        workerContext.heartbeatChecker.onHeartbeat(heartbeatEvent)
     }
 
     // ----------------------------------------------

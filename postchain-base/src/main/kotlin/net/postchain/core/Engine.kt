@@ -3,7 +3,6 @@
 package net.postchain.core
 
 import net.postchain.debug.BlockTrace
-import net.postchain.ebft.heartbeat.HeartbeatListener
 
 interface Shutdownable {
     fun shutdown()
@@ -30,7 +29,7 @@ interface BlockchainEngine : Shutdownable {
     fun getConfiguration(): BlockchainConfiguration
 }
 
-interface BlockchainProcess : HeartbeatListener {
+interface BlockchainProcess {
     val blockchainEngine: BlockchainEngine
     fun start()
     fun shutdown()
