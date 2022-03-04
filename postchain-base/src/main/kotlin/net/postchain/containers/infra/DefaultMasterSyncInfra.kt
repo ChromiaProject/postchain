@@ -107,9 +107,4 @@ open class DefaultMasterSyncInfra(
         super.shutdown()
         masterConnectionManager.shutdown()
     }
-
-    override fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
-        return if (chainId == 0L) Chain0HeartbeatListener()
-        else DefaultHeartbeatListener(nodeConfig, chainId)
-    }
 }

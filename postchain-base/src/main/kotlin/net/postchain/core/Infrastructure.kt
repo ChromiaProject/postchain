@@ -27,11 +27,6 @@ interface SynchronizationInfrastructure : Shutdownable {
     ): BlockchainProcess
 
     /**
-     * Creates [HeartbeatListener] for specific BlockchainProcess
-     */
-    fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener? = null
-
-    /**
      * Call this hook upon blockchain process restart.
      * Note: responsible for keeping track of the two BC process sync modes (normal sync and fastsync)
      */
