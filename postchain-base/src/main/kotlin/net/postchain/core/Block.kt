@@ -2,9 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.core.BlockchainRid
-
-
 interface BlockHeader {
     val prevBlockRID: ByteArray
     val rawData: ByteArray

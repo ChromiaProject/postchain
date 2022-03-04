@@ -4,7 +4,6 @@ import assertk.assert
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import net.postchain.core.BlockchainEngine
-import net.postchain.ebft.heartbeat.HeartbeatEvent
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.Test
@@ -37,8 +36,6 @@ internal class AbstractBlockchainProcessTest {
 }
 
 class DummyBlockchainProcess(private val testAction: () -> Unit): AbstractBlockchainProcess("TestProcess", mock(BlockchainEngine::class.java)) {
-
-    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) { }
 
     override fun cleanup() { }
 

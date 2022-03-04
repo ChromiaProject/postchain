@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.Storage
 import net.postchain.gtv.Gtv
 

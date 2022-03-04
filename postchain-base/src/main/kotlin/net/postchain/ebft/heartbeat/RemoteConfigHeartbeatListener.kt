@@ -13,12 +13,12 @@ import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.*
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
-class RemoteConfigChecker(
+class RemoteConfigHeartbeatListener(
         nodeConfig: NodeConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         val connectionManager: SubConnectionManager
-) : DefaultHeartbeatChecker(nodeConfig, chainId), MsMessageHandler {
+) : DefaultHeartbeatListener(nodeConfig, chainId), MsMessageHandler {
 
     companion object : KLogging()
 
