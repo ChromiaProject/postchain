@@ -139,7 +139,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             syncDebug("Start", blockHeight)
             lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
-                if (workerContext.heartbeatListener.checkHeartbeat(lastBlockTimestamp)) {
+                if (workerContext.heartbeatListener?.let { it.checkHeartbeat(lastBlockTimestamp) } != false) {
                     refillJobs()
                     processMessages(exitCondition)
                     processDoneJobs()
@@ -660,7 +660,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            while (!workerContext.heartbeatListener.checkHeartbeat(lastBlockTimestamp)) {
+            while (workerContext.heartbeatListener?.let { !it.checkHeartbeat(lastBlockTimestamp) } == true) {
                 if (!isProcessRunning() || exitCondition()) return
                 sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
             }

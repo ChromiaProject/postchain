@@ -136,7 +136,7 @@ open class BaseBlockchainInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener,
+            heartbeatListener: HeartbeatListener?,
             historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val conf = engine.getConfiguration()

@@ -22,7 +22,7 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener,
+            heartbeatListener: HeartbeatListener?,
             historicBlockchainContext: HistoricBlockchainContext? = null
     ): BlockchainProcess
 
