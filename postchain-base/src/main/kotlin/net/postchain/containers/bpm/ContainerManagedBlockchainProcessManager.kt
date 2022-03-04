@@ -123,11 +123,11 @@ open class ContainerManagedBlockchainProcessManager(
     override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, histConf: HistoricBlockchainContext?, heartbeatListener: HeartbeatListener?) {
         val hbListener = buildHeartbeatListener(chainId, blockchainConfig.blockchainRid)
         super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, histConf, hbListener)
-        heartbeatListeners[chainId] = hbListener
+        heartbeatListeners[chainId] = hbListener!!
         heartbeatManager.addListener(hbListener)
     }
 
-    private fun buildHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
+    private fun buildHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener? {
         val heartbeatListener = blockchainInfrastructure.makeHeartbeatListener(chainId, blockchainRid)
 
         // TODO: [POS-164]: Redesign this / RemoteConfigChecker

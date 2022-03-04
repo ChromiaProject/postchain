@@ -20,7 +20,7 @@ open class BaseBlockchainInfrastructure(
     val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
     val apiInfrastructure: ApiInfrastructure,
     val nodeDiagnosticContext: NodeDiagnosticContext
-) : BlockchainInfrastructure {
+) : BlockchainInfrastructure, SynchronizationInfrastructure by defaultSynchronizationInfrastructure {
 
     val cryptoSystem = SECP256K1CryptoSystem()
     val blockSigMaker: SigMaker
@@ -150,17 +150,4 @@ open class BaseBlockchainInfrastructure(
         apiInfrastructure.connectProcess(process)
         return process
     }
-
-    override fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
-        return defaultSynchronizationInfrastructure.makeHeartbeatListener(chainId, blockchainRid)
-    }
-
-    override fun exitBlockchainProcess(process: BlockchainProcess) {
-        defaultSynchronizationInfrastructure.exitBlockchainProcess(process)
-    }
-
-    override fun restartBlockchainProcess(process: BlockchainProcess) {
-        defaultSynchronizationInfrastructure.restartBlockchainProcess(process)
-    }
-
 }

@@ -29,7 +29,7 @@ interface SynchronizationInfrastructure : Shutdownable {
     /**
      * Creates [HeartbeatListener] for specific BlockchainProcess
      */
-    fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener
+    fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener? = null
 
     /**
      * Call this hook upon blockchain process restart.

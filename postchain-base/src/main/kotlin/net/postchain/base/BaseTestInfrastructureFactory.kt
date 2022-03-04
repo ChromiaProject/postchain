@@ -49,13 +49,6 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
         return TestBlockchainProcess(engine)
     }
 
-    override fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
-        return object : HeartbeatListener {
-            override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) = Unit
-            override fun checkHeartbeat(timestamp: Long): Boolean = true
-        }
-    }
-
     override fun exitBlockchainProcess(process: BlockchainProcess) = Unit
     override fun restartBlockchainProcess(process: BlockchainProcess) = Unit
 
