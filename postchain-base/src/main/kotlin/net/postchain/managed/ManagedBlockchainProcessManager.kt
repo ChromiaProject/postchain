@@ -139,8 +139,6 @@ open class ManagedBlockchainProcessManager(
          */
         fun restartHandlerChain0(blockTimestamp: Long, bTrace: BlockTrace?): Boolean {
             wrTrace("chain0 begin", chainId, bTrace)
-            // Sending heartbeat to other chains
-            heartbeatManager.beat(blockTimestamp)
 
             // Preloading blockchain configuration
             preloadChain0Configuration()

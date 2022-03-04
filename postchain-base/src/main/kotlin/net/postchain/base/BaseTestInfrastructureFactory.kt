@@ -43,7 +43,7 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener,
+            heartbeatListener: HeartbeatListener?,
             historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)

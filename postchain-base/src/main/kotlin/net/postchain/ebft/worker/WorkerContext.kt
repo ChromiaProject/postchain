@@ -19,7 +19,7 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val nodeId: Int, // Rename to signerIndex
                     val communicationManager: CommunicationManager<Message>,
                     val peerCommConfiguration: PeerCommConfiguration,
-                    val heartbeatListener: HeartbeatListener,
+                    val heartbeatListener: HeartbeatListener?,
                     val nodeConfig: NodeConfig,
                     val onShutdown: () -> Unit,
                     val startWithFastSync: Boolean = true // for ValidatorWorker
