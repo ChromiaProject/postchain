@@ -68,7 +68,7 @@ class NoOpEventProcessor : EventProcessor {
         return true
     }
 
-    private fun isValidEthereumEventFormat(opArgs: Array<Gtv>) = opArgs.size == 9 &&
+    private fun isValidEthereumEventFormat(opArgs: Array<Gtv>) = opArgs.size == 13 &&
             opArgs[0].asPrimitive() is BigInteger &&
             opArgs[1].asPrimitive() is String &&
             opArgs[2].asPrimitive() is String &&
@@ -77,7 +77,11 @@ class NoOpEventProcessor : EventProcessor {
             opArgs[5].asPrimitive() is String &&
             opArgs[6].asPrimitive() is String &&
             opArgs[7].asPrimitive() is String &&
-            opArgs[8].asPrimitive() is BigInteger
+            opArgs[8].asPrimitive() is BigInteger &&
+            opArgs[9].asPrimitive() is String &&
+            opArgs[10].asPrimitive() is String &&
+            opArgs[11].asPrimitive() is String &&
+            opArgs[12].asPrimitive() is String
 
     private fun isValidEthereumBlockFormat(opArgs: Array<Gtv>) = opArgs.size == 2 &&
             opArgs[0].asPrimitive() is BigInteger &&
@@ -223,7 +227,11 @@ class EthereumEventProcessor(
                 eventArgs[1].asString() == eventLog.blockHash &&
                 eventArgs[6].asString() == eventParameters.indexedValues[0].value &&
                 eventArgs[7].asString() == eventParameters.indexedValues[1].value &&
-                eventArgs[8].asBigInteger() == eventParameters.nonIndexedValues[0].value
+                eventArgs[8].asBigInteger() == eventParameters.nonIndexedValues[0].value &&
+                eventArgs[9].asString() == eventParameters.nonIndexedValues[1].value &&
+                eventArgs[10].asString() == eventParameters.nonIndexedValues[2].value &&
+                eventArgs[11].asString() == eventParameters.nonIndexedValues[3].value &&
+                eventArgs[12].asString() == eventParameters.nonIndexedValues[4].value
     }
 
     @Synchronized
@@ -250,9 +258,13 @@ class EthereumEventProcessor(
                     gtv(it.logIndex),
                     gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
                     gtv(contract.contractAddress),
-                    gtv(eventParameters.indexedValues[0].value as String),       // owner
-                    gtv(eventParameters.indexedValues[1].value as String),       // token
-                    gtv(eventParameters.nonIndexedValues[0].value as BigInteger) // value
+                    gtv(eventParameters.indexedValues[0].value as String),          // owner
+                    gtv(eventParameters.indexedValues[1].value as String),          // token address
+                    gtv(eventParameters.nonIndexedValues[0].value as BigInteger),   // amount/tokenId
+                    gtv(eventParameters.nonIndexedValues[1].value as String),       // token type (ERC20, ERC721,...)
+                    gtv(eventParameters.nonIndexedValues[2].value as String),       // token name
+                    gtv(eventParameters.nonIndexedValues[3].value as String),       // token symbol
+                    gtv(eventParameters.nonIndexedValues[4].value as String),       // token uri (only for ERC721)
                 )
             }.toList()
 
