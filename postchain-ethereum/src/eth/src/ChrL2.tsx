@@ -33,7 +33,7 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
     const name = await tokenContract.name();
     const symbol = await tokenContract.symbol();
     const decimals = await tokenContract.decimals();
-    let balance = await client.query('eth_balance_of', { "token": tokenAddress.toLowerCase(), "beneficiary": account.toLowerCase() })
+    let balance = await client.query('eth_balance_of', { "token_address": tokenAddress.toLowerCase(), "beneficiary": account.toLowerCase() })
     let withdraws = await client.query('get_withdrawal', {
       'token': tokenAddress.toLowerCase(),
       'beneficiary': account.toLowerCase()
