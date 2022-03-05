@@ -186,12 +186,12 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
             {data?.withdraws.map((w) => {
               return (<tr key={w?.serial}>
                 <th>{w?.serial}</th>
-                <td>{Number(formatUnits(w?.amount.toString() ?? 0, data?.decimals)).toFixed(6)}</td>
+                <td>{Number(formatUnits(w?.value.toString() ?? 0, data?.decimals)).toFixed(6)}</td>
                 <td>
-                  <button type="button" className="btn btn-outline btn-accent" onClick={() => withdrawRequest(w?.serial, w?.token, w?.beneficiary, w?.amount)}>
+                  <button type="button" className="btn btn-outline btn-accent" onClick={() => withdrawRequest(w?.serial, w?.token, w?.beneficiary, w?.value)}>
                     Withdraw Request
                   </button>
-                  <button type="button" className="btn btn-outline btn-accent" onClick={() => withdraw(w?.serial, w?.token, w?.beneficiary, w?.amount)}>
+                  <button type="button" className="btn btn-outline btn-accent" onClick={() => withdraw(w?.serial, w?.token, w?.beneficiary, w?.value)}>
                     Withdraw
                   </button>
                 </td>
