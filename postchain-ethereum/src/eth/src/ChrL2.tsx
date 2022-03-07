@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import { useQuery } from "react-query";
 
 import ERC20TokenArtifacts from "./artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
+import ERC721TokenArtifacts from "./artifacts/@openzeppelin/contracts/token/ERC721/ERC721.sol/ERC721.json";
 import ChrL2Artifacts from "./artifacts/contracts/ChrL2.sol/ChrL2.json";
 
 import { restClient, gtxClient, util } from "postchain-client"
@@ -26,13 +27,35 @@ interface Props {
   tokenAddress: string;
 }
 
-const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2Address: string}) => {
+const sendTnx = async (signer, to, calldata) => {
+  const txPrams = {
+    to: to,
+    value: '0x0',
+    data: calldata
+  };
+  const transaction = await signer.sendTransaction(txPrams);
+  toast.promise(transaction.wait(), {
+    loading: `Transaction submitted. Wait for confirmation...`,
+    success: <b>Transaction confirmed!</b>,
+    error: <b>Transaction failed!.</b>,
+  })
+}
+
+const TokenInfo = ({ tokenAddress, chrL2Address, tokenType }: { tokenAddress: string, chrL2Address: string, tokenType: string}) => {
   const { library, account } = useWeb3React();
   const fetchTokenInfo = async () => {
-    const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library);
+    var tokenContract;
+    if (tokenType === "ERC721") {
+      tokenContract = new ethers.Contract(tokenAddress, ERC721TokenArtifacts.abi, library);
+    } else {
+      tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library);
+    }
     const name = await tokenContract.name();
     const symbol = await tokenContract.symbol();
-    const decimals = await tokenContract.decimals();
+    var decimals = 0;
+    if (tokenType === "ERC20") {
+      decimals = await tokenContract.decimals();
+    }
     let balance = await client.query('eth_balance_of', { "token_address": tokenAddress.toLowerCase(), "beneficiary": account.toLowerCase() })
     let withdraws = await client.query('get_withdrawal', {
       'token': tokenAddress.toLowerCase(),
@@ -121,18 +144,13 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
         extraRoot: "0x" + el2MerkleProof.extraRoot,
         extraMerkleProofs: extraMerkleProofs,
       }
-      const calldata = chrl2.interface.encodeFunctionData("withdrawRequest", [eventData, evtProof, blockHeader, sigs, el2Proof])
-      const txPrams = {
-        to: chrL2Address,
-        value: '0x0',
-        data: calldata
-      };
-      const transaction = await signer.sendTransaction(txPrams);
-      toast.promise(transaction.wait(), {
-        loading: `Transaction submitted. Wait for confirmation...`,
-        success: <b>Transaction confirmed!</b>,
-        error: <b>Transaction failed!.</b>,
-      })
+      var calldata
+      if (tokenType === "ERC20") {
+        calldata = chrl2.interface.encodeFunctionData("withdrawRequest", [eventData, evtProof, blockHeader, sigs, el2Proof])
+      } else {
+        calldata = chrl2.interface.encodeFunctionData("withdrawRequestNFT", [eventData, evtProof, blockHeader, sigs, el2Proof])
+      }
+      await sendTnx(signer, chrL2Address, calldata)
     } catch (error) { }
   }
 
@@ -145,18 +163,13 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
         ChrL2Artifacts.abi,
         library
       )
-      const calldata = chrl2.interface.encodeFunctionData("withdraw", [eventHash, account])
-      const txPrams = {
-        to: chrL2Address,
-        value: '0x0',
-        data: calldata
-      };
-      const transaction = await signer.sendTransaction(txPrams);
-      toast.promise(transaction.wait(), {
-        loading: `Transaction submitted. Wait for confirmation...`,
-        success: <b>Transaction confirmed!</b>,
-        error: <b>Transaction failed!.</b>,
-      })
+      var calldata
+      if (tokenType === "ERC20") {
+        calldata = chrl2.interface.encodeFunctionData("withdraw", [eventHash, account])
+      } else {
+        calldata = chrl2.interface.encodeFunctionData("withdrawNFT", [eventHash, account])
+      }
+      await sendTnx(signer, chrL2Address, calldata)
     } catch (error) { }
   }
 
@@ -204,13 +217,20 @@ const TokenInfo = ({ tokenAddress, chrL2Address }: { tokenAddress: string, chrL2
   )
 }
 
-const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
+const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
   const { library, chainId, account } = useWeb3React()
   const [balance, setBalance] = useState(BigNumber.from(0))
   const [deposite, setDeposit] = useState(BigNumber.from(0))
   const [amount, setAmount] = useState(0)
   const [withdrawAmount, setWithdrawAmount] = useState(0)
   const [unit, setUnit] = useState(18)
+  const tokenId = 65696
+  var tokenType: string
+  if (tokenAddress === "0x064e16771A4864561f767e4Ef4a6989fc4045aE7") {
+    tokenType = "ERC721"
+  } else {
+    tokenType = "ERC20"
+  }
 
   const waitConfirmation = function(txRID) {
     return new Promise((resolve, reject) => {
@@ -245,7 +265,10 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
     try {
       let sender = util.makeKeyPair()
       var tx = client.newTransaction([sender.pubKey])
-      let amount = ethers.BigNumber.from(withdrawAmount).mul(ethers.BigNumber.from(10).pow(unit)).toString()
+      var amount = ethers.BigNumber.from(withdrawAmount).mul(ethers.BigNumber.from(10).pow(unit)).toString()
+      if (tokenType === "ERC721") {
+        amount = ethers.BigNumber.from(tokenId).toString()
+      }
       tx.addOperation("withdraw", tokenAddress.toLowerCase(), account.toLowerCase(), parseInt(amount))
       tx.sign(sender.privKey, sender.pubKey)
       let txRID = tx.getTxRID()
@@ -267,19 +290,31 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
 
   useEffect(() => {
     const fetchDepositedTokenInfo = () => {
-      const tokenContract = new ethers.Contract(
-        tokenAddress, 
-        ERC20TokenArtifacts.abi,
-        library
-      )
       const chrl2 = new ethers.Contract(
         chrL2Address,
         ChrL2Artifacts.abi,
         library
       )
-      tokenContract.balanceOf(account).then(setBalance).catch()
-      tokenContract.decimals().then(setUnit).catch()
-      chrl2._balances(tokenAddress).then(setDeposit).catch()
+
+      var tokenContract;
+      if (tokenType === "ERC721") {
+        tokenContract = new ethers.Contract(
+          tokenAddress,
+          ERC721TokenArtifacts.abi,
+          library
+        )
+        tokenContract.balanceOf(account).then(setBalance).catch()
+        setUnit(0)
+      } else {
+        tokenContract = new ethers.Contract(
+          tokenAddress,
+          ERC20TokenArtifacts.abi,
+          library
+        )
+        tokenContract.balanceOf(account).then(setBalance).catch()
+        tokenContract.decimals().then(setUnit).catch()
+        chrl2._balances(tokenAddress).then(setDeposit).catch()
+      }
     };
     try {
       fetchDepositedTokenInfo();
@@ -297,17 +332,22 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
       )
       const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from(10).pow(unit))
       const calldata = chrl2.interface.encodeFunctionData("deposit", [tokenAddress, value])
-      const txPrams = {
-        to: chrL2Address,
-        value: '0x0',
-        data: calldata
-      };
-      const transaction = await signer.sendTransaction(txPrams);
-      toast.promise(transaction.wait(), {
-        loading: `Transaction submitted. Wait for confirmation...`,
-        success: <b>Transaction confirmed!</b>,
-        error: <b>Transaction failed!.</b>,
-      });
+      await sendTnx(signer, chrL2Address, calldata)
+    } catch (error) {
+    }
+  };
+
+  const depositNFTokens = async () => {
+    const signer = library.getSigner()
+    try {
+      const chrl2 = new ethers.Contract(
+        chrL2Address,
+        ChrL2Artifacts.abi,
+        library
+      )
+      const id = ethers.BigNumber.from(tokenId)
+      const calldata = chrl2.interface.encodeFunctionData("depositNFT", [tokenAddress, id])
+      await sendTnx(signer, chrL2Address, calldata)
     } catch (error) {
     }
   };
@@ -318,20 +358,20 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library)
       const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from(10).pow(unit))
       const calldata = tokenContract.interface.encodeFunctionData("approve", [chrL2Address, value])
-      const txPrams = {
-        to: tokenAddress,
-        value: '0x0',
-        data: calldata,
-      };
-      const transaction = await signer.sendTransaction(txPrams);
-      toast.promise(transaction.wait(), {
-        loading: `Transaction submitted. Wait for confirmation...`,
-        success: <b>Transaction confirmed!</b>,
-        error: <b>Transaction failed!.</b>,
-      });
+      await sendTnx(signer, tokenAddress, calldata)
     } catch (error) {
     }
-  };  
+  };
+
+  const setApprovalForAll = async () => {
+    const signer = library.getSigner();
+    try {
+      const tokenContract = new ethers.Contract(tokenAddress, ERC721TokenArtifacts.abi, library)
+      const calldata = tokenContract.interface.encodeFunctionData("setApprovalForAll", [chrL2Address, true])
+      await sendTnx(signer, tokenAddress, calldata)
+    } catch (error) {
+    }
+  }
 
   return (
     <div className="relative py-3 sm:max-w-5xl sm:mx-auto">
@@ -361,7 +401,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
       )}
 
       <div className="flex items-center w-full px-4 py-10 bg-cover card bg-base-200">
-        <TokenInfo tokenAddress={tokenAddress} chrL2Address={chrL2Address}/>
+        <TokenInfo tokenAddress={tokenAddress} chrL2Address={chrL2Address} tokenType={tokenType}/>
 
         <div className="text-center shadow-2xl card">
           <div className="card-body">
@@ -388,16 +428,34 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress }: Props) => {
               onChange={(evt) => setAmount(evt.target.valueAsNumber)}
               className="range range-accent"
             />
-            <div>
-              <div className="justify-center card-actions">
-                <button onClick={approveTokens} type="button" className="btn btn-outline btn-accent">
-                  Approve
-                </button>
-                <button onClick={depositTokens} type="button" className="btn btn-outline btn-accent">
-                  Deposit
-                </button>
-              </div>
-            </div>
+            {tokenType === "ERC20" && (
+              <>
+                <div>
+                  <div className="justify-center card-actions">
+                    <button onClick={approveTokens} type="button" className="btn btn-outline btn-accent">
+                      Approve
+                    </button>
+                    <button onClick={depositTokens} type="button" className="btn btn-outline btn-accent">
+                      Deposit
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+            {tokenType === "ERC721" && (
+              <>
+                <div>
+                  <div className="justify-center card-actions">
+                    <button onClick={setApprovalForAll} type="button" className="btn btn-outline btn-accent">
+                      Approve
+                    </button>
+                    <button onClick={depositNFTokens} type="button" className="btn btn-outline btn-accent">
+                      Deposit
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
         <div className="divider"></div>
