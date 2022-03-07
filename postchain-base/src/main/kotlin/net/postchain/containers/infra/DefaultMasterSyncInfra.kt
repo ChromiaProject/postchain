@@ -15,6 +15,9 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
+import net.postchain.ebft.heartbeat.Chain0HeartbeatListener
+import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
+import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
@@ -104,5 +107,4 @@ open class DefaultMasterSyncInfra(
         super.shutdown()
         masterConnectionManager.shutdown()
     }
-
 }

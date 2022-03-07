@@ -135,10 +135,7 @@ open class EBFTSynchronizationInfrastructure(
         }
     }
 
-    override fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
-        return if (chainId == 0L) Chain0HeartbeatListener()
-        else DefaultHeartbeatListener(nodeConfig, chainId)
-    }
+
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {
         val chainID = process.blockchainEngine.getConfiguration().chainID

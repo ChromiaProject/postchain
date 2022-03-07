@@ -26,8 +26,4 @@ class DefaultSubSyncInfra(
         connectionManager = DefaultSubConnectionManager(nodeConfig)
         fillDiagnosticContext()
     }
-
-    override fun makeHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
-        return RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainRid, connectionManager as SubConnectionManager)
-    }
 }

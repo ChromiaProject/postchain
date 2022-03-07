@@ -23,9 +23,10 @@ import net.postchain.core.RestartHandler
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.heartbeat.Chain0HeartbeatListener
+import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
 import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
 import net.postchain.ebft.heartbeat.HeartbeatListener
-import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
@@ -47,7 +48,7 @@ open class ContainerManagedBlockchainProcessManager(
     private val directoryDataSource: DirectoryDataSource by lazy { dataSource as DirectoryDataSource }
     private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
 
-    protected val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
+    private val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
     private val heartbeatListeners = mutableMapOf<Long, HeartbeatListener>()
     /**
      * TODO: [POS-129]: Implement handling of DockerException
@@ -121,22 +122,15 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, histConf: HistoricBlockchainContext?, heartbeatListener: HeartbeatListener?) {
-        val hbListener = buildHeartbeatListener(chainId, blockchainConfig.blockchainRid)
+        val hbListener = buildHeartbeatListener(chainId)
         super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, histConf, hbListener)
-        heartbeatListeners[chainId] = hbListener
+        heartbeatListeners[chainId] = hbListener!!
         heartbeatManager.addListener(hbListener)
     }
 
-    private fun buildHeartbeatListener(chainId: Long, blockchainRid: BlockchainRid): HeartbeatListener {
-        val heartbeatListener = blockchainInfrastructure.makeHeartbeatListener(chainId, blockchainRid)
-
-        // TODO: [POS-164]: Redesign this / RemoteConfigChecker
-        if (heartbeatListener is RemoteConfigHeartbeatListener) { // will be true if nodeConfig.remoteConfigEnabled
-            heartbeatListener.blockchainConfigProvider = blockchainConfigProvider
-            heartbeatListener.storage = storage
-        }
-
-        return heartbeatListener
+    private fun buildHeartbeatListener(chainId: Long): HeartbeatListener? {
+        return if (chainId == 0L) Chain0HeartbeatListener()
+        else DefaultHeartbeatListener(nodeConfig, chainId)
     }
 
     override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
