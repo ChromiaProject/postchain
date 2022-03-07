@@ -73,8 +73,7 @@ open class EBFTSynchronizationInfrastructure(
                 peerCommConfiguration,
                 heartbeatListener,
                 nodeConfig,
-                unregisterBlockchainDiagnosticData,
-                getStartWithFastSyncValue(blockchainConfig.chainID)
+                unregisterBlockchainDiagnosticData
         )
 
         /*
@@ -112,14 +111,16 @@ open class EBFTSynchronizationInfrastructure(
                 )
 
             }
-            HistoricBlockchainProcess(workerContext, historicBlockchainContext).also {
-                registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_HISTORIC_REPLICA) {
-                    "TODO: Implement getHeight()"
-                }
-                it.start()
-            }
+            HistoricBlockchainProcess(workerContext)
+                    .setHistoricBlockchainContext(historicBlockchainContext)
+                    .also {
+                        registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_HISTORIC_REPLICA) {
+                            "TODO: Implement getHeight()"
+                        }
+                        it.start()
+                    }
         } else if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
-            ValidatorBlockchainProcess(workerContext).also {
+            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_VALIDATOR) {
                     it.syncManager.getHeight().toString()
                 }
@@ -134,8 +135,6 @@ open class EBFTSynchronizationInfrastructure(
             }
         }
     }
-
-
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {
         val chainID = process.blockchainEngine.getConfiguration().chainID

@@ -31,7 +31,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
-                           private val isProcessRunning: () -> Boolean
+                           private val isProcessRunning: () -> Boolean,
+                           startInFastSync: Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(10000, statusManager)
@@ -62,7 +63,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         val lastHeight = blockQueries.getBestHeight().get()
         useFastSyncAlgorithm = when {
             lastHeight < params.mustSyncUntilHeight -> true
-            else -> workerContext.startWithFastSync
+            else -> startInFastSync
         }
     }
 
