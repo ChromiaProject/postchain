@@ -261,10 +261,20 @@ describe("ChrL2", () => {
             const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
             const toDeposit = ethers.utils.parseEther("100")
             const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
+
+            const expectedPayload = ''.concat(
+                "0xa5", "84", "00000059", "30", "83", "000055", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
+                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value length
+                user.address.substring(2),
+                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
+                tokenAddress.substring(2),
+                "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
+                hexZeroPad(toDeposit.toHexString(), 32).substring(2)
+            )
             await tokenApproveInstance.approve(chrL2Address, toDeposit)
             await expect(chrL2Instance.deposit(tokenAddress, toDeposit))
                     .to.emit(chrL2Instance, "Deposited")
-                    .withArgs(user.address, tokenAddress, toDeposit)
+                    .withArgs(0, expectedPayload.toLowerCase())
 
             expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
             expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
@@ -294,7 +304,7 @@ describe("ChrL2", () => {
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
                 const contractAddress = hexZeroPad(tokenAddress, 32)
                 const toAddress = hexZeroPad(user.address, 32)
-                const amount = log.data
+                const amount = hexZeroPad(toDeposit.toHexString(), 32)
                 let event: string = ''
                 event = event.concat(serialNumber.substring(2, serialNumber.length))
                 event = event.concat(contractAddress.substring(2, contractAddress.length))

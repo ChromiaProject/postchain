@@ -9,11 +9,8 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.core.UserMistake
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtx.GTXBlockchainConfiguration
 import org.web3j.protocol.Web3j
-import org.web3j.tx.ClientTransactionManager
-import org.web3j.tx.gas.DefaultGasProvider
 import java.math.BigInteger
 
 data class EIFConfig(val contract: String, val contractDeployBlock: BigInteger)
@@ -73,16 +70,9 @@ class EL2SynchronizationInfrastructureExtension(
             val web3j = Web3j.build(Web3jServiceFactory.buildService(ethereumUrl))
             web3c = Web3Connector(web3j, eifConfig.contract)
 
-            val contract = ChrL2.load(
-                web3c.contractAddress,
-                web3c.web3j,
-                ClientTransactionManager(web3c.web3j, "0x0"),
-                DefaultGasProvider()
-            )
-
             eventProcessor = EthereumEventProcessor(
                 web3c,
-                contract,
+                eifConfig.contract,
                 BigInteger.valueOf(100),
                 eifConfig.contractDeployBlock,
                 engine

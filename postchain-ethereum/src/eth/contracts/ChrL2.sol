@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
+import "./Gtv.sol";
 import "./Postchain.sol";
 
 contract ChrL2 {
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
+    enum AssetType { ERC20 }
 
     mapping(ERC20 => uint256) public _balances;
     mapping (bytes32 => Withdraw) public _withdraw;
@@ -23,7 +25,7 @@ contract ChrL2 {
         bool isWithdraw;
     }
 
-    event Deposited(address indexed owner, ERC20 indexed token, uint256 value);
+    event Deposited(AssetType indexed asset, bytes payload);
     event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
 
@@ -53,9 +55,14 @@ contract ChrL2 {
     }
 
     function deposit(ERC20 token, uint256 amount) public returns (bool) {
+        // Encode arguments
+        bytes memory args = abi.encodePacked(Gtv.encode(msg.sender), Gtv.encode(address(token)), Gtv.encode(amount));
+        bytes memory argArray = Gtv.encodeArray(args);
+
+        // Do transfer
         token.transferFrom(msg.sender, address(this), amount);
         _balances[token] += amount;
-        emit Deposited(msg.sender, token, amount);
+        emit Deposited(AssetType.ERC20, argArray);
         return true;
     }
 
