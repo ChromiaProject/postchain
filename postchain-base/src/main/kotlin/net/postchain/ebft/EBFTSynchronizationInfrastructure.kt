@@ -57,7 +57,7 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener,
+            heartbeatListener: HeartbeatListener?,
             historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration() as BaseBlockchainConfiguration // TODO: [et]: Resolve type cast
