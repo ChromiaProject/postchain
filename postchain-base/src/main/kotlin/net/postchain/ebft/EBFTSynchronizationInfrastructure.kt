@@ -55,13 +55,20 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener?,
-            historicBlockchainContext: HistoricBlockchainContext?
+            heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
         val unregisterBlockchainDiagnosticData: () -> Unit = {
             blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
         }
+
+        val historicBrid = blockchainConfig.effectiveBlockchainRID
+        val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
+            HistoricBlockchainContext(
+                    historicBrid, nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
+                    ?: emptyMap()
+            )
+        } else null
 
         val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
         val workerContext = WorkerContext(
@@ -90,14 +97,15 @@ open class EBFTSynchronizationInfrastructure(
         4 Goto 2
         */
         return if (historicBlockchainContext != null) {
-            historicBlockchainContext.contextCreator = {
-                val historicPeerCommConfiguration = if (it == historicBlockchainContext.historicBrid) {
+
+            historicBlockchainContext.contextCreator = { brid ->
+                val historicPeerCommConfiguration = if (brid == historicBrid) {
                     peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
                 } else {
                     // It's an ancestor brid for historicBrid
-                    buildPeerCommConfigurationForAncestor(nodeConfig, historicBlockchainContext, it)
+                    buildPeerCommConfigurationForAncestor(nodeConfig, historicBlockchainContext, brid)
                 }
-                val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, it)
+                val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, brid)
 
                 WorkerContext(
                         processName,
@@ -111,8 +119,7 @@ open class EBFTSynchronizationInfrastructure(
                 )
 
             }
-            HistoricBlockchainProcess(workerContext)
-                    .setHistoricBlockchainContext(historicBlockchainContext)
+            HistoricBlockchainProcess(workerContext, historicBlockchainContext)
                     .also {
                         registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_HISTORIC_REPLICA) {
                             "TODO: Implement getHeight()"
@@ -135,6 +142,25 @@ open class EBFTSynchronizationInfrastructure(
             }
         }
     }
+
+    /*
+    Definition: cross-fetching is the process of downloading blocks from another blockchain
+    over the peer-to-peer network. This is used when forking a chain when we don't have
+    the old chain locally and we haven't been able to sync using the new chain rid.
+
+    Problem: in order to cross-fetch blocks, we'd like to get the old blockchain's
+    configuration (to find nodes to connect to). But that's difficult. We don't always
+    have it, and we might not have the most recent configuration.
+
+    If we don't have that, we can use the current blockchain's configuration to
+    find nodes to sync from, since at least a quorum of the signers from old chain
+    must also be signers of the new chain.
+
+    To simplify things, we will always use current blockchain configuration to find
+    nodes to cross-fetch from. We'll also use sync-nodes.
+     */
+    private fun crossFetchingEnabled(blockchainConfig: BlockchainConfiguration) =
+            blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {
         val chainID = process.blockchainEngine.getConfiguration().chainID

@@ -11,7 +11,6 @@ import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.HeartbeatListener
-import net.postchain.ebft.heartbeat.HeartbeatEvent
 
 class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 
@@ -43,8 +42,7 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener?,
-            historicBlockchainContext: HistoricBlockchainContext?
+            heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }

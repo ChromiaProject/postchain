@@ -32,12 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 4 Goto 1
  */
 class HistoricBlockchainProcess(val workerContext: WorkerContext,
+                                private val historicBlockchainContext: HistoricBlockchainContext
                                ) : AbstractBlockchainProcess("historic-${workerContext.processName}", workerContext.engine) {
-    private lateinit var historicBlockchainContext: HistoricBlockchainContext
-
-    fun setHistoricBlockchainContext(historicBlockchainContext: HistoricBlockchainContext) = apply {
-        this.historicBlockchainContext = historicBlockchainContext
-    }
 
     companion object : KLogging()
 
