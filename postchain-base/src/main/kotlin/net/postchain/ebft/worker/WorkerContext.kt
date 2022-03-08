@@ -2,6 +2,7 @@ package net.postchain.ebft.worker
 
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.config.node.NodeConfig
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatListener
@@ -14,9 +15,8 @@ import net.postchain.network.CommunicationManager
  * communicationManager (If it's a DefaultXCommunicationManager, and so on).
  */
 class WorkerContext(val processName: BlockchainProcessName,
-                    val signers: List<ByteArray>,
+                    val blockchainConfiguration: BlockchainConfiguration,
                     val engine: BlockchainEngine,
-                    val nodeId: Int, // Rename to signerIndex
                     val communicationManager: CommunicationManager<Message>,
                     val peerCommConfiguration: PeerCommConfiguration,
                     val heartbeatListener: HeartbeatListener?,

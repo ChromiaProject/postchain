@@ -67,7 +67,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
     }
 
-    private val signersIds = workerContext.signers.map { NodeRid(it) }
+    private val signersIds = workerContext.blockchainConfiguration.signers.map { NodeRid(it) }
     private fun indexOfValidator(peerId: NodeRid): Int = signersIds.indexOf(peerId)
     private fun validatorAtIndex(index: Int): NodeRid = signersIds[index]
 

@@ -31,13 +31,14 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
 
     init {
         val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
+        val blockchainConfiguration = workerContext.blockchainConfiguration
         statusManager = BaseStatusManager(
-                workerContext.signers.size,
-                workerContext.nodeId,
+                blockchainConfiguration.signers.size,
+                blockchainConfiguration.blockchainContext.nodeID,
                 bestHeight + 1)
 
         blockDatabase = BaseBlockDatabase(
-                blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeId)
+                blockchainEngine, blockchainEngine.getBlockQueries(), blockchainConfiguration.blockchainContext.nodeID)
 
         blockManager = BaseBlockManager(
                 workerContext.processName,

@@ -12,6 +12,9 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
 
     companion object : KLogging()
 
+    override val blockchainContext: BlockchainContext
+        get() = configData.context
+
     override val traits = setOf<String>()
     val cryptoSystem = SECP256K1CryptoSystem()
     val blockStore = BaseBlockStore()
