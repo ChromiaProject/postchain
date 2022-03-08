@@ -136,12 +136,11 @@ open class BaseBlockchainInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener?,
-            historicBlockchainContext: HistoricBlockchainContext?
+            heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
         val conf = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastucture(conf.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener, historicBlockchainContext)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener)
         if (conf is BaseBlockchainConfiguration) {
             for (extName in conf.syncInfrastructureExtensionNames) {
                 getSynchronizationInfrastuctureExtension(extName).connectProcess(process)

@@ -3,7 +3,6 @@ package net.postchain.containers.bpm
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import mu.KLogging
-import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.Utils
@@ -121,9 +120,9 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, histConf: HistoricBlockchainContext?, heartbeatListener: HeartbeatListener?) {
+    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?) {
         val hbListener = buildHeartbeatListener(chainId)
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, histConf, hbListener)
+        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, hbListener)
         heartbeatListeners[chainId] = hbListener!!
         heartbeatManager.addListener(hbListener)
     }
