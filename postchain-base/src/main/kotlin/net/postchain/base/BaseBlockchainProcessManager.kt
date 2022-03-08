@@ -105,33 +105,7 @@ open class BaseBlockchainProcessManager(
                         val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
                         startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
-                        /*
-                        Definition: cross-fetching is the process of downloading blocks from another blockchain
-                        over the peer-to-peer network. This is used when forking a chain when we don't have
-                        the old chain locally and we haven't been able to sync using the new chain rid.
-
-                        Problem: in order to cross-fetch blocks, we'd like to get the old blockchain's
-                        configuration (to find nodes to connect to). But that's difficult. We don't always
-                        have it, and we might not have the most recent configuration.
-
-                        If we don't have that, we can use the current blockchain's configuration to
-                        find nodes to sync from, since at least a quorum of the signers from old chain
-                        must also be signers of the new chain.
-
-                        To simplify things, we will always use current blockchain configuration to find
-                        nodes to cross-fetch from. We'll also use sync-nodes.
-                         */
-
-                        val histConf: HistoricBlockchainContext? =
-                                if (blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid) {
-                                    val ancestors = nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
-                                    HistoricBlockchainContext(
-                                            blockchainConfig.effectiveBlockchainRID, ancestors
-                                            ?: emptyMap()
-                                    )
-                                } else null
-
-                        createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, histConf, null)
+                        createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, null)
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                         startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
@@ -151,10 +125,8 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, histConf: HistoricBlockchainContext?, heartbeatListener: HeartbeatListener?) {
-        val process = blockchainInfrastructure.makeBlockchainProcess(
-                processName, engine, heartbeatListener, histConf)
-        blockchainProcesses[chainId] = process
+    protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?) {
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener)
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {

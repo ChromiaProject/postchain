@@ -18,7 +18,7 @@ import java.lang.Thread.sleep
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess("validator-${workerContext.processName}", workerContext.engine) {
+class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFastSync: Boolean) : AbstractBlockchainProcess("validator-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
 
@@ -31,13 +31,14 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
 
     init {
         val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
+        val blockchainConfiguration = workerContext.blockchainConfiguration
         statusManager = BaseStatusManager(
-                workerContext.signers.size,
-                workerContext.nodeId,
+                blockchainConfiguration.signers.size,
+                blockchainConfiguration.blockchainContext.nodeID,
                 bestHeight + 1)
 
         blockDatabase = BaseBlockDatabase(
-                blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeId)
+                blockchainEngine, blockchainEngine.getBlockQueries(), blockchainConfiguration.blockchainContext.nodeID)
 
         blockManager = BaseBlockManager(
                 workerContext.processName,
@@ -53,7 +54,8 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext) : AbstractBlo
                 blockManager,
                 blockDatabase,
                 nodeStateTracker,
-                ::isProcessRunning
+                ::isProcessRunning,
+                startWithFastSync
                 )
 
         networkAwareTxQueue = NetworkAwareTxQueue(
