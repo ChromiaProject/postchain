@@ -12,8 +12,6 @@ import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticProperty.BLOCKCHAIN
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.ebft.heartbeat.Chain0HeartbeatListener
-import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.message.Message
 import net.postchain.ebft.worker.HistoricBlockchainProcess
@@ -60,21 +58,21 @@ open class EBFTSynchronizationInfrastructure(
             heartbeatListener: HeartbeatListener?,
             historicBlockchainContext: HistoricBlockchainContext?
     ): BlockchainProcess {
-        val blockchainConfig = engine.getConfiguration() as BaseBlockchainConfiguration // TODO: [et]: Resolve type cast
+        val blockchainConfig = engine.getConfiguration()
         val unregisterBlockchainDiagnosticData: () -> Unit = {
             blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
         }
 
         val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
         val workerContext = WorkerContext(
-                processName, blockchainConfig.signers, engine,
-                blockchainConfig.configData.context.nodeID,
-                buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration),
+                processName,
+                blockchainConfig,
+                engine,
+                buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
                 peerCommConfiguration,
                 heartbeatListener,
                 nodeConfig,
-                unregisterBlockchainDiagnosticData,
-                getStartWithFastSyncValue(blockchainConfig.chainID)
+                unregisterBlockchainDiagnosticData
         )
 
         /*
@@ -102,8 +100,9 @@ open class EBFTSynchronizationInfrastructure(
                 val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, it)
 
                 WorkerContext(
-                        processName, blockchainConfig.signers, engine,
-                        blockchainConfig.configData.context.nodeID,
+                        processName,
+                        blockchainConfig,
+                        engine,
                         histCommManager,
                         historicPeerCommConfiguration,
                         heartbeatListener,
@@ -112,14 +111,16 @@ open class EBFTSynchronizationInfrastructure(
                 )
 
             }
-            HistoricBlockchainProcess(workerContext, historicBlockchainContext).also {
-                registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_HISTORIC_REPLICA) {
-                    "TODO: Implement getHeight()"
-                }
-                it.start()
-            }
-        } else if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
-            ValidatorBlockchainProcess(workerContext).also {
+            HistoricBlockchainProcess(workerContext)
+                    .setHistoricBlockchainContext(historicBlockchainContext)
+                    .also {
+                        registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_HISTORIC_REPLICA) {
+                            "TODO: Implement getHeight()"
+                        }
+                        it.start()
+                    }
+        } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY) {
+            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also {
                 registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_VALIDATOR) {
                     it.syncManager.getHeight().toString()
                 }
@@ -134,8 +135,6 @@ open class EBFTSynchronizationInfrastructure(
             }
         }
     }
-
-
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {
         val chainID = process.blockchainEngine.getConfiguration().chainID
@@ -164,19 +163,18 @@ open class EBFTSynchronizationInfrastructure(
 
     private fun buildXCommunicationManager(
             processName: BlockchainProcessName,
-            blockchainConfig: BaseBlockchainConfiguration,
+            blockchainConfig: BlockchainConfiguration,
             relevantPeerCommConfig: PeerCommConfiguration,
-            blockchainRid: BlockchainRid? = null
+            blockchainRid: BlockchainRid
     ): CommunicationManager<Message> {
-        val effectiveRid = blockchainRid ?: blockchainConfig.blockchainRid
-        val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, effectiveRid)
+        val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, blockchainRid)
         val packetDecoder = EbftPacketDecoder(relevantPeerCommConfig)
 
         return DefaultPeerCommunicationManager(
                 connectionManager,
                 relevantPeerCommConfig,
                 blockchainConfig.chainID,
-                effectiveRid,
+                blockchainRid,
                 packetEncoder,
                 packetDecoder,
                 processName

@@ -11,6 +11,7 @@ import net.postchain.gtv.Gtv
  * (for example [BlockBuildingStrategy]).
  */
 interface BlockchainConfiguration {
+    val blockchainContext: BlockchainContext
     val chainID: Long
     val blockchainRid: BlockchainRid
     val signers: List<ByteArray>
