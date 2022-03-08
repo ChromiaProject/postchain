@@ -23,10 +23,10 @@ library Gtv {
         return abi.encodePacked(
             GTV_ARRAY_BER_TAG,
             uint8(BER_LENGTH_MASK + 4), // Length arg is uint32 = 4 bytes
-            uint32(args.length + 6),    // In addition to args.length: uint8 + uint8 + int32 = 6 bytes
+            uint32(args.length + 6),    // In addition to args.length: uint8 + uint8 + uint32 = 6 bytes
             ARRAY_BER_TAG,
-            uint8(BER_LENGTH_MASK + 4), // Length arg is int24 = 3 bytes
-            int32(int(args.length)),    // For some reason we are not allowed to cast directly to int32
+            uint8(BER_LENGTH_MASK + 4), // Length arg is uint32 = 4 bytes
+            uint32(args.length),
             args
         );
     }
@@ -59,10 +59,10 @@ library Gtv {
         return abi.encodePacked(
             GTV_STRING_BER_TAG,
             uint8(BER_LENGTH_MASK + 4), // Length arg is uint32 = 4 bytes
-            uint32(length + 6),         // In addition to length: uint8 + uint8 + int32 = 6 bytes
+            uint32(length + 6),         // In addition to length: uint8 + uint8 + uint32 = 6 bytes
             UTF8_STRING_BER_TAG,
-            uint8(BER_LENGTH_MASK + 4), // Length arg is int24 = 3 bytes
-            int32(int(length)),         // For some reason we are not allowed to cast directly to int32
+            uint8(BER_LENGTH_MASK + 4), // Length arg is uint32 = 4 bytes
+            uint32(length),
             value
         );
     }
