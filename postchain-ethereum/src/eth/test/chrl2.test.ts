@@ -263,7 +263,7 @@ describe("ChrL2", () => {
             const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
 
             const expectedPayload = ''.concat(
-                "0xa5", "84", "00000059", "30", "83", "000055", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
+                "0xa5", "84", "0000005b", "30", "84", "00000055", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
                 "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value length
                 user.address.substring(2),
                 "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
