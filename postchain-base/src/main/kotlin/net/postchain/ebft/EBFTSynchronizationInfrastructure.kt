@@ -31,7 +31,7 @@ open class EBFTSynchronizationInfrastructure(
 
     val nodeConfig get() = nodeConfigProvider.getConfiguration()
     lateinit var connectionManager: ConnectionManager
-    protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<String, () -> Any>>()
+    protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
 
     init {
@@ -119,28 +119,12 @@ open class EBFTSynchronizationInfrastructure(
                 )
 
             }
-            HistoricBlockchainProcess(workerContext, historicBlockchainContext)
-                    .also {
-                        registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_HISTORIC_REPLICA) {
-                            "TODO: Implement getHeight()"
-                        }
-                        it.start()
-                    }
+            HistoricBlockchainProcess(workerContext, historicBlockchainContext).also { it.start() }
         } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY) {
-            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also {
-                registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_VALIDATOR) {
-                    it.syncManager.getHeight().toString()
-                }
-                it.start()
-            }
+            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also { it.start() }
         } else {
-            ReadOnlyBlockchainProcess(workerContext).also {
-                registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_REPLICA) {
-                    it.getHeight().toString()
-                }
-                it.start()
-            }
-        }
+            ReadOnlyBlockchainProcess(workerContext).also { it.start() }
+        }.also { it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() }) }
     }
 
     /*
@@ -274,7 +258,7 @@ open class EBFTSynchronizationInfrastructure(
             connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
                 diagnosticData.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
                     properties.apply {
-                        put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS.prettyName) { topology }
+                        put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS) { topology }
                     }
                 }
             }
@@ -285,14 +269,6 @@ open class EBFTSynchronizationInfrastructure(
                     }
                     .values.toTypedArray()
         }
-    }
-
-    private fun registerBlockchainDiagnosticData(blockchainRid: BlockchainRid, nodeType: DpNodeType, getCurrentHeight: () -> String) {
-        blockchainProcessesDiagnosticData[blockchainRid] = mutableMapOf<String, () -> Any>(
-                DiagnosticProperty.BLOCKCHAIN_RID.prettyName to { blockchainRid.toHex() },
-                DiagnosticProperty.BLOCKCHAIN_NODE_TYPE.prettyName to { nodeType.prettyName },
-                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT.prettyName to getCurrentHeight
-        )
     }
 
     private fun getStartWithFastSyncValue(chainId: Long): Boolean {

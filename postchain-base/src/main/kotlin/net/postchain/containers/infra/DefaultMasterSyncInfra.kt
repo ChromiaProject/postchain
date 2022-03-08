@@ -89,10 +89,10 @@ open class DefaultMasterSyncInfra(
                 unregisterBlockchainDiagnosticData
         )
 
-        blockchainProcessesDiagnosticData[blockchainRid] = mutableMapOf<String, () -> Any>(
-                DiagnosticProperty.BLOCKCHAIN_RID.prettyName to { blockchainRid.toHex() },
-                DiagnosticProperty.CONTAINER_NAME.prettyName to { targetContainer.containerName.toString() },
-                DiagnosticProperty.CONTAINER_ID.prettyName to { targetContainer.shortContainerId() ?: "" }
+        blockchainProcessesDiagnosticData[blockchainRid] = mutableMapOf(
+                DiagnosticProperty.BLOCKCHAIN_RID to { blockchainRid.toHex() },
+                DiagnosticProperty.CONTAINER_NAME to { targetContainer.containerName.toString() },
+                DiagnosticProperty.CONTAINER_ID to { targetContainer.shortContainerId() ?: "" }
         )
 
         return process
