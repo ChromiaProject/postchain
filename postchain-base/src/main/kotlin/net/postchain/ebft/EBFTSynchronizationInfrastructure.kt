@@ -61,7 +61,7 @@ open class EBFTSynchronizationInfrastructure(
                 peerCommConfiguration,
                 heartbeatListener,
                 nodeConfig
-        ) {}
+        )
 
         /*
         Block building is prohibited on FB if its current configuration has a historicBrid set.
@@ -96,7 +96,7 @@ open class EBFTSynchronizationInfrastructure(
                         historicPeerCommConfiguration,
                         heartbeatListener,
                         nodeConfig,
-                ) {}
+                )
 
             }
             HistoricBlockchainProcess(workerContext, historicBlockchainContext).also { it.start() }

@@ -20,12 +20,10 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val communicationManager: CommunicationManager<Message>,
                     val peerCommConfiguration: PeerCommConfiguration,
                     val heartbeatListener: HeartbeatListener?,
-                    val nodeConfig: NodeConfig,
-                    val onShutdown: () -> Unit,
+                    val nodeConfig: NodeConfig
 ) {
     fun shutdown() {
         engine.shutdown()
         communicationManager.shutdown()
-        onShutdown()
     }
 }
