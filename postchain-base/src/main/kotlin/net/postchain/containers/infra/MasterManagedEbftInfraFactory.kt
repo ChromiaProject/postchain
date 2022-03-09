@@ -16,18 +16,12 @@ import net.postchain.network.mastersub.master.DefaultMasterConnectionManager
 
 open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
 
-    override fun makeBlockchainInfrastructure(
-            postchainContext: PostchainContext
-    ): BlockchainInfrastructure {
+    override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
-            val syncInfra = DefaultMasterSyncInfra(
-                    nodeConfig, nodeDiagnosticContext, DefaultMasterConnectionManager(nodeConfig), connectionManager)
+            val syncInfra = DefaultMasterSyncInfra(this, DefaultMasterConnectionManager(nodeConfig))
+            val apiInfra = DefaultMasterApiInfra(nodeConfig, nodeDiagnosticContext)
 
-            val apiInfra = DefaultMasterApiInfra(
-                    nodeConfig, nodeDiagnosticContext)
-
-            return DefaultMasterBlockchainInfra(
-                    nodeConfig, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager)
+            return DefaultMasterBlockchainInfra(this, syncInfra, apiInfra)
         }
     }
 

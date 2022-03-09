@@ -275,14 +275,13 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
                 blockchainConfigurationProvider, nodeDiagnosticContext, dataSource, connectionManager)
     }
 
-    override fun makeBlockchainInfrastructure(
-            postchainContext: PostchainContext): BlockchainInfrastructure {
+    override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
 
-            val syncInfra = EBFTSynchronizationInfrastructure(nodeConfig, nodeDiagnosticContext, connectionManager)
+            val syncInfra = EBFTSynchronizationInfrastructure(this)
             val apiInfra = BaseApiInfrastructure(nodeConfig, nodeDiagnosticContext)
-            return TestManagedBlockchainInfrastructure(nodeConfig, syncInfra, apiInfra, nodeDiagnosticContext, dataSource, connectionManager)
+            return TestManagedBlockchainInfrastructure(syncInfra, apiInfra, this, dataSource)
         }
     }
 
@@ -323,11 +322,11 @@ class TestManagedBlockchainConfigurationProvider(val mockDataSource: ManagedNode
 
 
 class TestManagedBlockchainInfrastructure(
-        nodeConfig: NodeConfig,
-        syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
-        nodeDiagnosticContext: NodeDiagnosticContext, val mockDataSource: MockManagedNodeDataSource,
-        connectionManager: ConnectionManager) :
-        BaseBlockchainInfrastructure(nodeConfig, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager) {
+        syncInfra: SynchronizationInfrastructure,
+        apiInfra: ApiInfrastructure,
+        postchainContext: PostchainContext,
+        val mockDataSource: MockManagedNodeDataSource) :
+        BaseBlockchainInfrastructure(syncInfra, apiInfra, postchainContext) {
     override fun makeBlockchainConfiguration(
             rawConfigurationData: ByteArray,
             eContext: EContext,

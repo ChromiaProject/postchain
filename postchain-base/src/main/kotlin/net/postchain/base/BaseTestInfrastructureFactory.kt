@@ -75,15 +75,12 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
         return ManualBlockchainConfigurationProvider()
     }
 
-    override fun makeBlockchainInfrastructure(
-            postchainContext: PostchainContext
-    ): BlockchainInfrastructure {
+    override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             val syncInfra = TestSynchronizationInfrastructure()
             val apiInfra = BaseApiInfrastructure(nodeConfig, nodeDiagnosticContext)
 
-            return BaseBlockchainInfrastructure(
-                    nodeConfig, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager)
+            return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }
     }
 

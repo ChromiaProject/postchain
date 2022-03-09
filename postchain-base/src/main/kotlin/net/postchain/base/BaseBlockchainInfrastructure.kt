@@ -2,26 +2,22 @@
 
 package net.postchain.base
 
+import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
-import net.postchain.network.common.ConnectionManager
 
 open class BaseBlockchainInfrastructure(
-        private val nodeConfig: NodeConfig,
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
         val apiInfrastructure: ApiInfrastructure,
-        val nodeDiagnosticContext: NodeDiagnosticContext,
-        val connectionManager: ConnectionManager
+        private val postchainContext: PostchainContext
 ) : BlockchainInfrastructure, SynchronizationInfrastructure by defaultSynchronizationInfrastructure {
 
     val cryptoSystem = SECP256K1CryptoSystem()
@@ -32,7 +28,7 @@ open class BaseBlockchainInfrastructure(
     val syncInfraExtCache = mutableMapOf<String, SynchronizationInfrastructureExtension>()
 
     init {
-        val privKey = nodeConfig.privKeyByteArray
+        val privKey = postchainContext.nodeConfig.privKeyByteArray
         val pubKey = secp256k1_derivePubKey(privKey)
         blockSigMaker = cryptoSystem.buildSigMaker(pubKey, privKey)
         subjectID = pubKey
@@ -85,7 +81,7 @@ open class BaseBlockchainInfrastructure(
             restartHandler: RestartHandler
     ): BaseBlockchainEngine {
 
-        val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
+        val storage = StorageBuilder.buildStorage(postchainContext.nodeConfig.appConfig, NODE_ID_TODO)
 
         val transactionQueue = BaseTransactionQueue(
                 (configuration as BaseBlockchainConfiguration) // TODO: Olle: Is this conversion harmless?
@@ -125,12 +121,8 @@ open class BaseBlockchainInfrastructure(
      */
     private fun getInstanceByClassName(className: String): Shutdownable {
         val iClass = Class.forName(className)
-        val ctor = iClass.getConstructor(
-                NodeConfig::class.java,
-                NodeDiagnosticContext::class.java,
-                ConnectionManager::class.java
-        )
-        return ctor.newInstance(nodeConfig, nodeDiagnosticContext, connectionManager) as Shutdownable
+        val ctor = iClass.getConstructor(PostchainContext::class.java)
+        return ctor.newInstance(postchainContext) as Shutdownable
     }
 
     override fun makeBlockchainProcess(
