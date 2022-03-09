@@ -14,12 +14,14 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
+import net.postchain.network.common.ConnectionManager
 
 open class BaseBlockchainInfrastructure(
     private val nodeConfigProvider: NodeConfigurationProvider,
     val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
     val apiInfrastructure: ApiInfrastructure,
-    val nodeDiagnosticContext: NodeDiagnosticContext
+    val nodeDiagnosticContext: NodeDiagnosticContext,
+    val connectionManager: ConnectionManager
 ) : BlockchainInfrastructure, SynchronizationInfrastructure by defaultSynchronizationInfrastructure {
 
     val cryptoSystem = SECP256K1CryptoSystem()
@@ -36,8 +38,6 @@ open class BaseBlockchainInfrastructure(
         subjectID = pubKey
         syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
     }
-
-    override fun init() {}
 
     override fun shutdown() {
         for (infra in syncInfraCache.values)

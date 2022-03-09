@@ -3,6 +3,7 @@
 package net.postchain.core
 
 import net.postchain.debug.BlockTrace
+import net.postchain.debug.DiagnosticProperty
 
 interface Shutdownable {
     fun shutdown()
@@ -33,6 +34,7 @@ interface BlockchainProcess {
     val blockchainEngine: BlockchainEngine
     fun start()
     fun shutdown()
+    fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) = Unit
 }
 
 interface BlockchainProcessManager : Shutdownable, Synchronizable {

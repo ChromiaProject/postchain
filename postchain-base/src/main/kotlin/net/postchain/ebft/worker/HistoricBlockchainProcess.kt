@@ -11,6 +11,8 @@ import net.postchain.base.withReadConnection
 import net.postchain.core.*
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.BlockTrace
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
@@ -351,5 +353,12 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         if (logger.isDebugEnabled) {
             logger.debug("shutdown() - $str, at height: ${this.fastSynchronizer.blockHeight}, the block that's causing the shutdown: $blockTrace")
         }
+    }
+
+    override fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) {
+        diagnosticData.putAll(mapOf(
+                DiagnosticProperty.BLOCKCHAIN_RID to { workerContext.blockchainConfiguration.blockchainRid.toHex() },
+                DiagnosticProperty.BLOCKCHAIN_NODE_TYPE to { DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName },
+        ))
     }
 }

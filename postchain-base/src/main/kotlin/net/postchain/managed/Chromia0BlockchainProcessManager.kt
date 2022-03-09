@@ -17,17 +17,20 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.GTXDataBuilder
+import net.postchain.network.common.ConnectionManager
 
 class Chromia0BlockchainProcessManager(
         blockchainInfrastructure: BlockchainInfrastructure,
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext
+        nodeDiagnosticContext: NodeDiagnosticContext,
+        connectionManager: ConnectionManager
 ) : ManagedBlockchainProcessManager(
         blockchainInfrastructure,
         nodeConfigProvider,
         blockchainConfigProvider,
-        nodeDiagnosticContext) {
+        nodeDiagnosticContext,
+        connectionManager) {
 
     override fun buildRestartHandler(chainId: Long): RestartHandler {
         val baseHandler = super.buildRestartHandler(chainId)

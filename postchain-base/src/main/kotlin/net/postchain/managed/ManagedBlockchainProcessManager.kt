@@ -12,6 +12,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.network.common.ConnectionManager
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -50,12 +51,14 @@ open class ManagedBlockchainProcessManager(
         blockchainInfrastructure: BlockchainInfrastructure,
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext
+        nodeDiagnosticContext: NodeDiagnosticContext,
+        connectionManager: ConnectionManager
 ) : BaseBlockchainProcessManager(
         blockchainInfrastructure,
         nodeConfigProvider,
         blockchainConfigProvider,
-        nodeDiagnosticContext
+        nodeDiagnosticContext,
+        connectionManager
 ) {
 
     protected open lateinit var dataSource: ManagedNodeDataSource

@@ -26,27 +26,12 @@ import net.postchain.network.peer.*
 open class EBFTSynchronizationInfrastructure(
         val nodeConfigProvider: NodeConfigurationProvider,
         val nodeDiagnosticContext: NodeDiagnosticContext,
+        val connectionManager: ConnectionManager,
         val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
 ) : SynchronizationInfrastructure {
 
     val nodeConfig get() = nodeConfigProvider.getConfiguration()
-    lateinit var connectionManager: ConnectionManager
-    protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<String, () -> Any>>()
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
-
-    init {
-        this.init() // TODO: [POS-129]: Redesign this call
-    }
-
-    override fun init() {
-        connectionManager = DefaultPeerConnectionManager(
-                EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory(),
-                SECP256K1CryptoSystem()
-        )
-
-        fillDiagnosticContext()
-    }
 
     override fun shutdown() {
         connectionManager.shutdown()
@@ -58,9 +43,6 @@ open class EBFTSynchronizationInfrastructure(
             heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
-        val unregisterBlockchainDiagnosticData: () -> Unit = {
-            blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
-        }
 
         val historicBrid = blockchainConfig.effectiveBlockchainRID
         val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
@@ -78,8 +60,7 @@ open class EBFTSynchronizationInfrastructure(
                 buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
                 peerCommConfiguration,
                 heartbeatListener,
-                nodeConfig,
-                unregisterBlockchainDiagnosticData
+                nodeConfig
         )
 
         /*
@@ -115,31 +96,14 @@ open class EBFTSynchronizationInfrastructure(
                         historicPeerCommConfiguration,
                         heartbeatListener,
                         nodeConfig,
-                        unregisterBlockchainDiagnosticData
                 )
 
             }
-            HistoricBlockchainProcess(workerContext, historicBlockchainContext)
-                    .also {
-                        registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_HISTORIC_REPLICA) {
-                            "TODO: Implement getHeight()"
-                        }
-                        it.start()
-                    }
+            HistoricBlockchainProcess(workerContext, historicBlockchainContext).also { it.start() }
         } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY) {
-            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also {
-                registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_VALIDATOR) {
-                    it.syncManager.getHeight().toString()
-                }
-                it.start()
-            }
+            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also { it.start() }
         } else {
-            ReadOnlyBlockchainProcess(workerContext).also {
-                registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_REPLICA) {
-                    it.getHeight().toString()
-                }
-                it.start()
-            }
+            ReadOnlyBlockchainProcess(workerContext).also { it.start() }
         }
     }
 
@@ -264,34 +228,6 @@ open class EBFTSynchronizationInfrastructure(
                 SECP256K1CryptoSystem(),
                 nodeConfig.privKeyByteArray,
                 nodeConfig.pubKeyByteArray
-        )
-    }
-
-    protected fun fillDiagnosticContext() {
-        nodeDiagnosticContext.addProperty(BLOCKCHAIN) {
-            val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
-
-            connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
-                diagnosticData.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
-                    properties.apply {
-                        put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS.prettyName) { topology }
-                    }
-                }
-            }
-
-            diagnosticData
-                    .mapValues { (_, v) ->
-                        v.mapValues { (_, v2) -> v2() }
-                    }
-                    .values.toTypedArray()
-        }
-    }
-
-    private fun registerBlockchainDiagnosticData(blockchainRid: BlockchainRid, nodeType: DpNodeType, getCurrentHeight: () -> String) {
-        blockchainProcessesDiagnosticData[blockchainRid] = mutableMapOf<String, () -> Any>(
-                DiagnosticProperty.BLOCKCHAIN_RID.prettyName to { blockchainRid.toHex() },
-                DiagnosticProperty.BLOCKCHAIN_NODE_TYPE.prettyName to { nodeType.prettyName },
-                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT.prettyName to getCurrentHeight
         )
     }
 
