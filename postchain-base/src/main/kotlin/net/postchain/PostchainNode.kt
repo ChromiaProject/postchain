@@ -4,7 +4,11 @@ package net.postchain
 
 import mu.KLogging
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.*
+import net.postchain.core.BaseInfrastructureFactoryProvider
+import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.BlockchainRid
+import net.postchain.core.Shutdownable
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
@@ -21,7 +25,7 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
     private val diagnosticContext = DefaultNodeDiagnosticContext()
-    val connectionManager: ConnectionManager
+    private val connectionManager: ConnectionManager
 
     companion object : KLogging()
 

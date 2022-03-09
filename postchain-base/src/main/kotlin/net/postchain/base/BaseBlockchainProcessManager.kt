@@ -12,7 +12,6 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.network.common.ConnectionManager
 import java.util.*

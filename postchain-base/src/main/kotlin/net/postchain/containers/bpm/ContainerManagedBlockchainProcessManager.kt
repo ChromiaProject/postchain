@@ -31,7 +31,6 @@ import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.network.common.ConnectionManager
-import org.eclipse.jetty.util.TypeUtil.toHex
 
 open class ContainerManagedBlockchainProcessManager(
         private val masterBlockchainInfra: MasterBlockchainInfra,
@@ -361,6 +360,7 @@ open class ContainerManagedBlockchainProcessManager(
                         DiagnosticProperty.CONTAINER_NAME to { targetContainer.containerName.toString() },
                         DiagnosticProperty.CONTAINER_ID to { targetContainer.shortContainerId() ?: "" }
                 )
+                chainIdToBrid[chain.chainId] = chain.brid
             }
             process.transferConfigsToContainer()
             targetContainer.addProcess(process)
@@ -379,8 +379,9 @@ open class ContainerManagedBlockchainProcessManager(
         return if (process != null) {
             masterBlockchainInfra.exitMasterBlockchainProcess(process)
             heartbeatManager.removeListener(process)
-            process.shutdown()
             container.removeProcess(process)
+            blockchainProcessesDiagnosticData.remove(chain.brid)
+            chainIdToBrid.remove(chain.chainId)
             process to containerInitializer.removeContainerChainDir(fs, chain) // TODO: [POS-164]: Redesign
         } else {
             null to false

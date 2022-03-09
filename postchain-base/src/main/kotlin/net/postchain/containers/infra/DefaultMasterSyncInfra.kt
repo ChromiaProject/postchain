@@ -61,7 +61,7 @@ open class DefaultMasterSyncInfra(
                 communicationManager,
                 dataSource,
                 containerChainDir,
-        ) {}
+        )
     }
 
     override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) = Unit

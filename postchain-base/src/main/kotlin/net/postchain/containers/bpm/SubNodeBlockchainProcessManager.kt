@@ -11,7 +11,6 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
-import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 open class SubNodeBlockchainProcessManager(
@@ -19,7 +18,7 @@ open class SubNodeBlockchainProcessManager(
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext,
-        connectionManager : SubConnectionManager
+        connectionManager: SubConnectionManager
 ) : BaseBlockchainProcessManager(
         blockchainInfrastructure,
         nodeConfigProvider,
