@@ -25,6 +25,7 @@ import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.core.NodeRid
+import net.postchain.network.common.ConnectionManager
 import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -256,20 +257,22 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
             nodeConfigProvider: NodeConfigurationProvider,
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext): BlockchainProcessManager {
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager): BlockchainProcessManager {
         return TestManagedBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider,
-                blockchainConfigurationProvider, nodeDiagnosticContext, dataSource)
+                blockchainConfigurationProvider, nodeDiagnosticContext, dataSource, connectionManager)
     }
 
     override fun makeBlockchainInfrastructure(
             nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext): BlockchainInfrastructure {
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager): BlockchainInfrastructure {
         nodeConfig = nodeConfigProvider.getConfiguration()
         dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
 
-        val syncInfra = EBFTSynchronizationInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
+        val syncInfra = EBFTSynchronizationInfrastructure(nodeConfigProvider, nodeDiagnosticContext, connectionManager)
         val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
-        val infrastructure = TestManagedBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, dataSource)
+        val infrastructure = TestManagedBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, dataSource, connectionManager)
         return infrastructure
     }
 
@@ -312,8 +315,9 @@ class TestManagedBlockchainConfigurationProvider(val mockDataSource: ManagedNode
 class TestManagedBlockchainInfrastructure(
         nodeConfigProvider: NodeConfigurationProvider,
         syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
-        nodeDiagnosticContext: NodeDiagnosticContext, val mockDataSource: MockManagedNodeDataSource) :
-        BaseBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext) {
+        nodeDiagnosticContext: NodeDiagnosticContext, val mockDataSource: MockManagedNodeDataSource,
+        connectionManager: ConnectionManager) :
+        BaseBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager) {
     override fun makeBlockchainConfiguration(
             rawConfigurationData: ByteArray,
             eContext: EContext,
@@ -328,11 +332,12 @@ class TestManagedBlockchainProcessManager(
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext,
-        val testDataSource: ManagedNodeDataSource)
+        val testDataSource: ManagedNodeDataSource,
+        connectionManager: ConnectionManager)
     : ManagedBlockchainProcessManager(blockchainInfrastructure,
         nodeConfigProvider,
         blockchainConfigProvider,
-        nodeDiagnosticContext) {
+        nodeDiagnosticContext, connectionManager) {
 
     companion object : KLogging()
 

@@ -10,35 +10,41 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
+import net.postchain.network.common.ConnectionManager
+import net.postchain.network.mastersub.master.DefaultMasterConnectionManager
 
 open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
 
     override fun makeBlockchainInfrastructure(
             nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager
     ): BlockchainInfrastructure {
 
         val syncInfra = DefaultMasterSyncInfra(
-                nodeConfigProvider, nodeDiagnosticContext)
+                nodeConfigProvider, nodeDiagnosticContext, DefaultMasterConnectionManager(nodeConfigProvider.getConfiguration()), connectionManager)
 
         val apiInfra = DefaultMasterApiInfra(
                 nodeConfigProvider, nodeDiagnosticContext)
 
         return DefaultMasterBlockchainInfra(
-                nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext)
+                nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager)
     }
 
     override fun makeProcessManager(
             nodeConfigProvider: NodeConfigurationProvider,
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager
     ): BlockchainProcessManager {
 
         return ContainerManagedBlockchainProcessManager(
                 blockchainInfrastructure as MasterBlockchainInfra,
                 nodeConfigProvider,
                 blockchainConfigurationProvider,
-                nodeDiagnosticContext)
+                nodeDiagnosticContext,
+                connectionManager
+        )
     }
 }

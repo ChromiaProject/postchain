@@ -21,6 +21,7 @@ import net.postchain.core.BlockchainRid
 import net.postchain.core.RestartHandler
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.Chain0HeartbeatListener
 import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
@@ -29,17 +30,20 @@ import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.network.common.ConnectionManager
 
 open class ContainerManagedBlockchainProcessManager(
         private val masterBlockchainInfra: MasterBlockchainInfra,
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext
+        nodeDiagnosticContext: NodeDiagnosticContext,
+        connectionManager: ConnectionManager
 ) : ManagedBlockchainProcessManager(
         masterBlockchainInfra,
         nodeConfigProvider,
         blockchainConfigProvider,
-        nodeDiagnosticContext
+        nodeDiagnosticContext,
+        connectionManager
 ) {
 
     companion object : KLogging()
@@ -133,11 +137,12 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
-       super.stopAndUnregisterBlockchainProcess(chainId, restart)
+        super.stopAndUnregisterBlockchainProcess(chainId, restart)
         heartbeatListeners.remove(chainId)?.run {
             heartbeatManager.removeListener(this)
         }
     }
+
     /**
      * Restart all chains. Begin with chain zero.
      */
@@ -349,7 +354,14 @@ open class ContainerManagedBlockchainProcessManager(
                     directoryDataSource,
                     targetContainer,
                     dir
-            )
+            ).also {
+                blockchainProcessesDiagnosticData[chain.brid] = mutableMapOf(
+                        DiagnosticProperty.BLOCKCHAIN_RID to { it.blockchainRid.toHex() },
+                        DiagnosticProperty.CONTAINER_NAME to { targetContainer.containerName.toString() },
+                        DiagnosticProperty.CONTAINER_ID to { targetContainer.shortContainerId() ?: "" }
+                )
+                chainIdToBrid[chain.chainId] = chain.brid
+            }
             process.transferConfigsToContainer()
             targetContainer.addProcess(process)
             heartbeatManager.addListener(process)
@@ -367,8 +379,9 @@ open class ContainerManagedBlockchainProcessManager(
         return if (process != null) {
             masterBlockchainInfra.exitMasterBlockchainProcess(process)
             heartbeatManager.removeListener(process)
-            process.shutdown()
             container.removeProcess(process)
+            blockchainProcessesDiagnosticData.remove(chain.brid)
+            chainIdToBrid.remove(chain.chainId)
             process to containerInitializer.removeContainerChainDir(fs, chain) // TODO: [POS-164]: Redesign
         } else {
             null to false

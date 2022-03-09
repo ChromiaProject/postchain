@@ -4,12 +4,17 @@ package net.postchain
 
 import mu.KLogging
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.*
+import net.postchain.core.BaseInfrastructureFactoryProvider
+import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.BlockchainRid
+import net.postchain.core.Shutdownable
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.network.common.ConnectionManager
 import nl.komponents.kovenant.Kovenant
 
 /**
@@ -20,6 +25,7 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
     private val diagnosticContext = DefaultNodeDiagnosticContext()
+    private val connectionManager: ConnectionManager
 
     companion object : KLogging()
 
@@ -32,10 +38,11 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
         }
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider().createInfrastructureFactory(nodeConfigProvider)
-        blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(nodeConfigProvider, diagnosticContext)
+        connectionManager = infrastructureFactory.makeConnectionManager(nodeConfigProvider)
+        blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(nodeConfigProvider, diagnosticContext, connectionManager)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(
-                nodeConfigProvider, blockchainInfrastructure, blockchainConfigProvider, diagnosticContext)
+                nodeConfigProvider, blockchainInfrastructure, blockchainConfigProvider, diagnosticContext, connectionManager)
 
         diagnosticContext.addProperty(DiagnosticProperty.VERSION, getVersion())
         diagnosticContext.addProperty(DiagnosticProperty.PUB_KEY, nodeConfigProvider.getConfiguration().pubKey)
