@@ -6,7 +6,6 @@ import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.network.common.ConnectionManager
 
@@ -83,11 +82,9 @@ interface InfrastructureFactory {
 
     fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure
 
-    fun makeProcessManager(nodeConfigProvider: NodeConfigurationProvider,
+    fun makeProcessManager(postchainContext: PostchainContext,
                            blockchainInfrastructure: BlockchainInfrastructure,
-                           blockchainConfigurationProvider: BlockchainConfigurationProvider,
-                           nodeDiagnosticContext: NodeDiagnosticContext,
-                           connectionManager: ConnectionManager
+                           blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager
 }
 

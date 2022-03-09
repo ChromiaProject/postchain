@@ -2,35 +2,29 @@
 
 package net.postchain.managed
 
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.RestartHandler
 import net.postchain.debug.BlockTrace
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.GTXDataBuilder
-import net.postchain.network.common.ConnectionManager
 
 class Chromia0BlockchainProcessManager(
+        postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
-        nodeConfigProvider: NodeConfigurationProvider,
-        blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext,
-        connectionManager: ConnectionManager
+        blockchainConfigProvider: BlockchainConfigurationProvider
 ) : ManagedBlockchainProcessManager(
+        postchainContext,
         blockchainInfrastructure,
-        nodeConfigProvider,
-        blockchainConfigProvider,
-        nodeDiagnosticContext,
-        connectionManager) {
+        blockchainConfigProvider) {
 
     override fun buildRestartHandler(chainId: Long): RestartHandler {
         val baseHandler = super.buildRestartHandler(chainId)

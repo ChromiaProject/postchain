@@ -12,9 +12,7 @@ import net.postchain.containers.bpm.SubNodeBlockchainProcessManager
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.InfrastructureFactory
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
-import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
 import net.postchain.network.mastersub.subnode.DefaultSubPeersCommConfigFactory
 import net.postchain.network.mastersub.subnode.SubConnectionManager
@@ -32,20 +30,18 @@ class SubEbftInfraFactory : InfrastructureFactory {
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             val syncInfra = EBFTSynchronizationInfrastructure(this, DefaultSubPeersCommConfigFactory())
-            val apiInfra = BaseApiInfrastructure(nodeConfig, nodeDiagnosticContext)
+            val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
 
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }
     }
 
     override fun makeProcessManager(
-            nodeConfigProvider: NodeConfigurationProvider,
+            postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,
-            blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext,
-            connectionManager: ConnectionManager
+            blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-        return SubNodeBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider, blockchainConfigurationProvider, nodeDiagnosticContext, connectionManager as SubConnectionManager)
+        return SubNodeBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
     }
 
 }

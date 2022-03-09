@@ -20,11 +20,12 @@ import net.postchain.network.peer.*
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
-        postchainContext: PostchainContext,
+        private val postchainContext: PostchainContext,
         val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
 ) : SynchronizationInfrastructure {
 
-    val nodeConfig = postchainContext.nodeConfig
+    val nodeConfig: NodeConfig
+        get() = postchainContext.getNodeConfig()
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
     val connectionManager = postchainContext.connectionManager
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }

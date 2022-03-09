@@ -28,7 +28,7 @@ open class BaseBlockchainInfrastructure(
     val syncInfraExtCache = mutableMapOf<String, SynchronizationInfrastructureExtension>()
 
     init {
-        val privKey = postchainContext.nodeConfig.privKeyByteArray
+        val privKey = postchainContext.getNodeConfig().privKeyByteArray
         val pubKey = secp256k1_derivePubKey(privKey)
         blockSigMaker = cryptoSystem.buildSigMaker(pubKey, privKey)
         subjectID = pubKey
@@ -81,7 +81,7 @@ open class BaseBlockchainInfrastructure(
             restartHandler: RestartHandler
     ): BaseBlockchainEngine {
 
-        val storage = StorageBuilder.buildStorage(postchainContext.nodeConfig.appConfig, NODE_ID_TODO)
+        val storage = StorageBuilder.buildStorage(postchainContext.getNodeConfig().appConfig, NODE_ID_TODO)
 
         val transactionQueue = BaseTransactionQueue(
                 (configuration as BaseBlockchainConfiguration) // TODO: Olle: Is this conversion harmless?

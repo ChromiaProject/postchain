@@ -1,30 +1,25 @@
 package net.postchain.containers.bpm
 
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 open class SubNodeBlockchainProcessManager(
+        postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
-        nodeConfigProvider: NodeConfigurationProvider,
-        blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext,
-        connectionManager: SubConnectionManager
+        blockchainConfigProvider: BlockchainConfigurationProvider
 ) : BaseBlockchainProcessManager(
+        postchainContext,
         blockchainInfrastructure,
-        nodeConfigProvider,
-        blockchainConfigProvider,
-        nodeDiagnosticContext,
-        connectionManager
+        blockchainConfigProvider
 ) {
 
     private val heartbeatManager = DefaultHeartbeatManager(nodeConfig)

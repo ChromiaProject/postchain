@@ -3,17 +3,16 @@
 package net.postchain.base
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.ebft.heartbeat.HeartbeatListener
-import net.postchain.network.common.ConnectionManager
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -29,16 +28,17 @@ import java.util.concurrent.TimeUnit
  * If you don't want to wait for startup you can schedule a start via a the "startBlockchainAsync()"
  */
 open class BaseBlockchainProcessManager(
+        protected val postchainContext: PostchainContext,
         protected val blockchainInfrastructure: BlockchainInfrastructure,
-        protected val nodeConfigProvider: NodeConfigurationProvider,
-        protected val blockchainConfigProvider: BlockchainConfigurationProvider,
-        protected val nodeDiagnosticContext: NodeDiagnosticContext,
-        val connectionManager: ConnectionManager
+        protected val blockchainConfigProvider: BlockchainConfigurationProvider
 ) : BlockchainProcessManager {
 
     override val synchronizer = Any()
 
-    val nodeConfig = nodeConfigProvider.getConfiguration()
+    val nodeConfig: NodeConfig
+        get() = postchainContext.getNodeConfig()
+    val connectionManager = postchainContext.connectionManager
+    val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
     val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()

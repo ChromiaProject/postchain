@@ -2,13 +2,11 @@
 
 package net.postchain.managed
 
+import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.BaseEBFTInfrastructureFactory
-import net.postchain.network.common.ConnectionManager
 
 open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
 
@@ -17,17 +15,11 @@ open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
     }
 
     override fun makeProcessManager(
-            nodeConfigProvider: NodeConfigurationProvider,
+            postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,
-            blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext,
-            connectionManager: ConnectionManager
+            blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
 
-        return ManagedBlockchainProcessManager(
-                blockchainInfrastructure,
-                nodeConfigProvider,
-                blockchainConfigurationProvider,
-                nodeDiagnosticContext, connectionManager)
+        return ManagedBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
     }
 }

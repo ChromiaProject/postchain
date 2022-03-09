@@ -15,7 +15,6 @@ import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.InfrastructureFactory
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
 import net.postchain.ebft.heartbeat.HeartbeatListener
@@ -78,24 +77,17 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             val syncInfra = TestSynchronizationInfrastructure()
-            val apiInfra = BaseApiInfrastructure(nodeConfig, nodeDiagnosticContext)
+            val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
 
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }
     }
 
     override fun makeProcessManager(
-            nodeConfigProvider: NodeConfigurationProvider,
+            postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,
-            blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext,
-            connectionManager: ConnectionManager
+            blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-
-        return BaseBlockchainProcessManager(
-                blockchainInfrastructure,
-                nodeConfigProvider,
-                blockchainConfigurationProvider,
-                nodeDiagnosticContext, connectionManager)
+        return BaseBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
     }
 }
