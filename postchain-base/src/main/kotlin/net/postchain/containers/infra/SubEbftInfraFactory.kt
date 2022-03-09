@@ -2,11 +2,11 @@
 
 package net.postchain.containers.infra
 
+import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.SubNodeBlockchainProcessManager
 import net.postchain.core.BlockchainInfrastructure
@@ -30,18 +30,18 @@ class SubEbftInfraFactory : InfrastructureFactory {
     }
 
     override fun makeBlockchainInfrastructure(
-            nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext,
-            connectionManager: ConnectionManager
+            postchainContext: PostchainContext
     ): BlockchainInfrastructure {
-        val syncInfra = EBFTSynchronizationInfrastructure(
-                nodeConfigProvider, nodeDiagnosticContext, connectionManager, DefaultSubPeersCommConfigFactory())
+        with(postchainContext) {
+            val syncInfra = EBFTSynchronizationInfrastructure(
+                    nodeConfig, nodeDiagnosticContext, connectionManager, DefaultSubPeersCommConfigFactory())
 
-        val apiInfra = BaseApiInfrastructure(
-                nodeConfigProvider, nodeDiagnosticContext)
+            val apiInfra = BaseApiInfrastructure(
+                    nodeConfig, nodeDiagnosticContext)
 
-        return BaseBlockchainInfrastructure(
-                nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager)
+            return BaseBlockchainInfrastructure(
+                    nodeConfig, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager)
+        }
     }
 
     override fun makeProcessManager(

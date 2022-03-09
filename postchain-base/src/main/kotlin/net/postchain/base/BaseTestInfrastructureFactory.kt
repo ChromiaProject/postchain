@@ -3,11 +3,17 @@
 package net.postchain.base
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.*
+import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.InfrastructureFactory
+import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EbftPacketDecoderFactory
@@ -23,7 +29,7 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
     // Need this stuff to make this test class look a bit "normal"
     val name: String = BlockchainProcessName("?", blockchainEngine.getConfiguration().blockchainRid).toString()
 
-    override fun start() { }
+    override fun start() {}
 
     override fun shutdown() {
         shutdownDebug("Begin")
@@ -70,16 +76,15 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
     }
 
     override fun makeBlockchainInfrastructure(
-            nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext,
-            connectionManager: ConnectionManager
+            postchainContext: PostchainContext
     ): BlockchainInfrastructure {
+        with(postchainContext) {
+            val syncInfra = TestSynchronizationInfrastructure()
+            val apiInfra = BaseApiInfrastructure(nodeConfig, nodeDiagnosticContext)
 
-        val syncInfra = TestSynchronizationInfrastructure()
-        val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
-
-        return BaseBlockchainInfrastructure(
-                nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager)
+            return BaseBlockchainInfrastructure(
+                    nodeConfig, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager)
+        }
     }
 
     override fun makeProcessManager(

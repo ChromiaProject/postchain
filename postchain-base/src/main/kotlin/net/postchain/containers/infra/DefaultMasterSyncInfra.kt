@@ -2,7 +2,7 @@
 
 package net.postchain.containers.infra
 
-import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.config.node.NodeConfig
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
@@ -19,12 +19,12 @@ import java.nio.file.Path
 
 
 open class DefaultMasterSyncInfra(
-        nodeConfigProvider: NodeConfigurationProvider,
+        nodeConfig: NodeConfig,
         nodeDiagnosticContext: NodeDiagnosticContext,
         protected val masterConnectionManager: MasterConnectionManager,
         connectionManager: ConnectionManager
 ) : EBFTSynchronizationInfrastructure(
-        nodeConfigProvider,
+        nodeConfig,
         nodeDiagnosticContext,
         connectionManager
 ), MasterSyncInfra {

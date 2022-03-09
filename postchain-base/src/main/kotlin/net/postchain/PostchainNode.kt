@@ -14,7 +14,6 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.network.common.ConnectionManager
 import nl.komponents.kovenant.Kovenant
 
 /**
@@ -25,7 +24,7 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
     private val diagnosticContext = DefaultNodeDiagnosticContext()
-    private val connectionManager: ConnectionManager
+    private val postchainContext: PostchainContext
 
     companion object : KLogging()
 
@@ -38,8 +37,13 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
         }
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider().createInfrastructureFactory(nodeConfigProvider)
-        connectionManager = infrastructureFactory.makeConnectionManager(nodeConfigProvider)
-        blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(nodeConfigProvider, diagnosticContext, connectionManager)
+        val connectionManager = infrastructureFactory.makeConnectionManager(nodeConfigProvider)
+        postchainContext = PostchainContext(
+                nodeConfigProvider.getConfiguration(),
+                connectionManager,
+                DefaultNodeDiagnosticContext()
+        )
+        blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(
                 nodeConfigProvider, blockchainInfrastructure, blockchainConfigProvider, diagnosticContext, connectionManager)
@@ -63,6 +67,8 @@ open class PostchainNode(val nodeConfigProvider: NodeConfigurationProvider) : Sh
         processManager.shutdown()
         logger.debug("${name()}: shutdown() - Stopping BlockchainInfrastructure")
         blockchainInfrastructure.shutdown()
+        logger.debug("${name()}: shutdown() - Stopping ConnectionManager")
+        postchainContext.shutDown()
         logger.debug("${name()}: shutdown() - Closing NodeConfigurationProvider")
         nodeConfigProvider.close()
         logger.info("${name()}: shutdown() - end")

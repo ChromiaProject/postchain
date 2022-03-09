@@ -2,8 +2,8 @@
 
 package net.postchain.core
 
+import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
@@ -81,11 +81,7 @@ interface InfrastructureFactory {
 
     fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider
 
-    fun makeBlockchainInfrastructure(
-            nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext,
-            connectionManager: ConnectionManager
-    ): BlockchainInfrastructure
+    fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure
 
     fun makeProcessManager(nodeConfigProvider: NodeConfigurationProvider,
                            blockchainInfrastructure: BlockchainInfrastructure,
