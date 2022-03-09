@@ -33,12 +33,6 @@ open class EBFTSynchronizationInfrastructure(
     val nodeConfig get() = nodeConfigProvider.getConfiguration()
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
 
-    init {
-        this.init() // TODO: [POS-129]: Redesign this call
-    }
-
-    override fun init() { }
-
     override fun shutdown() {
         connectionManager.shutdown()
     }

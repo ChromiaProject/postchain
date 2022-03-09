@@ -13,6 +13,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.InfrastructureFactory
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
 open class BaseEBFTInfrastructureFactory : InfrastructureFactory {

@@ -21,16 +21,13 @@ import java.nio.file.Path
 open class DefaultMasterSyncInfra(
         nodeConfigProvider: NodeConfigurationProvider,
         nodeDiagnosticContext: NodeDiagnosticContext,
-        private val masterConnectionManager: MasterConnectionManager,
+        protected val masterConnectionManager: MasterConnectionManager,
         connectionManager: ConnectionManager
 ) : EBFTSynchronizationInfrastructure(
         nodeConfigProvider,
         nodeDiagnosticContext,
         connectionManager
 ), MasterSyncInfra {
-
-
-    override fun init() { }
 
     /**
      * We create a new [MasterCommunicationManager] for every new BC process we make.

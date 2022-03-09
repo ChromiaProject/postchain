@@ -31,8 +31,6 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
         fastSynchronizer.syncUntil { !isProcessRunning() }
     }
 
-    fun getHeight(): Long = fastSynchronizer.blockHeight
-
     override fun cleanup() {
         blockDatabase.stop()
         workerContext.shutdown()

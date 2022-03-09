@@ -40,8 +40,6 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
 
 class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
-    override fun init() = Unit
-
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,

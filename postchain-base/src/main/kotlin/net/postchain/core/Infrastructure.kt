@@ -13,8 +13,6 @@ import net.postchain.ebft.heartbeat.HeartbeatListener
  */
 interface SynchronizationInfrastructure : Shutdownable {
 
-    fun init()
-
     /**
      * This is how a blockchain process get created.
      */

@@ -4,6 +4,7 @@ package net.postchain.containers.infra
 
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.api.DefaultMasterApiInfra
 import net.postchain.containers.bpm.ContainerManagedBlockchainProcessManager
@@ -12,22 +13,30 @@ import net.postchain.core.BlockchainProcessManager
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
+import net.postchain.ebft.message.Message
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.network.mastersub.master.MasterConnectionManagerFactory
 
 open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
+    lateinit var masterFactory: MasterConnectionManagerFactory<Message>
+
+    protected fun getOrCreateMasterFactory(nodeConfig: NodeConfig): MasterConnectionManagerFactory<Message> {
+        if (!::masterFactory.isInitialized) {
+            masterFactory = MasterConnectionManagerFactory(
+                            EbftPacketEncoderFactory(),
+                            EbftPacketDecoderFactory(),
+                            SECP256K1CryptoSystem(),
+                            nodeConfig)
+        }
+        return masterFactory
+    }
 
     override fun makeBlockchainInfrastructure(
             nodeConfigProvider: NodeConfigurationProvider,
             nodeDiagnosticContext: NodeDiagnosticContext
     ): BlockchainInfrastructure {
 
-        val masterFactory = MasterConnectionManagerFactory(
-                EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory(),
-                SECP256K1CryptoSystem(),
-                nodeConfigProvider.getConfiguration()
-        )
+        val masterFactory = getOrCreateMasterFactory(nodeConfigProvider.getConfiguration())
         val syncInfra = DefaultMasterSyncInfra(
                 nodeConfigProvider, nodeDiagnosticContext, masterFactory.getMasterConnectionManager(), masterFactory.getPeerConnectionManager())
 
@@ -45,12 +54,7 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
             nodeDiagnosticContext: NodeDiagnosticContext
     ): BlockchainProcessManager {
 
-        val masterFactory = MasterConnectionManagerFactory(
-                EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory(),
-                SECP256K1CryptoSystem(),
-                nodeConfigProvider.getConfiguration()
-        )
+        val masterFactory = getOrCreateMasterFactory(nodeConfigProvider.getConfiguration())
         return ContainerManagedBlockchainProcessManager(
                 blockchainInfrastructure as MasterBlockchainInfra,
                 nodeConfigProvider,

@@ -39,8 +39,6 @@ open class BaseBlockchainInfrastructure(
         syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
     }
 
-    override fun init() {}
-
     override fun shutdown() {
         for (infra in syncInfraCache.values)
             infra.shutdown()
