@@ -8,6 +8,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.BaseEBFTInfrastructureFactory
+import net.postchain.network.common.ConnectionManager
 
 open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
 
@@ -19,7 +20,8 @@ open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
             nodeConfigProvider: NodeConfigurationProvider,
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager
     ): BlockchainProcessManager {
 
         return ManagedBlockchainProcessManager(

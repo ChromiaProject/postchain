@@ -7,6 +7,7 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.network.common.ConnectionManager
 
 class Chromia0InfrastructureFactory: ManagedEBFTInfrastructureFactory() {
 
@@ -14,7 +15,8 @@ class Chromia0InfrastructureFactory: ManagedEBFTInfrastructureFactory() {
             nodeConfigProvider: NodeConfigurationProvider,
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager
     ): BlockchainProcessManager {
 
         return Chromia0BlockchainProcessManager(

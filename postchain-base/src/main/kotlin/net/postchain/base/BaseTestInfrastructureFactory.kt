@@ -13,6 +13,7 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
 import net.postchain.ebft.heartbeat.HeartbeatListener
+import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
 class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
@@ -56,18 +57,22 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
 class BaseTestInfrastructureFactory : InfrastructureFactory {
 
-    val connectionManager = DefaultPeerConnectionManager(
-            EbftPacketEncoderFactory(),
-            EbftPacketDecoderFactory(),
-            SECP256K1CryptoSystem()
-    )
+    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager {
+        return DefaultPeerConnectionManager(
+                EbftPacketEncoderFactory(),
+                EbftPacketDecoderFactory(),
+                SECP256K1CryptoSystem()
+        )
+    }
+
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
         return ManualBlockchainConfigurationProvider()
     }
 
     override fun makeBlockchainInfrastructure(
             nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager
     ): BlockchainInfrastructure {
 
         val syncInfra = TestSynchronizationInfrastructure()
@@ -81,7 +86,8 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
             nodeConfigProvider: NodeConfigurationProvider,
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager
     ): BlockchainProcessManager {
 
         return BaseBlockchainProcessManager(

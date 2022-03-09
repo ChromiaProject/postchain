@@ -3,10 +3,12 @@
 package net.postchain.core
 
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.HeartbeatListener
+import net.postchain.network.common.ConnectionManager
 
 /**
  * Responsible blockchain process lifecycle, i.e. creating, exiting and restarting blockchain processes.
@@ -75,17 +77,21 @@ interface ApiInfrastructure : Shutdownable {
 
 interface InfrastructureFactory {
 
+    fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager
+
     fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider
 
     fun makeBlockchainInfrastructure(
             nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager
     ): BlockchainInfrastructure
 
     fun makeProcessManager(nodeConfigProvider: NodeConfigurationProvider,
                            blockchainInfrastructure: BlockchainInfrastructure,
                            blockchainConfigurationProvider: BlockchainConfigurationProvider,
-                           nodeDiagnosticContext: NodeDiagnosticContext
+                           nodeDiagnosticContext: NodeDiagnosticContext,
+                           connectionManager: ConnectionManager
     ): BlockchainProcessManager
 }
 

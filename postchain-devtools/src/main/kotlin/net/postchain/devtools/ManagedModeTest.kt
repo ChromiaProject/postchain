@@ -257,14 +257,16 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
             nodeConfigProvider: NodeConfigurationProvider,
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext): BlockchainProcessManager {
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager): BlockchainProcessManager {
         return TestManagedBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider,
                 blockchainConfigurationProvider, nodeDiagnosticContext, dataSource, connectionManager)
     }
 
     override fun makeBlockchainInfrastructure(
             nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext): BlockchainInfrastructure {
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager): BlockchainInfrastructure {
         nodeConfig = nodeConfigProvider.getConfiguration()
         dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
 

@@ -14,31 +14,26 @@ import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.InfrastructureFactory
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
+import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
 import net.postchain.network.mastersub.subnode.DefaultSubPeersCommConfigFactory
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class SubEbftInfraFactory : InfrastructureFactory {
 
-    lateinit var subConnectionManager: SubConnectionManager
-
-    protected fun getOrCreateSubConnectionManager(nodeConfig: NodeConfig): SubConnectionManager {
-        if (!::subConnectionManager.isInitialized) {
-            subConnectionManager = DefaultSubConnectionManager(nodeConfig)
-        }
-        return subConnectionManager
+    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): SubConnectionManager {
+        return DefaultSubConnectionManager(nodeConfigProvider.getConfiguration())
     }
-    
+
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
         return ManualBlockchainConfigurationProvider()
     }
 
     override fun makeBlockchainInfrastructure(
             nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager
     ): BlockchainInfrastructure {
-
-        val connectionManager = getOrCreateSubConnectionManager(nodeConfigProvider.getConfiguration())
         val syncInfra = EBFTSynchronizationInfrastructure(
                 nodeConfigProvider, nodeDiagnosticContext, connectionManager, DefaultSubPeersCommConfigFactory())
 
@@ -53,10 +48,10 @@ class SubEbftInfraFactory : InfrastructureFactory {
             nodeConfigProvider: NodeConfigurationProvider,
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            nodeDiagnosticContext: NodeDiagnosticContext,
+            connectionManager: ConnectionManager
     ): BlockchainProcessManager {
-        val connectionManager = getOrCreateSubConnectionManager(nodeConfigProvider.getConfiguration())
-        return SubNodeBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider, blockchainConfigurationProvider, nodeDiagnosticContext, connectionManager)
+        return SubNodeBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider, blockchainConfigurationProvider, nodeDiagnosticContext, connectionManager as SubConnectionManager)
     }
 
 }
