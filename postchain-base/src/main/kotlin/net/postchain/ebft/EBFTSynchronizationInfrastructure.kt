@@ -26,27 +26,18 @@ import net.postchain.network.peer.*
 open class EBFTSynchronizationInfrastructure(
         val nodeConfigProvider: NodeConfigurationProvider,
         val nodeDiagnosticContext: NodeDiagnosticContext,
+        val connectionManager: ConnectionManager,
         val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
 ) : SynchronizationInfrastructure {
 
     val nodeConfig get() = nodeConfigProvider.getConfiguration()
-    lateinit var connectionManager: ConnectionManager
-    protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
 
     init {
         this.init() // TODO: [POS-129]: Redesign this call
     }
 
-    override fun init() {
-        connectionManager = DefaultPeerConnectionManager(
-                EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory(),
-                SECP256K1CryptoSystem()
-        )
-
-        fillDiagnosticContext()
-    }
+    override fun init() { }
 
     override fun shutdown() {
         connectionManager.shutdown()
@@ -58,9 +49,6 @@ open class EBFTSynchronizationInfrastructure(
             heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
-        val unregisterBlockchainDiagnosticData: () -> Unit = {
-            blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
-        }
 
         val historicBrid = blockchainConfig.effectiveBlockchainRID
         val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
@@ -78,9 +66,8 @@ open class EBFTSynchronizationInfrastructure(
                 buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
                 peerCommConfiguration,
                 heartbeatListener,
-                nodeConfig,
-                unregisterBlockchainDiagnosticData
-        )
+                nodeConfig
+        ) {}
 
         /*
         Block building is prohibited on FB if its current configuration has a historicBrid set.
@@ -115,8 +102,7 @@ open class EBFTSynchronizationInfrastructure(
                         historicPeerCommConfiguration,
                         heartbeatListener,
                         nodeConfig,
-                        unregisterBlockchainDiagnosticData
-                )
+                ) {}
 
             }
             HistoricBlockchainProcess(workerContext, historicBlockchainContext).also { it.start() }
@@ -124,7 +110,7 @@ open class EBFTSynchronizationInfrastructure(
             ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also { it.start() }
         } else {
             ReadOnlyBlockchainProcess(workerContext).also { it.start() }
-        }.also { it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() }) }
+        }
     }
 
     /*
@@ -249,26 +235,6 @@ open class EBFTSynchronizationInfrastructure(
                 nodeConfig.privKeyByteArray,
                 nodeConfig.pubKeyByteArray
         )
-    }
-
-    protected fun fillDiagnosticContext() {
-        nodeDiagnosticContext.addProperty(BLOCKCHAIN) {
-            val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
-
-            connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
-                diagnosticData.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
-                    properties.apply {
-                        put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS) { topology }
-                    }
-                }
-            }
-
-            diagnosticData
-                    .mapValues { (_, v) ->
-                        v.mapValues { (_, v2) -> v2() }
-                    }
-                    .values.toTypedArray()
-        }
     }
 
     private fun getStartWithFastSyncValue(chainId: Long): Boolean {

@@ -26,6 +26,6 @@ open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
                 blockchainInfrastructure,
                 nodeConfigProvider,
                 blockchainConfigurationProvider,
-                nodeDiagnosticContext)
+                nodeDiagnosticContext, connectionManager)
     }
 }

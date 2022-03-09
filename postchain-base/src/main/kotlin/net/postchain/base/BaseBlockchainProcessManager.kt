@@ -9,10 +9,12 @@ import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.heartbeat.HeartbeatListener
+import net.postchain.network.common.ConnectionManager
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -31,7 +33,8 @@ open class BaseBlockchainProcessManager(
         protected val blockchainInfrastructure: BlockchainInfrastructure,
         protected val nodeConfigProvider: NodeConfigurationProvider,
         protected val blockchainConfigProvider: BlockchainConfigurationProvider,
-        protected val nodeDiagnosticContext: NodeDiagnosticContext
+        protected val nodeDiagnosticContext: NodeDiagnosticContext,
+        val connectionManager: ConnectionManager
 ) : BlockchainProcessManager {
 
     override val synchronizer = Any()
@@ -39,6 +42,8 @@ open class BaseBlockchainProcessManager(
     val nodeConfig = nodeConfigProvider.getConfiguration()
     val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
+    protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
+    protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
 
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
@@ -49,6 +54,10 @@ open class BaseBlockchainProcessManager(
     var blockDebug: BlockTrace? = null
 
     companion object : KLogging()
+
+    init {
+        initiateChainDiagnosticData()
+    }
 
     /**
      * Put the startup operation of chainId in the [executor]'s work queue.
@@ -126,7 +135,10 @@ open class BaseBlockchainProcessManager(
     }
 
     protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener).also {
+            it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
+        }
+        chainIdToBrid[chainId] = blockchainConfig.blockchainRid
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
@@ -154,6 +166,7 @@ open class BaseBlockchainProcessManager(
     }
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
+        blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
         blockchainProcesses.remove(chainId)?.also {
             if (restart) {
                 blockchainInfrastructure.restartBlockchainProcess(it)
@@ -174,6 +187,8 @@ open class BaseBlockchainProcessManager(
             it.value.shutdown()
         }
         blockchainProcesses.clear()
+        blockchainProcessesDiagnosticData.clear()
+        chainIdToBrid.clear()
 
         blockchainProcessesLoggers.forEach { (_, t) ->
             t.cancel()
@@ -211,14 +226,10 @@ open class BaseBlockchainProcessManager(
 
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private fun logPeerTopology(chainId: Long) {
-        // TODO: [et]: Fix links to EBFT entities
-        val topology = ((blockchainInfrastructure as BaseBlockchainInfrastructure)
-                .defaultSynchronizationInfrastructure as? EBFTSynchronizationInfrastructure)
-                ?.connectionManager?.getNodesTopology(chainId)
-                ?.mapKeys {
+        val topology = connectionManager.getNodesTopology(chainId)
+                .mapKeys {
                     peerName(it.key)
                 }
-                ?: emptyMap()
 
         val prettyTopology = topology.mapValues {
             it.value
@@ -236,6 +247,26 @@ open class BaseBlockchainProcessManager(
     protected fun isConfigurationChanged(chainId: Long): Boolean {
         return withReadConnection(storage, chainId) { eContext ->
             blockchainConfigProvider.needsConfigurationChange(eContext, chainId)
+        }
+    }
+
+    protected fun initiateChainDiagnosticData() {
+        nodeDiagnosticContext.addProperty(DiagnosticProperty.BLOCKCHAIN) {
+            val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
+
+            connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
+                diagnosticData.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
+                    properties.apply {
+                        put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS) { topology }
+                    }
+                }
+            }
+
+            diagnosticData
+                    .mapValues { (_, v) ->
+                        v.mapValues { (_, v2) -> v2() }
+                    }
+                    .values.toTypedArray()
         }
     }
 

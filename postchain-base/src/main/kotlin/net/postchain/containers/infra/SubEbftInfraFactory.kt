@@ -12,6 +12,8 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.InfrastructureFactory
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.EBFTSynchronizationInfrastructure
+import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
 import net.postchain.network.mastersub.subnode.DefaultSubPeersCommConfigFactory
 
 class SubEbftInfraFactory : InfrastructureFactory {
@@ -25,14 +27,15 @@ class SubEbftInfraFactory : InfrastructureFactory {
             nodeDiagnosticContext: NodeDiagnosticContext
     ): BlockchainInfrastructure {
 
-        val syncInfra = DefaultSubSyncInfra(
-                nodeConfigProvider, nodeDiagnosticContext, DefaultSubPeersCommConfigFactory())
+        val connectionManager = DefaultSubConnectionManager(nodeConfigProvider.getConfiguration())
+        val syncInfra = EBFTSynchronizationInfrastructure(
+                nodeConfigProvider, nodeDiagnosticContext, connectionManager, DefaultSubPeersCommConfigFactory())
 
         val apiInfra = BaseApiInfrastructure(
                 nodeConfigProvider, nodeDiagnosticContext)
 
         return BaseBlockchainInfrastructure(
-                nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext)
+                nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager)
     }
 
     override fun makeProcessManager(
@@ -41,7 +44,8 @@ class SubEbftInfraFactory : InfrastructureFactory {
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             nodeDiagnosticContext: NodeDiagnosticContext
     ): BlockchainProcessManager {
-        return SubNodeBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider, blockchainConfigurationProvider, nodeDiagnosticContext)
+        val connectionManager = DefaultSubConnectionManager(nodeConfigProvider.getConfiguration())
+        return SubNodeBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider, blockchainConfigurationProvider, nodeDiagnosticContext, connectionManager)
     }
 
 }

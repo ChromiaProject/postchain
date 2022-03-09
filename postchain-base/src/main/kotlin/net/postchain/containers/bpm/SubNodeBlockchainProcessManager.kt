@@ -12,26 +12,28 @@ import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
 import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
+import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 open class SubNodeBlockchainProcessManager(
         blockchainInfrastructure: BlockchainInfrastructure,
         nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext
+        nodeDiagnosticContext: NodeDiagnosticContext,
+        connectionManager : SubConnectionManager
 ) : BaseBlockchainProcessManager(
         blockchainInfrastructure,
         nodeConfigProvider,
         blockchainConfigProvider,
-        nodeDiagnosticContext
+        nodeDiagnosticContext,
+        connectionManager
 ) {
 
     private val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
     private val heartbeatListeners = mutableMapOf<Long, HeartbeatListener>()
-    val connectionManager = DefaultSubConnectionManager(nodeConfig)
 
     override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?) {
         val hbListener = if (nodeConfig.remoteConfigEnabled) {
-            RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainConfig.blockchainRid, connectionManager).also {
+            RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager).also {
                 it.blockchainConfigProvider = blockchainConfigProvider
                 it.storage = storage
                 heartbeatManager.addListener(it)

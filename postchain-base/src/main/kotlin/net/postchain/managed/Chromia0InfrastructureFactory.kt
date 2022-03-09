@@ -21,6 +21,7 @@ class Chromia0InfrastructureFactory: ManagedEBFTInfrastructureFactory() {
                 blockchainInfrastructure,
                 nodeConfigProvider,
                 blockchainConfigurationProvider,
-                nodeDiagnosticContext)
+                nodeDiagnosticContext,
+                connectionManager)
     }
 }
