@@ -1,3 +1,8 @@
+enum asset_type {
+    erc20,
+    erc721
+}
+
 entity eth_block {
     key eth_block_height: integer;
     key eth_block_hash: text;
@@ -5,7 +10,7 @@ entity eth_block {
 
 entity eth_token {
     key token_address: text;
-    token_type: text;
+    token_type: asset_type;
     token_name: text;
     token_symbol: text;
 }
@@ -64,8 +69,7 @@ operation __eth_block(eth_block_height: integer, eth_block_hash: text) {
 
 operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash: text, log_index: integer,
                         event_signature: text, contract_address: text,
-                        from_address: text, token_address: text, token_value: integer,
-                        token_type: text, token_name: text, token_symbol: text, token_uri: text) {
+                        token_type: asset_type, payload: gtv) {
 
     var eth_block = eth_block @? { eth_block_height, eth_block_hash };
 
@@ -76,9 +80,14 @@ operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash:
         );
     }
 
-    var eth_token = eth_token @? { token_address };
+    val argList = list<gtv>.from_gtv(payload);
 
+    var token_address = to_zero_padded_hex(byte_array.from_gtv(argList[1]));
+    var eth_token = eth_token @? { token_address };
     if (empty(eth_token)) {
+        var token_name = text.from_gtv(argList[3]);
+        var token_symbol = text.from_gtv(argList[4]);
+
         eth_token = create eth_token(
             token_address,
             token_type,
@@ -86,6 +95,9 @@ operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash:
             token_symbol
         );
     }
+    var from_address = to_zero_padded_hex(byte_array.from_gtv(argList[0]));
+    var token_value = integer.from_gtv(argList[2]);
+    var token_uri = text.from_gtv(argList[5]);
 
     val eth_event = create eth_event(
         eth_block,
@@ -99,7 +111,7 @@ operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash:
         token_uri
     );
 
-    if (token_type == "ERC721") {
+    if (token_type == asset_type.erc721) {
         create eth_balance(
             eth_token,
             beneficiary = from_address,
@@ -128,7 +140,7 @@ operation withdraw(token_address: text, beneficiary: text, token_value: integer)
     if (empty(t)) {
         return;
     }
-    if (t.token_type == "ERC20") {
+    if (t.token_type == asset_type.erc20) {
         val b = eth_balance @ { .eth_token == t, beneficiary };
         require(b.value >= token_value, "Balance is too low");
         update b(value -= token_value);
@@ -183,4 +195,8 @@ query eth_balance_of(token_address: text, beneficiary: text): integer {
         return 0;
     }
     return b;
+}
+
+function to_zero_padded_hex(array: byte_array) {
+    return "0x" + array.to_hex();
 }

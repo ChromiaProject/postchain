@@ -1,16 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
-import "./Postchain.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import "./utils/Gtv.sol";
+import "./Postchain.sol";
 
 contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
+    enum AssetType {
+        ERC20,
+        ERC721
+    }
 
     mapping(ERC20 => uint256) public _balances;
     mapping(IERC721 => mapping(uint256 => address)) public _owners;
@@ -44,11 +49,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         Status status;
     }
 
-    /**
-     * @dev ERC20: value is token amount, ERC721: value is tokenId
-     */
-    event Deposited(address indexed owner, address indexed nft, uint256 value, 
-                    string tokenType, string name, string symbol, string tokenURI);
+    event Deposited(AssetType indexed asset, bytes payload);
     event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
@@ -94,31 +95,57 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     }
 
     function deposit(ERC20 token, uint256 amount) public returns (bool) {
+        // Encode arguments
+        bytes memory args = abi.encodePacked(
+            Gtv.encode(msg.sender),
+            Gtv.encode(address(token)),
+            Gtv.encode(amount),
+            Gtv.encode(token.name()),
+            Gtv.encode(token.symbol()),
+            Gtv.encode("")
+        );
+        bytes memory argArray = Gtv.encodeArray(args);
+
+        // Do transfer
         token.transferFrom(msg.sender, address(this), amount);
         _balances[token] += amount;
-        emit Deposited(msg.sender, address(token), amount, "ERC20", token.name(), token.symbol(), "");
+        emit Deposited(AssetType.ERC20, argArray);
         return true;
     }
 
     function depositNFT(IERC721 nft, uint256 tokenId) public returns (bool) {
         nft.safeTransferFrom(msg.sender, address(this), tokenId);
         _owners[nft][tokenId] = msg.sender;
+        string memory name = "";
+        string memory symbol= "";
+        string memory tokenURI = "";
+        bytes memory args;
         if (nft.supportsInterface(type(IERC721Metadata).interfaceId)) {
             bool success;
-            bytes memory name;
-            bytes memory symbol;
-            bytes memory tokenURI;
-            (success, name) = address(nft).staticcall(abi.encodeWithSignature("name()"));
+            bytes memory _name;
+            bytes memory _symbol;
+            bytes memory _tokenURI;
+            (success, _name) = address(nft).staticcall(abi.encodeWithSignature("name()"));
             require(success, "ChrL2: cannot get nft name");
-            (success, symbol) = address(nft).staticcall(abi.encodeWithSignature("symbol()"));
+            (success, _symbol) = address(nft).staticcall(abi.encodeWithSignature("symbol()"));
             require(success, "ChrL2: cannot get nft symbol");
-            (success, tokenURI) = address(nft).staticcall(abi.encodeWithSignature("tokenURI(uint256)", tokenId));
+            (success, _tokenURI) = address(nft).staticcall(abi.encodeWithSignature("tokenURI(uint256)", tokenId));
             require(success, "ChrL2: cannot get nft token URI");
-            emit Deposited(msg.sender, address(nft), tokenId, "ERC721", 
-                abi.decode(name, (string)), abi.decode(symbol, (string)), abi.decode(tokenURI, (string)));
-            return true;
+            name = abi.decode(_name, (string));
+            symbol = abi.decode(_symbol, (string));
+            tokenURI = abi.decode(_tokenURI, (string));
         }
-        emit Deposited(msg.sender, address(nft), tokenId, "ERC721", "", "", "");
+
+        // Encode arguments
+        args = abi.encodePacked(
+            Gtv.encode(msg.sender),
+            Gtv.encode(address(nft)),
+            Gtv.encode(tokenId),
+            Gtv.encode(name),
+            Gtv.encode(symbol),
+            Gtv.encode(tokenURI)
+        );
+        emit Deposited(AssetType.ERC721, Gtv.encodeArray(args));
         return true;
     }
 

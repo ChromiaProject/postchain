@@ -64,7 +64,7 @@ describe("Non Fungible Token", () => {
         it("User can deposit NFT to target smartcontract", async () => {
             const [deployer, user] = await ethers.getSigners()
             const tokenInstance = new ERC721Mock__factory(deployer).attach(nftAddress)
-            const tokenId = 8888
+            const tokenId = BigNumber.from(8888)
 
             await tokenInstance.mint(user.address, tokenId)
             expect(await tokenInstance.balanceOf(user.address)).to.eq(1)
@@ -75,9 +75,24 @@ describe("Non Fungible Token", () => {
             await tokenApproveInstance.setApprovalForAll(chrL2Address, true)
             let tokenURI = await tokenApproveInstance.tokenURI(tokenId)
             expect(tokenURI).to.eq(baseURI+tokenId.toString())
+            const expectedPayload = ''.concat(
+                "0xa5", "84", "000000e1", "30", "84", "000000db", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
+                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value length
+                user.address.substring(2),
+                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
+                nftAddress.substring(2),
+                "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
+                hexZeroPad(tokenId.toHexString(), 32).substring(2),
+                "a2", "84", "00000011", "0c", "84", "0000000b", 
+                "43525950544f50554e4b53",
+                "a2", "84", "00000008", "0c", "84", "00000002", 
+                "cfbe",
+                "a2", "84", "0000005b", "0c", "84", "00000055", 
+                "68747470733a2f2f676174657761792e70696e6174612e636c6f75642f697066732f516d52354e415637764369356f6f624b32774b4e4b634d3551417943437a4367327779735a587768435962424c732f38383838"
+            )            
             await expect(chrL2Instance.depositNFT(nftAddress, tokenId))
                     .to.emit(chrL2Instance, "Deposited")
-                    .withArgs(user.address, nftAddress, tokenId, "ERC721", name, symbol, tokenURI)
+                    .withArgs(1, expectedPayload.toLowerCase())
 
             expect(await tokenInstance.balanceOf(chrL2Address)).to.eq(1)
             expect(await tokenInstance.ownerOf(tokenId)).to.eq(chrL2Address)
@@ -88,7 +103,7 @@ describe("Non Fungible Token", () => {
         it("User can withdraw NFT by providing properly proof data", async () => {
             const [deployer, user] = await ethers.getSigners()
             const tokenInstance = new ERC721Mock__factory(deployer).attach(nftAddress)
-            const tokenId = 8888
+            const tokenId = BigNumber.from(8888)
 
             await tokenInstance.mint(user.address, tokenId)
             expect(await tokenInstance.balanceOf(user.address)).to.eq(1)
@@ -106,8 +121,7 @@ describe("Non Fungible Token", () => {
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
                 const contractAddress = hexZeroPad(nftAddress, 32)
                 const toAddress = hexZeroPad(user.address, 32)
-                let id: BigNumber = log.args ? log.args["value"] : BigNumber.from(0)
-                const tokenIdHex = hexZeroPad(id.toHexString(), 32)
+                const tokenIdHex = hexZeroPad(tokenId.toHexString(), 32)
                 let event: string = ''
                 event = event.concat(serialNumber.substring(2, serialNumber.length))
                 event = event.concat(contractAddress.substring(2, contractAddress.length))

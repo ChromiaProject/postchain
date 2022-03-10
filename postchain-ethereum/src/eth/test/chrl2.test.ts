@@ -7,9 +7,9 @@ import { MerkleProofLibraryAddresses } from "../src/types/factories/MerkleProof_
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
 import { PostchainLibraryAddresses } from "../src/types/factories/Postchain__factory";
-import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
+import { ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
-import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash } from "./utils"
+import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash} from "./utils"
 
 chai.use(solidity);
 const { expect } = chai;
@@ -262,10 +262,25 @@ describe("ChrL2", () => {
             const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
             const toDeposit = ethers.utils.parseEther("100")
             const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
+            const expectedPayload = ''.concat(
+                "0xa5", "84", "0000008c", "30", "84", "00000086", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
+                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value length
+                user.address.substring(2),
+                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
+                tokenAddress.substring(2),
+                "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
+                hexZeroPad(toDeposit.toHexString(), 32).substring(2),
+                "a2", "84", "00000010", "0c", "84", "0000000a", 
+                "5465737420546f6b656e",
+                "a2", "84", "00000009", "0c", "84", "00000003", 
+                "545354",
+                "a2", "84", "00000006", "0c", "84", "00000000", 
+                ""
+            )
             await tokenApproveInstance.approve(chrL2Address, toDeposit)
             await expect(chrL2Instance.deposit(tokenAddress, toDeposit))
                     .to.emit(chrL2Instance, "Deposited")
-                    .withArgs(user.address, tokenAddress, toDeposit, "ERC20", "Test Token", "TST", "")
+                    .withArgs(0, expectedPayload.toLowerCase())
 
             expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
             expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
@@ -295,8 +310,7 @@ describe("ChrL2", () => {
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
                 const contractAddress = hexZeroPad(tokenAddress, 32)
                 const toAddress = hexZeroPad(user.address, 32)
-                const amount: BigNumber = log.args ? log.args["value"] : BigNumber.from(0)
-                const amountHex = hexZeroPad(amount.toHexString(), 32)
+                const amountHex = hexZeroPad(toDeposit.toHexString(), 32)
                 let event: string = ''
                 event = event.concat(serialNumber.substring(2, serialNumber.length))
                 event = event.concat(contractAddress.substring(2, contractAddress.length))

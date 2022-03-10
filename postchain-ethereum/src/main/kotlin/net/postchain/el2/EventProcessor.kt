@@ -1,14 +1,12 @@
 package net.postchain.el2
 
 import mu.KLogging
-import net.postchain.base.snapshot.SimpleDigestSystem
-import net.postchain.common.data.KECCAK256
-import net.postchain.common.toHex
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.OpData
@@ -68,20 +66,15 @@ class NoOpEventProcessor : EventProcessor {
         return true
     }
 
-    private fun isValidEthereumEventFormat(opArgs: Array<Gtv>) = opArgs.size == 13 &&
+    private fun isValidEthereumEventFormat(opArgs: Array<Gtv>) = opArgs.size == 8 &&
             opArgs[0].asPrimitive() is BigInteger &&
             opArgs[1].asPrimitive() is String &&
             opArgs[2].asPrimitive() is String &&
             opArgs[3].asPrimitive() is BigInteger &&
             opArgs[4].asString() == EventEncoder.encode(ChrL2.DEPOSITED_EVENT) &&
             opArgs[5].asPrimitive() is String &&
-            opArgs[6].asPrimitive() is String &&
-            opArgs[7].asPrimitive() is String &&
-            opArgs[8].asPrimitive() is BigInteger &&
-            opArgs[9].asPrimitive() is String &&
-            opArgs[10].asPrimitive() is String &&
-            opArgs[11].asPrimitive() is String &&
-            opArgs[12].asPrimitive() is String
+            opArgs[6].asPrimitive() is BigInteger &&
+            opArgs[7].asPrimitive() is Array<*>
 
     private fun isValidEthereumBlockFormat(opArgs: Array<Gtv>) = opArgs.size == 2 &&
             opArgs[0].asPrimitive() is BigInteger &&
@@ -96,7 +89,7 @@ class NoOpEventProcessor : EventProcessor {
  */
 class EthereumEventProcessor(
     private val web3c: Web3Connector,
-    private val contract: ChrL2,
+    private val contractAddress: String,
     private val readOffset: BigInteger,
     contractDeployBlock: BigInteger,
     blockchainEngine: BlockchainEngine
@@ -139,7 +132,7 @@ class EthereumEventProcessor(
         val filter = EthFilter(
             DefaultBlockParameter.valueOf(from),
             DefaultBlockParameter.valueOf(to),
-            contract.contractAddress
+            contractAddress
         )
         filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
 
@@ -225,13 +218,10 @@ class EthereumEventProcessor(
         val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, eventLog)
         return eventArgs[0].asBigInteger() == eventLog.blockNumber &&
                 eventArgs[1].asString() == eventLog.blockHash &&
-                eventArgs[6].asString() == eventParameters.indexedValues[0].value &&
-                eventArgs[7].asString() == eventParameters.indexedValues[1].value &&
-                eventArgs[8].asBigInteger() == eventParameters.nonIndexedValues[0].value &&
-                eventArgs[9].asString() == eventParameters.nonIndexedValues[1].value &&
-                eventArgs[10].asString() == eventParameters.nonIndexedValues[2].value &&
-                eventArgs[11].asString() == eventParameters.nonIndexedValues[3].value &&
-                eventArgs[12].asString() == eventParameters.nonIndexedValues[4].value
+                eventArgs[6].asBigInteger() == eventParameters.indexedValues[0].value &&
+                eventArgs[7].asArray().contentEquals(
+                    GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray).asArray()
+                )
     }
 
     @Synchronized
@@ -251,20 +241,15 @@ class EthereumEventProcessor(
             .takeWhile { it.blockNumber <= readOffsetBlock.number }
             .map {
                 val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, it)
-                arrayOf<Gtv>(
+                arrayOf(
                     gtv(it.blockNumber),
                     gtv(it.blockHash),
                     gtv(it.transactionHash),
                     gtv(it.logIndex),
                     gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                    gtv(contract.contractAddress),
-                    gtv(eventParameters.indexedValues[0].value as String),          // owner
-                    gtv(eventParameters.indexedValues[1].value as String),          // token address
-                    gtv(eventParameters.nonIndexedValues[0].value as BigInteger),   // amount/tokenId
-                    gtv(eventParameters.nonIndexedValues[1].value as String),       // token type (ERC20, ERC721,...)
-                    gtv(eventParameters.nonIndexedValues[2].value as String),       // token name
-                    gtv(eventParameters.nonIndexedValues[3].value as String),       // token symbol
-                    gtv(eventParameters.nonIndexedValues[4].value as String),       // token uri (only for ERC721)
+                    gtv(contractAddress),
+                    gtv(eventParameters.indexedValues[0].value as BigInteger),   // asset type
+                    GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray) // payload
                 )
             }.toList()
 
@@ -319,7 +304,7 @@ class EthereumEventProcessor(
         if (response.hasError()) {
             logger.error("Web3j request failed with error code: ${response.error.code} and message: ${response.error.message}")
 
-            if (maxRetries == null || maxRetries > 0) {
+            if ((maxRetries == null) || (maxRetries > 0)) {
                 if (retryTimeout > 0) {
                     sleep(retryTimeout)
                 }
