@@ -241,7 +241,7 @@ class EthereumEventProcessor(
             .takeWhile { it.blockNumber <= readOffsetBlock.number }
             .map {
                 val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, it)
-                arrayOf<Gtv>(
+                arrayOf(
                     gtv(it.blockNumber),
                     gtv(it.blockHash),
                     gtv(it.transactionHash),
@@ -304,7 +304,7 @@ class EthereumEventProcessor(
         if (response.hasError()) {
             logger.error("Web3j request failed with error code: ${response.error.code} and message: ${response.error.message}")
 
-            if (maxRetries == null || maxRetries > 0) {
+            if ((maxRetries == null) || (maxRetries > 0)) {
                 if (retryTimeout > 0) {
                     sleep(retryTimeout)
                 }
