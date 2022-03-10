@@ -7,7 +7,7 @@ import { MerkleProofLibraryAddresses } from "../src/types/factories/MerkleProof_
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { PostchainLibraryAddresses } from "../src/types/factories/Postchain__factory";
 import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
-import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
+import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
 import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash } from "./utils"
 import { intToHex } from "ethjs-util";
 
@@ -84,11 +84,11 @@ describe("Non Fungible Token", () => {
                 "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
                 hexZeroPad(tokenId.toHexString(), 32).substring(2),
                 "a2", "84", "00000011", "0c", "84", "0000000b", 
-                "43525950544f50554e4b53",
+                solidityPack(["string"], [name]).substring(2),
                 "a2", "84", "00000008", "0c", "84", "00000002", 
-                "cfbe",
+                solidityPack(["string"], [symbol]).substring(2),
                 "a2", "84", "0000005b", "0c", "84", "00000055", 
-                "68747470733a2f2f676174657761792e70696e6174612e636c6f75642f697066732f516d52354e415637764369356f6f624b32774b4e4b634d3551417943437a4367327779735a587768435962424c732f38383838"
+                solidityPack(["string"], [tokenURI]).substring(2)
             )            
             await expect(chrL2Instance.depositNFT(nftAddress, tokenId))
                     .to.emit(chrL2Instance, "Deposited")

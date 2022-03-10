@@ -5,7 +5,7 @@ import { TestToken__factory, ChrL2__factory, Postchain__factory, EC__factory, Me
 import { ChrL2LibraryAddresses } from "../src/types/factories/ChrL2__factory";
 import { MerkleProofLibraryAddresses } from "../src/types/factories/MerkleProof__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
+import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
 import { PostchainLibraryAddresses } from "../src/types/factories/Postchain__factory";
 import { ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
@@ -262,6 +262,8 @@ describe("ChrL2", () => {
             const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
             const toDeposit = ethers.utils.parseEther("100")
             const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
+            const name = await tokenApproveInstance.name()
+            const symbol = await tokenApproveInstance.symbol()
             const expectedPayload = ''.concat(
                 "0xa5", "84", "0000008c", "30", "84", "00000086", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
                 "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value length
@@ -271,9 +273,9 @@ describe("ChrL2", () => {
                 "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
                 hexZeroPad(toDeposit.toHexString(), 32).substring(2),
                 "a2", "84", "00000010", "0c", "84", "0000000a", 
-                "5465737420546f6b656e",
+                solidityPack(["string"], [name]).substring(2),
                 "a2", "84", "00000009", "0c", "84", "00000003", 
-                "545354",
+                solidityPack(["string"], [symbol]).substring(2),
                 "a2", "84", "00000006", "0c", "84", "00000000", 
                 ""
             )
