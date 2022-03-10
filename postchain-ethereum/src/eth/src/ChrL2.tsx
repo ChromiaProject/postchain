@@ -305,6 +305,11 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
         )
         tokenContract.balanceOf(account).then(setBalance).catch()
         setUnit(0)
+        chrl2._owners(tokenAddress, tokenId).then((owner: string) => {
+          if (owner === account) {
+            setDeposit(BigNumber.from(1))
+          }
+        }).catch()
       } else {
         tokenContract = new ethers.Contract(
           tokenAddress,
