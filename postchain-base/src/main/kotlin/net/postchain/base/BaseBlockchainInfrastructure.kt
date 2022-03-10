@@ -94,22 +94,15 @@ open class BaseBlockchainInfrastructure(
                 }
     }
 
-    fun getSynchronizationInfrastucture(dynClassName: DynamicClassName?): SynchronizationInfrastructure {
+    private fun getSynchronizationInfrastructure(dynClassName: DynamicClassName?): SynchronizationInfrastructure {
         if (dynClassName == null) return defaultSynchronizationInfrastructure
         val name = dynClassName.className
-        val full_name = if (name == "ebft") "net.postchain.ebft.EBFTSynchronizationInfrastructure" else name
-        if (full_name in syncInfraCache) return syncInfraCache[full_name]!!
-        val infra = getInstanceByClassName(name) as SynchronizationInfrastructure
-        syncInfraCache[full_name] = infra
-        return infra
+        val className = if (name == "ebft") "net.postchain.ebft.EBFTSynchronizationInfrastructure" else name
+        return syncInfraCache.getOrPut(className) { getInstanceByClassName(className) }
     }
 
-    fun getSynchronizationInfrastuctureExtension(dynClassName: DynamicClassName): SynchronizationInfrastructureExtension {
-        val name = dynClassName.className
-        if (name in syncInfraCache) return syncInfraExtCache[name]!!
-        val infra = getInstanceByClassName(name) as SynchronizationInfrastructureExtension
-        syncInfraExtCache[name] = infra
-        return infra
+    private fun getSynchronizationInfrastructureExtension(dynClassName: DynamicClassName): SynchronizationInfrastructureExtension {
+        return syncInfraExtCache.getOrPut(dynClassName.className) { getInstanceByClassName(dynClassName.className) }
     }
 
     /**
@@ -119,10 +112,11 @@ open class BaseBlockchainInfrastructure(
      * @param className is the full name of the class to create an instance from
      * @return the instance as a [Shutdownable]
      */
-    private fun getInstanceByClassName(className: String): Shutdownable {
+    @Suppress("UNCHECKED_CAST")
+    private fun <T : Shutdownable> getInstanceByClassName(className: String): T {
         val iClass = Class.forName(className)
         val ctor = iClass.getConstructor(PostchainContext::class.java)
-        return ctor.newInstance(postchainContext) as Shutdownable
+        return ctor.newInstance(postchainContext) as T
     }
 
     override fun makeBlockchainProcess(
@@ -131,11 +125,11 @@ open class BaseBlockchainInfrastructure(
             heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
         val conf = engine.getConfiguration()
-        val synchronizationInfrastructure = getSynchronizationInfrastucture(conf.syncInfrastructureName)
+        val synchronizationInfrastructure = getSynchronizationInfrastructure(conf.syncInfrastructureName)
         val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener)
         if (conf is BaseBlockchainConfiguration) {
             for (extName in conf.syncInfrastructureExtensionNames) {
-                getSynchronizationInfrastuctureExtension(extName).connectProcess(process)
+                getSynchronizationInfrastructureExtension(extName).connectProcess(process)
             }
         }
         apiInfrastructure.connectProcess(process)
