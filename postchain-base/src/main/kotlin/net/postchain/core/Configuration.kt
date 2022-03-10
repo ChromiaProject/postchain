@@ -26,7 +26,6 @@ interface BlockchainConfiguration {
     fun makeBlockBuilder(ctx: EContext): BlockBuilder
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun initializeDB(ctx: EContext)
-    //fun getQueueCapacity(): Long
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
 
 }

@@ -45,10 +45,10 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider) : Shutdo
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
 
-        with(postchainContext) {
-            nodeDiagnosticContext.addProperty(DiagnosticProperty.VERSION, getVersion())
-            nodeDiagnosticContext.addProperty(DiagnosticProperty.PUB_KEY, nodeConfigProvider.getConfiguration().pubKey)
-            nodeDiagnosticContext.addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
+        with(postchainContext.nodeDiagnosticContext) {
+            addProperty(DiagnosticProperty.VERSION, getVersion())
+            addProperty(DiagnosticProperty.PUB_KEY, nodeConfigProvider.getConfiguration().pubKey)
+            addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
         }
     }
 
@@ -93,10 +93,10 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider) : Shutdo
         return if (logger.isDebugEnabled) {
             val x = processManager.retrieveBlockchain(chainId)
             if (x == null) {
-                logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.getNodeConfig().pubKey}?" }
+                logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.nodeConfig.pubKey}?" }
                 null
             } else {
-                val procName = BlockchainProcessName(postchainContext.getNodeConfig().pubKey, x.blockchainEngine.getConfiguration().blockchainRid)
+                val procName = BlockchainProcessName(postchainContext.nodeConfig.pubKey, x.blockchainEngine.getConfiguration().blockchainRid)
                 BlockTrace.buildBeforeBlock(procName)
             }
         } else {

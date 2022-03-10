@@ -10,7 +10,9 @@ data class PostchainContext(
         val connectionManager: ConnectionManager,
         val nodeDiagnosticContext: NodeDiagnosticContext = DefaultNodeDiagnosticContext()
 ) {
-    fun getNodeConfig() = nodeConfigProvider.getConfiguration()
+
+    // TODO: This will generate a new configuration on each call, which is needed for Managed Mode who updates the peer list.
+    val nodeConfig get() = nodeConfigProvider.getConfiguration()
 
     fun shutDown() {
         connectionManager.shutdown()

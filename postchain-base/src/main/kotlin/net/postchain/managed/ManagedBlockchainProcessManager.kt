@@ -102,7 +102,7 @@ open class ManagedBlockchainProcessManager(
     // TODO: [POS-129]: 'protected open' for tests only. Change that.
     protected open fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
         val storage = StorageBuilder.buildStorage(
-                postchainContext.getNodeConfig().appConfig, NODE_ID_NA)
+                postchainContext.nodeConfig.appConfig, NODE_ID_NA)
 
         // Building blockQueries of Rell module for ManagedDataSource
         val blockQueries = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
@@ -119,7 +119,7 @@ open class ManagedBlockchainProcessManager(
     }
 
     protected open fun createDataSource(blockQueries: BlockQueries) =
-            BaseManagedNodeDataSource(blockQueries, postchainContext.getNodeConfig())
+            BaseManagedNodeDataSource(blockQueries, postchainContext.nodeConfig)
 
     /**
      * @return a [RestartHandler] which is a lambda (This lambda will be called by the Engine after each block
@@ -280,8 +280,8 @@ open class ManagedBlockchainProcessManager(
             val toLaunch0 = if (reloadChain0 && CHAIN0 !in toLaunch) toLaunch.plus(0L) else toLaunch
 
             logger./*info*/ debug {
-                val pubKey = postchainContext.getNodeConfig().pubKey
-                val peerInfos = postchainContext.getNodeConfig().peerInfoMap
+                val pubKey = postchainContext.nodeConfig.pubKey
+                val peerInfos = postchainContext.nodeConfig.peerInfoMap
                 "pubKey: $pubKey" +
                         ", peerInfos: ${peerInfos.keys.toTypedArray().contentToString()}" +
                         ", chains to launch: ${toLaunch0.toTypedArray().contentDeepToString()}" +

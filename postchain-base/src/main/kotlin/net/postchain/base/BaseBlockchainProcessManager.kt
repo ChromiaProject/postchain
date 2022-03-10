@@ -6,7 +6,6 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
@@ -35,8 +34,7 @@ open class BaseBlockchainProcessManager(
 
     override val synchronizer = Any()
 
-    val nodeConfig: NodeConfig
-        get() = postchainContext.getNodeConfig()
+    val nodeConfig = postchainContext.nodeConfig
     val connectionManager = postchainContext.connectionManager
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
     val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
