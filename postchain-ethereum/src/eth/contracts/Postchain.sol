@@ -72,7 +72,7 @@ library Postchain {
         return (evt.token, evt.beneficiary, evt.amount);
     }
 
-    function verifyEventNFT(bytes32 _hash, bytes memory _event) public pure returns (IERC721, address, uint256) {
+    function verifyEventNFT(bytes32 _hash, bytes memory _event) internal pure returns (IERC721, address, uint256) {
         EventNFT memory evt = abi.decode(_event, (EventNFT));
         bytes32 hash = keccak256(_event);
         if (hash != _hash) {
