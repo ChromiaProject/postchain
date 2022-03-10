@@ -9,6 +9,8 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 
+const val TRANSACTION_QUEUE_CAPACITY = 2500 // 5 seconds (if 500 tps)
+
 class BaseBlockchainConfigurationData(
     val data: GtvDictionary,
     partialContext: BlockchainContext,
@@ -66,7 +68,7 @@ class BaseBlockchainConfigurationData(
      */
     fun getQueueCapacity(): Int {
         val stratDict = data[KEY_BLOCKSTRATEGY]
-        return stratDict?.get(KEY_BLOCKSTRATEGY_QUEUE_CAPACITY)?.asInteger()?.toInt() ?: 2500 // 5 seconds (if 500 tps)
+        return stratDict?.get(KEY_BLOCKSTRATEGY_QUEUE_CAPACITY)?.asInteger()?.toInt() ?: TRANSACTION_QUEUE_CAPACITY
     }
 
     fun getDependenciesAsList(): List<BlockchainRelatedInfo> {

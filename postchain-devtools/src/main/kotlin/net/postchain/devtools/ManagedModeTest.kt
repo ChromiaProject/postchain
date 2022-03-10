@@ -1,31 +1,40 @@
 package net.postchain.devtools
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
-import net.postchain.base.*
+import net.postchain.base.BaseBlockBuildingStrategy
+import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.BaseBlockchainContext
+import net.postchain.base.BaseBlockchainInfrastructure
+import net.postchain.base.PeerInfo
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.ManagedModeTest.NodeSet
 import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvString
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.core.NodeRid
-import net.postchain.network.common.ConnectionManager
 import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -254,26 +263,20 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
     lateinit var nodeConfig: NodeConfig
     lateinit var dataSource: MockManagedNodeDataSource
     override fun makeProcessManager(
-            nodeConfigProvider: NodeConfigurationProvider,
+            postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,
-            blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext,
-            connectionManager: ConnectionManager): BlockchainProcessManager {
-        return TestManagedBlockchainProcessManager(blockchainInfrastructure, nodeConfigProvider,
-                blockchainConfigurationProvider, nodeDiagnosticContext, dataSource, connectionManager)
+            blockchainConfigurationProvider: BlockchainConfigurationProvider): BlockchainProcessManager {
+        return TestManagedBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider, dataSource)
     }
 
-    override fun makeBlockchainInfrastructure(
-            nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext,
-            connectionManager: ConnectionManager): BlockchainInfrastructure {
-        nodeConfig = nodeConfigProvider.getConfiguration()
-        dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
+    override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
+        with(postchainContext) {
+            dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
 
-        val syncInfra = EBFTSynchronizationInfrastructure(nodeConfigProvider, nodeDiagnosticContext, connectionManager)
-        val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
-        val infrastructure = TestManagedBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, dataSource, connectionManager)
-        return infrastructure
+            val syncInfra = EBFTSynchronizationInfrastructure(this)
+            val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
+            return TestManagedBlockchainInfrastructure(syncInfra, apiInfra, this, dataSource)
+        }
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
@@ -313,11 +316,11 @@ class TestManagedBlockchainConfigurationProvider(val mockDataSource: ManagedNode
 
 
 class TestManagedBlockchainInfrastructure(
-        nodeConfigProvider: NodeConfigurationProvider,
-        syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
-        nodeDiagnosticContext: NodeDiagnosticContext, val mockDataSource: MockManagedNodeDataSource,
-        connectionManager: ConnectionManager) :
-        BaseBlockchainInfrastructure(nodeConfigProvider, syncInfra, apiInfra, nodeDiagnosticContext, connectionManager) {
+        syncInfra: SynchronizationInfrastructure,
+        apiInfra: ApiInfrastructure,
+        postchainContext: PostchainContext,
+        val mockDataSource: MockManagedNodeDataSource) :
+        BaseBlockchainInfrastructure(syncInfra, apiInfra, postchainContext) {
     override fun makeBlockchainConfiguration(
             rawConfigurationData: ByteArray,
             eContext: EContext,
@@ -328,16 +331,15 @@ class TestManagedBlockchainInfrastructure(
 }
 
 class TestManagedBlockchainProcessManager(
+        postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
-        nodeConfigProvider: NodeConfigurationProvider,
         blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext,
-        val testDataSource: ManagedNodeDataSource,
-        connectionManager: ConnectionManager)
-    : ManagedBlockchainProcessManager(blockchainInfrastructure,
-        nodeConfigProvider,
-        blockchainConfigProvider,
-        nodeDiagnosticContext, connectionManager) {
+        val testDataSource: ManagedNodeDataSource)
+    : ManagedBlockchainProcessManager(
+        postchainContext,
+        blockchainInfrastructure,
+        blockchainConfigProvider
+) {
 
     companion object : KLogging()
 

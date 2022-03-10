@@ -2,16 +2,12 @@
 
 package net.postchain.ebft
 
+import net.postchain.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.config.node.NodeConfig
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticProperty.BLOCKCHAIN
-import net.postchain.debug.DpNodeType
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.message.Message
 import net.postchain.ebft.worker.HistoricBlockchainProcess
@@ -24,18 +20,16 @@ import net.postchain.network.peer.*
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
-        val nodeConfigProvider: NodeConfigurationProvider,
-        val nodeDiagnosticContext: NodeDiagnosticContext,
-        val connectionManager: ConnectionManager,
+        private val postchainContext: PostchainContext,
         val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
 ) : SynchronizationInfrastructure {
 
-    val nodeConfig get() = nodeConfigProvider.getConfiguration()
+    val nodeConfig get() = postchainContext.nodeConfig
+    val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
+    val connectionManager = postchainContext.connectionManager
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
 
-    override fun shutdown() {
-        connectionManager.shutdown()
-    }
+    override fun shutdown() { }
 
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,

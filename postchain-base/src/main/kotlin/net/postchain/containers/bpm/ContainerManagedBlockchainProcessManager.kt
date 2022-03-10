@@ -3,11 +3,11 @@ package net.postchain.containers.bpm
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.Utils
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
 import net.postchain.containers.bpm.DockerTools.checkContainerName
@@ -22,7 +22,6 @@ import net.postchain.core.RestartHandler
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.heartbeat.Chain0HeartbeatListener
 import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
 import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
@@ -30,20 +29,15 @@ import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
-import net.postchain.network.common.ConnectionManager
 
 open class ContainerManagedBlockchainProcessManager(
+        postchainContext: PostchainContext,
         private val masterBlockchainInfra: MasterBlockchainInfra,
-        nodeConfigProvider: NodeConfigurationProvider,
-        blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext,
-        connectionManager: ConnectionManager
+        blockchainConfigProvider: BlockchainConfigurationProvider
 ) : ManagedBlockchainProcessManager(
+        postchainContext,
         masterBlockchainInfra,
-        nodeConfigProvider,
-        blockchainConfigProvider,
-        nodeDiagnosticContext,
-        connectionManager
+        blockchainConfigProvider
 ) {
 
     companion object : KLogging()
@@ -53,6 +47,7 @@ open class ContainerManagedBlockchainProcessManager(
 
     private val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
     private val heartbeatListeners = mutableMapOf<Long, HeartbeatListener>()
+
     /**
      * TODO: [POS-129]: Implement handling of DockerException
      */
@@ -67,8 +62,7 @@ open class ContainerManagedBlockchainProcessManager(
         stopRunningChainContainers()
     }
 
-    override fun createDataSource(blockQueries: BlockQueries) =
-            BaseDirectoryDataSource(blockQueries, nodeConfigProvider.getConfiguration())
+    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, nodeConfig)
 
     override fun buildRestartHandler(chainId: Long): RestartHandler {
         return { blockTimestamp: Long, blockTrace: BlockTrace? ->

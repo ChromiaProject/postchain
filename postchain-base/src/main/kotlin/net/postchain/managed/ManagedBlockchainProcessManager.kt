@@ -3,16 +3,14 @@
 package net.postchain.managed
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
-import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.network.common.ConnectionManager
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -48,17 +46,13 @@ import net.postchain.network.common.ConnectionManager
  */
 @Suppress("PropertyName")
 open class ManagedBlockchainProcessManager(
+        postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
-        nodeConfigProvider: NodeConfigurationProvider,
-        blockchainConfigProvider: BlockchainConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext,
-        connectionManager: ConnectionManager
+        blockchainConfigProvider: BlockchainConfigurationProvider
 ) : BaseBlockchainProcessManager(
+        postchainContext,
         blockchainInfrastructure,
-        nodeConfigProvider,
-        blockchainConfigProvider,
-        nodeDiagnosticContext,
-        connectionManager
+        blockchainConfigProvider
 ) {
 
     protected open lateinit var dataSource: ManagedNodeDataSource
@@ -87,7 +81,7 @@ open class ManagedBlockchainProcessManager(
 //                logger.debug { "${nodeConfigProvider.javaClass}" }
 
             // Setting up managed data source to the nodeConfig
-            (nodeConfigProvider as? ManagedNodeConfigurationProvider)
+            (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
                     ?.setPeerInfoDataSource(dataSource)
                     ?: logger.warn { "Node config is not managed, no peer info updates possible" }
 
@@ -108,7 +102,7 @@ open class ManagedBlockchainProcessManager(
     // TODO: [POS-129]: 'protected open' for tests only. Change that.
     protected open fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
         val storage = StorageBuilder.buildStorage(
-                nodeConfigProvider.getConfiguration().appConfig, NODE_ID_NA)
+                postchainContext.nodeConfig.appConfig, NODE_ID_NA)
 
         // Building blockQueries of Rell module for ManagedDataSource
         val blockQueries = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
@@ -125,7 +119,7 @@ open class ManagedBlockchainProcessManager(
     }
 
     protected open fun createDataSource(blockQueries: BlockQueries) =
-            BaseManagedNodeDataSource(blockQueries, nodeConfigProvider.getConfiguration())
+            BaseManagedNodeDataSource(blockQueries, postchainContext.nodeConfig)
 
     /**
      * @return a [RestartHandler] which is a lambda (This lambda will be called by the Engine after each block
@@ -286,8 +280,8 @@ open class ManagedBlockchainProcessManager(
             val toLaunch0 = if (reloadChain0 && CHAIN0 !in toLaunch) toLaunch.plus(0L) else toLaunch
 
             logger./*info*/ debug {
-                val pubKey = nodeConfigProvider.getConfiguration().pubKey
-                val peerInfos = nodeConfigProvider.getConfiguration().peerInfoMap
+                val pubKey = postchainContext.nodeConfig.pubKey
+                val peerInfos = postchainContext.nodeConfig.peerInfoMap
                 "pubKey: $pubKey" +
                         ", peerInfos: ${peerInfos.keys.toTypedArray().contentToString()}" +
                         ", chains to launch: ${toLaunch0.toTypedArray().contentDeepToString()}" +
