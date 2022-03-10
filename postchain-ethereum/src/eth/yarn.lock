@@ -6132,13 +6132,6 @@ collection-visit@^1.0.0:
     map-visit "^1.0.0"
     object-visit "^1.0.0"
 
-collections@^5.1.8:
-  version "5.1.12"
-  resolved "https://registry.yarnpkg.com/collections/-/collections-5.1.12.tgz#270f6c26ddc2930734ae6cc19ad4e8fb412af739"
-  integrity sha512-7WV0gdGlQFHjB//+/5JW4CdMnOlf7fWMMeM3EWvuao7RbK0MeFS01bZOgWmIH5DHDejSutf455QUZ56ZjjROXw==
-  dependencies:
-    weak-map "~1.0.x"
-
 color-convert@^1.9.0, color-convert@^1.9.3:
   version "1.9.3"
   resolved "https://registry.yarnpkg.com/color-convert/-/color-convert-1.9.3.tgz#bb71850690e1f136567de629d2d5471deda4c1e8"
@@ -14068,14 +14061,13 @@ posix-character-classes@^0.1.0:
   resolved "https://registry.yarnpkg.com/posix-character-classes/-/posix-character-classes-0.1.1.tgz#01eac0fe3b5af71a2a6c02feabb8c1fef7e00eab"
   integrity sha1-AerA/jta9xoqbAL+q7jB/vfgDqs=
 
-postchain-client@^0.9.2:
-  version "0.9.2"
-  resolved "https://registry.yarnpkg.com/postchain-client/-/postchain-client-0.9.2.tgz#2faf46647508b2bc6112099cad378eda7d40f982"
-  integrity sha512-EaTBDwZhJ9vQTUGhAh4QWryJd3u6VvVWG/+43xudjsSx0gt2eNuSqBZgRZjPeZ1dgY1xE5NY+K5i3S+MLwMZRA==
+postchain-client@^0.10.5:
+  version "0.10.5"
+  resolved "https://registry.yarnpkg.com/postchain-client/-/postchain-client-0.10.5.tgz#a621c9d86b331ecff3bb1a04689f1532fc955ee3"
+  integrity sha512-V/f1Cm+i+98vvFdBFJrC0XEnbuI976EqFCtlShkxwzg/OlnAMaj6ZQ1bURLZRyVMJAaJMey/sjqRkGAr+ycCuw==
   dependencies:
     asn1.js "^4.10.1"
     browser-request "^0.3.3"
-    collections "^5.1.8"
     request "^2.81.0"
     secp256k1 "^3.5.0"
 
@@ -18432,11 +18424,6 @@ wbuf@^1.1.0, wbuf@^1.7.3:
   integrity sha512-O84QOnr0icsbFGLS0O3bI5FswxzRr8/gHwWkDlQFskhSPryQXvrTMxjxGP4+iWYoauLoBvfDpkrOauZ+0iZpDA==
   dependencies:
     minimalistic-assert "^1.0.0"
-
-weak-map@~1.0.x:
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/weak-map/-/weak-map-1.0.5.tgz#79691584d98607f5070bd3b70a40e6bb22e401eb"
-  integrity sha1-eWkVhNmGB/UHC9O3CkDmuyLkAes=
 
 web3-bzz@1.2.11:
   version "1.2.11"

@@ -5,10 +5,11 @@ import { TestToken__factory, ChrL2__factory, Postchain__factory, EC__factory, Me
 import { ChrL2LibraryAddresses } from "../src/types/factories/ChrL2__factory";
 import { MerkleProofLibraryAddresses } from "../src/types/factories/MerkleProof__factory";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
+import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
 import { PostchainLibraryAddresses } from "../src/types/factories/Postchain__factory";
 import { ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
+import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash} from "./utils"
 
 chai.use(solidity);
 const { expect } = chai;
@@ -261,15 +262,22 @@ describe("ChrL2", () => {
             const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
             const toDeposit = ethers.utils.parseEther("100")
             const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
-
+            const name = await tokenApproveInstance.name()
+            const symbol = await tokenApproveInstance.symbol()
             const expectedPayload = ''.concat(
-                "0xa5", "84", "0000005b", "30", "84", "00000055", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
+                "0xa5", "84", "0000008c", "30", "84", "00000086", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
                 "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value length
                 user.address.substring(2),
                 "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
                 tokenAddress.substring(2),
                 "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
-                hexZeroPad(toDeposit.toHexString(), 32).substring(2)
+                hexZeroPad(toDeposit.toHexString(), 32).substring(2),
+                "a2", "84", "00000010", "0c", "84", "0000000a", 
+                solidityPack(["string"], [name]).substring(2),
+                "a2", "84", "00000009", "0c", "84", "00000003", 
+                solidityPack(["string"], [symbol]).substring(2),
+                "a2", "84", "00000006", "0c", "84", "00000000", 
+                ""
             )
             await tokenApproveInstance.approve(chrL2Address, toDeposit)
             await expect(chrL2Instance.deposit(tokenAddress, toDeposit))
@@ -304,19 +312,19 @@ describe("ChrL2", () => {
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
                 const contractAddress = hexZeroPad(tokenAddress, 32)
                 const toAddress = hexZeroPad(user.address, 32)
-                const amount = hexZeroPad(toDeposit.toHexString(), 32)
+                const amountHex = hexZeroPad(toDeposit.toHexString(), 32)
                 let event: string = ''
                 event = event.concat(serialNumber.substring(2, serialNumber.length))
                 event = event.concat(contractAddress.substring(2, contractAddress.length))
                 event = event.concat(toAddress.substring(2, toAddress.length))
-                event = event.concat(amount.substring(2, amount.length))
+                event = event.concat(amountHex.substring(2, amountHex.length))
 
                 // swap toAddress and contractAddress position to make maliciousEvent
                 let maliciousEvent: string = ''
                 maliciousEvent = maliciousEvent.concat(serialNumber.substring(2, serialNumber.length))
                 maliciousEvent = maliciousEvent.concat(toAddress.substring(2, toAddress.length))
                 maliciousEvent = maliciousEvent.concat(contractAddress.substring(2, contractAddress.length))
-                maliciousEvent = maliciousEvent.concat(amount.substring(2, amount.length))
+                maliciousEvent = maliciousEvent.concat(amountHex.substring(2, amountHex.length))
 
                 let data = DecodeHexStringToByteArray(event)
                 let maliciousData = DecodeHexStringToByteArray(maliciousEvent)
@@ -334,7 +342,7 @@ describe("ChrL2", () => {
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
                 let extraDataMerkleRoot = "FC3424F7E05AEE1F9085ACAFC981261CA1EA3A9A28DDA88C809C06B94F68C6A6"
-                
+
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
                 let node12 = postchainMerkleNodeHash([0x00, node1, node2])
@@ -370,7 +378,7 @@ describe("ChrL2", () => {
                                     DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
                                     DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
                                 ]
-                                
+         
                 let eventProof = {
                     leaf: DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     position: 0,
@@ -380,9 +388,8 @@ describe("ChrL2", () => {
                     leaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
                     position: 0,
                     merkleProofs: merkleProof,
-                }                
+                }
                 let el2HashedLeaf = hashGtvBytes64Leaf(DecodeHexStringToByteArray(el2Leaf))
-                let extraRoot = el2HashedLeaf
                 let el2Proof = {
                     el2Leaf: DecodeHexStringToByteArray(el2Leaf),
                     el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
@@ -414,42 +421,42 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")                        
                     ],
                 }
-                await expect(chrL2Instance.withdraw_request(maliciousData, eventProof,
+                await expect(chrL2Instance.withdrawRequest(maliciousData, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid event')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], invalidEl2Leaf)
                 ).to.be.revertedWith('Postchain: invalid el2 extra data')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], invalidExtraDataRoot)
                 ).to.be.revertedWith('Postchain: invalid extra data root')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(maliciousBlockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid block header')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], maliciousEl2Proof)
                 ).to.be.revertedWith('Postchain: invalid el2 extra merkle proof')
-                await expect(chrL2Instance.withdraw_request(data, maliciousEventProof,
+                await expect(chrL2Instance.withdrawRequest(data, maliciousEventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('ChrL2: invalid merkle proof')
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [], el2Proof)
                 ).to.be.revertedWith('ChrL2: block signature is invalid')
 
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.emit(chrL2Instance, "WithdrawRequest")
                 .withArgs(user.address, tokenAddress, toDeposit)
 
-                await expect(chrL2Instance.withdraw_request(data, eventProof,
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
                 ).to.be.revertedWith('ChrL2: event hash was already used')
@@ -481,33 +488,8 @@ describe("ChrL2", () => {
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint)
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
-                    user.address)).to.be.revertedWith('ChrL2: fund was already claimed')
+                    user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
             }
         })
     })
 })
-
-var DecodeHexStringToByteArray = function (hexString: string) {
-    var result = [];
-    while (hexString.length >= 2) { 
-        result.push(parseInt(hexString.substring(0, 2), 16))
-        hexString = hexString.substring(2, hexString.length)
-    }
-    return result;
-}
-
-var postchainMerkleNodeHash = function(values: any[]): string {
-    return ethers.utils.soliditySha256(['uint8', 'bytes32', 'bytes32'], values)
-}
-
-var hashGtvBytes32Leaf = function (data: BytesLike): string {
-    var result: string = ''
-    result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes32'], [0x1, 0xA1, 32+2, 0x4, 32, data])
-    return result
-}
-
-var hashGtvBytes64Leaf = function (data: BytesLike): string {
-    var result: string = ''
-    result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA1, 64+2, 0x4, 64, data])
-    return result
-}
