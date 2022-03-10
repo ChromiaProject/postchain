@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -9,7 +10,9 @@ import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "./utils/Gtv.sol";
 import "./Postchain.sol";
 
-contract ChrL2 is IERC721Receiver, ReentrancyGuard {
+contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuard {
+    // This contract is upgradeable. This imposes restrictions on how storage layout can be modified once it is deployed
+    // Some instructions are also not allowed. Read more at: https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
     enum AssetType {
@@ -55,7 +58,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
     event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
     event WithdrawalNFT(address indexed beneficiary, IERC721 indexed nft, uint256 tokenId);
 
-    constructor(address[] memory _directoryNodes, address[] memory _appNodes) {
+    function initialize(address[] memory _directoryNodes, address[] memory _appNodes) public initializer {
         directoryNodes = _directoryNodes;
         appNodes = _appNodes;
     }
@@ -176,7 +179,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         Data.EventProof memory eventProof,
         bytes memory blockHeader,
         bytes[] memory sigs,
-        Data.EL2ProofData memory el2Proof        
+        Data.EL2ProofData memory el2Proof
     ) internal view {
         require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
         {
@@ -217,7 +220,7 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
             emit WithdrawRequestNFT(beneficiary, nft, tokenId);
         }
         return true;
-    } 
+    }
 
     function withdraw(bytes32 _hash, address payable beneficiary) public nonReentrant {
         Withdraw storage wd = _withdraw[_hash];
@@ -244,5 +247,5 @@ contract ChrL2 is IERC721Receiver, ReentrancyGuard {
         _owners[wd.nft][tokenId] = address(0);
         wd.nft.safeTransferFrom(address(this), beneficiary, tokenId);
         emit WithdrawalNFT(beneficiary, wd.nft, tokenId);
-    } 
+    }
 }

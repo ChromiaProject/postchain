@@ -91,3 +91,13 @@ Find out more about deployment here:
 
 - Gas reporter [hardhat-gas-reporter](https://hardhat.org/plugins/hardhat-gas-reporter.html)
 - Etherscan [hardhat-etherscan](https://hardhat.org/plugins/nomiclabs-hardhat-etherscan.html)
+
+## Upgrade ChrL2 contract
+
+You can upgrade a deployed instance of the ChrL2 contract.
+
+Replace CHRL_CONTRACT_ADDRESS with the address contract was deployed to
+
+```sh
+$ yarn update --network rinkeby --address CHRL_CONTRACT_ADDRESS
+```

@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 library Hash {
 
-    function hash(bytes32 left, bytes32 right) public pure returns (bytes32) {
+    function hash(bytes32 left, bytes32 right) internal pure returns (bytes32) {
         if (left == 0x0 && right == 0x0) {
             return 0x0;
         } else if (left == 0x0) {
@@ -15,7 +15,7 @@ library Hash {
         }
     }
 
-    function hashGtvBytes32Leaf(bytes32 value) public pure returns (bytes32) {
+    function hashGtvBytes32Leaf(bytes32 value) internal pure returns (bytes32) {
         return sha256(abi.encodePacked(
                 uint8(0x1),  // Gtv merkle tree leaf prefix
                 uint8(0xA1), // // Gtv ByteArray tag: CONTEXT_CLASS, CONSTRUCTED, 1
@@ -26,7 +26,7 @@ library Hash {
         ));
     }
 
-    function hashGtvBytes64Leaf(bytes memory value) public pure returns (bytes32) {
+    function hashGtvBytes64Leaf(bytes memory value) internal pure returns (bytes32) {
         return sha256(abi.encodePacked(
                 uint8(0x1),  // Gtv merkle tree leaf prefix
                 uint8(0xA1), // // Gtv ByteArray tag: CONTEXT_CLASS, CONSTRUCTED, 1

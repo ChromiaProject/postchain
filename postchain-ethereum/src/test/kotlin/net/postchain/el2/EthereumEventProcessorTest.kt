@@ -84,8 +84,7 @@ class EthereumEventProcessorTest {
     fun `Deposit events on ethereum should be parsed and private validated`() {
         val initialMint = 50L
         // Deploy ChrL2 contract
-        val mockNodes = DynamicArray(Address::class.java)
-        val chrL2 = ChrL2.deploy(web3j, transactionManager, gasProvider, mockNodes, mockNodes).send()
+        val chrL2 = ChrL2.deploy(web3j, transactionManager, gasProvider).send()
         val web3c = Web3Connector(web3j, chrL2.contractAddress)
 
         // Mock query for last eth block in this test
