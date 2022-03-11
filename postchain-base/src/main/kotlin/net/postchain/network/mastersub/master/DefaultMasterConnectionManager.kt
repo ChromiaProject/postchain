@@ -2,6 +2,7 @@ package net.postchain.network.mastersub.master
 
 import mu.KLogging
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.bpm.masterPort
 import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ChainsWithOneConnection

@@ -3,6 +3,7 @@ package net.postchain.network.mastersub.master
 import mu.KLogging
 import net.postchain.common.toHex
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.bpm.containerSendConnectedPeersPeriod
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
@@ -10,7 +11,14 @@ import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
-import net.postchain.network.mastersub.protocol.*
+import net.postchain.network.mastersub.protocol.MsConnectedPeersMessage
+import net.postchain.network.mastersub.protocol.MsDataMessage
+import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
+import net.postchain.network.mastersub.protocol.MsHandshakeMessage
+import net.postchain.network.mastersub.protocol.MsHeartbeatMessage
+import net.postchain.network.mastersub.protocol.MsMessage
+import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
+import net.postchain.network.mastersub.protocol.MsSubnodeStatusMessage
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration

@@ -5,7 +5,6 @@ package net.postchain.config.node
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
-import net.postchain.containers.bpm.FileSystem
 import net.postchain.core.BlockchainRid
 import net.postchain.core.Infrastructure
 import net.postchain.core.NodeRid
@@ -15,7 +14,6 @@ open class NodeConfig(val appConfig: AppConfig) {
 
     companion object {
         const val DEFAULT_PORT: Int = 9870
-        const val CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
     }
 
     private val config: Configuration
@@ -32,43 +30,6 @@ open class NodeConfig(val appConfig: AppConfig) {
     val infrastructure: String
         // "base/ebft" is the default
         get() = config.getString("infrastructure", Infrastructure.Ebft.get())
-
-    /**
-     * Container chains
-     */
-    val containerImage: String
-        get() = config.getString("containerChains.dockerImage", "chromaway/postchain-subnode:latest")
-    val subnodeRestApiPort: Int
-        get() = config.getInt("containerChains.api.port", 7740)
-
-    // Used by subnode to connect to master for inter-node communication.
-    val masterHost: String
-        get() = config.getString("containerChains.masterHost", "localhost")
-
-    val masterPort: Int
-        get() = config.getInt("containerChains.masterPort", 9860)
-
-    // Used by master for restAPI communication with subnode
-    val slaveHost: String
-        get() = config.getString("containerChains.slaveHost", "localhost")
-
-    val containerSendConnectedPeersPeriod: Long
-        get() = config.getLong("container.send-connected-peers-period", 60_000L)
-
-    val runningContainersAtStartRegexp: String
-        get() = config.getString("container.healthcheck.runningContainersAtStartRegexp", "")
-    val runningContainersCheckPeriod: Int // In number of blocks of chain0, set 0 to disable a check
-        get() = config.getInt("container.healthcheck.runningContainersCheckPeriod", 0)
-
-    // Container FileSystem
-    val containerFilesystem: String
-        get() = config.getString("container.filesystem", FileSystem.Type.LOCAL.name).toUpperCase() // LOCAL | ZFS
-    val containerZfsPool: String
-        get() = config.getString("container.zfs.pool-name", FileSystem.ZFS_POOL_NAME)
-    val containerZfsPoolInitScript: String
-        get() = config.getString("container.zfs.pool-init-script", CONTAINER_ZFS_INIT_SCRIPT)
-    val containerBindPgdataVolume: Boolean
-        get() = config.getBoolean("container.bind-pgdata-volume", true)
 
     /**
      * Database

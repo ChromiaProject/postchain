@@ -3,6 +3,8 @@ package net.postchain.network.mastersub.subnode
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.bpm.masterHost
+import net.postchain.containers.bpm.masterPort
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
