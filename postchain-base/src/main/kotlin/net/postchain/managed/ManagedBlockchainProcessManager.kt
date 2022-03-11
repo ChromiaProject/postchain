@@ -340,13 +340,12 @@ open class ManagedBlockchainProcessManager(
      * Note: We use [computeBlockchainList()] which is the API method "nm_compute_blockchain_list" of this node's own
      * API for chain zero.
      *
-     * @return all chains chain zero thinks we should run, in the order they should be started.
+     * @return all chainIids chain zero thinks we should run.
      */
-    protected open fun retrieveBlockchainsToLaunch(): Array<BlockchainRelatedInfo> {
+    protected open fun retrieveBlockchainsToLaunch(): Array<Long> {
         retrieveDebug("Begin")
         // chain-zero is always in the list
-        val chain0 = BlockchainRelatedInfo(BlockchainRid.ZERO_RID, "chain zero", 0L)
-        val levelSorter = IcmfListenerLevelSorter(chain0)
+        val blockchains = mutableListOf(0L)
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
@@ -354,9 +353,7 @@ open class ManagedBlockchainProcessManager(
             val locallyConfiguredReplicas = nodeConfig.blockchainsToReplicate
             val domainBlockchainSet = dataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
             val allMyBlockchains = domainBlockchainSet.union(locallyConfiguredReplicas)
-
-            // If we cannot find the chainIid, then we should create an Iid for the chain.
-            val allChainsWithIid = allMyBlockchains.map { blockchainRid ->
+            allMyBlockchains.map { blockchainRid ->
                 val chainId = db.getChainId(ctx0, blockchainRid)
                 retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
                 if (chainId == null) {
@@ -366,31 +363,17 @@ open class ManagedBlockchainProcessManager(
                     withReadWriteConnection(storage, newChainId) { newCtx ->
                         db.initializeBlockchain(newCtx, blockchainRid)
                     }
-                    BlockchainRelatedInfo(blockchainRid, null, newChainId)
+                    newChainId
                 } else {
-                    BlockchainRelatedInfo(blockchainRid, null, chainId)
+                    chainId
                 }
-            }.filter { it.chainId != 0L }
-
-            // Add the chains to the level sorter
-            allChainsWithIid.forEach {
-                val conn = icmfController.getListenerConnChecker(it.chainId!!)
-                if (conn == null) {
-                    levelSorter.add(LevelConnectionChecker.NOT_LISTENER, it) // This is not a listener chain
-                }  else {
-                    val level: Int = when (conn) {
-                        is LevelConnectionChecker -> conn.myListeningLevel // Get the real level
-                        else -> LevelConnectionChecker.MID_LEVEL // We don't know take middle
-                    }
-                    levelSorter.add(level, it)
-                }
+            }.filter { it != 0L }.forEach {
+                blockchains.add(it)
             }
             true
         }
-
-        retrieveDebug("End, restart: ${levelSorter.size()}.")
-        return levelSorter.getSorted() // Generate a sorted list
-
+        retrieveDebug("End, restart: ${blockchains.size}.")
+        return blockchains.toTypedArray()
     }
 
     // ----------------------------------------------

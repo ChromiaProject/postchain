@@ -25,9 +25,7 @@ open class BaseBlockchainConfiguration(
     override val effectiveBlockchainRID = configData.getHistoricBRID() ?: configData.context.blockchainRID
     override val signers = configData.getSigners()
 
-    // Future work: make validation configurable (i.e. create the validator from config setting),
-    // Currently we can only use "base"
-    private val blockHeaderValidator: BlockHeaderValidator = BaseBlockHeaderValidator(
+    private val blockWitnessManager: BlockWitnessManager = BaseBlockWitnessManager(
         cryptoSystem,
         configData.blockSigMaker,
         signers.toTypedArray()
@@ -56,9 +54,9 @@ open class BaseBlockchainConfiguration(
     }
 
     /**
-     * We can get the [BlockHeaderValidator] directly from the config, don't have to go to the [BlockBuilder]
+     * We can get the [BlockWitnessManager] directly from the config, don't have to go to the [BlockBuilder]
      */
-    override fun getBlockHeaderValidator(): BlockHeaderValidator = blockHeaderValidator
+    override fun getBlockHeaderValidator(): BlockWitnessManager = blockWitnessManager
 
     override fun getTransactionFactory(): TransactionFactory {
         return BaseTransactionFactory()
@@ -84,7 +82,7 @@ open class BaseBlockchainConfiguration(
             getSpecialTxHandler(),
             signers.toTypedArray(),
             configData.blockSigMaker,
-            blockHeaderValidator,
+            blockWitnessManager,
             bcRelatedInfosDependencyList,
             makeBBExtensions(),
             effectiveBlockchainRID != blockchainRid,

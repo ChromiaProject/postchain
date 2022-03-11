@@ -52,7 +52,7 @@ open class BaseBlockchainProcessManager(
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
 
     // We need to use the same [IcmfController] for all chains or else they won't "see" each other (and be unable to connect).
-    protected val icmfController = IcmfController()
+    protected val icmfController = IcmfController(storage)
 
     // For DEBUG only
     var insideATest = false

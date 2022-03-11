@@ -35,7 +35,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     private var blockQueries: BlockQueries? = null // This is for querying ourselves, i.e. the "anchor rell app"
 
     // We will need one validator for each blockchain we are anchoring
-    private val validationMap: Map<BlockchainRid, BlockHeaderValidator> = hashMapOf()
+    private val validationMap: Map<BlockchainRid, BlockWitnessManager> = hashMapOf()
 
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
@@ -88,11 +88,13 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         val retList = ArrayList<OpData>()
 
         verifySameChainId(bctx, blockchainRID)
-        val pipes = this.icmfReceiver!!.getNonEmptyPipesForListenerChain(bctx.chainID) // Returns the pipes that has anchor chain as a listener
+        val pipes = this.icmfReceiver!!.getPipesForListenerChain(bctx.blockIID) // Returns the pipes that has anchor chain as a listener
 
         // Extract all packages from all pipes
         for (pipe in pipes) {
-            handlePipe(blockchainRID, pipe, retList)
+            if (pipe.hasNewPackets()) {
+                handlePipe(blockchainRID, pipe, retList)
+            }
         }
         return retList
     }

@@ -54,8 +54,6 @@ class BaseManagedBlockBuilder(
         }
     }
 
-    override fun getBlockHeaderValidator() = blockBuilder.getBlockHeaderValidator()
-
     override fun begin(partialBlockHeader: BlockHeader?) {
         runOpSafely { blockBuilder.begin(partialBlockHeader) }
     }

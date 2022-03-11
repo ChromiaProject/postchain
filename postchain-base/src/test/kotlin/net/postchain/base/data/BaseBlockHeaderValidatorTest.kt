@@ -7,7 +7,7 @@ import net.postchain.core.InitialBlockData
 import org.junit.jupiter.api.Test
 
 /**
- * The [BaseBlockHeaderValidator] doesn't have any DB dependencies, which makes it pretty easy to do unit test for
+ * The [BaseBlockWitnessManager] doesn't have any DB dependencies, which makes it pretty easy to do unit test for
  *
  * Note: this is somewhat overlapping the [BaseBlockBuilderValidatonTest]
  */
@@ -44,7 +44,7 @@ class BaseBlockHeaderValidatorTest {
 
         val sigMaker: SigMaker = cryptoSystem.buildSigMaker(sub1PubKey, privKey)
 
-        val validator = BaseBlockHeaderValidator(cryptoSystem, sigMaker, subjects)
+        val validator = BaseBlockWitnessManager(cryptoSystem, sigMaker, subjects)
 
         // ------------------
         // Validate

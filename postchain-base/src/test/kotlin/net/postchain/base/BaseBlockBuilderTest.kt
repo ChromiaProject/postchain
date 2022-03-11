@@ -40,7 +40,7 @@ class BaseBlockBuilderTest {
     val dummy = ByteArray(32, { 0 })
     val subjects = arrayOf("test".toByteArray())
     val signer = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
-    val validator = BaseBlockHeaderValidator(cryptoSystem, signer, subjects)
+    val validator = BaseBlockWitnessManager(cryptoSystem, signer, subjects)
     val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
         subjects, signer, validator, listOf(),  listOf(), false)

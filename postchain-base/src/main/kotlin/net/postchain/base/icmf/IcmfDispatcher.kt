@@ -42,7 +42,7 @@ class IcmfDispatcher {
         return if (x == null) {
             listOf()
         } else {
-            x!!.toList()
+            x.toList()
         }
     }
 

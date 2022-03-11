@@ -131,11 +131,8 @@ data class SystemSetup(
      */
     fun getBlockchainsANodeShouldRun(nodeNr: NodeSeqNumber): List<BlockchainSetup> {
         val bcSetups = blockchainMap.values.filter { bc -> bc.signerNodeList.contains(nodeNr) }
-        val levelSorter = IcmfListenerLevelSorter(null) // No chain0
-        bcSetups.forEach {
-            levelSorter.add(it.getListenerLevel(), it.getChainInfo())
-        }
-        val sortedChains = levelSorter.getSorted()
+
+        val sortedChains = bcSetups
         val retBcSetups = mutableListOf<BlockchainSetup>()
         var debugStr = ""
         sortedChains.forEach {

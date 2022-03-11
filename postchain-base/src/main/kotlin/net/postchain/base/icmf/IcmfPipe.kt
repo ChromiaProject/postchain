@@ -1,18 +1,8 @@
 package net.postchain.base.icmf
 
-import net.postchain.base.BlockchainRelatedInfo
-
-/**
- * Used internally in the [IcmfPipe] to fetch more packages from the source.
- */
-interface IcmfFetcher {
-
-    /**
-     * @param sourceChainIid is the chain we will read from
-     * @param height of the source chain we need a package for
-     * @return a [IcmfPackage] for this height or nothing if the height doesn't exist for the source chain.
-     */
-    fun fetch(sourceChainIid: Long, height: Long): IcmfPackage?
+interface  IICMFPipe {
+    fun shouldPoll(): Boolean
+    fun poll(fetchInstructions: Any): IcmfPackage?
 }
 
 /**

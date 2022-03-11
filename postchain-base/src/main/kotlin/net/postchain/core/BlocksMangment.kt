@@ -90,7 +90,6 @@ interface BlockBuilder {
     fun finalizeAndValidate(blockHeader: BlockHeader)
     fun getBlockData(): BlockData
     fun getBlockWitnessBuilder(): BlockWitnessBuilder?
-    fun getBlockHeaderValidator(): BlockHeaderValidator
     fun commit(blockWitness: BlockWitness)
 
     // Just debug

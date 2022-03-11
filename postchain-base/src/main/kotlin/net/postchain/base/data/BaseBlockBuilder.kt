@@ -8,7 +8,6 @@ import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.*
-import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -42,7 +41,7 @@ open class BaseBlockBuilder(
         val specialTxHandler: SpecialTransactionHandler,
         val subjects: Array<ByteArray>,
         val blockSigMaker: SigMaker,
-        val blockValidator: BlockHeaderValidator,
+        val blockWitnessBuilderFactory: BlockWitnessManager,
         val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
         val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
@@ -60,9 +59,9 @@ open class BaseBlockBuilder(
     private var haveSpecialEndTransaction = false
 
     /**
-     * @return a proper [BlockHeaderValidator] with [CryptoSystem] in it.
+     * @return a proper [BlockWitnessManager] with [CryptoSystem] in it.
      */
-    override fun getBlockHeaderValidator() = blockValidator
+    override fun getBlockWitnessManager() = blockWitnessBuilderFactory
 
     /**
      * Computes the root hash for the Merkle tree of transactions currently in a block
@@ -225,7 +224,7 @@ open class BaseBlockBuilder(
             throw ProgrammerMistake("Block is not finalized yet.")
         }
 
-        return getBlockHeaderValidator().createWitnessBuilderWithOwnSignature(_blockData!!.header)
+        return getBlockWitnessManager().createWitnessBuilderWithOwnSignature(_blockData!!.header)
     }
 
     /**

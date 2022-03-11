@@ -68,31 +68,6 @@ interface MultiSigBlockWitness : BlockWitness {
 }
 
 /**
- * Can validate a block header. This is either:
- * 1. check the witness signatures
- * 2. compare the header to data about our blocks (that we've gotten from DB or somewhere else)
- */
-interface BlockHeaderValidator {
-    // Returns a new witness builder for the current header
-    fun createWitnessBuilderWithoutOwnSignature(
-        header: BlockHeader
-    ): BlockWitnessBuilder
-
-    // Same as above, but "this node" also adds a signature
-    fun createWitnessBuilderWithOwnSignature(
-        header: BlockHeader
-    ): BlockWitnessBuilder
-
-    // Returns true if the signatures check out
-    fun validateWitness(
-        blockWitness: BlockWitness,
-        witnessBuilder: BlockWitnessBuilder // Includes the header we are about to validate
-    ): Boolean
-
-
-}
-
-/**
  * This is a DTO we will use to build a block.
  * Note that we don't hold the RID of the block itself, b/c we don't know it yet.
  *

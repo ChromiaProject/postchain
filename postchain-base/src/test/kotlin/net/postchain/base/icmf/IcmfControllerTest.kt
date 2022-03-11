@@ -22,7 +22,7 @@ class IcmfControllerTest {
      * - We set up 3 fake source chains
      * - Start them in random order, and we should get the correct amount of pipes, defined by what chains that are
      *   running at the moment
-     */
+
     @Test
     fun happyScenarioTest() {
         // These are listener chains
@@ -214,7 +214,7 @@ class IcmfControllerTest {
         assertTrue(hasPipeId( "6-2",  pipesDispatch))
         assertTrue(hasPipeId( "6-3",  pipesDispatch))
     }
-
+*/
 
     /**
      * This will mock the entire BC process and the config.

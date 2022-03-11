@@ -34,30 +34,12 @@ class IcmfReceiver {
     }
 
     /**
-     * Return all pipes for the given chain that have new data
-     *
-     * @param listenerChainIid is the target chain we want to check updates for
-     * @return a mutable list of pipes (not the original pipe list)
-     */
-    fun getNonEmptyPipesForListenerChain(listenerChainIid: Long): List<IcmfPipe> {
-        val allPipes = getListOrAddIfNotExists(listenerChainIid)
-
-        val dataPipes = ArrayList<IcmfPipe>() // Make a defensive copy of the pipe collection
-        for (pipe in allPipes) {
-            if (pipe.hasNewPackets()) { // Only put non-empty pipes in here (to save time)
-                dataPipes.add(pipe)
-            }
-        }
-        return dataPipes
-    }
-
-    /**
      * Return all pipes for the given chain
      *
      * @param listenerChainIid is the target chain we want to check pipes for
-     * @return a mutable list of pipes (not the original pipe list)
+     * @return a list of pipes
      */
-    fun getAllPipesForListenerChain(listenerChainIid: Long): List<IcmfPipe> = getListOrAddIfNotExists(listenerChainIid).toMutableList()
+    fun getPipesForListenerChain(listenerChainIid: Long): List<IcmfPipe> = getListOrAddIfNotExists(listenerChainIid)
 
     /**
      * Adds a pipe for the given (listener) chain and returns the new pipe
@@ -77,7 +59,7 @@ class IcmfReceiver {
     private fun getListOrAddIfNotExists(listenerChainIid: Long): MutableList<IcmfPipe> {
         var pipes: MutableList<IcmfPipe>? = listenerChainToPipes[listenerChainIid]
         if (pipes == null) {
-            pipes = ArrayList<IcmfPipe>()
+            pipes = mutableListOf<IcmfPipe>()
             listenerChainToPipes[listenerChainIid] = pipes
         }
         return pipes

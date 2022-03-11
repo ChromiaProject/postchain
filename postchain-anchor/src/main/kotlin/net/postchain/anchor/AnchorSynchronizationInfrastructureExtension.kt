@@ -3,6 +3,8 @@ package net.postchain.anchor
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainEngine
 import net.postchain.base.Storage
+import net.postchain.base.icmf.AnchorIcmfFetcher
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.gtx.GTXBlockchainConfiguration

@@ -1,4 +1,4 @@
-package net.postchain.anchor
+package net.postchain.base.icmf
 
 import mu.KLogging
 import net.postchain.base.Storage
@@ -12,10 +12,23 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 
 /**
+ * Used internally in the [IcmfPipe] to fetch more packages from the source.
+ */
+interface IcmfFetcher {
+
+    /**
+     * @param sourceChainIid is the chain we will read from
+     * @param height of the source chain we need a package for
+     * @return a [IcmfPackage] for this height or nothing if the height doesn't exist for the source chain.
+     */
+    fun fetch(sourceChainIid: Long, height: Long): IcmfPackage?
+}
+
+/**
  * Implements the [IcmfFetcher] for Anchoring, i.e. fetches the header and witness data from the DB fo the
  * source chain, and packs this into the [IcmfPackage].
  */
-class AnchorIcmfFetcher(
+class LocalIcmfFetcher(
     protected val storage: Storage
 ) : IcmfFetcher {
 
