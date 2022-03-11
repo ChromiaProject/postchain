@@ -77,7 +77,7 @@ const config: HardhatUserConfig = {
   },
   solidity: {
     compilers: [{
-      version: "0.8.3",
+      version: "0.8.2",
       settings: {
         // Disable the optimizer when debugging
         // https://hardhat.org/hardhat-network/#solidity-optimizer-support

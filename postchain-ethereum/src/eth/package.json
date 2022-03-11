@@ -10,7 +10,7 @@
     "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
     "coverage": "cross-env CODE_COVERAGE=true hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
     "deploy": "npx hardhat deploy:ChrL2",
-    "update": "npx hardhat update:ChrL2",
+    "upgrade-contract": "npx hardhat upgrade:ChrL2",
     "deploy:token": "npx hardhat deploy:token",
     "start": "craco start",
     "build": "craco build"
@@ -53,7 +53,7 @@
   "dependencies": {
     "@craco/craco": "^6.2.0",
     "@openzeppelin/contracts": "^4.4.2",
-    "@openzeppelin/contracts-upgradeable": "^4.4.2",
+    "@openzeppelin/contracts-upgradeable": "^4.5.2",
     "@tailwindcss/typography": "^0.4.1",
     "@web3-react/core": "^6.1.9",
     "@web3-react/injected-connector": "^6.0.7",

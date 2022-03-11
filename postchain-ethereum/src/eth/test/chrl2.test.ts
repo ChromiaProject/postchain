@@ -243,7 +243,7 @@ describe("ChrL2", () => {
             const name = await tokenApproveInstance.name()
             const symbol = await tokenApproveInstance.symbol()
             const expectedPayload = ''.concat(
-                "0xa5", "84", "0000008c", "30", "84", "00000086", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
+                "0xa5", "84", "000000a5", "30", "84", "0000009f", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
                 "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value length
                 user.address.substring(2),
                 "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
@@ -254,8 +254,8 @@ describe("ChrL2", () => {
                 solidityPack(["string"], [name]).substring(2),
                 "a2", "84", "00000009", "0c", "84", "00000003",
                 solidityPack(["string"], [symbol]).substring(2),
-                "a2", "84", "00000006", "0c", "84", "00000000",
-                ""
+                "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
+                hexZeroPad("0x12", 32).substring(2), // Default decimals is 18
             )
             await tokenApproveInstance.approve(chrL2Address, toDeposit)
             await expect(chrL2Instance.deposit(tokenAddress, toDeposit))

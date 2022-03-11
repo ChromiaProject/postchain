@@ -96,8 +96,8 @@ Find out more about deployment here:
 
 You can upgrade a deployed instance of the ChrL2 contract.
 
-Replace CHRL_CONTRACT_ADDRESS with the address contract was deployed to
+Replace CONTRACT_ADDRESS with the address that the contract was deployed to
 
 ```sh
-$ yarn update --network rinkeby --address CHRL_CONTRACT_ADDRESS
+$ yarn upgrade-contract --network rinkeby --verify --address CONTRACT_ADDRESS
 ```

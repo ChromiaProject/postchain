@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
+// Upgradeable implementations
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+
+// Interfaces
+import "@openzeppelin/contracts/interfaces/IERC721.sol";
+import "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
+import "@openzeppelin/contracts/interfaces/IERC721Metadata.sol";
+
+// Internal libraries
 import "./utils/Gtv.sol";
 import "./Postchain.sol";
 
@@ -20,7 +25,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         ERC721
     }
 
-    mapping(ERC20 => uint256) public _balances;
+    mapping(IERC20 => uint256) public _balances;
     mapping(IERC721 => mapping(uint256 => address)) public _owners;
     mapping (bytes32 => Withdraw) public _withdraw;
     mapping (bytes32 => WithdrawNFT) public _withdrawNFT;
@@ -37,7 +42,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     }
 
     struct Withdraw {
-        ERC20 token;
+        IERC20 token;
         address beneficiary;
         uint256 amount;
         uint256 block_number;
@@ -53,9 +58,9 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     }
 
     event Deposited(AssetType indexed asset, bytes payload);
-    event WithdrawRequest(address indexed beneficiary, ERC20 indexed token, uint256 value);
+    event WithdrawRequest(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
-    event Withdrawal(address indexed beneficiary, ERC20 indexed token, uint256 value);
+    event Withdrawal(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawalNFT(address indexed beneficiary, IERC721 indexed nft, uint256 tokenId);
 
     function initialize(address[] memory _directoryNodes, address[] memory _appNodes) public initializer {
@@ -97,15 +102,37 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         return true;
     }
 
-    function deposit(ERC20 token, uint256 amount) public returns (bool) {
+    function deposit(IERC20 token, uint256 amount) public returns (bool) {
+        string memory name = "";
+        string memory symbol = "";
+        uint8 decimals = 0;
+
+        // We don't know if this token supports metadata functions or not so we have to query and handle failure
+        bool success;
+        bytes memory _name;
+        bytes memory _symbol;
+        bytes memory _decimals;
+        (success, _name) = address(token).staticcall(abi.encodeWithSignature("name()"));
+        if (success) {
+            name = abi.decode(_name, (string));
+        }
+        (success, _symbol) = address(token).staticcall(abi.encodeWithSignature("symbol()"));
+        if (success) {
+            symbol = abi.decode(_symbol, (string));
+        }
+        (success, _decimals) = address(token).staticcall(abi.encodeWithSignature("decimals()"));
+        if (success) {
+            decimals = abi.decode(_decimals, (uint8));
+        }
+
         // Encode arguments
         bytes memory args = abi.encodePacked(
             Gtv.encode(msg.sender),
             Gtv.encode(address(token)),
             Gtv.encode(amount),
-            Gtv.encode(token.name()),
-            Gtv.encode(token.symbol()),
-            Gtv.encode("")
+            Gtv.encode(name),
+            Gtv.encode(symbol),
+            Gtv.encode(decimals)
         );
         bytes memory argArray = Gtv.encodeArray(args);
 
@@ -193,7 +220,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     function _updateWithdraw(bytes32 hash, bytes memory _event) internal returns (bool) {
         Withdraw storage wd = _withdraw[hash];
         {
-            (ERC20 token, address beneficiary, uint256 amount) = hash.verifyEvent(_event);
+            (IERC20 token, address beneficiary, uint256 amount) = hash.verifyEvent(_event);
             require(amount > 0 && amount <= _balances[token], "ChrL2: invalid amount to make request withdraw");
             wd.token = token;
             wd.beneficiary = beneficiary;
