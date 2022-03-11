@@ -46,6 +46,7 @@ interface SynchronizationInfrastructure : Shutdownable {
  */
 interface SynchronizationInfrastructureExtension : Shutdownable {
     fun connectProcess(process: BlockchainProcess)
+    fun disconnectProcess(process: BlockchainProcess)
 }
 
 /**
