@@ -24,7 +24,6 @@ entity eth_event {
     from_address: text;
     eth_token: eth_token;
     value: integer;
-    token_uri: text;
 }
 
 entity eth_balance {
@@ -97,7 +96,6 @@ operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash:
     }
     var from_address = to_zero_padded_hex(byte_array.from_gtv(argList[0]));
     var token_value = integer.from_gtv(argList[2]);
-    var token_uri = text.from_gtv(argList[5]);
 
     val eth_event = create eth_event(
         eth_block,
@@ -107,11 +105,11 @@ operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash:
         contract_address,
         from_address,
         eth_token,
-        value = token_value,
-        token_uri
+        value = token_value
     );
 
     if (token_type == asset_type.erc721) {
+        var token_uri = text.from_gtv(argList[5]);
         create eth_balance(
             eth_token,
             beneficiary = from_address,
