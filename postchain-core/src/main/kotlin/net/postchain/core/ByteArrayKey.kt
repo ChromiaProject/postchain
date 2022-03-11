@@ -3,7 +3,7 @@
 package net.postchain.core
 
 import net.postchain.common.toHex
-import org.spongycastle.util.Arrays
+import java.util.*
 
 class ByteArrayKey(val byteArray: ByteArray): Comparable<ByteArrayKey> {
 

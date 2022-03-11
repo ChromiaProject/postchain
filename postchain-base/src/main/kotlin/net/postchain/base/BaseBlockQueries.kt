@@ -8,7 +8,6 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import nl.komponents.kovenant.Kovenant
 import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.buildDispatcher
 import nl.komponents.kovenant.task
 
 /**

@@ -3,7 +3,7 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.base.Storage
+import net.postchain.core.Storage
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*

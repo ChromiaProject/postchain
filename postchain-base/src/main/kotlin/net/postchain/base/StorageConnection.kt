@@ -7,6 +7,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
 import net.postchain.core.NODE_ID_NA
+import net.postchain.core.Storage
 
 fun <RT> Storage.withReadConnection(op: (AppContext) -> RT): RT {
     val ctx = openReadConnection()

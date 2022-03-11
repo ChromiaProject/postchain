@@ -3,7 +3,7 @@
 package net.postchain.config.node
 
 import net.postchain.StorageBuilder
-import net.postchain.base.Storage
+import net.postchain.core.Storage
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders.*
 import net.postchain.core.NODE_ID_NA

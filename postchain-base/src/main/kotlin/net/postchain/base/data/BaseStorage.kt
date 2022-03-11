@@ -5,7 +5,7 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseAppContext
 import net.postchain.base.BaseEContext
-import net.postchain.base.Storage
+import net.postchain.core.Storage
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
 import net.postchain.core.ProgrammerMistake

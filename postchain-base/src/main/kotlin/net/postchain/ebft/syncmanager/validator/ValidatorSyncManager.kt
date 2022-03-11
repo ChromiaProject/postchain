@@ -21,7 +21,6 @@ import net.postchain.ebft.worker.WorkerContext
 import net.postchain.core.NodeRid
 import nl.komponents.kovenant.task
 import java.util.*
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The ValidatorSyncManager handles communications with our peers.

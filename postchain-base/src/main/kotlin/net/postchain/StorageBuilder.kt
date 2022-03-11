@@ -2,7 +2,7 @@
 
 package net.postchain
 
-import net.postchain.base.Storage
+import net.postchain.core.Storage
 import net.postchain.base.data.BaseStorage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory

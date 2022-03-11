@@ -1,9 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base
-
-import net.postchain.core.AppContext
-import net.postchain.core.EContext
+package net.postchain.core
 
 /**
  * Handles back-end database connection and storage

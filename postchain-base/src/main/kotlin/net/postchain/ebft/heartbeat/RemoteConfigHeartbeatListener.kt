@@ -2,7 +2,7 @@ package net.postchain.ebft.heartbeat
 
 import mu.KLogging
 import net.postchain.base.BaseConfigurationDataStore
-import net.postchain.base.Storage
+import net.postchain.core.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection

@@ -3,7 +3,7 @@ package net.postchain.devtools
 import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.base.PeerInfo
-import net.postchain.base.Storage
+import net.postchain.core.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.base.runStorageCommand
