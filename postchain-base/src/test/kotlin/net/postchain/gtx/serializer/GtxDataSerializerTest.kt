@@ -11,8 +11,8 @@ import net.postchain.gtv.GtvString
 import net.postchain.gtx.GTXTransactionBodyData
 import net.postchain.gtx.GTXTransactionData
 import net.postchain.gtx.OpData
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class GtxDataSerializerTest {
 
@@ -51,6 +51,6 @@ class GtxDataSerializerTest {
         // ---------- Convert it ------------------------------
         val tx = GtxTransactionDataSerializer.serializeToGtv(txData)
 
-        Assert.assertEquals(tx, expectedGtvTxStruct)
+       assertEquals(tx, expectedGtvTxStruct)
     }
 }

@@ -2,11 +2,11 @@
 
 package net.postchain.devtools
 
-import org.junit.Assert.assertEquals
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
-@Ignore
+@Disabled
 class TestLauncherTest {
 
     private val blockchainRID = "101010101010101ABCDEF101010101010101ABCDEF101010101010101ABCDEF0"

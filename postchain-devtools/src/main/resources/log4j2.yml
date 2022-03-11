@@ -4,80 +4,66 @@ Configuration:
 
   Properties:
     Property:
-    - name: logs
-      value: "logs"
-    - name: logfile
-      value: "logfile.log"
+      - name: logs
+        value: "logs"
+      - name: logfile
+        value: "postchain-devtools"
+      - name: logpattern
+        value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
 
   Appenders:
     Console:
-      name: ConsoleAppender
-      target: SYSTEM_OUT
-      PatternLayout:
-        # pattern: "[%X{node-id}] %-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
-        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
-    File:
-      name: FileAppender
-      fileName: "${logs}/${logfile}"
-      PatternLayout:
-        # pattern: "[%X{node-id}] %-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
-        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
-
+      - name: ConsoleAppender
+        PatternLayout:
+          pattern: ${logpattern}
+      - name: SimpleConsoleAppender
+        PatternLayout:
+          pattern: "+++ %msg +++%n"
+    RollingFile:
+      - name: FileAppender
+        fileName: "${logs}/${logfile}.log"
+        filePattern: "${logs}/${logfile}.%d{yyyy-MM-dd-hh-mm}.log"
+        Policies:
+          SizeBasedTriggeringPolicy:
+            size: 1 MB
+        DefaultRollOverStrategy:
+          max: 10
+        PatternLayout:
+          pattern: ${logpattern}
+      - name: SimpleFileAppender
+        fileName: "${logs}/${logfile}.log"
+        filePattern: "${logs}/${logfile}.%d{yyyy-MM-dd-hh-mm}.log"
+        Policies:
+          SizeBasedTriggeringPolicy:
+            size: 1 MB
+        DefaultRollOverStrategy:
+          max: 10
+        PatternLayout:
+          pattern: "+++ %msg +++%n"
 
   Loggers:
 
     Root:
       level: warn
       AppenderRef:
-      - ref: ConsoleAppender
-      - ref: FileAppender
+        - ref: ConsoleAppender
+        - ref: FileAppender
 
     Logger:
-      # ------------------
-      # Common Postchain setting
-      # ------------------
-    - name: net.postchain
-      level: debug #I suggest we keep this on debug on the checked in version.
-      additivity: false
-      AppenderRef:
-      - ref: ConsoleAppender
-      - ref: FileAppender
 
-      # ------------------
-      # Specific settings
-      # ------------------
-#    - name: net.postchain.ebft
-#      level: trace #Don't check in your local settings. Too confusing for the rest of the team
-#      additivity: false
-#      AppenderRef:
-#      - ref: ConsoleAppender
-#      - ref: FileAppender
-#
-#    - name: net.postchain.managed
-#      level: trace #Don't check in your local settings. Too confusing for the rest of the team
-#      additivity: false
-#      AppenderRef:
-#        - ref: ConsoleAppender
-#        - ref: FileAppender
-#
-#    - name: net.postchain.base.data
-#      level: trace #Don't check in your local settings. Too confusing for the rest of the team
-#      additivity: false
-#      AppenderRef:
-#      - ref: ConsoleAppender
-#      - ref: FileAppender
-#
-#    - name: net.postchain.base.BaseBlockchainEngine
-#      level: trace #Don't check in your local settings. Too confusing for the rest of the team
-#      additivity: false
-#      AppenderRef:
-#        - ref: ConsoleAppender
-#        - ref: FileAppender
-#
-#    - name: net.postchain.base.data.SQLDatabaseAccess
-#      level: debug #Don't check in your local settings. Too confusing for the rest of the team
-#      additivity: false
-#      AppenderRef:
-#      - ref: ConsoleAppender
-#      - ref: FileAppender
+      - name: net.postchain
+        level: debug
 
+      - name: net.postchain.devtools.IntegrationTestSetup
+        level: debug
+        additivity: false
+        AppenderRef:
+          - ref: SimpleConsoleAppender
+          - ref : SimpleFileAppender
+
+      - name: net.postchain.devtools.ConfigFileBasedIntegrationTest
+        level: debug
+        additivity: false
+        AppenderRef:
+          - ref: SimpleConsoleAppender
+          - ref : SimpleFileAppender

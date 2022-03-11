@@ -20,8 +20,7 @@ import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 /**
@@ -86,7 +85,7 @@ class ArrayToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+        assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -110,7 +109,7 @@ class ArrayToMerkleProofTreeTest {
                 "    GtvByteArray(bytearray=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])$ln" +
                 "  ])$ln" +
                 "])$ln"
-        Assert.assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
+       assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
         val deserialized = proofFactory.deserialize(serialize)
@@ -121,7 +120,7 @@ class ArrayToMerkleProofTreeTest {
         val deserializedPrintout = printer.printNode(pbtDes)
         //println(deserializedPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+       assertEquals(expectedTree.trim(), deserializedPrintout.trim())
     }
 
     // -------------- Size 4 ------------
@@ -160,7 +159,7 @@ class ArrayToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -192,7 +191,7 @@ class ArrayToMerkleProofTreeTest {
                 "  ])$ln" +
                 "])$ln"
 
-        Assert.assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
+       assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
         val deserialized = proofFactory.deserialize(serialize)
@@ -203,7 +202,7 @@ class ArrayToMerkleProofTreeTest {
         val deserializedPrintout = printer.printNode(pbtDes)
         //println(deserializedPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+       assertEquals(expectedTree.trim(), deserializedPrintout.trim())
 
     }
 
@@ -250,7 +249,7 @@ class ArrayToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -288,7 +287,7 @@ class ArrayToMerkleProofTreeTest {
                 "    ])$ln" +
                 "  ])$ln"
 
-        Assert.assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
+       assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
         val deserialized = proofFactory.deserialize(serialize)
@@ -298,7 +297,7 @@ class ArrayToMerkleProofTreeTest {
         val deserializedPrintout = printer.printNode(pbtDes)
         //println(deserializedPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+       assertEquals(expectedTree.trim(), deserializedPrintout.trim())
     }
 
     // ---------------------
@@ -337,7 +336,7 @@ class ArrayToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -406,7 +405,7 @@ class ArrayToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -449,7 +448,7 @@ class ArrayToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -491,7 +490,7 @@ class ArrayToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -534,7 +533,7 @@ class ArrayToMerkleProofTreeTest {
                 "  ])$ln" +
                 "])$ln"
 
-        Assert.assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
+       assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
         val deserialized = proofFactory.deserialize(serialize)
@@ -545,7 +544,7 @@ class ArrayToMerkleProofTreeTest {
         val deserializedPrintout = printer.printNode(pbtDes)
         println(deserializedPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+       assertEquals(expectedTree.trim(), deserializedPrintout.trim())
 
     }
 }

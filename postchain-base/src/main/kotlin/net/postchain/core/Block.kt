@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-
 interface BlockHeader {
     val prevBlockRID: ByteArray
     val rawData: ByteArray

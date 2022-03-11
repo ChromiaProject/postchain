@@ -20,7 +20,7 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
     private lateinit var dataSource: ManagedNodeDataSource
     private val systemProvider = ManualBlockchainConfigurationProvider() // Used mainly to access Chain0 (we don't want to use Chain0 to check it's own config changes, too strange)
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     fun setDataSource(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource
@@ -158,6 +158,12 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         // Skip override, we go directly to Chain0 to check
         val savedBlockHeight = activeHeight - 1 // Tricky part, for [ManagedNodeDataSource] we must send the last saved block height
         return dataSource.findNextConfigurationHeight(blockchainRID!!.data, savedBlockHeight)
+    }
+
+    override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
+        val db = DatabaseAccess.of(eContext)
+        val brid = db.getBlockchainRid(eContext)
+        return dataSource.findNextConfigurationHeight(brid!!.data, height)
     }
 
     private fun getConfigurationFromDataSource(eContext: EContext): ByteArray? {

@@ -2,6 +2,8 @@
 
 package net.postchain.common
 
+import kotlin.math.pow
+
 /**
  * This is a (sort of) generic class that is able to make delays exponentially longer and longer.
  */
@@ -21,7 +23,7 @@ class ExponentialDelay (
                 executionCounter += 1
                 // must calculate new delay
                 //println("ec = $executionCounter")
-                delayCounterMillis = (delayCounterMillis * (Math.pow(DELAY_POWER_BASE, executionCounter.toDouble()))).toLong()
+                delayCounterMillis = (delayCounterMillis * (DELAY_POWER_BASE.pow(executionCounter.toDouble()))).toLong()
                 if (delayCounterMillis > MAX_DELAY_MILLIS) {
                     delayCounterMillis = MAX_DELAY_MILLIS
                 }

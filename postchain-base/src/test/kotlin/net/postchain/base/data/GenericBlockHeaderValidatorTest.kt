@@ -4,7 +4,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ValidationResult
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 /**

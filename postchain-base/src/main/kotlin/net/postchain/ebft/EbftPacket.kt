@@ -9,12 +9,13 @@ import net.postchain.core.UserMistake
 import net.postchain.ebft.message.Identification
 import net.postchain.ebft.message.Message
 import net.postchain.ebft.message.SignedMessage
+import net.postchain.core.NodeRid
 import net.postchain.network.*
 
 class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketEncoder<Message> {
 
-    override fun makeIdentPacket(forPeer: ByteArray): ByteArray {
-        val bytes = Identification(forPeer, blockchainRID, System.currentTimeMillis()).encode()
+    override fun makeIdentPacket(forNode: NodeRid): ByteArray {
+        val bytes = Identification(forNode.byteArray, blockchainRID, System.currentTimeMillis()).encode()
         val sigMaker = config.sigMaker()
         val signature = sigMaker.signMessage(bytes)
         return SignedMessage(bytes, config.pubKey, signature.data).encode()
@@ -46,7 +47,7 @@ class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<Mess
             throw UserMistake("'yourPubKey' ${message.pubKey.toHex()} of Identification is not mine")
         }
 
-        return IdentPacketInfo(signedMessage.pubKey, message.blockchainRID, null)
+        return IdentPacketInfo(NodeRid(signedMessage.pubKey), message.blockchainRID, null)
     }
 
     override fun decodePacket(pubKey: ByteArray, bytes: ByteArray): Message {

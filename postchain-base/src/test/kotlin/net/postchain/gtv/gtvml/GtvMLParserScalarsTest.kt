@@ -5,7 +5,8 @@ package net.postchain.gtv.gtvml
 import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.gtv.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class GtvMLParserScalarsTest {
 
@@ -82,35 +83,47 @@ class GtvMLParserScalarsTest {
         assert(actual).isEqualTo(expected)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGtv_param_incompatible_type_successfully() {
         val xml = "<param key='param_key' type='string'/>"
-        GtvMLParser.parseGtvML(
+        assertThrows<IllegalArgumentException> {
+            GtvMLParser.parseGtvML(
                 xml,
-                mapOf("param_key" to GtvArray(arrayOf(GtvInteger(123)))))
+                mapOf("param_key" to GtvArray(arrayOf(GtvInteger(123))))
+            )
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGtv_param_unknown_type_successfully() {
         val xml = "<param key='param_key' type='UNKNOWN_TYPE'/>"
-        GtvMLParser.parseGtvML(
+        assertThrows<IllegalArgumentException> {
+            GtvMLParser.parseGtvML(
                 xml,
-                mapOf("param_key" to GtvInteger(123)))
+                mapOf("param_key" to GtvInteger(123))
+            )
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGtv_param_not_found_throws_exception() {
         val xml = "<param key='param_key_not_found' type='int'/>"
-        GtvMLParser.parseGtvML(
+        assertThrows<IllegalArgumentException> {
+            GtvMLParser.parseGtvML(
                 xml,
-                mapOf("param_key" to GtvInteger(123)))
+                mapOf("param_key" to GtvInteger(123))
+            )
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGtv_array_with_CASE_SENSITIVE_not_found_param_throws_exception() {
         val xml = "<param key='CASE_SENSITIVE_KEY' type='int'/>"
-        GtvMLParser.parseGtvML(
+        assertThrows<IllegalArgumentException> {
+            GtvMLParser.parseGtvML(
                 xml,
-                mapOf("case_sensitive_key" to GtvInteger(123)))
+                mapOf("case_sensitive_key" to GtvInteger(123))
+            )
+        }
     }
 }

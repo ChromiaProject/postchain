@@ -10,8 +10,8 @@ import net.postchain.gtv.merkle.GtvBinaryTreeFactory
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class DictToGtvBinaryTreeTest {
 
@@ -48,7 +48,7 @@ class DictToGtvBinaryTreeTest {
 
         val treePrintout = buildThreeOf1_fromDict()
         //println(treeHolderFromDict.treePrintout)
-        Assert.assertEquals(expectedTree.trim(), treePrintout.trim())
+       assertEquals(expectedTree.trim(), treePrintout.trim())
     }
 
     @Test
@@ -63,7 +63,7 @@ class DictToGtvBinaryTreeTest {
         val treePrintout = buildThreeOf1_fromDict(gtvPath)
         //println(treeHolder.treePrintout)
 
-        Assert.assertEquals(expectedTreeWithPath.trim(), treePrintout.trim())
+       assertEquals(expectedTreeWithPath.trim(), treePrintout.trim())
     }
 
     // ------------------- Size 4 --------------------
@@ -104,7 +104,7 @@ class DictToGtvBinaryTreeTest {
 
         val treePrintout = buildThreeOf4_fromDict()
         //println(treeHolderFromDict.treePrintout)
-        Assert.assertEquals(expectedTree.trim(), treePrintout.trim())
+       assertEquals(expectedTree.trim(), treePrintout.trim())
     }
 
     @Test
@@ -127,7 +127,7 @@ class DictToGtvBinaryTreeTest {
         val treePrintout = buildThreeOf4_fromDict(gtvPath)
         println(treePrintout)
 
-        Assert.assertEquals(expectedTreeWithPath.trim(), treePrintout.trim())
+       assertEquals(expectedTreeWithPath.trim(), treePrintout.trim())
     }
 
     // ------------------- Size 1 in 2 --------------------
@@ -171,7 +171,7 @@ class DictToGtvBinaryTreeTest {
 
         val treePrintout = buildTreeOf1WithSubTree()
         //println(treeHolder.treePrintout)
-        Assert.assertEquals(expectedTree.trim(), treePrintout.trim())
+       assertEquals(expectedTree.trim(), treePrintout.trim())
     }
 
     @Test
@@ -194,7 +194,7 @@ class DictToGtvBinaryTreeTest {
         val treePrintout = buildTreeOf1WithSubTree(gtvPath)
         //println(treeHolder.treePrintout)
 
-        Assert.assertEquals(expectedTreeWithPath.trim(), treePrintout.trim())
+       assertEquals(expectedTreeWithPath.trim(), treePrintout.trim())
     }
 
 }

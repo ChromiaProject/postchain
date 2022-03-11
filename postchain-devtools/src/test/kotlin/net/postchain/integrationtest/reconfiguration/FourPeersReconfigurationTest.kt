@@ -10,8 +10,8 @@ import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.integrationtest.reconfiguration.TxChartHelper.buildTxChart
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
 import java.util.concurrent.CountDownLatch
@@ -92,7 +92,7 @@ class FourPeersReconfigurationTest : ReconfigurationTest() {
     // I comment asserting block code because want to get rid of the jackson usage and this test was marked as Ignore.
     // So there is no need to try to re-write asserting code by using gson.
     // In case we'd like to remove @Ingore in the the future for this test case, please implement asserting using gson instead.
-    @Ignore
+   @Disabled
     @Test
     fun reconfigurationAtHeight_whenSignersAreChanged_isSuccessful() {
         val nodesCount = 4
@@ -184,7 +184,7 @@ class FourPeersReconfigurationTest : ReconfigurationTest() {
     }
 
     // TODO: Olle fix for POS-76
-    @Ignore
+   @Disabled
     @Test
     fun reconfigurationAtHeight_withBaseBlockBuildingStrategy_withManyTxs_whenSignersAreChanged_isSuccessful() {
         val nodesCount = 4
@@ -250,7 +250,7 @@ class FourPeersReconfigurationTest : ReconfigurationTest() {
                     // Building tx charts of the minimum (common) length for all nodes
                     val commonHeight = nodes.map { node ->
                         node.query(DEFAULT_CHAIN_IID) { it.getBestHeight() } ?: -1L
-                    }.min() ?: -1L
+                    }.minOrNull() ?: -1L
 
                     assertk.assert(commonHeight > 0L).isTrue()
 

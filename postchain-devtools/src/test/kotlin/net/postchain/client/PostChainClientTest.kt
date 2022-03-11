@@ -2,10 +2,10 @@
 
 package net.postchain.client
 
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.eq
-import com.nhaarman.mockitokotlin2.spy
-import com.nhaarman.mockitokotlin2.verify
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
 import net.postchain.core.BlockchainRid
 import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.DefaultSigner
@@ -23,7 +23,8 @@ import net.postchain.gtx.GTXDataBuilder
 import org.awaitility.Awaitility.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -72,7 +73,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         }
     }
 
-    @Test(expected = ProgrammerMistake::class)
+    @Test
     fun makingAndPostingSyncTransaction_UnsignedTransactionGiven_throws_Exception() {
         // Mock
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
@@ -80,7 +81,9 @@ class PostChainClientTest : IntegrationTestSetup() {
         val txBuilder = client.makeTransaction()
 
         // When
-        txBuilder.postSync(ConfirmationLevel.NO_WAIT)
+        assertThrows<ProgrammerMistake> {
+            txBuilder.postSync(ConfirmationLevel.NO_WAIT)
+        }
     }
 
     @Test

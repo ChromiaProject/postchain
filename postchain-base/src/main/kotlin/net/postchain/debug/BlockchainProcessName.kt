@@ -3,10 +3,12 @@
 package net.postchain.debug
 
 import net.postchain.core.BlockchainRid
-import net.postchain.devtools.PeerNameHelper
 
-data class BlockchainProcessName(val pubKey: String, val blockchainRID: BlockchainRid) {
+data class BlockchainProcessName(val pubKey: String, val blockchainRid: BlockchainRid) {
 
-    override fun toString(): String = "[${PeerNameHelper.peerName(pubKey)}]/[${blockchainRID.toShortHex()}]"
+    override fun toString(): String {
+        // In tests, last part of brid is used to identify chains, so include that in the shortened name.
+        return "[${pubKey.take(8)}/${blockchainRid.toHex().take(2)}:${blockchainRid.toHex().takeLast(4)}]"
+    }
 
 }

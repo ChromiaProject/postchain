@@ -7,10 +7,11 @@ import net.postchain.config.node.PeerInfoDataSource
 interface ManagedNodeDataSource : PeerInfoDataSource {
     fun getPeerListVersion(): Long
     fun computeBlockchainList(): List<ByteArray>
-    fun getConfiguration(blockchainRIDRaw: ByteArray, height: Long): ByteArray?
+    fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray?
+    fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray>
     /**
      * Looks for the nearest configuration height strictly after parameter height. Returns
      * null if no future configurations found or if blockchain doesn't exist.
      */
-    fun findNextConfigurationHeight(blockchainRIDRaw: ByteArray, height: Long): Long?
+    fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
 }

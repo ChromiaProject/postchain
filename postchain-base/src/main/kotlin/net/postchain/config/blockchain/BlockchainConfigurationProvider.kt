@@ -45,5 +45,5 @@ interface BlockchainConfigurationProvider {
      */
     fun getHistoricConfiguration(eContext: EContext, chainId: Long, historicBlockHeight: Long): ByteArray?
 
-
+    fun findNextConfigurationHeight(eContext: EContext, height: Long): Long?
 }

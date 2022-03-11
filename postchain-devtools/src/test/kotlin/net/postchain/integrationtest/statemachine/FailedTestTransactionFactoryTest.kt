@@ -1,6 +1,6 @@
 package net.postchain.integrationtest.statemachine
 
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import kotlin.test.assertEquals

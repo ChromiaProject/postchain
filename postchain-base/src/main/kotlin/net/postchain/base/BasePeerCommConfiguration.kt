@@ -4,10 +4,11 @@ package net.postchain.base
 
 import net.postchain.core.ByteArrayKey
 
-class BasePeerCommConfiguration(override val networkNodes: NetworkNodes,
-                                private val cryptoSystem: CryptoSystem,
-                                private val privKey: ByteArray,
-                                override val pubKey: ByteArray
+open class BasePeerCommConfiguration(
+        override val networkNodes: NetworkNodes,
+        private val cryptoSystem: CryptoSystem,
+        private val privKey: ByteArray,
+        override val pubKey: ByteArray
 ) : PeerCommConfiguration {
 
     companion object {

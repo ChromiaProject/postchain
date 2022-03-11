@@ -92,7 +92,7 @@ class IcmfController : KLogging(){
 
         val newPipes = ArrayList<IcmfPipe>()
 
-        val conf = bcProcess.getEngine().getConfiguration()
+        val conf = bcProcess.blockchainEngine.getConfiguration()
         val givenChainIid = conf.chainID
         val givenChainListenerConf = conf.icmfListener
 

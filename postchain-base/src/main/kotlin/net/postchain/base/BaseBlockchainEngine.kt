@@ -38,9 +38,7 @@ open class BaseBlockchainEngine(
     private lateinit var blockQueries: BlockQueries
     private var initialized = false
     private var closed = false
-    private var afterCommitHandlerInternal: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
-        false
-    }
+    private var afterCommitHandlerInternal: (BlockTrace?, Long) -> Boolean = { _, _ -> false }
     private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
 
     override fun isRunning() = !closed
@@ -91,8 +89,8 @@ open class BaseBlockchainEngine(
                     transactionQueue.removeAll(blockBuilder.transactions)
                     strategy.blockCommitted(blockBuilder.getBlockData())
                     if (afterCommitHandler(
-                            blockBuilder.getBTrace(), // This is a big reason for BTrace to exist
-                            blockBuilder.bctx.height)) {
+                                    blockBuilder.getBTrace(), // This is a big reason for BTrace to exist
+                                    blockBuilder.bctx.height)) {
                         closed = true
                     }
                     afterLog("End", it.getBTrace())
@@ -190,7 +188,7 @@ open class BaseBlockchainEngine(
             // the transaction queue is gone. This could potentially happen
             // during a revolt. We might need a "transactional" tx queue...
 
-            TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendtransactions")
+            TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendTransactions")
             var acceptedTxs = 0
             var rejectedTxs = 0
 
@@ -202,9 +200,7 @@ open class BaseBlockchainEngine(
                 val tx = transactionQueue.takeTransaction()
                 TimeLog.end("BaseBlockchainEngine.buildBlock().takeTransaction")
                 if (tx != null) {
-                    if (logger.isTraceEnabled) {
-                        logger.trace("$processName: Appending transaction ${tx.getRID().toHex()}")
-                    }
+                    logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
                     TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
                     if (tx.isSpecial()) {
                         rejectedTxs++
@@ -212,10 +208,11 @@ open class BaseBlockchainEngine(
                         continue
                     }
                     val txException = blockBuilder.maybeAppendTransaction(tx)
-                    TimeLog.end("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
+                    TimeLog.end("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
                     if (txException != null) {
                         rejectedTxs++
                         transactionQueue.rejectTransaction(tx, txException)
+                        logger.warn { "Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}" }
                     } else {
                         acceptedTxs++
                         // tx is fine, consider stopping
@@ -229,7 +226,7 @@ open class BaseBlockchainEngine(
                 }
             }
 
-            TimeLog.end("BaseBlockchainEngine.buildBlock().appendtransactions")
+            TimeLog.end("BaseBlockchainEngine.buildBlock().appendTransactions")
 
             val netEnd = System.nanoTime()
             val blockHeader = blockBuilder.finalizeBlock()
@@ -304,8 +301,8 @@ open class BaseBlockchainEngine(
     }
 
     private fun loadLog(str: String, bTrace: BlockTrace?) {
-        if (logger.isTraceEnabled) {
-            logger.trace { "$processName loadUnfinishedBlockImpl() -- $str, coming from block: $bTrace" }
+        if (logger.isDebugEnabled) {
+            logger.debug { "$processName loadUnfinishedBlockImpl() -- $str, coming from block: $bTrace" }
         }
     }
 
@@ -316,10 +313,11 @@ open class BaseBlockchainEngine(
     }
 
     private fun buildLog(str: String, bTrace: BlockTrace?) {
-        if (logger.isTraceEnabled) {
-            logger.trace { "$processName buildBlock() -- $str, for block: $bTrace" }
+        if (logger.isDebugEnabled) {
+            logger.debug { "$processName buildBlock() -- $str, for block: $bTrace" }
         }
     }
+
     private fun buildDebug(str: String) {
         if (logger.isDebugEnabled) {
             logger.debug { "$processName buildBlock() - $str" }

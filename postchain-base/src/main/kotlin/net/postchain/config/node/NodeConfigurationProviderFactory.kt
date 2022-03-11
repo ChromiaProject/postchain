@@ -9,8 +9,7 @@ import net.postchain.config.node.NodeConfigProviders.*
 import net.postchain.core.NODE_ID_NA
 
 object NodeConfigurationProviderFactory {
-
-    val DEFAULT_STORAGE_FACTORY: (AppConfig) -> Storage = {
+    private val DEFAULT_STORAGE_FACTORY: (AppConfig) -> Storage = {
         StorageBuilder.buildStorage(it, NODE_ID_NA)
     }
 
@@ -23,13 +22,12 @@ object NodeConfigurationProviderFactory {
         appConfig: AppConfig,
         storageFactory: (AppConfig) -> Storage = DEFAULT_STORAGE_FACTORY
     ): NodeConfigurationProvider {
-
         return when (appConfig.nodeConfigProvider.toLowerCase()) {
             Legacy.name.toLowerCase() -> LegacyNodeConfigurationProvider(appConfig)
+            File.name.toLowerCase() -> FileNodeConfigurationProvider(appConfig)
             Manual.name.toLowerCase() -> ManualNodeConfigurationProvider(appConfig, storageFactory)
             Managed.name.toLowerCase() -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
-            // TODO: Change 'Legacy' to 'Manual' in v3.0
-            else -> LegacyNodeConfigurationProvider(appConfig)
+            else -> ManualNodeConfigurationProvider(appConfig, storageFactory)
         }
     }
 }

@@ -6,12 +6,13 @@ import mu.KLogging
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
 import net.postchain.api.rest.controller.Model
+import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.devtools.PeerNameHelper.peerName
+import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
@@ -43,8 +44,10 @@ class PostchainTestNode(
         // We don't have specific test classes for Proc Man
         when (processManager) {
             is BaseBlockchainProcessManager -> {
+                processManager.insideATest = true
             }
             is ManagedBlockchainProcessManager -> {
+                processManager.insideATest = true
             }
         }
     }
@@ -65,7 +68,7 @@ class PostchainTestNode(
 
         return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
-            logger.debug("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}")
+            logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
             DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
             BaseConfigurationDataStore.addConfigurationData(eContext, 0, blockchainConfig)
             brid
@@ -76,7 +79,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
-            logger.debug("Adding configuration for chain: $chainId, height: $height")
+            logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
             brid
@@ -106,7 +109,7 @@ class PostchainTestNode(
     fun getRestApiModel(): Model {
         val blockchainProcess = processManager.retrieveBlockchain(DEFAULT_CHAIN_IID)!!
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
-                .restApi?.retrieveModel(blockchainRID(blockchainProcess))!!
+                .restApi?.retrieveModel(blockchainRID(blockchainProcess)) as Model
     }
 
     fun getRestApiHttpPort(): Int {
@@ -123,22 +126,22 @@ class PostchainTestNode(
     }
 
     fun transactionQueue(chainId: Long = DEFAULT_CHAIN_IID): TransactionQueue {
-        return getBlockchainInstance(chainId).getEngine().getTransactionQueue()
+        return getBlockchainInstance(chainId).blockchainEngine.getTransactionQueue()
     }
 
     fun blockQueries(chainId: Long = DEFAULT_CHAIN_IID): BlockQueries {
-        return getBlockchainInstance(chainId).getEngine().getBlockQueries()
+        return getBlockchainInstance(chainId).blockchainEngine.getBlockQueries()
     }
 
     fun blockBuildingStrategy(chainId: Long = DEFAULT_CHAIN_IID): BlockBuildingStrategy {
-        return getBlockchainInstance(chainId).getEngine().getBlockBuildingStrategy()
+        return getBlockchainInstance(chainId).blockchainEngine.getBlockBuildingStrategy()
     }
 
     fun networkTopology(chainId: Long = DEFAULT_CHAIN_IID): Map<String, String> {
         // TODO: [et]: Fix type casting
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure)
                 .defaultSynchronizationInfrastructure as EBFTSynchronizationInfrastructure)
-                .connectionManager.getPeersTopology(chainId)
+                .connectionManager.getNodesTopology(chainId)
                 .mapKeys { pubKeyToConnection ->
                     pubKeyToConnection.key.toString()
                 }
@@ -155,6 +158,6 @@ class PostchainTestNode(
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
 
     private fun blockchainRID(process: BlockchainProcess): String {
-        return process.getEngine().getConfiguration().blockchainRid.toHex()
+        return process.blockchainEngine.getConfiguration().blockchainRid.toHex()
     }
 }

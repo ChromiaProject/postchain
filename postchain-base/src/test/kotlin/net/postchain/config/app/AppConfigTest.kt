@@ -3,8 +3,9 @@
 package net.postchain.config.app
 
 import assertk.assertions.isEmpty
-import assertk.assertions.isEqualTo
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
+import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
 
 class AppConfigTest {
 
@@ -15,9 +16,10 @@ class AppConfigTest {
 
         assertk.assert(appConfig.nodeConfigProvider).isEmpty()
         assertk.assert(appConfig.databaseDriverclass).isEmpty()
-        assertk.assert(appConfig.databaseUrl).isEmpty()
-        assertk.assert(appConfig.databaseSchema).isEqualTo("public")
-        assertk.assert(appConfig.databaseUsername).isEmpty()
-        assertk.assert(appConfig.databasePassword).isEmpty()
+
+        assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
+        assertIsDefaultOrEqualsToEnvVar(appConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
+        assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
+        assertIsEmptyOrEqualsToEnvVar(appConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
     }
 }

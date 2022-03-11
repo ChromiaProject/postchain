@@ -5,9 +5,20 @@ package net.postchain.config.node
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.config.app.AppConfig
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
+import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
 
 class NodeConfigTest {
+
+    @Test
+    fun ttt() {
+        val m = mutableMapOf(1 to 10, 2 to 20, 3 to 30)
+        val kk = m.keys.toSet()
+        kk.forEach {
+            println(m.remove(it))
+        }
+    }
 
     @Test
     fun testEmptyNodeConfig() {
@@ -15,14 +26,15 @@ class NodeConfigTest {
                 javaClass.getResource("/net/postchain/config/empty-node-config.properties").file)
         val nodeConfig = NodeConfig(appConfig)
 
+        // TODO: [POS-129]: Remove it
         assertk.assert(nodeConfig.blockchainConfigProvider).isEmpty()
-        assertk.assert(nodeConfig.infrastructure).isEqualTo("base/ebft")
+        assertk.assert(nodeConfig.infrastructure).isEqualTo("ebft")
 
         assertk.assert(nodeConfig.databaseDriverclass).isEmpty()
-        assertk.assert(nodeConfig.databaseUrl).isEmpty()
-        assertk.assert(nodeConfig.databaseSchema).isEqualTo("public")
-        assertk.assert(nodeConfig.databaseUsername).isEmpty()
-        assertk.assert(nodeConfig.databasePassword).isEmpty()
+        assertIsEmptyOrEqualsToEnvVar(nodeConfig.databaseUrl, "POSTCHAIN_DB_URL")
+        assertIsDefaultOrEqualsToEnvVar(nodeConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
+        assertIsEmptyOrEqualsToEnvVar(nodeConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
+        assertIsEmptyOrEqualsToEnvVar(nodeConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
 
         assertk.assert(nodeConfig.privKey).isEmpty()
         assertk.assert(nodeConfig.privKeyByteArray.isEmpty())

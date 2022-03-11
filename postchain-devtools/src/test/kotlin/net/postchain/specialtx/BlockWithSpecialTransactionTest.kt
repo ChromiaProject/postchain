@@ -11,8 +11,10 @@ import net.postchain.gtx.GTXAutoSpecialTxExtension
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
+import java.util.concurrent.TimeUnit
 
 /**
  * Produces blocks containing Special transactions using the simplest possible setup, but as a minimum we need a new
@@ -46,7 +48,8 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         ).getGTXTransaction()
     }
 
-    @Test(timeout = 2 * 60 * 1000L)
+    @Test
+    @Timeout(2, unit = TimeUnit.MINUTES)
     fun testBlockContent() {
         val count = 3
         configOverrides.setProperty("testpeerinfos", createPeerInfos(count))
@@ -56,7 +59,7 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         // --------------------
         // Needed to create TXs
         // --------------------
-        val blockchainRID: BlockchainRid = nodes[0].getBlockchainInstance().getEngine().getConfiguration().blockchainRid
+        val blockchainRID: BlockchainRid = nodes[0].getBlockchainInstance().blockchainEngine.getConfiguration().blockchainRid
         val module = SpecialTxTestGTXModule() // Had to build a special module for this test
         val cs = SECP256K1CryptoSystem()
         gtxTxFactory = GTXTransactionFactory(blockchainRID, module, cs)
@@ -96,13 +99,13 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         // --------------------
         val expectedNumberOfTxs = 3
 
-        val bockQueries = nodes[0].getBlockchainInstance().getEngine().getBlockQueries()
+        val bockQueries = nodes[0].getBlockchainInstance().blockchainEngine.getBlockQueries()
         for (i in 0..2) {
 
             val blockData = bockQueries.getBlockAtHeight(i.toLong()).get()!!
             //System.out.println("block $i fetched.")
 
-            Assert.assertEquals(expectedNumberOfTxs, blockData.transactions.size)
+            assertEquals(expectedNumberOfTxs, blockData.transactions.size)
 
             checkForBegin(blockData.transactions[0])
             checkForTx(blockData.transactions[1])
@@ -124,9 +127,9 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
 
     private fun checkForOperation(tx: ByteArray, opName: String) {
         val txGtx = gtxTxFactory.decodeTransaction(tx) as GTXTransaction
-        Assert.assertEquals(1, txGtx.ops.size)
+        assertEquals(1, txGtx.ops.size)
         val op = txGtx.ops[0] as GTXOperation
         //System.out.println("Op : ${op.toString()}")
-        Assert.assertEquals(opName, op.data.opName)
+        assertEquals(opName, op.data.opName)
     }
 }

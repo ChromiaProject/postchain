@@ -6,16 +6,18 @@ import net.postchain.anchor.AnchorSpecialTxExtension
 import net.postchain.anchor.AnchorTestGTXModule
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.icmf.LevelConnectionChecker
-import net.postchain.base.withWriteConnection
-import net.postchain.configurations.GTXTestModule
 import net.postchain.core.BlockchainRid
 import net.postchain.devtools.TxCache
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
-import net.postchain.gtx.*
+import net.postchain.gtx.CompositeGTXModule
+import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GTXOperation
+import net.postchain.gtx.GTXTransaction
+import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.StandardOpsGTXModule
 import org.junit.Assert
 import org.junit.Test
-import java.lang.Exception
 
 /**
  * Main idea is to have one "source" blockchain that generates block, so that these blocks can be anchored by another
@@ -80,7 +82,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
         // --------------------
         // ChainId = 2: Check that we begin with nothing
         // --------------------
-        val bockQueries = nodes[0].getBlockchainInstance(ANCHOR_CHAIN_ID.toLong()).getEngine().getBlockQueries()
+        val bockQueries = nodes[0].getBlockchainInstance(ANCHOR_CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
 
         // --------------------
         // ChainId = 2: Build first anchor block

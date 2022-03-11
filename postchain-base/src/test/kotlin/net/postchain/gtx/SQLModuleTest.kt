@@ -9,8 +9,8 @@ import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFactory.gtv
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.MapConfiguration
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 
 class SQLModuleTest {
@@ -30,7 +30,7 @@ class SQLModuleTest {
         withWriteConnection(storage, 1) {
             GTXSchemaManager.initializeDB(it)
             module.initializeDB(it)
-            Assert.assertTrue(module.getOperations().size == 1)
+           assertTrue(module.getOperations().size == 1)
             false
         }
     }

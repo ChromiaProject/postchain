@@ -5,7 +5,8 @@ package net.postchain.gtv.gtvml
 import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.gtv.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class GtvMLParserDictsTest {
 
@@ -68,7 +69,7 @@ class GtvMLParserDictsTest {
         assert(actual).isEqualTo(expected)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGtv_dict_with_not_found_param_throws_exception() {
         val xml = """
             <dict>
@@ -77,10 +78,12 @@ class GtvMLParserDictsTest {
             </dict>
         """.trimIndent()
 
-        GtvMLParser.parseGtvML(xml, mapOf())
+        assertThrows<IllegalArgumentException> {
+            GtvMLParser.parseGtvML(xml, mapOf())
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGtv_dict_with_CASE_SENSITIVE_not_found_param_throws_exception() {
         val xml = """
             <dict>
@@ -89,9 +92,12 @@ class GtvMLParserDictsTest {
             </dict>
         """.trimIndent()
 
-        GtvMLParser.parseGtvML(
+        assertThrows<IllegalArgumentException> {
+            GtvMLParser.parseGtvML(
                 xml,
-                mapOf("case_sensitive_key" to GtvInteger(42)))
+                mapOf("case_sensitive_key" to GtvInteger(42))
+            )
+        }
     }
 
     @Test

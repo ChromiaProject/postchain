@@ -2,75 +2,62 @@
 
 package net.postchain.ebft
 
+import net.postchain.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.icmf.IcmfController
 import net.postchain.config.node.NodeConfig
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticProperty.BLOCKCHAIN
-import net.postchain.debug.DpNodeType
-import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.message.Message
-import net.postchain.ebft.worker.HistoricChainWorker
-import net.postchain.ebft.worker.ReadOnlyWorker
-import net.postchain.ebft.worker.ValidatorWorker
+import net.postchain.ebft.worker.HistoricBlockchainProcess
+import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
-import net.postchain.network.netty2.NettyConnectorFactory
-import net.postchain.network.x.DefaultXCommunicationManager
-import net.postchain.network.x.DefaultXConnectionManager
-import net.postchain.network.x.XConnectionManager
-import net.postchain.network.x.XPeerID
+import net.postchain.network.common.*
+import net.postchain.network.peer.*
 
 @Suppress("JoinDeclarationAndAssignment")
-class EBFTSynchronizationInfrastructure(
-        val nodeConfigProvider: NodeConfigurationProvider,
-        val nodeDiagnosticContext: NodeDiagnosticContext
+open class EBFTSynchronizationInfrastructure(
+        private val postchainContext: PostchainContext,
+        val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
 ) : SynchronizationInfrastructure {
 
-    private val nodeConfig get() = nodeConfigProvider.getConfiguration()
-    val connectionManager: XConnectionManager
-    private val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<String, () -> Any>>()
+    val nodeConfig get() = postchainContext.nodeConfig
+    val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
+    val connectionManager = postchainContext.connectionManager
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
 
-    init {
-        connectionManager = DefaultXConnectionManager(
-                NettyConnectorFactory(),
-                EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory(),
-                SECP256K1CryptoSystem())
-
-        addBlockchainDiagnosticProperty()
-    }
-
-    override fun shutdown() {
-        connectionManager.shutdown()
-    }
+    override fun shutdown() { }
 
     override fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        icmfController: IcmfController,
-        historicBlockchainContext: HistoricBlockchainContext?
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            icmfController: IcmfController,
+            heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
-        val blockchainConfig = engine.getConfiguration() as BaseBlockchainConfiguration // TODO: [et]: Resolve type cast
-        val unregisterBlockchainDiagnosticData: () -> Unit = {
-            blockchainProcessesDiagnosticData.remove(blockchainConfig.blockchainRid)
-        }
-        val peerCommConfiguration = buildPeerCommConfiguration(nodeConfig, blockchainConfig)
+        val blockchainConfig = engine.getConfiguration()
 
+        val historicBrid = blockchainConfig.effectiveBlockchainRID
+        val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
+            HistoricBlockchainContext(
+                    historicBrid, nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
+                    ?: emptyMap()
+            )
+        } else null
+
+        val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
         val workerContext = WorkerContext(
-                processName, blockchainConfig.signers, engine,
-                blockchainConfig.configData.context.nodeID,
-                buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration),
+                processName,
+                blockchainConfig,
+                engine,
+                buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
                 peerCommConfiguration,
-                nodeConfig,
                 icmfController,
-                unregisterBlockchainDiagnosticData,
-                getStartWithFastSyncValue(blockchainConfig.chainID)
+                heartbeatListener,
+                nodeConfig
         )
 
         /*
@@ -88,49 +75,64 @@ class EBFTSynchronizationInfrastructure(
         4 Goto 2
         */
         return if (historicBlockchainContext != null) {
-            historicBlockchainContext.contextCreator = {
-                val historicPeerCommConfiguration = if (it == historicBlockchainContext.historicBrid) {
-                    buildPeerCommConfiguration(nodeConfig, blockchainConfig, historicBlockchainContext)
+
+            historicBlockchainContext.contextCreator = { brid ->
+                val historicPeerCommConfiguration = if (brid == historicBrid) {
+                    peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
                 } else {
                     // It's an ancestor brid for historicBrid
-                    buildPeerCommConfigurationForAncestor(nodeConfig, historicBlockchainContext, it)
+                    buildPeerCommConfigurationForAncestor(nodeConfig, historicBlockchainContext, brid)
                 }
-                val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, it)
+                val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, brid)
 
-                WorkerContext(processName, blockchainConfig.signers,
-                        engine, blockchainConfig.configData.context.nodeID, histCommManager, historicPeerCommConfiguration,
-                        nodeConfig, icmfController, unregisterBlockchainDiagnosticData)
+                WorkerContext(
+                        processName,
+                        blockchainConfig,
+                        engine,
+                        histCommManager,
+                        historicPeerCommConfiguration,
+                        icmfController,
+                        heartbeatListener,
+                        nodeConfig,
+                )
 
             }
-            HistoricChainWorker(workerContext, historicBlockchainContext).also {
-                registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_SIGNER) {
-                    "TODO: Implement getHeight()"
-                }
-            }
-        } else if (blockchainConfig.configData.context.nodeID != NODE_ID_READ_ONLY) {
-            ValidatorWorker(workerContext).also {
-                registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_SIGNER) {
-                    it.syncManager.getHeight().toString()
-                }
-            }
+            HistoricBlockchainProcess(workerContext, historicBlockchainContext).also { it.start() }
+        } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY) {
+            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also { it.start() }
         } else {
-            ReadOnlyWorker(workerContext).also {
-                registerBlockchainDiagnosticData(blockchainConfig.blockchainRid, DpNodeType.NODE_TYPE_REPLICA) {
-                    it.getHeight().toString()
-                }
-            }
+            ReadOnlyBlockchainProcess(workerContext).also { it.start() }
         }
     }
 
+    /*
+    Definition: cross-fetching is the process of downloading blocks from another blockchain
+    over the peer-to-peer network. This is used when forking a chain when we don't have
+    the old chain locally and we haven't been able to sync using the new chain rid.
+
+    Problem: in order to cross-fetch blocks, we'd like to get the old blockchain's
+    configuration (to find nodes to connect to). But that's difficult. We don't always
+    have it, and we might not have the most recent configuration.
+
+    If we don't have that, we can use the current blockchain's configuration to
+    find nodes to sync from, since at least a quorum of the signers from old chain
+    must also be signers of the new chain.
+
+    To simplify things, we will always use current blockchain configuration to find
+    nodes to cross-fetch from. We'll also use sync-nodes.
+     */
+    private fun crossFetchingEnabled(blockchainConfig: BlockchainConfiguration) =
+            blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid
+
     override fun exitBlockchainProcess(process: BlockchainProcess) {
-        val chainID = process.getEngine().getConfiguration().chainID
+        val chainID = process.blockchainEngine.getConfiguration().chainID
         startWithFastSync.remove(chainID) // remove status when process is gone
     }
 
     override fun restartBlockchainProcess(process: BlockchainProcess) {
         var fastSyncStatus = true
-        val chainID = process.getEngine().getConfiguration().chainID
-        if (process is ValidatorWorker) {
+        val chainID = process.blockchainEngine.getConfiguration().chainID
+        if (process is ValidatorBlockchainProcess) {
             fastSyncStatus = process.isInFastSyncMode()
         }
         startWithFastSync[chainID] = fastSyncStatus
@@ -149,27 +151,31 @@ class EBFTSynchronizationInfrastructure(
 
     private fun buildXCommunicationManager(
             processName: BlockchainProcessName,
-            blockchainConfig: BaseBlockchainConfiguration,
+            blockchainConfig: BlockchainConfiguration,
             relevantPeerCommConfig: PeerCommConfiguration,
-            blockchainRid: BlockchainRid? = null
+            blockchainRid: BlockchainRid
     ): CommunicationManager<Message> {
-        val effectiveRid = blockchainRid ?: blockchainConfig.blockchainRid
-        val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, effectiveRid)
+        val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, blockchainRid)
         val packetDecoder = EbftPacketDecoder(relevantPeerCommConfig)
 
-        return DefaultXCommunicationManager(
+        return DefaultPeerCommunicationManager(
                 connectionManager,
                 relevantPeerCommConfig,
                 blockchainConfig.chainID,
-                effectiveRid,
+                blockchainRid,
                 packetEncoder,
                 packetDecoder,
                 processName
         ).apply { init() }
     }
 
-    private fun buildPeerCommConfigurationForAncestor(nodeConfig: NodeConfig, historicBlockchainContext: HistoricBlockchainContext, ancBrid: BlockchainRid): PeerCommConfiguration {
-        val myPeerID = XPeerID(nodeConfig.pubKeyByteArray)
+    // TODO: [POS-129] Merge: move it to [DefaultPeersCommConfigFactory]
+    private fun buildPeerCommConfigurationForAncestor(
+            nodeConfig: NodeConfig,
+            historicBlockchainContext: HistoricBlockchainContext,
+            ancBrid: BlockchainRid
+    ): PeerCommConfiguration {
+        val myPeerID = NodeRid(nodeConfig.pubKeyByteArray)
         val peersThatServeAncestorBrid = historicBlockchainContext.ancestors[ancBrid]!!
 
         val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
@@ -180,7 +186,8 @@ class EBFTSynchronizationInfrastructure(
                 relevantPeerMap.values,
                 SECP256K1CryptoSystem(),
                 nodeConfig.privKeyByteArray,
-                nodeConfig.pubKeyByteArray)
+                nodeConfig.pubKeyByteArray
+        )
     }
 
     /**
@@ -192,15 +199,20 @@ class EBFTSynchronizationInfrastructure(
      *
      * TODO: Could getRelevantPeers() be a method inside [NodeConfig]?
      */
-    private fun buildPeerCommConfiguration(nodeConfig: NodeConfig, blockchainConfig: BaseBlockchainConfiguration, historicBlockchainContext: HistoricBlockchainContext? = null): PeerCommConfiguration {
-        val myPeerID = XPeerID(nodeConfig.pubKeyByteArray)
-        val signers = blockchainConfig.signers.map { XPeerID(it) }
+    private fun buildPeerCommConfiguration(
+            nodeConfig: NodeConfig,
+            blockchainConfig: BaseBlockchainConfiguration,
+            historicBlockchainContext: HistoricBlockchainContext? = null
+    ): PeerCommConfiguration {
+        val myPeerID = NodeRid(nodeConfig.pubKeyByteArray)
+        val signers = blockchainConfig.signers.map { NodeRid(it) }
         val signersReplicas = signers.flatMap {
             nodeConfig.nodeReplicas[it] ?: listOf()
         }
         val blockchainReplicas = if (historicBlockchainContext != null) {
             (nodeConfig.blockchainReplicaNodes[historicBlockchainContext.historicBrid] ?: listOf()).union(
-                    nodeConfig.blockchainReplicaNodes[blockchainConfig.blockchainRid] ?: listOf())
+                    nodeConfig.blockchainReplicaNodes[blockchainConfig.blockchainRid] ?: listOf()
+            )
         } else {
             nodeConfig.blockchainReplicaNodes[blockchainConfig.blockchainRid] ?: listOf()
         }
@@ -213,34 +225,7 @@ class EBFTSynchronizationInfrastructure(
                 relevantPeerMap.values,
                 SECP256K1CryptoSystem(),
                 nodeConfig.privKeyByteArray,
-                nodeConfig.pubKeyByteArray)
-    }
-
-    private fun addBlockchainDiagnosticProperty() {
-        nodeDiagnosticContext.addProperty(BLOCKCHAIN) {
-            val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
-
-            connectionManager.getPeersTopology().forEach { (blockchainRid, topology) ->
-                diagnosticData.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
-                    properties.apply {
-                        put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS.prettyName) { topology }
-                    }
-                }
-            }
-
-            diagnosticData
-                    .mapValues { (_, v) ->
-                        v.mapValues { (_, v2) -> v2() }
-                    }
-                    .values.toTypedArray()
-        }
-    }
-
-    private fun registerBlockchainDiagnosticData(blockchainRid: BlockchainRid, nodeType: DpNodeType, getCurrentHeight: () -> String) {
-        blockchainProcessesDiagnosticData[blockchainRid] = mutableMapOf<String, () -> Any>(
-                DiagnosticProperty.BLOCKCHAIN_RID.prettyName to { blockchainRid.toHex() },
-                DiagnosticProperty.BLOCKCHAIN_NODE_TYPE.prettyName to { nodeType.prettyName },
-                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT.prettyName to getCurrentHeight
+                nodeConfig.pubKeyByteArray
         )
     }
 

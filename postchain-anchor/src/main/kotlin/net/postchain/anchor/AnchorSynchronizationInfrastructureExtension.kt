@@ -1,18 +1,14 @@
 package net.postchain.anchor
 
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainEngine
 import net.postchain.base.Storage
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtx.GTXBlockchainConfiguration
-import javax.naming.ConfigurationException
 
-class AnchorSynchronizationInfrastructureExtension(
-    val nodeConfigProvider: NodeConfigurationProvider,
-    val nodeDiagnosticContext: NodeDiagnosticContext
-) : SynchronizationInfrastructureExtension {
+@Suppress("unused")
+class AnchorSynchronizationInfrastructureExtension(val postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
 
     /**
      * When this method is executed we know an anchor chain is being created/connected (only such a chain would have
@@ -27,7 +23,7 @@ class AnchorSynchronizationInfrastructureExtension(
      * Note: All other [BlockchainProcess] will feed us data via [IcmfDispatcher]
      */
     override fun connectProcess(process: BlockchainProcess) {
-        val engine = process.getEngine()
+        val engine = process.blockchainEngine
         val cfg = engine.getConfiguration()
 
         if (cfg is GTXBlockchainConfiguration) {
@@ -61,8 +57,8 @@ class AnchorSynchronizationInfrastructureExtension(
      * we don't care about that here.
      */
     private fun getAnchoreSpecialTxExtension(cfg: GTXBlockchainConfiguration): AnchorSpecialTxExtension? {
-        return cfg.module.getSpecialTxExtensions().firstOrNull {
-                ext -> (ext is AnchorSpecialTxExtension)
+        return cfg.module.getSpecialTxExtensions().firstOrNull { ext ->
+            (ext is AnchorSpecialTxExtension)
         } as AnchorSpecialTxExtension?
     }
 }

@@ -3,7 +3,7 @@
 package net.postchain.devtools.gtx
 
 import net.postchain.devtools.IntegrationTestSetup
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class GTXClientTestBackendManual : IntegrationTestSetup() {
 

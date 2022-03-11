@@ -9,7 +9,7 @@ import net.postchain.devtools.assertNodeConnectedWith
 import net.postchain.isEmpty
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 // TODO: this test seems flaky, investigate
 class TwoPeersReconnectionTest : ReconnectionTest() {

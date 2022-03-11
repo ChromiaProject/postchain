@@ -3,10 +3,7 @@
 package net.postchain.network.netty2
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.ChannelFuture
-import io.netty.channel.ChannelHandler
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.EventLoopGroup
+import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
@@ -16,14 +13,13 @@ import java.util.concurrent.TimeUnit
 
 class NettyServer {
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     private lateinit var server: ServerBootstrap
-    private lateinit var bindFuture: ChannelFuture
     private lateinit var createChannelHandler: () -> ChannelHandler
     private lateinit var eventLoopGroup: EventLoopGroup
 
-    fun setChannelHandler(handlerFactory: () -> ChannelHandler) {
+    fun setCreateChannelHandler(handlerFactory: () -> ChannelHandler) {
         this.createChannelHandler = handlerFactory
     }
 
@@ -47,14 +43,14 @@ class NettyServer {
                     }
                 })
 
-        bindFuture = server.bind(port).sync()
+        server.bind(port).sync()
     }
 
     fun shutdown() {
-        logger.debug("Shutting down NettyServer")
+        logger.debug{ "Shutting down NettyServer" }
         try {
             eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).sync()
-            logger.debug("Shutting down NettyServer done")
+            logger.debug{ "Shutting down NettyServer done" }
         } catch (t: Throwable) {
             logger.debug("Shutting down NettyServer failed", t)
         }

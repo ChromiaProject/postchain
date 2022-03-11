@@ -5,8 +5,8 @@ package net.postchain.gtv.merkle
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.merkle.TreeHelper
 import net.postchain.gtv.GtvInteger
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 
 class GtvMerkleHashCalculatorTest {
 
@@ -25,7 +25,7 @@ class GtvMerkleHashCalculatorTest {
         // 2. the add-one-hashed value
 
         val result = calculator.calculateLeafHash(iGtv)
-        Assert.assertEquals(expectedResultAfterAddOneHash, TreeHelper.convertToHex(result))
+        assertEquals(expectedResultAfterAddOneHash, TreeHelper.convertToHex(result))
     }
 
 
@@ -43,6 +43,6 @@ class GtvMerkleHashCalculatorTest {
         // 2. the 32 byte hashed value
 
         val result = calculator.calculateLeafHash(iGtv)
-        Assert.assertEquals(expectedResultAfterAddOneHash, TreeHelper.convertToHex(result))
+        assertEquals(expectedResultAfterAddOneHash, TreeHelper.convertToHex(result))
     }
 }

@@ -8,6 +8,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
+const val TRANSACTION_QUEUE_CAPACITY = 2500 // 5 seconds (if 500 tps)
 /**
  * Minimal/raw version of the BC configuration.
  */
@@ -59,6 +60,17 @@ class BaseBlockchainConfigurationData(
     fun getMaxBlockTransactions(): Long {
         val stratDict = data[KEY_BLOCKSTRATEGY]
         return stratDict?.get(KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS)?.asInteger() ?: 100
+    }
+
+    /**
+     * Note on POS-198: We actually do want the TX queue to fill up fast, b/c the client should display this
+     * info to the user (spinning ball etc) so that the client understands that the system is down.
+     * Alex spoke about making TX resend automatic, after a pause, when 503 error is returned, so that no action
+     * from the user's side has to be taken to eventually get the TX into the queue.
+     */
+    fun getQueueCapacity(): Int {
+        val stratDict = data[KEY_BLOCKSTRATEGY]
+        return stratDict?.get(KEY_BLOCKSTRATEGY_QUEUE_CAPACITY)?.asInteger()?.toInt() ?: TRANSACTION_QUEUE_CAPACITY
     }
 
     fun getDependenciesAsList(): List<BlockchainRelatedInfo> {
@@ -117,6 +129,7 @@ class BaseBlockchainConfigurationData(
         const val KEY_BLOCKSTRATEGY_NAME = "name"
         const val KEY_BLOCKSTRATEGY_MAXBLOCKSIZE = "maxblocksize"
         const val KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS = "maxblocktransactions"
+        const val KEY_BLOCKSTRATEGY_QUEUE_CAPACITY = "queuecapacity"
 
         const val KEY_CONFIGURATIONFACTORY = "configurationfactory"
 

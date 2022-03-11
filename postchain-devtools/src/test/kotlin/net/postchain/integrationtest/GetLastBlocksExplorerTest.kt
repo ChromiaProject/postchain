@@ -16,12 +16,12 @@ import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
-    @Before
+    @BeforeEach
     fun setup() {
         val blockchainConfig = "/net/postchain/devtools/blockexplorer/blockchain_config.xml"
         val sysSetup = SystemSetupFactory.buildSystemSetup(mapOf(1 to blockchainConfig))

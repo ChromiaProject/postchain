@@ -3,11 +3,12 @@
 package net.postchain.core
 
 import net.postchain.base.icmf.IcmfController
-import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockTrace
+import net.postchain.debug.DiagnosticProperty
 
 interface Shutdownable {
     fun shutdown()
+    //fun isShutdown() // TODO: Olle: shouldn't we have this too, so many are using a flag for this
 }
 
 interface Synchronizable {
@@ -47,9 +48,11 @@ interface BlockchainEngine : Shutdownable {
  * - [BlockDatabase] to read and store blocks to the DB.
  */
 interface BlockchainProcess {
-    fun getEngine(): BlockchainEngine
+    val blockchainEngine: BlockchainEngine
     fun getIcmfController(): IcmfController
+    fun start()
     fun shutdown()
+    fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) = Unit
 }
 
 /**

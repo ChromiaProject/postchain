@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.Storage
 import net.postchain.gtv.Gtv
 
@@ -12,8 +11,10 @@ import net.postchain.gtv.Gtv
  * (for example [BlockBuildingStrategy]).
  */
 interface BlockchainConfiguration {
+    val blockchainContext: BlockchainContext
     val chainID: Long
     val blockchainRid: BlockchainRid
+    val signers: List<ByteArray>
     val effectiveBlockchainRID: BlockchainRid
     val traits: Set<String>
     val syncInfrastructureName: DynamicClassName?

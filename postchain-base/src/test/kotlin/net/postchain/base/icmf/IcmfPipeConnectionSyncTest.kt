@@ -2,7 +2,7 @@ package net.postchain.base.icmf
 
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.core.BlockchainRid
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class IcmfPipeConnectionSyncTest {

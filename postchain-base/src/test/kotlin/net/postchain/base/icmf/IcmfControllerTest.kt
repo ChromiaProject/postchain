@@ -1,22 +1,19 @@
 package net.postchain.base.icmf
 
 import net.postchain.base.BlockchainRelatedInfo
-import net.postchain.config.blockchain.SimpleConfReaderMock
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainRid
-import org.easymock.EasyMock
-import org.junit.Test
-import org.easymock.EasyMockSupport
-import org.junit.Assert.assertTrue
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.mock
 import kotlin.test.assertEquals
 
 /**
  * Since we support both manual and managed mode, I made one scenario for each.
  */
-class IcmfControllerTest : EasyMockSupport() {
-
+class IcmfControllerTest {
 
     /**
      * This is a managed mode scenario test on [IcmfController], testing this:
@@ -46,10 +43,6 @@ class IcmfControllerTest : EasyMockSupport() {
         val mockProcessChain4: BlockchainProcess = mockBlockchainProcess(chain4.chainId!!, null) // It's a source, so listenerConfig is "null"
         val mockProcessChain5: BlockchainProcess = mockBlockchainProcess(chain5.chainId!!, null)
         val mockProcessChain6: BlockchainProcess = mockBlockchainProcess(chain6.chainId!!, null)
-
-        // EasyMock thing
-        replayAll()
-
 
         // ---------
         // Setup Controller
@@ -232,14 +225,17 @@ class IcmfControllerTest : EasyMockSupport() {
     private fun mockBlockchainProcess(chainIid: Long, listenerConfig: String?): BlockchainProcess {
         val bcRid = BlockchainRid.buildRepeat(chainIid.toByte())
 
-        val mockProcess: BlockchainProcess = mock(BlockchainProcess::class.java)
-        val mockEngine: BlockchainEngine = mock(BlockchainEngine::class.java)
-        val mockConfig: BlockchainConfiguration = mock(BlockchainConfiguration::class.java)
-        EasyMock.expect(mockProcess.getEngine()).andReturn(mockEngine).anyTimes()
-        EasyMock.expect(mockEngine.getConfiguration()).andReturn(mockConfig).anyTimes()
-        EasyMock.expect(mockConfig.chainID).andReturn(chainIid).anyTimes()
-        EasyMock.expect(mockConfig.blockchainRid).andReturn(bcRid).anyTimes()
-        EasyMock.expect(mockConfig.icmfListener).andReturn(listenerConfig).anyTimes()
+        val mockConfig: BlockchainConfiguration = mock {
+            on { chainID }.thenReturn(chainIid)
+            on { blockchainRid }.thenReturn(bcRid)
+            on { icmfListener }.thenReturn(listenerConfig)
+        }
+        val mockEngine: BlockchainEngine = mock {
+            on { getConfiguration() }.thenReturn(mockConfig)
+        }
+        val mockProcess: BlockchainProcess = mock {
+            on { blockchainEngine }.thenReturn(mockEngine)
+        }
 
         return mockProcess
     }

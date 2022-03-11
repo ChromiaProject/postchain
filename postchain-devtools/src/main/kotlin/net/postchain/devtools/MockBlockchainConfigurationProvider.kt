@@ -60,5 +60,9 @@ class MockBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSou
         logger.debug("getHistoricConfiguration() - Fetching configuration from chain0 (for chain: $chainId and height: $historicBlockHeight)")
         return mockDataSource.getConfiguration(ChainUtil.ridOf(chainId).data, historicBlockHeight)
     }
+
+    override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
+        TODO("Not implemented yet")
+    }
 }
 

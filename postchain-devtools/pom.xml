@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright (c) 2020 ChromaWay AB. See README for license information. -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.4.0-SNAPSHOT</version>
+        <version>3.4.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>postchain-devtools</artifactId>
@@ -12,8 +13,6 @@
 
     <properties>
         <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
-        <mockito.version>2.23.0</mockito.version>
-        <mockito-kotlin.version>2.1.0</mockito-kotlin.version>
         <assertk.version>0.10</assertk.version>
     </properties>
 
@@ -27,11 +26,17 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
         </dependency>
-
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-client</artifactId>
-            <version>3.4.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-common</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
         </dependency>
 
         <!-- Kotlin -->
@@ -45,132 +50,100 @@
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit</artifactId>
-            <version>${kotlin.version}</version>
+            <artifactId>kotlin-test-junit5</artifactId>
         </dependency>
 
         <!-- CLI -->
         <dependency>
             <groupId>com.github.ajalt</groupId>
             <artifactId>clikt</artifactId>
-            <version>1.4.0</version>
         </dependency>
 
         <!-- Testing -->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
-            <scope>compile</scope>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.8.2</version>
+            <scope>compile</scope> <!-- TODO: Should be test scope -->
         </dependency>
-
         <dependency>
-            <groupId>pl.pragmatists</groupId>
-            <artifactId>JUnitParams</artifactId>
-            <version>1.1.1</version>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
-            <groupId>io.rest-assured</groupId>
-            <artifactId>rest-assured</artifactId>
-            <version>3.1.1</version>
-            <scope>test</scope>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <scope>test</scope> <!-- TODO: Should be removed (test rules in E2E tests) -->
         </dependency>
-
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>${mockito.version}</version>
-            <scope>test</scope>
         </dependency>
-
         <dependency>
-            <groupId>com.nhaarman.mockitokotlin2</groupId>
+            <groupId>org.mockito.kotlin</groupId>
             <artifactId>mockito-kotlin</artifactId>
-            <version>${mockito-kotlin.version}</version>
-            <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
             <artifactId>assertk</artifactId>
             <version>${assertk.version}</version>
+            <scope>compile</scope> <!-- TODO: Should be test scope -->
         </dependency>
-
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.skyscreamer</groupId>
             <artifactId>jsonassert</artifactId>
-            <version>1.5.0</version>
-            <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
-            <version>1.12.5</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility-kotlin</artifactId>
+            <version>${awaitility.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${awaitility.version}</version>
+            <scope>compile</scope>
         </dependency>
 
     </dependencies>
 
     <build>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven.surefire.plugin.version}</version>
-                <configuration>
-                    <properties>
-                        <property>
-                            <name>listener</name>
-                            <value>net.postchain.maven.surefire.PrintCurrentTestRunListener</value>
-                        </property>
-                    </properties>
-                    <includes>
-                        <include>**/*Test.java</include>
-                        <include>**/*IT.java</include>
-                        <!--                        <include>**/*Nightly.java</include>-->
-                        <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
-                    </includes>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>${maven.assembly.plugin.version}</version>
+                <artifactId>maven-jar-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>make-executable-jar</id>
-                        <phase>package</phase>
+                        <id>default-jar</id>
                         <goals>
-                            <goal>single</goal>
+                            <goal>jar</goal>
                         </goals>
                         <configuration>
                             <archive>
                                 <manifest>
                                     <mainClass>net.postchain.devtools.AppKt</mainClass>
+                                    <addClasspath>true</addClasspath>
+                                    <classpathPrefix/>
+                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                                     <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
                                     <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                                 </manifest>
                             </archive>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
                         </configuration>
                     </execution>
-                </executions>
-            </plugin>
-
-            <!-- Exporting test classes for other modules' integration tests -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.1.2</version>
-                <executions>
+                    <!-- Exporting test classes for other modules' integration tests -->
                     <execution>
                         <goals>
                             <goal>test-jar</goal>
@@ -178,38 +151,7 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>ci</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>${maven.surefire.plugin.version}</version>
-                        <configuration>
-                            <properties>
-                                <property>
-                                    <name>listener</name>
-                                    <value>net.postchain.maven.surefire.PrintCurrentTestRunListener</value>
-                                </property>
-                            </properties>
-                            <includes>
-                                <include>**/*Test.java</include>
-                                <include>**/*IT.java</include>
-                                <include>**/*Nightly.java</include>
-                                <include>**/*E2ET.*</include>
-                                <!--                                <include>**/FourPeersReconfigurationTest.java</include>-->
-                            </includes>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>

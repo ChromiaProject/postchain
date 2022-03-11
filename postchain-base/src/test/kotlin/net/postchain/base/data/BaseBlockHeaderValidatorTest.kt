@@ -4,7 +4,7 @@ import net.postchain.base.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainRid
 import net.postchain.core.InitialBlockData
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 /**
  * The [BaseBlockHeaderValidator] doesn't have any DB dependencies, which makes it pretty easy to do unit test for
