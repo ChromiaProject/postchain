@@ -2,7 +2,7 @@
 
 package net.postchain.managed
 
-import net.postchain.PostchainContext
+import net.postchain.core.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager

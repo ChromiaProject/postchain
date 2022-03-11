@@ -2,7 +2,7 @@
 
 package net.postchain.base
 
-import net.postchain.PostchainContext
+import net.postchain.core.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.data.BaseBlockchainConfiguration

@@ -8,6 +8,7 @@ import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.BlockchainRid
+import net.postchain.core.PostchainContext
 import net.postchain.core.Shutdownable
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName

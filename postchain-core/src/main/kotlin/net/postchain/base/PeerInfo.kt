@@ -1,5 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
+// TODO: Move this to core package
 package net.postchain.base
 
 import net.postchain.core.ByteArrayKey

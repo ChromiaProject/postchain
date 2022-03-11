@@ -2,7 +2,7 @@
 
 package net.postchain.ebft
 
-import net.postchain.PostchainContext
+import net.postchain.core.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.config.node.NodeConfig

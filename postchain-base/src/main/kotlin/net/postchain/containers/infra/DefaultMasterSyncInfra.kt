@@ -2,7 +2,7 @@
 
 package net.postchain.containers.infra
 
-import net.postchain.PostchainContext
+import net.postchain.core.PostchainContext
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer

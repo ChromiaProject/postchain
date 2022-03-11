@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName

@@ -3,7 +3,7 @@ package net.postchain.containers.bpm
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import mu.KLogging
-import net.postchain.PostchainContext
+import net.postchain.core.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.Utils

@@ -3,12 +3,9 @@
 package net.postchain.config.node
 
 import assertk.assertions.containsExactly
-import assertk.assertions.isEqualTo
-import assertk.assertions.isSameAs
 import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
-import net.postchain.config.app.AppConfig
 import org.junit.jupiter.api.Test
 import java.time.Instant
 

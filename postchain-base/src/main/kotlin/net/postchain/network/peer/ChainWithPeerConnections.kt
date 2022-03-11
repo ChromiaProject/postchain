@@ -12,9 +12,9 @@ import net.postchain.network.netty2.NettyPeerConnection
  * and [NodeRid].
  */
 class ChainWithPeerConnections(
-    val iid: Long,
-    val peerConfig: XChainPeersConfiguration,
-    private val connectAll: Boolean
+        val iid: Long,
+        val peerConfig: XChainPeersConfiguration,
+        private val connectAll: Boolean
 ) : ChainWithConnections<PeerConnection, PeerPacketHandler> {
 
     val bcRid = peerConfig.blockchainRid // Just take it from the config

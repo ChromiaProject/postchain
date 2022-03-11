@@ -1,6 +1,6 @@
 package net.postchain.containers.bpm
 
-import net.postchain.PostchainContext
+import net.postchain.core.PostchainContext
 import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainConfiguration

@@ -6,7 +6,6 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainRid
-import net.postchain.core.Infrastructure
 import net.postchain.core.NodeRid
 import org.apache.commons.configuration2.Configuration
 
@@ -29,7 +28,7 @@ open class NodeConfig(val appConfig: AppConfig) {
 
     val infrastructure: String
         // "base/ebft" is the default
-        get() = config.getString("infrastructure", Infrastructure.Ebft.get())
+        get() = config.getString("infrastructure", "ebft")
 
     /**
      * Database

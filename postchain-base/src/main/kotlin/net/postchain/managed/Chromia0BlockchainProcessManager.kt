@@ -2,7 +2,7 @@
 
 package net.postchain.managed
 
-import net.postchain.PostchainContext
+import net.postchain.core.PostchainContext
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.data.DatabaseAccess

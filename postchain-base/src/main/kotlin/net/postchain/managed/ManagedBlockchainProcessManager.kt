@@ -3,7 +3,7 @@
 package net.postchain.managed
 
 import mu.KLogging
-import net.postchain.PostchainContext
+import net.postchain.core.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
