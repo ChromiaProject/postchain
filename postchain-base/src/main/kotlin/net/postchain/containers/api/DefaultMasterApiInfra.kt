@@ -18,7 +18,6 @@ class DefaultMasterApiInfra(
     override fun connectContainerProcess(process: ContainerBlockchainProcess) {
         if (restApi != null) {
             val nodeConfig = nodeConfigProvider.getConfiguration()
-
             val path = URL("http",
                     nodeConfig.slaveHost,
                     process.restApiPort,

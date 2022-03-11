@@ -2,16 +2,14 @@
 
 package net.postchain.containers.infra
 
-import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.PostchainContext
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.DirectoryDataSource
-import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
@@ -19,15 +17,9 @@ import java.nio.file.Path
 
 
 open class DefaultMasterSyncInfra(
-        nodeConfigProvider: NodeConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext,
-        protected val masterConnectionManager: MasterConnectionManager,
-        connectionManager: ConnectionManager
-) : EBFTSynchronizationInfrastructure(
-        nodeConfigProvider,
-        nodeDiagnosticContext,
-        connectionManager
-), MasterSyncInfra {
+        postchainContext: PostchainContext,
+        protected val masterConnectionManager: MasterConnectionManager
+) : EBFTSynchronizationInfrastructure(postchainContext), MasterSyncInfra {
 
     /**
      * We create a new [MasterCommunicationManager] for every new BC process we make.
