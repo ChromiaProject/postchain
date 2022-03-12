@@ -6,9 +6,6 @@ import net.postchain.core.BlockHeader
 import net.postchain.core.BlockWitness
 import net.postchain.core.BlockWitnessBuilder
 
-/**
- * TODO: This stuff is horrible, refactor!
- */
 interface BlockWitnessManager {
     // Returns a new witness builder for the current header
     fun createWitnessBuilderWithoutOwnSignature(

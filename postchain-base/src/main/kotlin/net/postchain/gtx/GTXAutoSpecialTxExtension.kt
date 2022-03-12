@@ -50,7 +50,7 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
         }
     }
 
-    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, blockchainRID: BlockchainRid): List<OpData> {
+    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val op = if (position == SpecialTransactionPosition.Begin)
             OP_BEGIN_BLOCK else OP_END_BLOCK
         return listOf(OpData(op, arrayOf(GtvInteger(bctx.height))))

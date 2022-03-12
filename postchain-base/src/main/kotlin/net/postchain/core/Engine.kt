@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.base.icmf.IcmfController
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.DiagnosticProperty
 
@@ -49,7 +48,6 @@ interface BlockchainEngine : Shutdownable {
  */
 interface BlockchainProcess {
     val blockchainEngine: BlockchainEngine
-    fun getIcmfController(): IcmfController
     fun start()
     fun shutdown()
     fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) = Unit

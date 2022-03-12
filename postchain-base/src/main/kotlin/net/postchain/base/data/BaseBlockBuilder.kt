@@ -25,7 +25,7 @@ import java.util.*
  * @property specialTxHandler is the main entry point for special transaction handling.
  * @property subjects Public keys for nodes authorized to sign blocks
  * @property blockSigMaker used to produce signatures on blocks for local node
- * @property blockValidator
+ * @property blockWitnessBuilderFactory
  * @property blockchainRelatedInfoDependencyList holds the blockchain RIDs this blockchain depends on
  * @property extensions are extensions to the block builder, usually helping with handling of special transactions.
  * @property usingHistoricBRID
@@ -41,7 +41,7 @@ open class BaseBlockBuilder(
         val specialTxHandler: SpecialTransactionHandler,
         val subjects: Array<ByteArray>,
         val blockSigMaker: SigMaker,
-        val blockWitnessBuilderFactory: BlockWitnessManager,
+        override val blockWitnessManager: BlockWitnessManager,
         val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
         val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
@@ -57,11 +57,6 @@ open class BaseBlockBuilder(
 
     private var blockSize: Long = 0L
     private var haveSpecialEndTransaction = false
-
-    /**
-     * @return a proper [BlockWitnessManager] with [CryptoSystem] in it.
-     */
-    override fun getBlockWitnessManager() = blockWitnessBuilderFactory
 
     /**
      * Computes the root hash for the Merkle tree of transactions currently in a block
@@ -218,13 +213,12 @@ open class BaseBlockBuilder(
      * @throws ProgrammerMistake If the block is not finalized yet signatures can't be created since they would
      * be invalid when further transactions are added to the block
      */
-    // TODO: Olle: Talked to Alex and he said this shouldn't be this tied to the BBB, the WitnessBuilder should come from somewhere else
     override fun getBlockWitnessBuilder(): BlockWitnessBuilder? {
         if (!finalized) {
             throw ProgrammerMistake("Block is not finalized yet.")
         }
 
-        return getBlockWitnessManager().createWitnessBuilderWithOwnSignature(_blockData!!.header)
+        return blockWitnessManager.createWitnessBuilderWithOwnSignature(_blockData!!.header)
     }
 
     /**

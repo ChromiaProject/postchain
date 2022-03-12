@@ -5,12 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
-import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.icmf.IcmfController
-import net.postchain.base.icmf.IcmfPipeConnectionSync
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.blockchain.QuickSimpleConfigReader
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
@@ -51,8 +46,7 @@ open class BaseBlockchainProcessManager(
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
 
-    // We need to use the same [IcmfController] for all chains or else they won't "see" each other (and be unable to connect).
-    protected val icmfController = IcmfController(storage)
+    protected val extensions: List<BlockchainProcessManagerExtension> = makeExtensions()
 
     // For DEBUG only
     var insideATest = false
@@ -62,6 +56,11 @@ open class BaseBlockchainProcessManager(
 
     init {
         initiateChainDiagnosticData()
+    }
+
+    /** overridable */
+    protected fun makeExtensions(): List<BlockchainProcessManagerExtension> {
+        return listOf()
     }
 
     /**
@@ -109,24 +108,11 @@ open class BaseBlockchainProcessManager(
                         val engine = blockchainInfrastructure.makeBlockchainEngine( processName, blockchainConfig, x)
                         startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
-                        val process = createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, null)
+                        createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, null)
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
-                        val db = DatabaseAccess.of(eContext)
-                        val height = db.getLastBlockHeight(eContext) // FUTURE WORK: Olle: A bit ugly/slow to get this from db here, we should prob pass it as a param from somewhere
-
-                        // Create the pipes we should feed the dispatcher
-                        val pipes = icmfController.maybeConnect(process, height) // We only create pipes first time
-
-                        if (logger.isDebugEnabled) {
-                            for (pipe in pipes) {
-                                // Not much to do with the created pipes since they already got added to the dispatcher in maybeConnect()
-                                logger.debug("Pipe created: ${pipe.pipeId} for process: $processName")
-                            }
-                        }
                         startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
                         blockchainConfig.blockchainRid
-
                     } else {
                         logger.error("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
                         null
@@ -153,8 +139,9 @@ open class BaseBlockchainProcessManager(
         return cm
     }
     protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?): BlockchainProcess {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, icmfController, heartbeatListener).also {
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener).also {
             it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
+            for (e in extensions) e.connectProcess(it)
             chainIdToBrid[chainId] = blockchainConfig.blockchainRid
         }
         return blockchainProcesses[chainId]!!
@@ -172,10 +159,6 @@ open class BaseBlockchainProcessManager(
     override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
         synchronized(synchronizer) {
             stopInfoDebug("Stopping of blockchain", chainId, bTrace)
-
-            icmfController.chainStop(chainId)
-
-
             stopAndUnregisterBlockchainProcess(chainId, restart)
             stopInfoDebug("Stopping blockchain, shutdown complete", chainId, bTrace)
 
@@ -190,6 +173,7 @@ open class BaseBlockchainProcessManager(
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
         blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
         blockchainProcesses.remove(chainId)?.also {
+            for (e in extensions) e.disconnectProcess(it)
             if (restart) {
                 blockchainInfrastructure.restartBlockchainProcess(it)
             } else {
@@ -223,7 +207,7 @@ open class BaseBlockchainProcessManager(
 
     /**
      * Define what actions should be taken after block commit. In our case:
-     * 1) alerts ICMF about new block height,
+     * 1) trigger bp extensions,
      * 2) checks for configuration changes, and then does a async reboot of the given chain.
      *
      * @param chainId - the chain we should build the [AfterCommitHandler] for
@@ -233,11 +217,7 @@ open class BaseBlockchainProcessManager(
     protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         val retFun: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
 
-            // One option (that we currently don't use), is to trigger ICMF pipes
-            // after block commit. Instead we fetch the block headers at the time the
-            // listener chain needs it.
-            //icmfController.icmfDispatcher.newBlockHeight(chainId, height, storage)
-
+            for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, height)
             val doRestart = withReadConnection(storage, chainId) { eContext ->
                 blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
             }
@@ -300,7 +280,6 @@ open class BaseBlockchainProcessManager(
                     }
                     .values.toTypedArray()
         }
-
     }
 
     // ----------------------------------------------

@@ -7,7 +7,6 @@ import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.BaseTransactionQueue
-import net.postchain.base.icmf.IcmfController
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatListener
@@ -109,22 +108,26 @@ open class BaseBlockchainInfrastructure(
      * @param className is the full name of the class to create an instance from
      * @return the instance as a [Shutdownable]
      */
-    @Suppress("UNCHECKED_CAST")
-    private fun <T : Shutdownable> getInstanceByClassName(className: String): T {
+    private inline fun <reified T : Shutdownable> getInstanceByClassName(className: String): T {
         val iClass = Class.forName(className)
         val ctor = iClass.getConstructor(PostchainContext::class.java)
-        return ctor.newInstance(postchainContext) as T
+        val instance = ctor.newInstance(postchainContext)
+        if (instance is T)
+            return instance
+        else
+            throw UserMistake(
+                    "Class ${className} does not support required interface"
+            )
     }
 
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            icmfController: IcmfController,
             heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
         val conf = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(conf.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, icmfController, heartbeatListener)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener)
         if (conf is BaseBlockchainConfiguration) {
             for (extName in conf.syncInfrastructureExtensionNames) {
                 getSynchronizationInfrastructureExtension(extName).connectProcess(process)

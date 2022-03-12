@@ -1,7 +1,6 @@
 package net.postchain.devtools.utils.configuration
 
 import net.postchain.base.BlockchainRelatedInfo
-import net.postchain.base.icmf.LevelConnectionChecker
 import net.postchain.core.BlockchainRid
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.gtv.Gtv
@@ -30,7 +29,6 @@ data class BlockchainSetup(
     val signerNodeList: List<NodeSeqNumber>,
     val chainDependencies: Set<Int> = setOf(), // default is none
     private var shouldHaveNormalTx: Boolean = true,  // Set to false to prevent normal TXs to go to this chain
-    private var listenerLevel: Int = LevelConnectionChecker.NOT_LISTENER // default means this is a source chain, which is the most common case
 ) {
 
     /**

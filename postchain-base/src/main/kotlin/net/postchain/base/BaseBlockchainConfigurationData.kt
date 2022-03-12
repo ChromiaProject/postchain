@@ -76,7 +76,7 @@ class BaseBlockchainConfigurationData(
     fun getDependenciesAsList(): List<BlockchainRelatedInfo> {
         val dep = data[KEY_DEPENDENCIES]
         return if (dep != null) {
-            BaseDependencyFactory.build(dep!!)
+            BaseDependencyFactory.build(dep)
         } else {
             // It is allowed to have no dependencies
             listOf<BlockchainRelatedInfo>()
@@ -100,11 +100,6 @@ class BaseBlockchainConfigurationData(
         } else {
             listOf()
         }
-    }
-
-    // Most chains don't have this setting
-    fun getIcmfListener(): String? {
-        return data[KEY_ICMF_LISTENER]?.asString()
     }
 
     fun getComponentMap() = configurationComponentMap
@@ -145,10 +140,6 @@ class BaseBlockchainConfigurationData(
 
         const val KEY_SYNC = "sync"
         const val KEY_SYNC_EXT = "sync_ext"
-
-        const val KEY_ICMF_SOURCE = "icmfsource" // Only use this setting for manual mode (only)
-        const val KEY_ICMF_LISTENER = "icmflistener" // Only use this setting for managed mode
-
 
         /**
          * Factory method

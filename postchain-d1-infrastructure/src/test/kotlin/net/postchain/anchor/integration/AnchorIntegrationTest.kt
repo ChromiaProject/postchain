@@ -5,7 +5,6 @@ import net.postchain.anchor.AnchorGTXModule
 import net.postchain.anchor.AnchorSpecialTxExtension
 import net.postchain.anchor.AnchorTestGTXModule
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.icmf.LevelConnectionChecker
 import net.postchain.core.BlockchainRid
 import net.postchain.devtools.TxCache
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
@@ -54,7 +53,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
         // Important!! We don't want to create any regular test transactions for the Anchor chain
         // -----------------------------
         sysSetup.blockchainMap[ANCHOR_CHAIN_ID]!!.setShouldHaveNormalTx(false)
-        sysSetup.blockchainMap[ANCHOR_CHAIN_ID]!!.setListenerChainLevel(LevelConnectionChecker.HIGH_LEVEL) // The usual Anchor level
+        //sysSetup.blockchainMap[ANCHOR_CHAIN_ID]!!.setListenerChainLevel(LevelConnectionChecker.HIGH_LEVEL) // The usual Anchor level
 
         runXNodes(sysSetup) // Starts all chains on all nodes
 

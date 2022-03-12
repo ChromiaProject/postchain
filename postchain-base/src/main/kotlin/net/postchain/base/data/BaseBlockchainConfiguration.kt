@@ -4,13 +4,11 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.icmf.IcmfController
 import net.postchain.core.*
 
 open class BaseBlockchainConfiguration(
         val configData: BaseBlockchainConfigurationData,
-        val controller: IcmfController? = null // Only some chains (like anchoring) will have a pump station.
-        ): BlockchainConfiguration {
+) : BlockchainConfiguration {
 
     companion object : KLogging()
 
@@ -37,11 +35,8 @@ open class BaseBlockchainConfiguration(
     override val syncInfrastructureName = DynamicClassName.build(configData.getSyncInfrastructureName())
     override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.getSyncInfrastructureExtensions())
 
-    override val icmfListener = configData.getIcmfListener()
-
     // Only GTX config can have special TX, this is just "Base" so we settle for null
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
-
     val componentMap: Map<String, Any> = configData.getComponentMap() // Used for things that might or might not exist
 
 

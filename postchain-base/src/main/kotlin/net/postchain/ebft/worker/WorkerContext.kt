@@ -1,7 +1,6 @@
 package net.postchain.ebft.worker
 
 import net.postchain.base.PeerCommConfiguration
-import net.postchain.base.icmf.IcmfController
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
@@ -20,7 +19,6 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val engine: BlockchainEngine,
                     val communicationManager: CommunicationManager<Message>,
                     val peerCommConfiguration: PeerCommConfiguration,
-                    val icmfController: IcmfController,
                     val heartbeatListener: HeartbeatListener?,
                     val nodeConfig: NodeConfig
 ) {

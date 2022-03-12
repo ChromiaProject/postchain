@@ -3,7 +3,6 @@
 package net.postchain.base
 
 import mu.KLogging
-import net.postchain.base.icmf.IcmfController
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -22,14 +21,12 @@ import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
-class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine, val icmf: IcmfController) : BlockchainProcess {
+class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 
     companion object : KLogging()
 
     // Need this stuff to make this test class look a bit "normal"
     val name: String = BlockchainProcessName("?", blockchainEngine.getConfiguration().blockchainRid).toString()
-
-    override fun getIcmfController() = icmf
 
     override fun start() {}
 
@@ -52,10 +49,9 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            icmf: IcmfController,
             heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
-        return TestBlockchainProcess(engine, icmf)
+        return TestBlockchainProcess(engine)
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) = Unit

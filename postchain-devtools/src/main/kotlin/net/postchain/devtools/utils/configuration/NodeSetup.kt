@@ -1,7 +1,6 @@
 package net.postchain.devtools.utils.configuration
 
 import mu.KLogging
-import net.postchain.base.icmf.IcmfListenerLevelSorter
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode

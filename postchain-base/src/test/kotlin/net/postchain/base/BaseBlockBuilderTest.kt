@@ -52,7 +52,7 @@ class BaseBlockBuilderTest {
         val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(INVALID_TIMESTAMP, bbb.validate(header).result)
+        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
     }
 
     @Test
@@ -62,7 +62,7 @@ class BaseBlockBuilderTest {
         val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(INVALID_TIMESTAMP, bbb.validate(header).result)
+        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
     }
 
     @Test
@@ -72,7 +72,7 @@ class BaseBlockBuilderTest {
         val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(OK, bbb.validate(header).result)
+        assertEquals(OK, bbb.validateBlockHeader(header).result)
     }
 }
 /*

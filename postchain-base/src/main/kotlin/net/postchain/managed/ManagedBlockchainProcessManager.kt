@@ -7,8 +7,6 @@ import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.icmf.IcmfListenerLevelSorter
-import net.postchain.base.icmf.LevelConnectionChecker
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
@@ -142,10 +140,8 @@ open class ManagedBlockchainProcessManager(
             // Preloading blockchain configuration
             preloadChain0Configuration()
 
-            // Checking out for a peers set changes
-            val peerListVersion = dataSource.getPeerListVersion()
-            val doReload = (this.peerListVersion != peerListVersion)
-            this.peerListVersion = peerListVersion
+            // Checking out the peer list changes
+            val doReload = isPeerListChanged()
 
             return if (doReload) {
                 logger.info { "Reloading of blockchains are required" }
@@ -192,10 +188,9 @@ open class ManagedBlockchainProcessManager(
                 wrTrace("Before", chainId, bTrace)
                 synchronized(synchronizer) {
                     wrTrace("Sync", chainId, bTrace)
-                    // After block commit we trigger ICMF pipes for this chain's new height
-                    icmfController.icmfDispatcher.newBlockHeight(chainId, blockHeight, storage)
+                    for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
-                    val x = if (chainId == 0L) restartHandlerChain0(bTrace) else restartHandlerChainN(bTrace)
+                    val x = if (chainId == CHAIN0) restartHandlerChain0(bTrace) else restartHandlerChainN(bTrace)
                     wrTrace("After", chainId, bTrace)
                     x
                 }
@@ -211,15 +206,14 @@ open class ManagedBlockchainProcessManager(
     }
 
     /**
-     * Restart all chains. Begin with chain zero and then according to the order given by ICMF.
+     * Restart all chains. Begin with chain zero.
      */
     private fun reloadBlockchainsAsync(bTrace: BlockTrace?) {
         executor.submit {
             reloadAllDebug("Begin", bTrace)
-            val toLaunchInfos = retrieveBlockchainsToLaunch()
-            val launched = blockchainProcesses.keys
-            val toLaunch = toLaunchInfos.map { it.chainId!! }.toTypedArray()
-            logChains(toLaunch.toSet(), launched, true)
+            val toLaunch = retrieveBlockchainsToLaunch()
+            val launched = getLaunchedBlockchains()
+            logChains(toLaunch, launched, true)
 
             // Starting blockchains: at first chain0, then the rest
             reloadAllInfo("Launching blockchain", 0)
@@ -234,7 +228,7 @@ open class ManagedBlockchainProcessManager(
 
             // Stopping launched blockchains
             launched.filterNot(toLaunch::contains)
-                    .filter { retrieveBlockchain(it) != null }
+                    .filter { it in launched }
                     .forEach {
                         reloadAllInfo("Stopping blockchain", it)
                         stopBlockchain(it, bTrace)
@@ -246,9 +240,6 @@ open class ManagedBlockchainProcessManager(
      * Only the chains in the [toLaunch] list should run. Any old chains not in this list must be stopped.
      * Note: any chains not in the new config for this node should actually also be deleted, but not impl yet.
      *
-     * Note: Since ICMF has a complex initiation, we launch pure listener chains (like Anchor chain) before
-     * "normal" chains.
-     *
      * @param toLaunch the chains to run
      * @param launched is the old chains. Maybe stop some of them.
      * @param reloadChain0 is true if the chain zero must be restarted.
@@ -256,10 +247,9 @@ open class ManagedBlockchainProcessManager(
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
         executor.submit {
             ssaTrace("Begin", bTrace)
-            val toLaunchInfos = retrieveBlockchainsToLaunch()
-            val launched = blockchainProcesses.keys
-            val toLaunch = toLaunchInfos.map { it.chainId!! }.toTypedArray()
-            logChains(toLaunch.toSet(), launched, reloadChain0)
+            val toLaunch = retrieveBlockchainsToLaunch()
+            val launched = getLaunchedBlockchains()
+            logChains(toLaunch, launched, reloadChain0)
 
             // Launching blockchain 0
             if (reloadChain0) {
@@ -269,7 +259,7 @@ open class ManagedBlockchainProcessManager(
 
             // Launching new blockchains except blockchain 0
             toLaunch.filter { it != 0L }
-                    .filter { retrieveBlockchain(it) == null }
+                    .filter { it !in launched }
                     .forEach {
                         ssaInfo("Launching blockchain", it)
                         startBlockchain(it, bTrace)
@@ -277,7 +267,7 @@ open class ManagedBlockchainProcessManager(
 
             // Stopping launched blockchains
             launched.filterNot(toLaunch::contains)
-                    .filter { retrieveBlockchain(it) != null }
+                    .filter { it in launched }
                     .forEach {
                         ssaInfo("Stopping blockchain", it)
                         stopBlockchain(it, bTrace)
@@ -342,10 +332,10 @@ open class ManagedBlockchainProcessManager(
      *
      * @return all chainIids chain zero thinks we should run.
      */
-    protected open fun retrieveBlockchainsToLaunch(): Array<Long> {
-        retrieveDebug("Begin")
+    protected open fun retrieveBlockchainsToLaunch(): Set<Long> {
+        retrieveTrace("Begin")
         // chain-zero is always in the list
-        val blockchains = mutableListOf(0L)
+        val blockchains = mutableSetOf(CHAIN0)
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
@@ -367,13 +357,23 @@ open class ManagedBlockchainProcessManager(
                 } else {
                     chainId
                 }
-            }.filter { it != 0L }.forEach {
+            }.filter { it != CHAIN0 }.forEach {
                 blockchains.add(it)
             }
             true
         }
-        retrieveDebug("End, restart: ${blockchains.size}.")
-        return blockchains.toTypedArray()
+        retrieveTrace("End, restart: ${blockchains.size}.")
+        return blockchains.toSet()
+    }
+
+    protected open fun getLaunchedBlockchains(): Set<Long> {
+        return blockchainProcesses.keys
+    }
+
+    protected fun isPeerListChanged(): Boolean {
+        val prev = peerListVersion
+        peerListVersion = dataSource.getPeerListVersion()
+        return prev != peerListVersion
     }
 
     // ----------------------------------------------

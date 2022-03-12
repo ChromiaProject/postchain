@@ -1,10 +1,12 @@
-package net.postchain.base.icmf
+// Copyright (c) 2022 ChromaWay AB. See README for license information.
+
+package net.postchain.d1.icmf
 
 import mu.KLogging
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.icmf.IcmfFetcher
-import net.postchain.base.icmf.IcmfPackage
+import net.postchain.d1.icmf.IcmfFetcher
+import net.postchain.d1.icmf.IcmfPackage
 import net.postchain.base.withReadConnection
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray

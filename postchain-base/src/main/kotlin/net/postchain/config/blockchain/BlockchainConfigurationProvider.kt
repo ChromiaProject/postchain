@@ -2,7 +2,6 @@
 
 package net.postchain.config.blockchain
 
-import net.postchain.base.icmf.IcmfController
 import net.postchain.core.EContext
 
 /**

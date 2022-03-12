@@ -1,9 +1,7 @@
 package net.postchain.base.data
 
 import net.postchain.base.*
-import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.getBFTRequiredSignatureCount
 
 /**

@@ -44,8 +44,7 @@ interface GTXSpecialTxExtension {
      */
     fun createSpecialOperations(
         position: SpecialTransactionPosition,
-        bctx: BlockEContext,
-        blockchainRID: BlockchainRid // This is not strictly needed, but to get it from DB is slow
+        bctx: BlockEContext
     ): List<OpData>
 
     /**

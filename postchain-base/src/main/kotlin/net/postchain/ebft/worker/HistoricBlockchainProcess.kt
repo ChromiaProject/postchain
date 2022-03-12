@@ -7,7 +7,6 @@ import net.postchain.base.BaseBlockchainEngine
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.icmf.IcmfController
 import net.postchain.base.withReadConnection
 import net.postchain.core.*
 import net.postchain.core.framework.AbstractBlockchainProcess
@@ -60,8 +59,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     // Logging only
     var blockTrace: BlockTrace? = null // For logging only
     val myBRID = blockchainEngine.getConfiguration().blockchainRid
-
-    override fun getIcmfController() = workerContext.icmfController
 
     override fun action() {
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)

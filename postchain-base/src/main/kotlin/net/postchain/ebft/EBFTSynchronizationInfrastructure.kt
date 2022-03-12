@@ -5,7 +5,6 @@ package net.postchain.ebft
 import net.postchain.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
-import net.postchain.base.icmf.IcmfController
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
@@ -35,7 +34,6 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            icmfController: IcmfController,
             heartbeatListener: HeartbeatListener?
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
@@ -55,7 +53,6 @@ open class EBFTSynchronizationInfrastructure(
                 engine,
                 buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
                 peerCommConfiguration,
-                icmfController,
                 heartbeatListener,
                 nodeConfig
         )
@@ -91,7 +88,6 @@ open class EBFTSynchronizationInfrastructure(
                         engine,
                         histCommManager,
                         historicPeerCommConfiguration,
-                        icmfController,
                         heartbeatListener,
                         nodeConfig,
                 )

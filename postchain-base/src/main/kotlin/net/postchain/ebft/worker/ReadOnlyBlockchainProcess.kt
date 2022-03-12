@@ -25,8 +25,6 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
             ::isProcessRunning
     )
 
-    override fun getIcmfController() = workerContext.icmfController
-
     override fun action() {
         fastSynchronizer.syncUntil { !isProcessRunning() }
     }

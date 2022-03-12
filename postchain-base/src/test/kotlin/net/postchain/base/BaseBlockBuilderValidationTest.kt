@@ -60,7 +60,7 @@ class BaseBlockBuilderValidationTest {
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validate(header)
+        val validation = bbb.validateBlockHeader(header)
 
         assertEquals(OK, validation.result)
     }
@@ -73,7 +73,7 @@ class BaseBlockBuilderValidationTest {
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validate(header)
+        val validation = bbb.validateBlockHeader(header)
 
         assertEquals(INVALID_TIMESTAMP, validation.result)
     }
@@ -86,7 +86,7 @@ class BaseBlockBuilderValidationTest {
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validate(header)
+        val validation = bbb.validateBlockHeader(header)
 
         assertEquals(INVALID_TIMESTAMP, validation.result)
     }
@@ -99,7 +99,7 @@ class BaseBlockBuilderValidationTest {
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validate(header)
+        val validation = bbb.validateBlockHeader(header)
 
         assertEquals(INVALID_ROOT_HASH, validation.result)
     }

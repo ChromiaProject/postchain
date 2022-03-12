@@ -1,4 +1,6 @@
-package net.postchain.base.icmf
+// Copyright (c) 2022 ChromaWay AB. See README for license information.
+
+package net.postchain.d1.icmf
 
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.core.BlockchainRid

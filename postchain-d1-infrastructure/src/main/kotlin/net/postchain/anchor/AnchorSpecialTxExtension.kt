@@ -5,9 +5,9 @@ import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
-import net.postchain.base.icmf.IcmfPackage
-import net.postchain.base.icmf.IcmfPipe
-import net.postchain.base.icmf.IcmfReceiver
+import net.postchain.d1.icmf.IcmfPackage
+import net.postchain.d1.icmf.IcmfPipe
+import net.postchain.d1.icmf.IcmfReceiver
 import net.postchain.config.blockchain.*
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
@@ -103,9 +103,9 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-        blockchainRID: BlockchainRid,
-        pipe: IcmfPipe,
-        retList: ArrayList<OpData>
+            blockchainRID: BlockchainRid,
+            pipe: IcmfPipe,
+            retList: ArrayList<OpData>
     ) {
         var debugCounter = 0  // Remove if this is disturbing
 

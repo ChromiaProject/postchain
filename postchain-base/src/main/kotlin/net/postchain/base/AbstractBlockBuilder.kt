@@ -32,7 +32,7 @@ abstract class AbstractBlockBuilder(
     // ----------------------------------
     // functions which need to be implemented in a concrete BlockBuilder:
     // ----------------------------------
-    abstract protected fun getBlockWitnessManager(): BlockWitnessManager
+    abstract protected val blockWitnessManager: BlockWitnessManager
     abstract protected fun computeMerkleRootHash(): ByteArray              // Computes the root hash for the Merkle tree of transactions currently in a block
     abstract protected fun makeBlockHeader(): BlockHeader                  // Create block header from initial block data
     abstract protected fun buildBlockchainDependencies(partialBlockHeader: BlockHeader?): BlockchainDependencies
@@ -91,9 +91,6 @@ abstract class AbstractBlockBuilder(
         // a meaningful error message to log.
         TimeLog.startSum("AbstractBlockBuilder.appendTransaction().isCorrect")
         if (!tx.isCorrect()) {
-            if (logger.isDebugEnabled) {
-                logger.debug("Failing tx is of type ${tx.javaClass.canonicalName}")
-            }
             throw UserMistake("Transaction ${tx.getRID().toHex()} is not correct")
         }
         TimeLog.end("AbstractBlockBuilder.appendTransaction().isCorrect")
@@ -135,7 +132,7 @@ abstract class AbstractBlockBuilder(
      * @throws UserMistake Happens if validation of the block header fails
      */
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
-        val validationResult = validate(blockHeader)
+        val validationResult = validateBlockHeader(blockHeader)
         when (validationResult.result) {
             OK -> {
                 store.finalizeBlock(bctx, blockHeader)
@@ -150,7 +147,7 @@ abstract class AbstractBlockBuilder(
     /**
      * (Note: don't call this. We only keep this as a public function for legacy tests to work)
      */
-    fun validate(blockHeader: BlockHeader): ValidationResult {
+    fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
         val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
         return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
             blockHeader,
@@ -187,8 +184,8 @@ abstract class AbstractBlockBuilder(
      */
     override fun commit(blockWitness: BlockWitness) {
         commitLog("Begin")
-        val witnessBuilder = getBlockWitnessManager().createWitnessBuilderWithOwnSignature(_blockData!!.header)
-        if (!getBlockWitnessManager().validateWitness(blockWitness, witnessBuilder)) {
+        val witnessBuilder = blockWitnessManager.createWitnessBuilderWithOwnSignature(_blockData!!.header)
+        if (!blockWitnessManager.validateWitness(blockWitness, witnessBuilder)) {
             throw ProgrammerMistake("Invalid witness")
         }
         store.commitBlock(bctx, blockWitness)

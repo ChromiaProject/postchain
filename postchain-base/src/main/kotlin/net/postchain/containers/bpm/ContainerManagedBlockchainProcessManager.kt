@@ -155,8 +155,8 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun stopStartBlockchains(reloadChain0: Boolean) {
-        val toLaunch = retrieveBlockchainsToLaunch().map { it.chainId!! }
-        val launched = blockchainProcesses.keys
+        val toLaunch = retrieveBlockchainsToLaunch()
+        val launched = getLaunchedBlockchains()
 
         // Chain0
         if (reloadChain0) {
@@ -396,6 +396,11 @@ open class ContainerManagedBlockchainProcessManager(
 
     private fun findPostchainContainer(containerName: String) =
             postchainContainers.find { it.containerName.name == containerName }
+
+    override fun getLaunchedBlockchains(): Set<Long> {
+        // chain0 + chainsOf(starting/running containers)
+        return super.getLaunchedBlockchains() + startingOrRunningContainerProcesses()
+    }
 
     private fun startingOrRunningContainerProcesses(): Set<Long> {
         return postchainContainers

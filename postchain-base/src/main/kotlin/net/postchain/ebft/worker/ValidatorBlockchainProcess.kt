@@ -31,8 +31,6 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
     
-    override fun getIcmfController() = workerContext.icmfController
-
     init {
         val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
         val blockchainConfiguration = workerContext.blockchainConfiguration

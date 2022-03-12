@@ -50,7 +50,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         val b = GTXDataBuilder(blockchainRID, arrayOf(), cs)
         for (x in extensions) {
             if (x.needsSpecialTransaction(position)) {
-                for (o in x.createSpecialOperations(position, bctx, blockchainRID)) {
+                for (o in x.createSpecialOperations(position, bctx)) {
                     b.addOperation(o.opName, o.args)
                 }
             }

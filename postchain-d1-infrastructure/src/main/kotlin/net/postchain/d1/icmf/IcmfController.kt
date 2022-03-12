@@ -1,4 +1,6 @@
-package net.postchain.base.icmf
+// Copyright (c) 2022 ChromaWay AB. See README for license information.
+
+package net.postchain.d1.icmf
 
 import mu.KLogging
 import net.postchain.base.BlockchainRelatedInfo
@@ -43,9 +45,11 @@ import net.postchain.core.ProgrammerMistake
  */
 class IcmfController(val storage: Storage) : KLogging(){
 
+
+
     data class ListeningChainData(
-        val fetcher: IcmfFetcher,
-        val connChecker: ConnectionChecker
+            val fetcher: IcmfFetcher,
+        //val connChecker: ConnectionChecker
     )
 
     private val listeningChainData = mutableMapOf<Long, ListeningChainData>()
@@ -72,38 +76,22 @@ class IcmfController(val storage: Storage) : KLogging(){
     }
 
     fun connectListeningChain(bcProcess: BlockchainProcess) {
-        val conf = bcProcess.getEngine().getConfiguration()
-        val chainID = conf.chainID
-        val chainListenerConf = conf.icmfListener
-        if (chainListenerConf == null) return
-        val concheck = ConnectionCheckerFactory.build(chainID, chainListenerConf)
-        listeningChainData[chainID] = ListeningChainData(
-                LocalIcmfFetcher(storage),
-                concheck
-        )
-        for (sourceChain in allConnectedChains) {
-            if (concheck.shouldConnect(sourceChain, chainID, this)) {
-                buildAndAddPipe(sourceChain, chainID, -1) // TODO: height?
-            }
-        }
+//        val conf = bcProcess.getEngine().getConfiguration()
+//        val chainID = conf.chainID
+//        val chainListenerConf = conf.icmfListener
+//        if (chainListenerConf == null) return
+//        val concheck = ConnectionCheckerFactory.build(chainID, chainListenerConf)
+//        listeningChainData[chainID] = ListeningChainData(
+//                LocalIcmfFetcher(storage),
+//                concheck
+//        )
+//        for (sourceChain in allConnectedChains) {
+//            if (concheck.shouldConnect(sourceChain, chainID, this)) {
+//                buildAndAddPipe(sourceChain, chainID, -1) // TODO: height?
+//            }
+//        }
     }
 
-    /**
-     * Decides if a new BC process needs pipes or not, and if they are needed they will be created.
-     *
-     * - If the chain will send messages, it will act as "source" in a new [IcmfPipe],
-     * - If the chain is configured to receive messages it will act as "listener" in a new pipe.
-     * A pipe can be both a listener and a source.
-     *
-     * The pipe will only be created if both chains are active, and it's the job of the [IcmfPipeConnectionSync] to
-     * know about these things.
-     *
-     * We also update the [IcmfDispatcher] and [IcmfReceiver] during this process.
-     *
-     * @param bcProcess is the new process that might need a pipe
-     * @param height is the current height of the bcProcess we are working with
-     * @return a set of new [IcmfPipe] if the given process should be connected to something
-     */
     fun maybeConnect(bcProcess: BlockchainProcess, height: Long): List<IcmfPipe> {
         val newPipes = ArrayList<IcmfPipe>()
 
@@ -123,45 +111,6 @@ class IcmfController(val storage: Storage) : KLogging(){
         // Create source pipes
         val sourcePipes = getPipesForSourceRole(givenChainIid, bcProcess, height)
         newPipes.addAll(sourcePipes)
-
-        return newPipes
-    }
-
-
-    /**
-     * At this point we know the chain is configured as a listener, and our job is to figure out what source chains
-     * that should have given chain as a listener, and create pipes for them.
-     *
-     * @return any [IcmfPipe] where the given chain acts "listener"
-     */
-    private fun getPipesForListenerRole(
-        iid: Long, // the given chain IID
-        height: Long,
-        connChecker: ConnectionChecker
-    ) : List<IcmfPipe> {
-        val newPipes = ArrayList<IcmfPipe>()
-
-        // Validation
-        val existingPipes = icmfReceiver.getPipesForListenerChain(iid)
-        if (!existingPipes.isEmpty()) {
-            logger.warn("We are about to start a chain: $iid that already has ${existingPipes.size} active pipes" +
-                    "where it is listener. Very likely something is wrong.")
-        }
-
-        // Fetch all possible source chains
-        val sourceChains = pipeConnSync!!.getSourceChainsFromListener(iid)
-        for (sourceChainIid: Long in sourceChains) {
-            // (just in case) If they are already connected, don't connect
-            val found = existingPipes.firstOrNull { it.sourceChainIid == sourceChainIid }
-
-            if (found == null) {
-                // Not connected, go on to with final check
-                if (connChecker.shouldConnect(sourceChainIid, iid, this)) {
-                    val newPipe = buildAndAddPipe(sourceChainIid, iid, height)
-                    newPipes.add(newPipe)
-                }
-            }
-        }
 
         return newPipes
     }

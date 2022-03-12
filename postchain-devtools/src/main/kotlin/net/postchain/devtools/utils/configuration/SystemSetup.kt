@@ -1,7 +1,6 @@
 package net.postchain.devtools.utils.configuration
 
 import net.postchain.base.PeerInfo
-import net.postchain.base.icmf.IcmfListenerLevelSorter
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.ByteArrayKey

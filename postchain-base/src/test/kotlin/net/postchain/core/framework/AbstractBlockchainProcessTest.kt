@@ -3,7 +3,6 @@ package net.postchain.core.framework
 import assertk.assert
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
-import net.postchain.base.icmf.IcmfController
 import net.postchain.core.BlockchainEngine
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
@@ -36,10 +35,6 @@ internal class AbstractBlockchainProcessTest {
 }
 
 class DummyBlockchainProcess(private val testAction: () -> Unit): AbstractBlockchainProcess("TestProcess", mock(BlockchainEngine::class.java)) {
-
-    override fun getIcmfController(): IcmfController {
-        TODO("Not yet implemented")
-    }
 
     override fun cleanup() { }
 

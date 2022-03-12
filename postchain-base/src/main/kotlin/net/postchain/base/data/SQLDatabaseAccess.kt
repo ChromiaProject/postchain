@@ -17,8 +17,6 @@ import java.time.Instant
 
 abstract class SQLDatabaseAccess : DatabaseAccess {
 
-    val PREFIX_ICMF: String = "icmf"
-
     protected fun tableMeta(): String = "meta"
     protected fun tableBlockchains(): String = "blockchains"
     protected fun tablePeerinfos(): String = "peerinfos"
