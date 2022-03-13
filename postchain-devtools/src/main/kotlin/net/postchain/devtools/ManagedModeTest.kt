@@ -300,21 +300,19 @@ class TestManagedBlockchainProcessManager(
      * Overriding the original method, so that we now, instead of checking the DB for what
      * BCs to launch we instead
      */
-    override fun retrieveBlockchainsToLaunch(): Array<BlockchainRelatedInfo> {
-        retrieveDebug("NOTE TEST! - Begin ")
-        val result = mutableListOf<BlockchainRelatedInfo>()
-        dataSource.computeBlockchainList().forEach {
+    override fun retrieveBlockchainsToLaunch(): Set<Long> {
+        val result = mutableListOf<Long>()
+        testDataSource.computeBlockchainList().forEach {
             val brid = BlockchainRid(it)
             val chainIid = ChainUtil.iidOf(brid)
-            val chainInfo = BlockchainRelatedInfo(brid, null, chainIid)
-            result.add(chainInfo)
+            result.add(chainIid)
             retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")
             withReadWriteConnection(storage, chainIid) { newCtx ->
                 DatabaseAccess.of(newCtx).initializeBlockchain(newCtx, brid)
             }
         }
         retrieveDebug("NOTE TEST! - End, restart: ${result.size} ")
-        return result.toTypedArray()
+        return result.toSet()
     }
 
     private fun getQueue(chainId: Long): BlockingQueue<Long> {
