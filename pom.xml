@@ -11,7 +11,7 @@
         <module>postchain-base</module>
         <module>postchain-devtools</module>
         <module>postchain-client</module>
-        <module>postchain-anchor</module>
+        <module>postchain-d1-infrastructure</module>
     </modules>
     <packaging>pom</packaging>
 

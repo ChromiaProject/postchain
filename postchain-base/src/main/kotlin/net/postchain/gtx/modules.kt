@@ -85,7 +85,6 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
 
     override fun getSpecialTxExtensions() = _specialTxExtensions
 
-
     override fun makeTransactor(opData: ExtOpData): Transactor {
         if (opData.opName in opmap) {
             return opmap[opData.opName]!!.makeTransactor(opData)

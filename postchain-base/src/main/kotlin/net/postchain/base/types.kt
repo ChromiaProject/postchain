@@ -54,6 +54,18 @@ open class BaseBlockEContext(
     val txEventSink: TxEventSink
 ) : EContext by ectx, BlockEContext {
 
+    var alreadyCommitted = false
+    val hooks = mutableListOf<() -> Unit>()
+
+    override fun addAfterCommitHook(hook: () -> Unit) {
+        hooks.add(hook)
+    }
+
+    override fun blockWasCommitted() {
+        if (alreadyCommitted) throw ProgrammerMistake("Trying to commit block twice?!")
+        alreadyCommitted = true
+        for (h in hooks) h()
+    }
 
     override fun <T> getInterface(c: Class<T>): T? {
         return if (c == TxEventSink::class.java) {

@@ -1,20 +1,18 @@
-package net.postchain.anchor
+package net.postchain.d1.anchor
 import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
-import net.postchain.d1.icmf.IcmfPackage
 import net.postchain.d1.icmf.IcmfPipe
 import net.postchain.d1.icmf.IcmfReceiver
 import net.postchain.config.blockchain.*
 import net.postchain.core.*
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvByteArray
-import net.postchain.gtv.GtvFactory
+import net.postchain.d1.icmf.ClusterAnchorRoutingRule
+import net.postchain.d1.icmf.IcmfPacket
+import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.OpData
@@ -25,7 +23,7 @@ import java.lang.IllegalStateException
  */
 class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
-    private val _relevantOps = mutableSetOf<String>()
+    private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
     private var myChainRid: BlockchainRid? = null // We must know the id of the anchor chain itself
     private var myChainIid: Long? = null // We must know the id of the anchor chain itself
@@ -33,9 +31,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     private var icmfReceiver: IcmfReceiver? = null // This is where we get the actual data to create operations
 
     private var blockQueries: BlockQueries? = null // This is for querying ourselves, i.e. the "anchor rell app"
-
-    // We will need one validator for each blockchain we are anchoring
-    private val validationMap: Map<BlockchainRid, BlockWitnessManager> = hashMapOf()
 
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
@@ -48,10 +43,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         blockchainRID: BlockchainRid,
         cs: CryptoSystem
     ) {
-        if (!_relevantOps.contains(OP_BLOCK_HEADER)) {
-            _relevantOps.add(OP_BLOCK_HEADER)
-        }
-
         myChainRid = blockchainRID
     }
 
@@ -84,16 +75,16 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
      * @param btcx is the context of the anchor chain (but without BC RID)
      * @param blockchainRID is the BC RID of the anchor chain (or something is wrong)
      */
-    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, blockchainRID: BlockchainRid): List<OpData> {
-        val retList = ArrayList<OpData>()
+    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
+        val retList = mutableListOf<OpData>()
 
-        verifySameChainId(bctx, blockchainRID)
-        val pipes = this.icmfReceiver!!.getPipesForListenerChain(bctx.blockIID) // Returns the pipes that has anchor chain as a listener
+        //verifySameChainId(bctx, blockchainRID)
+        val pipes = this.icmfReceiver!!.getRelevantPipes()
 
         // Extract all packages from all pipes
         for (pipe in pipes) {
-            if (pipe.hasNewPackets()) {
-                handlePipe(blockchainRID, pipe, retList)
+            if (pipe.mightHaveNewPackets()) {
+                handlePipe(pipe, retList, bctx)
             }
         }
         return retList
@@ -103,36 +94,36 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-            blockchainRID: BlockchainRid,
             pipe: IcmfPipe,
-            retList: ArrayList<OpData>
+            retList: MutableList<OpData>,
+            bctx: BlockEContext
     ) {
-        var debugCounter = 0  // Remove if this is disturbing
-
-        var heightToFetch: Long = getHeightToAnchor(blockchainRID)
-        while (pipe.hasNewPackets()) {
-            debugCounter++
-            val icmfPackage = pipe.fetch(heightToFetch)
+        if (pipe.id.routingRule != ClusterAnchorRoutingRule) return
+        var counter = 0
+        val blockchainRid = BlockchainRid(pipe.id.key.asByteArray())
+        var currentHeight: Long = getLastAnchoredHeight(blockchainRid)
+        while (pipe.mightHaveNewPackets()) {
+            val icmfPackage = pipe.fetchNext(GtvInteger(currentHeight))
             if (icmfPackage != null) {
-                val anchorOpData = buildOpData(icmfPackage)
-                retList.add(anchorOpData)
-                heightToFetch++ // Try next height
+                retList.add(buildOpData(icmfPackage))
+                pipe.markTaken(icmfPackage.currentPointer, bctx)
+                currentHeight++ // Try next height
+                counter++
             } else {
                 break // Nothing more to find
             }
         }
         if (logger.isDebugEnabled) {
-            logger.debug("Pulled $debugCounter messages from pipeId: ${pipe.pipeId}")
+            logger.debug("Pulled $counter messages from pipeId: ${pipe.id}")
         }
     }
 
-    private fun getHeightToAnchor(blockchainRID: BlockchainRid): Long {
+    private fun getLastAnchoredHeight(blockchainRID: BlockchainRid): Long {
         val tmpBlockInfo = getLastAnchoredBlock(blockchainRID)
         return if (tmpBlockInfo == null) {
-            // First block
-            0
+            -1
         } else {
-            tmpBlockInfo.height + 1
+            tmpBlockInfo.height
         }
     }
 
@@ -142,7 +133,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
      * @param icmfPackage is what we get from ICMF
      * @return is the [OpData] we can use to create a special TX.
      */
-    fun buildOpData(icmfPackage: IcmfPackage): OpData {
+    fun buildOpData(icmfPackage: IcmfPacket): OpData {
         val gtvHeaderMsg = icmfPackage.blockHeader // We don't care about any messages, only the header
         val headerMsg = BlockHeaderDataFactory.buildFromGtv(gtvHeaderMsg) // Yes, a bit expensive going back and forth between GTV and Domain objects like this
         val witnessBytes: ByteArray = icmfPackage.witness.asByteArray()
@@ -402,8 +393,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     private fun buildArgs(vararg args: Pair<String, Gtv>): Gtv {
         return GtvFactory.gtv(*args)
     }
-
-
 }
 
 

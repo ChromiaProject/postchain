@@ -22,7 +22,7 @@ This is a Anchor Chain configuration specifically for testing.
         <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
     </entry>
     <entry key="sync_ext">
-        <array><string>net.postchain.anchor.AnchorSynchronizationInfrastructureExtension</string></array> <!-- This is the Anchor infra: essential!  -->
+        <array><string>net.postchain.d1.anchor.AnchorSynchronizationInfrastructureExtension</string></array> <!-- This is the Anchor infra: essential!  -->
     </entry>
     <entry key="icmflistener">
         <string>10</string> <!-- Anchor chain listens to messages from all chains with no number or lower number. This only works for managed mode, manual don't know about other chains. -->
@@ -42,8 +42,8 @@ This is a Anchor Chain configuration specifically for testing.
             <entry key="modules">
                 <array>
                     <!-- Note: we don't want GTXTestModule here, b/c we are not supposed to write any "normal" TXs -->
-                    <string>net.postchain.anchor.AnchorGTXModule</string> <!-- This is the Anchor module: essential!  -->
-                    <string>net.postchain.anchor.AnchorTestGTXModule</string> <!-- This is the stand in for the missing Rell code.  -->
+                    <string>net.postchain.d1.anchor.AnchorGTXModule</string> <!-- This is the Anchor module: essential!  -->
+                    <string>net.postchain.d1.anchor.AnchorTestGTXModule</string> <!-- This is the stand in for the missing Rell code.  -->
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>
             </entry>

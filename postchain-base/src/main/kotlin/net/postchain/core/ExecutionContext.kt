@@ -36,6 +36,8 @@ interface BlockEContext : EContext {
     val blockIID: Long
     val timestamp: Long
     fun getChainDependencyHeight(chainID: Long): Long
+    fun addAfterCommitHook(hook: () -> Unit)
+    fun blockWasCommitted()
 }
 
 interface TxEContext : BlockEContext {

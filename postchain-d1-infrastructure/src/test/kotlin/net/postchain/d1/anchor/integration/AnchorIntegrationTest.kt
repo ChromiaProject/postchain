@@ -1,9 +1,9 @@
-package net.postchain.anchor.integration
+package net.postchain.d1.anchor.integration
 
 import mu.KLogging
-import net.postchain.anchor.AnchorGTXModule
-import net.postchain.anchor.AnchorSpecialTxExtension
-import net.postchain.anchor.AnchorTestGTXModule
+import net.postchain.d1.anchor.AnchorGTXModule
+import net.postchain.d1.anchor.AnchorSpecialTxExtension
+import net.postchain.d1.anchor.AnchorTestGTXModule
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.BlockchainRid
 import net.postchain.devtools.TxCache

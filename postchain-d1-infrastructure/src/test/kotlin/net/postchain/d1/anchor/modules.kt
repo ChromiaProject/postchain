@@ -1,4 +1,4 @@
-package net.postchain.anchor
+package net.postchain.d1.anchor
 
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
