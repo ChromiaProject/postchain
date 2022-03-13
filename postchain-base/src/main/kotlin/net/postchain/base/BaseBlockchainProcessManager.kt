@@ -46,6 +46,8 @@ open class BaseBlockchainProcessManager(
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
 
+    protected val extensions: List<BlockchainProcessManagerExtension> = makeExtensions()
+
     // For DEBUG only
     var insideATest = false
     var blockDebug: BlockTrace? = null
@@ -54,6 +56,11 @@ open class BaseBlockchainProcessManager(
 
     init {
         initiateChainDiagnosticData()
+    }
+
+    /** overridable */
+    protected fun makeExtensions(): List<BlockchainProcessManagerExtension> {
+        return listOf()
     }
 
     /**
@@ -72,16 +79,6 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-//    protected fun stopBlockchainAsync(chainId: Long) {
-//        executor.execute {
-//            try {
-//                stopBlockchain(chainId)
-//            } catch (e: Exception) {
-//                logger.error(e) { e.message }
-//            }
-//        }
-//    }
-
     /**
      * Will stop the chain and then start it as a [BlockchainProcess].
      *
@@ -97,18 +94,18 @@ open class BaseBlockchainProcessManager(
 
                 startInfo("Starting of blockchain", chainId)
                 withReadWriteConnection(storage, chainId) { eContext ->
-                    val configuration = blockchainConfigProvider.getConfiguration(eContext, chainId)
+                    val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
                     if (configuration != null) {
 
+                        val componentMap = buildComponentMap()
                         val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                                configuration, eContext, NODE_ID_AUTO, chainId
-                        )
+                                configuration, eContext, NODE_ID_AUTO, chainId, componentMap)
 
                         val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
                         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
-                        val x: RestartHandler = buildRestartHandler(chainId)
-                        val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
+                        val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
+                        val engine = blockchainInfrastructure.makeBlockchainEngine( processName, blockchainConfig, x)
                         startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
                         createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, null)
@@ -116,7 +113,6 @@ open class BaseBlockchainProcessManager(
 
                         startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
                         blockchainConfig.blockchainRid
-
                     } else {
                         logger.error("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
                         null
@@ -131,11 +127,24 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?) {
+    /**
+     * In the future there probably should be some way to transport unique configuration components
+     * into the map (initially set in the the configuration file?). Currently it's not needed.
+     *
+     * @return the component map we will use for the configuration of this BC process.
+     */
+    private fun buildComponentMap(): MutableMap<String, Any> {
+        val cm = HashMap<String, Any>()
+        // cm["xxx"] = Xxx()  // <-- This is how we can add stuff
+        return cm
+    }
+    protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?): BlockchainProcess {
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener).also {
             it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
+            for (e in extensions) e.connectProcess(it)
+            chainIdToBrid[chainId] = blockchainConfig.blockchainRid
         }
-        chainIdToBrid[chainId] = blockchainConfig.blockchainRid
+        return blockchainProcesses[chainId]!!
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
@@ -150,7 +159,6 @@ open class BaseBlockchainProcessManager(
     override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
         synchronized(synchronizer) {
             stopInfoDebug("Stopping of blockchain", chainId, bTrace)
-
             stopAndUnregisterBlockchainProcess(chainId, restart)
             stopInfoDebug("Stopping blockchain, shutdown complete", chainId, bTrace)
 
@@ -165,6 +173,7 @@ open class BaseBlockchainProcessManager(
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
         blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
         blockchainProcesses.remove(chainId)?.also {
+            for (e in extensions) e.disconnectProcess(it)
             if (restart) {
                 blockchainInfrastructure.restartBlockchainProcess(it)
             } else {
@@ -197,16 +206,21 @@ open class BaseBlockchainProcessManager(
     }
 
     /**
-     * Checks for configuration changes, and then does a async reboot of the given chain.
+     * Define what actions should be taken after block commit. In our case:
+     * 1) trigger bp extensions,
+     * 2) checks for configuration changes, and then does a async reboot of the given chain.
      *
-     * @param chainId - the chain we should build the [RestartHandler] for
-     * @return a newly created [RestartHandler]. This method will be much more complex is
+     * @param chainId - the chain we should build the [AfterCommitHandler] for
+     * @return a newly created [AfterCommitHandler]. This method will be much more complex is
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
-    protected open fun buildRestartHandler(chainId: Long): RestartHandler {
-        return { _: Long, bTrace: BlockTrace? ->
-            testDebug("BaseBlockchainProcessManager's (normal) restart of: $chainId", bTrace)
-            val doRestart = isConfigurationChanged(chainId)
+    protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+        val retFun: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
+
+            for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, height)
+            val doRestart = withReadConnection(storage, chainId) { eContext ->
+                blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
+            }
 
             if (doRestart) {
                 testDebug("BaseBlockchainProcessManager, need restart of: $chainId", bTrace)
@@ -215,6 +229,7 @@ open class BaseBlockchainProcessManager(
 
             doRestart
         }
+        return retFun //  (So that we can put a breakpoint here where it won't be mixed with actual execution of the function)
     }
 
     protected fun nodeName(): String {
@@ -243,7 +258,7 @@ open class BaseBlockchainProcessManager(
 
     protected fun isConfigurationChanged(chainId: Long): Boolean {
         return withReadConnection(storage, chainId) { eContext ->
-            blockchainConfigProvider.needsConfigurationChange(eContext, chainId)
+            blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
         }
     }
 

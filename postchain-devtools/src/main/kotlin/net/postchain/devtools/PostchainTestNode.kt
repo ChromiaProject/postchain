@@ -30,7 +30,7 @@ class PostchainTestNode(
         preWipeDatabase: Boolean = false
 ) : PostchainNode(nodeConfigProvider) {
 
-    private val testStorage: Storage
+    val testStorage: Storage
     val pubKey: String
     private var isInitialized by Delegates.notNull<Boolean>()
     private val blockchainRidMap = mutableMapOf<Long, BlockchainRid>() // Used to keep track of the BC RIDs of the chains
@@ -42,7 +42,6 @@ class PostchainTestNode(
         isInitialized = true
 
         // We don't have specific test classes for Proc Man
-        // But some test debugging cannot really be done the normal way so we need this strange looking thing
         when (processManager) {
             is BaseBlockchainProcessManager -> {
                 processManager.insideATest = true

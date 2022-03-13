@@ -21,13 +21,7 @@ const val LOG_STATS = true // Was this the reason this entire class was muted?
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
  * This class produces [ManagedBlockBuilder]s, which means we have to check for BC restart after a block is built.
  *
- * NOTE: Re logging
- * Looks like this class used to do too much logging, so now everything has been scaled down one notch
- * (debug -> trace, etc). IMO this is better than blocking the logging from YAML (which might be hard to remember)
- *
- * NOTE: Logging TXs
- * TODO: Since I've turned all logging down, doing logging per transaction cannot even be TRACE
- * (since this is once-per-block logging now). One idea is to add a custom Log4j level below TRACE for TX logging
+ * Usually we don't log single (successful) transactions, not even at trace level.
  */
 open class BaseBlockchainEngine(
         private val processName: BlockchainProcessName,
@@ -44,10 +38,8 @@ open class BaseBlockchainEngine(
     private lateinit var blockQueries: BlockQueries
     private var initialized = false
     private var closed = false
-    private var restartHandlerInternal: (BlockTimestamp: Long, BlockTrace?) -> Boolean = { l: Long, blockTrace: BlockTrace? ->
-        false
-    }
-    private var restartHandler: RestartHandler = restartHandlerInternal
+    private var afterCommitHandlerInternal: (BlockTrace?, Long) -> Boolean = { _, _ -> false }
+    private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
 
     override fun isRunning() = !closed
 
@@ -60,8 +52,8 @@ open class BaseBlockchainEngine(
         initialized = true
     }
 
-    override fun setRestartHandler(handler: RestartHandler) {
-        restartHandler = handler
+    override fun setAfterCommitHandler(handler: AfterCommitHandler) {
+        afterCommitHandler = handler
     }
 
     override fun getTransactionQueue(): TransactionQueue {
@@ -96,10 +88,9 @@ open class BaseBlockchainEngine(
                     val blockBuilder = it as AbstractBlockBuilder
                     transactionQueue.removeAll(blockBuilder.transactions)
                     strategy.blockCommitted(blockBuilder.getBlockData())
-
-                    val blockTimestamp = (it.getBlockData().header as BaseBlockHeader).timestamp
-                    // This is a big reason for BTrace to exist
-                    if (restartHandler(blockTimestamp, blockBuilder.getBTrace())) {
+                    if (afterCommitHandler(
+                                    blockBuilder.getBTrace(), // This is a big reason for BTrace to exist
+                                    blockBuilder.bctx.height)) {
                         closed = true
                     }
                     afterLog("End", it.getBTrace())
@@ -202,13 +193,15 @@ open class BaseBlockchainEngine(
             var rejectedTxs = 0
 
             while (true) {
-                //logger.trace("$processName: Checking transaction queue") // Was this the reason logging for this entire class was disabled??
+                if (logger.isTraceEnabled) {
+                    logger.trace("$processName: Checking transaction queue")
+                }
                 TimeLog.startSum("BaseBlockchainEngine.buildBlock().takeTransaction")
                 val tx = transactionQueue.takeTransaction()
                 TimeLog.end("BaseBlockchainEngine.buildBlock().takeTransaction")
                 if (tx != null) {
-                    //logger.trace("$processName: Appending transaction ${tx.getRID().toHex()}") // Was this the reason logging for this entire class was disabled??
-                    TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
+                    logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
+                    TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
                     if (tx.isSpecial()) {
                         rejectedTxs++
                         transactionQueue.rejectTransaction(tx, ProgrammerMistake("special transactions can't enter queue"))
@@ -257,6 +250,7 @@ open class BaseBlockchainEngine(
         } catch (e: Exception) {
             exception = e
         }
+        buildLog("End")
 
         return blockBuilder to exception
     }

@@ -6,6 +6,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcess
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
 import net.postchain.ebft.heartbeat.HeartbeatListener
@@ -25,7 +26,7 @@ open class SubNodeBlockchainProcessManager(
     private val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
     private val heartbeatListeners = mutableMapOf<Long, HeartbeatListener>()
 
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?) {
+    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?): BlockchainProcess {
         val hbListener = if (nodeConfig.remoteConfigEnabled) {
             RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager).also {
                 it.blockchainConfigProvider = blockchainConfigProvider
@@ -36,7 +37,7 @@ open class SubNodeBlockchainProcessManager(
         } else {
             null
         }
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, hbListener)
+        return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, hbListener)
     }
 
     override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {

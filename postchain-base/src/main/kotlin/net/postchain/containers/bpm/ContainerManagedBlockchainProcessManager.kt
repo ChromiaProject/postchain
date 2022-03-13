@@ -14,11 +14,12 @@ import net.postchain.containers.bpm.DockerTools.checkContainerName
 import net.postchain.containers.bpm.DockerTools.containerName
 import net.postchain.containers.bpm.DockerTools.shortContainerId
 import net.postchain.containers.infra.MasterBlockchainInfra
+import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockQueries
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainRid
-import net.postchain.core.RestartHandler
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
@@ -64,8 +65,8 @@ open class ContainerManagedBlockchainProcessManager(
 
     override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, nodeConfig)
 
-    override fun buildRestartHandler(chainId: Long): RestartHandler {
-        return { blockTimestamp: Long, blockTrace: BlockTrace? ->
+    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+        return { blockTrace: BlockTrace?, blockTimestamp: Long ->
             try {
                 rTrace("Before", chainId, blockTrace)
                 if (chainId != CHAIN0) {
@@ -84,7 +85,9 @@ open class ContainerManagedBlockchainProcessManager(
                         preloadChain0Configuration()
 
                         // Checking out the peer list changes
-                        val doReload = isPeerListChanged()
+                        val peerListVersion = dataSource.getPeerListVersion()
+                        val doReload = (this.peerListVersion != peerListVersion)
+                        this.peerListVersion = peerListVersion
 
                         val res = containerJobManager.withLock {
                             // Reload/start/stops blockchains
@@ -118,11 +121,11 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?) {
+    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?): BlockchainProcess {
         val hbListener = buildHeartbeatListener(chainId)
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, hbListener)
         heartbeatListeners[chainId] = hbListener!!
         heartbeatManager.addListener(hbListener)
+        return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, hbListener)
     }
 
     private fun buildHeartbeatListener(chainId: Long): HeartbeatListener? {

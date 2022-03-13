@@ -5,10 +5,10 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.*
 import net.postchain.core.*
-import net.postchain.getBFTRequiredSignatureCount
 
-open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurationData)
-    : BlockchainConfiguration {
+open class BaseBlockchainConfiguration(
+        val configData: BaseBlockchainConfigurationData,
+) : BlockchainConfiguration {
 
     companion object : KLogging()
 
@@ -23,11 +23,22 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
     override val effectiveBlockchainRID = configData.getHistoricBRID() ?: configData.context.blockchainRID
     override val signers = configData.getSigners()
 
+    private val blockWitnessManager: BlockWitnessManager = BaseBlockWitnessManager(
+        cryptoSystem,
+        configData.blockSigMaker,
+        signers.toTypedArray()
+    )
+
     val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
 
     // Infrastructure settings
     override val syncInfrastructureName = DynamicClassName.build(configData.getSyncInfrastructureName())
     override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.getSyncInfrastructureExtensions())
+
+    // Only GTX config can have special TX, this is just "Base" so we settle for null
+    private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
+    val componentMap: Map<String, Any> = configData.getComponentMap() // Used for things that might or might not exist
+
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
         return BaseBlockHeader(rawBlockHeader, cryptoSystem)
@@ -37,26 +48,17 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
         return BaseBlockWitness.fromBytes(rawWitness)
     }
 
-    // This is basically a duplicate of BaseBlockBuilder.validateWitness.
-    // We should find a common place to put this code.
-    fun verifyBlockHeader(blockHeader: BlockHeader, blockWitness: BlockWitness): Boolean {
-        if (!(blockWitness is MultiSigBlockWitness)) {
-            throw ProgrammerMistake("Invalid BlockWitness implementation.")
-        }
-        val signers = signers.toTypedArray()
-        val witnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, blockHeader, signers, getBFTRequiredSignatureCount(signers.size))
-        for (signature in blockWitness.getSignatures()) {
-            witnessBuilder.applySignature(signature)
-        }
-        return witnessBuilder.isComplete()
-    }
+    /**
+     * We can get the [BlockWitnessManager] directly from the config, don't have to go to the [BlockBuilder]
+     */
+    override fun getBlockHeaderValidator(): BlockWitnessManager = blockWitnessManager
 
     override fun getTransactionFactory(): TransactionFactory {
         return BaseTransactionFactory()
     }
 
     open fun getSpecialTxHandler(): SpecialTransactionHandler {
-        return NullSpecialTransactionHandler()
+        return specialTransactionHandler // Must be overridden in sub-class
     }
 
     open fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
@@ -65,20 +67,24 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
 
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
-        return BaseBlockBuilder(
-                effectiveBlockchainRID,
-                cryptoSystem,
-                ctx,
-                blockStore,
-                getTransactionFactory(),
-                getSpecialTxHandler(),
-                signers.toTypedArray(),
-                configData.blockSigMaker,
-                bcRelatedInfosDependencyList,
-                makeBBExtensions(),
-                effectiveBlockchainRID != blockchainRid,
-                configData.getMaxBlockSize(),
-                configData.getMaxBlockTransactions())
+
+        val bb = BaseBlockBuilder(
+            effectiveBlockchainRID,
+            cryptoSystem,
+            ctx,
+            blockStore,
+            getTransactionFactory(),
+            getSpecialTxHandler(),
+            signers.toTypedArray(),
+            configData.blockSigMaker,
+            blockWitnessManager,
+            bcRelatedInfosDependencyList,
+            makeBBExtensions(),
+            effectiveBlockchainRID != blockchainRid,
+            configData.getMaxBlockSize(),
+            configData.getMaxBlockTransactions())
+
+        return bb
     }
 
     /**
@@ -134,6 +140,22 @@ open class BaseBlockchainConfiguration(val configData: BaseBlockchainConfigurati
             throw ProgrammerMistake("The constructor of the block building strategy given was " +
                     "unable to finish. Class name given: $strategyClassName," +
                     " class found=$strategyClass, ctor=$ctor, Msg: ${e.message}")
+        }
+    }
+
+    /**
+     * It's not crystal clear when something is important enough to get a typed "getX()" method in the config, or if it
+     * should be hidden behind this generic getter. If you suspect your setting is unusual, put it as a component.
+     *
+     * @param name is the identifier for the component we need
+     * @return a component if found
+     */
+    override fun <T> getComponent(name: String): T? {
+        val obj: Any? = componentMap[name]
+        return if (obj != null) {
+            obj as T
+        } else {
+            null
         }
     }
 }

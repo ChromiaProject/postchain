@@ -4,8 +4,8 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
-import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.core.NodeStateTracker
+import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
@@ -30,7 +30,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     val networkAwareTxQueue: NetworkAwareTxQueue
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
-
+    
     init {
         val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
         val blockchainConfiguration = workerContext.blockchainConfiguration

@@ -73,6 +73,12 @@ open class BaseBlockEContext(
     }
 }
 
+/**
+ * The [BaseTxEContext] adds transaction info to the block context (i.e. the context knows what transaction it's running)
+ *
+ * Note: this context also has an "events" list, collecting events for the block, until "done()" is called where
+ *       all events are put into the sink.
+ */
 open class BaseTxEContext(
     val bectx: BlockEContext,
     override val txIID: Long,
