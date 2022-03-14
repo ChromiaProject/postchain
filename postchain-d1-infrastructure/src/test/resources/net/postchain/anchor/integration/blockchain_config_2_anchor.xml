@@ -21,9 +21,6 @@ This is a Anchor Chain configuration specifically for testing.
         <!-- Must use GTX since we need it -->
         <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
     </entry>
-    <entry key="sync_ext">
-        <array><string>net.postchain.d1.anchor.AnchorSynchronizationInfrastructureExtension</string></array> <!-- This is the Anchor infra: essential!  -->
-    </entry>
     <entry key="icmflistener">
         <string>10</string> <!-- Anchor chain listens to messages from all chains with no number or lower number. This only works for managed mode, manual don't know about other chains. -->
     </entry>

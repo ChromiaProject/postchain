@@ -45,7 +45,6 @@ class IcmfProcessManagerExtension (val postchainContext: PostchainContext) : Blo
             }
 
             // connect process to local dispatcher
-            // TODO: should be a bit more selective
             getIcmfController(process).localDispatcher.connectChain(cfg.chainID)
         }
     }

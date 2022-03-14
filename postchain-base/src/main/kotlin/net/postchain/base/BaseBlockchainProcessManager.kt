@@ -29,7 +29,8 @@ import java.util.concurrent.TimeUnit
 open class BaseBlockchainProcessManager(
         protected val postchainContext: PostchainContext,
         protected val blockchainInfrastructure: BlockchainInfrastructure,
-        protected val blockchainConfigProvider: BlockchainConfigurationProvider
+        protected val blockchainConfigProvider: BlockchainConfigurationProvider,
+        bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
 ) : BlockchainProcessManager {
 
     override val synchronizer = Any()
@@ -46,7 +47,7 @@ open class BaseBlockchainProcessManager(
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
 
-    protected val extensions: List<BlockchainProcessManagerExtension> = makeExtensions()
+    protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
 
     // For DEBUG only
     var insideATest = false
@@ -56,11 +57,6 @@ open class BaseBlockchainProcessManager(
 
     init {
         initiateChainDiagnosticData()
-    }
-
-    /** overridable */
-    protected fun makeExtensions(): List<BlockchainProcessManagerExtension> {
-        return listOf()
     }
 
     /**
