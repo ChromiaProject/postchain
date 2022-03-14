@@ -141,7 +141,7 @@ open class BaseBlockchainProcessManager(
     protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?): BlockchainProcess {
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener).also {
             it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
-            for (e in extensions) e.connectProcess(it)
+            extensions.forEach { ext -> ext.connectProcess(it) }
             chainIdToBrid[chainId] = blockchainConfig.blockchainRid
         }
         return blockchainProcesses[chainId]!!
@@ -173,7 +173,7 @@ open class BaseBlockchainProcessManager(
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
         blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
         blockchainProcesses.remove(chainId)?.also {
-            for (e in extensions) e.disconnectProcess(it)
+            extensions.forEach { ext -> ext.disconnectProcess(it) }
             if (restart) {
                 blockchainInfrastructure.restartBlockchainProcess(it)
             } else {
@@ -188,9 +188,10 @@ open class BaseBlockchainProcessManager(
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
 
-        blockchainProcesses.forEach {
-            blockchainInfrastructure.exitBlockchainProcess(it.value)
-            it.value.shutdown()
+        blockchainProcesses.values.forEach {
+            blockchainInfrastructure.exitBlockchainProcess(it)
+            extensions.forEach { ext -> ext.disconnectProcess(it) }
+            it.shutdown()
         }
         blockchainProcesses.clear()
         blockchainProcessesDiagnosticData.clear()
@@ -215,7 +216,7 @@ open class BaseBlockchainProcessManager(
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
     protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        val retFun: (BlockTrace?, Long) -> Boolean = { bTrace, height ->
+        return { bTrace, height ->
 
             for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, height)
             val doRestart = withReadConnection(storage, chainId) { eContext ->
@@ -228,8 +229,7 @@ open class BaseBlockchainProcessManager(
             }
 
             doRestart
-        }
-        return retFun //  (So that we can put a breakpoint here where it won't be mixed with actual execution of the function)
+        } //  (So that we can put a breakpoint here where it won't be mixed with actual execution of the function)
     }
 
     protected fun nodeName(): String {

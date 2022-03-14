@@ -56,7 +56,7 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
         return listOf(OpData(op, arrayOf(GtvInteger(bctx.height))))
     }
 
-    fun validateOp(bctx: BlockEContext, op: OpData, requiredOpName: String): Boolean {
+    private fun validateOp(bctx: BlockEContext, op: OpData, requiredOpName: String): Boolean {
         if (op.opName != requiredOpName) return false
 
         if (op.args.size != 1) return false

@@ -134,7 +134,7 @@ open class ManagedBlockchainProcessManager(
          *
          * @return "true" if a restart was needed
          */
-        fun restartHandlerChain0(bTrace: BlockTrace?): Boolean {
+        fun afterCommitHandlerChain0(bTrace: BlockTrace?): Boolean {
             wrTrace("chain0 begin", chainId, bTrace)
 
             // Preloading blockchain configuration
@@ -166,7 +166,7 @@ open class ManagedBlockchainProcessManager(
          *
          * @param chainId is the chain we should check (cannot be chain zero).
          */
-        fun restartHandlerChainN(bTrace: BlockTrace?): Boolean {
+        fun afterCommitHandlerChainN(bTrace: BlockTrace?): Boolean {
             // Checking out for a chain configuration changes
             wrTrace("chainN, begin", chainId, bTrace)
 
@@ -190,7 +190,7 @@ open class ManagedBlockchainProcessManager(
                     wrTrace("Sync", chainId, bTrace)
                     for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
-                    val x = if (chainId == CHAIN0) restartHandlerChain0(bTrace) else restartHandlerChainN(bTrace)
+                    val x = if (chainId == CHAIN0) afterCommitHandlerChain0(bTrace) else afterCommitHandlerChainN(bTrace)
                     wrTrace("After", chainId, bTrace)
                     x
                 }

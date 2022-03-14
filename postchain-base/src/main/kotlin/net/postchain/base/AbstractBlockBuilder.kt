@@ -40,14 +40,14 @@ abstract class AbstractBlockBuilder(
     // ----------------------------------
     // Public b/c need to be accessed by subclasses
     // ----------------------------------
-    var finalized: Boolean = false                   // signalling if further updates to block is permitted
-    val rawTransactions = mutableListOf<ByteArray>() // list of encoded transactions
+    protected var finalized: Boolean = false                   // signalling if further updates to block is permitted
+    protected val rawTransactions = mutableListOf<ByteArray>() // list of encoded transactions
     val transactions = mutableListOf<Transaction>()  // list of decoded transactions
-    var blockchainDependencies: BlockchainDependencies? = null //  is the dependencies the configuration tells us to use
+    protected var blockchainDependencies: BlockchainDependencies? = null //  is the dependencies the configuration tells us to use
     lateinit var bctx: BlockEContext                 // is the context for this specific block
-    lateinit var initialBlockData: InitialBlockData  //
-    var _blockData: BlockData? = null                // complete set of data for the block including header and [rawTransactions]
-    var buildingNewBlock: Boolean = false            // remains "false" as long we got a block from some other node
+    internal lateinit var initialBlockData: InitialBlockData  //
+    protected var _blockData: BlockData? = null                // complete set of data for the block including header and [rawTransactions]
+    protected var buildingNewBlock: Boolean = false            // remains "false" as long we got a block from some other node
 
     var blockTrace: BlockTrace? = null               // Only for logging, remains "null" unless TRACE
 
@@ -147,7 +147,7 @@ abstract class AbstractBlockBuilder(
     /**
      * (Note: don't call this. We only keep this as a public function for legacy tests to work)
      */
-    fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
+    internal fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
         val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
         return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
             blockHeader,
@@ -163,7 +163,7 @@ abstract class AbstractBlockBuilder(
     /**
      * @return the block RID at a certain height
      */
-    fun getBlockRidAtHeight(height: Long) = store.getBlockRID(ectx, height)
+    private fun getBlockRidAtHeight(height: Long) = store.getBlockRID(ectx, height)
 
     /**
      * Return block data if block is finalized.

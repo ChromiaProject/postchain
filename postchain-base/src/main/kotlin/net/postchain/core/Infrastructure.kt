@@ -38,27 +38,6 @@ interface SynchronizationInfrastructure : Shutdownable {
 }
 
 /**
- * This interface works a bit like a lifecycle hook, basically you can create a chunk of logic that can use
- * a [BlockchainProcess] for something during startup of the process.
- *
- * To see how it all goes together, see: doc/extension_classes.graphml
- *
- */
-interface BlockchainProcessLifecycleHandler: Shutdownable {
-    /**
-     * "connect" here is a loosely defined concept. Often we want to initiate the corresponding [GTXSpecialTxExtension]
-     * during "connect" but it could be anything.
-     *
-     * @param process is the new process being created.
-     */
-    fun connectProcess(process: BlockchainProcess)
-
-    fun disconnectProcess(process: BlockchainProcess)
-}
-
-interface SynchronizationInfrastructureExtension: BlockchainProcessLifecycleHandler
-
-/**
  * Extends the [SynchronizationInfrastructure] with these BC related concepts:
  * 1. [BlockchainConfiguration]
  * 2. [BlockchainEngine]
@@ -79,6 +58,27 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     ): BlockchainEngine
 
 }
+
+/**
+ * This interface works a bit like a lifecycle hook, basically you can create a chunk of logic that can use
+ * a [BlockchainProcess] for something during startup of the process.
+ *
+ * To see how it all goes together, see: doc/extension_classes.graphml
+ *
+ */
+interface BlockchainProcessLifecycleHandler: Shutdownable {
+    /**
+     * "connect" here is a loosely defined concept. Often we want to initiate the corresponding [GTXSpecialTxExtension]
+     * during "connect" but it could be anything.
+     *
+     * @param process is the new process being created.
+     */
+    fun connectProcess(process: BlockchainProcess)
+
+    fun disconnectProcess(process: BlockchainProcess)
+}
+
+interface SynchronizationInfrastructureExtension: BlockchainProcessLifecycleHandler
 
 interface ApiInfrastructure: BlockchainProcessLifecycleHandler
 
