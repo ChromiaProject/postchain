@@ -38,12 +38,7 @@ class IcmfProcessManagerExtension (val postchainContext: PostchainContext) : Blo
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg)?.let {
                 // Since this configuration has an Anchor extension, let's add the [IcmfReceiver]
-                val receiver = getIcmfController(process).registerReceiverChain(
-                        cfg.chainID,
-                        setOf(ClusterAnchorRoute)
-                )
-
-                it.useIcmfReceiver(receiver)
+                it.connectIcmfController(getIcmfController(process))
 
                 // We steal the [BlockQueries] from the engine, so that the spec TX extension can call the Anchor Module
                 it.setBlockQueries(engine.getBlockQueries())
