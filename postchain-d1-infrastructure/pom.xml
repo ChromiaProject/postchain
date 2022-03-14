@@ -7,8 +7,8 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>postchain-anchor</artifactId>
-    <name>Postchain Anchor Module</name>
+    <artifactId>postchain-d1-infrastructure</artifactId>
+    <name>Postchain directory 1 Module</name>
 
     <properties>
         <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
