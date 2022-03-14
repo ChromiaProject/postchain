@@ -184,7 +184,7 @@ abstract class AbstractBlockBuilder(
      */
     override fun commit(blockWitness: BlockWitness) {
         commitLog("Begin")
-        val witnessBuilder = blockWitnessManager.createWitnessBuilderWithOwnSignature(_blockData!!.header)
+        val witnessBuilder = blockWitnessManager.createWitnessBuilderWithoutOwnSignature(_blockData!!.header)
         if (!blockWitnessManager.validateWitness(blockWitness, witnessBuilder)) {
             throw ProgrammerMistake("Invalid witness")
         }
