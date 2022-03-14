@@ -5,29 +5,29 @@ package net.postchain.d1.icmf
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ByteArrayKey
 
-sealed class RoutingRule
+sealed class Route
 
 /**
  * Routing rule for cluster anchoring chain.
  * meaning: import headers from all chains running on a cluster.
  */
-object ClusterAnchorRoutingRule: RoutingRule()
+object ClusterAnchorRoute: Route()
 
 /**
  * Route messages from a specific topic of a specific chain.
  */
-data class SpecificChainRoutingRule(
+data class SpecificChainRoute(
         val brid: BlockchainRid,
         val topics: List<String>
-): RoutingRule()
+): Route()
 
 
 /**
  * Route messages from entire network matching specific topic
  */
-data class GlobalTopicRoutingRule(
+data class GlobalTopicRoute(
         val topic: ByteArrayKey
-): RoutingRule()
+): Route()
 
 
 

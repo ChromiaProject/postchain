@@ -12,11 +12,11 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import java.lang.Long.max
 
-class LocalIcmfPipe(
-        override val id: PipeID,
+class ClusterAnchorIcmfPipe(
+        override val id: PipeID<ClusterAnchorRoute>,
         protected val storage: Storage,
         protected val chainID: Long
-): IcmfPipe {
+): IcmfPipe<ClusterAnchorRoute, Long> {
     var highestSeen = -2L
     var lastCommitted = -2L
     val lock = Any()
@@ -34,16 +34,14 @@ class LocalIcmfPipe(
         }
     }
 
-    override fun fetchNext(currentPointer: Gtv): IcmfPacket? {
-        val height = currentPointer.asInteger()
-
+    override fun fetchNext(currentPointer: Long): IcmfPacket? {
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
 
-            val blockRID = dba.getBlockRID(eContext, height + 1)
+            val blockRID = dba.getBlockRID(eContext, currentPointer + 1)
             if (blockRID != null) {
                 synchronized(lock) {
-                    highestSeen = max(highestSeen, height + 1)
+                    highestSeen = max(highestSeen, currentPointer + 1)
                 }
                 val gtvBlockRid: Gtv = GtvByteArray(blockRID)
 
@@ -55,17 +53,17 @@ class LocalIcmfPipe(
                 val gtvHeader: Gtv = GtvDecoder.decodeGtv(rawHeader)
                 val gtvWitness: Gtv = GtvFactory.gtv(rawWitness)  // This is a primitive GTV encoding, but all we have
 
-                IcmfPacket.build(height, gtvBlockRid, gtvHeader, gtvWitness)
+                IcmfPacket.build(currentPointer, gtvBlockRid, gtvHeader, gtvWitness)
             } else {
                 null
             }
         }
     }
 
-    override fun markTaken(currentPointer: Gtv, bctx: BlockEContext) {
+    override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
             synchronized(lock) {
-                lastCommitted = max(currentPointer.asInteger(), lastCommitted)
+                lastCommitted = max(currentPointer, lastCommitted)
             }
         }
     }

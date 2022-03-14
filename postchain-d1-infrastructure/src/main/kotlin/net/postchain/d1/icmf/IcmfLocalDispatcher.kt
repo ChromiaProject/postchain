@@ -8,19 +8,19 @@ import net.postchain.core.BlockchainRid
 import net.postchain.gtv.GtvByteArray
 
 class IcmfLocalDispatcher(val storage: Storage) {
-    val receivers = mutableMapOf<Long, ConcreteIcmfReceiver>()
+    val receivers = mutableMapOf<Long, ClusterAnchorIcmfReceiver>()
 
-    fun connectReceiver(chainID: Long, receiver: ConcreteIcmfReceiver) {
+    fun connectReceiver(chainID: Long, receiver: ClusterAnchorIcmfReceiver) {
         receivers[chainID] = receiver
     }
 
     fun connectChain(chainID: Long) {
         // TODO: get BRID from chainID
         val brid = BlockchainRid(EMPTY_HASH)
-        val pipeID = PipeID(ClusterAnchorRoutingRule, GtvByteArray(brid.data))
+        val pipeID = PipeID(ClusterAnchorRoute, GtvByteArray(brid.data))
         for ((recID, rec) in receivers) {
             if ((recID != chainID) && (chainID !in rec.localPipes)) {
-                rec.localPipes[chainID] = LocalIcmfPipe(
+                rec.localPipes[chainID] = ClusterAnchorIcmfPipe(
                         pipeID,
                         storage,
                         chainID

@@ -5,8 +5,8 @@ package net.postchain.d1.icmf
 import net.postchain.core.BlockEContext
 import net.postchain.gtv.Gtv
 
-data class PipeID (
-        val routingRule: RoutingRule,
+data class PipeID<RT: Route> (
+        val route: RT,
         val key: Gtv
 ) {
     override fun toString(): String {
@@ -15,9 +15,9 @@ data class PipeID (
     }
 }
 
-interface IcmfPipe {
-    val id: PipeID
+interface IcmfPipe<RT: Route, PtrT> {
+    val id: PipeID<RT>
     fun mightHaveNewPackets(): Boolean
-    fun fetchNext(currentPointer: Gtv): IcmfPacket?
-    fun markTaken(currentPointer: Gtv, bctx: BlockEContext)
+    fun fetchNext(currentPointer: PtrT): IcmfPacket?
+    fun markTaken(currentPointer: PtrT, bctx: BlockEContext)
 }

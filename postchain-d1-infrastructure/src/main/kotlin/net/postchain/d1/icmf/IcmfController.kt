@@ -3,14 +3,19 @@
 package net.postchain.d1.icmf
 
 import net.postchain.base.Storage
+import net.postchain.core.ProgrammerMistake
 
 class IcmfController(storage: Storage) {
     val localDispatcher = IcmfLocalDispatcher(storage)
 
-    fun registerReceiverChain(chainID: Long, rules: Set<RoutingRule>): IcmfReceiver {
-        val recv = ConcreteIcmfReceiver(rules)
-        if (ClusterAnchorRoutingRule in rules)
-            localDispatcher.connectReceiver(chainID, recv)
-        return recv
+    fun createReceiver(chainID: Long, route: Route): IcmfReceiver<*, *> {
+        return when (route) {
+            is ClusterAnchorRoute -> {
+                val recv = ClusterAnchorIcmfReceiver()
+                localDispatcher.connectReceiver(chainID, recv)
+                recv
+            }
+            else -> throw ProgrammerMistake("Unrecognized route")
+        }
     }
 }

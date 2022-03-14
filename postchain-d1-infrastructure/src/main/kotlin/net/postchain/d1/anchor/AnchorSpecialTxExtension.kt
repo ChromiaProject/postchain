@@ -5,12 +5,9 @@ import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
-import net.postchain.d1.icmf.IcmfPipe
-import net.postchain.d1.icmf.IcmfReceiver
 import net.postchain.config.blockchain.*
 import net.postchain.core.*
-import net.postchain.d1.icmf.ClusterAnchorRoutingRule
-import net.postchain.d1.icmf.IcmfPacket
+import net.postchain.d1.icmf.*
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXModule
@@ -21,14 +18,14 @@ import java.lang.IllegalStateException
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
-class AnchorSpecialTxExtension : GTXSpecialTxExtension {
+class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
     private var myChainRid: BlockchainRid? = null // We must know the id of the anchor chain itself
-    private var myChainIid: Long? = null // We must know the id of the anchor chain itself
+    private var myChainID: Long? = null // We must know the id of the anchor chain itself
 
-    private var icmfReceiver: IcmfReceiver? = null // This is where we get the actual data to create operations
+    private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long>? = null // This is where we get the actual data to create operations
 
     private var blockQueries: BlockQueries? = null // This is for querying ourselves, i.e. the "anchor rell app"
 
@@ -40,9 +37,11 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
     override fun init(
         module: GTXModule,
+        chainID: Long,
         blockchainRID: BlockchainRid,
         cs: CryptoSystem
     ) {
+        myChainID = chainID
         myChainRid = blockchainRID
     }
 
@@ -94,19 +93,19 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-            pipe: IcmfPipe,
+            pipe: IcmfPipe<ClusterAnchorRoute, Long>,
             retList: MutableList<OpData>,
             bctx: BlockEContext
     ) {
-        if (pipe.id.routingRule != ClusterAnchorRoutingRule) return
+        if (pipe.id.route != ClusterAnchorRoute) return
         var counter = 0
         val blockchainRid = BlockchainRid(pipe.id.key.asByteArray())
         var currentHeight: Long = getLastAnchoredHeight(blockchainRid)
         while (pipe.mightHaveNewPackets()) {
-            val icmfPackage = pipe.fetchNext(GtvInteger(currentHeight))
+            val icmfPackage = pipe.fetchNext(currentHeight)
             if (icmfPackage != null) {
                 retList.add(buildOpData(icmfPackage))
-                pipe.markTaken(icmfPackage.currentPointer, bctx)
+                pipe.markTaken(icmfPackage.height, bctx)
                 currentHeight++ // Try next height
                 counter++
             } else {
@@ -250,7 +249,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         newInfo: MinimalBlockHeaderInfo,
         chainHeightMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
     ) {
-        var headers = chainHeightMap[bcRid]
+        val headers = chainHeightMap[bcRid]
         if (headers == null) {
             chainHeightMap[bcRid] = mutableSetOf(newInfo)
         } else {
@@ -264,15 +263,13 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
     // ------------------------ PUBLIC NON-INHERITED ----------------
 
-    /**
-     * This must have been set before first time we call [createSpecialOperations()]
-     */
-    fun useIcmfReceiver(ir: IcmfReceiver) {
-        if (icmfReceiver == null) {
-            icmfReceiver = ir
-        } else {
-            logger.info("Adding a IcmfReceiver when we have one.")
-        }
+    override fun connectIcmfController(controller: IcmfController) {
+        if (icmfReceiver != null)
+            throw ProgrammerMistake("Setting receiver twice")
+        icmfReceiver = controller.createReceiver(
+                myChainID!!,
+                ClusterAnchorRoute
+        ) as IcmfReceiver<ClusterAnchorRoute, Long>
     }
 
     // ------------------------ PRIVATE ----------------
@@ -282,11 +279,11 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
      * and verify it doesn't change.
      */
     private fun verifySameChainId(bctx: BlockEContext, blockchainRID: BlockchainRid ) {
-        if (this.myChainIid == null) {
-            this.myChainIid = bctx.chainID
+        if (this.myChainID == null) {
+            this.myChainID = bctx.chainID
         } else {
-            if (this.myChainIid != bctx.chainID) { // Possibly useless check, but I'm paranoid
-                throw IllegalStateException("Did anchor chain change chainID? Now: ${bctx.chainID}, before: $myChainIid")
+            if (this.myChainID != bctx.chainID) { // Possibly useless check, but I'm paranoid
+                throw IllegalStateException("Did anchor chain change chainID? Now: ${bctx.chainID}, before: $myChainID")
             }
         }
         if (this.myChainRid == null) {

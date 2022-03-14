@@ -4,7 +4,7 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
-import net.postchain.d1.icmf.ClusterAnchorRoutingRule
+import net.postchain.d1.icmf.ClusterAnchorRoute
 import net.postchain.d1.icmf.IcmfController
 import net.postchain.gtx.GTXBlockchainConfiguration
 
@@ -40,7 +40,7 @@ class IcmfProcessManagerExtension (val postchainContext: PostchainContext) : Blo
                 // Since this configuration has an Anchor extension, let's add the [IcmfReceiver]
                 val receiver = getIcmfController(process).registerReceiverChain(
                         cfg.chainID,
-                        setOf(ClusterAnchorRoutingRule)
+                        setOf(ClusterAnchorRoute)
                 )
 
                 it.useIcmfReceiver(receiver)

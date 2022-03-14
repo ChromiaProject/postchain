@@ -34,5 +34,3 @@ class AnchorGTXModule : SimpleGTXModule<Unit>(
         return listOf(AnchorSpecialTxExtension())
     }
 }
-
-
