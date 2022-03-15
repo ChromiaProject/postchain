@@ -4,7 +4,6 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.StorageBuilder
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
@@ -37,7 +36,7 @@ open class BaseBlockchainProcessManager(
     val nodeConfig = postchainContext.nodeConfig
     val connectionManager = postchainContext.connectionManager
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
-    val storage = StorageBuilder.buildStorage(nodeConfig.appConfig)
+    val storage get() = postchainContext.storage
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
@@ -191,8 +190,6 @@ open class BaseBlockchainProcessManager(
             t.cancel()
             t.purge()
         }
-
-        storage.close()
         logger.debug("[${nodeName()}]: Stopped BlockchainProcessManager")
     }
 
