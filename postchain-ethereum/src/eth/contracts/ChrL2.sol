@@ -25,12 +25,16 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         ERC721
     }
 
+    uint public transactionCount;
+    mapping (uint => Transaction) public transactions;
+    mapping (uint => mapping (address => bool)) public confirmations;
     mapping(IERC20 => uint256) public _balances;
     mapping(IERC721 => mapping(uint256 => address)) public _owners;
     mapping (bytes32 => Withdraw) public _withdraw;
     mapping (bytes32 => WithdrawNFT) public _withdrawNFT;
     address[] public directoryNodes;
     address[] public appNodes;
+    mapping (address => bool) public isAppNode;
 
     // Each postchain event will be used to claim only one time.
     mapping (bytes32 => bool) private _events;
@@ -39,6 +43,13 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         Pending,
         Withdrawable,
         Withdrawn
+    }
+
+    struct Transaction {
+        address destination;
+        uint value;
+        bytes data;
+        bool executed;
     }
 
     struct Withdraw {
@@ -57,15 +68,66 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         Status status;
     }
 
+    event Confirmation(address indexed sender, uint indexed transactionId);
+    event Revocation(address indexed sender, uint indexed transactionId);
+    event Submission(uint indexed transactionId);
+    event Execution(uint indexed transactionId);
+    event ExecutionFailure(uint indexed transactionId);
     event Deposited(AssetType indexed asset, bytes payload);
     event WithdrawRequest(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
     event Withdrawal(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawalNFT(address indexed beneficiary, IERC721 indexed nft, uint256 tokenId);
 
+    /*
+     *  Modifiers
+     */
+    modifier onlyThis() {
+        require(msg.sender == address(this), "ChrL2: onlyThis");
+        _;
+    }
+
+    modifier appNodeDoesNotExist(address node) {
+        require(!isAppNode[node], "ChrL2: appNodeDoesNotExist");
+        _;
+    }
+
+    modifier appNodeExists(address node) {
+        require(isAppNode[node], "ChrL2: appNodeExists");
+        _;
+    }    
+
+    modifier transactionExists(uint transactionId) {
+        require(transactions[transactionId].destination != address(0), "ChrL2: transactionExists");
+        _;
+    }
+
+    modifier confirmed(uint transactionId, address node) {
+        require(confirmations[transactionId][node], "ChrL2: confirmed");
+        _;
+    }
+
+    modifier notConfirmed(uint transactionId, address node) {
+        require(!confirmations[transactionId][node], "ChrL2: notConfirmed");
+        _;
+    }
+
+    modifier notExecuted(uint transactionId) {
+        require(!transactions[transactionId].executed, "Chrl2: notExecuted");
+        _;
+    }
+
+    modifier notNull(address _address) {
+        require(_address != address(0), "ChrL2: notNull");
+        _;
+    }
+
     function initialize(address[] memory _directoryNodes, address[] memory _appNodes) public initializer {
         directoryNodes = _directoryNodes;
         appNodes = _appNodes;
+        for (uint i = 0; i < appNodes.length; i++) {
+            isAppNode[appNodes[i]] = true;
+        }
     }
 
     /**
@@ -96,10 +158,145 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         if (!hash.isValidNodes(_appNodes)) revert("ChrL2: invalid app node");
         if (!hash.isValidSignatures(sigs, directoryNodes)) revert("ChrL2: not enough require signature");
         for (uint i = 0; i < appNodes.length; i++) {
+            isAppNode[appNodes[i]] = false;
             appNodes.pop();
         }
-        appNodes = _appNodes;
+        for (uint k = 0; k < _appNodes.length; k++) {
+            appNodes.push(_appNodes[k]);
+            isAppNode[_appNodes[k]] = true;
+        }
         return true;
+    }
+
+    /// @dev Allows an owner to submit and confirm a transaction.
+    /// @param destination Transaction target address.
+    /// @param value Transaction ether value.
+    /// @param data Transaction data payload.
+    /// @return transactionId Returns transaction ID.
+    function submitTransaction(address destination, uint value, bytes calldata data)
+        public
+        returns (uint transactionId)
+    {
+        transactionId = _addTransaction(destination, value, data);
+        confirmTransaction(transactionId);
+    }
+
+    /// @dev Allows an owner to confirm a transaction.
+    /// @param transactionId Transaction ID.
+    function confirmTransaction(uint transactionId)
+        public
+        appNodeExists(msg.sender)
+        transactionExists(transactionId)
+        notConfirmed(transactionId, msg.sender)
+    {
+        confirmations[transactionId][msg.sender] = true;
+        emit Confirmation(msg.sender, transactionId);
+        executeTransaction(transactionId);
+    }
+
+    /// @dev Allows an owner to revoke a confirmation for a transaction.
+    /// @param transactionId Transaction ID.
+    function revokeConfirmation(uint transactionId)
+        public
+        appNodeExists(msg.sender)
+        confirmed(transactionId, msg.sender)
+        notExecuted(transactionId)
+    {
+        confirmations[transactionId][msg.sender] = false;
+        emit Revocation(msg.sender, transactionId);
+    }    
+
+    /// @dev Allows anyone to execute a confirmed transaction.
+    /// @param transactionId Transaction ID.
+    function executeTransaction(uint transactionId)
+        public
+        appNodeExists(msg.sender)
+        confirmed(transactionId, msg.sender)
+        notExecuted(transactionId)
+    {
+        if (isConfirmed(transactionId)) {
+            Transaction storage txn = transactions[transactionId];
+            txn.executed = true;
+            if (external_call(txn.destination, txn.value, txn.data.length, txn.data))
+                emit Execution(transactionId);
+            else {
+                emit ExecutionFailure(transactionId);
+                txn.executed = false;
+            }
+        }
+    }
+
+    // call has been separated into its own function in order to take advantage
+    // of the Solidity's code generator to produce a loop that copies tx.data into memory.
+    function external_call(address destination, uint value, uint dataLength, bytes memory data) internal returns (bool) {
+        bool result;
+        assembly {
+            let x := mload(0x40)   // "Allocate" memory for output (0x40 is where "free memory" pointer is stored by convention)
+            let d := add(data, 0x20) // First 32 bytes are the padded length of data, so exclude that
+            result := call(
+                sub(gas(), 34710),   // 34710 is the value that solidity is currently emitting
+                                   // It includes callGas (700) + callVeryLow (3, to pay for SUB) + callValueTransferGas (9000) +
+                                   // callNewAccountGas (25000, in case the destination address does not exist and needs creating)
+                destination,
+                value,
+                d,
+                dataLength,        // Size of the input (in bytes) - this is what fixes the padding problem
+                x,
+                0                  // Output is ignored, therefore the output size is zero
+            )
+        }
+        return result;
+    }    
+
+    /// @dev Returns the confirmation status of a transaction.
+    /// @param transactionId Transaction ID.
+    /// @return Confirmation status.
+    function isConfirmed(uint transactionId)
+        public
+        view
+        returns (bool)
+    {
+        uint count = 0;
+        for (uint i = 0; i < appNodes.length; i++) {
+            if (confirmations[transactionId][appNodes[i]]) count += 1;
+        }
+        if (count >= Postchain._calculateBFTRequiredNum(appNodes.length)) {
+            return true;
+        }
+        return false;
+    }
+
+    /// @dev Adds a new transaction to the transaction mapping, if transaction does not exist yet.
+    /// @param destination Transaction target address.
+    /// @param value Transaction ether value.
+    /// @param data Transaction data payload.
+    /// @return transactionId Returns transaction ID.
+    function _addTransaction(address destination, uint value, bytes calldata data)
+        internal
+        notNull(destination)
+        returns (uint transactionId)
+    {
+        transactionId = transactionCount;
+        transactions[transactionId] = Transaction({
+            destination: destination,
+            value: value,
+            data: data,
+            executed: false
+        });
+        transactionCount += 1;
+        emit Submission(transactionId);
+    }
+
+    function pendingWithdraw(bytes32 _hash) onlyThis public {
+        Withdraw storage wd = _withdraw[_hash];
+        require(wd.status == Status.Withdrawable, "ChrL2: pendingWithdraw");
+        wd.status = Status.Pending;
+    }
+
+    function unpendingWithdraw(bytes32 _hash) onlyThis public {
+        Withdraw storage wd = _withdraw[_hash];
+        require(wd.status == Status.Pending, "ChrL2: unpendingWithdraw");
+        wd.status = Status.Withdrawable;
     }
 
     function deposit(IERC20 token, uint256 amount) public returns (bool) {

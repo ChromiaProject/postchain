@@ -212,6 +212,9 @@ describe("ChrL2", () => {
             // Directory Nodes
             await chrL2Instance.updateDirectoryNodes(hash, [sig], [other.address])
             expect(await chrL2Instance.directoryNodes(0)).to.eq(other.address)
+            expect(await chrL2Instance.isAppNode("0x659e4a3726275edFD125F52338ECe0d54d15BD99")).to.be.false
+            expect(await chrL2Instance.isAppNode("0x75e20828B343d1fE37FAe469aB698E19c17F20b5")).to.be.false
+            expect(await chrL2Instance.isAppNode("0x1a642f0E3c3aF545E7AcBD38b07251B3990914F1")).to.be.false
 
             // App Nodes
             sig = await other.signMessage(DecodeHexStringToByteArray("7fcc39140a3e49a5950393cbe3d7e063adb8ede85106a1a7f3e3e610585d1c5a"))
@@ -224,6 +227,9 @@ describe("ChrL2", () => {
             expect(await chrL2Instance.appNodes(0)).to.eq("0x659e4a3726275edFD125F52338ECe0d54d15BD99")
             expect(await chrL2Instance.appNodes(1)).to.eq("0x75e20828B343d1fE37FAe469aB698E19c17F20b5")
             expect(await chrL2Instance.appNodes(2)).to.eq("0x1a642f0E3c3aF545E7AcBD38b07251B3990914F1")
+            expect(await chrL2Instance.isAppNode("0x659e4a3726275edFD125F52338ECe0d54d15BD99")).to.be.true
+            expect(await chrL2Instance.isAppNode("0x75e20828B343d1fE37FAe469aB698E19c17F20b5")).to.be.true
+            expect(await chrL2Instance.isAppNode("0x1a642f0E3c3aF545E7AcBD38b07251B3990914F1")).to.be.true
         })
     })
 
