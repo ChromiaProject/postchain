@@ -6,7 +6,6 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import net.postchain.StorageBuilder
 import net.postchain.config.app.AppConfig
-import net.postchain.core.NODE_ID_NA
 
 @Parameters(commandDescription = "Wipe db")
 class CommandWipeDb : Command {
@@ -21,7 +20,7 @@ class CommandWipeDb : Command {
     override fun execute(): CliResult {
         return try {
             val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
-            StorageBuilder.buildStorage(appConfig, NODE_ID_NA, true).close()
+            StorageBuilder.buildStorage(appConfig, true).close()
             Ok("Database has been wiped successfully")
         } catch (e: CliError.Companion.CliException) {
             CliError.CommandNotAllowed(message = e.message)
