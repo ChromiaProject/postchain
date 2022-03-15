@@ -7,9 +7,9 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 
 // Interfaces
 import "@openzeppelin/contracts/interfaces/IERC721.sol";
+import "@openzeppelin/contracts/interfaces/IERC721Metadata.sol";
 import "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
-import "@openzeppelin/contracts/interfaces/IERC721Metadata.sol";
 
 // Internal libraries
 import "./utils/Gtv.sol";
