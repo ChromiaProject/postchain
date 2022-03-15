@@ -97,9 +97,8 @@ open class BaseBlockchainProcessManager(
                     val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
                     if (configuration != null) {
 
-                        val componentMap = buildComponentMap()
                         val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                                configuration, eContext, NODE_ID_AUTO, chainId, componentMap)
+                                configuration, eContext, NODE_ID_AUTO, chainId)
 
                         val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
                         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
@@ -127,17 +126,6 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    /**
-     * In the future there probably should be some way to transport unique configuration components
-     * into the map (initially set in the the configuration file?). Currently it's not needed.
-     *
-     * @return the component map we will use for the configuration of this BC process.
-     */
-    private fun buildComponentMap(): MutableMap<String, Any> {
-        val cm = HashMap<String, Any>()
-        // cm["xxx"] = Xxx()  // <-- This is how we can add stuff
-        return cm
-    }
     protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?): BlockchainProcess {
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener).also {
             it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })

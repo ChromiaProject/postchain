@@ -6,7 +6,6 @@ import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.BaseBlockchainInfrastructure
-import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
@@ -270,7 +269,6 @@ class TestManagedBlockchainInfrastructure(postchainContext: PostchainContext,
         eContext: EContext,
         nodeId: Int,
         chainId: Long,
-        configurationComponentMap: MutableMap<String, Any>
     ): BlockchainConfiguration {
 
         return mockDataSource.getConf(rawConfigurationData)!!

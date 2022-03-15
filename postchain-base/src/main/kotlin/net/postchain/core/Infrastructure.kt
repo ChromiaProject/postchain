@@ -48,7 +48,6 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
                                     eContext: EContext,
                                     nodeId: Int,
                                     chainId: Long,
-                                    configurationComponentMap: MutableMap<String, Any> = HashMap() // For unusual settings, customizations etc.
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(

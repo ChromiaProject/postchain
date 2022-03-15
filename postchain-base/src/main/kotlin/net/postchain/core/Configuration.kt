@@ -29,7 +29,6 @@ interface BlockchainConfiguration {
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun initializeDB(ctx: EContext)
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
-    fun <T> getComponent(name: String): T?
 }
 
 interface ConfigurationDataStore {

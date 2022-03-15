@@ -56,11 +56,10 @@ open class BaseBlockchainInfrastructure(
             eContext: EContext,
             nodeId: Int,
             chainId: Long,
-            configurationComponentMap: MutableMap<String, Any>
     ): BlockchainConfiguration {
 
         val confData = BaseBlockchainConfigurationData.build(
-            rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker, configurationComponentMap)
+            rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
 
         val bcfClass = Class.forName(confData.data[KEY_CONFIGURATIONFACTORY]!!.asString())
         val factory = (bcfClass.newInstance() as BlockchainConfigurationFactory)
