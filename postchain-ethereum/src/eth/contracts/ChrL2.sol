@@ -83,42 +83,42 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
      *  Modifiers
      */
     modifier onlyThis() {
-        require(msg.sender == address(this), "ChrL2: onlyThis");
+        require(msg.sender == address(this), "ChrL2: only the contract can execute");
         _;
     }
 
     modifier appNodeDoesNotExist(address node) {
-        require(!isAppNode[node], "ChrL2: appNodeDoesNotExist");
+        require(!isAppNode[node], "ChrL2: app node already exist");
         _;
     }
 
     modifier appNodeExists(address node) {
-        require(isAppNode[node], "ChrL2: appNodeExists");
+        require(isAppNode[node], "ChrL2: app node does not exist");
         _;
     }    
 
     modifier transactionExists(uint transactionId) {
-        require(transactions[transactionId].destination != address(0), "ChrL2: transactionExists");
+        require(transactions[transactionId].destination != address(0), "ChrL2: transaction does not exist");
         _;
     }
 
     modifier confirmed(uint transactionId, address node) {
-        require(confirmations[transactionId][node], "ChrL2: confirmed");
+        require(confirmations[transactionId][node], "ChrL2: transaction was not confirmed by the node yet");
         _;
     }
 
     modifier notConfirmed(uint transactionId, address node) {
-        require(!confirmations[transactionId][node], "ChrL2: notConfirmed");
+        require(!confirmations[transactionId][node], "ChrL2: transaction was already confirmed by the node");
         _;
     }
 
     modifier notExecuted(uint transactionId) {
-        require(!transactions[transactionId].executed, "Chrl2: notExecuted");
+        require(!transactions[transactionId].executed, "Chrl2: transaction was already executed");
         _;
     }
 
     modifier notNull(address _address) {
-        require(_address != address(0), "ChrL2: notNull");
+        require(_address != address(0), "ChrL2: null address is not allow");
         _;
     }
 
