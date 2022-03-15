@@ -6,7 +6,6 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
 import net.postchain.StorageBuilder
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.core.NODE_ID_TODO
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.getModules
@@ -30,9 +29,9 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
                 "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_2.xml")
 
         // Wiping of database
-        StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
+        val storage = StorageBuilder.buildStorage(appConfig, true)
 
-        PostchainTestNode(nodeConfigProvider)
+        PostchainTestNode(nodeConfigProvider, storage)
                 .apply {
                     // Adding chain1 with blockchainConfig1 with DummyModule1
                     addBlockchain(chainId, blockchainConfig1)

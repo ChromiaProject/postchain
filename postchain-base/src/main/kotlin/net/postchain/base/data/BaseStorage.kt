@@ -15,7 +15,6 @@ import javax.sql.DataSource
 class BaseStorage(
         private val readDataSource: DataSource,
         private val writeDataSource: DataSource,
-        private val nodeId: Int,
         private val db: DatabaseAccess,
         override val readConcurrency: Int,
         private val savepointSupport: Boolean = true
@@ -125,5 +124,5 @@ class BaseStorage(
             BaseAppContext(dataSource.connection, db)
 
     private fun buildEContext(chainID: Long, dataSource: DataSource): EContext =
-            BaseEContext(dataSource.connection, chainID, nodeId, db)
+            BaseEContext(dataSource.connection, chainID, db)
 }

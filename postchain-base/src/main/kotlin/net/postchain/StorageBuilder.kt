@@ -13,7 +13,7 @@ import javax.sql.DataSource
 object StorageBuilder {
     const val readConcurrency = 10 // TODO: make this configurable
 
-    fun buildStorage(appConfig: AppConfig, nodeIndex: Int, wipeDatabase: Boolean = false): Storage {
+    fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
         initStorage(appConfig, wipeDatabase, db)
 
@@ -34,7 +34,6 @@ object StorageBuilder {
         return BaseStorage(
                 readDataSource,
                 writeDataSource,
-                nodeIndex,
                 db,
                 readConcurrency,
                 db.isSavepointSupported())

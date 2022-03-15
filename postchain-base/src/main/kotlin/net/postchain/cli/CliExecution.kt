@@ -3,17 +3,25 @@
 package net.postchain.cli
 
 import net.postchain.PostchainNode
-import net.postchain.base.*
+import net.postchain.StorageBuilder
+import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.BaseConfigurationDataStore
+import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.BlockchainRidFactory
+import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
+import net.postchain.base.runStorageCommand
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.core.BlockchainRid
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainRid
 import net.postchain.core.EContext
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvFileReader
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
 import java.sql.Connection
@@ -220,10 +228,12 @@ object CliExecution {
     }
 
     fun runNode(nodeConfigFile: String, chainIds: List<Long>) {
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val storage = StorageBuilder.buildStorage(appConfig)
         val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(
-                AppConfig.fromPropertiesFile(nodeConfigFile))
+                appConfig) { storage }
 
-        with(PostchainNode(nodeConfigProvider)) {
+        with(PostchainNode(nodeConfigProvider, storage)) {
             chainIds.forEach { startBlockchain(it) }
         }
     }

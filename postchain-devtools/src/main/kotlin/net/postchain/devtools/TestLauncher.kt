@@ -5,11 +5,10 @@ package net.postchain.devtools
 import com.google.gson.GsonBuilder
 import mu.KLogging
 import net.postchain.StorageBuilder
-import net.postchain.core.BlockchainRid
 import net.postchain.base.gtxml.TestType
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.core.NODE_ID_TODO
+import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.devtools.KeyPairHelper.privKey
@@ -69,9 +68,9 @@ class TestLauncher : IntegrationTestSetup() {
         val chainId = nodeConfigProvider.getConfiguration().activeChainIds.first().toLong()
 
         // Wiping of database
-        StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
+        val storage = StorageBuilder.buildStorage(appConfig, true)
 
-        return PostchainTestNode(nodeConfigProvider).apply {
+        return PostchainTestNode(nodeConfigProvider, storage).apply {
             val blockchainRID = addBlockchain(chainId, blockchainConfig)
             mapBlockchainRID(chainId, blockchainRID)
             startBlockchain()

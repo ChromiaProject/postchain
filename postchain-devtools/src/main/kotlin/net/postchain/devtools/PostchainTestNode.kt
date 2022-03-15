@@ -4,11 +4,9 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.PostchainNode
-import net.postchain.StorageBuilder
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
-import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
@@ -16,6 +14,7 @@ import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
+import net.postchain.managed.ManagedBlockchainProcessManager
 import kotlin.properties.Delegates
 
 /**
@@ -27,17 +26,15 @@ import kotlin.properties.Delegates
  */
 class PostchainTestNode(
         nodeConfigProvider: NodeConfigurationProvider,
-        preWipeDatabase: Boolean = false
-) : PostchainNode(nodeConfigProvider) {
+        val testStorage: Storage
+) : PostchainNode(nodeConfigProvider, testStorage) {
 
-    private val testStorage: Storage
     val pubKey: String
     private var isInitialized by Delegates.notNull<Boolean>()
     private val blockchainRidMap = mutableMapOf<Long, BlockchainRid>() // Used to keep track of the BC RIDs of the chains
 
     init {
         val nodeConfig = nodeConfigProvider.getConfiguration()
-        testStorage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO, preWipeDatabase)
         pubKey = nodeConfig.pubKey
         isInitialized = true
 

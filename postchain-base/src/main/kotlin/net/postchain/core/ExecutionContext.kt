@@ -14,7 +14,6 @@ interface AppContext {
 
 interface ExecutionContext : AppContext {
     val chainID: Long
-    val nodeID: Int // TODO: [et]: Remove it?
 }
 
 typealias EContext = ExecutionContext

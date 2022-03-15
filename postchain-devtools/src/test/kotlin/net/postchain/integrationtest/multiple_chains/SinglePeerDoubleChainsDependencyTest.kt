@@ -5,7 +5,6 @@ package net.postchain.integrationtest.multiple_chains
 import mu.KLogging
 import net.postchain.StorageBuilder
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.core.NODE_ID_TODO
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
 import org.junit.jupiter.api.Test
@@ -29,10 +28,10 @@ class SinglePeerDoubleChainsDependencyTest : ConfigFileBasedIntegrationTest() {
         val appConfig = createAppConfig(0, 1, nodeConfigFilename)
         val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
 
-        StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
+        val storage = StorageBuilder.buildStorage(appConfig, true)
 
         // Building a PostchainNode
-        val node = PostchainTestNode(nodeConfigProvider)
+        val node = PostchainTestNode(nodeConfigProvider, storage)
                 .also { nodes.add(it) }
 
         // Launching blockchain

@@ -37,7 +37,7 @@ open class BaseBlockchainProcessManager(
     val nodeConfig = postchainContext.nodeConfig
     val connectionManager = postchainContext.connectionManager
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
-    val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
+    val storage = StorageBuilder.buildStorage(nodeConfig.appConfig)
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()

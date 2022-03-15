@@ -13,7 +13,6 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.core.NODE_ID_NA
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -37,7 +36,7 @@ class CliIntegrationTest {
     @BeforeEach
     fun setup() {
         // this wipes the data base.
-        StorageBuilder.buildStorage(appConfig, NODE_ID_NA, true)
+        StorageBuilder.buildStorage(appConfig, true)
         // add-blockchain goes here
         val blockChainConfig = fullPath("blockchain_config.xml")
         CliExecution.addBlockchain(nodeConfigPath, chainId, blockChainConfig, AlreadyExistMode.FORCE)

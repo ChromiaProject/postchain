@@ -151,10 +151,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     ): PostchainTestNode {
 
         val appConfig = createAppConfig(nodeIndex, totalNodesCount, nodeConfigFilename)
-        // Wiping of database
-        if (preWipeDatabase) {
-            StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
-        }
+        val storage = StorageBuilder.buildStorage(appConfig, preWipeDatabase)
         val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
         val nodeConfig = nodeConfigProvider.getConfiguration()
 
@@ -165,7 +162,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         // Performing setup action
         setupAction(appConfig, nodeConfig)
 
-        return PostchainTestNode(nodeConfigProvider)
+        return PostchainTestNode(nodeConfigProvider, storage)
                 .apply {
                     val blockchainRid = addBlockchain(chainId, blockchainConfig)
                     mapBlockchainRID(chainId, blockchainRid)
@@ -242,13 +239,10 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     ): PostchainTestNode {
 
         val appConfig = createAppConfig(nodeIndex, nodeCount, nodeConfigFilename)
-        // Wiping of database
-        if (preWipeDatabase) {
-            StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
-        }
+        val storage = StorageBuilder.buildStorage(appConfig, preWipeDatabase)
         val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
 
-        val node = PostchainTestNode(nodeConfigProvider)
+        val node = PostchainTestNode(nodeConfigProvider, storage)
                 .also { nodes.add(it) }
 
         nodeConfigProvider.getConfiguration().activeChainIds
