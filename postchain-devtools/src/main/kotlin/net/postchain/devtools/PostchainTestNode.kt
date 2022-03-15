@@ -26,8 +26,8 @@ import kotlin.properties.Delegates
  */
 class PostchainTestNode(
         nodeConfigProvider: NodeConfigurationProvider,
-        val testStorage: Storage
-) : PostchainNode(nodeConfigProvider, testStorage) {
+        storage: Storage
+) : PostchainNode(nodeConfigProvider, storage) {
 
     val pubKey: String
     private var isInitialized by Delegates.notNull<Boolean>()
@@ -64,7 +64,7 @@ class PostchainTestNode(
     fun addBlockchain(chainId: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
             DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
@@ -76,7 +76,7 @@ class PostchainTestNode(
     fun addConfiguration(chainId: Long, height: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
@@ -87,7 +87,7 @@ class PostchainTestNode(
     fun setMustSyncUntil(chainId: Long, brid: BlockchainRid, height: Long): Boolean {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             logger.debug("Set must_sync_until for chain: $brid, height: $height")
             BaseConfigurationDataStore.setMustSyncUntil(eContext, brid, height)
         }
@@ -101,7 +101,6 @@ class PostchainTestNode(
         logger.debug("shutdown node ${peerName(pubKey)}")
         super.shutdown()
         logger.debug("shutdown node ${peerName(pubKey)} done")
-        testStorage.close()
     }
 
     fun getRestApiModel(): Model {
