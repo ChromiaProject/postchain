@@ -66,7 +66,7 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
  * To see how it all goes together, see: doc/extension_classes.graphml
  *
  */
-interface BlockchainProcessLifecycleHandler: Shutdownable {
+interface BlockchainProcessConnectable {
     /**
      * "connect" here is a loosely defined concept. Often we want to initiate the corresponding [GTXSpecialTxExtension]
      * during "connect" but it could be anything.
@@ -78,11 +78,11 @@ interface BlockchainProcessLifecycleHandler: Shutdownable {
     fun disconnectProcess(process: BlockchainProcess)
 }
 
-interface SynchronizationInfrastructureExtension: BlockchainProcessLifecycleHandler
+interface SynchronizationInfrastructureExtension: BlockchainProcessConnectable, Shutdownable
 
-interface ApiInfrastructure: BlockchainProcessLifecycleHandler
+interface ApiInfrastructure: BlockchainProcessConnectable, Shutdownable
 
-interface BlockchainProcessManagerExtension: BlockchainProcessLifecycleHandler {
+interface BlockchainProcessManagerExtension: BlockchainProcessConnectable, Shutdownable {
     fun afterCommit(process: BlockchainProcess, height: Long)
 }
 
