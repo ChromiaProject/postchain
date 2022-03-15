@@ -90,6 +90,10 @@ describe("Non Fungible Token", () => {
             let logs = receipt.events?.filter((x) =>  {return x.event == 'Deposited'})
             if (logs !== undefined) {
                 let log = logs[0]
+
+                // Note: test data might change depends on the actual log data
+                // and might make the test failed.
+                // It'd better to find a way to make deterministic test data
                 const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
                 const contractAddress = hexZeroPad(nftAddress, 32)

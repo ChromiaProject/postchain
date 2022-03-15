@@ -453,16 +453,34 @@ describe("ChrL2", () => {
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     user.address)).to.revertedWith("ChrL2: not mature enough to withdraw the fund")
 
-                // force mining 100 blocks
-                for (let i = 0; i < 100; i++) {
+                // force mining 98 blocks
+                for (let i = 0; i < 98; i++) {
                     await ethers.provider.send('evm_mine', [])
                 }
+
+                let hashEvent = DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length))
+
+                // appNodes can update withdraw request status to pending (emergency case)
+                let appNode = new ChrL2__factory(chrL2Interface, appNodes).attach(chrL2Address)
+                let pendingWithdraw = appNode.interface.encodeFunctionData("pendingWithdraw", [hashEvent])
+                await appNode.submitTransaction(chrL2Address, BigNumber.from(0), pendingWithdraw)
+
+                // then user cannot withdraw the fund
+                await expect(chrL2Instance.withdraw(
+                    hashEvent,
+                    user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
+
+                // appNode can set withdraw request satus back to withdrawable
+                let unpendingWithdraw = appNode.interface.encodeFunctionData("unpendingWithdraw", [hashEvent])
+                await appNode.submitTransaction(chrL2Address, BigNumber.from(0), unpendingWithdraw)
 
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
                 expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     deployer.address)).to.be.revertedWith('ChrL2: no fund for the beneficiary')
+
+                // now user can withdraw the fund
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     user.address))
