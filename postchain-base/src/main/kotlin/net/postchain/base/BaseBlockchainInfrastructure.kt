@@ -79,7 +79,8 @@ open class BaseBlockchainInfrastructure(
             restartHandler: RestartHandler
     ): BaseBlockchainEngine {
 
-        val storage = StorageBuilder.buildStorage(postchainContext.nodeConfig.appConfig, NODE_ID_TODO)
+        // We create a new storage instance to open new db connections for each engine
+        val storage = StorageBuilder.buildStorage(postchainContext.nodeConfig.appConfig)
 
         val transactionQueue = BaseTransactionQueue(
                 (configuration as BaseBlockchainConfiguration) // TODO: Olle: Is this conversion harmless?

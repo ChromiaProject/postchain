@@ -1,5 +1,6 @@
 package net.postchain.devtools.utils.configuration
 
+import net.postchain.StorageBuilder
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
@@ -77,7 +78,8 @@ object NodeConfigurationProviderGenerator {
         }
 
         val appConfig = AppConfig(compositeConfig)
-        val provider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val storage = StorageBuilder.buildStorage(appConfig)
+        val provider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
 
         // Run the action, default won't do anything
         setupAction(appConfig, provider.getConfiguration())

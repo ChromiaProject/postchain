@@ -102,7 +102,7 @@ open class ManagedBlockchainProcessManager(
     // TODO: [POS-129]: 'protected open' for tests only. Change that.
     protected open fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
         val storage = StorageBuilder.buildStorage(
-                postchainContext.nodeConfig.appConfig, NODE_ID_NA)
+                postchainContext.nodeConfig.appConfig)
 
         // Building blockQueries of Rell module for ManagedDataSource
         val blockQueries = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
