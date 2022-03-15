@@ -19,7 +19,8 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
     fun reconfigurationAtHeight_is_successful() {
         // Node config
         val appConfig = createAppConfig(0, 1, DEFAULT_CONFIG_FILE)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val storage = StorageBuilder.buildStorage(appConfig, true)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
         val chainId = nodeConfigProvider.getConfiguration().activeChainIds.first().toLong()
 
         // Chains configs
@@ -27,9 +28,6 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
                 "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_1.xml")
         val blockchainConfig2 = readBlockchainConfig(
                 "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_2.xml")
-
-        // Wiping of database
-        val storage = StorageBuilder.buildStorage(appConfig, true)
 
         PostchainTestNode(nodeConfigProvider, storage)
                 .apply {

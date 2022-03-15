@@ -2,7 +2,6 @@
 
 package net.postchain.config.node
 
-import net.postchain.StorageBuilder
 import net.postchain.base.Storage
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders.File
@@ -11,10 +10,6 @@ import net.postchain.config.node.NodeConfigProviders.Managed
 import net.postchain.config.node.NodeConfigProviders.Manual
 
 object NodeConfigurationProviderFactory {
-    private val DEFAULT_STORAGE_FACTORY: (AppConfig) -> Storage = {
-        StorageBuilder.buildStorage(it)
-    }
-
     /**
      * @param appConfig used to find the provider
      * @param storageFactory
@@ -22,7 +17,7 @@ object NodeConfigurationProviderFactory {
      */
     fun createProvider(
         appConfig: AppConfig,
-        storageFactory: (AppConfig) -> Storage = DEFAULT_STORAGE_FACTORY
+        storageFactory: (AppConfig) -> Storage
     ): NodeConfigurationProvider {
         return when (appConfig.nodeConfigProvider.toLowerCase()) {
             Legacy.name.toLowerCase() -> LegacyNodeConfigurationProvider(appConfig)

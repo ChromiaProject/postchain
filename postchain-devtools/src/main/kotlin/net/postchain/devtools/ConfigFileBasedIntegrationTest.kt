@@ -152,7 +152,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
 
         val appConfig = createAppConfig(nodeIndex, totalNodesCount, nodeConfigFilename)
         val storage = StorageBuilder.buildStorage(appConfig, preWipeDatabase)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
         val nodeConfig = nodeConfigProvider.getConfiguration()
 
         nodesNames[nodeConfig.pubKey] = "$nodeIndex"
@@ -240,7 +240,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
 
         val appConfig = createAppConfig(nodeIndex, nodeCount, nodeConfigFilename)
         val storage = StorageBuilder.buildStorage(appConfig, preWipeDatabase)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
 
         val node = PostchainTestNode(nodeConfigProvider, storage)
                 .also { nodes.add(it) }

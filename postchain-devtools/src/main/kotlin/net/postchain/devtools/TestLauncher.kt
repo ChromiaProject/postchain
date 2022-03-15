@@ -50,25 +50,13 @@ class TestLauncher : IntegrationTestSetup() {
 
     private fun createTestNode(configFile: String, blockchainConfigFile: String): PostchainTestNode {
         val appConfig = AppConfig.fromPropertiesFile(configFile)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
-
-        /*
-        // TODO: Fix this hack
-        nodeConfig.setProperty("api.port", -1) // FYI: Disabling Rest API in test mode
-        nodeConfig.setProperty("node.0.id", nodeConfig.getProperty("test.node.0.id"))
-        nodeConfig.setProperty("node.0.host", nodeConfig.getProperty("test.node.0.host"))
-        nodeConfig.setProperty("node.0.port", nodeConfig.getProperty("test.node.0.port"))
-        nodeConfig.setProperty("node.0.pubkey", nodeConfig.getProperty("test.node.0.pubkey"))
-        nodeConfig.setProperty("database.schema", nodeConfig.getProperty("test.database.schema"))
-        */
+        val storage = StorageBuilder.buildStorage(appConfig, true)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
 
         val blockchainConfig = GtvMLParser.parseGtvML(
                 File(blockchainConfigFile).readText())
 
         val chainId = nodeConfigProvider.getConfiguration().activeChainIds.first().toLong()
-
-        // Wiping of database
-        val storage = StorageBuilder.buildStorage(appConfig, true)
 
         return PostchainTestNode(nodeConfigProvider, storage).apply {
             val blockchainRID = addBlockchain(chainId, blockchainConfig)

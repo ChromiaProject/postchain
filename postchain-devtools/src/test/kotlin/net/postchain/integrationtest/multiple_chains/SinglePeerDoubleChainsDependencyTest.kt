@@ -26,9 +26,8 @@ class SinglePeerDoubleChainsDependencyTest : ConfigFileBasedIntegrationTest() {
         val blockchainConfigFilename = "/net/postchain/devtools/multiple_chains/dependent_bcs/single_peer/blockchain_config_bad_dependency.xml"
         configOverrides.setProperty("testpeerinfos", createPeerInfos(1))
         val appConfig = createAppConfig(0, 1, nodeConfigFilename)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
-
         val storage = StorageBuilder.buildStorage(appConfig, true)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
 
         // Building a PostchainNode
         val node = PostchainTestNode(nodeConfigProvider, storage)

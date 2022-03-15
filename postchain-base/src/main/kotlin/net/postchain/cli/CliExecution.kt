@@ -278,9 +278,11 @@ object CliExecution {
 
     private fun tryCreateBasicDataSource(nodeConfigFile: String): Connection? {
         return try {
+            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+            val storage = StorageBuilder.buildStorage(appConfig)
             val nodeConfig = NodeConfigurationProviderFactory.createProvider(
-                    AppConfig.fromPropertiesFile(nodeConfigFile)
-            ).getConfiguration()
+                    appConfig
+            ) { storage }.getConfiguration()
 
             BasicDataSource().apply {
                 addConnectionProperty("currentSchema", nodeConfig.databaseSchema)
