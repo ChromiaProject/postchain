@@ -4,7 +4,7 @@ import { solidity } from "ethereum-waffle";
 import { TestToken__factory, ChrL2__factory, TestDelegator__factory } from "../src/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
-import { ContractReceipt, ContractTransaction } from "ethers";
+import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
 import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash} from "./utils"
 
@@ -325,7 +325,9 @@ describe("ChrL2", () => {
                 let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
-                let extraDataMerkleRoot = "8D46CCB5A2E60109C6F6AFF5648F5BBF50F7A3128811A29E2A50DF6F668A389A"
+
+                // This merkle root is calculated in the postchain code
+                let extraDataMerkleRoot = "FC3424F7E05AEE1F9085ACAFC981261CA1EA3A9A28DDA88C809C06B94F68C6A6"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
@@ -461,7 +463,7 @@ describe("ChrL2", () => {
                 let hashEvent = DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length))
 
                 // appNodes can update withdraw request status to pending (emergency case)
-                let appNode = new ChrL2__factory(chrL2Interface, appNodes).attach(chrL2Address)
+                let appNode = new ChrL2__factory(appNodes).attach(chrL2Address)
                 let pendingWithdraw = appNode.interface.encodeFunctionData("pendingWithdraw", [hashEvent])
                 await appNode.submitTransaction(chrL2Address, BigNumber.from(0), pendingWithdraw)
 

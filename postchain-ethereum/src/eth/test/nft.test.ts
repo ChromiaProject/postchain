@@ -92,7 +92,7 @@ describe("Non Fungible Token", () => {
                 let log = logs[0]
 
                 // Note: test data might change depends on the actual log data
-                // and might make the test failed.
+                // and might make the test failed due to it will make difference `extraDataMerkleRoot`
                 // It'd better to find a way to make deterministic test data
                 const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
@@ -118,7 +118,9 @@ describe("Non Fungible Token", () => {
                 let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
-                let extraDataMerkleRoot = "4C681452C0DCF296D1E64DEEC1D64971636752FA694884F2CA22079D5F9C5D78"
+
+                // This merkle root is calculated in the postchain code
+                let extraDataMerkleRoot = "8514072E8D41D38C0AA9ED0C69D0C7AC9E6CAD3C7741AD243E8F64D14E17F73B"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
