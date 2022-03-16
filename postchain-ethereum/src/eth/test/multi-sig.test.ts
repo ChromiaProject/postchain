@@ -15,25 +15,25 @@ describe("Multi-Sig", () => {
     let tokenAddress: string;
     let chrL2Address: string;
     let testDelegatorAddress: string;
-    let directoryNodes: SignerWithAddress;
+    let directoryNode1: SignerWithAddress;
+    let directoryNode2: SignerWithAddress;
+    let directoryNode3: SignerWithAddress;
     let appNode1: SignerWithAddress;
     let appNode2: SignerWithAddress;
-    let appNode3: SignerWithAddress;
 
     beforeEach(async () => {
         const [deployer] = await ethers.getSigners()
-        ;[directoryNodes, appNode1, appNode2, appNode3] = await ethers.getSigners()
+        ;[directoryNode1, directoryNode2, directoryNode3, appNode1, appNode2] = await ethers.getSigners()
         const tokenFactory = new TestToken__factory(deployer)
         const tokenContract = await tokenFactory.deploy()
         tokenAddress = tokenContract.address
         expect(await tokenContract.totalSupply()).to.eq(0)
-
         const testDelegatorFactory = new TestDelegator__factory(deployer);
         const testDelegator = await testDelegatorFactory.deploy()
         testDelegatorAddress = testDelegator.address;
 
         const chrl2Factory = new ChrL2__factory(deployer)
-        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[directoryNodes.address], [appNode1.address, appNode2.address, appNode3.address]])
+        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[directoryNode1.address, directoryNode2.address, directoryNode3.address], [appNode1.address, appNode2.address]])
         chrL2Address = chrl2Instance.address
     });
 
@@ -91,7 +91,7 @@ describe("Multi-Sig", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "7DDB5D3CA47A0D78250C039AB2403CA8163ACBED9C6B81A25D85C5872356428D"
+                let extraDataMerkleRoot = "7AF2FAF3C2889A522F61809F842C59E9BF62E49CECEC060AEC0D2A83ED818B27"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
@@ -125,7 +125,6 @@ describe("Multi-Sig", () => {
 
                 let sig1 = await appNode1.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
                 let sig2 = await appNode2.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
-                let sig3 = await appNode3.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
                 let merkleProof = [
                                     DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
                                     DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
@@ -174,9 +173,8 @@ describe("Multi-Sig", () => {
                     ],
                 }
                 let sigs = [
-                    DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
-                    DecodeHexStringToByteArray(sig2.substring(2, sig2.length)), 
-                    DecodeHexStringToByteArray(sig3.substring(2, sig3.length))
+                    sig1,
+                    sig2
                 ]
                 await expect(chrL2Instance.withdrawRequest(maliciousData, eventProof,
                     DecodeHexStringToByteArray(blockHeader), sigs, el2Proof)
@@ -225,27 +223,27 @@ describe("Multi-Sig", () => {
 
                 let hashEvent = DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length))
 
-                // appNodes can update withdraw request status to pending (emergency case)
-                let appNode1ChrL2 = new ChrL2__factory(appNode1).attach(chrL2Address)
-                let appNode2ChrL2 = new ChrL2__factory(appNode2).attach(chrL2Address)
-                let appNode3ChrL2 = new ChrL2__factory(appNode3).attach(chrL2Address)
-                let pendingWithdraw = appNode1ChrL2.interface.encodeFunctionData("pendingWithdraw", [hashEvent])                
-                await appNode1ChrL2.submitTransaction(chrL2Address, BigNumber.from(0), pendingWithdraw)
-                var txId = (await appNode1ChrL2.transactionCount()).sub(1)
-                await appNode2ChrL2.confirmTransaction(txId)
-                await appNode3ChrL2.confirmTransaction(txId)
+                // directoryNodes can update withdraw request status to pending (emergency case)
+                let directoryNode1ChrL2 = new ChrL2__factory(directoryNode1).attach(chrL2Address)
+                let directoryNode2ChrL2 = new ChrL2__factory(directoryNode2).attach(chrL2Address)
+                let directoryNode3ChrL2 = new ChrL2__factory(directoryNode3).attach(chrL2Address)
+                let pendingWithdraw = directoryNode1ChrL2.interface.encodeFunctionData("pendingWithdraw", [hashEvent])                
+                await directoryNode1ChrL2.submitTransaction(chrL2Address, BigNumber.from(0), pendingWithdraw)
+                var txId = (await directoryNode1ChrL2.transactionCount()).sub(1)
+                await directoryNode2ChrL2.confirmTransaction(txId)
+                await directoryNode3ChrL2.confirmTransaction(txId)
 
                 // then user cannot withdraw the fund
                 await expect(chrL2Instance.withdraw(
                     hashEvent,
                     user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
 
-                // appNodes can set withdraw request satus back to withdrawable
-                let unpendingWithdraw = appNode1ChrL2.interface.encodeFunctionData("unpendingWithdraw", [hashEvent])
-                await appNode1ChrL2.submitTransaction(chrL2Address, BigNumber.from(0), unpendingWithdraw)
-                txId = (await appNode1ChrL2.transactionCount()).sub(1)
-                await appNode2ChrL2.confirmTransaction(txId)
-                await appNode3ChrL2.confirmTransaction(txId)
+                // directoryNodes can set withdraw request satus back to withdrawable
+                let unpendingWithdraw = directoryNode1ChrL2.interface.encodeFunctionData("unpendingWithdraw", [hashEvent])
+                await directoryNode1ChrL2.submitTransaction(chrL2Address, BigNumber.from(0), unpendingWithdraw)
+                txId = (await directoryNode1ChrL2.transactionCount()).sub(1)
+                await directoryNode2ChrL2.confirmTransaction(txId)
+                await directoryNode3ChrL2.confirmTransaction(txId)
 
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
                 expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)

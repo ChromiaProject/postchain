@@ -34,7 +34,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     mapping (bytes32 => WithdrawNFT) public _withdrawNFT;
     address[] public directoryNodes;
     address[] public appNodes;
-    mapping (address => bool) public isAppNode;
+    mapping (address => bool) public isDirectoryNode;
 
     // Each postchain event will be used to claim only one time.
     mapping (bytes32 => bool) private _events;
@@ -68,6 +68,10 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         Status status;
     }
 
+    event DirectoryNodeAddition(address indexed directoryNode);
+    event DirectoryNodeRemoval(address indexed directoryNode);
+    event AppNodeAddition(address indexed appNode);
+    event AppNodeRemoval(address indexed appNode);
     event Confirmation(address indexed sender, uint indexed transactionId);
     event Revocation(address indexed sender, uint indexed transactionId);
     event Submission(uint indexed transactionId);
@@ -87,15 +91,15 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         _;
     }
 
-    modifier appNodeDoesNotExist(address node) {
-        require(!isAppNode[node], "ChrL2: app node already exist");
+    modifier directoryNodeDoesNotExist(address node) {
+        require(!isDirectoryNode[node], "ChrL2: directory node already exist");
         _;
     }
 
-    modifier appNodeExists(address node) {
-        require(isAppNode[node], "ChrL2: app node does not exist");
+    modifier directoryNodeExists(address node) {
+        require(isDirectoryNode[node], "ChrL2: directory node does not exist");
         _;
-    }    
+    }
 
     modifier transactionExists(uint transactionId) {
         require(transactions[transactionId].destination != address(0), "ChrL2: transaction does not exist");
@@ -125,8 +129,8 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     function initialize(address[] memory _directoryNodes, address[] memory _appNodes) public initializer {
         directoryNodes = _directoryNodes;
         appNodes = _appNodes;
-        for (uint i = 0; i < appNodes.length; i++) {
-            isAppNode[appNodes[i]] = true;
+        for (uint i = 0; i < directoryNodes.length; i++) {
+            isDirectoryNode[directoryNodes[i]] = true;
         }
     }
 
@@ -144,27 +148,44 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         return this.onERC721Received.selector;
     }
 
-    function updateDirectoryNodes(bytes32 hash, bytes[] memory sigs, address[] memory _directoryNodes) public returns (bool) {
-        if (!hash.isValidNodes(_directoryNodes)) revert("ChrL2: invalid directory node");
-        if (!hash.isValidSignatures(sigs, directoryNodes)) revert("ChrL2: not enough require signature");
-        for (uint i = 0; i < directoryNodes.length; i++) {
-            directoryNodes.pop();
-        }
-        directoryNodes = _directoryNodes;
+    /// @dev Allows to add a new directory node. Transaction has to be sent by wallet.
+    /// @param _directoryNode Address of new directory node.
+    function addDirectoryNode(address _directoryNode)  
+        onlyThis 
+        directoryNodeDoesNotExist(_directoryNode)
+        notNull(_directoryNode)
+        public returns (bool)
+    {
+        isDirectoryNode[_directoryNode] = true;
+        directoryNodes.push(_directoryNode);
+        emit AppNodeAddition(_directoryNode);
         return true;
     }
 
-    function updateAppNodes(bytes32 hash, bytes[] memory sigs, address[] memory _appNodes) public returns (bool) {
-        if (!hash.isValidNodes(_appNodes)) revert("ChrL2: invalid app node");
-        if (!hash.isValidSignatures(sigs, directoryNodes)) revert("ChrL2: not enough require signature");
+    /// @dev Allows to remove an directory node. Transaction has to be sent by wallet.
+    /// @param _directoryNode Address of directory node.
+    function removeDirectoryNode(address _directoryNode)
+        onlyThis
+        directoryNodeExists(_directoryNode)
+        public returns (bool)
+    {
+        isDirectoryNode[_directoryNode] = false;
+        for (uint i=0; i < directoryNodes.length - 1; i++) {
+            if (directoryNodes[i] == _directoryNode) {
+                directoryNodes[i] = directoryNodes[directoryNodes.length - 1];
+                directoryNodes.pop();
+                break;
+            }
+        }
+        emit AppNodeRemoval(_directoryNode);
+        return true;
+    }
+
+    function updateAppNodes(address[] memory _appNodes) onlyThis public returns (bool) {
         for (uint i = 0; i < appNodes.length; i++) {
-            isAppNode[appNodes[i]] = false;
             appNodes.pop();
         }
-        for (uint k = 0; k < _appNodes.length; k++) {
-            appNodes.push(_appNodes[k]);
-            isAppNode[_appNodes[k]] = true;
-        }
+        appNodes = _appNodes;
         return true;
     }
 
@@ -185,7 +206,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     /// @param transactionId Transaction ID.
     function confirmTransaction(uint transactionId)
         public
-        appNodeExists(msg.sender)
+        directoryNodeExists(msg.sender)
         transactionExists(transactionId)
         notConfirmed(transactionId, msg.sender)
     {
@@ -198,7 +219,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     /// @param transactionId Transaction ID.
     function revokeConfirmation(uint transactionId)
         public
-        appNodeExists(msg.sender)
+        directoryNodeExists(msg.sender)
         confirmed(transactionId, msg.sender)
         notExecuted(transactionId)
     {
@@ -210,7 +231,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     /// @param transactionId Transaction ID.
     function executeTransaction(uint transactionId)
         public
-        appNodeExists(msg.sender)
+        directoryNodeExists(msg.sender)
         confirmed(transactionId, msg.sender)
         notExecuted(transactionId)
     {
@@ -234,9 +255,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
             let x := mload(0x40)   // "Allocate" memory for output (0x40 is where "free memory" pointer is stored by convention)
             let d := add(data, 0x20) // First 32 bytes are the padded length of data, so exclude that
             result := call(
-                sub(gas(), 34710),   // 34710 is the value that solidity is currently emitting
-                                   // It includes callGas (700) + callVeryLow (3, to pay for SUB) + callValueTransferGas (9000) +
-                                   // callNewAccountGas (25000, in case the destination address does not exist and needs creating)
+                gas(),
                 destination,
                 value,
                 d,
@@ -257,10 +276,10 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         returns (bool)
     {
         uint count = 0;
-        for (uint i = 0; i < appNodes.length; i++) {
-            if (confirmations[transactionId][appNodes[i]]) count += 1;
+        for (uint i = 0; i < directoryNodes.length; i++) {
+            if (confirmations[transactionId][directoryNodes[i]]) count += 1;
         }
-        if (count >= Postchain._calculateBFTRequiredNum(appNodes.length)) {
+        if (count >= Postchain._calculateBFTRequiredNum(directoryNodes.length)) {
             return true;
         }
         return false;
