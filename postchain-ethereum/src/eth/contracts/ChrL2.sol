@@ -70,8 +70,6 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
 
     event DirectoryNodeAddition(address indexed directoryNode);
     event DirectoryNodeRemoval(address indexed directoryNode);
-    event AppNodeAddition(address indexed appNode);
-    event AppNodeRemoval(address indexed appNode);
     event Confirmation(address indexed sender, uint indexed transactionId);
     event Revocation(address indexed sender, uint indexed transactionId);
     event Submission(uint indexed transactionId);
@@ -158,7 +156,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     {
         isDirectoryNode[_directoryNode] = true;
         directoryNodes.push(_directoryNode);
-        emit AppNodeAddition(_directoryNode);
+        emit DirectoryNodeAddition(_directoryNode);
         return true;
     }
 
@@ -177,7 +175,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
                 break;
             }
         }
-        emit AppNodeRemoval(_directoryNode);
+        emit DirectoryNodeRemoval(_directoryNode);
         return true;
     }
 
@@ -308,13 +306,13 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
 
     function pendingWithdraw(bytes32 _hash) onlyThis public {
         Withdraw storage wd = _withdraw[_hash];
-        require(wd.status == Status.Withdrawable, "ChrL2: pendingWithdraw");
+        require(wd.status == Status.Withdrawable, "ChrL2: withdraw request status is not withdrawable");
         wd.status = Status.Pending;
     }
 
     function unpendingWithdraw(bytes32 _hash) onlyThis public {
         Withdraw storage wd = _withdraw[_hash];
-        require(wd.status == Status.Pending, "ChrL2: unpendingWithdraw");
+        require(wd.status == Status.Pending, "ChrL2: withdraw request status is not pending");
         wd.status = Status.Withdrawable;
     }
 

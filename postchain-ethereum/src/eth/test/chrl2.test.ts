@@ -417,7 +417,7 @@ describe("ChrL2", () => {
                     hashEvent,
                     user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
 
-                // appNode can set withdraw request satus back to withdrawable
+                // directoryNode can set withdraw request status back to withdrawable
                 let unpendingWithdraw = directoryNode.interface.encodeFunctionData("unpendingWithdraw", [hashEvent])
                 await directoryNode.submitTransaction(chrL2Address, BigNumber.from(0), unpendingWithdraw)
 

@@ -238,7 +238,7 @@ describe("Multi-Sig", () => {
                     hashEvent,
                     user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
 
-                // directoryNodes can set withdraw request satus back to withdrawable
+                // directoryNodes can set withdraw request status back to withdrawable
                 let unpendingWithdraw = directoryNode1ChrL2.interface.encodeFunctionData("unpendingWithdraw", [hashEvent])
                 await directoryNode1ChrL2.submitTransaction(chrL2Address, BigNumber.from(0), unpendingWithdraw)
                 txId = (await directoryNode1ChrL2.transactionCount()).sub(1)
