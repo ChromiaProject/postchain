@@ -142,17 +142,17 @@ describe("ChrL2", () => {
             const [node1, node2, node3, other] = await ethers.getSigners()
             const chrL2Instance = new ChrL2__factory(directoryNodes).attach(chrL2Address)
             const otherChrL2Instance = new ChrL2__factory(other).attach(chrL2Address)
+            let nodes = [
+                node1.address, 
+                node2.address, 
+                node3.address
+            ]
+            await expect(chrL2Instance.updateAppNodes(nodes)).to.be.revertedWith('ChrL2: only the contract can execute')
             expect(await chrL2Instance.directoryNodes(0)).to.eq(directoryNodes.address)
             expect(await chrL2Instance.isDirectoryNode(directoryNodes.address)).to.be.true
             expect(await chrL2Instance.isDirectoryNode(other.address)).to.be.false
             // Update App Nodes
-            let updateAppNodes = chrL2Instance.interface.encodeFunctionData("updateAppNodes", [
-                [
-                    node1.address, 
-                    node2.address, 
-                    node3.address
-                ]                
-            ])
+            let updateAppNodes = chrL2Instance.interface.encodeFunctionData("updateAppNodes", [nodes])
             await chrL2Instance.submitTransaction(chrL2Address, BigNumber.from(0), updateAppNodes)
             expect(await chrL2Instance.appNodes(0)).to.eq(node1.address)
             expect(await chrL2Instance.appNodes(1)).to.eq(node2.address)

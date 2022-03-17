@@ -243,7 +243,15 @@ describe("Multi-Sig", () => {
                 await directoryNode1ChrL2.submitTransaction(chrL2Address, BigNumber.from(0), unpendingWithdraw)
                 txId = (await directoryNode1ChrL2.transactionCount()).sub(1)
                 await directoryNode2ChrL2.confirmTransaction(txId)
+                await directoryNode2ChrL2.revokeConfirmation(txId)
                 await directoryNode3ChrL2.confirmTransaction(txId)
+
+                // user still cannot withdraw the fund
+                await expect(chrL2Instance.withdraw(
+                    hashEvent,
+                    user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
+
+                await directoryNode2ChrL2.confirmTransaction(txId)
 
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
                 expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
