@@ -17,7 +17,6 @@ import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
@@ -49,7 +48,7 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener?
+            shouldProcessNewMessages: (Long) -> Boolean
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }

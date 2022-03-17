@@ -21,11 +21,6 @@ interface HeartbeatListener {
     fun checkHeartbeat(timestamp: Long): Boolean
 }
 
-open class Chain0HeartbeatListener() : HeartbeatListener {
-    override fun onHeartbeat(heartbeatEvent: HeartbeatEvent) = Unit
-    override fun checkHeartbeat(timestamp: Long) = true
-}
-
 open class DefaultHeartbeatListener(val nodeConfig: NodeConfig, chainId: Long) : HeartbeatListener {
 
     companion object : KLogging()
