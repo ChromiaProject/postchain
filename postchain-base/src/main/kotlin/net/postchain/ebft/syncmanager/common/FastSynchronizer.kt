@@ -75,7 +75,7 @@ data class FastSyncParameters(
         var blacklistingTimeoutMs: Long = 10 * 60 * 1000)
 
 /**
- * This class syncs blocks from its peers by requesting <parallelism> blocks
+ * This class syncs blocks from its peers by requesting [FastSyncParameters.parallelism] blocks
  * from random peers simultaneously.
  *
  * The peers respond to the requests using a BlockHeader immediately followed
@@ -85,7 +85,7 @@ data class FastSyncParameters(
  * and witness.
  *
  * Requests that times out: When a request to a peer has been outstanding for a
- * long time (fastSyncParams.jobTimeout), we must timeout and stop using that
+ * long time [FastSyncParameters.jobTimeout], we must timeout and stop using that
  * peer, at least temporarily. Otherwise it will hold up the syncing process
  * every now and then when that peer has been (randomly) selected.
  *
@@ -100,13 +100,15 @@ class FastSynchronizer(private val workerContext: WorkerContext,
                        val blockDatabase: BlockDatabase,
                        val params: FastSyncParameters,
                        val isProcessRunning: () -> Boolean
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
+) {
+    private val blockQueries = workerContext.engine.getBlockQueries()
+    private val communicationManager = workerContext.communicationManager
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
     private val jobs = TreeMap<Long, Job>()
     private val peerStatuses = PeerStatuses(params)
     private var lastJob: Job? = null
-    private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
+    private val lastBlockTimestamp: Long get() = workerContext.engine.getBlockQueries().getLastBlockTimestamp().get()
 
     // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
     private var addBlockCompletionPromise: CompletionPromise? = null
@@ -116,8 +118,9 @@ class FastSynchronizer(private val workerContext: WorkerContext,
 
     companion object : KLogging()
 
-    var blockHeight: Long = blockQueries.getBestHeight().get()
-        private set
+    var blockHeight: Long = workerContext.engine.getBlockQueries().getBestHeight().get()
+
+    private val messageHandler = BlockSenderMessageHandler(blockQueries, communicationManager) { blockHeight }
 
     inner class Job(val height: Long, var peerId: NodeRid) {
         var header: BlockHeader? = null
@@ -134,9 +137,8 @@ class FastSynchronizer(private val workerContext: WorkerContext,
 
     fun syncUntil(exitCondition: () -> Boolean) {
         try {
-            blockHeight = blockQueries.getBestHeight().get()
+            blockHeight = workerContext.engine.getBlockQueries().getBestHeight().get()
             syncDebug("Start", blockHeight)
-            lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
                 if (workerContext.shouldProcessMessages(lastBlockTimestamp)) {
                     refillJobs()
@@ -674,8 +676,8 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             }
             try {
                 when (message) {
-                    is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
-                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight)
+                    is GetBlockAtHeight -> messageHandler.handleMessage(peerId, message)
+                    is GetBlockHeaderAndBlock -> messageHandler.handleMessage(peerId, message)
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
                     is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)

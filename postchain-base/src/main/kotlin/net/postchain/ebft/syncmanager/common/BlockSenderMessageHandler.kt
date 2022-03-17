@@ -2,11 +2,20 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.core.BlockQueries
-import net.postchain.ebft.message.*
-import net.postchain.network.CommunicationManager
 import net.postchain.core.NodeRid
+import net.postchain.ebft.message.BlockData
+import net.postchain.ebft.message.BlockHeader
+import net.postchain.ebft.message.CompleteBlock
+import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.ebft.message.GetBlockHeaderAndBlock
+import net.postchain.ebft.message.Message
+import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.network.CommunicationManager
 
-abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<Message>) {
+class BlockSenderMessageHandler(
+        private val blockQueries: BlockQueries,
+        private val communicationManager: CommunicationManager<Message>,
+        private val currentHeightRetriever: () -> Long) : MessageHandler {
     companion object: KLogging()
 
     /**
@@ -23,24 +32,31 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
     private var tipHeight: Long = -1
     private var tipHeader: BlockHeader = BlockHeader(byteArrayOf(), byteArrayOf(), 0)
 
+    override fun handleMessage(nodeId: NodeRid, message: Message) {
+        when (message) {
+            is GetBlockAtHeight -> sendBlockAtHeight(nodeId, message.height)
+            is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(nodeId, message.height, currentHeightRetriever())
+        }
+    }
+
     /**
      * Send message to node including the block at [height]. This is a response to the [GetBlockAtHeight] request.
      *
      * @param peerId NodeRid of receiving node
      * @param height requested block height
      */
-    fun sendBlockAtHeight(peerId: NodeRid, height: Long) {
+    private fun sendBlockAtHeight(peerId: NodeRid, height: Long) {
         val blockData = blockQueries.getBlockAtHeight(height).get()
         if (blockData == null) {
-            logger.debug{ "No block at height $height, as requested by $peerId" }
+            logger.debug { "No block at height $height, as requested by $peerId" }
             return
         }
         val packet = CompleteBlock(BlockData(blockData.header.rawData, blockData.transactions), height, blockData.witness.getRawData())
         communicationManager.sendPacket(packet, peerId)
     }
 
-    fun sendBlockHeaderAndBlock(peerID: NodeRid, requestedHeight: Long, myHeight: Long) {
-        logger.trace{ "GetBlockHeaderAndBlock from peer $peerID for height $requestedHeight, myHeight is $myHeight" }
+    private fun sendBlockHeaderAndBlock(peerID: NodeRid, requestedHeight: Long, myHeight: Long) {
+        logger.trace { "GetBlockHeaderAndBlock from peer $peerID for height $requestedHeight, myHeight is $myHeight" }
 
         if (myHeight == -1L) {
             sendHeader(peerID, byteArrayOf(), byteArrayOf(), -1, requestedHeight)
@@ -68,13 +84,13 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
         }
 
         val unfinishedBlock = UnfinishedBlock(blockData.header.rawData, blockData.transactions)
-        logger.trace{ "Replying with UnfinishedBlock to peer $peerID for height $requestedHeight" }
+        logger.trace { "Replying with UnfinishedBlock to peer $peerID for height $requestedHeight" }
         communicationManager.sendPacket(unfinishedBlock, peerID)
     }
 
     private fun sendHeader(peerID: NodeRid, header: ByteArray, witness: ByteArray, sentHeight: Long, requestedHeight: Long): BlockHeader {
         val h = BlockHeader(header, witness, requestedHeight)
-        logger.trace{ "Replying with BlockHeader at height $sentHeight to peer $peerID for requested height $requestedHeight" }
+        logger.trace { "Replying with BlockHeader at height $sentHeight to peer $peerID for requested height $requestedHeight" }
         communicationManager.sendPacket(h, peerID)
         return h
     }

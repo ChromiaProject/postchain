@@ -14,10 +14,10 @@ import net.postchain.ebft.rest.contract.serialize
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
 import net.postchain.ebft.syncmanager.StatusLogInterval
+import net.postchain.ebft.syncmanager.common.BlockSenderMessageHandler
 import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
-import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.worker.WorkerContext
 import nl.komponents.kovenant.task
 import java.util.*
@@ -32,7 +32,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val nodeStateTracker: NodeStateTracker,
                            private val isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
+) {
+    private val blockQueries = workerContext.engine.getBlockQueries()
+    private val communicationManager = workerContext.communicationManager
+    private val messageHandler = BlockSenderMessageHandler(blockQueries, communicationManager) { statusManager.myStatus.height } // Why was this set to h-1 ?
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(10000, statusManager)
     private val statusSender = StatusSender(1000, statusManager, workerContext.communicationManager)
@@ -92,11 +95,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             try {
                 when (message) {
                     // same case for replica and validator node
-                    is GetBlockAtHeight -> sendBlockAtHeight(xPeerId, message.height)
-                    is GetBlockHeaderAndBlock -> {
-                        sendBlockHeaderAndBlock(xPeerId, message.height,
-                                this.statusManager.myStatus.height - 1)
-                    }
+                    is GetBlockAtHeight -> messageHandler.handleMessage(xPeerId, message)
+                    is GetBlockHeaderAndBlock -> messageHandler.handleMessage(xPeerId, message)
                     else -> {
                         if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
                             // validator consensus logic
