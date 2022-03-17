@@ -118,15 +118,12 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
-        val hbListener = buildHeartbeatListener(chainId)
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { hbListener?.checkHeartbeat(it) ?: true }
-        heartbeatListeners[chainId] = hbListener!!
-        heartbeatManager.addListener(hbListener)
-    }
-
-    private fun buildHeartbeatListener(chainId: Long): HeartbeatListener? {
-        return if (chainId == 0L) null
-        else DefaultHeartbeatListener(nodeConfig, chainId)
+        if (chainId == 0L) super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
+        val hbListener = DefaultHeartbeatListener(nodeConfig, chainId).also {
+            heartbeatManager.addListener(it)
+            heartbeatListeners[chainId] = it
+        }
+        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { hbListener.checkHeartbeat(it) }
     }
 
     override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
