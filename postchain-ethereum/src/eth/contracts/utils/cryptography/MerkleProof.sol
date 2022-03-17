@@ -7,7 +7,7 @@ library MerkleProof {
     /**
      * @dev verify merkle proof using keccak256
      */
-    function verify(bytes32[] calldata proofs, bytes32 leaf, uint position, bytes32 rootHash) public pure returns (bool) {
+    function verify(bytes32[] memory proofs, bytes32 leaf, uint position, bytes32 rootHash) internal pure returns (bool) {
         bytes32 r = leaf;
         for (uint i = 0; i < proofs.length; i++) {
             uint b = position & (1 << i);
@@ -24,7 +24,7 @@ library MerkleProof {
      * @dev verify merkle proof using sha256
      * specific for postchain block header extra data in dictionary data format
      */
-    function verifySHA256(bytes32[] calldata proofs, bytes32 leaf, uint position, bytes32 rootHash) public pure returns (bool) {
+    function verifySHA256(bytes32[] memory proofs, bytes32 leaf, uint position, bytes32 rootHash) internal pure returns (bool) {
         bytes32 r = leaf; // hashed leaf
         uint last = proofs.length-1;
         for (uint i = 0; i < last; i++) {
@@ -45,7 +45,7 @@ library MerkleProof {
         return (r == rootHash);
     }
     
-    function root(bytes32[] memory nodes) public pure returns (bytes32) {
+    function root(bytes32[] memory nodes) internal pure returns (bytes32) {
         if (nodes.length == 1) return nodes[0];
         uint len = nodes.length/2;
         bytes32[] memory _nodes = new bytes32[](len);

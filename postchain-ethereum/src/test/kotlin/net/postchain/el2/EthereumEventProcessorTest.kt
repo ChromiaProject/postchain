@@ -19,7 +19,6 @@ import org.mockito.kotlin.*
 import org.testcontainers.containers.wait.strategy.Wait
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.web3j.abi.datatypes.Address
-import org.web3j.abi.datatypes.DynamicArray
 import org.web3j.abi.datatypes.generated.Uint256
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
@@ -84,8 +83,7 @@ class EthereumEventProcessorTest {
     fun `Deposit events on ethereum should be parsed and private validated`() {
         val initialMint = 50L
         // Deploy ChrL2 contract
-        val mockNodes = DynamicArray(Address::class.java)
-        val chrL2 = ChrL2.deploy(web3j, transactionManager, gasProvider, mockNodes, mockNodes).send()
+        val chrL2 = ChrL2.deploy(web3j, transactionManager, gasProvider).send()
         val web3c = Web3Connector(web3j, chrL2.contractAddress)
 
         // Mock query for last eth block in this test
