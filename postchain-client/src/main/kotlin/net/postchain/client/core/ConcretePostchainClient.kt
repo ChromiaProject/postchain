@@ -70,6 +70,8 @@ class ConcretePostchainClient(
         return def.promise
     }
 
+    override fun querySync(name: String, gtv: Gtv) = doQuery(name, gtv)
+
     private fun doQuery(name: String, gtv: Gtv): Gtv {
         val httpPost = HttpPost("$serverUrl/query_gtx/$blockchainRIDHex")
         val gtxQuery = gtv(gtv(name), gtv)
