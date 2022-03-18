@@ -118,7 +118,7 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
-        if (chainId == 0L) super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
+        if (chainId == 0L) return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
         val hbListener = DefaultHeartbeatListener(nodeConfig, chainId).also {
             heartbeatManager.addListener(it)
             heartbeatListeners[chainId] = it
