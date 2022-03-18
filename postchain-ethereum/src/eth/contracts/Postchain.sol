@@ -37,7 +37,7 @@ library Postchain {
         bytes32 extraDataHashedLeaf;
     }
 
-    function isValidNodes(bytes32 hash, address[] memory nodes) public pure returns (bool) {
+    function isValidNodes(bytes32 hash, address[] memory nodes) internal pure returns (bool) {
         uint len = _upperPowerOfTwo(nodes.length);
         bytes32[] memory _nodes = new bytes32[](len);
         for (uint i = 0; i < nodes.length; i++) {
@@ -49,7 +49,7 @@ library Postchain {
         return _nodes.root() == hash;
     }
 
-    function isValidSignatures(bytes32 hash, bytes[] memory signatures, address[] memory signers) public pure returns (bool) {
+    function isValidSignatures(bytes32 hash, bytes[] memory signatures, address[] memory signers) internal pure returns (bool) {
         uint _actualSignature = 0;
         uint _requiredSignature = _calculateBFTRequiredNum(signers.length);
         for (uint i = 0; i < signatures.length; i++) {
@@ -63,7 +63,7 @@ library Postchain {
         return (_actualSignature >= _requiredSignature);
     }
 
-    function verifyEvent(bytes32 _hash, bytes memory _event) public pure returns (ERC20, address, uint256) {
+    function verifyEvent(bytes32 _hash, bytes memory _event) internal pure returns (ERC20, address, uint256) {
         Event memory evt = abi.decode(_event, (Event));
         bytes32 hash = keccak256(_event);
         if (hash != _hash) {
@@ -72,7 +72,7 @@ library Postchain {
         return (evt.token, evt.beneficiary, evt.amount);
     }
 
-    function verifyEventNFT(bytes32 _hash, bytes memory _event) public pure returns (IERC721, address, uint256) {
+    function verifyEventNFT(bytes32 _hash, bytes memory _event) internal pure returns (IERC721, address, uint256) {
         EventNFT memory evt = abi.decode(_event, (EventNFT));
         bytes32 hash = keccak256(_event);
         if (hash != _hash) {
@@ -84,7 +84,7 @@ library Postchain {
     function verifyBlockHeader(
         bytes memory blockHeader,
         Data.EL2ProofData memory proof
-    ) public pure returns (bytes32, bytes32, bytes32) {
+    ) internal pure returns (bytes32, bytes32, bytes32) {
         require(Hash.hashGtvBytes64Leaf(proof.el2Leaf) == proof.el2HashedLeaf, "Postchain: invalid el2 extra data");
         (bytes32 blockRid, bytes32 extraDataHashedLeaf) = _decodeBlockHeader(blockHeader);
         require(proof.extraRoot == extraDataHashedLeaf, "Postchain: invalid extra data root");

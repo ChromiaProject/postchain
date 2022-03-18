@@ -1,11 +1,8 @@
-import { ethers } from "hardhat";
+import {ethers, upgrades} from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { ChrL2__factory, Postchain__factory, EC__factory, MerkleProof__factory, Hash__factory, ERC721Mock__factory } from "../src/types";
-import { ChrL2LibraryAddresses } from "../src/types/factories/ChrL2__factory";
-import { MerkleProofLibraryAddresses } from "../src/types/factories/MerkleProof__factory";
+import { ChrL2__factory, ERC721Mock__factory } from "../src/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { PostchainLibraryAddresses } from "../src/types/factories/Postchain__factory";
 import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
 import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
 import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash } from "./utils"
@@ -18,10 +15,6 @@ const { expect } = chai;
 describe("Non Fungible Token", () => {
     let nftAddress: string;
     let chrL2Address: string;
-    let merkleAddress: string;
-    let hasherAddress: string;
-    let chrL2Interface: ChrL2LibraryAddresses;
-    let merkleProofInterface: MerkleProofLibraryAddresses;
     let directoryNodes: SignerWithAddress;
     let appNodes: SignerWithAddress;
     const name = "CRYPTOPUNKS";
@@ -35,29 +28,9 @@ describe("Non Fungible Token", () => {
         const tokenContract = await tokenFactory.deploy(name, symbol)
         nftAddress = tokenContract.address
 
-        const ecFactory = new EC__factory(deployer);
-        const ec = await ecFactory.deploy();
-        const hashFactory = new Hash__factory(deployer);
-        const hasher = await hashFactory.deploy()
-        hasherAddress = hasher.address;
-        merkleProofInterface = {"__$d42deddc843410a175fce5315eff8fddf4$__": hasherAddress}
-        const merkleFactory = new MerkleProof__factory(merkleProofInterface, deployer)
-        const merkle = await merkleFactory.deploy();
-        merkleAddress = merkle.address
-        const postchainInterface: PostchainLibraryAddresses = {
-            "__$2a5a34f5712a9d42d5a557457b5485a829$__": ec.address,
-            "__$d42deddc843410a175fce5315eff8fddf4$__": hasherAddress,
-            "__$fc40fc502169a2ee9db1b4670a1c17e7ae$__": merkleAddress
-        }
-        const postchainFactory = new Postchain__factory(postchainInterface, deployer);
-        const postchain = await postchainFactory.deploy();
-        chrL2Interface = {
-            "__$7e4eb5d82fde1ae3468a6b70e42858da4c$__": postchain.address,
-            "__$fc40fc502169a2ee9db1b4670a1c17e7ae$__": merkleAddress
-        }
-        const chrl2Factory = new ChrL2__factory(chrL2Interface, deployer)
-        const chrL2Contract = await chrl2Factory.deploy([directoryNodes.address], [appNodes.address])
-        chrL2Address = chrL2Contract.address
+        const chrl2Factory = new ChrL2__factory(deployer)
+        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[directoryNodes.address], [appNodes.address]])
+        chrL2Address = chrl2Instance.address
     });
 
     describe("Deposit NFT", async () => {
@@ -70,7 +43,7 @@ describe("Non Fungible Token", () => {
             expect(await tokenInstance.balanceOf(user.address)).to.eq(1)
             expect(await tokenInstance.ownerOf(tokenId)).to.eq(user.address)
 
-            const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
+            const chrL2Instance = new ChrL2__factory(user).attach(chrL2Address)
             const tokenApproveInstance = new ERC721Mock__factory(user).attach(nftAddress)
             await tokenApproveInstance.setApprovalForAll(chrL2Address, true)
             let tokenURI = await tokenApproveInstance.tokenURI(tokenId)
@@ -109,7 +82,7 @@ describe("Non Fungible Token", () => {
             expect(await tokenInstance.balanceOf(user.address)).to.eq(1)
             expect(await tokenInstance.ownerOf(tokenId)).to.eq(user.address)
 
-            const chrL2Instance = new ChrL2__factory(chrL2Interface, user).attach(chrL2Address)
+            const chrL2Instance = new ChrL2__factory(user).attach(chrL2Address)
             const tokenApproveInstance = new ERC721Mock__factory(user).attach(nftAddress)
             await tokenApproveInstance.setApprovalForAll(chrL2Address, true)
             let tx: ContractTransaction = await chrL2Instance.depositNFT(nftAddress, tokenId)
@@ -141,7 +114,7 @@ describe("Non Fungible Token", () => {
                 let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
-                let extraDataMerkleRoot = "138C7AB3DFD4310722D953B4A37D0302C62CE29BD89EBD4517CB1CD2A87659F8"
+                let extraDataMerkleRoot = "4C681452C0DCF296D1E64DEEC1D64971636752FA694884F2CA22079D5F9C5D78"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
