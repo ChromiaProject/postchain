@@ -26,7 +26,7 @@ open class SubNodeBlockchainProcessManager(
     private val heartbeatListeners = mutableMapOf<Long, HeartbeatListener>()
 
     override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
-        if (!nodeConfig.remoteConfigEnabled) super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
+        if (!nodeConfig.remoteConfigEnabled) return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
         val hbListener = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager)
                 .also {
                     it.blockchainConfigProvider = blockchainConfigProvider
