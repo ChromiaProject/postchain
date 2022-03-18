@@ -5,9 +5,10 @@ package net.postchain.client.core
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import net.postchain.api.rest.json.JsonFactory
-import net.postchain.core.BlockchainRid
+import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.core.BlockchainRid
 import net.postchain.core.TransactionStatus.*
 import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
@@ -24,6 +25,7 @@ import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClients
 import java.io.BufferedReader
 import java.io.InputStream
+import java.time.Instant
 
 class ConcretePostchainClient(
         private val resolver: PostchainNodeResolver,
@@ -37,6 +39,30 @@ class ConcretePostchainClient(
     private val blockchainRIDHex = blockchainRID.toHex()
     private val retrieveTxStatusAttempts = 20
     private val retrieveTxStatusIntervalMs = 500L
+
+    override fun operation(confirmationLevel: ConfirmationLevel, name: String, vararg args: Gtv): Promise<OperationResult, Exception> {
+        val def = deferred<OperationResult, Exception>()
+        try {
+            def.resolve(doOperation(confirmationLevel, name, *args))
+        } catch (e: Exception) {
+            def.reject(e)
+        }
+        return def.promise
+    }
+
+    override fun operationSync(confirmationLevel: ConfirmationLevel, name: String, vararg args: Gtv) = doOperation(confirmationLevel, name, *args)
+
+    private fun doOperation(confirmationLevel: ConfirmationLevel, name: String, vararg args: Gtv): OperationResult {
+        GTXDataBuilder(blockchainRID, arrayOf(defaultSigner!!.pubkey), SECP256K1CryptoSystem()).apply {
+            addOperation("nop", arrayOf(gtv(Instant.now().toEpochMilli())))
+            addOperation(name, arrayOf(*args))
+            finish()
+            sign(defaultSigner.sigMaker)
+        }.let {
+            val result = postTransactionSync(it, confirmationLevel)
+            return OperationResultImpl(result.status, it.getDigestForSigning())
+        }
+    }
 
     override fun makeTransaction(): GTXTransactionBuilder {
         return GTXTransactionBuilder(this, blockchainRID, arrayOf(defaultSigner!!.pubkey))
