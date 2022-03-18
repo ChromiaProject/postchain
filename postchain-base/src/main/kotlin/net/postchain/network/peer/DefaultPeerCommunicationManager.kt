@@ -11,24 +11,26 @@ import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.network.CommunicationManager
+import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.ebft.message.GetBlockHeaderAndBlock
+import net.postchain.ebft.message.Message
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import net.postchain.network.common.ConnectionManager
 
-class DefaultPeerCommunicationManager<PacketType>(
+class DefaultPeerCommunicationManager(
         val connectionManager: ConnectionManager,
         val config: PeerCommConfiguration,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
-        private val packetEncoder: XPacketEncoder<PacketType>,
-        private val packetDecoder: XPacketDecoder<PacketType>,
+        private val packetEncoder: XPacketEncoder<Message>,
+        private val packetDecoder: XPacketDecoder<Message>,
         protected val processName: BlockchainProcessName
-) : CommunicationManager<PacketType> {
+) : AbstractMessagePublisher<Message>() {
 
     companion object : KLogging()
 
-    private var inboundPackets = mutableListOf<Pair<NodeRid, PacketType>>()
+    private var inboundPackets = mutableListOf<Pair<NodeRid, Message>>()
     var connected = false
 
     /**
@@ -49,13 +51,13 @@ class DefaultPeerCommunicationManager<PacketType>(
     }
 
     @Synchronized
-    override fun getPackets(): MutableList<Pair<NodeRid, PacketType>> {
+    override fun getPackets(): MutableList<Pair<NodeRid, Message>> {
         val currentQueue = inboundPackets
         inboundPackets = mutableListOf()
         return currentQueue
     }
 
-    override fun sendPacket(packet: PacketType, recipient: NodeRid) {
+    override fun sendPacket(packet: Message, recipient: NodeRid) {
         logger.trace { "$processName: sendPacket($packet, ${peerName(recipient.toString())})" }
 
         require(NodeRid(config.pubKey) != recipient) {
@@ -69,7 +71,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         )
     }
 
-    override fun broadcastPacket(packet: PacketType) {
+    override fun broadcastPacket(packet: Message) {
         logger.trace { "$processName: broadcastPacket($packet)" }
 
         connectionManager.broadcastPacket(
@@ -85,7 +87,7 @@ class DefaultPeerCommunicationManager<PacketType>(
      * @param amongPeers is the set of nodes acceptable to send to
      * @return a randomly picked peer from the give set that has an open connection, or "null" if none found.
      */
-    override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): NodeRid? {
+    override fun sendToRandomPeer(packet: Message, amongPeers: Set<NodeRid>): NodeRid? {
         var peer: NodeRid? = null
         return try {
             val possiblePeers = connectionManager.getConnectedNodes(chainId).intersect(amongPeers)
@@ -123,6 +125,10 @@ class DefaultPeerCommunicationManager<PacketType>(
             val decodedPacket = packetDecoder.decodePacket(peerId.byteArray, packet)
             synchronized(this) {
                 logger.trace { "Successfully decoded the package, now adding it " }
+                when (decodedPacket) {
+                    is GetBlockHeaderAndBlock -> publish(peerId, decodedPacket)
+                    is GetBlockAtHeight -> publish(peerId, decodedPacket)
+                }
                 inboundPackets.add(peerId to decodedPacket)
             }
         } catch (e: BadDataMistake) {

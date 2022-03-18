@@ -2,11 +2,11 @@
 
 package net.postchain.network.peer
 
-import org.mockito.kotlin.mock
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.devtools.KeyPairHelper
+import org.mockito.kotlin.mock
 
 class IntegrationTestContext(
         peerInfos: Array<PeerInfo>,
@@ -18,7 +18,7 @@ class IntegrationTestContext(
     val connectionManager = DefaultPeerConnectionManager<Int>(
             mock(), mock(), SECP256K1CryptoSystem())
 
-    val communicationManager = DefaultPeerCommunicationManager<Int>(
+    val communicationManager = DefaultPeerCommunicationManager(
             connectionManager, peerCommunicationConfig, 1L, mock(), mock(), mock(), mock())
 
     fun shutdown() {

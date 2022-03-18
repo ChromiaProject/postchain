@@ -9,11 +9,11 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.Message
+import net.postchain.ebft.syncmanager.common.BlockMessageSubscriber
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.network.CommunicationManager
 import net.postchain.network.common.*
 import net.postchain.network.peer.*
 
@@ -46,13 +46,17 @@ open class EBFTSynchronizationInfrastructure(
         } else null
 
         val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
+        val communicationManager = buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid)
+
+        val blockMessageSubscriber = BlockMessageSubscriber(engine.getBlockQueries(), communicationManager)
         val workerContext = WorkerContext(
                 processName,
                 blockchainConfig,
                 engine,
-                buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
+                communicationManager,
                 peerCommConfiguration,
                 nodeConfig,
+                blockMessageSubscriber,
                 shouldProcessNewMessages
         )
 
@@ -88,6 +92,7 @@ open class EBFTSynchronizationInfrastructure(
                         histCommManager,
                         historicPeerCommConfiguration,
                         nodeConfig,
+                        blockMessageSubscriber,
                         shouldProcessNewMessages
                 )
 
@@ -149,7 +154,7 @@ open class EBFTSynchronizationInfrastructure(
             blockchainConfig: BlockchainConfiguration,
             relevantPeerCommConfig: PeerCommConfiguration,
             blockchainRid: BlockchainRid
-    ): CommunicationManager<Message> {
+    ): AbstractMessagePublisher<Message> {
         val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, blockchainRid)
         val packetDecoder = EbftPacketDecoder(relevantPeerCommConfig)
 

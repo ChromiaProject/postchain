@@ -5,20 +5,27 @@ package net.postchain.network.peer
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
-import org.mockito.kotlin.*
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
+import net.postchain.ebft.message.Message
+import net.postchain.gtv.Gtv
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.lang.IllegalArgumentException
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
 
 class DefaultPeerCommunicationManagerTest {
 
@@ -46,8 +53,8 @@ class DefaultPeerCommunicationManagerTest {
         val peerCommunicationConfig: PeerCommConfiguration = mock {
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodesDummy()
         }
-        val packetEncoder: XPacketEncoder<Int> = mock()
-        val packetDecoder: XPacketDecoder<Int> = mock()
+        val packetEncoder: XPacketEncoder<Message> = mock()
+        val packetDecoder: XPacketDecoder<Message> = mock()
 
         // When
         val communicationManager = DefaultPeerCommunicationManager(
@@ -77,8 +84,8 @@ class DefaultPeerCommunicationManagerTest {
             on { resolvePeer(peerInfo1.pubKey) } doReturn peerInfo1
             on { resolvePeer(peerInfo2.pubKey) } doReturn peerInfo2
         }
-        val packetEncoder: XPacketEncoder<Int> = mock()
-        val packetDecoder: XPacketDecoder<Int> = mock()
+        val packetEncoder: XPacketEncoder<Message> = mock()
+        val packetDecoder: XPacketDecoder<Message> = mock()
 
         // When
         val communicationManager = DefaultPeerCommunicationManager(
@@ -109,9 +116,9 @@ class DefaultPeerCommunicationManagerTest {
 
         // When / Then exception
         assertThrows<IllegalArgumentException> {
-            DefaultPeerCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
+            DefaultPeerCommunicationManager(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
                 .apply {
-                    sendPacket(0, NodeRid(pubKey1))
+                    sendPacket(dummyMessage(), NodeRid(pubKey1))
                 }
         }
     }
@@ -127,12 +134,12 @@ class DefaultPeerCommunicationManagerTest {
         }
 
         // When
-        val communicationManager = DefaultPeerCommunicationManager<Int>(
+        val communicationManager = DefaultPeerCommunicationManager(
                 connectionManager, config, CHAIN_ID, blockchainRid, mock(), mock(), mock()
         )
                 .apply {
                     init()
-                    sendPacket(0, NodeRid(pubKey1))
+                    sendPacket(dummyMessage(), NodeRid(pubKey1))
                 }
 
         // Then
@@ -149,12 +156,12 @@ class DefaultPeerCommunicationManagerTest {
         val connectionManager: PeerConnectionManager = mock()
 
         // When
-        val communicationManager = DefaultPeerCommunicationManager<Int>(
+        val communicationManager = DefaultPeerCommunicationManager(
                 connectionManager, mock(), CHAIN_ID, blockchainRid, mock(), mock(), mock()
         )
                 .apply {
                     init()
-                    broadcastPacket(42)
+                    broadcastPacket(dummyMessage())
                 }
 
         // Then
@@ -169,7 +176,7 @@ class DefaultPeerCommunicationManagerTest {
         val connectionManager: PeerConnectionManager = mock()
 
         // When
-        val communicationManager = DefaultPeerCommunicationManager<Int>(
+        val communicationManager = DefaultPeerCommunicationManager(
                 connectionManager, mock(), CHAIN_ID, blockchainRid, mock(), mock(), mock()
         )
                 .apply {
@@ -182,4 +189,11 @@ class DefaultPeerCommunicationManagerTest {
 
         communicationManager.shutdown()
     }
+}
+
+fun dummyMessage() = object : Message(0) {
+    override fun toGtv(): Gtv {
+        TODO("Not yet implemented")
+    }
+
 }
