@@ -91,7 +91,7 @@ describe("Multi-Sig", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "7AF2FAF3C2889A522F61809F842C59E9BF62E49CECEC060AEC0D2A83ED818B27"
+                let extraDataMerkleRoot = "05608E8DC1763FC003015CE81318E60C260EF71804770252D7E487CA33ABB2C2"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))

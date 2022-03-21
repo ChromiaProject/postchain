@@ -272,7 +272,7 @@ describe("ChrL2", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "E3D5991805B02BADE14750BADD3A5266F4D2F5490AA6D9912ED5DFA4FEB59381"
+                let extraDataMerkleRoot = "C398AE47B09A8F25305AC410DE258BA98E60AA488C9C62B5B0795CE621BF250E"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
