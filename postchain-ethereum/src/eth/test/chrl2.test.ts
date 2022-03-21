@@ -4,7 +4,7 @@ import { solidity } from "ethereum-waffle";
 import { TestToken__factory, ChrL2__factory, TestDelegator__factory } from "../src/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
-import { ContractReceipt, ContractTransaction } from "ethers";
+import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
 import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash} from "./utils"
 
@@ -138,92 +138,43 @@ describe("ChrL2", () => {
     })
 
     describe("Nodes", async () => {
-        it("Invalid directory node: invalid input data", async () => {
-            const [anyone] = await ethers.getSigners()
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address)
-
-            // Directory Nodes
-            await expect(chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdd", 
-                                                    ["0x8d3c78fb047f38e1b9a1b74f0695f0e494e5924b239c94597e3bbf9ec405bfb35ee015d470c7259be0bcfa559b6e83202f1f8dee01c01d96d2566a11a83d0f771c"], 
-                                                    ["0xe105Ba42B66D08Ac7Ca7FC48c583599044a6DAb3"]))
-                    .to.be.revertedWith("ChrL2: invalid directory node")
-        })
-
-        it("Invalid directory node: not enough signature", async () => {
-            const [anyone] = await ethers.getSigners()
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address)
-            expect(await chrL2Instance.directoryNodes(0)).to.eq(directoryNodes.address)
-            let sig = await directoryNodes.signMessage(DecodeHexStringToByteArray("01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdc"))
-            // Directory Nodes
-            await chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdc", 
-                                                    [sig],
-                                                    ["0xe105Ba42B66D08Ac7Ca7FC48c583599044a6DAb3"])
-
-            await expect(chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdc", 
-                                                    [],
-                                                    ["0xe105Ba42B66D08Ac7Ca7FC48c583599044a6DAb3"]))
-                    .to.be.revertedWith("ChrL2: not enough require signature")
-        })
-
-        it("Invalid app node: invalid input data", async () => {
-            const [anyone] = await ethers.getSigners()
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address)
-
-            // App Nodes
-            await expect(chrL2Instance.updateAppNodes("0x7fcc39140a3e49a5950393cbe3d7e063adb8ede85106a1a7f3e3e610585d1c5b", 
-                                                ["0xf9d0a80283aa2a1088adafd4e99453be610a9fd61c69d40b36deab48c84b54d47895765b82d9ae442a00671d462d5a83b34e8bc5fb9c64a9e453f8f18be68f381b"], 
-                                                [
-                                                    "0x659e4a3726275edFD125F52338ECe0d54d15BD99", 
-                                                    "0x75e20828B343d1fE37FAe469aB698E19c17F20b5", 
-                                                    "0x1a642f0E3c3aF545E7AcBD38b07251B3990914F1"
-                                                ]))
-                    .to.be.revertedWith("ChrL2: invalid app node")
-        })
-
-        it("Invalid app node: not enough signature", async () => {
-            const [anyone] = await ethers.getSigners()
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address)
-            expect(await chrL2Instance.directoryNodes(0)).to.eq(directoryNodes.address)
-            let sig = await directoryNodes.signMessage(DecodeHexStringToByteArray("01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdc"));
-
-            // Directory Nodes
-            await chrL2Instance.updateDirectoryNodes("0x01a775f1ca2c6ab3e5f37f3e8541fcc8cbc64a5a0414e6be1e724677142a7fdc", 
-                                                    [sig], 
-                                                    ["0xe105Ba42B66D08Ac7Ca7FC48c583599044a6DAb3"]);
-
-            // App Nodes
-            await expect(chrL2Instance.updateAppNodes("0x7fcc39140a3e49a5950393cbe3d7e063adb8ede85106a1a7f3e3e610585d1c5a", 
-                                                [], 
-                                                [
-                                                    "0x659e4a3726275edFD125F52338ECe0d54d15BD99", 
-                                                    "0x75e20828B343d1fE37FAe469aB698E19c17F20b5", 
-                                                    "0x1a642f0E3c3aF545E7AcBD38b07251B3990914F1"
-                                                ]))
-                    .to.be.revertedWith("ChrL2: not enough require signature")
-        })
-
         it("Update directory & app node(s) successfully", async () => {
-            const [anyone, other] = await ethers.getSigners()
-            const chrL2Instance = new ChrL2__factory(anyone).attach(chrL2Address)
+            const [node1, node2, node3, other] = await ethers.getSigners()
+            const chrL2Instance = new ChrL2__factory(directoryNodes).attach(chrL2Address)
+            const otherChrL2Instance = new ChrL2__factory(other).attach(chrL2Address)
+            let nodes = [
+                node1.address, 
+                node2.address, 
+                node3.address
+            ]
+            await expect(chrL2Instance.updateAppNodes(nodes)).to.be.revertedWith('ChrL2: only the contract can execute')
             expect(await chrL2Instance.directoryNodes(0)).to.eq(directoryNodes.address)
-            let hash = keccak256(DecodeHexStringToByteArray(other.address.substring(2, other.address.length)))
-            let sig = await directoryNodes.signMessage(DecodeHexStringToByteArray(hash.substring(2, hash.length)))
+            expect(await chrL2Instance.isDirectoryNode(directoryNodes.address)).to.be.true
+            expect(await chrL2Instance.isDirectoryNode(other.address)).to.be.false
+            // Update App Nodes
+            let updateAppNodes = chrL2Instance.interface.encodeFunctionData("updateAppNodes", [nodes])
+            await chrL2Instance.submitTransaction(chrL2Address, BigNumber.from(0), updateAppNodes)
+            expect(await chrL2Instance.appNodes(0)).to.eq(node1.address)
+            expect(await chrL2Instance.appNodes(1)).to.eq(node2.address)
+            expect(await chrL2Instance.appNodes(2)).to.eq(node3.address)
 
-            // Directory Nodes
-            await chrL2Instance.updateDirectoryNodes(hash, [sig], [other.address])
+            // Add Directory Nodes
+            let addDirectoryNode = chrL2Instance.interface.encodeFunctionData("addDirectoryNode", [other.address])
+            await chrL2Instance.submitTransaction(chrL2Address, BigNumber.from(0), addDirectoryNode)
+            expect(await chrL2Instance.directoryNodes(0)).to.eq(directoryNodes.address)
+            expect(await chrL2Instance.directoryNodes(1)).to.eq(other.address)
+            expect(await chrL2Instance.isDirectoryNode(directoryNodes.address)).to.be.true
+            expect(await chrL2Instance.isDirectoryNode(other.address)).to.be.true
+
+            // Remove Directory Nodes
+            let removeDirectoryNode = chrL2Instance.interface.encodeFunctionData("removeDirectoryNode", [directoryNodes.address])
+            await chrL2Instance.submitTransaction(chrL2Address, BigNumber.from(0), removeDirectoryNode)
+            let txId = (await chrL2Instance.transactionCount()).sub(1)
+            await otherChrL2Instance.confirmTransaction(txId)
+
             expect(await chrL2Instance.directoryNodes(0)).to.eq(other.address)
-
-            // App Nodes
-            sig = await other.signMessage(DecodeHexStringToByteArray("7fcc39140a3e49a5950393cbe3d7e063adb8ede85106a1a7f3e3e610585d1c5a"))
-            await chrL2Instance.updateAppNodes("0x7fcc39140a3e49a5950393cbe3d7e063adb8ede85106a1a7f3e3e610585d1c5a", [sig], 
-                                                [
-                                                    "0x659e4a3726275edFD125F52338ECe0d54d15BD99", 
-                                                    "0x75e20828B343d1fE37FAe469aB698E19c17F20b5", 
-                                                    "0x1a642f0E3c3aF545E7AcBD38b07251B3990914F1"
-                                                ])
-            expect(await chrL2Instance.appNodes(0)).to.eq("0x659e4a3726275edFD125F52338ECe0d54d15BD99")
-            expect(await chrL2Instance.appNodes(1)).to.eq("0x75e20828B343d1fE37FAe469aB698E19c17F20b5")
-            expect(await chrL2Instance.appNodes(2)).to.eq("0x1a642f0E3c3aF545E7AcBD38b07251B3990914F1")
+            expect(await chrL2Instance.isDirectoryNode(other.address)).to.be.true
+            expect(await chrL2Instance.isDirectoryNode(directoryNodes.address)).to.be.false
         })
     })
 
@@ -312,14 +263,16 @@ describe("ChrL2", () => {
                 let state = blockNumber.substring(2, blockNumber.length).concat(event)
                 let hashRootState = keccak256(DecodeHexStringToByteArray(state))
                 let el2Leaf = hashRootEvent.substring(2, hashRootEvent.length).concat(hashRootState.substring(2, hashRootState.length))
-
+                
                 let blockchainRid = "977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"
                 let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
                 let merkleRootHash = "96defe74f43fcf2d12a1844bcd7a3a7bcb0d4fa191776953dae3f1efb508d866"
                 let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
-                let extraDataMerkleRoot = "8D46CCB5A2E60109C6F6AFF5648F5BBF50F7A3128811A29E2A50DF6F668A389A"
+
+                // This merkle root is calculated in the postchain code
+                let extraDataMerkleRoot = "C398AE47B09A8F25305AC410DE258BA98E60AA488C9C62B5B0795CE621BF250E"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
@@ -447,16 +400,34 @@ describe("ChrL2", () => {
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     user.address)).to.revertedWith("ChrL2: not mature enough to withdraw the fund")
 
-                // force mining 100 blocks
-                for (let i = 0; i < 100; i++) {
+                // force mining 98 blocks
+                for (let i = 0; i < 98; i++) {
                     await ethers.provider.send('evm_mine', [])
                 }
+
+                let hashEvent = DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length))
+
+                // directoryNode can update withdraw request status to pending (emergency case)
+                let directoryNode = new ChrL2__factory(directoryNodes).attach(chrL2Address)
+                let pendingWithdraw = directoryNode.interface.encodeFunctionData("pendingWithdraw", [hashEvent])
+                await directoryNode.submitTransaction(chrL2Address, BigNumber.from(0), pendingWithdraw)
+
+                // then user cannot withdraw the fund
+                await expect(chrL2Instance.withdraw(
+                    hashEvent,
+                    user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
+
+                // directoryNode can set withdraw request status back to withdrawable
+                let unpendingWithdraw = directoryNode.interface.encodeFunctionData("unpendingWithdraw", [hashEvent])
+                await directoryNode.submitTransaction(chrL2Address, BigNumber.from(0), unpendingWithdraw)
 
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
                 expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     deployer.address)).to.be.revertedWith('ChrL2: no fund for the beneficiary')
+
+                // now user can withdraw the fund
                 await expect(chrL2Instance.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     user.address))

@@ -90,6 +90,10 @@ describe("Non Fungible Token", () => {
             let logs = receipt.events?.filter((x) =>  {return x.event == 'Deposited'})
             if (logs !== undefined) {
                 let log = logs[0]
+
+                // Note: test data might change depends on the actual log data
+                // and might make the test failed due to it will make difference `extraDataMerkleRoot`
+                // It'd better to find a way to make deterministic test data
                 const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)
                 const serialNumber = hexZeroPad(intToHex(log.blockNumber + log.logIndex), 32)
                 const contractAddress = hexZeroPad(nftAddress, 32)
@@ -114,7 +118,9 @@ describe("Non Fungible Token", () => {
                 let merkleRootHashHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
                 let dependencies = "56bfbee83edd2c9a79ff421c95fc8ec0fa0d67258dca697e47aae56f6fbc8af3"
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
-                let extraDataMerkleRoot = "4C681452C0DCF296D1E64DEEC1D64971636752FA694884F2CA22079D5F9C5D78"
+
+                // This merkle root is calculated in the postchain code
+                let extraDataMerkleRoot = "F6134DA7669DF2398073CD8126989DD9E26BA78E7094D7E2EADEC582BC70D9BF"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
