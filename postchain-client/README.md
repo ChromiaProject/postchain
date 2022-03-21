@@ -3,7 +3,7 @@
 The "postchain-client" can be used in two ways:
 
 - As a command line tool.
-- As a lib inside a Java program.
+- As a lib inside a Java (Kotlin or any JVM language) program.
 
 ## Command line P.C. client
 
