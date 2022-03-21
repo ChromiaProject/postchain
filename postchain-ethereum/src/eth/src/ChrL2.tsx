@@ -179,6 +179,38 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
     } catch (error) { }
   }
 
+  const pending = async (serial: number, token: string, beneficiary: string, amount: number) => {
+    const signer = library.getSigner();
+    const eventHash = "0x" + calculateEventLeafHash(serial, token, beneficiary, amount)
+    try {
+      const chrl2 = new ethers.Contract(
+        chrL2Address,
+        ChrL2Artifacts.abi,
+        library
+      )
+      console.log("eventHash: " + eventHash)
+      let pendingWithdraw = chrl2.interface.encodeFunctionData("pendingWithdraw", [eventHash])
+      console.log("pendingWithdraw: " + pendingWithdraw)
+      let calldata = chrl2.interface.encodeFunctionData("submitTransaction", [chrL2Address, BigNumber.from(0), pendingWithdraw])
+      await sendTnx(signer, chrL2Address, calldata)
+    } catch (e) { 
+      console.log(e.Message)
+    }
+  }
+
+  const confirm =async () => {
+    const signer = library.getSigner();
+    try {
+      const chrl2 = new ethers.Contract(
+        chrL2Address,
+        ChrL2Artifacts.abi,
+        library
+      )
+      let calldata = chrl2.interface.encodeFunctionData("confirmTransaction", [BigNumber.from(0)])
+      await sendTnx(signer, chrL2Address, calldata)
+    } catch (error) { }    
+  }
+
   return (
     <div className="flex flex-col">
       <button className="btn">
@@ -214,6 +246,12 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
                   </button>
                   <button type="button" className="btn btn-outline btn-accent" onClick={() => withdraw(eventHash)}>
                     Withdraw
+                  </button>
+                  <button type="button" className="btn btn-outline btn-accent" onClick={() => pending(w?.serial, w?.token, w?.beneficiary, w?.value)}>
+                    Pending
+                  </button>
+                  <button type="button" className="btn btn-outline btn-accent" onClick={() => confirm()}>
+                    Confirm
                   </button>
                 </td>
               </tr>)
