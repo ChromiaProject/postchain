@@ -35,11 +35,12 @@ To generate a client one could go about it like this:
   import net.postchain.client.core.DefaultSigner
   import net.postchain.client.core.PostchainClient
   import net.postchain.client.core.PostchainClientFactory
+  import net.postchain.client.core.TransactionStatus
 
   val cryptoSystem = SECP256K1CryptoSystem()
   val bcRid = ... // The blockchain RID of the chain (can be found in the logs when P.C. server starts) 
   val pubKey0 = ... // This must be a real pub key
-  val privKey0 = ... // The must be a real priv key
+  val privKey0 = ... // This must be a real priv key
   val sigMaker0 = cryptoSystem.buildSigMaker(pubKey0, privKey0)
   val defaultSigner = DefaultSigner(sigMaker0, pubKey0)
   val resolver = PostchainClientFactory.makeSimpleNodeResolver("http://127.0.0.1:${nodes[0].getRestApiHttpPort()}")
@@ -50,7 +51,13 @@ To generate a client one could go about it like this:
   txBuilder.addOperation("nop", arrayOf()) // Operation "nop" with on arguments
   txBuilder.sign(sigMaker0) // Sign it
 
-  txBuilder.postSync(ConfirmationLevel.NO_WAIT)
+  // Synchronous call = waits for result
+  val result = txBuilder.postSync(ConfirmationLevel.NO_WAIT)
+  when (result.status) {
+      TransactionStatus.CONFIRMED -> // TX has been put into the TX queue of the Postchain server
+      TransactionStatus.REJECTED  -> // TX most likely wrong number of args
+      else ->  // Investigate
+  }
 ```
 ... see PostChainClientTest in the devtools Maven module for more examples. 
 
