@@ -43,7 +43,7 @@ To generate a client one could go about it like this:
   val privKey0 = ... // This must be a real priv key
   val sigMaker0 = cryptoSystem.buildSigMaker(pubKey0, privKey0)
   val defaultSigner = DefaultSigner(sigMaker0, pubKey0)
-  val resolver = PostchainClientFactory.makeSimpleNodeResolver("http://127.0.0.1:${nodes[0].getRestApiHttpPort()}")
+  val resolver = PostchainClientFactory.makeSimpleNodeResolver("http://127.0.0.1:7740") // Running P.C. server on localhost
   val psClient = PostchainClientFactory.getClient(resolver, bcRid, defaultSigner)
 
   // Build the TX 
