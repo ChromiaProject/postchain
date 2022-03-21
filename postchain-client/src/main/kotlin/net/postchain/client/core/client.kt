@@ -39,6 +39,11 @@ interface TransactionResult {
     val status: TransactionStatus
 }
 
+interface OperationResult {
+    val status: TransactionStatus
+    val txId: ByteArray
+}
+
 interface PostchainClient {
     fun makeTransaction(): GTXTransactionBuilder
     fun makeTransaction(signers: Array<ByteArray>): GTXTransactionBuilder
@@ -48,6 +53,9 @@ interface PostchainClient {
 
     fun query(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Promise<Gtv, Exception>
     fun querySync(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Gtv
+
+    fun operation(confirmationLevel: ConfirmationLevel, name: String, vararg args: Gtv): Promise<OperationResult, Exception>
+    fun operationSync(confirmationLevel: ConfirmationLevel, name: String, vararg args: Gtv): OperationResult
 
 }
 
