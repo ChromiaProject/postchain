@@ -217,7 +217,7 @@ open class BaseBlockchainProcessManager(
             }
 
             doRestart
-        } //  (So that we can put a breakpoint here where it won't be mixed with actual execution of the function)
+        }
     }
 
     protected fun nodeName(): String {

@@ -41,7 +41,7 @@ open class BaseBlockBuilder(
         val specialTxHandler: SpecialTransactionHandler,
         val subjects: Array<ByteArray>,
         val blockSigMaker: SigMaker,
-        override val blockWitnessManager: BlockWitnessManager,
+        override val blockWitnessProvider: BlockWitnessProvider,
         val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
         val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
@@ -218,7 +218,7 @@ open class BaseBlockBuilder(
             throw ProgrammerMistake("Block is not finalized yet.")
         }
 
-        return blockWitnessManager.createWitnessBuilderWithOwnSignature(_blockData!!.header)
+        return blockWitnessProvider.createWitnessBuilderWithOwnSignature(_blockData!!.header)
     }
 
     /**

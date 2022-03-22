@@ -166,7 +166,7 @@ object GenericBlockHeaderValidator {
 
         // The "advanced" checks
         return when {
-            currentBlockTimestamp >= header.timestamp ->
+            currentBlockTimestamp > header.timestamp ->
                 ValidationResult(ValidationResult.Result.INVALID_TIMESTAMP, "Block timestamp >= header.timestamp")
 
             !header.checkCorrectNumberOfDependencies(nrOfDependencies) ->

@@ -41,16 +41,9 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
     }
 
     /**
-     * @param depMap contains the Chain IDs we depend on
+     * @param depsRequired number of dependencies needed in the block header
      * @return true if there are the same number of elements in the block header as in the configuration
      *          (it's lame, but it's the best we can do, since we allow "null")
-     */
-    fun checkIfAllBlockchainDependenciesArePresent(depRequired: List<BlockchainRelatedInfo>): Boolean {
-        return depRequired.size == blockHeightDependencyArray.size
-    }
-
-    /**
-     * Simplified version of the above
      */
     fun checkCorrectNumberOfDependencies(depsRequired: Int): Boolean {
         return depsRequired == blockHeightDependencyArray.size

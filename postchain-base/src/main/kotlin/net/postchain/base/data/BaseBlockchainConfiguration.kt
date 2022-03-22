@@ -23,7 +23,7 @@ open class BaseBlockchainConfiguration(
     override val effectiveBlockchainRID = configData.getHistoricBRID() ?: configData.context.blockchainRID
     override val signers = configData.getSigners()
 
-    private val blockWitnessManager: BlockWitnessManager = BaseBlockWitnessManager(
+    private val blockWitnessProvider: BlockWitnessProvider = BaseBlockWitnessProvider(
         cryptoSystem,
         configData.blockSigMaker,
         signers.toTypedArray()
@@ -47,9 +47,9 @@ open class BaseBlockchainConfiguration(
     }
 
     /**
-     * We can get the [BlockWitnessManager] directly from the config, don't have to go to the [BlockBuilder]
+     * We can get the [BlockWitnessProvider] directly from the config, don't have to go to the [BlockBuilder]
      */
-    override fun getBlockHeaderValidator(): BlockWitnessManager = blockWitnessManager
+    override fun getBlockHeaderValidator(): BlockWitnessProvider = blockWitnessProvider
 
     override fun getTransactionFactory(): TransactionFactory {
         return BaseTransactionFactory()
@@ -75,7 +75,7 @@ open class BaseBlockchainConfiguration(
             getSpecialTxHandler(),
             signers.toTypedArray(),
             configData.blockSigMaker,
-            blockWitnessManager,
+            blockWitnessProvider,
             bcRelatedInfosDependencyList,
             makeBBExtensions(),
             effectiveBlockchainRID != blockchainRid,

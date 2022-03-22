@@ -46,7 +46,7 @@ class BaseBlockBuilderValidationTest {
         }
     }
 
-    val validator = BaseBlockWitnessManager(cryptoSystem, sigMaker, subjects)
+    val validator = BaseBlockWitnessProvider(cryptoSystem, sigMaker, subjects)
     val bctx = BaseBlockEContext(ctx, 0, 1, 10, mapOf(), dummyEventSink)
     val bbb = BaseBlockBuilder(BlockchainRid.buildRepeat(0), cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
