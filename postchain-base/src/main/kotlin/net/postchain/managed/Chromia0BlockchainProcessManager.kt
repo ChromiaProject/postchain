@@ -10,13 +10,16 @@ import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.ByteArrayKey
-import net.postchain.core.RestartHandler
+import net.postchain.core.AfterCommitHandler
 import net.postchain.debug.BlockTrace
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.GTXDataBuilder
 
+/**
+ * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.
+ */
 class Chromia0BlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
@@ -25,25 +28,6 @@ class Chromia0BlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
         blockchainConfigProvider) {
-
-    override fun buildRestartHandler(chainId: Long): RestartHandler {
-        val baseHandler = super.buildRestartHandler(chainId)
-        if (chainId == 0L)
-            return baseHandler
-        else {
-            return { blockTimestamp: Long, blockTrace: BlockTrace? ->
-                rhTrace("Begin", chainId, blockTrace)
-                try {
-                    anchorLastBlock(chainId)
-                    rhTrace("Anchored", chainId, blockTrace)
-                } catch (e: Exception) {
-                    logger.error("Error when anchoring $e", e)
-                    e.printStackTrace()
-                }
-                baseHandler(blockTimestamp, blockTrace)
-            }
-        }
-    }
 
     private fun anchorLastBlock(chainId: Long) {
         withReadConnection(storage, chainId) { eContext ->
@@ -74,6 +58,25 @@ class Chromia0BlockchainProcessManager(
                         txb.serialize()
                 )
                 chain0Engine.getTransactionQueue().enqueue(tx)
+            }
+        }
+    }
+
+    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+        val baseHandler = super.buildAfterCommitHandler(chainId)
+        if (chainId == 0L)
+            return baseHandler
+        else {
+            return { bTrace: BlockTrace?, height: Long ->
+                rhTrace("Begin", chainId, bTrace)
+                try {
+                    anchorLastBlock(chainId)
+                    rhTrace("Anchored", chainId, bTrace)
+                } catch (e: Exception) {
+                    logger.error("Error when anchoring $e", e)
+                    e.printStackTrace()
+                }
+                baseHandler(bTrace, height)
             }
         }
     }

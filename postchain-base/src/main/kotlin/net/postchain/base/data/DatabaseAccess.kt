@@ -85,6 +85,8 @@ interface DatabaseAccess {
     // Event and State
     fun insertEvent(ctx: EContext, prefix: String, height: Long, hash: Hash, data: ByteArray)
     fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): EventInfo?
+    fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
+    fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun pruneEvents(ctx: EContext, prefix: String, height: Long)
     fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray)
     fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): AccountState?
@@ -109,6 +111,10 @@ interface DatabaseAccess {
     fun setMustSyncUntil(ctx: AppContext, blockchainRID: BlockchainRid, height: Long): Boolean
     fun getMustSyncUntil(ctx: AppContext): Map<Long, Long>
     fun getChainIds(ctx: AppContext): Map<BlockchainRid, Long>
+
+    // To be able to create tables not automatically created by the system
+    // (most mandatory tables are not "creatable")
+    fun createEventLeafTable(ctx: EContext, prefix: String) // Note: Not used by anchoring
 
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {

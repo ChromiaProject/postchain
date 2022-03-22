@@ -49,6 +49,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
+
+    // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
 
@@ -306,6 +308,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     // ---- Event and State ----
 
+    /**
+     * Fetch one event that matches the given hash (if height is correct)
+     */
     override fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
         val sql = """SELECT * FROM (SELECT block_height, hash, data, 
             RANK() OVER (ORDER BY event_iid) rank_number 
@@ -313,13 +318,58 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             WHERE block_height = ?) x WHERE hash = ?"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
         if (rows.isEmpty()) return null
-        val data = rows.first()
+        val data = rows.first() // Should there be more than one?
         return DatabaseAccess.EventInfo(
                 (data["rank_number"] as Long) - 1,
                 data["block_height"] as Long,
                 data["hash"] as Hash,
                 data["data"] as ByteArray
         )
+    }
+
+    /**
+     * Fetch ALL events from the given height
+     */
+    override fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
+        val sql = """SELECT block_height, hash, data, event_iid
+            FROM ${tableEvents(ctx, prefix)} 
+            WHERE block_height = ?
+            ORDER BY event_iid """
+
+        return getEventList(ctx, blockHeight, sql)
+    }
+
+    /**
+     * Fetch ALL events above the given height
+     */
+    override fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
+        val sql = """SELECT block_height, hash, data, event_iid
+            FROM ${tableEvents(ctx, prefix)} 
+            WHERE block_height > ?
+            ORDER BY event_iid
+            LIMIT ? """
+
+        return getEventList(ctx, blockHeight, sql)
+    }
+
+    /**
+     * NOTE: We dont' bother to set "pos" so it starts from 0, we just use the event_iid raw.
+     *       In this case the important thing is the SORTING of the events, not the exact pos number.
+     */
+    private fun getEventList(ctx: EContext, blockHeight: Long, sql: String, maxEventsLimit: Int = 1000): List<DatabaseAccess.EventInfo> {
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, maxEventsLimit)
+        return if (rows.isEmpty()) {
+            ArrayList<DatabaseAccess.EventInfo>()
+        } else {
+            rows.map { data ->
+                DatabaseAccess.EventInfo(
+                    data["event_iid"] as Long,
+                    data["block_height"] as Long,
+                    data["hash"] as Hash,
+                    data["data"] as ByteArray
+                )
+            }
+        }
     }
 
     override fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): DatabaseAccess.AccountState? {
@@ -353,6 +403,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
 
+
+    override fun createEventLeafTable(ctx: EContext, prefix: String) {
+        queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx, prefix))
+    }
 
     // --- Init App ----
 
@@ -474,6 +528,17 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
+    /**
+     * The rule is: a blockchain will continue use a configuration until
+     * we say that a new configuration should be used (at a certain height).
+     * This query let us go from "block height" to what configuration is used at this height.
+     *
+     * @param ctx
+     * @param height is the height of a block
+     * @return the height of the CONFIGURATION used for a block of the given height.
+     *         returning "null" here means no configuration is defined for the chain,
+     *         which is must likely an error.
+     */
     override fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long? {
         val sql = """
             SELECT height 

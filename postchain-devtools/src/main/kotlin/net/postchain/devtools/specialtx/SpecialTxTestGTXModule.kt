@@ -1,4 +1,4 @@
-package net.postchain.specialtx
+package net.postchain.devtools.specialtx
 
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext

@@ -14,7 +14,7 @@ import org.apache.commons.dbutils.handlers.ScalarHandler
 /**
  * nop operation can be useful as nonce or identifier which has no meaning on consensus level
  */
-class GtxNop(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
+open class GtxNop(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
 
     companion object : KLogging() {
         const val OP_NAME = "nop"
@@ -65,6 +65,18 @@ class GtxNop(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
             }
             false
         }
+    }
+}
+
+/**
+ * Same as "nop" but for special transactions (they must have operations that begins with "__")
+ *
+ * We want everything to be like [GtxNop] just with a different name.
+ */
+class GtxSpecNop(u: Unit, opData: ExtOpData) : GtxNop(u, opData) {
+
+    companion object : KLogging() {
+        const val OP_NAME = "__nop"
     }
 }
 
@@ -142,10 +154,12 @@ fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
  * Module that should be included in the [CompositeGTXModule] of all "normal/real world" DApp modules.
  * It holds some standard things that are very useful, bordering on mandatory.
  */
+
 class StandardOpsGTXModule : SimpleGTXModule<Unit>(
         Unit,
         mapOf(
                 GtxNop.OP_NAME to ::GtxNop,
+                GtxSpecNop.OP_NAME to ::GtxSpecNop,
                 GtxTimeB.OP_NAME to ::GtxTimeB
         ),
         mapOf(

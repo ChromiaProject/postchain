@@ -86,8 +86,8 @@ data class NodeSetup(
      * Turns this [NodeSetup] to a [PostchainTestNode] and adds and starts all blockchains on it
      */
     fun toTestNodeAndStartAllChains(
-            systemSetup: SystemSetup,
-            preWipeDatabase: Boolean = true
+        systemSetup: SystemSetup,
+        preWipeDatabase: Boolean = true
     ): PostchainTestNode {
 
         require(configurationProvider != null) { "Cannot build a PostchainTestNode without a NodeConfigurationProvider set" }
@@ -100,7 +100,7 @@ data class NodeSetup(
             // TODO: These chains can in turn be depending on each other, so they should be "sorted" first
             chainsToRead.forEach { chainId ->
                 val chainSetup = systemSetup.blockchainMap[chainId]
-                        ?: error("Incorrect SystemSetup")
+                    ?: error("Incorrect SystemSetup")
                 startChain(node, chainSetup, "read only")
             }
         }
@@ -108,7 +108,7 @@ data class NodeSetup(
         logger.debug("Node ${sequenceNumber.nodeNumber}: Start all blockchains we should sign")
         chainsToSign.forEach { chainId ->
             val chainSetup = systemSetup.blockchainMap[chainId]
-                    ?: error("Incorrect SystemSetup")
+                ?: error("Incorrect SystemSetup")
             startChain(node, chainSetup, "")
         }
 

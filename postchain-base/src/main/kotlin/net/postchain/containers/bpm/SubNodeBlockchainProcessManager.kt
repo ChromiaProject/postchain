@@ -6,6 +6,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcess
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
 import net.postchain.ebft.heartbeat.HeartbeatListener
