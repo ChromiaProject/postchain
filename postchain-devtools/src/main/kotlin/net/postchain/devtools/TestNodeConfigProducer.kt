@@ -31,10 +31,10 @@ object TestNodeConfigProducer {
      *
      */
     fun createLegacyNodeConfig(
-        testName: String,
-        nodeSetup: NodeSetup,
-        systemSetup: SystemSetup,
-        startConfig: PropertiesConfiguration? = null
+            testName: String,
+            nodeSetup: NodeSetup,
+            systemSetup: SystemSetup,
+            startConfig: PropertiesConfiguration? = null
     ): Configuration {
 
         val baseConfig = startConfig ?: PropertiesConfiguration()
@@ -61,10 +61,10 @@ object TestNodeConfigProducer {
      *
      */
     fun createManagedNodeConfig(
-        testName: String,
-        nodeSetup: NodeSetup,
-        systemSetup: SystemSetup,
-        startConfig: PropertiesConfiguration? = null
+            testName: String,
+            nodeSetup: NodeSetup,
+            systemSetup: SystemSetup,
+            startConfig: PropertiesConfiguration? = null
     ): Configuration {
 
         val baseConfig = startConfig ?: PropertiesConfiguration()
@@ -77,10 +77,10 @@ object TestNodeConfigProducer {
     }
 
     fun commonSettings(
-        baseConfig: PropertiesConfiguration,
-        testName: String,
-        nodeSetup: NodeSetup,
-        systemSetup: SystemSetup
+            baseConfig: PropertiesConfiguration,
+            testName: String,
+            nodeSetup: NodeSetup,
+            systemSetup: SystemSetup
     ) {
 
         // DB
@@ -93,6 +93,7 @@ object TestNodeConfigProducer {
         setConfInfrastructure(systemSetup.confInfrastructure, baseConfig)
         setApiPort(nodeSetup, baseConfig, systemSetup.needRestApi)
         setKeys(nodeSetup, baseConfig)
+        setHeartbeat(baseConfig)
     }
 
     fun setSyncTuningParams(systemSetup: SystemSetup, baseConfig: PropertiesConfiguration) {
@@ -117,9 +118,10 @@ object TestNodeConfigProducer {
     ) {
         // These are the same for all tests
         baseConfig.setProperty("database.driverclass", "org.postgresql.Driver")
-        baseConfig.setProperty("database.url",         "jdbc:postgresql://localhost:5432/postchain")
-        baseConfig.setProperty("database.username",    "postchain")
-        baseConfig.setProperty("database.password",    "postchain")
+        val dbHost = System.getenv("POSTCHAIN_TEST_DB_HOST") ?: "localhost"
+        baseConfig.setProperty("database.url", "jdbc:postgresql://$dbHost:5432/postchain")
+        baseConfig.setProperty("database.username", "postchain")
+        baseConfig.setProperty("database.password", "postchain")
         // TODO: Maybe a personalized schema name like this is not needed (this is just legacy from the node.properties files)
         val goodTestName = testName.filter { it.isLetterOrDigit() }.toLowerCase()
         baseConfig.setProperty("database.schema", goodTestName + nodeConf.sequenceNumber.nodeNumber)
@@ -157,10 +159,10 @@ object TestNodeConfigProducer {
      * Sets the API port, so it wont clash with other nodes.
      */
     fun setApiPort(
-        nodeSetup: NodeSetup,
-        baseConfig: PropertiesConfiguration,
-        needRestApi: Boolean
-    ){
+            nodeSetup: NodeSetup,
+            baseConfig: PropertiesConfiguration,
+            needRestApi: Boolean
+    ) {
         if (needRestApi) {
             baseConfig.setProperty("api.port", nodeSetup.getApiPortNumber())
         } else {
@@ -178,5 +180,9 @@ object TestNodeConfigProducer {
 
         baseConfig.setProperty("messaging.privkey", nodeConf.privKeyHex)
         baseConfig.setProperty("messaging.pubkey", nodeConf.pubKeyHex)
+    }
+
+    fun setHeartbeat(baseConfig: PropertiesConfiguration) {
+        baseConfig.setProperty("heartbeat.enabled", false)
     }
 }

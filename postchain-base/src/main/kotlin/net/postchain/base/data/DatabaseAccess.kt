@@ -2,11 +2,11 @@
 
 package net.postchain.base.data
 
+import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
-import net.postchain.base.snapshot.Page
-import net.postchain.common.data.Hash
 import net.postchain.core.*
-import net.postchain.network.x.XPeerID
+import net.postchain.common.data.Hash
+import net.postchain.core.NodeRid
 import java.sql.Connection
 import java.time.Instant
 
@@ -61,8 +61,8 @@ interface DatabaseAccess {
     fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray
     fun getLastBlockHeight(ctx: EContext): Long
     fun getLastBlockRid(ctx: EContext, chainId: Long): ByteArray?
-    fun getBlockHeightInfo(ctx: EContext, bcRid: BlockchainRid): Pair<Long, ByteArray>?
     fun getLastBlockTimestamp(ctx: EContext): Long
+    fun getBlockHeightInfo(ctx: EContext, bcRid: BlockchainRid): Pair<Long, ByteArray>?
     fun getTxRIDsAtHeight(ctx: EContext, height: Long): Array<ByteArray>
     fun getBlockInfo(ctx: EContext, txRID: ByteArray): BlockInfo
     fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray
@@ -77,6 +77,8 @@ interface DatabaseAccess {
 
     // Blockchain configurations
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
+    fun findNextConfigurationHeight(ctx: EContext, height: Long): Long?
+
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 
@@ -84,8 +86,10 @@ interface DatabaseAccess {
     fun createPageTable(ctx: EContext, prefix: String)
     fun createEventLeafTable(ctx: EContext, prefix: String)
     fun createStateLeafTable(ctx: EContext, prefix: String)
-    fun insertEvent(ctx: EContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
-    fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): EventInfo?
+    fun insertEvent(ctx: EContext, prefix: String, height: Long, hash: Hash, data: ByteArray)
+    fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): EventInfo?
+    fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
+    fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun pruneEvents(ctx: EContext, prefix: String, height: Long)
     fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray)
     fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): AccountState?
@@ -103,7 +107,7 @@ interface DatabaseAccess {
     fun removePeerInfo(ctx: AppContext, pubKey: String): Array<PeerInfo>
 
     // Extra nodes to sync from
-    fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<XPeerID>>
+    fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<NodeRid>>
     fun existsBlockchainReplica(ctx: AppContext, brid: String, pubkey: String): Boolean
     fun addBlockchainReplica(ctx: AppContext, brid: String, pubKey: String): Boolean
     fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubKey: String): Set<BlockchainRid>
@@ -113,6 +117,10 @@ interface DatabaseAccess {
     fun setMustSyncUntil(ctx: AppContext, blockchainRID: BlockchainRid, height: Long): Boolean
     fun getMustSyncUntil(ctx: AppContext): Map<Long, Long>
     fun getChainIds(ctx: AppContext): Map<BlockchainRid, Long>
+
+    // To be able to create tables not automatically created by the system
+    // (most mandatory tables are not "creatable")
+    fun createEventLeafTable(ctx: EContext, prefix: String) // Note: Not used by anchoring
 
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {

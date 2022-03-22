@@ -3,7 +3,7 @@ package net.postchain.integrationtest.multiple_chains
 import mu.KLogging
 import net.postchain.devtools.TxCache
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
-import net.postchain.util.GtxTxIntegrationTestSetup
+import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import org.junit.jupiter.api.Test
 
 class SinglePeerDoubleChainsDependencyHappyTest : GtxTxIntegrationTestSetup() {

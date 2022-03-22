@@ -40,17 +40,17 @@ class BaseBlockHeaderTest {
         val decodedHeader = BaseBlockHeader(headerRaw.rawData, cryptoSystem)
 
         assertTrue(
-                decodedHeader.checkIfAllBlockchainDependenciesArePresent(listOf(
+                decodedHeader.checkCorrectNumberOfDependencies(listOf(
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(1), "hello", 1L),
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(2), "World", 2L)
-                ))
+                ).size)
         )
         assertFalse(
-                decodedHeader.checkIfAllBlockchainDependenciesArePresent(listOf(
+                decodedHeader.checkCorrectNumberOfDependencies(listOf(
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(1), "hello", 1L),
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(2), "cruel", 2L),
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(3), "World", 3L)
-                ))
+                ).size)
         )
     }
 

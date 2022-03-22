@@ -12,9 +12,10 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
+import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.util.peerInfoFromPublicKey
-import net.postchain.network.x.XPeerConnection
-import net.postchain.network.x.XPeerConnectionDescriptor
+import net.postchain.network.peer.PeerConnection
+import net.postchain.network.peer.PeerConnectionDescriptor
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.FIVE_SECONDS
 import org.awaitility.Duration.TEN_SECONDS
@@ -66,37 +67,37 @@ class IntNettyConnector3PeersCommunicationIT {
     fun testConnectAndCommunicate() {
         // Connecting
         // * 1 -> 2
-        val peerDescriptor2 = XPeerConnectionDescriptor(peerInfo2.peerId(), blockchainRid)
-        context1.peer.connectPeer(peerDescriptor2, peerInfo2, context1.packetEncoder)
+        val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder)
         // * 1 -> 3
-        val peerDescriptor3 = XPeerConnectionDescriptor(peerInfo3.peerId(), blockchainRid)
-        context1.peer.connectPeer(peerDescriptor3, peerInfo3, context1.packetEncoder)
+        val peerDescriptor3 = PeerConnectionDescriptor(blockchainRid, peerInfo3.peerId(), ConnectionDirection.OUTGOING)
+        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetEncoder)
         // * 3 -> 2
-        context3.peer.connectPeer(peerDescriptor2, peerInfo2, context3.packetEncoder)
+        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder)
 
         // Waiting for all connections to be established
-        val connection1 = argumentCaptor<XPeerConnection>()
-        val connection2 = argumentCaptor<XPeerConnection>()
-        val connection3 = argumentCaptor<XPeerConnection>()
+        val connection1 = argumentCaptor<PeerConnection>()
+        val connection2 = argumentCaptor<PeerConnection>()
+        val connection3 = argumentCaptor<PeerConnection>()
         await().atMost(FIVE_SECONDS)
                 .untilAsserted {
                     // 1
                     val expected1 = arrayOf(peerInfo2, peerInfo3).map(PeerInfo::peerId).toTypedArray()
-                    verify(context1.events, times(2)).onPeerConnected(connection1.capture())
-                    assert(connection1.firstValue.descriptor().peerId).isIn(*expected1)
-                    assert(connection1.secondValue.descriptor().peerId).isIn(*expected1)
+                    verify(context1.events, times(2)).onNodeConnected(connection1.capture())
+                    assert(connection1.firstValue.descriptor().nodeId).isIn(*expected1)
+                    assert(connection1.secondValue.descriptor().nodeId).isIn(*expected1)
 
                     // 2
                     val expected2 = arrayOf(peerInfo1, peerInfo3).map(PeerInfo::peerId).toTypedArray()
-                    verify(context2.events, times(2)).onPeerConnected(connection2.capture())
-                    assert(connection2.firstValue.descriptor().peerId).isIn(*expected2)
-                    assert(connection2.secondValue.descriptor().peerId).isIn(*expected2)
+                    verify(context2.events, times(2)).onNodeConnected(connection2.capture())
+                    assert(connection2.firstValue.descriptor().nodeId).isIn(*expected2)
+                    assert(connection2.secondValue.descriptor().nodeId).isIn(*expected2)
 
                     // 3
                     val expected3 = arrayOf(peerInfo1, peerInfo2).map(PeerInfo::peerId).toTypedArray()
-                    verify(context3.events, times(2)).onPeerConnected(connection3.capture())
-                    assert(connection3.firstValue.descriptor().peerId).isIn(*expected3)
-                    assert(connection3.secondValue.descriptor().peerId).isIn(*expected3)
+                    verify(context3.events, times(2)).onNodeConnected(connection3.capture())
+                    assert(connection3.firstValue.descriptor().nodeId).isIn(*expected3)
+                    assert(connection3.secondValue.descriptor().nodeId).isIn(*expected3)
                 }
 
         // Sending packets
@@ -119,21 +120,21 @@ class IntNettyConnector3PeersCommunicationIT {
                     // Peer1
                     val packets1 = argumentCaptor<ByteArray>()
                     val expected1 = arrayOf(packet2, packet3).map(ByteArray::byteArrayKeyOf).toTypedArray()
-                    verify(context1.packets, times(2)).invoke(packets1.capture(), any())
+                    verify(context1.packets, times(2)).handle(packets1.capture(), any())
                     assert(packets1.firstValue.byteArrayKeyOf()).isIn(*expected1)
                     assert(packets1.secondValue.byteArrayKeyOf()).isIn(*expected1)
 
                     // Peer2
                     val packets2 = argumentCaptor<ByteArray>()
                     val expected2 = arrayOf(packet1, packet3).map(ByteArray::byteArrayKeyOf).toTypedArray()
-                    verify(context2.packets, times(2)).invoke(packets2.capture(), any())
+                    verify(context2.packets, times(2)).handle(packets2.capture(), any())
                     assert(packets2.firstValue.byteArrayKeyOf()).isIn(*expected2)
                     assert(packets2.secondValue.byteArrayKeyOf()).isIn(*expected2)
 
                     // Peer3
                     val packets3 = argumentCaptor<ByteArray>()
                     val expected3 = arrayOf(packet1, packet2).map(ByteArray::byteArrayKeyOf).toTypedArray()
-                    verify(context3.packets, times(2)).invoke(packets3.capture(), any())
+                    verify(context3.packets, times(2)).handle(packets3.capture(), any())
                     assert(packets3.firstValue.byteArrayKeyOf()).isIn(*expected3)
                     assert(packets3.secondValue.byteArrayKeyOf()).isIn(*expected3)
                 }

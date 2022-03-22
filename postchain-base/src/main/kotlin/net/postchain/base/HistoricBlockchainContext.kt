@@ -2,10 +2,10 @@ package net.postchain.base
 
 import net.postchain.core.BlockchainRid
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 
 class HistoricBlockchainContext(val historicBrid: BlockchainRid,
-                                val ancestors: Map<BlockchainRid, Set<XPeerID>>) {
+                                val ancestors: Map<BlockchainRid, Set<NodeRid>>) {
     lateinit var contextCreator: (BlockchainRid) -> WorkerContext
 
 

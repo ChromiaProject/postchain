@@ -8,8 +8,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.peerId
 import net.postchain.base.withReadConnection
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BlockchainRid
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 
 /**
  *
@@ -48,7 +47,7 @@ open class ManualNodeConfigurationProvider(
         }
     }
 
-    open fun getBlockchainReplicaCollection(appConfig: AppConfig): Map<BlockchainRid, List<XPeerID>> {
+    open fun getBlockchainReplicaCollection(appConfig: AppConfig): Map<BlockchainRid, List<NodeRid>> {
         return storage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).getBlockchainReplicaCollection(ctx)
         }

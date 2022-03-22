@@ -25,7 +25,7 @@ class BaseBlockStoreTest {
         sut = BaseBlockStore()
         db = mock {}
         //sut.db = db
-        ctx = BaseEContext(mock {}, 2L, 0, db)
+        ctx = BaseEContext(mock {}, 2L, db)
     }
 
     @Test

@@ -17,7 +17,7 @@ val myCS = SECP256K1CryptoSystem()
 
 fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
     val b = GTXDataBuilder(bcRid, arrayOf(pubKey(0)), myCS)
-    b.addOperation("nop", arrayOf(gtv(42)))
+    b.addOperation(GtxNop.OP_NAME, arrayOf(gtv(42)))
     b.finish()
     b.sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
     return b.serialize()
