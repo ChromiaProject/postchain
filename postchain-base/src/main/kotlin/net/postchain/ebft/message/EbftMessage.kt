@@ -10,10 +10,10 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvNull
 
-abstract class Message(val topic: MessageTopic) {
+abstract class EbftMessage(val topic: MessageTopic) {
 
     companion object {
-        inline fun <reified T: Message> decode(bytes: ByteArray): T {
+        inline fun <reified T: EbftMessage> decode(bytes: ByteArray): T {
             val data =  GtvDecoder.decodeGtv(bytes) as GtvArray
             return when (val topic = data[0].asInteger().toInt()) {
                 MessageTopic.ID.value -> Identification(data[1].asByteArray(), BlockchainRid(data[2].asByteArray()), data[3].asInteger()) as T

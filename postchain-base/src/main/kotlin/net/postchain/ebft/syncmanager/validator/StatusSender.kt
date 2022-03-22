@@ -3,7 +3,7 @@
 package net.postchain.ebft.syncmanager.validator
 
 import net.postchain.ebft.StatusManager
-import net.postchain.ebft.message.Message
+import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.Status
 import net.postchain.network.CommunicationManager
 import java.util.*
@@ -11,7 +11,7 @@ import java.util.*
 class StatusSender(
         private val maxStatusInterval: Int,
         private val statusManager: StatusManager,
-        private val communicationManager: CommunicationManager<Message>
+        private val communicationManager: CommunicationManager<EbftMessage>
 ) {
     var lastSerial: Long = -1
     var lastSentTime: Long = Date(0L).time

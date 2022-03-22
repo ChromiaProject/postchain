@@ -7,12 +7,12 @@ import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.toHex
 import net.postchain.core.UserMistake
 import net.postchain.ebft.message.Identification
-import net.postchain.ebft.message.Message
+import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.SignedMessage
 import net.postchain.core.NodeRid
 import net.postchain.network.*
 
-class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketEncoder<Message> {
+class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketEncoder<EbftMessage> {
 
     override fun makeIdentPacket(forNode: NodeRid): ByteArray {
         val bytes = Identification(forNode.byteArray, blockchainRID, System.currentTimeMillis()).encode()
@@ -21,19 +21,19 @@ class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: Bl
         return SignedMessage(bytes, config.pubKey, signature.data).encode()
     }
 
-    override fun encodePacket(packet: Message): ByteArray {
+    override fun encodePacket(packet: EbftMessage): ByteArray {
         return encodeAndSign(packet, config.sigMaker())
     }
 }
 
-class EbftPacketEncoderFactory : XPacketEncoderFactory<Message> {
+class EbftPacketEncoderFactory : XPacketEncoderFactory<EbftMessage> {
 
-    override fun create(config: PeerCommConfiguration, blockchainRID: BlockchainRid): XPacketEncoder<Message> {
+    override fun create(config: PeerCommConfiguration, blockchainRID: BlockchainRid): XPacketEncoder<EbftMessage> {
         return EbftPacketEncoder(config, blockchainRID)
     }
 }
 
-class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<Message> {
+class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<EbftMessage> {
 
     override fun parseIdentPacket(bytes: ByteArray): IdentPacketInfo {
         val signedMessage = decodeSignedMessage(bytes)
@@ -50,11 +50,11 @@ class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<Mess
         return IdentPacketInfo(NodeRid(signedMessage.pubKey), message.blockchainRID, null)
     }
 
-    override fun decodePacket(pubKey: ByteArray, bytes: ByteArray): Message {
+    override fun decodePacket(pubKey: ByteArray, bytes: ByteArray): EbftMessage {
         return decodeAndVerify(bytes, pubKey, config.verifier())
     }
 
-    override fun decodePacket(bytes: ByteArray): Message? {
+    override fun decodePacket(bytes: ByteArray): EbftMessage? {
         return decodeAndVerify(bytes, config.verifier())
     }
 
@@ -64,9 +64,9 @@ class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<Mess
     }
 }
 
-class EbftPacketDecoderFactory : XPacketDecoderFactory<Message> {
+class EbftPacketDecoderFactory : XPacketDecoderFactory<EbftMessage> {
 
-    override fun create(config: PeerCommConfiguration): XPacketDecoder<Message> {
+    override fun create(config: PeerCommConfiguration): XPacketDecoder<EbftMessage> {
         return EbftPacketDecoder(config)
     }
 }

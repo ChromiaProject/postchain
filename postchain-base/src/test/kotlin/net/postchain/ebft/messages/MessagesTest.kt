@@ -13,7 +13,7 @@ class MessagesTest {
         val mess = GetBlockAtHeight(29)
         val encoded = mess.encode()
 
-        val result = Message.decode<GetBlockAtHeight>(encoded)
+        val result = EbftMessage.decode<GetBlockAtHeight>(encoded)
         assertEquals(mess.height, result.height)
     }
 
@@ -26,7 +26,7 @@ class MessagesTest {
         val mess = BlockSignature(blockRID, sig)
         val encoded = mess.encode()
 
-        val result = Message.decode<BlockSignature>(encoded)
+        val result = EbftMessage.decode<BlockSignature>(encoded)
         assertArrayEquals(mess.blockRID, result.blockRID)
         assertArrayEquals(mess.sig.subjectID, result.sig.subjectID)
         assertArrayEquals(mess.sig.data, result.sig.data)
@@ -43,7 +43,7 @@ class MessagesTest {
 
         val status = Status(blockRID, height, revolting, round, serial, state)
         val encoded = status.encode()
-        val expected = Message.decode<Status>(encoded)
+        val expected = EbftMessage.decode<Status>(encoded)
 
         assertArrayEquals(status.blockRID, expected.blockRID)
         assertEquals(status.height, expected.height)
