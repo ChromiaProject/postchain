@@ -156,7 +156,9 @@ class EthereumEventProcessor(
         }
     }
 
-    override fun cleanup() {}
+    override fun cleanup() {
+        web3c.shutdown()
+    }
 
     @Synchronized
     override fun isValidEventData(ops: Array<OpData>): Boolean {

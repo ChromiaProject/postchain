@@ -8,6 +8,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.peerId
 import net.postchain.base.withReadConnection
 import net.postchain.config.app.AppConfig
+import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 
 /**

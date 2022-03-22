@@ -2,7 +2,6 @@
 
 package net.postchain.gtx
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SigMaker
 import net.postchain.base.merkle.MerkleHashCalculator

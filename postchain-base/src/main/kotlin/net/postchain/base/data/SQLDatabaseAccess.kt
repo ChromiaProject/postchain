@@ -51,6 +51,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
+    protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
 
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
@@ -311,9 +312,6 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     // ---- Event and State ----
 
-    /**
-     * Fetch one event that matches the given hash (if height is correct)
-     */
     override fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): DatabaseAccess.EventInfo? {
         val sql = """SELECT block_height, position, hash, data 
             FROM ${tableEventLeafs(ctx, prefix)} 
@@ -334,7 +332,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      */
     override fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
         val sql = """SELECT block_height, hash, data, event_iid
-            FROM ${tableEvents(ctx, prefix)} 
+            FROM ${tableEventLeafs(ctx, prefix)} 
             WHERE block_height = ?
             ORDER BY event_iid """
 
@@ -346,7 +344,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      */
     override fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
         val sql = """SELECT block_height, hash, data, event_iid
-            FROM ${tableEvents(ctx, prefix)} 
+            FROM ${tableEventLeafs(ctx, prefix)} 
             WHERE block_height > ?
             ORDER BY event_iid
             LIMIT ? """
