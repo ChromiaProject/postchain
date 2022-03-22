@@ -4,14 +4,12 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.StorageBuilder
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -37,7 +35,7 @@ open class BaseBlockchainProcessManager(
     val nodeConfig = postchainContext.nodeConfig
     val connectionManager = postchainContext.connectionManager
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
-    val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
+    val storage get() = postchainContext.storage
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
@@ -107,7 +105,7 @@ open class BaseBlockchainProcessManager(
                         val engine = blockchainInfrastructure.makeBlockchainEngine( processName, blockchainConfig, x)
                         startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
-                        createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, null)
+                        createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                         startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
@@ -126,13 +124,12 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?): BlockchainProcess {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener).also {
+    protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, shouldProcessNewMessages).also {
             it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
             extensions.forEach { ext -> ext.connectProcess(it) }
             chainIdToBrid[chainId] = blockchainConfig.blockchainRid
         }
-        return blockchainProcesses[chainId]!!
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
@@ -189,8 +186,6 @@ open class BaseBlockchainProcessManager(
             t.cancel()
             t.purge()
         }
-
-        storage.close()
         logger.debug("[${nodeName()}]: Stopped BlockchainProcessManager")
     }
 

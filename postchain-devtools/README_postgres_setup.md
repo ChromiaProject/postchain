@@ -113,7 +113,7 @@ block_iid | block_height
 
 ## Copyright & License information
 
-Copyright (c) 2017-2021 ChromaWay AB. All rights reserved.
+Copyright (c) 2017-2022 ChromaWay AB. All rights reserved.
 
 This software can used either under terms of commercial license
 obtained from ChromaWay AB, or, alternatively, under the terms

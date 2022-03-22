@@ -26,7 +26,7 @@ class SQLModuleTest {
         val module = mf.makeModule(config, BlockchainRid.ZERO_RID)
 
         val appConfig = AppConfig(getDatabaseConfig())
-        val storage = StorageBuilder.buildStorage(appConfig, 0)
+        val storage = StorageBuilder.buildStorage(appConfig)
         withWriteConnection(storage, 1) {
             GTXSchemaManager.initializeDB(it)
             module.initializeDB(it)

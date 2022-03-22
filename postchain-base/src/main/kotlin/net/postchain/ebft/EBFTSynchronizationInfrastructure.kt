@@ -8,7 +8,6 @@ import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.message.Message
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
@@ -29,12 +28,12 @@ open class EBFTSynchronizationInfrastructure(
     val connectionManager = postchainContext.connectionManager
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
 
-    override fun shutdown() { }
+    override fun shutdown() {}
 
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener?
+            shouldProcessNewMessages: (Long) -> Boolean
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
 
@@ -53,8 +52,8 @@ open class EBFTSynchronizationInfrastructure(
                 engine,
                 buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
                 peerCommConfiguration,
-                heartbeatListener,
-                nodeConfig
+                nodeConfig,
+                shouldProcessNewMessages
         )
 
         /*
@@ -88,8 +87,8 @@ open class EBFTSynchronizationInfrastructure(
                         engine,
                         histCommManager,
                         historicPeerCommConfiguration,
-                        heartbeatListener,
                         nodeConfig,
+                        shouldProcessNewMessages
                 )
 
             }

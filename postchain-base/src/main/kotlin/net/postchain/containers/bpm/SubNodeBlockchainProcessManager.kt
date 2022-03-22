@@ -26,18 +26,16 @@ open class SubNodeBlockchainProcessManager(
     private val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
     private val heartbeatListeners = mutableMapOf<Long, HeartbeatListener>()
 
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?): BlockchainProcess {
-        val hbListener = if (nodeConfig.remoteConfigEnabled) {
-            RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager).also {
-                it.blockchainConfigProvider = blockchainConfigProvider
-                it.storage = storage
-                heartbeatManager.addListener(it)
-                heartbeatListeners[chainId] = it
-            }
-        } else {
-            null
-        }
-        return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, hbListener)
+    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
+        if (!nodeConfig.remoteConfigEnabled) return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
+        val hbListener = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager)
+                .also {
+                    it.blockchainConfigProvider = blockchainConfigProvider
+                    it.storage = storage
+                    heartbeatManager.addListener(it)
+                    heartbeatListeners[chainId] = it
+                }
+        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { hbListener.checkHeartbeat(it) }
     }
 
     override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {

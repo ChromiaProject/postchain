@@ -13,7 +13,6 @@ import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.message.*
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.core.NodeRid
 import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -139,7 +138,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             syncDebug("Start", blockHeight)
             lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
-                if (workerContext.heartbeatListener?.let { it.checkHeartbeat(lastBlockTimestamp) } != false) {
+                if (workerContext.shouldProcessMessages(lastBlockTimestamp)) {
                     refillJobs()
                     processMessages(exitCondition)
                     processDoneJobs()
@@ -662,7 +661,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            while (workerContext.heartbeatListener?.let { !it.checkHeartbeat(lastBlockTimestamp) } == true) {
+            while (!workerContext.shouldProcessMessages(lastBlockTimestamp)) {
                 if (!isProcessRunning() || exitCondition()) return
                 sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
             }

@@ -26,7 +26,7 @@ class BaseBlockBuilderTest {
     var bbs = BaseBlockStore()
     val tf = BaseTransactionFactory()
     val db: DatabaseAccess = mock {}
-    val ctx = BaseEContext(mock {}, 2L, 0, db)
+    val ctx = BaseEContext(mock {}, 2L, db)
 
     val dummyEventSink = object : TxEventSink {
         override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {

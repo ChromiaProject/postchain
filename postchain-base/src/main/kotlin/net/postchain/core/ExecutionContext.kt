@@ -26,7 +26,6 @@ interface AppContext {
 
 interface ExecutionContext : AppContext {
     val chainID: Long
-    val nodeID: Int // TODO: [et]: Remove it?
 }
 
 typealias EContext = ExecutionContext
@@ -63,7 +62,3 @@ const val NODE_ID_READ_ONLY = -1
  * Used when "node id" is not applicable to the blockchain configuration in question.
  */
 const val NODE_ID_NA = -3
-
-const val NODE_ID_TODO = -1
-
-

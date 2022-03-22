@@ -5,7 +5,6 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.message.Message
 import net.postchain.network.CommunicationManager
 
@@ -19,8 +18,8 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val engine: BlockchainEngine,
                     val communicationManager: CommunicationManager<Message>,
                     val peerCommConfiguration: PeerCommConfiguration,
-                    val heartbeatListener: HeartbeatListener?,
-                    val nodeConfig: NodeConfig
+                    val nodeConfig: NodeConfig,
+                    val shouldProcessMessages: (Long) -> Boolean
 ) {
     fun shutdown() {
         engine.shutdown()

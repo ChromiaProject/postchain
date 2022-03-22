@@ -4,7 +4,12 @@ package net.postchain.base
 
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.core.*
+import net.postchain.core.AppContext
+import net.postchain.core.BlockEContext
+import net.postchain.core.ByteArrayKey
+import net.postchain.core.EContext
+import net.postchain.core.Transaction
+import net.postchain.core.TxEContext
 import net.postchain.gtv.Gtv
 import java.sql.Connection
 
@@ -30,7 +35,6 @@ open class BaseAppContext(
 open class BaseEContext(
     override val conn: Connection,
     override val chainID: Long,
-    override val nodeID: Int,
     private val dbAccess: DatabaseAccess
 ) : EContext {
 

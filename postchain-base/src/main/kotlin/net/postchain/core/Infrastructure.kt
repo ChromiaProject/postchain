@@ -7,7 +7,6 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.network.common.ConnectionManager
 
 /**
@@ -21,7 +20,7 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener?
+            shouldProcessNewMessages: (Long) -> Boolean = { true }
     ): BlockchainProcess
 
     /**
@@ -77,6 +76,11 @@ interface BlockchainProcessConnectable {
     fun disconnectProcess(process: BlockchainProcess)
 }
 
+/**
+ * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
+ * (examples: BBB Ext and GTX Spec TX Ext).
+ * To see how it all goes together, see: doc/extension_classes.graphml
+ */
 interface SynchronizationInfrastructureExtension: BlockchainProcessConnectable, Shutdownable
 
 interface ApiInfrastructure: BlockchainProcessConnectable, Shutdownable
