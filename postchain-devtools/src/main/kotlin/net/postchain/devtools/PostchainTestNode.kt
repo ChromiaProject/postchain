@@ -39,7 +39,6 @@ class PostchainTestNode(
         isInitialized = true
 
         // We don't have specific test classes for Proc Man
-        // But some test debugging cannot really be done the normal way so we need this strange looking thing
         when (processManager) {
             is BaseBlockchainProcessManager -> {
                 processManager.insideATest = true

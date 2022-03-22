@@ -1,4 +1,4 @@
-package net.postchain.util
+package net.postchain.devtools.utils
 
 import mu.KLogging
 import net.postchain.common.toHex
@@ -10,7 +10,6 @@ import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtx.GTXTransactionFactory
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -49,7 +48,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
         createNodesFromSystemSetup(systemSetup)
 
         // Asserting all chains are started
-        // (This is a bit more complicated since we have different chains per node)
+        // (This is a bit more complicated since we might have different chains per node) // TODO: Olle: we usually want to run same chains on all nodes so this is prob overkill
         logger.debug("---2. Asserting all chains are started -------------------------")
         Awaitility.await().atMost(Duration.TEN_SECONDS)
                 .untilAsserted {
@@ -116,7 +115,9 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
         if(factoryMap.isEmpty()) {
             // Must create the TX factories before any transactions can be created
             systemSetup.blockchainMap.values.forEach { chainSetup ->
-                factoryMap[chainSetup.chainId.toLong()] = GTXTransactionFactory(chainSetup.rid, gtxTestModule, cryptoSystem)
+                if (chainSetup.shouldHaveNormalTx()) {
+                    factoryMap[chainSetup.chainId.toLong()] = GTXTransactionFactory(chainSetup.rid, gtxTestModule, cryptoSystem)
+                }
             }
         }
 
@@ -131,7 +132,16 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
                 logger.debug("+++++++++++++++++++++++++++++++++++++++++++")
                 systemSetup.nodeMap.values.forEach { node ->
                     node.chainsToSign.forEach { chain -> // For each chain this node is a signer of
-                        enqueueTx(chain.toLong(), currentTxId, txCache, block, blockIndex, nodes[node.sequenceNumber.nodeNumber])
+                        if (systemSetup.blockchainMap[chain]!!.shouldHaveNormalTx()) { // Only create tx if this chain should have it
+                            enqueueTx(
+                                chain.toLong(),
+                                currentTxId,
+                                txCache,
+                                block,
+                                blockIndex,
+                                nodes[node.sequenceNumber.nodeNumber]
+                            )
+                        }
                     }
                 }
             }
@@ -139,13 +149,15 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
             systemSetup.nodeMap.values.forEach { node ->
                 val nodeId = node.sequenceNumber.nodeNumber
                 node.chainsToSign.forEach { chain ->
-                    buildBlocks(nodeId, chain.toLong(), block) // The block we can buildgetPeerInfoMap ourselves
+                    if (systemSetup.blockchainMap[chain]!!.shouldHaveNormalTx()) { // No need to build block for chains without normal TX, has to do this via (low level) "buildBlocks()" method.
+                        buildBlocks(nodeId, chain.toLong(), block) // The block we can buildgetPeerInfoMap ourselves
+                    }
                 }
             }
         }
     }
 
-    private fun buildBlocks(nodeId: Int, chain: Long, block: Int) {
+    fun buildBlocks(nodeId: Int, chain: Long, block: Int) {
         logger.debug("-------------------------------------------")
         logger.info { "Node: $nodeId, chain: $chain -> Trigger block" }
         logger.debug("-------------------------------------------")
@@ -177,7 +189,9 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
 
         systemSetup.nodeMap.values.forEach { node ->
                     node.chainsToSign.forEach { chain ->
-                        assertChainForNode(node.sequenceNumber, chain.toLong(), expectedHeight, txPerBlock, txCache)
+                        if (systemSetup.blockchainMap[chain]!!.shouldHaveNormalTx()) { // No need to assert if we don't have generated test TXs
+                            assertChainForNode(node.sequenceNumber, chain.toLong(), expectedHeight, txPerBlock, txCache)
+                        }
                 }
         }
     }
@@ -196,11 +210,11 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
             logger.info { "Verifying height $height" }
 
             // Asserting uniqueness of block at height
-            val blockRids = queries.getBlockRid(height).get()
-            assertNotNull(blockRids)
+            val blockRid = queries.getBlockRid(height).get()
+            assertNotNull(blockRid)
 
             // Asserting txs count
-            val txs = queries.getBlockTransactionRids(blockRids).get()
+            val txs = queries.getBlockTransactionRids(blockRid).get()
            assertEquals(txPerBlock, txs.size)
 
             // Asserting txs content

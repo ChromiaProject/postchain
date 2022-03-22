@@ -74,11 +74,11 @@ data class SystemSetup(
          * Complex setup means we look at the blockchain configurations given, and figure out what nodes we need from that.
          * The [NodeSetup] we will create will know exactly what nodes they should connect to
          *
-         * @param blockchainConfList holds the complete blockchain configurations
+         * @param blockchainConfMap holds the complete blockchain configurations
          */
         fun buildComplexSetup(
-                blockchainConfList: List<BlockchainSetup>
-        ): SystemSetup  =  SystemSetupFactory.buildSystemSetup(blockchainConfList)
+            blockchainConfMap: Map<Int, String>
+        ): SystemSetup  =  SystemSetupFactory.buildSystemSetup(blockchainConfMap)
 
 
 
@@ -126,14 +126,25 @@ data class SystemSetup(
     }
 
     /**
-     * Get all [BlockchainSetup] that a node should sign
+     * Get all [BlockchainSetup] that a node should sign, in correct ICMF order
      */
     fun getBlockchainsANodeShouldRun(nodeNr: NodeSeqNumber): List<BlockchainSetup> {
-        return blockchainMap.values.filter { bc -> bc.signerNodeList.contains(nodeNr) }
+        val bcSetups = blockchainMap.values.filter { bc -> bc.signerNodeList.contains(nodeNr) }
+
+        val sortedChains = bcSetups
+        val retBcSetups = mutableListOf<BlockchainSetup>()
+        var debugStr = ""
+        sortedChains.forEach {
+            debugStr += ", ${it.chainId!!}"
+            val bcSetup = blockchainMap[it.chainId!!.toInt()]!!
+            retBcSetups.add(bcSetup)
+        }
+        System.out.println("-- Chain start order $debugStr")
+        return retBcSetups
     }
 
     /**
-     * Transform this [SystemSetup] instance into a list of [PostchainTestNode] s.
+     * Transform this [SystemSetup] instance into a list of [PostchainTestNode] s, and start everything.
      */
     fun toTestNodes(): List<PostchainTestNode> {
         val retList = mutableListOf<PostchainTestNode>()

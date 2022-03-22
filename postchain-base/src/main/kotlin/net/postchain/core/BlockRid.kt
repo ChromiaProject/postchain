@@ -5,6 +5,9 @@ import net.postchain.common.toHex
 
 /**
  * Wrapper type for a BC block's identifier (which is an array of bytes)
+ *
+ * Note1: Previously we used to use [BlockchainRid] even for Block RIDs, but that practice can cause mixup.
+ * Note2: We could use generics to abstract both [BlockRid] and [BlockchainRid] into one class.
  */
 data class BlockRid(val data: ByteArray) {
 
@@ -16,16 +19,16 @@ data class BlockRid(val data: ByteArray) {
 
     companion object {
 
-        fun buildFromHex(str: String) = BlockchainRid(str.hexStringToByteArray())
+        fun buildFromHex(str: String) = BlockRid(str.hexStringToByteArray())
 
         /**
          * For test, build a full length BC RID by repeating a single digit as a byte
          *
          * @param b is the byte to be repeated
          */
-        fun buildRepeat(b: Byte): BlockchainRid {
+        fun buildRepeat(b: Byte): BlockRid {
             val bArr = ByteArray(32) { b }
-            return BlockchainRid(bArr)
+            return BlockRid(bArr)
         }
     }
 
@@ -41,7 +44,7 @@ data class BlockRid(val data: ByteArray) {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as BlockchainRid
+        other as BlockRid
 
         if (!data.contentEquals(other.data)) return false
 

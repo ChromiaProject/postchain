@@ -7,11 +7,8 @@ import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.BaseTransactionQueue
-import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.gtv.GtvDictionary
-import net.postchain.gtv.GtvFactory
 
 open class BaseBlockchainInfrastructure(
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
@@ -47,21 +44,18 @@ open class BaseBlockchainInfrastructure(
      * @param eContext is the DB context
      * @param nodeId
      * @param chainId
-     * @param initialBlockchainRID is null or a blokchain RID
+     * @param configurationComponentMap is the map of components (of any type) we specifically set for this config.
      * @return the newly created [BlockchainConfiguration]
      */
     override fun makeBlockchainConfiguration(
             rawConfigurationData: ByteArray,
             eContext: EContext,
             nodeId: Int,
-            chainId: Long
+            chainId: Long,
     ): BlockchainConfiguration {
 
-        val gtvData = GtvFactory.decodeGtv(rawConfigurationData)
-        val brid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
-
-        val context = BaseBlockchainContext(brid, nodeId, chainId, subjectID)
-        val confData = BaseBlockchainConfigurationData(gtvData as GtvDictionary, context, blockSigMaker)
+        val confData = BaseBlockchainConfigurationData.build(
+            rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
 
         val bcfClass = Class.forName(confData.data[KEY_CONFIGURATIONFACTORY]!!.asString())
         val factory = (bcfClass.newInstance() as BlockchainConfigurationFactory)
@@ -75,7 +69,7 @@ open class BaseBlockchainInfrastructure(
     override fun makeBlockchainEngine(
             processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
-            restartHandler: RestartHandler
+            afterCommitHandler: AfterCommitHandler
     ): BaseBlockchainEngine {
 
         // We create a new storage instance to open new db connections for each engine
@@ -87,7 +81,7 @@ open class BaseBlockchainInfrastructure(
 
         return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue)
                 .apply {
-                    setRestartHandler(restartHandler)
+                    setAfterCommitHandler(afterCommitHandler)
                     initialize()
                 }
     }
@@ -150,10 +144,15 @@ open class BaseBlockchainInfrastructure(
      * @param className is the full name of the class to create an instance from
      * @return the instance as a subclass of [Shutdownable]
      */
-    @Suppress("UNCHECKED_CAST")
-    private fun <T : Shutdownable> getInstanceByClassName(className: String): T {
+    private inline fun <reified T : Shutdownable> getInstanceByClassName(className: String): T {
         val iClass = Class.forName(className)
         val ctor = iClass.getConstructor(PostchainContext::class.java)
-        return ctor.newInstance(postchainContext) as T
+        val instance = ctor.newInstance(postchainContext)
+        if (instance is T)
+            return instance
+        else
+            throw UserMistake(
+                    "Class ${className} does not support required interface"
+            )
     }
 }

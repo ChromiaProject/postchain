@@ -33,7 +33,7 @@ import java.util.logging.LogManager
  * may or may not use blockchain config files.
  *
  * If you need to provide unusual configurations in your config files, you can use [ConfigFileBasedIntegrationTest]
- * instead (but usually we can sneak in settings via [configOverrides] etc  even here, so it SHOULDN'T be needed)
+ * instead (but usually we can sneak in settings via [configOverrides] etc even here, so it SHOULDN'T be needed)
  */
 open class IntegrationTestSetup : AbstractIntegration() {
 
@@ -142,7 +142,6 @@ open class IntegrationTestSetup : AbstractIntegration() {
             }
         }
     }
-
 
     /**
      * Creates [count] nodes with the same configuration.

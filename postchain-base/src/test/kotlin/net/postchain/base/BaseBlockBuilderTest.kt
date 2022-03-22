@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import net.postchain.base.data.*
 import org.mockito.kotlin.mock
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
@@ -39,9 +40,10 @@ class BaseBlockBuilderTest {
     val dummy = ByteArray(32, { 0 })
     val subjects = arrayOf("test".toByteArray())
     val signer = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
+    val validator = BaseBlockWitnessProvider(cryptoSystem, signer, subjects)
     val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
-        subjects, signer, listOf(),  listOf(), false)
+        subjects, signer, validator, listOf(),  listOf(), false)
 
     @Test
     fun invalidMonotoneTimestamp() {
