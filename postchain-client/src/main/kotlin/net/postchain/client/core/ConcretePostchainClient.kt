@@ -4,6 +4,7 @@ package net.postchain.client.core
 
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
+import mu.KLogging
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.core.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -30,6 +31,8 @@ class ConcretePostchainClient(
         private val blockchainRID: BlockchainRid,
         private val defaultSigner: DefaultSigner?
 ) : PostchainClient {
+
+    companion object : KLogging()
 
     private val gson = JsonFactory.makeJson()
     private val serverUrl = resolver.getNodeURL(blockchainRID)
@@ -136,6 +139,7 @@ class ConcretePostchainClient(
                             }
                         }
                     } catch (e: Exception) {
+                        logger.warn(e) { "Unable to poll for new block" }
                         Thread.sleep(retrieveTxStatusIntervalMs)
                     }
                 }
