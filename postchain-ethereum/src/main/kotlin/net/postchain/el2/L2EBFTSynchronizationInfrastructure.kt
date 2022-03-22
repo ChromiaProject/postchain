@@ -27,7 +27,7 @@ fun NodeConfig.getEthereumUrl(): String {
 class EL2SynchronizationInfrastructureExtension(
     private val postchainContext: PostchainContext
 ) : SynchronizationInfrastructureExtension {
-    private var eventProcessors = mutableMapOf<String, EventProcessor>()
+    private val eventProcessors = mutableMapOf<String, EventProcessor>()
 
     companion object : KLogging()
 
@@ -59,26 +59,22 @@ class EL2SynchronizationInfrastructureExtension(
     override fun disconnectProcess(process: BlockchainProcess) {
         val blockchainRid = process.blockchainEngine.getConfiguration().blockchainRid.toHex()
         val eventProcessor = eventProcessors.remove(blockchainRid)
-
-        if (eventProcessor != null) {
-            eventProcessor.shutdown()
-        } else {
-            throw ProgrammerMistake("Blockchain $blockchainRid not attached")
-        }
+            ?: throw ProgrammerMistake("Blockchain $blockchainRid not attached")
+        eventProcessor.shutdown()
     }
 
     override fun shutdown() {}
 
     private fun initializeEventProcessor(eifConfig: EIFConfig, engine: BlockchainEngine): EventProcessor {
         val ethereumUrl = postchainContext.nodeConfigProvider.getConfiguration().getEthereumUrl()
-        if ("ignore".equals(ethereumUrl, ignoreCase = true)) {
+        return if ("ignore".equals(ethereumUrl, ignoreCase = true)) {
             logger.warn("EIF is running in disconnected mode. No events will be validated against ethereum.")
-            return NoOpEventProcessor()
+            NoOpEventProcessor()
         } else {
             val web3j = Web3j.build(Web3jServiceFactory.buildService(ethereumUrl))
             val web3c = Web3Connector(web3j, eifConfig.contract)
 
-            return EthereumEventProcessor(
+            EthereumEventProcessor(
                 web3c,
                 eifConfig.contract,
                 BigInteger.valueOf(100),
