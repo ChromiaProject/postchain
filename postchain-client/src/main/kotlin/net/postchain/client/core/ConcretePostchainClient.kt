@@ -118,7 +118,10 @@ class ConcretePostchainClient(
             }
 
             ConfirmationLevel.UNVERIFIED -> {
-                submitTransaction()
+                val statusLine = submitTransaction()
+                if (statusLine.statusCode in 400..499) {
+                    return TransactionResultImpl(REJECTED)
+                }
                 val httpGet = HttpGet("$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
                 httpGet.setHeader("Content-type", "application/json")
 
