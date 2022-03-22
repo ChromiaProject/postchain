@@ -2,22 +2,26 @@
 
 package net.postchain.ebft
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.toHex
-import net.postchain.core.UserMistake
-import net.postchain.ebft.message.Identification
-import net.postchain.ebft.message.EbftMessage
-import net.postchain.ebft.message.SignedMessage
+import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
-import net.postchain.network.*
+import net.postchain.core.UserMistake
+import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.Identification
+import net.postchain.ebft.message.SignedMessage
+import net.postchain.network.IdentPacketInfo
+import net.postchain.network.XPacketDecoder
+import net.postchain.network.XPacketDecoderFactory
+import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketEncoderFactory
 
 class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketEncoder<EbftMessage> {
 
     override fun makeIdentPacket(forNode: NodeRid): ByteArray {
-        val bytes = Identification(forNode.byteArray, blockchainRID, System.currentTimeMillis()).encode()
+        val bytes = Identification(forNode.byteArray, blockchainRID, System.currentTimeMillis())
         val sigMaker = config.sigMaker()
-        val signature = sigMaker.signMessage(bytes)
+        val signature = sigMaker.signMessage(bytes.encoded)
         return SignedMessage(bytes, config.pubKey, signature.data).encode()
     }
 

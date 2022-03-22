@@ -8,25 +8,30 @@ import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 
-class SignedMessage(val message: ByteArray, val pubKey: ByteArray, val signature: ByteArray): EbftMessage(MessageTopic.SIGNEDMESSAGE) {
+class SignedMessage(val message: EbftMessage, val pubKey: ByteArray, val signature: ByteArray) {
 
     companion object {
         fun decode(bytes: ByteArray): SignedMessage {
             try {
                 val gtvArray = GtvDecoder.decodeGtv(bytes) as GtvArray
 
-                return SignedMessage(gtvArray[0].asByteArray(), gtvArray[1].asByteArray(), gtvArray[2].asByteArray())
+                return SignedMessage(EbftMessage.decode(gtvArray[0].asByteArray()), gtvArray[1].asByteArray(), gtvArray[2].asByteArray())
             } catch (e: Exception) {
                 throw UserMistake("bytes ${bytes.toHex()} cannot be decoded", e)
             }
         }
     }
 
-    override fun toGtv(): Gtv {
-        return gtv(gtv(message), gtv(pubKey), gtv(signature))
+    fun encode(): ByteArray {
+        return GtvEncoder.encodeGtv(toGtv())
+    }
+
+    fun toGtv(): Gtv {
+        return gtv(gtv(message.encoded), gtv(pubKey), gtv(signature))
     }
 }
 

@@ -11,10 +11,9 @@ import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.SignedMessage
 
 fun encodeAndSign(message: EbftMessage, sigMaker: SigMaker): ByteArray {
-    val signingBytes = message.encode()
-    val signature = sigMaker.signMessage(signingBytes) // TODO POS-04_sig I THINK this is one of the cases where we actually sign the data
+    val signature = sigMaker.signMessage(message.encoded) // TODO POS-04_sig I THINK this is one of the cases where we actually sign the data
 
-    return SignedMessage(signingBytes, signature.subjectID, signature.data).encode()
+    return SignedMessage(message, signature.subjectID, signature.data).encode()
 }
 
 fun decodeSignedMessage(bytes: ByteArray): SignedMessage {
@@ -40,15 +39,15 @@ fun decodeAndVerify(bytes: ByteArray, pubKey: ByteArray, verify: Verifier): Ebft
 
 fun decodeAndVerify(bytes: ByteArray, verify: Verifier): EbftMessage? {
     val message = SignedMessage.decode(bytes)
-    val verified = verify(message.message, Signature(message.pubKey, message.signature))
+    val verified = verify(message.message.encoded, Signature(message.pubKey, message.signature))
 
-    return if (verified) EbftMessage.decode(message.message) else null
+    return if (verified) message.message else null
 }
 
 fun tryDecodeAndVerify(bytes: ByteArray, pubKey: ByteArray, verify: Verifier): EbftMessage? {
     val message = SignedMessage.decode(bytes)
     val verified = message.pubKey.contentEquals(pubKey)
-            && verify(message.message, Signature(message.pubKey, message.signature))
-    return if (verified) EbftMessage.decode(message.message)
+            && verify(message.message.encoded, Signature(message.pubKey, message.signature))
+    return if (verified) message.message
     else null
 }
