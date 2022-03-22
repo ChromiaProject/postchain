@@ -13,7 +13,8 @@ enum class MessageTopic(val value: Int) {
     GETBLOCKATHEIGHT(9),
     GETUNFINISHEDBLOCK(10),
     GETBLOCKHEADERANDBLOCK(11),
-    BLOCKHEADER(12);
+    BLOCKHEADER(12),
+    SIGNEDMESSAGE(13);
 
     fun toLong() = value.toLong()
 }

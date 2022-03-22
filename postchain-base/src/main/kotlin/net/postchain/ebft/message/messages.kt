@@ -8,11 +8,10 @@ import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 
-class SignedMessage(val message: ByteArray, val pubKey: ByteArray, val signature: ByteArray) {
+class SignedMessage(val message: ByteArray, val pubKey: ByteArray, val signature: ByteArray): EbftMessage(MessageTopic.SIGNEDMESSAGE) {
 
     companion object {
         fun decode(bytes: ByteArray): SignedMessage {
@@ -26,11 +25,7 @@ class SignedMessage(val message: ByteArray, val pubKey: ByteArray, val signature
         }
     }
 
-    fun encode(): ByteArray {
-        return GtvEncoder.encodeGtv(toGtv())
-    }
-
-    fun toGtv(): Gtv {
+    override fun toGtv(): Gtv {
         return gtv(gtv(message), gtv(pubKey), gtv(signature))
     }
 }
