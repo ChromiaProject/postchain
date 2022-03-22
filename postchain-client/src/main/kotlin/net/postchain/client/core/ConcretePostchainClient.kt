@@ -17,7 +17,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXDataBuilder
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.deferred
-import org.apache.http.client.methods.CloseableHttpResponse
+import org.apache.http.StatusLine
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
@@ -81,13 +81,14 @@ class ConcretePostchainClient(
             setHeader("Accept", "application/json")
             setHeader("Content-type", "application/json")
         }
-        val response = httpClient.execute(httpPost)
-        if (response.statusLine.statusCode != 200) {
-            throw UserMistake("Can not make query_gtx api call ")
+        httpClient.execute(httpPost).use { response ->
+            if (response.statusLine.statusCode != 200) {
+                throw UserMistake("Can not make query_gtx api call ")
+            }
+            val type = object : TypeToken<List<String>>() {}.type
+            val gtxHexCode = gson.fromJson<List<String>>(parseResponse(response.entity.content), type)?.first()
+            return GtvFactory.decodeGtv(gtxHexCode!!.hexStringToByteArray())
         }
-        val type = object : TypeToken<List<String>>() {}.type
-        val gtxHexCode = gson.fromJson<List<String>>(parseResponse(response.entity.content), type)?.first()
-        return GtvFactory.decodeGtv(gtxHexCode!!.hexStringToByteArray())
     }
 
     private fun doPostTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
@@ -95,18 +96,18 @@ class ConcretePostchainClient(
         val txJson = """{"tx" : $txHex}"""
         val txHashHex = txBuilder.getDigestForSigning().toHex()
 
-        fun submitTransaction(): CloseableHttpResponse {
+        fun submitTransaction(): StatusLine {
             val httpPost = HttpPost("$serverUrl/tx/$blockchainRIDHex")
             httpPost.setHeader("Content-type", "application/json")
             httpPost.entity = StringEntity(txJson)
-            return httpClient.execute(httpPost)
+            return httpClient.execute(httpPost).use { response -> response.statusLine }
         }
 
         when (confirmationLevel) {
 
             ConfirmationLevel.NO_WAIT -> {
-                val response = submitTransaction()
-                return if (response.statusLine.statusCode == 200) {
+                val statusLine = submitTransaction()
+                return if (statusLine.statusCode == 200) {
                     TransactionResultImpl(WAITING)
                 } else {
                     TransactionResultImpl(REJECTED)
@@ -121,16 +122,18 @@ class ConcretePostchainClient(
                 // keep polling till getting Confirmed or Rejected
                 (0 until retrieveTxStatusAttempts).forEach { _ ->
                     try {
-                        httpClient.execute(httpGet).entity?.let {
-                            val response = parseResponse(it.content)
-                            val jsonObject = gson.fromJson(response, JsonObject::class.java)
-                            val status = valueOf(jsonObject.get("status").asString.toUpperCase())
+                        httpClient.execute(httpGet).use { response ->
+                            response.entity?.let {
+                                val responseBody = parseResponse(it.content)
+                                val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
+                                val status = valueOf(jsonObject.get("status").asString.toUpperCase())
 
-                            if (status == CONFIRMED || status == REJECTED) {
-                                return TransactionResultImpl(status)
+                                if (status == CONFIRMED || status == REJECTED) {
+                                    return TransactionResultImpl(status)
+                                }
+
+                                Thread.sleep(retrieveTxStatusIntervalMs)
                             }
-
-                            Thread.sleep(retrieveTxStatusIntervalMs)
                         }
                     } catch (e: Exception) {
                         Thread.sleep(retrieveTxStatusIntervalMs)
