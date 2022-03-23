@@ -8,12 +8,7 @@ import net.postchain.core.BlockchainRid
 data class PipeID<RT: Route> (
         val route: RT,
         val brid: BlockchainRid
-) {
-    override fun toString(): String {
-        // TODO
-        return "PipeID(TODO)"
-    }
-}
+)
 
 interface IcmfPipe<RT: Route, PtrT> {
     val id: PipeID<RT>

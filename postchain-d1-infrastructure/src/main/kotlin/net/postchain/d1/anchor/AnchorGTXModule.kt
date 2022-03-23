@@ -13,14 +13,14 @@ import net.postchain.gtx.SimpleGTXModule
  * The Rell module define the "__anchor_block_header" operation for example, it is not known by this module.
  */
 class AnchorGTXModule : SimpleGTXModule<Unit>(
-    Unit, mapOf(), mapOf()
+        Unit, mapOf(), mapOf()
 ) {
 
     companion object {
         const val PREFIX: String = "sys.x.anchor" // This name should not clash with the Rell "anchor" module
     }
 
-    override fun initializeDB(ctx: EContext) { } // Don't need anything, the "real" anchor module creates tables etc
+    override fun initializeDB(ctx: EContext) {} // Don't need anything, the "real" anchor module creates tables etc
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
         return listOf() // We don't need any BBB extensions to make anchoring work

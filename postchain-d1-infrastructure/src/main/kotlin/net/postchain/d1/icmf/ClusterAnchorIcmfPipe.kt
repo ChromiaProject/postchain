@@ -17,9 +17,9 @@ class ClusterAnchorIcmfPipe(
         protected val storage: Storage,
         protected val chainID: Long
 ): IcmfPipe<ClusterAnchorRoute, Long> {
-    var highestSeen = -2L
-    var lastCommitted = -2L
-    val lock = Any()
+    private var highestSeen = -1L
+    private var lastCommitted = -1L
+    private val lock = Any()
 
     // TODO: prefetch packet in dispatcher instead of just setting height
     fun setHighestSeenHeight(height: Long) {
@@ -30,7 +30,7 @@ class ClusterAnchorIcmfPipe(
 
     override fun mightHaveNewPackets(): Boolean {
         synchronized(lock) {
-            return (highestSeen == -2L) || (highestSeen > lastCommitted)
+            return (highestSeen > lastCommitted)
         }
     }
 
