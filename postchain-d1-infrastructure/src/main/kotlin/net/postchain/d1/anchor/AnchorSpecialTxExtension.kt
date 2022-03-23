@@ -13,7 +13,6 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.OpData
-import java.lang.IllegalStateException
 
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
@@ -99,7 +98,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     ) {
         if (pipe.id.route != ClusterAnchorRoute) return
         var counter = 0
-        val blockchainRid = BlockchainRid(pipe.id.key.asByteArray())
+        val blockchainRid = pipe.id.brid
         var currentHeight: Long = getLastAnchoredHeight(blockchainRid)
         while (pipe.mightHaveNewPackets()) {
             val icmfPackage = pipe.fetchNext(currentHeight)

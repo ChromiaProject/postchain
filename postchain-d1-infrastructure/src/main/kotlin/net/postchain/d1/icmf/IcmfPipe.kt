@@ -3,11 +3,11 @@
 package net.postchain.d1.icmf
 
 import net.postchain.core.BlockEContext
-import net.postchain.gtv.Gtv
+import net.postchain.core.BlockchainRid
 
 data class PipeID<RT: Route> (
         val route: RT,
-        val key: Gtv
+        val brid: BlockchainRid
 ) {
     override fun toString(): String {
         // TODO

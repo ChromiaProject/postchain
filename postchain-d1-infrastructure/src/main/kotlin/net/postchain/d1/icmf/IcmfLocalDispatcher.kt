@@ -5,9 +5,7 @@ package net.postchain.d1.icmf
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
-import net.postchain.common.data.EMPTY_HASH
 import net.postchain.core.BlockchainRid
-import net.postchain.gtv.GtvByteArray
 
 class IcmfLocalDispatcher(val storage: Storage) {
     val receivers = mutableMapOf<Long, ClusterAnchorIcmfReceiver>()
@@ -17,7 +15,7 @@ class IcmfLocalDispatcher(val storage: Storage) {
         receivers[chainID] = receiver
         for ((c_chainID, brid) in chains) {
             if (c_chainID != chainID) {
-                val pipeID = PipeID(ClusterAnchorRoute, GtvByteArray(brid.data))
+                val pipeID = PipeID(ClusterAnchorRoute, brid)
                 receiver.localPipes[c_chainID] = ClusterAnchorIcmfPipe(
                         pipeID,
                         storage,
@@ -32,7 +30,7 @@ class IcmfLocalDispatcher(val storage: Storage) {
             DatabaseAccess.of(it).getBlockchainRid(it)!!
         }
 
-        val pipeID = PipeID(ClusterAnchorRoute, GtvByteArray(brid.data))
+        val pipeID = PipeID(ClusterAnchorRoute, brid)
         for ((recID, rec) in receivers) {
             if ((recID != chainID) && (chainID !in rec.localPipes)) {
                 rec.localPipes[chainID] = ClusterAnchorIcmfPipe(
