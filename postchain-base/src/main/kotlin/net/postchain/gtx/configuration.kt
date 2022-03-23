@@ -11,29 +11,34 @@ import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
 import nl.komponents.kovenant.Promise
 
-open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationData, val module: GTXModule)
+open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationData,
+                                      val module: GTXModule)
     : BaseBlockchainConfiguration(configData) {
     private val txFactory = GTXTransactionFactory(
-            effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize())
-    private val specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem,
-            txFactory
+        effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize()
     )
+    private lateinit var specTxHandler: GTXSpecialTxHandler // Note: this is NOT the same as the variable in Base.
 
     companion object : KLogging()
+
+    override fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
+        return module.makeBlockBuilderExtensions()
+    }
 
     override fun getTransactionFactory(): TransactionFactory {
         return txFactory
     }
 
     override fun getSpecialTxHandler(): SpecialTransactionHandler {
-        return specTxHandler
+        return specTxHandler // NOTE: not the same as "specialTransactionHandler" in Base
     }
 
     override fun initializeDB(ctx: EContext) {
         super.initializeDB(ctx)
-        logger.debug("Running initialize DB of class GTXBlockchainConfiguration")
+        logger.debug("Running initialize DB of class GTXBlockchainConfiguration using ctx chainIid: ${ctx.chainID}, BC RID: ${effectiveBlockchainRID.toShortHex()}")
         GTXSchemaManager.initializeDB(ctx)
         module.initializeDB(ctx)
+        specTxHandler = GTXSpecialTxHandler(module, effectiveBlockchainRID, cryptoSystem, txFactory)
     }
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {

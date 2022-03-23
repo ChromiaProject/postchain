@@ -2,11 +2,12 @@
 
 package net.postchain.client.core
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.SigMaker
 import net.postchain.core.TransactionStatus
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtx.GTXDataBuilder
 import nl.komponents.kovenant.Promise
 
@@ -45,7 +46,8 @@ interface PostchainClient {
     fun postTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception>
     fun postTransactionSync(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult
 
-    fun query(name: String, gtv: Gtv): Promise<Gtv, Exception>
+    fun query(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Promise<Gtv, Exception>
+    fun querySync(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Gtv
 
 }
 

@@ -2,8 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.base.BlockchainRid
-
 /**
  * BlockchainContext interface
  *

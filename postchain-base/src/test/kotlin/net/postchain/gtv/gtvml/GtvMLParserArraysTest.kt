@@ -5,7 +5,8 @@ package net.postchain.gtv.gtvml
 import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.gtv.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class GtvMLParserArraysTest {
 
@@ -45,20 +46,25 @@ class GtvMLParserArraysTest {
         assert(actual).isEqualTo(expected)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGtv_array_with_not_found_param_throws_exception() {
         val xml = "<array><string>hello</string><param type='int' key='UNKNOWN_KEY'/></array>"
+        assertThrows<IllegalArgumentException> {
         GtvMLParser.parseGtvML(
                 xml,
                 mapOf("num" to GtvInteger(42)))
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGtv_array_with_CASE_SENSITIVE_not_found_param_throws_exception() {
         val xml = "<array><string>hello</string><param type='int' key='CASE_SENSITIVE_KEY'/></array>"
-        GtvMLParser.parseGtvML(
+        assertThrows<IllegalArgumentException> {
+            GtvMLParser.parseGtvML(
                 xml,
-                mapOf("case_sensitive_key" to GtvInteger(42)))
+                mapOf("case_sensitive_key" to GtvInteger(42))
+            )
+        }
     }
 
     @Test

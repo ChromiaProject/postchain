@@ -70,13 +70,13 @@ class BaseStatusManager(
     override fun onStatusUpdate(nodeIndex: Int, status: NodeStatus) {
         val existingStatus = nodeStatuses[nodeIndex]
         if (
-            // A restarted peer will have its serial reset, but
-            // this will not cause a problem because the serial is
-            // initialized based on current time. See init block
-            // of this class
-            (status.serial > existingStatus.serial)
-            || (status.height > existingStatus.height)
-            || ((status.height == existingStatus.height) && (status.round > existingStatus.round))
+        // A restarted peer will have its serial reset, but
+        // this will not cause a problem because the serial is
+        // initialized based on current time. See init block
+        // of this class
+                (status.serial > existingStatus.serial)
+                || (status.height > existingStatus.height)
+                || ((status.height == existingStatus.height) && (status.round > existingStatus.round))
         ) {
             nodeStatuses[nodeIndex] = status
             recomputeStatus()
@@ -140,10 +140,10 @@ class BaseStatusManager(
             return false
         }
 
-        logger.debug("Advancing block height from ${myStatus.height} to $nextHeight ...")
+        logger.debug{ "Advancing block height from ${myStatus.height} to $nextHeight ..." }
         (myStatus.height until nextHeight).forEach { _ -> advanceHeight() }
 
-        logger.debug("Current state: ${myStatus.height}")
+        logger.debug{ "Current state: ${myStatus.height}" }
         return true
     }
 
@@ -271,9 +271,7 @@ class BaseStatusManager(
      * @return the intent
      */
     @Synchronized
-    override fun getBlockIntent(): BlockIntent {
-        return intent
-    }
+    override fun getBlockIntent(): BlockIntent = intent
 
     fun setBlockIntent(newIntent: BlockIntent) {
         intent = newIntent
@@ -420,6 +418,7 @@ class BaseStatusManager(
             if (count >= this.quorum) {
                 // check if we have (2f+1) commit signatures including ours, in that case we signal commit intent.
                 intent = CommitBlockIntent
+                logger.debug{ "setting CommitBlockIntent for idx: $myIndex " }
                 return true
             } else {
                 // otherwise we set intent to FetchCommitSignatureIntent with current blockRID and list of nodes which

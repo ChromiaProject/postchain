@@ -3,16 +3,25 @@
 package net.postchain.cli
 
 import net.postchain.PostchainNode
-import net.postchain.base.*
+import net.postchain.StorageBuilder
+import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.BaseConfigurationDataStore
+import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.BlockchainRidFactory
+import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
+import net.postchain.base.runStorageCommand
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainRid
 import net.postchain.core.EContext
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvFileReader
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
 import java.sql.Connection
@@ -42,11 +51,22 @@ object CliExecution {
             givenDependencies: List<BlockchainRelatedInfo> = listOf()
     ): BlockchainRid {
 
+        /**
+         * If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
+         */
+        fun getBrid(): BlockchainRid {
+            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+            val keyString = "brid.chainid." + chainId.toString()
+            val brid = if (appConfig.config.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.config.getString(keyString)) else
+                BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            return brid
+        }
+
         return runStorageCommand(nodeConfigFile, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
 
             fun init(): BlockchainRid {
-                val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+                val brid = getBrid()
                 db.initializeBlockchain(ctx, brid)
                 DependenciesValidator.validateBlockchainRids(ctx, givenDependencies)
                 BaseConfigurationDataStore.addConfigurationData(ctx, 0, blockchainConfig)
@@ -154,7 +174,7 @@ object CliExecution {
                     // throw error
                 } else if (!allowUnknownSigners) {
                     throw BadDataMistake(BadDataType.MISSING_PEERINFO,
-                            "Signer ${nodePubkey} does not exist in peerinfos.")
+                            "Signer $nodePubkey does not exist in peerinfos.")
                 }
             }
         }
@@ -208,10 +228,12 @@ object CliExecution {
     }
 
     fun runNode(nodeConfigFile: String, chainIds: List<Long>) {
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val storage = StorageBuilder.buildStorage(appConfig)
         val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(
-                AppConfig.fromPropertiesFile(nodeConfigFile))
+                appConfig) { storage }
 
-        with(PostchainNode(nodeConfigProvider)) {
+        with(PostchainNode(nodeConfigProvider, storage)) {
             chainIds.forEach { startBlockchain(it) }
         }
     }
@@ -256,9 +278,11 @@ object CliExecution {
 
     private fun tryCreateBasicDataSource(nodeConfigFile: String): Connection? {
         return try {
+            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+            val storage = StorageBuilder.buildStorage(appConfig)
             val nodeConfig = NodeConfigurationProviderFactory.createProvider(
-                    AppConfig.fromPropertiesFile(nodeConfigFile)
-            ).getConfiguration()
+                    appConfig
+            ) { storage }.getConfiguration()
 
             BasicDataSource().apply {
                 addConnectionProperty("currentSchema", nodeConfig.databaseSchema)

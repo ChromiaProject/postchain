@@ -5,7 +5,8 @@ package net.postchain.api.rest.json
 import com.google.gson.Gson
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.core.TransactionStatus
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
 
@@ -54,8 +55,10 @@ class ApiStatusSerializerTest {
         JSONAssert.assertEquals(expected, actual, JSONCompareMode.STRICT)
     }
 
-    @Test(expected = IllegalStateException::class)
+    @Test
     fun notRejectedStatusWithRejectedReason_will_throws_Exception() {
-        ApiStatus(TransactionStatus.WAITING, "Reject reason here")
+        assertThrows<java.lang.IllegalStateException> {
+            ApiStatus(TransactionStatus.WAITING, "Reject reason here")
+        }
     }
 }

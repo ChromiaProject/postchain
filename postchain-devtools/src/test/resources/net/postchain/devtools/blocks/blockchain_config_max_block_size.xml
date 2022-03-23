@@ -9,9 +9,11 @@
         blockdelay=1000 (milliseconds)
         -->
         <dict>
-            <!-- 1mb -->
+            <entry key="maxblocktransactions">
+                <int>4</int>
+            </entry>
             <entry key="maxblocksize">
-                <int>1048576</int>
+                <int>150</int>
             </entry>
             <entry key="name">
                 <string>net.postchain.base.BaseBlockBuildingStrategy</string>
@@ -25,7 +27,7 @@
         * Single node GTX: SingleNodeGtxBlockchainConfigurationFactory
         * Normal Gtx: GTXBlockchainConfigurationFactory
         -->
-        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+        <string>net.postchain.devtools.testinfra.TestBlockchainConfigurationFactory</string>
     </entry>
     <entry key="signers">
         <array>
@@ -44,6 +46,7 @@
             <entry key="modules">
                 <array>
                     <string>net.postchain.configurations.GTXTestModule</string>
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>
             </entry>
         </dict>

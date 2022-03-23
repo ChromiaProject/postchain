@@ -4,10 +4,10 @@ package net.postchain.integrationtest.multiple_chains
 
 import mu.KLogging
 import net.postchain.devtools.TxCache
-import net.postchain.util.GtxTxIntegrationTestSetup
+import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 
 /**
@@ -25,7 +25,7 @@ class ReadOnlyNodeConnectsToPeerWithDependencyTest : GtxTxIntegrationTestSetup()
      * One BC depend on another BC.
      */
     @Test
-    @Ignore // TODO: Olle POS-114 should be made to work.
+   @Disabled // TODO: Olle POS-114 should be made to work.
     fun testHappyDependency() {
         val chainList = listOf(1L, 2L)
 

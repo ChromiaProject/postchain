@@ -1,0 +1,109 @@
+// Copyright (c) 2020 ChromaWay AB. See README for license information.
+
+package net.postchain.network.peer
+
+import assertk.assert
+import assertk.assertions.containsExactly
+import net.postchain.base.BasePeerCommConfiguration
+import net.postchain.base.PeerInfo
+import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.base.secp256k1_derivePubKey
+import net.postchain.core.BlockchainRid
+import net.postchain.core.NodeRid
+import net.postchain.core.byteArrayKeyOf
+import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.network.util.peerInfoFromPublicKey
+import org.awaitility.Awaitility.await
+import org.awaitility.Duration
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+
+class DefaultPeerCommunicationManager2PeersIT {
+
+    private val cryptoSystem = SECP256K1CryptoSystem()
+    private val blockchainRid = BlockchainRid.buildRepeat(0)
+
+    private lateinit var peerInfo1: PeerInfo
+    private lateinit var peerInfo2: PeerInfo
+
+    private lateinit var context1: EbftIntegrationTestContext
+    private lateinit var context2: EbftIntegrationTestContext
+
+    private val privKey1 = cryptoSystem.getRandomBytes(32)
+    private val pubKey1 = secp256k1_derivePubKey(privKey1)
+
+    private val privKey2 = cryptoSystem.getRandomBytes(32)
+    private val pubKey2 = secp256k1_derivePubKey(privKey2)
+
+    @BeforeEach
+    fun setUp() {
+        peerInfo1 = peerInfoFromPublicKey(pubKey1)
+        peerInfo2 = peerInfoFromPublicKey(pubKey2)
+        val peers = arrayOf(peerInfo1, peerInfo2)
+
+        // Creating
+        context1 = EbftIntegrationTestContext(
+                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey1, pubKey1),
+                blockchainRid)
+
+        context2 = EbftIntegrationTestContext(
+                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey2, pubKey2),
+                blockchainRid)
+
+        // Initializing
+        context1.communicationManager.init()
+        context2.communicationManager.init()
+    }
+
+    @AfterEach
+    fun tearDown() {
+        context1.shutdown()
+        context2.shutdown()
+    }
+
+    @Test
+    fun twoPeers_SendsPackets_Successfully() {
+        // Waiting for all connections to be established
+        await().atMost(Duration.FIVE_SECONDS)
+                .untilAsserted {
+                    val actual1 = context1.connectionManager.getConnectedNodes(context1.chainId)
+                    assert(actual1).containsExactly(peerInfo2.pubKey.byteArrayKeyOf())
+
+                    val actual2 = context2.connectionManager.getConnectedNodes(context2.chainId)
+                    assert(actual2).containsExactly(peerInfo1.pubKey.byteArrayKeyOf())
+                }
+
+        // Sending packets
+        // * 1 -> 2
+        val packets1 = arrayOf(
+                GetBlockAtHeight(10),
+                GetBlockAtHeight(11))
+        context1.communicationManager.sendPacket(packets1[0], NodeRid(pubKey2))
+        context1.communicationManager.sendPacket(packets1[1], NodeRid(pubKey2))
+        // * 2 -> 1
+        val packets2 = arrayOf(
+                GetBlockAtHeight(20),
+                GetBlockAtHeight(21),
+                GetBlockAtHeight(22))
+        context2.communicationManager.sendPacket(packets2[0], NodeRid(pubKey1))
+        context2.communicationManager.sendPacket(packets2[1], NodeRid(pubKey1))
+        context2.communicationManager.sendPacket(packets2[2], NodeRid(pubKey1))
+
+        // * asserting
+        val actual1 = mutableListOf<Long>()
+        val actual2 = mutableListOf<Long>()
+        await().atMost(Duration.TEN_SECONDS)
+                .untilAsserted {
+                    // Peer1
+                    val actualPackets1 = context1.communicationManager.getPackets()
+                    actual1.addAll(actualPackets1.map { (it.second as GetBlockAtHeight).height })
+                    assert(actual1).containsExactly(20L, 21L, 22L)
+
+                    // Peer2
+                    val actualPackets2 = context2.communicationManager.getPackets()
+                    actual2.addAll(actualPackets2.map { (it.second as GetBlockAtHeight).height })
+                    assert(actual2).containsExactly(10L, 11L)
+                }
+    }
+}

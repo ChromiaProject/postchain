@@ -26,7 +26,7 @@ open class ReconnectionTest : ConfigFileBasedIntegrationTest() {
     protected fun <T> queries(node: PostchainTestNode, action: (BlockQueries) -> Promise<T, Exception>): T {
         return node
                 .getBlockchainInstance()
-                .getEngine()
+                .blockchainEngine
                 .getBlockQueries()
                 .run {
                     action(this)

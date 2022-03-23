@@ -2,11 +2,12 @@
 
 package net.postchain.base
 
-import net.postchain.base.merkle.Hash
+import net.postchain.common.data.Hash
+import net.postchain.core.BlockchainRid
 import net.postchain.core.BlockHeader
 import net.postchain.core.InitialBlockData
-import org.junit.Assert.*
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 class BaseBlockHeaderTest {
     val blockchainRID = BlockchainRid.ZERO_RID
@@ -39,17 +40,17 @@ class BaseBlockHeaderTest {
         val decodedHeader = BaseBlockHeader(headerRaw.rawData, cryptoSystem)
 
         assertTrue(
-                decodedHeader.checkIfAllBlockchainDependenciesArePresent(listOf(
+                decodedHeader.checkCorrectNumberOfDependencies(listOf(
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(1), "hello", 1L),
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(2), "World", 2L)
-                ))
+                ).size)
         )
         assertFalse(
-                decodedHeader.checkIfAllBlockchainDependenciesArePresent(listOf(
+                decodedHeader.checkCorrectNumberOfDependencies(listOf(
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(1), "hello", 1L),
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(2), "cruel", 2L),
                 BlockchainRelatedInfo( BlockchainRid.buildRepeat(3), "World", 3L)
-                ))
+                ).size)
         )
     }
 
@@ -58,7 +59,7 @@ class BaseBlockHeaderTest {
         val timestamp = 10000L + height
         val dependencies = createBlockchainDependencies()
         val blockData = InitialBlockData(blockchainRid, blockIID, chainId, prevBlockRid, height, timestamp, dependencies)
-        return BaseBlockHeader.make(SECP256K1CryptoSystem(), blockData, rootHash, timestamp)
+        return BaseBlockHeader.make(SECP256K1CryptoSystem(), blockData, rootHash, timestamp, mapOf())
     }
 
     private fun createBlockchainDependencies(): Array<Hash?>? {

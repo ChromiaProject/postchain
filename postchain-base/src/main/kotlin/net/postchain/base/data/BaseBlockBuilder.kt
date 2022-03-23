@@ -4,11 +4,10 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.merkle.Hash
+import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.*
-import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -23,9 +22,15 @@ import java.util.*
  * @property eContext Connection context including blockchain and node identifiers
  * @property store For database access
  * @property txFactory Used for serializing transaction data
+ * @property specialTxHandler is the main entry point for special transaction handling.
  * @property subjects Public keys for nodes authorized to sign blocks
- * @property blockchainDependencies holds the blockchain RIDs this blockchain depends on
  * @property blockSigMaker used to produce signatures on blocks for local node
+ * @property blockWitnessBuilderFactory
+ * @property blockchainRelatedInfoDependencyList holds the blockchain RIDs this blockchain depends on
+ * @property extensions are extensions to the block builder, usually helping with handling of special transactions.
+ * @property usingHistoricBRID
+ * @property maxBlockSize
+ * @property maxBlockTransactions
  */
 open class BaseBlockBuilder(
         blockchainRID: BlockchainRid,
@@ -36,7 +41,9 @@ open class BaseBlockBuilder(
         val specialTxHandler: SpecialTransactionHandler,
         val subjects: Array<ByteArray>,
         val blockSigMaker: SigMaker,
+        override val blockWitnessProvider: BlockWitnessProvider,
         val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
+        val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
         val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
         val maxBlockTransactions: Long = 100
@@ -56,7 +63,7 @@ open class BaseBlockBuilder(
      *
      * @return The Merkle tree root hash
      */
-    fun computeMerkleRootHash(): ByteArray {
+    override fun computeMerkleRootHash(): ByteArray {
         val digests = rawTransactions.map { txFactory.decodeTransaction(it).getHash() }
 
         val gtvArr = gtv(digests.map { gtv(it) })
@@ -64,11 +71,22 @@ open class BaseBlockBuilder(
         return gtvArr.merkleHash(calc)
     }
 
+    /**
+     * Adds an [TxEventSink] to this block builder.
+     */
     fun installEventProcessor(type: String, sink: TxEventSink) {
         if (type in eventProcessors) throw ProgrammerMistake("Conflicting event processors in block builder, type ${type}")
         eventProcessors[type] = sink
     }
 
+    /**
+     * Will send the given "data" to the correct event sink.
+     *
+     * @param ctxt is just the context
+     * @param type is the [TxEventSink] we want to send data to, if this sink isn't found, throw exception, b/c we do
+     *             not want these messages to accidentally get lost.
+     * @param data is the data we should send to the [TxEventSink]
+     */
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         when (val proc = eventProcessors[type]) {
             null -> throw ProgrammerMistake("Event sink for ${type} not found")
@@ -76,18 +94,41 @@ open class BaseBlockBuilder(
         }
     }
 
+    /**
+     * Retrieve initial block data and set block context.
+     *
+     * NOTE: For NEW blocks we must remember to add special transactions (old blocks should not be tampered with).
+     *
+     * @param partialBlockHeader might hold the header.
+     */
     override fun begin(partialBlockHeader: BlockHeader?) {
         if (partialBlockHeader == null && usingHistoricBRID) {
             throw UserMistake("Cannot build new blocks in historic mode (check configuration)")
         }
         super.begin(partialBlockHeader)
+        for (x in extensions) x.init(this.bctx, this)
         if (buildingNewBlock
                 && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.Begin)) {
-            appendTransaction(specialTxHandler.createSpecialTransaction(
-                    SpecialTransactionPosition.Begin,
-                    bctx
-            ))
+
+            val stx = specialTxHandler.createSpecialTransaction(
+                SpecialTransactionPosition.Begin,
+                bctx
+            )
+            appendTransaction(stx)
         }
+    }
+
+    open fun finalizeExtensions(): Map<String, Gtv> {
+        val m = mutableMapOf<String, Gtv>()
+        for (x in extensions) {
+            for (kv in x.finalize()) {
+                if (kv.key in m) {
+                    throw BlockValidationMistake("Block builder extensions clash: ${kv.key}")
+                }
+                m[kv.key] = kv.value
+            }
+        }
+        return m
     }
 
     /**
@@ -99,78 +140,7 @@ open class BaseBlockBuilder(
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp)
-    }
-
-    /**
-     * Validate block header:
-     * - check that previous block RID is used in this block
-     * - check for correct height
-     *   - If height is too low check if it's a split or dublicate
-     *   - If too high, it's from the future
-     * - check that timestamp occurs after previous blocks timestamp
-     * - check if all required dependencies are present
-     * - check for correct root hash
-     *
-     * @param blockHeader The block header to validate
-     */
-    override fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
-        val header = blockHeader as BaseBlockHeader
-
-        val computedMerkleRoot = computeMerkleRootHash()
-        val height = header.blockHeaderRec.getHeight()
-        val expectedHeight = initialBlockData.height
-        return when {
-            !header.prevBlockRID.contentEquals(initialBlockData.prevBlockRID) ->
-                ValidationResult(PREV_BLOCK_MISMATCH, "header.prevBlockRID != initialBlockData.prevBlockRID," +
-                        "( ${header.prevBlockRID.toHex()} != ${initialBlockData.prevBlockRID.toHex()} ), " +
-                        " height: $height and $expectedHeight ")
-
-            // These checks are for belts-and-suspenders. We shouldn't call this method
-            // if there's a height mismatch, and we probably don't. But if we do, let's
-            // check the stuff we can before reporting an error.
-            height > expectedHeight ->
-                ValidationResult(BLOCK_FROM_THE_FUTURE, "Expected height: $expectedHeight, got: $height, Block RID: ${header.blockRID.toHex()}")
-            height < expectedHeight -> {
-                val ourBlockRID = store.getBlockRID(ectx, height)
-                if (ourBlockRID!!.contentEquals(header.blockRID))
-                    ValidationResult(DUPLICATE_BLOCK, "Duplicate block at height ${height}, Block RID: ${header.blockRID.toHex()}")
-                else
-                    ValidationResult(SPLIT, "Blockchain split detected at height $height. Our block: ${ourBlockRID.toHex()}, " +
-                            "received block: ${header.blockRID.toHex()}")
-            }
-
-            bctx.timestamp >= header.timestamp ->
-                ValidationResult(INVALID_TIMESTAMP, "bctx.timestamp >= header.timestamp")
-
-            !header.checkIfAllBlockchainDependenciesArePresent(blockchainRelatedInfoDependencyList) ->
-                ValidationResult(MISSING_BLOCKCHAIN_DEPENDENCY, "checkIfAllBlockchainDependenciesArePresent() is false")
-
-            !Arrays.equals(header.blockHeaderRec.getMerkleRootHash(), computedMerkleRoot) -> // Do this last since most expensive check!
-                ValidationResult(INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeRootHash()")
-
-            else -> ValidationResult(OK)
-        }
-    }
-
-    /**
-     * Validates the following:
-     *  - Witness is of a correct implementation
-     *  - The signatures are valid with respect to the block being signed
-     *  - The number of signatures exceeds the threshold necessary to deem the block itself valid
-     *
-     *  @param blockWitness The witness to be validated
-     *  @throws ProgrammerMistake Invalid BlockWitness implementation
-     */
-    override fun validateWitness(blockWitness: BlockWitness): Boolean {
-        if (!(blockWitness is MultiSigBlockWitness)) {
-            throw ProgrammerMistake("Invalid BlockWitness impelmentation.")
-        }
-        val witnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, _blockData!!.header, subjects, getBFTRequiredSignatureCount(subjects.size))
-        for (signature in blockWitness.getSignatures()) {
-            witnessBuilder.applySignature(signature)
-        }
-        return witnessBuilder.isComplete()
+        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, finalizeExtensions())
     }
 
     /**
@@ -248,21 +218,35 @@ open class BaseBlockBuilder(
             throw ProgrammerMistake("Block is not finalized yet.")
         }
 
-        val witnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, _blockData!!.header, subjects, getBFTRequiredSignatureCount(subjects.size))
-        witnessBuilder.applySignature(blockSigMaker.signDigest(_blockData!!.header.blockRID)) // TODO: POS-04_sig
-        return witnessBuilder
+        return blockWitnessProvider.createWitnessBuilderWithOwnSignature(_blockData!!.header)
     }
 
+    /**
+     * When this is really a new block there won't be a [BlockHeader] until after this step.
+     *
+     * NOTE: For NEW blocks we add special transactions (old block data must not be modified).
+     *
+     * @return the new [BlockHeader] we are about to create.
+     */
     override fun finalizeBlock(): BlockHeader {
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End))
             appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.End, bctx))
         return super.finalizeBlock()
     }
 
+    /**
+     * In this case we already have the [BlockHeader] meaning it's a block we got from someone else, and thus
+     * we will validate it.
+     *
+     * @param blockHeader is the header for the block we are working on.
+     */
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
         if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End) && !haveSpecialEndTransaction)
             throw BadDataMistake(BadDataType.BAD_BLOCK,"End special transaction is missing")
         super.finalizeAndValidate(blockHeader)
+
+        // TODO: validate returned values!
+        finalizeExtensions()
     }
 
     private fun checkSpecialTransaction(tx: Transaction) {
@@ -293,14 +277,14 @@ open class BaseBlockBuilder(
     }
 
     override fun appendTransaction(tx: Transaction) {
-        checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
-        super.appendTransaction(tx)
-        blockSize += tx.getRawData().size
-        if (blockSize >= maxBlockSize) {
+        if (blockSize + tx.getRawData().size > maxBlockSize) {
             throw BlockValidationMistake("block size exceeds max block size ${maxBlockSize} bytes")
         } else if (transactions.size >= maxBlockTransactions) {
             throw BlockValidationMistake("Number of transactions exceeds max ${maxBlockTransactions} transactions in block")
         }
+        checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
+        super.appendTransaction(tx)
+        blockSize += tx.getRawData().size
     }
 
 }

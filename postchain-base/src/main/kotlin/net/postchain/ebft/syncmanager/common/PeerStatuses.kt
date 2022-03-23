@@ -1,7 +1,7 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 
 /**
  * Keeps track of peer's statuses. The currently trackeed statuses are
@@ -36,11 +36,13 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
      * height + 1). They also serve as a discovery mechanism, in which we become
      * aware of our neiborhood.
      */
-    private class KnownState(val params: FastSyncParameters) {
+    class KnownState(val params: FastSyncParameters): KLogging() {
         private enum class State {
             BLACKLISTED, UNRESPONSIVE, SYNCABLE, DRAINED
         }
+
         private var state = State.SYNCABLE
+
         /**
          * [maybeLegacy] and [confirmedModern] are transitional and should be
          * removed once most nodes have upgraded, because then
@@ -49,25 +51,72 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
          */
         private var maybeLegacy = false
         private var confirmedModern = false
-        private var unresponsiveTime: Long = System.currentTimeMillis()
-        private var drainedTime: Long = System.currentTimeMillis()
+        private var unresponsiveTime: Long = 0
+        private var drainedTime: Long = 0
         private var drainedHeight: Long = -1
+        private var errorCount = 0
+        private var timeOfLastError: Long = 0
 
-        fun isBlacklisted() = state == State.BLACKLISTED
-        fun isUnresponsive() = state == State.UNRESPONSIVE
+        fun isBlacklisted() = isBlacklisted(System.currentTimeMillis())
+        fun isBlacklisted(now: Long): Boolean {
+            if (state == State.BLACKLISTED && (now > timeOfLastError + params.blacklistingTimeoutMs)) {
+                // Alex suggested that peers should be given new chances often
+                if (logger.isDebugEnabled) {
+                    logger.debug("Peer timed out of blacklist")
+                }
+                this.state = State.SYNCABLE
+                this.timeOfLastError = 0
+                this.errorCount = 0
+            }
+
+            return state == State.BLACKLISTED
+        }
+
+        fun isUnresponsive(now: Long): Boolean {
+            if (state == State.UNRESPONSIVE && (now > unresponsiveTime + params.resurrectUnresponsiveTime)) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Peer timed out of unresponsiveness")
+                }
+                this.state = State.SYNCABLE
+                this.unresponsiveTime = 0
+            }
+
+            return state == State.UNRESPONSIVE
+        }
+
+        fun isDrained(now: Long): Boolean {
+            if (state == State.DRAINED && (now > drainedTime + params.resurrectDrainedTime)) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Peer timed out of drained")
+                }
+                this.state = State.SYNCABLE
+                this.drainedTime = 0
+                this.drainedHeight = -1
+            }
+
+            return state == State.DRAINED
+        }
+
         fun isMaybeLegacy() = !confirmedModern && maybeLegacy
         fun isConfirmedModern() = confirmedModern
         fun isSyncable(h: Long) = state == State.SYNCABLE || state == State.DRAINED && drainedHeight >= h
 
-        fun drained(height: Long) {
+        /**
+         * @param height is where the node's highest block can be found (but higher than that the node has no blocks).
+         */
+        fun drained(height: Long, now: Long) {
             state = State.DRAINED
-            drainedTime = System.currentTimeMillis()
+            drainedTime = now
             if (height > drainedHeight) {
                 drainedHeight = height
             }
         }
+
         fun headerReceived(height: Long) {
             if (state == State.DRAINED && height > drainedHeight) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Got header. Setting new fast sync peer status SYNCABLE")
+                }
                 state = State.SYNCABLE
             }
         }
@@ -76,126 +125,203 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
             // there might be more blocks to fetch now. But
             // we won't resurrect unresponsive peers.
             if (state == State.DRAINED && height > drainedHeight) {
+                if (logger.isDebugEnabled) {
+                    logger.debug("Got status. Setting new fast sync peer status SYNCABLE")
+                }
                 state = State.SYNCABLE
             }
         }
-        fun unresponsive() {
+
+        /**
+         * Note: this will get into conflict with connection manager, which also has a way of dealing with
+         * unresponsive peers.
+         */
+        fun unresponsive(desc: String, now: Long) {
             if (this.state != State.UNRESPONSIVE) {
                 this.state = State.UNRESPONSIVE
-                unresponsiveTime = System.currentTimeMillis()
+                unresponsiveTime = now
+                if (logger.isDebugEnabled) {
+                    logger.debug("Setting new fast sync peer status UNRESPONSIVE: $desc")
+                }
             }
         }
+
         fun maybeLegacy(isLegacy: Boolean) {
             if (!this.confirmedModern) {
+                if (this.maybeLegacy != isLegacy) {
+                    if (logger.isDebugEnabled) {
+                        logger.debug("Setting new fast sync peer status maybeLegacy: $isLegacy")
+                    }
+                }
                 this.maybeLegacy = isLegacy
             }
         }
         fun confirmedModern() {
+            if (logger.isDebugEnabled) {
+                if (!this.confirmedModern) {
+                    logger.debug("Setting new fast sync peer status CONFIRMED MODERN")
+                }
+            }
             this.confirmedModern = true
             this.maybeLegacy = false
         }
-        fun blacklist() {
-            this.state = State.BLACKLISTED
-        }
-        fun resurrect(now: Long) {
-            if (state == State.DRAINED && drainedTime + params.resurrectDrainedTime < now ||
-                    isUnresponsive() && unresponsiveTime + params.resurrectUnresponsiveTime < now) {
-                state = State.SYNCABLE
+
+        fun blacklist(desc: String, now: Long) {
+            if (this.state != State.BLACKLISTED) {
+                errorCount++
+                if (errorCount >= params.maxErrorsBeforeBlacklisting) {
+                    logger.warn("Blacklisting peer: $desc")
+                    this.state = State.BLACKLISTED
+                    this.timeOfLastError = now
+                } else {
+                    if (logger.isTraceEnabled) {
+                        logger.trace("Not blacklisting peer: $desc")
+                    }
+                    this.timeOfLastError = now
+                }
             }
         }
-    }
-    private val statuses = HashMap<XPeerID, KnownState>()
 
-    private fun resurrectDrainedAndUnresponsivePeers() {
-        val now = System.currentTimeMillis()
+        fun resurrect(now: Long) {
+            isUnresponsive(now)
+            isDrained(now)
+        }
+
+        override fun toString(): String {
+            return "state: ${state.name}, legacy: $maybeLegacy, modern: $confirmedModern"
+        }
+    }
+
+    private val statuses = HashMap<NodeRid, KnownState>()
+
+    private fun resurrectDrainedAndUnresponsivePeers(now: Long) {
         statuses.forEach {
             it.value.resurrect(now)
         }
     }
 
-    fun exclNonSyncable(height: Long): Set<XPeerID> {
-        resurrectDrainedAndUnresponsivePeers()
-        return statuses.filterValues { !it.isSyncable(height) || it.isMaybeLegacy() }.keys
+    /**
+     * @param height is the height we need
+     * @param now is our current time (we want to send it to keep this pure = testable)
+     * @return the nodes we SHOULDN'T sync
+     */
+    fun exclNonSyncable(height: Long, now: Long): Set<NodeRid> {
+        resurrectDrainedAndUnresponsivePeers(now)
+        val excluded = statuses.filter {
+            val state = it.value
+            val syncable = state.isSyncable(height) && !state.isMaybeLegacy()
+            !syncable
+        }
+        return excluded.keys
+
     }
 
-    fun getLegacyPeers(height: Long): Set<XPeerID> {
+    fun getLegacyPeers(height: Long): Set<NodeRid> {
         return statuses.filterValues { it.isMaybeLegacy() && it.isSyncable(height) }.keys
     }
 
-    fun drained(peerId: XPeerID, height: Long) {
+    fun drained(peerId: NodeRid, height: Long, now: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
+            logger.warn("We tried to get block from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
             return
         }
-        status.drained(height)
+        if (logger.isDebugEnabled) {
+            if (!status.isDrained(now)) { // Don't worry about resurrect b/c we drain later
+                logger.debug("Setting new fast sync peer status DRAINED at height: $height")
+            }
+        }
+        status.drained(height, now)
     }
 
-    fun headerReceived(peerId: XPeerID, height: Long) {
+    fun headerReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
+            logger.warn("We got a header from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
             return
         }
         status.headerReceived(height)
     }
 
-    fun statusReceived(peerId: XPeerID, height: Long) {
+    fun statusReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
+            logger.warn("Got status from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
             return
         }
         status.statusReceived(height)
     }
 
-    fun unresponsive(peerId: XPeerID) {
+    /**
+     * @param peerId is the peer that's not responding
+     * @param desc is the text we will log, surrounding the circumstances.
+     *             (This could be caused by a bug, if so it has to be traced)
+     */
+    fun unresponsive(peerId: NodeRid, desc: String) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
             return
         }
-        status.unresponsive()
+        status.unresponsive(desc, System.currentTimeMillis())
     }
 
-    fun setMaybeLegacy(peerId: XPeerID, isLegacy: Boolean) {
+    fun setMaybeLegacy(peerId: NodeRid, isLegacy: Boolean) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
             return
+        }
+        if (logger.isDebugEnabled) {
+            if (status.isMaybeLegacy() != isLegacy) {
+                logger.debug("Setting new fast sync peer: ${peerId.shortString()} status maybe legacy: $isLegacy.")
+            }
         }
         status.maybeLegacy(isLegacy)
     }
 
-    fun isMaybeLegacy(peerId: XPeerID): Boolean {
+    fun isMaybeLegacy(peerId: NodeRid): Boolean {
         return stateOf(peerId).isMaybeLegacy()
     }
-    fun isConfirmedModern(peerId: XPeerID): Boolean {
+    fun isConfirmedModern(peerId: NodeRid): Boolean {
         return stateOf(peerId).isConfirmedModern()
     }
-    fun confirmModern(peerId: XPeerID) {
+    fun confirmModern(peerId: NodeRid) {
         stateOf(peerId).confirmedModern()
     }
 
-    fun blacklist(peerId: XPeerID) {
-        stateOf(peerId).blacklist()
+    /**
+     * Might blacklist this peer depending on number of failures.
+     *
+     * @param peerId is the peer that's behaving badly
+     * @param desc is the text we will log, surrounding the circumstances.
+     *             (This could be caused by a bug, if so it has to be traced)
+     */
+    fun maybeBlacklist(peerId: NodeRid, desc: String) {
+        stateOf(peerId).blacklist(desc, System.currentTimeMillis())
     }
 
-    private fun stateOf(peerId: XPeerID): KnownState {
+    private fun stateOf(peerId: NodeRid): KnownState {
         return statuses.computeIfAbsent(peerId) { KnownState(params) }
     }
 
     /**
      * Adds the peer if it doesn't exist. Do nothing if it exists.
      */
-    fun addPeer(peerId: XPeerID) {
+    fun addPeer(peerId: NodeRid) {
         stateOf(peerId)
     }
 
-    fun isBlacklisted(xPeerId: XPeerID): Boolean {
+    fun isBlacklisted(xPeerId: NodeRid): Boolean {
         return stateOf(xPeerId).isBlacklisted()
     }
 
-    fun countSyncable(height: Long): Int {
-        return statuses.count { it.value.isSyncable(height) }
+    fun getSyncable(height: Long): Set<NodeRid> {
+        return statuses.filterValues { it.isSyncable(height) }.map {it.key}.toSet()
     }
 
     fun clear() {
+        if (logger.isDebugEnabled) {
+            logger.debug("clearing all fast sync peer statuses")
+        }
         statuses.clear()
     }
 }

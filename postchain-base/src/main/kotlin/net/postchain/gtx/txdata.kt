@@ -2,11 +2,10 @@
 
 package net.postchain.gtx
 
-import mu.KLogging
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
 import net.postchain.base.SigMaker
-import net.postchain.base.merkle.Hash
+import net.postchain.common.data.Hash
 import net.postchain.base.merkle.MerkleHashCalculator
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Signature
@@ -16,7 +15,6 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.factory.GtxTransactionDataFactory
 import net.postchain.gtx.serializer.GtxTransactionBodyDataSerializer
 import net.postchain.gtx.serializer.GtxTransactionDataSerializer
-import java.lang.IllegalArgumentException
 import java.util.*
 
 object GtxBase {

@@ -3,7 +3,8 @@
 package net.postchain.base
 
 import mu.KLogging
-import net.postchain.base.merkle.Hash
+import net.postchain.core.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.ProgrammerMistake
 

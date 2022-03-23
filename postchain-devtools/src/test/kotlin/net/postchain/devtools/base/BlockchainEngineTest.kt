@@ -11,14 +11,14 @@ import net.postchain.devtools.testinfra.ErrorTransaction
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.testinfra.UnexpectedExceptionTransaction
-import org.junit.Assert.*
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 class BlockchainEngineTest : IntegrationTestSetup() {
 
-    @Before
+    @BeforeEach
     fun setTestInfrastructure() {
         configOverrides.setProperty("infrastructure", "base/test")
     }
@@ -27,7 +27,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     fun testBuildBlock() {
         val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config.xml")
         val node = nodes[0]
-        val txQueue = node.getBlockchainInstance().getEngine().getTransactionQueue()
+        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
 
         txQueue.enqueue(TestTransaction(0))
         buildBlockAndCommit(node)
@@ -106,7 +106,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
 
         val blockData = createBlockWithTxAndCommit(node0, 2)
 
-        val bc = node1.getBlockchainInstance().getEngine().getConfiguration() as TestBlockchainConfiguration
+        val bc = node1.getBlockchainInstance().blockchainEngine.getConfiguration() as TestBlockchainConfiguration
         // Make the tx invalid on follower. Should discard whole block
         bc.transactionFactory.specialTxs[0] = ErrorTransaction(0, true, false)
         try {
@@ -143,34 +143,32 @@ class BlockchainEngineTest : IntegrationTestSetup() {
         assertEquals(-1, getBestHeight(node1))
     }
 
+    // an oversized block it doesn't work to produce.
+    // To test this, you need to nodes to run different configurations (i.e. tweak node 0 to
+    // allow higher limit) OR produce this block manually e.g. just taking a bunch of transactions
     @Test
-    fun testMaxBlockTransactionsFail() {
-        val (node0, node1) = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_max_block_transaction.xml")
-        val blockBuilder = createBlockWithTx(node0, 8)
-        val blockData = blockBuilder.getBlockData()
+    fun testMaxBlockTransactions() {
+        val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config_max_block_transaction.xml")
+        val node = nodes[0]
+        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
 
-        try {
-            loadUnfinishedAndCommit(node1, blockData)
-        } catch (e: Exception) {
+        // send 100 transactions
+        for (i in 1..100) {
+            txQueue.enqueue(TestTransaction(i))
         }
 
-        assertEquals(-1, getBestHeight(node1))
-    }
+        // commit 3 times
+        buildBlockAndCommit(node) // height 0
+        buildBlockAndCommit(node) // height 1
+        buildBlockAndCommit(node) // height 2
+        val riDsAtHeight0 = getTxRidsAtHeight(node, 0)
+        val riDsAtHeight1 = getTxRidsAtHeight(node, 1)
+        val riDsAtHeight2 = getTxRidsAtHeight(node, 2)
 
-    // TODO: [et]: Fix this dead/silent/not-producing-anything test
-    @Test
-    @Ignore
-    fun testMaxBlockTransactionsOk() {
-        val (node0, node1) = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_max_block_transaction.xml")
-        val blockBuilder = createBlockWithTx(node0, 6)
-        val blockData = blockBuilder.getBlockData()
-
-        try {
-            loadUnfinishedAndCommit(node1, blockData)
-        } catch (e: Exception) {
-        }
-
-        assertEquals(0, getBestHeight(node1))
+        // due to we set configuration maxblocktransaciton is 7, so only 7 transactions expected for each committed
+        assertEquals(7, riDsAtHeight0.size)
+        assertEquals(7, riDsAtHeight1.size)
+        assertEquals(7, riDsAtHeight2.size)
     }
 
     private fun createBlockWithTxAndCommit(node: PostchainTestNode, txCount: Int, startId: Int = 0): BlockData {
@@ -180,7 +178,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     private fun createBlockWithTx(node: PostchainTestNode, txCount: Int, startId: Int = 0): BlockBuilder {
-        val engine = node.getBlockchainInstance().getEngine()
+        val engine = node.getBlockchainInstance().blockchainEngine
         (startId until startId + txCount).forEach {
             engine.getTransactionQueue().enqueue(TestTransaction(it))
         }
@@ -188,7 +186,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     private fun loadUnfinishedAndCommit(node: PostchainTestNode, blockData: BlockData) {
-        val (blockBuilder, exception) = node.getBlockchainInstance().getEngine().loadUnfinishedBlock(blockData)
+        val (blockBuilder, exception) = node.getBlockchainInstance().blockchainEngine.loadUnfinishedBlock(blockData)
         if (exception != null) {
             throw exception
         } else {

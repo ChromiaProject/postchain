@@ -5,6 +5,7 @@ import net.postchain.core.BlockBuilder
 import net.postchain.core.BlockWitness
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.MultiSigBlockWitnessBuilder
+import net.postchain.debug.BlockTrace
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 
@@ -53,7 +54,7 @@ abstract class AbstractIntegration {
     protected fun buildBlockAndCommit(node: PostchainTestNode) {
         commitBlock(node
                 .getBlockchainInstance()
-                .getEngine()
+                .blockchainEngine
                 .buildBlock()
                 .first)
     }
@@ -70,17 +71,18 @@ abstract class AbstractIntegration {
             i++
         }
         val witness = witnessBuilder.getWitness()
+        blockBuilder.setBTrace(BlockTrace.build(null, blockHeader.blockRID, null))
         blockBuilder.commit(witness)
         return witness
     }
 
     protected fun getTxRidsAtHeight(node: PostchainTestNode, height: Long): Array<ByteArray> {
-        val blockQueries = node.getBlockchainInstance().getEngine().getBlockQueries()
+        val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
         val blockRid = blockQueries.getBlockRid(height).get()
         return blockQueries.getBlockTransactionRids(blockRid!!).get().toTypedArray()
     }
 
     protected fun getBestHeight(node: PostchainTestNode): Long {
-        return node.getBlockchainInstance().getEngine().getBlockQueries().getBestHeight().get()
+        return node.getBlockchainInstance().blockchainEngine.getBlockQueries().getBestHeight().get()
     }
 }

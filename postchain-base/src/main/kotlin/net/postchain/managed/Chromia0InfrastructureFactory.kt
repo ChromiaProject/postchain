@@ -2,25 +2,21 @@
 
 package net.postchain.managed
 
+import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
-import net.postchain.debug.NodeDiagnosticContext
 
+/**
+ * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.
+ */
 class Chromia0InfrastructureFactory: ManagedEBFTInfrastructureFactory() {
 
     override fun makeProcessManager(
-            nodeConfigProvider: NodeConfigurationProvider,
+            postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,
-            blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-
-        return Chromia0BlockchainProcessManager(
-                blockchainInfrastructure,
-                nodeConfigProvider,
-                blockchainConfigurationProvider,
-                nodeDiagnosticContext)
+        return Chromia0BlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
     }
 }

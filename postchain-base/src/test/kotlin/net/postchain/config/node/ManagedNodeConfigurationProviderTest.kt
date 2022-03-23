@@ -4,16 +4,12 @@ package net.postchain.config.node
 
 import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
-import assertk.assertions.isEqualTo
-import assertk.assertions.isSameAs
-import com.nhaarman.mockitokotlin2.doReturn
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
-import net.postchain.base.peerId
 import net.postchain.common.hexStringToByteArray
-import net.postchain.config.app.AppConfig
-import net.postchain.network.x.XPeerID
-import org.junit.Test
+import net.postchain.core.NodeRid
+import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 
@@ -26,27 +22,6 @@ class ManagedNodeConfigurationProviderTest {
     private val peerInfo2 = PeerInfo("127.0.0.1", 9902, "CCCC".hexStringToByteArray(), Instant.EPOCH)
     private val peerInfo2New = PeerInfo("127.0.0.1", 9902, "CCCC".hexStringToByteArray(), Instant.now())
 
-    @Test
-    fun testGetConfiguration() {
-        // Expected
-        val expected = arrayOf(peerInfo0, peerInfo1)
-        val actual = mapOf(
-                peerInfo1.peerId() to peerInfo1,
-                peerInfo0.peerId() to peerInfo0)
-
-        // Mock
-        val appConfig = AppConfig(mock())
-        val mockStorage = MockStorage.mock(expected)
-
-        // SUT
-        val provider = ManualNodeConfigurationProvider(appConfig) { mockStorage }
-
-        // Assert
-        val config = provider.getConfiguration()
-        assertk.assert(config.appConfig).isSameAs(appConfig)
-        assertk.assert(config.peerInfoMap).isEqualTo(actual)
-    }
-
     /**
      * Implementation of most tests
      */
@@ -56,7 +31,7 @@ class ManagedNodeConfigurationProviderTest {
             expected: Array<PeerInfo>
     ) {
         // Mock
-        val mockStorage = MockStorage.mock(manual)
+        val mockStorage = MockStorage.mockAppContext(manual)
 
         val mockManagedPeerInfos: PeerInfoDataSource = mock {
             on { getPeerInfos() } doReturn managed
@@ -105,7 +80,7 @@ class ManagedNodeConfigurationProviderTest {
     @Test
     fun getPeerInfoCollection__provider_returns_managedPeerInfos_iff_managedDataSource_isNotNull() {
         // Mock
-        val mockStorage = MockStorage.mock(emptyArray())
+        val mockStorage = MockStorage.mockAppContext(emptyArray())
 
         val mockManagedPeerInfos: PeerInfoDataSource = mock {
             on { getPeerInfos() } doReturn arrayOf(peerInfo0)
@@ -212,7 +187,7 @@ class ManagedNodeConfigurationProviderTest {
         assertEquals(expectedMerged, result.toSet())
     }
 
-    fun p(s: Int): XPeerID {
-        return XPeerID(byteArrayOf(s.toByte()))
+    fun p(s: Int): NodeRid {
+        return NodeRid(byteArrayOf(s.toByte()))
     }
 }

@@ -17,8 +17,8 @@ import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 /**
@@ -86,7 +86,7 @@ class DictToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -111,7 +111,7 @@ class DictToMerkleProofTreeTest {
                 "  ])$ln" +
                 "])$ln"
 
-        Assert.assertEquals(TreeHelper.stripWhite(expectedSerialization), TreeHelper.stripWhite(serialize.toString())) // Not really needed, Can be removed
+       assertEquals(TreeHelper.stripWhite(expectedSerialization), TreeHelper.stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
         val deserialized = proofFactory.deserialize(serialize)
@@ -121,7 +121,7 @@ class DictToMerkleProofTreeTest {
         val deserializedPrintout = printer.printNode(pbtDes)
         //println(deserializedPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+       assertEquals(expectedTree.trim(), deserializedPrintout.trim())
     }
 
 
@@ -193,7 +193,7 @@ class DictToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -232,7 +232,7 @@ class DictToMerkleProofTreeTest {
                 "  ])$ln" +
                 "])$ln"
 
-        Assert.assertEquals(TreeHelper.stripWhite(expectedSerialization), TreeHelper.stripWhite(serialize.toString())) // Not really needed, Can be removed
+       assertEquals(TreeHelper.stripWhite(expectedSerialization), TreeHelper.stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
         val deserialized = proofFactory.deserialize(serialize)
@@ -242,7 +242,7 @@ class DictToMerkleProofTreeTest {
         val deserializedPrintout = printer.printNode(pbtDes)
         //println(deserializedPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+       assertEquals(expectedTree.trim(), deserializedPrintout.trim())
 
     }
 
@@ -280,7 +280,7 @@ class DictToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -321,7 +321,7 @@ class DictToMerkleProofTreeTest {
                 "  ])$ln" +
                 "])$ln"
 
-        Assert.assertEquals(TreeHelper.stripWhite(expectedSerialization), TreeHelper.stripWhite(serialize.toString())) // Not really needed, Can be removed
+       assertEquals(TreeHelper.stripWhite(expectedSerialization), TreeHelper.stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
         val deserialized = proofFactory.deserialize(serialize)
@@ -331,7 +331,7 @@ class DictToMerkleProofTreeTest {
         val deserializedPrintout = printer.printNode(pbtDes)
         println(deserializedPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+       assertEquals(expectedTree.trim(), deserializedPrintout.trim())
 
     }
 
@@ -366,7 +366,7 @@ class DictToMerkleProofTreeTest {
         val resultPrintout = printer.printNode(pbt)
         //println(resultPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), resultPrintout.trim())
+       assertEquals(expectedTree.trim(), resultPrintout.trim())
 
         // Make sure the merkle root stays the same as without proof
         val merkleProofRoot = merkleProofTree.merkleHash(calculator)
@@ -394,7 +394,7 @@ class DictToMerkleProofTreeTest {
                 "  ])$ln" +
                 "])$ln"
 
-        Assert.assertEquals(TreeHelper.stripWhite(expectedSerialization), TreeHelper.stripWhite(serialize.toString())) // Not really needed, Can be removed
+       assertEquals(TreeHelper.stripWhite(expectedSerialization), TreeHelper.stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
         val deserialized = proofFactory.deserialize(serialize)
@@ -404,7 +404,7 @@ class DictToMerkleProofTreeTest {
         val deserializedPrintout = printer.printNode(pbtDes)
         //println(deserializedPrintout)
 
-        Assert.assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+       assertEquals(expectedTree.trim(), deserializedPrintout.trim())
     }
 
 }

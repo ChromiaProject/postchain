@@ -3,6 +3,7 @@
 package net.postchain.devtools
 
 import mu.KLogging
+import mu.Marker
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
@@ -12,19 +13,27 @@ import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
-import net.postchain.ebft.worker.ValidatorWorker
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import org.apache.commons.configuration2.MapConfiguration
+import org.apache.logging.log4j.core.impl.Log4jLogEvent
+import org.apache.logging.log4j.core.impl.LogEventFactory
+import org.apache.logging.log4j.message.Message
+import org.apache.logging.log4j.message.SimpleMessage
 import org.awaitility.kotlin.await
-import org.junit.After
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.TestInfo
+import org.slf4j.LoggerFactory
+import java.util.logging.LogManager
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
  * may or may not use blockchain config files.
  *
  * If you need to provide unusual configurations in your config files, you can use [ConfigFileBasedIntegrationTest]
- * instead (but usually we can sneak in settings via [configOverrides] etc  even here, so it SHOULDN'T be needed)
+ * instead (but usually we can sneak in settings via [configOverrides] etc even here, so it SHOULDN'T be needed)
  */
 open class IntegrationTestSetup : AbstractIntegration() {
 
@@ -41,34 +50,72 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     companion object : KLogging()
 
-    @After
+    open val awaitDebugLog = false
+
+    /**
+     * If we want to monitor how long we are waiting and WHAT we are waiting for, then we can turn on this flag.
+     *
+     * NOTE: The reason we do simple System Out is because running multiple nodes with a common logfile
+     * and enforced waiting is a situation unique for tests, so it's better if these "logs" look different from "real" logs.
+     */
+    fun awaitLog(dbg: String) {
+        if (awaitDebugLog) {
+            logger.info("TEST: $dbg")
+        }
+    }
+
+    // For important test info we always want to log
+    fun testLog(dbg: String) {
+        logger.info("TEST: $dbg")
+    }
+
+    @BeforeEach
+    fun setup(testInfo: TestInfo) {
+        logger.info("Starting test: ${testInfo.displayName}")
+    }
+
+    @AfterEach
     override fun tearDown() {
         try {
-            logger.debug("Integration test -- TEARDOWN")
+            logger.info("Integration test -- TEARDOWN")
             nodes.forEach { it.shutdown() }
             nodes.clear()
             nodeMap.clear()
-            logger.debug("Closed nodes")
+            logger.info("Closed nodes")
             peerInfos = null
             expectedSuccessRids = mutableMapOf()
             configOverrides.clear()
             TestBlockchainRidCache.clear()
-            logger.debug("teadDown() done")
+            logger.info("tearDown() done")
         } catch (t: Throwable) {
             logger.error("tearDown() failed", t)
         }
     }
 
+    /**
+     * Easy to forget we have two caches (due to legacy, maybe a bad practice?)
+     */
+    protected fun updateCache(nodeSetup: NodeSetup, testNode: PostchainTestNode) {
+        nodeMap[nodeSetup.sequenceNumber] = testNode
+        val nodeId = nodeSetup.sequenceNumber.nodeNumber
+
+        if (nodeId < nodes.size) {
+            nodes[nodeId] = testNode // We'll overwrite the existing test node
+        } else {
+            nodes.add(nodeId, testNode) // We'll add the test node to the list, but should be on the correct position.
+        }
+    }
+
     protected fun strategy(node: PostchainTestNode): OnDemandBlockBuildingStrategy {
         return node
-                .getBlockchainInstance()
-                .getEngine()
-                .getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
+            .getBlockchainInstance()
+            .blockchainEngine
+            .getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
     }
 
     // TODO: [et]: Check out nullability for return value
     protected fun enqueueTx(node: PostchainTestNode, data: ByteArray, expectedConfirmationHeight: Long): Transaction? {
-        val blockchainEngine = node.getBlockchainInstance().getEngine()
+        val blockchainEngine = node.getBlockchainInstance().blockchainEngine
         val tx = blockchainEngine.getConfiguration().getTransactionFactory().decodeTransaction(data)
         blockchainEngine.getTransactionQueue().enqueue(tx)
 
@@ -95,7 +142,6 @@ open class IntegrationTestSetup : AbstractIntegration() {
             }
         }
     }
-
 
     /**
      * Creates [count] nodes with the same configuration.
@@ -138,44 +184,102 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * @param systemSetup is the map of what the test setup looks like.
      */
     protected fun createNodesFromSystemSetup(
-            sysSetup: SystemSetup,
-            preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+        sysSetup: SystemSetup,
+        preWipeDatabase: Boolean = true,
+        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ) {
         this.systemSetup = sysSetup
-        val peerList = systemSetup.toPeerInfoList()
-        configOverrides.setProperty("testpeerinfos", peerList.toTypedArray())
 
-        val testName: String = this::class.java.simpleName ?: "NoName"   // Get subclass name or dummy
-        for (nodeSetup in systemSetup.nodeMap.values) {
-            val nodeConfigProvider = NodeConfigurationProviderGenerator.buildFromSetup(testName, configOverrides, nodeSetup, systemSetup, setupAction)
-            nodeSetup.configurationProvider = nodeConfigProvider
-            val newPTNode = nodeSetup.toTestNodeAndStartAllChains(systemSetup, preWipeDatabase)
+        // 1. generate node config for all [NodeSetup]
+        createNodeConfProvidersAndAddToNodeSetup(sysSetup, configOverrides, setupAction)
 
-            // TODO: not nice to mutate the "nodes" object like this, should return the list of PTNodes instead for testability
-            nodes.add(newPTNode)
-            nodeMap[nodeSetup.sequenceNumber] = newPTNode
+        // 2. start all nodes and all chains
+        val testNodeMap = startAllTestNodesAndAllChains(sysSetup, preWipeDatabase)
+        for (nodeId in testNodeMap.keys) {
+            val tmpNode = testNodeMap[nodeId]!!
+            updateCache(sysSetup.nodeMap[nodeId]!!, tmpNode)
         }
-        // Await FastSynch to complete. This is to prevent a situation where
-        // 1. Test starts all nodes
-        // 2. post a transaction
-        // 3. await block 0 (with timeout of 10 seconds)
-        // 4. Fastsync doesn't succeed within a timeout of X>10 seconds
-        // This can happen in rare occations. It's common enough to happen at avery
-        // other -Pci build on travis.
-        // This code waits for sync on all signer nodes before returning in step 1.
-        systemSetup.nodeMap.values.forEach {
-            val ns = it
-            it.chainsToSign.forEach {
-                val process = nodes[ns.sequenceNumber.nodeNumber].getBlockchainInstance(it.toLong())
+
+        // 3. FastSynch
+        awaitFastSynch(sysSetup, testNodeMap)
+    }
+
+    /**
+     * (Kalle's description)
+     * Await FastSynch to complete. This is to prevent a situation where:
+     * 1. Test starts all nodes
+     * 2. post a transaction
+     * 3. await block 0 (with timeout of 10 seconds)
+     * 4. Fastsync doesn't succeed within a timeout of X>10 seconds
+     *
+     * This can happen in rare occations. It's common enough to happen at avery other -Pci build on travis.
+     * This code waits for sync on all signer nodes before returning in step 1.
+     */
+    protected fun awaitFastSynch(
+        sysSetup: SystemSetup,
+        testNodeMap: Map<NodeSeqNumber, PostchainTestNode>
+    ) {
+        sysSetup.nodeMap.values.forEach { nodeSetup ->
+            nodeSetup.chainsToSign.forEach { chainIid ->
+                val process = testNodeMap[nodeSetup.sequenceNumber]!!.getBlockchainInstance(chainIid.toLong())
                 await.until {
-                    if (process is ValidatorWorker) {
+                    if (process is ValidatorBlockchainProcess) {
                         !process.syncManager.isInFastSync()
                     } else {
                         true
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Create the [PostchainTestNode], start everything, and return them
+     */
+    protected fun startAllTestNodesAndAllChains(
+        sysSetup: SystemSetup,
+        preWipeDatabase: Boolean
+    ): Map<NodeSeqNumber, PostchainTestNode> {
+        val retMap = mutableMapOf<NodeSeqNumber, PostchainTestNode>()
+        for (nodeSetup in sysSetup.nodeMap.values) {
+            retMap[nodeSetup.sequenceNumber] = nodeSetup.toTestNodeAndStartAllChains(systemSetup, preWipeDatabase)
+        }
+        return retMap.toMap()
+    }
+
+    /**
+     * @return subclass name or dummy
+     */
+    protected fun getTestName() = this::class.java.simpleName ?: "NoName"
+
+    /**
+     * Override this in your test to add config overrides directly on the [NodeSetup] (for node specific configs).
+     */
+    open fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+
+    }
+
+    /**
+     * Generates config for all [NodeSetup] objects
+     */
+    protected fun createNodeConfProvidersAndAddToNodeSetup(
+        sysSetup: SystemSetup,
+        confOverrides: MapConfiguration,
+        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+    ) {
+        val peerList = sysSetup.toPeerInfoList()
+        confOverrides.setProperty("testpeerinfos", peerList.toTypedArray())
+
+        val testName: String = getTestName()
+        for (nodeSetup in sysSetup.nodeMap.values) {
+            val nodeConfigProvider = NodeConfigurationProviderGenerator.buildFromSetup(
+                testName,
+                confOverrides,
+                nodeSetup,
+                sysSetup,
+                setupAction
+            )
+            nodeSetup.configurationProvider = nodeConfigProvider
         }
     }
 
@@ -187,7 +291,8 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * @param systemSetup is holds the configuration of all the nodes and chains
      * @return list of [PostchainTestNode] s.
      */
-    protected fun createMultiChainNodesFromSystemSetup(systemSetup: SystemSetup) = systemSetup.toTestNodes().toTypedArray()
+    protected fun createMultiChainNodesFromSystemSetup(systemSetup: SystemSetup) =
+        systemSetup.toTestNodes().toTypedArray()
 
     /**
      * Takes a [SystemSetup] and adds [NodeConfigurationProvider] to all [NodeSetup] in it.
@@ -228,18 +333,40 @@ open class IntegrationTestSetup : AbstractIntegration() {
     fun createPeerInfos(nodeCount: Int): Array<PeerInfo> = createPeerInfosWithReplicas(nodeCount, 0)
 
     protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
+        buildBlock(nodes, chainId, toHeight, *txs)
+    }
+
+    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
+        buildBlockNoWait(nodes, chainId, toHeight, *txs)
+        awaitHeight(nodes, chainId, toHeight)
+    }
+
+    protected fun buildBlockNoWait(
+        nodes: List<PostchainTestNode>,
+        chainId: Long,
+        toHeight: Long,
+        vararg txs: Transaction
+    ) {
         nodes.forEach {
             it.enqueueTxs(chainId, *txs)
         }
         nodes.forEach {
             it.buildBlocksUpTo(chainId, toHeight)
         }
-        awaitHeight(chainId, toHeight)
     }
 
-    protected fun awaitHeight(chainId: Long, height: Long) {
+    protected open fun awaitHeight(chainId: Long, height: Long) {
+        awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
+        awaitHeight(nodes, chainId, height)
+        awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
+    }
+
+    protected fun awaitHeight(nodes: List<PostchainTestNode>, chainId: Long, height: Long) {
         nodes.forEach {
+            awaitLog("++++++ AWAIT node RID: ${NameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
             it.awaitHeight(chainId, height)
+            awaitLog("++++++ WAIT OVER node RID: ${NameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
         }
     }
+
 }

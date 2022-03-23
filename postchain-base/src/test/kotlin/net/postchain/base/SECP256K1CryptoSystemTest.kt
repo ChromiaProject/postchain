@@ -3,9 +3,9 @@
 package net.postchain.base
 
 import net.postchain.common.toHex
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import java.util.*
 
 class SECP256K1CryptoSystemTest {
@@ -21,8 +21,8 @@ class SECP256K1CryptoSystemTest {
             val data = "Hello".toByteArray()
             val signature = sigMaker.signMessage(data) // TODO: POS-04_sig ???
             val verifier = SUT.makeVerifier()
-            assertTrue("Positive test failed for privkey ${privKey.toHex()}", verifier(data, signature))
-            assertFalse("Negative test failed for privkey ${privKey.toHex()}", verifier("Hell0".toByteArray(), signature))
+            assertTrue(verifier(data, signature), "Positive test failed for privkey ${privKey.toHex()}")
+            assertFalse(verifier("Hell0".toByteArray(), signature), "Negative test failed for privkey ${privKey.toHex()}")
         }
     }
 }

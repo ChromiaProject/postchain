@@ -5,11 +5,10 @@ package net.postchain.devtools
 import com.google.gson.GsonBuilder
 import mu.KLogging
 import net.postchain.StorageBuilder
-import net.postchain.base.BlockchainRid
 import net.postchain.base.gtxml.TestType
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.core.NODE_ID_TODO
+import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.devtools.KeyPairHelper.privKey
@@ -51,27 +50,15 @@ class TestLauncher : IntegrationTestSetup() {
 
     private fun createTestNode(configFile: String, blockchainConfigFile: String): PostchainTestNode {
         val appConfig = AppConfig.fromPropertiesFile(configFile)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
-
-        /*
-        // TODO: Fix this hack
-        nodeConfig.setProperty("api.port", -1) // FYI: Disabling Rest API in test mode
-        nodeConfig.setProperty("node.0.id", nodeConfig.getProperty("test.node.0.id"))
-        nodeConfig.setProperty("node.0.host", nodeConfig.getProperty("test.node.0.host"))
-        nodeConfig.setProperty("node.0.port", nodeConfig.getProperty("test.node.0.port"))
-        nodeConfig.setProperty("node.0.pubkey", nodeConfig.getProperty("test.node.0.pubkey"))
-        nodeConfig.setProperty("database.schema", nodeConfig.getProperty("test.database.schema"))
-        */
+        val storage = StorageBuilder.buildStorage(appConfig, true)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
 
         val blockchainConfig = GtvMLParser.parseGtvML(
                 File(blockchainConfigFile).readText())
 
         val chainId = nodeConfigProvider.getConfiguration().activeChainIds.first().toLong()
 
-        // Wiping of database
-        StorageBuilder.buildStorage(appConfig, NODE_ID_TODO, true).close()
-
-        return PostchainTestNode(nodeConfigProvider).apply {
+        return PostchainTestNode(nodeConfigProvider, storage).apply {
             val blockchainRID = addBlockchain(chainId, blockchainConfig)
             mapBlockchainRID(chainId, blockchainRID)
             startBlockchain()
@@ -195,7 +182,7 @@ class TestLauncher : IntegrationTestSetup() {
                     failures.add(TransactionFailure(blockHeight.toLong(), it.txIdx,
                             Exception("Transaction should fail")))
                 } else if (!present && !it.isFailure) {
-                    val engine = node.getBlockchainInstance().getEngine()
+                    val engine = node.getBlockchainInstance().blockchainEngine
                     val reason = engine.getTransactionQueue().getRejectionReason(txRID)
                     failures.add(TransactionFailure(blockHeight.toLong(), it.txIdx, reason))
                 }

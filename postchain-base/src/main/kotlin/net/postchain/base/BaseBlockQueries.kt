@@ -6,7 +6,9 @@ import mu.KLogging
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
+import nl.komponents.kovenant.Kovenant
 import nl.komponents.kovenant.Promise
+import nl.komponents.kovenant.buildDispatcher
 import nl.komponents.kovenant.task
 
 /**
@@ -29,26 +31,36 @@ class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witnes
  * @param chainID Blockchain identifier
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
-open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfiguration,
-                            private val storage: Storage,
-                            private val blockStore: BlockStore,
-                            private val chainId: Long,
-                            private val mySubjectId: ByteArray
+open class BaseBlockQueries(
+        private val blockchainConfiguration: BlockchainConfiguration,
+        private val storage: Storage,
+        private val blockStore: BlockStore,
+        private val chainId: Long,
+        private val mySubjectId: ByteArray
 ) : BlockQueries {
 
     companion object : KLogging()
+
+    // create a separate Kovenant context to make sure
+    // other tasks do not compete with BlockQueries
+    val kctx = Kovenant.createContext {
+        workerContext.dispatcher {
+            name = "BlockQueries"
+            concurrentTasks = storage.readConcurrency
+        }
+    }
 
     /**
      * Wrapper function for a supplied function with the goal of opening a new read-only connection, catching any exceptions
      * on the query being run and logging them, and finally closing the connection
      */
     protected fun <T> runOp(operation: (EContext) -> T): Promise<T, Exception> {
-        return task {
+        return task(kctx) {
             val ctx = storage.openReadConnection(chainId)
             try {
                 operation(ctx)
             } catch (e: Exception) {
-                logger.trace("An error occurred", e)
+                logger.trace(e) { "An error occurred" }
                 throw e
             } finally {
                 storage.closeReadConnection(ctx)
@@ -68,6 +80,12 @@ open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfi
     override fun getBestHeight(): Promise<Long, Exception> {
         return runOp {
             blockStore.getLastBlockHeight(it)
+        }
+    }
+
+    override fun getLastBlockTimestamp(): Promise<Long, Exception> {
+        return runOp {
+            blockStore.getLastBlockTimestamp(it)
         }
     }
 
@@ -168,16 +186,20 @@ open class BaseBlockQueries(private val blockchainConfiguration: BlockchainConfi
      * @throws UserMistake No block could be found at the specified height
      * @throws ProgrammerMistake Too many blocks (>1) found at the specified height
      */
-    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): Promise<BlockDataWithWitness, Exception> {
+    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): Promise<BlockDataWithWitness?, Exception> {
         return runOp {
-            val blockRID = blockStore.getBlockRID(it, height) ?: throw UserMistake("No block at height $height")
-            val headerBytes = blockStore.getBlockHeader(it, blockRID)
-            val witnessBytes = blockStore.getWitnessData(it, blockRID)
-            val txBytes = if (includeTransactions) blockStore.getBlockTransactions(it, blockRID) else listOf()
-            val header = blockchainConfiguration.decodeBlockHeader(headerBytes)
-            val witness = blockchainConfiguration.decodeWitness(witnessBytes)
+            val blockRID = blockStore.getBlockRID(it, height)
+            if (blockRID == null) {
+                null
+            } else {
+                val headerBytes = blockStore.getBlockHeader(it, blockRID)
+                val witnessBytes = blockStore.getWitnessData(it, blockRID)
+                val txBytes = if (includeTransactions) blockStore.getBlockTransactions(it, blockRID) else listOf()
+                val header = blockchainConfiguration.decodeBlockHeader(headerBytes)
+                val witness = blockchainConfiguration.decodeWitness(witnessBytes)
 
-            BlockDataWithWitness(header, txBytes, witness)
+                BlockDataWithWitness(header, txBytes, witness)
+            }
         }
     }
 }

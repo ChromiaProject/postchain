@@ -12,6 +12,7 @@ class Cli {
     private val jCommander: JCommander
     private val commands: Map<String, Command> = listOf(
             CommandKeygen()
+            , CommandGenerateContainerZfsInitScript()
 
             , CommandWaitDb()
             , CommandCheckBlockchain()
@@ -80,7 +81,7 @@ class Cli {
                 .asSequence()
                 .sorted()
                 .map { cmd ->
-                    "${cmd.padEnd(28, ' ')}${jCommander.getCommandDescription(cmd)}"
+                    "${cmd.padEnd(35, ' ')}${jCommander.getCommandDescription(cmd)}"
                 }.joinToString(
                         separator = "\n  ",
                         prefix = "Commands:\n  "

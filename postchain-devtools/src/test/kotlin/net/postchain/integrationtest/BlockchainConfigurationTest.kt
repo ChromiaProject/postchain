@@ -2,44 +2,47 @@
 
 package net.postchain.integrationtest
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.configurations.GTXTestModule
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXDataBuilder
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import org.apache.commons.lang3.RandomStringUtils
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class BlockchainConfigurationTest : IntegrationTestSetup() {
 
     @Test
     fun testMaxBlockSize() {
-        val blockchainRid = BlockchainRid.buildFromHex("14C483C045F323ACD44298D3BECAAFFD672B1C43D273AB55C0C67F12C9D09014")
-        configOverrides.setProperty("infrastructure", "base/test")
         val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config_max_block_size.xml")
         val node = nodes[0]
-        val txQueue = node.getBlockchainInstance().getEngine().getTransactionQueue()
+        val engine = node.getBlockchainInstance().blockchainEngine
 
-        txQueue.enqueue(buildTransaction(blockchainRid, RandomStringUtils.randomAlphanumeric(1024)))
-        buildBlockAndCommit(node)
-        assertEquals(0, getBestHeight(node))
-
-        val dummyTest = RandomStringUtils.randomAlphanumeric(25 * 1024 * 1024)
-
-        for (i in 1..2) {
-            txQueue.enqueue(buildTransaction(blockchainRid, "${dummyTest}-${i}"))
+        // blockchain_config_max_block_size.xml was set maxblocksize is 150 bytes and maxtransaction is 4
+        // the size of testtransaction is 40 bytes
+        // so we send 4 transactions (160bytes) which is over maxblocksize. Cnce we committed block, we expect 3 transactions inserted.
+        for (i in 1..4) {
+            engine.getTransactionQueue().enqueue(TestTransaction(i))
         }
-
+        // reason why we need to try catch is when block committed is over block size,
+        // it throws exception and could stop the test case, so the asserting was not reached.
         try {
-            buildBlockAndCommit(node)
-        } catch (e: Exception) {
+           buildBlockAndCommit(node)
+        }  catch (e : Exception) {
+
         }
 
-        assertEquals(0, getBestHeight(node))
+        // we need to sleep a bit (1s) to let the block committed accepted transactions.
+        Thread.sleep(1000)
+
+        val height = getBestHeight(node)
+        val acceptedTxs = getTxRidsAtHeight(node, height)
+        assertEquals(3, acceptedTxs.size)
     }
 
     @Test
@@ -48,7 +51,7 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         configOverrides.setProperty("infrastructure", "base/test")
         val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config_max_transaction_size.xml")
         val node = nodes[0]
-        val txQueue = node.getBlockchainInstance().getEngine().getTransactionQueue()
+        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
 
         // over 2mb
         txQueue.enqueue(buildTransaction(blockchainRid, "${RandomStringUtils.randomAlphanumeric(1024 * 1024 * 2)}-test"))

@@ -6,9 +6,17 @@ enum class NodeConfigProviders {
 
     /**
      * PeerInfo collection and other PostchainNode parameters are obtained
-     * from app.properties file
+     * from *.properties file
      */
     Legacy,
+
+    /**
+     * PeerInfo collection and other PostchainNode parameters are obtained
+     * from *.properties file.
+     *
+     * Similar to Legacy provider but with a different PeerInfo collection format.
+     */
+    File,
 
     /**
      * PeerInfo collection and other PostchainNode parameters are obtained
@@ -18,7 +26,7 @@ enum class NodeConfigProviders {
 
     /**
      * PeerInfo collection and other PostchainNode parameters are obtained
-     * from system blockchain
+     * from system blockchain (chain0)
      */
     Managed
 }

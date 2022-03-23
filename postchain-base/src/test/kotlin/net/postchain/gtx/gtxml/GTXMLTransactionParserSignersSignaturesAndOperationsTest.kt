@@ -4,14 +4,15 @@ package net.postchain.gtx.gtxml
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
 import net.postchain.devtools.MockCryptoSystem
 import net.postchain.gtv.*
 import net.postchain.gtx.GTXTransactionBodyData
 import net.postchain.gtx.GTXTransactionData
 import net.postchain.gtx.OpData
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
     val blockchainRID = BlockchainRid.buildFromHex("1234567812345678123456781234567812345678123456781234567812345678")
@@ -198,15 +199,18 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
         assert(actual).isEqualTo(expectedTx)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGTXMLTransaction_in_context_with_not_found_params_throws_exception() {
         val xml = javaClass.getResource("/net/postchain/gtx/gtxml/parse/tx_full_params_not_found.xml").readText()
 
-        GTXMLTransactionParser.parseGTXMLTransaction(
-                xml, TransactionContext.empty(), MockCryptoSystem())
+        assertThrows<java.lang.IllegalArgumentException> {
+            GTXMLTransactionParser.parseGTXMLTransaction(
+                xml, TransactionContext.empty(), MockCryptoSystem()
+            )
+        }
     }
 
-    @Test(expected = UserMistake::class)
+    @Test
     fun parseGTXMLTransaction_in_context_with_not_bytea_param_in_signers_throws_exception() {
         val xml = javaClass.getResource("/net/postchain/gtx/gtxml/parse/tx_params_not_bytea_signer.xml").readText()
 
@@ -217,10 +221,12 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
                 )
         )
 
-        GTXMLTransactionParser.parseGTXMLTransaction(xml, context, MockCryptoSystem())
+        assertThrows<UserMistake> {
+            GTXMLTransactionParser.parseGTXMLTransaction(xml, context, MockCryptoSystem())
+        }
     }
 
-    @Test(expected = UserMistake::class)
+    @Test
     fun parseGTXMLTransaction_in_context_with_not_bytea_param_in_signature_throws_exception() {
         val xml = javaClass.getResource("/net/postchain/gtx/gtxml/parse/tx_params_not_bytea_signature.xml").readText()
 
@@ -231,7 +237,9 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
                 )
         )
 
-        GTXMLTransactionParser.parseGTXMLTransaction(xml, context, MockCryptoSystem())
+        assertThrows<UserMistake> {
+            GTXMLTransactionParser.parseGTXMLTransaction(xml, context, MockCryptoSystem())
+        }
     }
 
     @Test
@@ -290,22 +298,26 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
         assert(actual).isEqualTo(expectedTx)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGTXMLTransaction_signers_more_than_signatures_throws_exception() {
         val xml = javaClass.getResource(
                 "/net/postchain/gtx/gtxml/parse/tx_signers_and_signatures_incompatibility__signers_more_than_signatures.xml")
                 .readText()
 
-        GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
+        assertThrows<IllegalArgumentException> {
+            GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
+        }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun parseGTXMLTransaction_signers_less_than_signatures_throws_exception() {
         val xml = javaClass.getResource(
                 "/net/postchain/gtx/gtxml/parse/tx_signers_and_signatures_incompatibility__signers_less_than_signatures.xml")
                 .readText()
 
-        GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
+        assertThrows<IllegalArgumentException> {
+            GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
+        }
     }
 
     @Test

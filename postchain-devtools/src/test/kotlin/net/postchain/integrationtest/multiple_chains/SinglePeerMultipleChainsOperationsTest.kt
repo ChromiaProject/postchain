@@ -9,7 +9,7 @@ import net.postchain.devtools.assertChainNotStarted
 import net.postchain.devtools.assertChainStarted
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class SinglePeerMultipleChainsOperationsTest : ConfigFileBasedIntegrationTest() {
 

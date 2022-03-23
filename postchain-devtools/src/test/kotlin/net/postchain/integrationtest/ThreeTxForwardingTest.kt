@@ -8,15 +8,17 @@ import net.postchain.common.toHex
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.testinfra.TestTransaction
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
+import java.util.concurrent.TimeUnit
 
 class ThreeTxForwardingTest : IntegrationTestSetup() {
 
     private fun strat(node: PostchainTestNode): ThreeTxStrategy {
         return node
                 .getBlockchainInstance()
-                .getEngine()
+                .blockchainEngine
                 .getBlockBuildingStrategy() as ThreeTxStrategy
     }
 
@@ -27,7 +29,8 @@ class ThreeTxForwardingTest : IntegrationTestSetup() {
     private fun apiModel(nodeIndex: Int): Model =
             nodes[nodeIndex].getRestApiModel()
 
-    @Test(timeout = 2 * 60 * 1000L)
+    @Test
+    @Timeout(2, unit = TimeUnit.MINUTES)
     fun testTxNotForwardedIfPrimary() {
         val count = 3
         configOverrides.setProperty("testpeerinfos", createPeerInfos(count))
@@ -49,10 +52,10 @@ class ThreeTxForwardingTest : IntegrationTestSetup() {
         apiModel(2).postTransaction(tx(8))
         strat(nodes[2]).awaitCommitted(2)
 
-        val bockQueries = nodes[2].getBlockchainInstance().getEngine().getBlockQueries()
+        val bockQueries = nodes[2].getBlockchainInstance().blockchainEngine.getBlockQueries()
         for (i in 0..2) {
-            val blockData = bockQueries.getBlockAtHeight(i.toLong()).get()
-            Assert.assertEquals(3, blockData.transactions.size)
+            val blockData = bockQueries.getBlockAtHeight(i.toLong()).get()!!
+            assertEquals(3, blockData.transactions.size)
         }
     }
 }

@@ -2,9 +2,6 @@
 
 package net.postchain.core
 
-import net.postchain.base.BlockchainRid
-
-
 interface BlockHeader {
     val prevBlockRID: ByteArray
     val rawData: ByteArray
@@ -50,7 +47,7 @@ data class ValidationResult(
         val result: Result,
         val message: String = "") {
     enum class Result {
-        OK, PREV_BLOCK_MISMATCH, BLOCK_FROM_THE_FUTURE, DUPLICATE_BLOCK, SPLIT, INVALID_TIMESTAMP,
+        OK, PREV_BLOCK_MISMATCH, BLOCK_FROM_THE_FUTURE, DUPLICATE_BLOCK, SPLIT, OLD_BLOCK_NOT_FOUND, INVALID_TIMESTAMP,
         MISSING_BLOCKCHAIN_DEPENDENCY, INVALID_ROOT_HASH }
 }
 
@@ -85,3 +82,38 @@ class InitialBlockData(
         val height: Long,
         val timestamp: Long,
         val blockHeightDependencyArr: Array<ByteArray?>?)
+
+
+/**
+ * Just a [String] wrapper that signals the string is actually a classpath
+ */
+data class DynamicClassName(val className: String) {
+
+
+    companion object {
+
+        @JvmStatic
+        fun build(className: String?): DynamicClassName? {
+
+            return if (className == null) {
+                null
+            } else {
+                // Maybe verify structure here? Remember that we have "ebft" as a shortcut
+                DynamicClassName(className)
+            }
+
+        }
+
+        @JvmStatic
+        fun buildList(classNames: List<String>): List<DynamicClassName> {
+            val retList = ArrayList<DynamicClassName>()
+            for (name in classNames) {
+                val wrapped = build(name)
+                if (wrapped != null) {
+                    retList.add(wrapped)
+                }
+            }
+            return retList
+        }
+    }
+}

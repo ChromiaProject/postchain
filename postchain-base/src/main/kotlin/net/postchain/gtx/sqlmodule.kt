@@ -2,7 +2,8 @@
 
 package net.postchain.gtx
 
-import net.postchain.base.BlockchainRid
+import net.postchain.base.BaseBlockBuilderExtension
+import net.postchain.core.BlockchainRid
 import net.postchain.core.*
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
@@ -124,6 +125,14 @@ class SQLGTXOperation(val opDesc: SQLOpDesc, opData: ExtOpData) :
 class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
     lateinit var ops: Map<String, SQLOpDesc>
     lateinit var queries: Map<String, SQLOpDesc>
+
+    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
+        return listOf()
+    }
+
+    override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
+        return listOf()
+    }
 
     override fun getOperations(): Set<String> {
         return ops.keys

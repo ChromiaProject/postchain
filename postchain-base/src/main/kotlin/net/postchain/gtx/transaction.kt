@@ -3,7 +3,7 @@
 package net.postchain.gtx
 
 import net.postchain.base.CryptoSystem
-import net.postchain.base.merkle.Hash
+import net.postchain.common.data.Hash
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
@@ -43,7 +43,9 @@ class GTXTransaction (
     }
 
     override fun isSpecial(): Boolean {
-        return ops.any { it.isSpecial() }
+        return ops.any {
+            it.isSpecial()
+        }
     }
 
     override fun isCorrect(): Boolean {
@@ -75,7 +77,14 @@ class GTXTransaction (
         var hasCustomOperation = false
         var foundNop = false
         var foundTimeB = false
+        var totalOps = 0
+        var specialOps = 0
+
         for (op in ops) {
+
+            totalOps++
+            if (op.isSpecial()) specialOps++
+
             when (op) {
                 is GtxNop -> {
                     if (foundNop) {
@@ -99,6 +108,11 @@ class GTXTransaction (
             }
 
             if (!op.isCorrect()) return false
+        }
+
+        if (specialOps > 0 && specialOps == totalOps) {
+            // The TX contains only special ops
+            return true // Pure special TX, and this should be valid
         }
 
         // "This transaction must have at least one operation (nop and timeb not counted) or be classed as spam."

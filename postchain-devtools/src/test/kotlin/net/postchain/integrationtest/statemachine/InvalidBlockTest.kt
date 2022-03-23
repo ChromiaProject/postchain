@@ -8,7 +8,7 @@ import net.postchain.devtools.enqueueTxsAndAwaitBuiltBlock
 import net.postchain.integrationtest.reconfiguration.TxChartHelper
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
 

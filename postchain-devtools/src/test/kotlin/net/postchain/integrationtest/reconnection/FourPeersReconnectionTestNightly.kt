@@ -4,14 +4,14 @@ import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.assertChainStarted
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class FourPeersReconnectionTestNightly : FourPeersReconnectionImpl() {
 
     private val nodeIndexShift = 10
 
-    @Before
+    @BeforeEach
     fun setUp() {
         reset()
     }

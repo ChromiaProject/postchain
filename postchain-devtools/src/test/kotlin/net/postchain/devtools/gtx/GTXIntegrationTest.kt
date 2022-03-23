@@ -2,7 +2,7 @@
 
 package net.postchain.devtools.gtx
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.toHex
 import net.postchain.core.Transaction
@@ -12,8 +12,10 @@ import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXDataBuilder
-import org.junit.Assert
-import org.junit.Test
+import net.postchain.gtx.GtxNop
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 val myCS = SECP256K1CryptoSystem()
 
@@ -21,7 +23,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
 
     fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(pubKey(0)), myCS)
-        b.addOperation("nop", arrayOf(gtv(42)))
+        b.addOperation(GtxNop.OP_NAME, arrayOf(gtv(42)))
         b.finish()
         b.sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
         return b.serialize()
@@ -57,8 +59,8 @@ class GTXIntegrationTest : IntegrationTestSetup() {
 
         fun enqueueTx(data: ByteArray): Transaction? {
             try {
-                val tx = node.getBlockchainInstance().getEngine().getConfiguration().getTransactionFactory().decodeTransaction(data)
-                node.getBlockchainInstance().getEngine().getTransactionQueue().enqueue(tx)
+                val tx = node.getBlockchainInstance().blockchainEngine.getConfiguration().getTransactionFactory().decodeTransaction(data)
+                node.getBlockchainInstance().blockchainEngine.getTransactionQueue().enqueue(tx)
                 return tx
             } catch (e: Exception) {
                 logger.error(e) { "Can't enqueue tx" }
@@ -71,14 +73,14 @@ class GTXIntegrationTest : IntegrationTestSetup() {
 
         fun makeSureBlockIsBuiltCorrectly() {
             currentBlockHeight += 1
-            buildBlockAndCommit(node.getBlockchainInstance().getEngine())
-            Assert.assertEquals(currentBlockHeight, getBestHeight(node))
+            buildBlockAndCommit(node.getBlockchainInstance().blockchainEngine)
+           assertEquals(currentBlockHeight, getBestHeight(node))
             val ridsAtHeight = getTxRidsAtHeight(node, currentBlockHeight)
             for (vtx in validTxs) {
                 val vtxRID = vtx.getRID()
-                Assert.assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
+               assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
             }
-            Assert.assertEquals(validTxs.size, ridsAtHeight.size)
+           assertEquals(validTxs.size, ridsAtHeight.size)
             validTxs.clear()
         }
 
@@ -119,8 +121,8 @@ class GTXIntegrationTest : IntegrationTestSetup() {
         // -------------------------
         makeSureBlockIsBuiltCorrectly()
 
-        val value = node.getBlockchainInstance().getEngine().getBlockQueries().query(
+        val value = node.getBlockchainInstance().blockchainEngine.getBlockQueries().query(
                 """{"type"="gtx_test_get_value", "txRID"="${validTx1.getRID().toHex()}"}""")
-        Assert.assertEquals("\"true\"", value.get())
+       assertEquals("\"true\"", value.get())
     }
 }

@@ -2,15 +2,15 @@
 
 package net.postchain.gtx
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.Signature
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import org.junit.Assert.*
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 
 fun mustThrowError(msg: String, code: () -> Unit) {

@@ -5,7 +5,7 @@ package net.postchain.gtv.gtvml
 import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.gtv.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 class GtvMLEncodeScalarsTest {
 

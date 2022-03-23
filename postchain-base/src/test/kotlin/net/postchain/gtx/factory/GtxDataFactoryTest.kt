@@ -2,7 +2,7 @@
 
 package net.postchain.gtx.factory
 
-import net.postchain.base.BlockchainRid
+import net.postchain.core.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
@@ -11,8 +11,8 @@ import net.postchain.gtv.GtvString
 import net.postchain.gtx.GTXTransactionBodyData
 import net.postchain.gtx.GTXTransactionData
 import net.postchain.gtx.OpData
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class GtxDataFactoryTest {
 
@@ -50,6 +50,6 @@ class GtxDataFactoryTest {
         // ---------- Convert it ------------------------------
         val txData: GTXTransactionData = GtxTransactionDataFactory.deserializeFromGtv(tx)
 
-        Assert.assertEquals(txData, expectedTx)
+       assertEquals(txData, expectedTx)
     }
 }

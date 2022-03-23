@@ -2,16 +2,24 @@
 
 package net.postchain.base
 
-import net.postchain.common.hexStringToByteArray
-import net.postchain.core.*
-import net.postchain.gtv.*
-import net.postchain.gtv.GtvFactory.gtv
-import org.apache.commons.configuration2.Configuration
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.core.BlockchainContext
+import net.postchain.core.BlockchainRid
+import net.postchain.core.EContext
+import net.postchain.core.NODE_ID_AUTO
+import net.postchain.core.NODE_ID_READ_ONLY
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvFactory
 
+const val TRANSACTION_QUEUE_CAPACITY = 2500 // 5 seconds (if 500 tps)
+/**
+ * Minimal/raw version of the BC configuration.
+ */
 class BaseBlockchainConfigurationData(
-        val data: GtvDictionary,
-        partialContext: BlockchainContext,
-        val blockSigMaker: SigMaker
+    val data: GtvDictionary,
+    partialContext: BlockchainContext,
+    val blockSigMaker: SigMaker,
 ) {
 
     val context: BlockchainContext
@@ -19,10 +27,10 @@ class BaseBlockchainConfigurationData(
 
     init {
         context = BaseBlockchainContext(
-                partialContext.blockchainRID,
-                resolveNodeID(partialContext.nodeID),
-                partialContext.chainID,
-                partialContext.nodeRID)
+            partialContext.blockchainRID,
+            resolveNodeID(partialContext.nodeID),
+            partialContext.chainID,
+            partialContext.nodeRID)
     }
 
     fun getSigners(): List<ByteArray> {
@@ -57,10 +65,21 @@ class BaseBlockchainConfigurationData(
         return stratDict?.get(KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS)?.asInteger() ?: 100
     }
 
+    /**
+     * Note on POS-198: We actually do want the TX queue to fill up fast, b/c the client should display this
+     * info to the user (spinning ball etc) so that the client understands that the system is down.
+     * Alex spoke about making TX resend automatic, after a pause, when 503 error is returned, so that no action
+     * from the user's side has to be taken to eventually get the TX into the queue.
+     */
+    fun getQueueCapacity(): Int {
+        val stratDict = data[KEY_BLOCKSTRATEGY]
+        return stratDict?.get(KEY_BLOCKSTRATEGY_QUEUE_CAPACITY)?.asInteger()?.toInt() ?: TRANSACTION_QUEUE_CAPACITY
+    }
+
     fun getDependenciesAsList(): List<BlockchainRelatedInfo> {
         val dep = data[KEY_DEPENDENCIES]
         return if (dep != null) {
-            BaseDependencyFactory.build(dep!!)
+            BaseDependencyFactory.build(dep)
         } else {
             // It is allowed to have no dependencies
             listOf<BlockchainRelatedInfo>()
@@ -73,12 +92,26 @@ class BaseBlockchainConfigurationData(
         return gtxDict?.get(KEY_GTX_TX_SIZE)?.asInteger() ?: 25 * 1024 * 1024
     }
 
+    fun getSyncInfrastructureName(): String? {
+        return data[KEY_SYNC]?.asString()
+    }
+
+    fun getSyncInfrastructureExtensions(): List<String> {
+        val e = data[KEY_SYNC_EXT]
+        return if (e != null) {
+            e.asArray().map { it.asString() }
+        } else {
+            listOf()
+        }
+    }
+
     companion object {
 
         const val KEY_BLOCKSTRATEGY = "blockstrategy"
         const val KEY_BLOCKSTRATEGY_NAME = "name"
         const val KEY_BLOCKSTRATEGY_MAXBLOCKSIZE = "maxblocksize"
         const val KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS = "maxblocktransactions"
+        const val KEY_BLOCKSTRATEGY_QUEUE_CAPACITY = "queuecapacity"
 
         const val KEY_CONFIGURATIONFACTORY = "configurationfactory"
 
@@ -92,44 +125,23 @@ class BaseBlockchainConfigurationData(
 
         const val KEY_HISTORIC_BRID = "historic_brid"
 
+        const val KEY_SYNC = "sync"
+        const val KEY_SYNC_EXT = "sync_ext"
 
-        @Deprecated("Deprecated in v2.4.4. Will be deleted in v3.0")
-        private fun convertGTXConfigToGtv(config: Configuration): Gtv {
-            val properties: MutableList<Pair<String, Gtv>> = mutableListOf(
-                    "modules" to gtv(
-                            config.getStringArray("gtx.modules").map { gtv(it) }
-                    )
-            )
-
-            if (config.containsKey("gtx.ft.assets")) {
-                val ftProps = mutableListOf<Pair<String, Gtv>>()
-                val assets = config.getStringArray("gtx.ft.assets")
-
-                ftProps.add("assets" to gtv(*assets.map { assetName ->
-                    val issuers = gtv(
-                            *config.getStringArray("gtx.ft.asset.$assetName.issuers").map(
-                                    { gtv(it.hexStringToByteArray()) }
-                            ).toTypedArray())
-
-                    gtv(
-                            "name" to gtv(assetName),
-                            "issuers" to issuers
-                    )
-                }.toTypedArray()))
-                properties.add("ft" to gtv(*ftProps.toTypedArray()))
-            }
-
-            if (config.containsKey("gtx.sqlmodules")) {
-                properties.add("sqlmodules" to gtv(*
-                config.getStringArray("gtx.sqlmodules").map { gtv(it) }.toTypedArray()
-                ))
-            }
-
-            if (config.containsKey("gtx.rellSrcModule")) {
-                properties.add("rellSrcModule" to gtv(config.getString("gtx.rellSrcModule")))
-            }
-
-            return gtv(*properties.toTypedArray())
+        /**
+         * Factory method
+         */
+        fun build(rawConfigurationData: ByteArray,
+                  eContext: EContext,
+                  nodeId: Int,
+                  chainId: Long,
+                  subjectID: ByteArray,
+                  blockSigMaker: SigMaker,
+        ): BaseBlockchainConfigurationData {
+            val gtvData = GtvFactory.decodeGtv(rawConfigurationData)
+            val brid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
+            val context = BaseBlockchainContext(brid, nodeId, chainId, subjectID)
+            return BaseBlockchainConfigurationData(gtvData as GtvDictionary, context, blockSigMaker)
         }
     }
 
@@ -139,8 +151,8 @@ class BaseBlockchainConfigurationData(
                 NODE_ID_READ_ONLY
             } else {
                 getSigners()
-                        .indexOfFirst { it.contentEquals(subjectID) }
-                        .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
+                    .indexOfFirst { it.contentEquals(subjectID) }
+                    .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
             }
         } else {
             nodeID
