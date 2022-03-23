@@ -420,7 +420,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             // meta table already exists. Check the version
             val sql = "SELECT value FROM ${tableMeta()} WHERE key='version'"
             val version = queryRunner.query(connection, sql, ScalarHandler<String>()).toInt()
-            if (version < expectedDbVersion) {
+            if (version == 1) {
                 logger.info("Current version ${version} is lower than expectedVersion ${expectedDbVersion}")
                 queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
                 queryRunner.update(connection, cmdCreateTableMustSyncUntil())
