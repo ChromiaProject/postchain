@@ -2,15 +2,10 @@
 
 package net.postchain.base.snapshot
 
-import net.postchain.base.snapshot.DigestSystem
-import net.postchain.base.snapshot.EventPageStore
-import net.postchain.base.snapshot.Page
-import net.postchain.base.snapshot.SnapshotPageStore
-
 class TestSnapshotPageStore(
     levelsPerPage: Int,
     ds: DigestSystem
-) : SnapshotPageStore(null, levelsPerPage, ds) {
+) : SnapshotPageStore(null, levelsPerPage, ds, "test") {
 
     private val store = mutableMapOf<Long, Page>()
     private var iid: Long = 0
@@ -48,7 +43,7 @@ class TestSnapshotPageStore(
 class TestEventPageStore(
     levelsPerPage: Int,
     ds: DigestSystem
-) : EventPageStore(null, levelsPerPage, ds) {
+) : EventPageStore(null, levelsPerPage, ds, "test") {
 
     private val store = mutableMapOf<Long, Page>()
     private var iid: Long = 0

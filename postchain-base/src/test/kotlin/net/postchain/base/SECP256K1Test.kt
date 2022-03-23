@@ -3,7 +3,6 @@
 package net.postchain.base
 
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -11,7 +10,6 @@ import net.postchain.gtx.gtxml.GTXMLTransactionParser
 import net.postchain.gtx.gtxml.TransactionContext
 import org.junit.jupiter.api.Test
 import java.nio.ByteBuffer
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class SECP256K1Test {
@@ -39,16 +37,13 @@ class SECP256K1Test {
         val sig0 = secp256k1_decodeSignature(signature0.data)
         val sig1 = secp256k1_decodeSignature(signature1.data)
 
-        // TODO:  SECP256K1Keccak tests
-        /*
         val expected0 = decompressKey(pubKey0)
-        val actual0 = SECP256K1Keccak.ecrecover(0, merkleRoot, sig0[0], sig0[1])!!
+        val actual0 = ecrecover(0, merkleRoot, sig0[0], sig0[1])!!
         assertTrue((expected0).contentEquals(actual0))
 
         val expected1 = decompressKey(pubKey1)
-        val actual1 = SECP256K1Keccak.ecrecover(0, merkleRoot, sig1[0], sig1[1])!!
+        val actual1 = ecrecover(0, merkleRoot, sig1[0], sig1[1])!!
         assertTrue((expected1).contentEquals(actual1))
-         */
     }
 
     @Test
@@ -95,22 +90,5 @@ class SECP256K1Test {
         val sigv = encodeSignatureWithV(blockRid, pubkey, sm.signDigest(blockRid).data)
 
         assertTrue(sigc.contentEquals(sigv))
-    }
-
-    @Test
-    fun testGetEthereumAddress1() {
-        val pubkey = "02e8bc920faad314f9859dd94d8ba0e62888f35ae572e1ebf80912033670b3e793".hexStringToByteArray()
-        val address = getEthereumAddress(pubkey)
-        val expected = "f4A8c3ef8a8968DA1680e22F289Fe0d5360755b4".hexStringToByteArray()
-        assertTrue(expected.contentEquals(address))
-    }
-
-    @Test
-    fun testToChecksumAddress() {
-        val pubkey = "039562c20fffe6f1b2f62565978da44fd25eae3703492c869deb105f83259df6b0".hexStringToByteArray()
-        val address = getEthereumAddress(pubkey)
-        val checksumAddress = toChecksumAddress(address.toHex())
-        val expected = "0x17d2C9EAb8d3BeDf39497c1A176eaEedfc3075CB"
-        assertEquals(expected, checksumAddress)
     }
 }

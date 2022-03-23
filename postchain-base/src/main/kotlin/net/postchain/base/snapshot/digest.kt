@@ -2,23 +2,21 @@
 
 package net.postchain.base.snapshot
 
-import net.postchain.base.MessageDigestFactory
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
 import java.security.InvalidParameterException
+import java.security.MessageDigest
 
 interface DigestSystem {
-    val algorithm: String
+    val messageDigest: MessageDigest
 
     fun hash(left: Hash, right: Hash): Hash
     fun digest(data: ByteArray): Hash
 }
 
 
-class SimpleDigestSystem(override val algorithm: String) : DigestSystem {
-
-    private val md = MessageDigestFactory.create(algorithm)
+class SimpleDigestSystem(override val messageDigest: MessageDigest) : DigestSystem {
 
     override fun hash(left: Hash, right: Hash): Hash {
         if (left.size != HASH_LENGTH || right.size != HASH_LENGTH)
@@ -32,7 +30,7 @@ class SimpleDigestSystem(override val algorithm: String) : DigestSystem {
     }
 
     override fun digest(data: ByteArray): Hash {
-        return md.digest(data)
+        return messageDigest.digest(data)
     }
 
 }

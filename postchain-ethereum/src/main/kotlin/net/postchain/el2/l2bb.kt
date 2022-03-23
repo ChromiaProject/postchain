@@ -12,7 +12,6 @@ import net.postchain.common.data.Hash
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
-import net.postchain.gtv.GtvEncoder
 import java.util.*
 
 class EthereumL2Implementation(
@@ -40,8 +39,8 @@ class EthereumL2Implementation(
         baseBB.installEventProcessor("el2_state", this)
         bctx = blockEContext
         store = LeafStore()
-        snapshot = SnapshotPageStore(blockEContext, levelsPerPage, ds)
-        event = EventPageStore(blockEContext, levelsPerPage, ds)
+        snapshot = SnapshotPageStore(blockEContext, levelsPerPage, ds, PREFIX)
+        event = EventPageStore(blockEContext, levelsPerPage, ds, PREFIX)
     }
 
     /**
@@ -60,7 +59,7 @@ class EthereumL2Implementation(
      * Hashes are remembered and later combined into a Merkle tree
      */
     private fun emitL2Event(evt: Gtv) {
-        val data = GtvEncoder.simpleEncodeGtv(evt)
+        val data = SimpleGtvEncoder.encodeGtv(evt)
         val hash = ds.digest(data)
         store.writeEvent(bctx, PREFIX, events.size.toLong(), hash, data)
         events.add(hash)
@@ -72,7 +71,7 @@ class EthereumL2Implementation(
      * during finalization
      */
     private fun emitL2State(state_n: Long, state: Gtv) {
-        val data = GtvEncoder.simpleEncodeGtv(state)
+        val data = SimpleGtvEncoder.encodeGtv(state)
         val hash = ds.digest(data)
         states[state_n] = hash
         store.writeState(bctx, PREFIX, state_n, data)
