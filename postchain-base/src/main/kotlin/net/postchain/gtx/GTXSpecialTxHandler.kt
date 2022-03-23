@@ -10,99 +10,17 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
-import net.postchain.gtv.GtvInteger
-import net.postchain.gtv.GtvType
+import net.postchain.gtv.GtvFactory
 
 /**
- * Holds various info regarding special TXs used by an extension, when a Spec TX is needed and how to create Spec TX etc.
+ * In this case "Handler" means we:
  *
- * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
- * (examples: BBB Ext and Sync Ext).
- * To see how it all goes together, see: doc/extension_classes.graphml
+ * - can find out if we need a special tx, and
+ * - can create a special tx, and
+ * - can validate a special tx.
+ *
+ * Special transactions are usually created by a [GTXSpecialTxExtension], which makes this extendable.
  */
-interface GTXSpecialTxExtension {
-    fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem)
-    fun getRelevantOps(): Set<String>
-    fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean
-    fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData>
-    fun validateSpecialOperations(position: SpecialTransactionPosition,
-                                  bctx: BlockEContext, ops: List<OpData>): Boolean
-}
-
-/**
- * Auto TX adds "__begin_block" and "__end_block" to the block.
- */
-class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
-    var wantBegin: Boolean = false
-    var wantEnd: Boolean = false
-
-    private val _relevantOps = mutableSetOf<String>()
-
-    companion object {
-        const val OP_BEGIN_BLOCK = "__begin_block"
-        const val OP_END_BLOCK = "__end_block"
-    }
-
-    override fun getRelevantOps() = _relevantOps
-
-    /**
-     * (Alex:) We only add the "__begin_.." and "__end.." if they are used by the Rell programmer writing the module,
-     * so we must check the module for these operations before we know if they are relevant.
-     */
-    override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) {
-        val ops = module.getOperations()
-        if (OP_BEGIN_BLOCK in ops) {
-            wantBegin = true
-            _relevantOps.add(OP_BEGIN_BLOCK)
-        }
-        if (OP_END_BLOCK in ops) {
-            wantEnd = true
-            _relevantOps.add(OP_END_BLOCK)
-        }
-    }
-
-    override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
-        return when (position) {
-            SpecialTransactionPosition.Begin -> wantBegin
-            SpecialTransactionPosition.End -> wantEnd
-        }
-    }
-
-    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        val op = if (position == SpecialTransactionPosition.Begin)
-            OP_BEGIN_BLOCK else OP_END_BLOCK
-        return listOf(OpData(op, arrayOf(GtvInteger(bctx.height))))
-    }
-
-    fun validateOp( bctx: BlockEContext, op: OpData, requiredOpName: String): Boolean {
-        if (op.opName != requiredOpName) return false
-
-        if (op.args.size != 1) return false
-        val arg = op.args[0]
-        if (arg.type !== GtvType.INTEGER) return false
-        if (arg.asInteger() != bctx.height) return false
-        return true
-    }
-
-    override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
-        if (position == SpecialTransactionPosition.Begin) {
-            if (wantBegin) {
-                if (ops.size != 1) return false
-                return validateOp(bctx, ops[0], OP_BEGIN_BLOCK)
-            } else {
-                return ops.isEmpty()
-            }
-        } else {
-            if (wantEnd) {
-                if (ops.size != 1) return false
-                return validateOp(bctx, ops[0], OP_END_BLOCK)
-            } else {
-                return ops.isEmpty()
-            }
-        }
-    }
-}
-
 open class GTXSpecialTxHandler(val module: GTXModule,
                                val blockchainRID: BlockchainRid,
                                val cs: CryptoSystem,
@@ -128,7 +46,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         return extensions.any { it.needsSpecialTransaction(position) }
     }
 
-    override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction? {
+    override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction {
         val b = GTXDataBuilder(blockchainRID, arrayOf(), cs)
         for (x in extensions) {
             if (x.needsSpecialTransaction(position)) {
@@ -138,12 +56,24 @@ open class GTXSpecialTxHandler(val module: GTXModule,
             }
         }
         if (b.operations.isEmpty()) {
-            // There is no point building this empty transaction, it would any way be marked as spam
-            return null
+            // no extension emitted an operation - add "__nop" (same as "nop" but for spec tx)
+            b.addOperation(GtxSpecNop.OP_NAME, arrayOf(GtvFactory.gtv(cs.getRandomBytes(32))))
         }
         return factory.decodeTransaction(b.serialize())
     }
 
+    /**
+     * The goal of this method is to call "validateSpecialOperations()" on all extensions we have.
+     *
+     * NOTE: For the logic below to work no two extensions can have operations with the same name. If they do we
+     *       might use the wrong extension to validate an operation.
+     *
+     * @param position is the position we are investigating
+     * @param tx is the [Transaction] we are investigating (must already have been created at an earlier stage).
+     *           This tx holds all operations from all extensions, so it can be very big (in case of Anchoring chain at least)
+     * @param ectx
+     * @param true if all special operations of all extensions valid
+     */
     override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, ectx: BlockEContext): Boolean {
         val gtxTransaction = tx as GTXTransaction
         val gtxData = gtxTransaction.gtxData
@@ -172,7 +102,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         return if (idx == operations.size) {
             true
         } else if (idx == operations.size - 1) {
-            if (operations[idx].opName == "nop") { // nop is allowed as last operation
+            if (operations[idx].opName == GtxSpecNop.OP_NAME) { // __nop is allowed as last operation
                 true
             } else {
                 logger.warn("Unprocessed special op: ${operations[idx].opName}")

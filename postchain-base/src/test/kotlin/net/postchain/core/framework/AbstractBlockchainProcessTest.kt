@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import java.lang.Thread.sleep
 import java.util.concurrent.TimeUnit
-import kotlin.IllegalArgumentException
 
 internal class AbstractBlockchainProcessTest {
 

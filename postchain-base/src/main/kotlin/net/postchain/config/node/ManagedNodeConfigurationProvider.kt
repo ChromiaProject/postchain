@@ -8,7 +8,7 @@ import net.postchain.base.peerId
 import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainRid
 import net.postchain.core.ByteArrayKey
-import net.postchain.network.x.XPeerID
+import net.postchain.core.NodeRid
 import java.time.Instant.EPOCH
 
 class ManagedNodeConfigurationProvider(
@@ -75,13 +75,13 @@ class ManagedNodeConfigurationProvider(
      * 2. The chain0 c0.blockchain_replica_node table
      *
      */
-    override fun getBlockchainReplicaCollection(appConfig: AppConfig): Map<BlockchainRid, List<XPeerID>> {
+    override fun getBlockchainReplicaCollection(appConfig: AppConfig): Map<BlockchainRid, List<NodeRid>> {
         // Collect from local table (common for all bcs)
         val localResMap = super.getBlockchainReplicaCollection(appConfig)
         // get values from the chain0 table
-        val chain0ResMap = (managedPeerSource?.getBlockchainReplicaNodeMap() ?: mutableMapOf<BlockchainRid, List<XPeerID>>())
+        val chain0ResMap = (managedPeerSource?.getBlockchainReplicaNodeMap() ?: mutableMapOf<BlockchainRid, List<NodeRid>>())
 
-        val resMap = mutableMapOf<BlockchainRid, List<XPeerID>>()
+        val resMap = mutableMapOf<BlockchainRid, List<NodeRid>>()
         val allKeys = localResMap.keys + chain0ResMap.keys
         for (k in allKeys) {
             resMap[k] = merge(localResMap[k], chain0ResMap[k])
@@ -89,7 +89,7 @@ class ManagedNodeConfigurationProvider(
         return resMap
     }
 
-    fun merge(a: List<XPeerID>?, b: List<XPeerID>?): List<XPeerID> {
+    fun merge(a: List<NodeRid>?, b: List<NodeRid>?): List<NodeRid> {
         if (a == null) {
             return b!!
         }

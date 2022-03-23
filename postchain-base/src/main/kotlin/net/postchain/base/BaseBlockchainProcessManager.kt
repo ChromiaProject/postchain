@@ -3,15 +3,13 @@
 package net.postchain.base
 
 import mu.KLogging
-import net.postchain.StorageBuilder
+import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.devtools.PeerNameHelper.peerName
-import net.postchain.ebft.EBFTSynchronizationInfrastructure
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.devtools.NameHelper.peerName
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -27,27 +25,41 @@ import java.util.concurrent.TimeUnit
  * If you don't want to wait for startup you can schedule a start via a the "startBlockchainAsync()"
  */
 open class BaseBlockchainProcessManager(
+        protected val postchainContext: PostchainContext,
         protected val blockchainInfrastructure: BlockchainInfrastructure,
-        protected val nodeConfigProvider: NodeConfigurationProvider,
-        protected val blockchainConfigProvider: BlockchainConfigurationProvider,
-        protected val nodeDiagnosticContext: NodeDiagnosticContext
+        protected val blockchainConfigProvider: BlockchainConfigurationProvider
 ) : BlockchainProcessManager {
 
     override val synchronizer = Any()
 
-    val nodeConfig = nodeConfigProvider.getConfiguration()
-    val storage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO)
+    val nodeConfig = postchainContext.nodeConfig
+    val connectionManager = postchainContext.connectionManager
+    val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
+    val storage get() = postchainContext.storage
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
+    protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
+    protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
 
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
+
+    protected val extensions: List<BlockchainProcessManagerExtension> = makeExtensions()
 
     // For DEBUG only
     var insideATest = false
     var blockDebug: BlockTrace? = null
 
     companion object : KLogging()
+
+    init {
+        initiateChainDiagnosticData()
+    }
+
+    /** overridable */
+    protected fun makeExtensions(): List<BlockchainProcessManagerExtension> {
+        return listOf()
+    }
 
     /**
      * Put the startup operation of chainId in the [executor]'s work queue.
@@ -80,7 +92,7 @@ open class BaseBlockchainProcessManager(
 
                 startInfo("Starting of blockchain", chainId)
                 val blockchainConfig = withReadWriteConnection(storage, chainId) { eContext ->
-                    val configuration = blockchainConfigProvider.getConfiguration(eContext, chainId)
+                    val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
                     if (configuration != null) {
                         blockchainInfrastructure.makeBlockchainConfiguration(
                                 configuration, eContext, NODE_ID_AUTO, chainId)
@@ -93,35 +105,12 @@ open class BaseBlockchainProcessManager(
                 val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
                 startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
-                val x: RestartHandler = buildRestartHandler(chainId)
-                val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
+                val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
+                val engine = blockchainInfrastructure.makeBlockchainEngine( processName, blockchainConfig, x)
                 startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
-                /*
-                Definition: cross-fetching is the process of downloading blocks from another blockchain
-                over the peer-to-peer network. This is used when forking a chain when we don't have
-                the old chain locally and we haven't been able to sync using the new chain rid.
-
-                Problem: in order to cross-fetch blocks, we'd like to get the old blockchain's
-                configuration (to find nodes to connect to). But that's difficult. We don't always
-                have it, and we might not have the most recent configuration.
-
-                If we don't have that, we can use the current blockchain's configuration to
-                find nodes to sync from, since at least a quorum of the signers from old chain
-                must also be signers of the new chain.
-
-                To simplify things, we will always use current blockchain configuration to find
-                nodes to cross-fetch from. We'll also use sync-nodes.
-                 */
-
-                val histConf: HistoricBlockchainContext? =
-                        if (blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid) {
-                            val ancestors = nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
-                            HistoricBlockchainContext(blockchainConfig.effectiveBlockchainRID, ancestors
-                                    ?: emptyMap())
-                        } else null
-
-                blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, histConf)
+                createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
+                logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                 startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
                 blockchainConfig.blockchainRid
@@ -129,6 +118,14 @@ open class BaseBlockchainProcessManager(
                 logger.error(e) { e.message }
                 null
             }
+        }
+    }
+
+    protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, shouldProcessNewMessages).also {
+            it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
+            extensions.forEach { ext -> ext.connectProcess(it) }
+            chainIdToBrid[chainId] = blockchainConfig.blockchainRid
         }
     }
 
@@ -143,16 +140,8 @@ open class BaseBlockchainProcessManager(
      */
     override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
         synchronized(synchronizer) {
-            stopInfoDebug("Stopping of Blockchain", chainId, bTrace)
-
-            blockchainProcesses.remove(chainId)?.also {
-                if (restart) {
-                    blockchainInfrastructure.restartBlockchainProcess(it)
-                } else {
-                    blockchainInfrastructure.exitBlockchainProcess(it)
-                }
-                it.shutdown()
-            }
+            stopInfoDebug("Stopping of blockchain", chainId, bTrace)
+            stopAndUnregisterBlockchainProcess(chainId, restart)
             stopInfoDebug("Stopping blockchain, shutdown complete", chainId, bTrace)
 
             blockchainProcessesLoggers.remove(chainId)?.also {
@@ -163,38 +152,55 @@ open class BaseBlockchainProcessManager(
         }
     }
 
+    protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
+        blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
+        blockchainProcesses.remove(chainId)?.also {
+            extensions.forEach { ext -> ext.disconnectProcess(it) }
+            if (restart) {
+                blockchainInfrastructure.restartBlockchainProcess(it)
+            } else {
+                blockchainInfrastructure.exitBlockchainProcess(it)
+            }
+            it.shutdown()
+        }
+    }
+
     override fun shutdown() {
         logger.debug("[${nodeName()}]: Stopping BlockchainProcessManager")
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
 
-        blockchainProcesses.forEach {
-            blockchainInfrastructure.exitBlockchainProcess(it.value)
-            it.value.shutdown()
+        blockchainProcesses.values.forEach {
+            blockchainInfrastructure.exitBlockchainProcess(it)
+            extensions.forEach { ext -> ext.disconnectProcess(it) }
+            it.shutdown()
         }
         blockchainProcesses.clear()
+        blockchainProcessesDiagnosticData.clear()
+        chainIdToBrid.clear()
 
         blockchainProcessesLoggers.forEach { (_, t) ->
             t.cancel()
             t.purge()
         }
-
-        storage.close()
         logger.debug("[${nodeName()}]: Stopped BlockchainProcessManager")
     }
 
     /**
-     * Checks for configuration changes, and then does a async reboot of the given chain.
+     * Define what actions should be taken after block commit. In our case:
+     * 1) trigger bp extensions,
+     * 2) checks for configuration changes, and then does a async reboot of the given chain.
      *
-     * @param chainId - the chain we should build the [RestartHandler] for
-     * @return a newly created [RestartHandler]. This method will be much more complex is
+     * @param chainId - the chain we should build the [AfterCommitHandler] for
+     * @return a newly created [AfterCommitHandler]. This method will be much more complex is
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
-    protected open fun buildRestartHandler(chainId: Long): RestartHandler {
-        val foo: (BlockTrace?) -> Boolean = { bTrace ->
-            testDebug("BaseBlockchainProcessManager's (normal) restart of: $chainId", bTrace)
+    protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+        return { bTrace, height ->
+
+            for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, height)
             val doRestart = withReadConnection(storage, chainId) { eContext ->
-                blockchainConfigProvider.needsConfigurationChange(eContext, chainId)
+                blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
             }
 
             if (doRestart) {
@@ -204,7 +210,6 @@ open class BaseBlockchainProcessManager(
 
             doRestart
         }
-        return foo
     }
 
     protected fun nodeName(): String {
@@ -213,14 +218,10 @@ open class BaseBlockchainProcessManager(
 
     // FYI: [et]: For integration testing. Will be removed or refactored later
     private fun logPeerTopology(chainId: Long) {
-        // TODO: [et]: Fix links to EBFT entities
-        val topology = ((blockchainInfrastructure as BaseBlockchainInfrastructure)
-                .defaultSynchronizationInfrastructure as? EBFTSynchronizationInfrastructure)
-                ?.connectionManager?.getPeersTopology(chainId)
-                ?.mapKeys {
+        val topology = connectionManager.getNodesTopology(chainId)
+                .mapKeys {
                     peerName(it.key)
                 }
-                ?: emptyMap()
 
         val prettyTopology = topology.mapValues {
             it.value
@@ -235,26 +236,38 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    // ----------------------------------------------
-    // To cut down on boilerplate logging in code
-    // ----------------------------------------------
-    fun isThisATest() = insideATest
-    fun setToTest() {
-        this.insideATest = true
-    }
-
-    /**
-     * For some reason KLogger doesn't work inside the restart handler, that's why we do System.out.
-     */
-    protected fun testDebug(str: String) {
-        if (isThisATest()) {
-            System.out.println("RestartHandler: $str")
+    protected fun isConfigurationChanged(chainId: Long): Boolean {
+        return withReadConnection(storage, chainId) { eContext ->
+            blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
         }
     }
 
+    protected fun initiateChainDiagnosticData() {
+        nodeDiagnosticContext.addProperty(DiagnosticProperty.BLOCKCHAIN) {
+            val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
+
+            connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
+                diagnosticData.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
+                    properties.apply {
+                        put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS) { topology }
+                    }
+                }
+            }
+
+            diagnosticData
+                    .mapValues { (_, v) ->
+                        v.mapValues { (_, v2) -> v2() }
+                    }
+                    .values.toTypedArray()
+        }
+    }
+
+    // ----------------------------------------------
+    // To cut down on boilerplate logging in code
+    // ----------------------------------------------
     protected fun testDebug(str: String, bTrace: BlockTrace?) {
-        if (isThisATest()) {
-            System.out.println("RestartHandler: $str, block causing this: $bTrace")
+        if (insideATest) {
+            logger.debug("RestartHandler: $str, block causing this: $bTrace")
         }
     }
 

@@ -4,8 +4,8 @@ package net.postchain.cli
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainRid
+import net.postchain.common.hexStringToByteArray
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 

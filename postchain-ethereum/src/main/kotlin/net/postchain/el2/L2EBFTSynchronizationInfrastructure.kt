@@ -1,19 +1,12 @@
 package net.postchain.el2
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.config.node.NodeConfig
-import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.BlockchainEngine
-import net.postchain.core.BlockchainProcess
-import net.postchain.core.SynchronizationInfrastructureExtension
-import net.postchain.core.UserMistake
-import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.ethereum.contracts.ChrL2
+import net.postchain.core.*
 import net.postchain.gtx.GTXBlockchainConfiguration
 import org.web3j.protocol.Web3j
-import org.web3j.tx.ClientTransactionManager
-import org.web3j.tx.gas.DefaultGasProvider
 import java.math.BigInteger
 
 data class EIFConfig(val contract: String, val contractDeployBlock: BigInteger)
@@ -32,11 +25,9 @@ fun NodeConfig.getEthereumUrl(): String {
 }
 
 class EL2SynchronizationInfrastructureExtension(
-    private val nodeConfigProvider: NodeConfigurationProvider,
-    nodeDiagnosticContext: NodeDiagnosticContext
+    private val postchainContext: PostchainContext
 ) : SynchronizationInfrastructureExtension {
-    private lateinit var web3c: Web3Connector
-    private lateinit var eventProcessor: EventProcessor
+    private val eventProcessors = mutableMapOf<String, EventProcessor>()
 
     companion object : KLogging()
 
@@ -58,44 +49,38 @@ class EL2SynchronizationInfrastructureExtension(
                     logger.warn("Contract deploy block config is set to 0. Consider changing it to real height to avoid redundant queries.")
                 }
 
-                initializeEventProcessor(eifConfig, engine)
+                val eventProcessor = initializeEventProcessor(eifConfig, engine)
                 el2Ext.useEventProcessor(eventProcessor)
+                eventProcessors[cfg.blockchainRid.toHex()] = eventProcessor
             }
         }
     }
 
-    private fun initializeEventProcessor(eifConfig: EIFConfig, engine: BlockchainEngine) {
-        val ethereumUrl = nodeConfigProvider.getConfiguration().getEthereumUrl()
-        if ("ignore".equals(ethereumUrl, ignoreCase = true)) {
+    override fun disconnectProcess(process: BlockchainProcess) {
+        val blockchainRid = process.blockchainEngine.getConfiguration().blockchainRid.toHex()
+        val eventProcessor = eventProcessors.remove(blockchainRid)
+            ?: throw ProgrammerMistake("Blockchain $blockchainRid not attached")
+        eventProcessor.shutdown()
+    }
+
+    override fun shutdown() {}
+
+    private fun initializeEventProcessor(eifConfig: EIFConfig, engine: BlockchainEngine): EventProcessor {
+        val ethereumUrl = postchainContext.nodeConfigProvider.getConfiguration().getEthereumUrl()
+        return if ("ignore".equals(ethereumUrl, ignoreCase = true)) {
             logger.warn("EIF is running in disconnected mode. No events will be validated against ethereum.")
-            eventProcessor = NoOpEventProcessor()
+            NoOpEventProcessor()
         } else {
             val web3j = Web3j.build(Web3jServiceFactory.buildService(ethereumUrl))
-            web3c = Web3Connector(web3j, eifConfig.contract)
+            val web3c = Web3Connector(web3j, eifConfig.contract)
 
-            val contract = ChrL2.load(
-                web3c.contractAddress,
-                web3c.web3j,
-                ClientTransactionManager(web3c.web3j, "0x0"),
-                DefaultGasProvider()
-            )
-
-            eventProcessor = EthereumEventProcessor(
+            EthereumEventProcessor(
                 web3c,
-                contract,
+                eifConfig.contract,
                 BigInteger.valueOf(100),
                 eifConfig.contractDeployBlock,
                 engine
             ).apply { start() }
-        }
-    }
-
-    override fun shutdown() {
-        if (::eventProcessor.isInitialized) {
-            eventProcessor.shutdown()
-        }
-        if (::web3c.isInitialized) {
-            web3c.shutdown()
         }
     }
 }

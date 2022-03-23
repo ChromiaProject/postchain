@@ -4,17 +4,17 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.PostchainNode
-import net.postchain.StorageBuilder
 import net.postchain.api.rest.controller.Model
+import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
-import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.devtools.PeerNameHelper.peerName
+import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
+import net.postchain.managed.ManagedBlockchainProcessManager
 import kotlin.properties.Delegates
 
 /**
@@ -26,28 +26,25 @@ import kotlin.properties.Delegates
  */
 class PostchainTestNode(
         nodeConfigProvider: NodeConfigurationProvider,
-        preWipeDatabase: Boolean = false
-) : PostchainNode(nodeConfigProvider) {
+        storage: Storage
+) : PostchainNode(nodeConfigProvider, storage) {
 
-    private val testStorage: Storage
     val pubKey: String
     private var isInitialized by Delegates.notNull<Boolean>()
     private val blockchainRidMap = mutableMapOf<Long, BlockchainRid>() // Used to keep track of the BC RIDs of the chains
 
     init {
         val nodeConfig = nodeConfigProvider.getConfiguration()
-        testStorage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO, preWipeDatabase)
         pubKey = nodeConfig.pubKey
         isInitialized = true
 
         // We don't have specific test classes for Proc Man
-        // But some test debugging cannot really be done the normal way so we need this strange looking thing
         when (processManager) {
             is BaseBlockchainProcessManager -> {
-                processManager.setToTest()
+                processManager.insideATest = true
             }
             is ManagedBlockchainProcessManager -> {
-                processManager.setToTest()
+                processManager.insideATest = true
             }
         }
     }
@@ -66,7 +63,7 @@ class PostchainTestNode(
     fun addBlockchain(chainId: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
             DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
@@ -78,7 +75,7 @@ class PostchainTestNode(
     fun addConfiguration(chainId: Long, height: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
@@ -89,7 +86,7 @@ class PostchainTestNode(
     fun setMustSyncUntil(chainId: Long, brid: BlockchainRid, height: Long): Boolean {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             logger.debug("Set must_sync_until for chain: $brid, height: $height")
             BaseConfigurationDataStore.setMustSyncUntil(eContext, brid, height)
         }
@@ -103,13 +100,12 @@ class PostchainTestNode(
         logger.debug("shutdown node ${peerName(pubKey)}")
         super.shutdown()
         logger.debug("shutdown node ${peerName(pubKey)} done")
-        testStorage.close()
     }
 
     fun getRestApiModel(): Model {
         val blockchainProcess = processManager.retrieveBlockchain(DEFAULT_CHAIN_IID)!!
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
-                .restApi?.retrieveModel(blockchainRID(blockchainProcess))!!
+                .restApi?.retrieveModel(blockchainRID(blockchainProcess)) as Model
     }
 
     fun getRestApiHttpPort(): Int {
@@ -141,7 +137,7 @@ class PostchainTestNode(
         // TODO: [et]: Fix type casting
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure)
                 .defaultSynchronizationInfrastructure as EBFTSynchronizationInfrastructure)
-                .connectionManager.getPeersTopology(chainId)
+                .connectionManager.getNodesTopology(chainId)
                 .mapKeys { pubKeyToConnection ->
                     pubKeyToConnection.key.toString()
                 }

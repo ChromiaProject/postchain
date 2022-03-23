@@ -32,7 +32,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ApiIntegrationTestNightly : IntegrationTestSetup() {
@@ -269,6 +268,52 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
 
             JSONAssert.assertEquals(expected, body, JSONCompareMode.STRICT)
         }
+    }
+
+    /**
+     * Test that we get the overloaded error.
+     *
+     * The reason we don't do the 503 (Overloaded) test as a unit test is that the setup requires a few more classes.
+     */
+    @Test
+    fun testTransactionQueueFullWithReason() {
+        val nodesCount = 1
+
+        val sysSetup = doSystemSetup(nodesCount,"/net/postchain/devtools/api/blockchain_config_tx_queue_size.xml")
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        // ---- To post a TX ---
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+
+        var blockHeight = 0
+        var currentId = 0
+
+
+        // ----- TX = 1 ------
+        val tx1 = TestOneOpGtxTransaction(factory, currentId)
+        val strHexData1 = tx1.getRawData().toHex()
+        //println("Sending TX: $strHexData:")
+
+        testStatusPost(
+            blockHeight,
+            "/tx/${blockchainRID}",
+            "{\"tx\": \"$strHexData1\"}",
+            200
+        )
+
+        // ----- TX = 2 ------
+        currentId++
+        val tx2 = TestOneOpGtxTransaction(factory, currentId)
+        val strHexData2 = tx2.getRawData().toHex()
+        //println("Sending TX: $strHexData:")
+
+        testStatusPost(
+            blockHeight,
+            "/tx/${blockchainRID}",
+            "{\"tx\": \"$strHexData2\"}",
+            503 // This should fail since we set the TX queue max size 1
+        )
     }
 
     /**

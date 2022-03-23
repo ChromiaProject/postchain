@@ -2,11 +2,10 @@
 
 package net.postchain.managed
 
+import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.BaseEBFTInfrastructureFactory
 
 open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
@@ -15,25 +14,12 @@ open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
         return ManagedBlockchainConfigurationProvider()
     }
 
-    override fun makeBlockchainInfrastructure(
-            nodeConfigProvider: NodeConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
-    ): BlockchainInfrastructure {
-        // TODO: [POS-82]: ???
-        return super.makeBlockchainInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
-    }
-
     override fun makeProcessManager(
-            nodeConfigProvider: NodeConfigurationProvider,
+            postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,
-            blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            nodeDiagnosticContext: NodeDiagnosticContext
+            blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
 
-        return ManagedBlockchainProcessManager(
-                blockchainInfrastructure,
-                nodeConfigProvider,
-                blockchainConfigurationProvider,
-                nodeDiagnosticContext)
+        return ManagedBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
     }
 }

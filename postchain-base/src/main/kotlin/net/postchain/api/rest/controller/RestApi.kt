@@ -3,6 +3,7 @@
 package net.postchain.api.rest.controller
 
 import com.google.gson.*
+import kong.unirest.Unirest
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
@@ -46,7 +47,7 @@ class RestApi(
 
     private val http = Service.ignite()!!
     private val gson = JsonFactory.makeJson()
-    private val models = mutableMapOf<String, Model>()
+    private val models = mutableMapOf<String, ChainModel>()
     private val bridByIID = mutableMapOf<Long, String>()
 
     init {
@@ -56,21 +57,22 @@ class RestApi(
         logger.info { "Rest API attached on $basePath/" }
     }
 
-    override fun attachModel(blockchainRID: String, model: Model) {
-        models[blockchainRID.toUpperCase()] = model
-        bridByIID[model.chainIID] = blockchainRID.toUpperCase()
+    override fun attachModel(blockchainRid: String, chainModel: ChainModel) {
+        val brid = blockchainRid.toUpperCase()
+        models[brid] = chainModel
+        bridByIID[chainModel.chainIID] = brid
     }
 
-    override fun detachModel(blockchainRID: String) {
-        val model = models[blockchainRID.toUpperCase()]
+    override fun detachModel(blockchainRid: String) {
+        val brid = blockchainRid.toUpperCase()
+        val model = models.remove(brid)
         if (model != null) {
             bridByIID.remove(model.chainIID)
-            models.remove(blockchainRID.toUpperCase())
-        } else throw ProgrammerMistake("Blockchain $blockchainRID not attached")
+        } else throw ProgrammerMistake("Blockchain $blockchainRid not attached")
     }
 
-    override fun retrieveModel(blockchainRID: String): Model? {
-        return models[blockchainRID.toUpperCase()]
+    override fun retrieveModel(blockchainRid: String): ChainModel? {
+        return models[blockchainRid.toUpperCase()] as? Model
     }
 
     fun actualPort(): Int {
@@ -81,41 +83,41 @@ class RestApi(
         http.exception(NotFoundError::class.java) { error, _, response ->
             logger.error("NotFoundError:", error)
             response.status(404)
-            response.body(error(error))
+            response.body(toJson(error))
         }
 
         http.exception(BadFormatError::class.java) { error, _, response ->
             logger.error("BadFormatError:", error)
             response.status(400)
-            response.body(error(error))
+            response.body(toJson(error))
         }
 
         http.exception(UserMistake::class.java) { error, _, response ->
             logger.error("UserMistake:", error)
             response.status(400)
-            response.body(error(error))
+            response.body(toJson(error))
         }
 
         http.exception(OverloadedException::class.java) { error, _, response ->
             response.status(503) // Service unavailable
-            response.body(error(error))
+            response.body(toJson(error))
         }
 
         http.exception(Exception::class.java) { error, _, response ->
             logger.error("Exception:", error)
             response.status(500)
-            response.body(error(error))
+            response.body(toJson(error))
         }
 
-        http.notFound { _, _ -> error(UserMistake("Not found")) }
+        http.notFound { _, _ -> toJson(UserMistake("Not found")) }
     }
 
     private fun buildRouter(http: Service) {
-
         http.port(listenPort)
         if (sslCertificate != null) {
             http.secure(sslCertificate, sslCertificatePassword, null, null)
         }
+
         http.before { req, res ->
             res.header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
             res.header(ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
@@ -137,11 +139,10 @@ class RestApi(
                 request.headers(ACCESS_CONTROL_REQUEST_METHOD)?.let {
                     response.header(ACCESS_CONTROL_ALLOW_METHODS, it)
                 }
-
                 "OK"
             }
 
-            http.post("/tx/$PARAM_BLOCKCHAIN_RID") { request, _ ->
+            http.post("/tx/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
                 val n = TimeLog.startSumConc("RestApi.buildRouter().postTx")
                 val tx = toTransaction(request)
                 val maxLength = try {
@@ -159,83 +160,90 @@ class RestApi(
                 model(request).postTransaction(tx)
                 TimeLog.end("RestApi.buildRouter().postTx", n)
                 "{}"
-            }
+            })
 
-            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", { request, _ ->
-                runTxActionOnModel(request) { model, txRID ->
+            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", redirectGet { request, _ ->
+                val result = runTxActionOnModel(request) { model, txRID ->
                     model.getTransaction(txRID)
                 }
-            }, gson::toJson)
+                gson.toJson(result)
+            })
 
-            http.get("/transactions/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", { request, _ ->
-                runTxActionOnModel(request) { model, txRID ->
+            http.get("/transactions/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", redirectGet { request, _ ->
+                val result = runTxActionOnModel(request) { model, txRID ->
                     model.getTransactionInfo(txRID)
                 }
-            }, gson::toJson)
-            http.get("/transactions/$PARAM_BLOCKCHAIN_RID", "application/json", { request, _ ->
+                gson.toJson(result)
+            })
+
+            http.get("/transactions/$PARAM_BLOCKCHAIN_RID", "application/json", redirectGet { request, _ ->
                 val model = model(request)
                 val paramsMap = request.queryMap()
                 val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_TXS_PER_REQUEST)
                         ?: DEFAULT_ENTRY_RESULTS_REQUEST
                 val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
-                model.getTransactionsInfo(beforeTime, limit)
-            }, gson::toJson)
+                val result = model.getTransactionsInfo(beforeTime, limit)
+                gson.toJson(result)
+            })
 
-            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/confirmationProof", { request, _ ->
-                runTxActionOnModel(request) { model, txRID ->
+            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/confirmationProof", redirectGet { request, _ ->
+                val result = runTxActionOnModel(request) { model, txRID ->
                     model.getConfirmationProof(txRID)
                 }
-            }, gson::toJson)
+                gson.toJson(result)
+            })
 
-            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/status", { request, _ ->
-                runTxActionOnModel(request) { model, txRID ->
+            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/status", redirectGet { request, _ ->
+                val result = runTxActionOnModel(request) { model, txRID ->
                     model.getStatus(txRID)
                 }
-            }, gson::toJson)
+                gson.toJson(result)
+            })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID", "application/json", { request, _ ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID", "application/json", redirectGet { request, _ ->
                 val model = model(request)
                 val paramsMap = request.queryMap()
                 val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
                 val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
                         ?: DEFAULT_ENTRY_RESULTS_REQUEST
                 val partialTxs = paramsMap.get("txs")?.value() != "true"
-                model.getBlocks(beforeTime, limit, partialTxs)
-
-            }, gson::toJson)
+                val result = model.getBlocks(beforeTime, limit, partialTxs)
+                gson.toJson(result)
+            })
 
             http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", { request, _ ->
                 val model = model(request)
                 val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
                 val paramsMap = request.queryMap()
                 val partialTx = paramsMap.get("txs").value() != "true"
-                model.getBlock(blockRID, partialTx)
-            }, gson::toJson)
+                val result = model.getBlock(blockRID, partialTx)
+                gson.toJson(result)
+            })
 
-            http.post("/query/$PARAM_BLOCKCHAIN_RID") { request, _ ->
+            http.post("/query/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
                 handlePostQuery(request)
-            }
+            })
 
-            http.post("/batch_query/$PARAM_BLOCKCHAIN_RID") { request, _ ->
+            http.post("/batch_query/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
                 handleQueries(request)
-            }
+            })
 
-            // direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
-            http.get("/dquery/$PARAM_BLOCKCHAIN_RID") { request, response ->
+            // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
+            http.get("/dquery/$PARAM_BLOCKCHAIN_RID", redirectGet { request, response ->
                 handleDirectQuery(request, response)
-            }
+            })
 
-            http.get("/query/$PARAM_BLOCKCHAIN_RID") { request, response ->
+            http.get("/query/$PARAM_BLOCKCHAIN_RID", redirectGet { request, _ ->
                 handleGetQuery(request)
-            }
+            })
 
-            http.post("/query_gtx/$PARAM_BLOCKCHAIN_RID") { request, _ ->
+            http.post("/query_gtx/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
                 handleGTXQueries(request)
-            }
+            })
 
-            http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", "application/json") { request, _ ->
+            http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", "application/json", redirectGet { request, _ ->
                 handleNodeStatusQueries(request)
-            }
+            })
 
             http.get("/_debug", "application/json") { request, _ ->
                 handleDebugQuery(request)
@@ -247,7 +255,6 @@ class RestApi(
 
             http.get("/brid/$PARAM_BLOCKCHAIN_RID") { request, _ ->
                 checkBlockchainRID(request)
-
             }
         }
 
@@ -289,7 +296,7 @@ class RestApi(
         }
     }
 
-    private fun error(error: Exception): String {
+    private fun toJson(error: Exception): String {
         return gson.toJson(ErrorBody(error.message ?: "Unknown error"))
     }
 
@@ -342,10 +349,8 @@ class RestApi(
 
     private fun handleQueries(request: Request): String {
         logger.debug("Request body: ${request.body()}")
-
         val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
-
-        var response: MutableList<String> = mutableListOf()
+        val response: MutableList<String> = mutableListOf()
 
         queriesArray.forEach {
             var query = gson.toJson(it)
@@ -357,7 +362,7 @@ class RestApi(
 
     private fun handleGTXQueries(request: Request): String {
         logger.debug("Request body: ${request.body()}")
-        var response: MutableList<String> = mutableListOf<String>()
+        val response: MutableList<String> = mutableListOf<String>()
         val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
 
         queriesArray.forEach {
@@ -376,8 +381,7 @@ class RestApi(
 
     private fun handleDebugQuery(request: Request): String {
         logger.debug("Request body: ${request.body()}")
-        return models.values.firstOrNull()?.debugQuery(request.params(SUBQUERY))
-                ?: throw NotFoundError("There are no running chains")
+        return model0(request).debugQuery(request.params(SUBQUERY))
     }
 
     private fun checkTxHashHex(request: Request): String {
@@ -423,16 +427,64 @@ class RestApi(
                 ?: throw NotFoundError("Can't find tx with hash $txHashHex")
     }
 
-    private fun model(request: Request): Model {
+    private fun chainModel(request: Request): ChainModel {
         val blockchainRID = checkBlockchainRID(request)
         return models[blockchainRID.toUpperCase()]
                 ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
+    }
+
+    private fun model(request: Request): Model {
+        return chainModel(request) as Model
+    }
+
+    private fun model0(request: Request): Model {
+        val chain0Rid = bridByIID[0L]
+                ?: throw NotFoundError("Can't find chain0 in DB. Is this node in managed mode?")
+
+        return models[chain0Rid] as? Model
+                ?: throw NotFoundError("Can't find blockchain with blockchainRID: $chain0Rid")
     }
 
     private fun parseMultipleQueriesRequest(request: Request): JsonArray {
         val element: JsonElement = gson.fromJson(request.body(), JsonElement::class.java)
         val jsonObject = element.asJsonObject
         return jsonObject.get("queries").asJsonArray
+    }
+
+    private fun redirectGet(localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
+        return { request, response ->
+            val model = chainModel(request)
+            if (model is ExternalModel) {
+                logger.trace { "External REST API model found: $model" }
+                val url = model.path + request.uri() + (request.queryString()?.let { "?$it" } ?: "")
+                logger.trace { "Redirecting get request to $url" }
+                Unirest.get(url)
+                        .header("Content-Type", "application/json")
+                        .asJson().body.toString()
+            } else {
+                logger.trace { "Local REST API model found: $model" }
+                localHandler(request, response)
+            }
+        }
+    }
+
+    private fun redirectPost(localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
+        return { request, response ->
+            val model = chainModel(request)
+            if (model is ExternalModel) {
+                logger.trace { "External REST API model found: $model" }
+                val url = model.path + request.uri()
+                logger.trace { "Redirecting post request to $url" }
+                Unirest.post(url)
+                        .header("Content-Type", "application/json")
+                        .body(request.body())
+                        .asEmptyAsync()
+                ""
+            } else {
+                logger.trace { "Local REST API model found: $model" }
+                localHandler(request, response)
+            }
+        }
     }
 
 }

@@ -9,7 +9,6 @@ import net.postchain.core.Signature
 import net.postchain.core.UserMistake
 import net.postchain.ebft.message.Message
 import net.postchain.ebft.message.SignedMessage
-import java.util.*
 
 fun encodeAndSign(message: Message, sigMaker: SigMaker): ByteArray {
     val signingBytes = message.encode()
@@ -48,7 +47,7 @@ fun decodeAndVerify(bytes: ByteArray, verify: Verifier): Message? {
 
 fun tryDecodeAndVerify(bytes: ByteArray, pubKey: ByteArray, verify: Verifier): Message? {
     val message = SignedMessage.decode(bytes)
-    val verified = Arrays.equals(message.pubKey, pubKey)
+    val verified = message.pubKey.contentEquals(pubKey)
             && verify(message.message, Signature(message.pubKey, message.signature))
     return if (verified) Message.decode(message.message)
     else null

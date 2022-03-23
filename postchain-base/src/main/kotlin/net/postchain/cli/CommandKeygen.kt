@@ -12,7 +12,6 @@ import org.bitcoinj.crypto.MnemonicCode
 @Parameters(commandDescription = "Generates public/private key pair")
 class CommandKeygen : Command {
 
-
     @Parameter(
             names = ["-m", "--mnemonic"],
             description = "Mnemonic word list, words separated by space, e.g: \"lift employ roast rotate liar holiday sun fever output magnet...\"")

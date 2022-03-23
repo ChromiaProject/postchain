@@ -11,7 +11,8 @@ import net.postchain.base.withReadConnection
 import net.postchain.core.*
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.BlockTrace
-import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
@@ -31,14 +32,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 2 Sync from remote-FB until drained or timeout
  * 3 Sync from remote-OB until drained or timeout
  * 4 Goto 1
- *
  */
 class HistoricBlockchainProcess(val workerContext: WorkerContext,
-                                val historicBlockchainContext: HistoricBlockchainContext) : AbstractBlockchainProcess(workerContext.processName.toString(), workerContext.engine) {
+                                private val historicBlockchainContext: HistoricBlockchainContext
+                               ) : AbstractBlockchainProcess("historic-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
 
-    val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
+    private val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
 
     private var historicSynchronizer: FastSynchronizer? = null
     private val storage = (workerContext.engine as BaseBlockchainEngine).storage
@@ -58,8 +59,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     // Logging only
     var blockTrace: BlockTrace? = null // For logging only
     val myBRID = blockchainEngine.getConfiguration().blockchainRid
-    val myNodeConf = workerContext.nodeConfig
-    val procName = BlockchainProcessName(myNodeConf.pubKey, myBRID)
 
     override fun action() {
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
@@ -265,37 +264,37 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     // init
     private fun initDebug(str: String) {
         if (logger.isDebugEnabled) {
-            logger.debug("$procName init() -- $str")
+            logger.debug("init() -- $str")
         }
     }
 
     private fun initTrace(str: String) {
         if (logger.isTraceEnabled) {
-            logger.trace("$procName init() --- $str")
+            logger.trace("init() --- $str")
         }
     }
 
     //copyBlocksNetwork()
     private fun netTrace(str: String, heightToCopy: Long) {
         if (logger.isTraceEnabled) {
-            logger.trace("$procName copyBlocksNetwork() -- $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
+            logger.trace("copyBlocksNetwork() -- $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
         }
     }
 
     private fun netDebug(str: String) {
         if (logger.isDebugEnabled) {
-            logger.debug("$procName copyBlocksNetwork() -- $str from blockchain ${historicBlockchainContext.historicBrid}")
+            logger.debug("copyBlocksNetwork() -- $str from blockchain ${historicBlockchainContext.historicBrid}")
         }
     }
 
     private fun netInfo(str: String, heightToCopy: Long) {
         if (logger.isInfoEnabled) {
-            logger.info("$procName copyBlocksNetwork() - $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
+            logger.info("copyBlocksNetwork() - $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
         }
     }
 
     private fun netErr(str: String, e: Exception) {
-        logger.error("$procName copyBlocksNetwork() - $str, from blockchain ${historicBlockchainContext.historicBrid}", e)
+        logger.error("copyBlocksNetwork() - $str, from blockchain ${historicBlockchainContext.historicBrid}", e)
     }
 
 
@@ -329,7 +328,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     private fun getCopyBTrace(heightToCopy: Long): BlockTrace? {
         return if (logger.isTraceEnabled) {
-            this.blockTrace = BlockTrace.buildBeforeBlock(procName, heightToCopy) // At this point we don't have the Block RID.
+            this.blockTrace = BlockTrace.buildBeforeBlock(workerContext.processName, heightToCopy) // At this point we don't have the Block RID.
             copyLog("Got block height", heightToCopy)
             this.blockTrace
         } else {
@@ -354,5 +353,12 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         if (logger.isDebugEnabled) {
             logger.debug("shutdown() - $str, at height: ${this.fastSynchronizer.blockHeight}, the block that's causing the shutdown: $blockTrace")
         }
+    }
+
+    override fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) {
+        diagnosticData.putAll(mapOf(
+                DiagnosticProperty.BLOCKCHAIN_RID to { workerContext.blockchainConfiguration.blockchainRid.toHex() },
+                DiagnosticProperty.BLOCKCHAIN_NODE_TYPE to { DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName },
+        ))
     }
 }

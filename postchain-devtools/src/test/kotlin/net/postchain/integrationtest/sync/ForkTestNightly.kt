@@ -1,9 +1,12 @@
 package net.postchain.integrationtest.sync
 
 import net.postchain.devtools.KeyPairHelper
+import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.currentHeight
 import net.postchain.devtools.utils.configuration.NodeSetup
-import net.postchain.network.x.XPeerID
+import net.postchain.devtools.utils.ChainUtil
+
+import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -92,9 +95,9 @@ class ForkTestNightly : ManagedModeTest() {
         // Make sure that node <node> doesn't have c1 locally and that the other node
         // doesn't have c2, We want node <node> to cross-fetch c2 from c1 on the other node instead of from local db.
         val nodeDataSource = dataSources(c1)[0]!!
-        nodeDataSource.delBlockchain(chainRidOf(c1.chain))
+        nodeDataSource.delBlockchain(ChainUtil.ridOf(c1.chain))
         // Set node 1 as replica for c1 so that node 0 will use node 1 to cross-fetch blocks.
-        nodeDataSource.addExtraReplica(chainRidOf(c1.chain), XPeerID(KeyPairHelper.pubKey(1)))
+        nodeDataSource.addExtraReplica(ChainUtil.ridOf(c1.chain), NodeRid(KeyPairHelper.pubKey(1)))
 
         restartNodeClean(0, c0, -1)
         val c2 = startNewBlockchain(setOf(0), setOf(), c1.chain)
@@ -117,7 +120,7 @@ class ForkTestNightly : ManagedModeTest() {
         // Make sure that node <node> doesn't have c1 locally and that the other node
         // doesn't have c2, We want node <node> to cross-fetch c2 from c1 on the other node instead of from local db.
         val nodeDataSource = dataSources(c1)[1]!!
-        nodeDataSource.delBlockchain(chainRidOf(c1.chain))
+        nodeDataSource.delBlockchain(ChainUtil.ridOf(c1.chain))
 
         restartNodeClean(1, c0, -1)
         // We don't know if node 1 will fetch c1 or c2 from node 0, because
@@ -172,11 +175,11 @@ class ForkTestNightly : ManagedModeTest() {
 
     @Test
     fun testAncestors() {
-        extraNodeProperties[0] = mapOf("blockchain_ancestors.${chainRidOf(3)}"
+        extraNodeProperties[0] = mapOf("blockchain_ancestors.${ChainUtil.ridOf(3)}"
                 to listOf(ancestor(1,2)))
         val (c1, c2) = makeFork() // c1 and c2 both consist of node index 0 (signer) and 1 (replica)
         dataSources(c1).forEach {
-            it.value.delBlockchain(chainRidOf(c1.chain))
+            it.value.delBlockchain(ChainUtil.ridOf(c1.chain))
         }
         buildBlock(c0) // trigger stopping of c1
         val c3 = startNewBlockchain(setOf(0), setOf(), c1.chain)
@@ -212,7 +215,7 @@ class ForkTestNightly : ManagedModeTest() {
    @Disabled // Incomplete test, never worked and probably incorrect setup.
     @Test
     fun testAncestorNetworkThenLocally() {
-        extraNodeProperties[0] = mapOf("blockchain_ancestors.${chainRidOf(3)}" to listOf(ancestor(2,2)))
+        extraNodeProperties[0] = mapOf("blockchain_ancestors.${ChainUtil.ridOf(3)}" to listOf(ancestor(2,2)))
 
         startManagedSystem(4, 0)
 
@@ -314,7 +317,7 @@ class ForkTestNightly : ManagedModeTest() {
     fun testAncestorsManyLevels() {
         // ancestors for chain 5 are 3 and 4
         extraNodeProperties[5] = mapOf(
-                "blockchain_ancestors.${chainRidOf(5)}" to listOf(ancestor(4, 4)))
+                "blockchain_ancestors.${ChainUtil.ridOf(5)}" to listOf(ancestor(4, 4)))
 
         startManagedSystem(7, 0)
 
@@ -406,7 +409,7 @@ class ForkTestNightly : ManagedModeTest() {
 //    }
 
     private fun ancestor(index: Int, blockchain: Long): String {
-        return "${XPeerID(KeyPairHelper.pubKey(index))}:${chainRidOf(blockchain)}"
+        return "${NodeRid(KeyPairHelper.pubKey(index))}:${ChainUtil.ridOf(blockchain)}"
     }
 
     /**
@@ -425,7 +428,7 @@ class ForkTestNightly : ManagedModeTest() {
     }
 
 
-    private fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
+    override fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
         awaitLog("========= AWAIT ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
         nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
         awaitLog("========= DONE WAITING ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
@@ -458,20 +461,6 @@ class ForkTestNightly : ManagedModeTest() {
         chainNew.all().forEach {
            assertFalse(expectedBlockRid!!.contentEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get()!!))
         }
-    }
-
-    private var chainId: Long = 1
-    fun startNewBlockchain(signers: Set<Int>, replicas: Set<Int>, historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf(), waitForRestart: Boolean = true): NodeSet {
-        assertTrue(signers.intersect(replicas).isEmpty())
-        val maxIndex = c0.all().size
-        signers.forEach { assertTrue(it < maxIndex ) }
-        replicas.forEach { assertTrue(it < maxIndex) }
-        val c = NodeSet(chainId++, signers, replicas)
-        newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
-        // Await blockchain started on all relevant nodes
-        if (waitForRestart)
-            awaitChainRestarted(c, -1)
-        return c
     }
 
     /**

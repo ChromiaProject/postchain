@@ -2,7 +2,6 @@
 
 package net.postchain.core
 
-
 interface BlockHeader {
     val prevBlockRID: ByteArray
     val rawData: ByteArray
@@ -48,7 +47,7 @@ data class ValidationResult(
         val result: Result,
         val message: String = "") {
     enum class Result {
-        OK, PREV_BLOCK_MISMATCH, BLOCK_FROM_THE_FUTURE, DUPLICATE_BLOCK, SPLIT, INVALID_TIMESTAMP,
+        OK, PREV_BLOCK_MISMATCH, BLOCK_FROM_THE_FUTURE, DUPLICATE_BLOCK, SPLIT, OLD_BLOCK_NOT_FOUND, INVALID_TIMESTAMP,
         MISSING_BLOCKCHAIN_DEPENDENCY, INVALID_ROOT_HASH }
 }
 

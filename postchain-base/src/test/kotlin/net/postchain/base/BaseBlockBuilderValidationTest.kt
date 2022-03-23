@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import net.postchain.base.data.*
 import org.mockito.kotlin.mock
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
@@ -37,7 +38,7 @@ class BaseBlockBuilderValidationTest {
 
     // Objects using mocks
     val db: DatabaseAccess = mock {}
-    val ctx = BaseEContext(mockedConn, 2L, 0, db)
+    val ctx = BaseEContext(mockedConn, 2L, db)
 
     val dummyEventSink = object : TxEventSink {
         override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
@@ -45,10 +46,11 @@ class BaseBlockBuilderValidationTest {
         }
     }
 
+    val validator = BaseBlockWitnessProvider(cryptoSystem, sigMaker, subjects)
     val bctx = BaseBlockEContext(ctx, 0, 1, 10, mapOf(), dummyEventSink)
     val bbb = BaseBlockBuilder(BlockchainRid.buildRepeat(0), cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
-            subjects, sigMaker, listOf(), listOf(), false)
+            subjects, sigMaker, validator, listOf(), listOf(), false)
 
     @Test
     fun validateBlockHeader_valid() {

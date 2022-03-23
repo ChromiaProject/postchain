@@ -4,7 +4,7 @@ package net.postchain.integrationtest.managedmode
 
 import net.postchain.base.PeerInfo
 import net.postchain.common.toHex
-import net.postchain.devtools.PeerNameHelper
+import net.postchain.devtools.NameHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 
@@ -22,6 +22,11 @@ object TestModulesHelper {
         return args["blockchain_rid"]?.asByteArray()?.toHex() ?: ""
     }
 
+    fun argContainerID(args: Gtv): String {
+        return args["container_id"]?.asString() ?: ""
+    }
+
+
     fun peerInfoToGtv(peerInfo: PeerInfo): Gtv {
         return GtvFactory.gtv(
                 GtvFactory.gtv(peerInfo.host),
@@ -32,7 +37,7 @@ object TestModulesHelper {
 
     fun peerInfoAsString(peerInfos: Array<PeerInfo>): String {
         return peerInfos
-                .map { PeerNameHelper.peerName(it.pubKey) }
+                .map { NameHelper.peerName(it.pubKey) }
                 .toTypedArray()
                 .contentToString()
     }

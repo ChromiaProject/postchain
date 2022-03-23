@@ -5,6 +5,7 @@ package net.postchain.specialtx
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.BlockchainRid
 import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.specialtx.SpecialTxTestGTXModule
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.gtx.GTXAutoSpecialTxExtension
 import net.postchain.gtx.GTXOperation
@@ -16,7 +17,7 @@ import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit
 
 /**
- * Produces blocks containing Special transactions using the simplest possible setup, but as a minimub we need a new
+ * Produces blocks containing Special transactions using the simplest possible setup, but as a minimum we need a new
  * custom test module to give us the "__xxx" operations needed.
  */
 class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
