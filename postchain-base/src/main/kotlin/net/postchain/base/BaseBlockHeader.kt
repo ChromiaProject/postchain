@@ -24,17 +24,16 @@ import net.postchain.gtv.merkleHash
  * @property rawData DER encoded data including the previous blocks RID ([prevBlockRID]) and [timestamp]
  * @property cryptoSystem An implementation of the various cryptographic primitives to use
  * @property timestamp  Specifies the time that a block was created as the number
- *                      of milliseconds since midnight Januray 1st 1970 UTC
+ *                      of milliseconds since midnight January 1st 1970 UTC
  */
 class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem: CryptoSystem) : BlockHeader {
     override val prevBlockRID: ByteArray
     override val blockRID: ByteArray
     val blockHeightDependencyArray: Array<Hash?>
     val timestamp: Long get() = blockHeaderRec.getTimestamp()
-    val blockHeaderRec: BlockHeaderData
+    val blockHeaderRec: BlockHeaderData = BlockHeaderDataFactory.buildFromBinary(rawData)
 
     init {
-        blockHeaderRec = BlockHeaderDataFactory.buildFromBinary(rawData)
         prevBlockRID = blockHeaderRec.getPreviousBlockRid()
         blockRID = blockHeaderRec.toGtv().merkleHash(  GtvMerkleHashCalculator(cryptoSystem) )
         blockHeightDependencyArray = blockHeaderRec.getBlockHeightDependencyArray()

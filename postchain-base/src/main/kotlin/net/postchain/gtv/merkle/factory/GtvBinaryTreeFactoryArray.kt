@@ -19,7 +19,7 @@ object GtvBinaryTreeFactoryArray {
 
     /**
      * There are 2 edge cases here:
-     * - When the args is empty. -> We return a top node with two empty leafs
+     * - When the args is empty. -> We return a top node with two empty leaves
      * - When there is only one element. -> We set the right element as empty
      */
     fun buildFromGtvArray(gtvArray: GtvArray, gtvPaths: GtvPathSet): BinaryTreeElement {
@@ -38,8 +38,7 @@ object GtvBinaryTreeFactoryArray {
         val result = mainFactory.buildHigherLayer(1, leafArray)
 
         // 3. Fix and return the root node
-        val orgRoot = result.get(0)
-        return when (orgRoot) {
+        return when (val orgRoot = result[0]) {
             is Node -> {
                 GtvArrayHeadNode(orgRoot.left, orgRoot.right, gtvArray, leafList.size, sumNrOfBytes, pathElem)
             }

@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+/**
+ * @title ERC721Mock
+ * This mock just provides a public mint, and burn functions for testing purposes
+ */
+contract ERC721Mock is ERC721 {
+    constructor(string memory name, string memory symbol) ERC721(name, symbol) {}
+
+    function baseURI() public view returns (string memory) {
+        return _baseURI();
+    }
+
+    function exists(uint256 tokenId) public view returns (bool) {
+        return _exists(tokenId);
+    }
+
+    function mint(address to, uint256 tokenId) public {
+        _mint(to, tokenId);
+    }
+
+    function burn(uint256 tokenId) public {
+        _burn(tokenId);
+    }
+
+    function _baseURI() internal view virtual override returns (string memory) {
+        return "https://gateway.pinata.cloud/ipfs/QmR5NAV7vCi5oobK2wKNKcM5QAyCCzCg2wysZXwhCYbBLs/";
+    }
+}

@@ -4,6 +4,8 @@ package net.postchain.gtv.merkle.proof
 
 import net.postchain.base.merkle.*
 import net.postchain.base.merkle.proof.*
+import net.postchain.common.data.EMPTY_HASH
+import net.postchain.common.data.Hash
 import net.postchain.core.UserMistake
 import net.postchain.gtv.*
 import net.postchain.gtv.merkle.GtvArrayHeadNode
@@ -11,7 +13,6 @@ import net.postchain.gtv.merkle.GtvBinaryTree
 import net.postchain.gtv.merkle.GtvDictHeadNode
 import net.postchain.gtv.merkle.GtvMerkleBasics
 import net.postchain.gtv.path.*
-import net.postchain.common.data.Hash
 
 
 
@@ -30,25 +31,25 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
      * Note that the [GtvBinaryTree] already has marked all elements that should be proven, so all we have to
      * do now is to convert the rest to hashes.
      *
-     * @param orginalTree is the tree we will use
+     * @param originalTree is the tree we will use
      * @param calculator is the class we use for hash calculation
      */
     fun buildFromBinaryTree(
-            orginalTree: GtvBinaryTree,
-            calculator: MerkleHashCalculator<Gtv>
+        originalTree: GtvBinaryTree,
+        calculator: MerkleHashCalculator<Gtv>
     ): GtvMerkleProofTree {
         if (logger.isTraceEnabled) {
             logger.trace("--------------------------------------------")
             logger.trace("--- Converting binary tree to proof tree ---")
             logger.trace("--------------------------------------------")
         }
-        val rootElement = buildFromBinaryTreeInternal(orginalTree.root, calculator)
+        val rootElement = buildFromBinaryTreeInternal(originalTree.root, calculator)
         if (logger.isTraceEnabled) {
             logger.trace("--------------------------------------------")
             logger.trace("--- /Converting binary tree to proof tree --")
             logger.trace("--------------------------------------------")
         }
-        return GtvMerkleProofTree(rootElement, orginalTree.root.getNrOfBytes())
+        return GtvMerkleProofTree(rootElement, originalTree.root.getNrOfBytes())
     }
 
     override fun buildFromBinaryTreeInternal(
@@ -57,7 +58,7 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
     ): MerkleProofElement {
         return when (currentElement) {
             is EmptyLeaf -> {
-                ProofHashedLeaf(MerkleBasics.EMPTY_HASH) // Just zeros
+                ProofHashedLeaf(EMPTY_HASH) // Just zeros
             }
             is Leaf<*> -> {
                 val content: Gtv = currentElement.content as Gtv // Have to convert here

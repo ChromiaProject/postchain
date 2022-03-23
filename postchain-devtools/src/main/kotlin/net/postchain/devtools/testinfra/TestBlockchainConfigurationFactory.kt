@@ -3,9 +3,9 @@
 package net.postchain.devtools.testinfra
 
 import net.postchain.base.BaseBlockchainConfigurationData
-import net.postchain.core.BlockchainRid
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactory
+import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.CompositeGTXModule

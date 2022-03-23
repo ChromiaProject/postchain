@@ -10,7 +10,7 @@ import net.postchain.network.CommunicationManager
 
 /**
  * This is a transitional class to hide away clutter from EBFTSynchronizationInfrastructure. There's
- * room for improvement here, for example, peerCommComnfiguration is already part of the
+ * room for improvement here, for example, peerCommConfiguration is already part of the
  * communicationManager (If it's a DefaultXCommunicationManager, and so on).
  */
 class WorkerContext(val processName: BlockchainProcessName,
@@ -21,6 +21,7 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val nodeConfig: NodeConfig,
                     val shouldProcessMessages: (Long) -> Boolean
 ) {
+
     fun shutdown() {
         engine.shutdown()
         communicationManager.shutdown()

@@ -84,8 +84,7 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
         fun makeModule(name: String): GTXModule {
             val moduleClass = Class.forName(name)
-            val instance = moduleClass.newInstance()
-            return when (instance) {
+            return when (val instance = moduleClass.newInstance()) {
                 is GTXModule -> instance
                 is GTXModuleFactory -> instance.makeModule(data, blockchainRID) //TODO
                 else -> throw UserMistake("Module class not recognized")

@@ -32,13 +32,13 @@ class SimpleGTXOperation(data: ExtOpData,
 }
 
 fun gtxOP(applyF: (TxEContext) -> Boolean): (Unit, ExtOpData) -> Transactor {
-    return { unit, data ->
+    return { _, data ->
         SimpleGTXOperation(data, applyF, { true })
     }
 }
 
 fun gtxOP(applyF: (TxEContext) -> Boolean, isCorrectF: () -> Boolean): (Unit, ExtOpData) -> Transactor {
-    return { unit, data ->
+    return { _, data ->
         SimpleGTXOperation(data, applyF, isCorrectF)
     }
 }

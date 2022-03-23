@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle.proof
+package net.postchain.gtv.merkle.proof
 
 import net.postchain.base.merkle.PrintableTreeFactory
 import net.postchain.base.merkle.TreeHelper
@@ -14,9 +14,6 @@ import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected4ElementArray
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected7ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expectet7and3ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
-import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.path.GtvPath
 import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
@@ -93,11 +90,11 @@ class ArrayToMerkleProofTreeTest {
 
         // Proof -> Serialize
         val serialize: GtvArray = merkleProofTree.serializeToGtv()
-        //println("Serilalized: $serialize")
+        //println("Serialized: $serialize")
 
         val expectedSerialization = "GtvArray(array=[$ln" +
                 "  GtvInteger(integer=103), $ln" +  // 103 =  node type is array
-                "  GtvInteger(integer=1), $ln" +  // lenght of array
+                "  GtvInteger(integer=1), $ln" +  // length of array
                 "  GtvInteger(integer=-10),$ln" + // (no path/position given)
                 "  GtvArray(array=[$ln" +
                 "    GtvInteger(integer=101), $ln" + // 101 = value to prove

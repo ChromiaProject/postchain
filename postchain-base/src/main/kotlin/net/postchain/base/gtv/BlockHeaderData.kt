@@ -12,13 +12,13 @@ import net.postchain.gtv.GtvFactory.gtv
 /**
  * The structure of the block header goes like this:
  *
- *  1. bockchainRid [GtvByteArray]
+ *  1. blockchainRid [GtvByteArray]
  *  2. prevBlockRid [GtvByteArray]
  *  3. rootHash [GtvByteArray]
  *  4. timestamp [GtvInteger]
  *  5. height [GtvInteger]
  *  6. dependencies [GtvArray] or [GtvNull] (this is to save space)
- *  6. extra  [GtvDictionary]
+ *  7. extra  [GtvDictionary]
  */
 data class BlockHeaderData(
         val gtvBlockchainRid: GtvByteArray,
@@ -61,14 +61,12 @@ data class BlockHeaderData(
             is GtvNull -> arrayOf()
             is GtvArray -> {
                 val lastBlockRidArray = arrayOfNulls<Hash>(gtvDependencies.getSize())
-                var i = 0
-                for (blockRid in gtvDependencies.array) {
+                for ((i, blockRid) in gtvDependencies.array.withIndex()) {
                     lastBlockRidArray[i] = when (blockRid) {
                         is GtvByteArray -> blockRid.bytearray
                         is GtvNull -> null // Allowed
                         else -> throw UserMistake("Cannot use type ${blockRid.type} in dependency list (at pos: $i)")
                     }
-                    i++
                 }
                 lastBlockRidArray
             }
@@ -82,7 +80,7 @@ data class BlockHeaderData(
         val retMap = HashMap<String, String>()
         for (key in this.gtvExtra.dict.keys) {
             val gtvValue = gtvExtra[key] as GtvString
-            retMap.put(key, gtvValue.string)
+            retMap[key] = gtvValue.string
         }
         return retMap
     }

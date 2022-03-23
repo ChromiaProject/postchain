@@ -4,12 +4,12 @@ package net.postchain.integrationtest.api
 
 import io.restassured.RestAssured.given
 import net.postchain.base.BaseBlockHeader
-import net.postchain.core.BlockchainRid
-import net.postchain.common.data.Hash
 import net.postchain.common.RestTools
+import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
+import net.postchain.core.BlockchainRid
 import net.postchain.core.Signature
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper

@@ -6,7 +6,6 @@ import net.postchain.base.PeerCommConfiguration
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 
-
 interface XPacketEncoder<PacketType> {
     fun makeIdentPacket(forNode: NodeRid): ByteArray
     fun encodePacket(packet: PacketType): ByteArray

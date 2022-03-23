@@ -7,7 +7,7 @@ import net.postchain.core.EContext
 import net.postchain.core.Transaction
 import java.sql.Connection
 
-class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
+ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun isSavepointSupported(): Boolean = true
 
@@ -40,26 +40,32 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     /**
      * @param ctx is the context
-     * @param prefix is what the events will be used for, for example "l2" or "icmf"
+     * @param prefix is what the events will be used for, for example "el2" or "icmf"
      */
     override fun cmdCreateTableEvent(ctx: EContext, prefix: String): String {
-        return "CREATE TABLE ${tableEvents(ctx, prefix)}" +
-                " (event_iid BIGSERIAL PRIMARY KEY," +
-                " block_height BIGINT NOT NULL, " +
+        return "CREATE TABLE IF NOT EXISTS ${tableEventLeafs(ctx, prefix)}" +
+                " (" +
+                " block_height BIGINT NOT NULL," +
+                " position BIGINT NOT NULL," +
                 " hash BYTEA NOT NULL," +
                 " data BYTEA NOT NULL)"
     }
 
-    /**
-     * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "l2"
-     */
-    override fun cmdCreateTableState(ctx: EContext, prefix: String): String {
-        return "CREATE TABLE ${tableStates(ctx, prefix)}" +
-                " (state_iid BIGSERIAL PRIMARY KEY," +
+     override fun cmdCreateTableState(ctx: EContext, prefix: String): String {
+         return "CREATE TABLE IF NOT EXISTS ${tableStateLeafs(ctx, prefix)}" +
+                 " (state_iid BIGSERIAL PRIMARY KEY," +
+                 " block_height BIGINT NOT NULL, " +
+                 " state_n BIGINT NOT NULL, " +
+                 " data BYTEA NOT NULL)"
+     }
+
+    override fun cmdCreateTablePage(ctx: EContext, name: String): String {
+        return "CREATE TABLE IF NOT EXISTS ${tablePages(ctx, name)}" +
+                " (page_iid BIGSERIAL PRIMARY KEY," +
                 " block_height BIGINT NOT NULL, " +
-                " state_n BIGINT NOT NULL, " +
-                " data BYTEA NOT NULL)"
+                " level INTEGER NOT NULL, " +
+                " left_index BIGINT NOT NULL, " +
+                " child_hashes BYTEA NOT NULL)"
     }
 
     override fun cmdCreateTableBlockchains(): String {
@@ -121,6 +127,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 "VALUES (?, ?, ?, ?)"
     }
 
+    override fun cmdInsertPage(ctx: EContext, name: String): String {
+        return "INSERT INTO ${tablePages(ctx, name)} (block_height, level, left_index, child_hashes) " +
+                "VALUES (?, ?, ?, ?)"
+    }
+
     override fun cmdInsertConfiguration(ctx: EContext): String {
         return "INSERT INTO ${tableConfigurations(ctx)} (height, configuration_data) " +
                 "VALUES (?, ?) ON CONFLICT (height) DO UPDATE SET configuration_data = ?"
@@ -147,28 +158,28 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     /**
      * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "l2" or "icmf"
+     * @param prefix is what the state will be used for, for example "el2" or "icmf"
      */
-    override fun cmdInsertEvents(ctx: EContext, prefix: String): String {
-        return "INSERT INTO ${tableEvents(ctx, prefix)} (block_height, hash, data) " + "VALUES (?, ?, ?)"
+    override fun cmdInsertEvent(ctx: EContext, prefix: String): String {
+        return "INSERT INTO ${tableEventLeafs(ctx, prefix)} (block_height, position, hash, data) " + "VALUES (?, ?,  ?, ?)"
     }
 
     /**
      * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "l2"
+     * @param prefix is what the state will be used for, for example "el2"
      */
-    override fun cmdInsertStates(ctx: EContext, prefix: String): String {
-        return "INSERT INTO ${tableStates(ctx, prefix)} (block_height, state_n, data) " + "VALUES (?, ?, ?)"
+    override fun cmdInsertState(ctx: EContext, prefix: String): String {
+        return "INSERT INTO ${tableStateLeafs(ctx, prefix)} (block_height, state_n, data) " + "VALUES (?, ?, ?)"
     }
 
     /**
      * Deletes data from the table where height is <= given minimum-height-to-keep
      *
      * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "l2" or "icmf"
+     * @param prefix is what the state will be used for, for example "el2" or "icmf"
      */
     override fun cmdPruneEvents(ctx: EContext, prefix: String): String {
-        return "DELETE FROM ${tableEvents(ctx, prefix)} WHERE height <= ?"
+        return "DELETE FROM ${tableEventLeafs(ctx, prefix)} WHERE height <= ?"
     }
 
     /**
@@ -180,10 +191,10 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
      * TODO: Haven't tried this, could be off by one in the between
      *
      * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "l2"
+     * @param prefix is what the state will be used for, for example "el2"
      */
     override fun cmdPruneStates(ctx: EContext, prefix: String): String {
-        return "DELETE FROM ${tableStates(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND height <= ?"
+        return "DELETE FROM ${tableStateLeafs(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND height <= ?"
     }
 
     override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {

@@ -89,7 +89,7 @@ open class BaseBlockBuilder(
      */
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         when (val proc = eventProcessors[type]) {
-            null -> throw ProgrammerMistake("Event sink for ${type} not found")
+            null -> throw ProgrammerMistake("Event sink for $type not found")
             else -> proc.processEmittedEvent(ctxt, type, data)
         }
     }
@@ -164,8 +164,7 @@ open class BaseBlockBuilder(
             if (givenDependencies.size == blockchainRelatedInfoDependencyList.size) {
 
                 val resList = mutableListOf<BlockchainDependency>()
-                var i = 0
-                for (bcInfo in blockchainRelatedInfoDependencyList) {
+                for ((i, bcInfo) in blockchainRelatedInfoDependencyList.withIndex()) {
                     val blockRid = givenDependencies[i]
                     val dep = if (blockRid != null) {
                         val dbHeight = store.getBlockHeightFromAnyBlockchain(bctx, blockRid, bcInfo.chainId!!)
@@ -180,7 +179,6 @@ open class BaseBlockBuilder(
                         BlockchainDependency(bcInfo, null) // No blocks required -> allowed
                     }
                     resList.add(dep)
-                    i++
                 }
                 BlockchainDependencies(resList)
             } else {
@@ -269,22 +267,23 @@ open class BaseBlockBuilder(
                 throw BlockValidationMistake("Special transaction validation failed")
             }
             haveSpecialEndTransaction = true
-        } else {
-            if (expectBeginTx) {
-                throw BlockValidationMistake("First transaction must be special transaction")
-            }
         }
+        // TODO: this validation is not properly in general
+//        else {
+//            if (expectBeginTx) {
+//                throw BlockValidationMistake("First transaction must be special transaction")
+//            }
+//        }
     }
 
     override fun appendTransaction(tx: Transaction) {
-        if (blockSize + tx.getRawData().size > maxBlockSize) {
-            throw BlockValidationMistake("block size exceeds max block size ${maxBlockSize} bytes")
-        } else if (transactions.size >= maxBlockTransactions) {
-            throw BlockValidationMistake("Number of transactions exceeds max ${maxBlockTransactions} transactions in block")
-        }
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
         super.appendTransaction(tx)
+        if (blockSize + tx.getRawData().size >= maxBlockSize) {
+            throw BlockValidationMistake("block size exceeds max block size $maxBlockSize bytes")
+        } else if (transactions.size >= maxBlockTransactions) {
+            throw BlockValidationMistake("Number of transactions exceeds max $maxBlockTransactions transactions in block")
+        }
         blockSize += tx.getRawData().size
     }
-
 }

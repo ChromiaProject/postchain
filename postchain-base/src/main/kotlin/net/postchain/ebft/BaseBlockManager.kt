@@ -16,7 +16,7 @@ import nl.komponents.kovenant.Promise
 /**
  * Manages intents and acts as a wrapper for [blockDatabase] and [statusManager]
  */
-class BaseBlockManager(
+open class BaseBlockManager(
         private val processName: BlockchainProcessName,
         private val blockDB: BlockDatabase,
         private val statusManager: StatusManager,

@@ -15,7 +15,7 @@ import net.postchain.gtv.Gtv
  *
  * Note: When calculating the merkle root of a proof of a complicated structure (args or dict)
  *       means that the value-to-be-proved (i.e. args/dict) must be transformed to a binary tree
- *       before we can calculate it's hash.
+ *       before we can calculate its hash.
  *       (This is why we place this code in a separate factory instead of in the [MerkleProofTree] itself)
  */
 abstract class MerkleHashSummaryFactory<T, TPathSet: PathSet>(
@@ -42,7 +42,6 @@ abstract class MerkleHashSummaryFactory<T, TPathSet: PathSet>(
      * @param proofTree the tree we are going to calculate the merkle root of (in the cases where there is no path, this
      *                  has already been done, and we just return the top element)
      * @param calculator holds the function we'll use to hash & serialize
-     * @param treeFactory is needed sometimes (see above)
      * @return the calculated merkle root of the proof.
      */
     fun calculateMerkleRoot(proofTree: MerkleProofTree<T>, calculator: MerkleHashCalculator<T>): MerkleHashSummary {
@@ -77,7 +76,7 @@ abstract class MerkleHashSummaryFactory<T, TPathSet: PathSet>(
 
     /**
      * @param value is the structure we want to turn to a proof tree
-     * @param treeFactory needed to build the proof tree
+     * @param calculator holds the function we'll use to hash & serialize
      * @return the new proof tree
      */
     abstract fun buildProofTree(value: T, calculator: MerkleHashCalculator<T>): MerkleProofTree<T>

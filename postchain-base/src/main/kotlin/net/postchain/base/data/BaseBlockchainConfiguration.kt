@@ -89,7 +89,7 @@ open class BaseBlockchainConfiguration(
      * Will add ChainID to the dependency list, if needed.
      */
     @Synchronized
-    private fun addChainIDToDependencies(ctx: EContext) {
+    protected fun addChainIDToDependencies(ctx: EContext) {
         if (bcRelatedInfosDependencyList.isNotEmpty()) {
             // Check if we have added ChainId's already
             val first = bcRelatedInfosDependencyList.first()

@@ -24,12 +24,12 @@ const val LOG_STATS = true // Was this the reason this entire class was muted?
  * Usually we don't log single (successful) transactions, not even at trace level.
  */
 open class BaseBlockchainEngine(
-        private val processName: BlockchainProcessName,
-        private val blockchainConfiguration: BlockchainConfiguration,
-        val storage: Storage,
-        private val chainID: Long,
-        private val transactionQueue: TransactionQueue,
-        private val useParallelDecoding: Boolean = true
+    private val processName: BlockchainProcessName,
+    private val blockchainConfiguration: BlockchainConfiguration,
+    val storage: Storage,
+    private val chainID: Long,
+    private val transactionQueue: TransactionQueue,
+    private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
     companion object : KLogging()
@@ -134,8 +134,8 @@ open class BaseBlockchainEngine(
     }
 
     private fun loadUnfinishedBlockImpl(
-            block: BlockData,
-            transactionsDecoder: (List<ByteArray>) -> List<Transaction>
+        block: BlockData,
+        transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
 
         val grossStart = System.nanoTime()
@@ -159,7 +159,8 @@ open class BaseBlockchainEngine(
 
             if (LOG_STATS) {
                 val prettyBlockHeader = prettyBlockHeader(
-                        block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd)
+                    block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd
+                )
                 logger.info("$processName: Loaded block: $prettyBlockHeader")
             }
 
@@ -204,7 +205,10 @@ open class BaseBlockchainEngine(
                     TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
                     if (tx.isSpecial()) {
                         rejectedTxs++
-                        transactionQueue.rejectTransaction(tx, ProgrammerMistake("special transactions can't enter queue"))
+                        transactionQueue.rejectTransaction(
+                            tx,
+                            ProgrammerMistake("special transactions can't enter queue")
+                        )
                         continue
                     }
                     val txException = blockBuilder.maybeAppendTransaction(tx)
@@ -236,7 +240,8 @@ open class BaseBlockchainEngine(
 
             if (LOG_STATS) {
                 val prettyBlockHeader = prettyBlockHeader(
-                        blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd)
+                    blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
+                )
                 logger.info("$processName: Block is finalized: $prettyBlockHeader")
             } else {
                 logger.info("$processName: Block is finalized")
@@ -260,11 +265,11 @@ open class BaseBlockchainEngine(
     // -----------------
 
     private fun prettyBlockHeader(
-            blockHeader: BlockHeader,
-            acceptedTxs: Int,
-            rejectedTxs: Int,
-            gross: Pair<Long, Long>,
-            net: Pair<Long, Long>
+        blockHeader: BlockHeader,
+        acceptedTxs: Int,
+        rejectedTxs: Int,
+        gross: Pair<Long, Long>,
+        net: Pair<Long, Long>
     ): String {
 
         val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first, 1)

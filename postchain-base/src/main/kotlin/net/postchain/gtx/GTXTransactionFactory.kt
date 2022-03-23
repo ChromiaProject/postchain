@@ -2,8 +2,8 @@
 
 package net.postchain.gtx
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.CryptoSystem
+import net.postchain.core.BlockchainRid
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionFactory
 import net.postchain.core.UserMistake
@@ -24,7 +24,7 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
 
     override fun decodeTransaction(data: ByteArray): Transaction {
         if (data.size > maxTransactionSize ) {
-            throw Exception("Transaction size exceeds max transaction size ${maxTransactionSize} bytes")
+            throw Exception("Transaction size exceeds max transaction size $maxTransactionSize bytes")
         }
         return internalBuild(data)
     }
@@ -69,7 +69,7 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
         // Extract some stuff
         val signers = body.signers
         val signatures = gtxData.signatures
-        val ops = body.getExtOpData().map({ module.makeTransactor(it) }).toTypedArray()
+        val ops = body.getExtOpData().map { module.makeTransactor(it) }.toTypedArray()
 
         return GTXTransaction(rawData, gtvData, gtxData, signers, signatures, ops, myHash, myRID, module, cs)
     }

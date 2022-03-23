@@ -6,10 +6,11 @@ import net.postchain.base.CryptoSystem
 import net.postchain.common.data.Hash
 import net.postchain.core.ProgrammerMistake
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.merkle.GtvBinaryTree
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 
 /**
- * This file holds some basic stuff, like constants etc..
+ * This file holds some basic stuff, like constants etc.
  *
  * Some generic documentation (package wide documentation) goes here too, see below:
  *
@@ -49,26 +50,19 @@ import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
  *  the dual transaction/node and provide proof of payment of any transaction he wishes.
  *
  * Remedy
- * (The fifth solution suggestioned is the one we are using:)
+ * (The fifth solution suggestion is the one we are using:)
  * 5. A hard-forking solution is adding a prefix to internal nodes of the Merkle tree before performing node
  * hashing and adding a different prefix to transaction IDs and then also hash them.
  * Ripple ([2]) uses a such a prefix system.
  * --------
  */
-
-
 object MerkleBasics {
 
     /**
-     * Prefixes are put in front of the the hash, after the hash value has been calculated
+     * Prefixes are put in front of the hash, after the hash value has been calculated
      */
     const val HASH_PREFIX_NODE: Byte = 0
     const val HASH_PREFIX_LEAF: Byte = 1
-
-    /**
-     * Use this to represent a hash of an empty element (in a tree, typically)
-     */
-    val EMPTY_HASH = ByteArray(32) // Just zeros
 
     const val UNKNOWN_SIZE_IN_BYTE = -101
 

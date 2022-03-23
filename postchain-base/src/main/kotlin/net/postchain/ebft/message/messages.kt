@@ -2,10 +2,10 @@
 
 package net.postchain.ebft.message
 
-import net.postchain.core.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
 import net.postchain.gtv.*
 
@@ -32,6 +32,7 @@ class SignedMessage(val message: ByteArray, val pubKey: ByteArray, val signature
     }
 }
 
+/* SIG and BLOCKDATA seem to be unused */
 enum class MessageType {
     ID, STATUS, TX, SIG, BLOCKSIG, BLOCKDATA, UNFINISHEDBLOCK,
     GETBLOCKSIG, COMPLETEBLOCK, GETBLOCKATHEIGHT, GETUNFINISHEDBLOCK, GETBLOCKHEADERANDBLOCK, BLOCKHEADER
