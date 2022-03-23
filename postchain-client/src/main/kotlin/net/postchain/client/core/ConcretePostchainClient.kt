@@ -132,10 +132,15 @@ class ConcretePostchainClient(
                             response.entity?.let {
                                 val responseBody = parseResponse(it.content)
                                 val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                                val status = valueOf(jsonObject.get("status").asString.toUpperCase())
+                                val statusString = jsonObject.get("status")?.asString?.toUpperCase()
+                                if (statusString == null) {
+                                    logger.warn { "No status in response\n$responseBody" }
+                                } else {
+                                    val status = valueOf(statusString)
 
-                                if (status == CONFIRMED || status == REJECTED) {
-                                    return TransactionResultImpl(status)
+                                    if (status == CONFIRMED || status == REJECTED) {
+                                        return TransactionResultImpl(status)
+                                    }
                                 }
 
                                 Thread.sleep(retrieveTxStatusIntervalMs)
