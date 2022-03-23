@@ -11,28 +11,20 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import java.lang.Long.max
+import java.util.concurrent.atomic.AtomicLong
 
 class ClusterAnchorIcmfPipe(
         override val id: PipeID<ClusterAnchorRoute>,
         protected val storage: Storage,
         protected val chainID: Long
 ): IcmfPipe<ClusterAnchorRoute, Long> {
-    private var highestSeen = -1L
-    private var lastCommitted = -1L
-    private val lock = Any()
+    private val highestSeen = AtomicLong(-1L)
+    private val lastCommitted = AtomicLong(-1L)
 
     // TODO: prefetch packet in dispatcher instead of just setting height
-    fun setHighestSeenHeight(height: Long) {
-        synchronized(lock) {
-            highestSeen = height
-        }
-    }
+    fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
 
-    override fun mightHaveNewPackets(): Boolean {
-        synchronized(lock) {
-            return (highestSeen > lastCommitted)
-        }
-    }
+    override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
     override fun fetchNext(currentPointer: Long): IcmfPacket? {
         return withReadConnection(storage, chainID) { eContext ->
@@ -40,9 +32,7 @@ class ClusterAnchorIcmfPipe(
 
             val blockRID = dba.getBlockRID(eContext, currentPointer + 1)
             if (blockRID != null) {
-                synchronized(lock) {
-                    highestSeen = max(highestSeen, currentPointer + 1)
-                }
+                highestSeen.getAndUpdate { max(it, currentPointer + 1) }
                 val gtvBlockRid: Gtv = GtvByteArray(blockRID)
 
                 // Get raw data
@@ -62,9 +52,7 @@ class ClusterAnchorIcmfPipe(
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
-            synchronized(lock) {
-                lastCommitted = max(currentPointer, lastCommitted)
-            }
+            lastCommitted.getAndUpdate { max(it, currentPointer) }
         }
     }
 
