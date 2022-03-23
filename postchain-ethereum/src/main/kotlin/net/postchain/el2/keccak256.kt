@@ -1,9 +1,9 @@
 package net.postchain.el2
 
-import net.postchain.base.MessageDigestFactory
 import net.postchain.base.decompressKey
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
+import java.security.MessageDigest
 
 /**
  * Get ethereum address from compress public key
@@ -20,6 +20,6 @@ fun getEthereumAddress(compressedKey: ByteArray): ByteArray {
  * @return The keccak256 hash digest of [bytes]
  */
 fun digest(bytes: ByteArray): Hash {
-    val m = MessageDigestFactory.create(KECCAK256)
+    val m = MessageDigest.getInstance(KECCAK256)
     return m.digest(bytes)
 }

@@ -21,6 +21,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXDataBuilder
 import java.math.BigInteger
+import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -29,7 +30,7 @@ val myCS = SECP256K1CryptoSystem()
 
 class L2BlockBuilderTest : IntegrationTestSetup() {
 
-    private val ds = SimpleDigestSystem(KECCAK256)
+    private lateinit var ds: SimpleDigestSystem
 
     fun makeL2EventOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
@@ -97,6 +98,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val nodes = createNodes(1, "/net/postchain/el2/blockchain_config.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
+        ds = SimpleDigestSystem(MessageDigest.getInstance(KECCAK256))
 
         fun enqueueTx(data: ByteArray): Transaction? {
             try {
@@ -197,6 +199,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val nodes = createNodes(1, "/net/postchain/el2/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
+        ds = SimpleDigestSystem(MessageDigest.getInstance(KECCAK256))
 
         fun enqueueTx(data: ByteArray): Transaction? {
             try {
@@ -349,6 +352,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val nodes = createNodes(1, "/net/postchain/el2/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
+        ds = SimpleDigestSystem(MessageDigest.getInstance(KECCAK256))
 
         fun enqueueTx(data: ByteArray): Transaction? {
             try {

@@ -9,10 +9,11 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.OpData
 import org.web3j.abi.EventEncoder
 import java.math.BigInteger
+import java.security.MessageDigest
 
 class L2TestEventProcessor : EventProcessor {
 
-    private val ds = SimpleDigestSystem(KECCAK256)
+    private val ds = SimpleDigestSystem(MessageDigest.getInstance(KECCAK256))
 
     private var lastBlock = 0
 
