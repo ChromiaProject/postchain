@@ -15,7 +15,7 @@ import net.postchain.debug.BlockTrace
  * The abstract block builder has only a vague concept about the core procedures of a block builder, for example:
  * - to only append correct transactions to a block, and
  * - that a block must be validated and finalized when it's done, and
- * - can call functions on the [BlockWitnessManager] but cannot create a [BlockWitnessManager]
+ * - can call functions on the [BlockWitnessProvider] but cannot create a [BlockWitnessProvider]
  * etc
  *
  * Everything else is left to sub-classes.
@@ -32,7 +32,7 @@ abstract class AbstractBlockBuilder(
     // ----------------------------------
     // functions which need to be implemented in a concrete BlockBuilder:
     // ----------------------------------
-    abstract protected val blockWitnessManager: BlockWitnessManager
+    abstract protected val blockWitnessProvider: BlockWitnessProvider
     abstract protected fun computeMerkleRootHash(): ByteArray              // Computes the root hash for the Merkle tree of transactions currently in a block
     abstract protected fun makeBlockHeader(): BlockHeader                  // Create block header from initial block data
     abstract protected fun buildBlockchainDependencies(partialBlockHeader: BlockHeader?): BlockchainDependencies
@@ -40,14 +40,14 @@ abstract class AbstractBlockBuilder(
     // ----------------------------------
     // Public b/c need to be accessed by subclasses
     // ----------------------------------
-    var finalized: Boolean = false                   // signalling if further updates to block is permitted
-    val rawTransactions = mutableListOf<ByteArray>() // list of encoded transactions
+    protected var finalized: Boolean = false                   // signalling if further updates to block is permitted
+    protected val rawTransactions = mutableListOf<ByteArray>() // list of encoded transactions
     val transactions = mutableListOf<Transaction>()  // list of decoded transactions
-    var blockchainDependencies: BlockchainDependencies? = null //  is the dependencies the configuration tells us to use
+    protected var blockchainDependencies: BlockchainDependencies? = null //  is the dependencies the configuration tells us to use
     lateinit var bctx: BlockEContext                 // is the context for this specific block
-    lateinit var initialBlockData: InitialBlockData  //
-    var _blockData: BlockData? = null                // complete set of data for the block including header and [rawTransactions]
-    var buildingNewBlock: Boolean = false            // remains "false" as long we got a block from some other node
+    internal lateinit var initialBlockData: InitialBlockData  //
+    protected var _blockData: BlockData? = null                // complete set of data for the block including header and [rawTransactions]
+    protected var buildingNewBlock: Boolean = false            // remains "false" as long we got a block from some other node
 
     var blockTrace: BlockTrace? = null               // Only for logging, remains "null" unless TRACE
 
@@ -147,7 +147,7 @@ abstract class AbstractBlockBuilder(
     /**
      * (Note: don't call this. We only keep this as a public function for legacy tests to work)
      */
-    fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
+    internal fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
         val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
         return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
             blockHeader,
@@ -163,7 +163,7 @@ abstract class AbstractBlockBuilder(
     /**
      * @return the block RID at a certain height
      */
-    fun getBlockRidAtHeight(height: Long) = store.getBlockRID(ectx, height)
+    private fun getBlockRidAtHeight(height: Long) = store.getBlockRID(ectx, height)
 
     /**
      * Return block data if block is finalized.
@@ -184,8 +184,8 @@ abstract class AbstractBlockBuilder(
      */
     override fun commit(blockWitness: BlockWitness) {
         commitLog("Begin")
-        val witnessBuilder = blockWitnessManager.createWitnessBuilderWithoutOwnSignature(_blockData!!.header)
-        if (!blockWitnessManager.validateWitness(blockWitness, witnessBuilder)) {
+        val witnessBuilder = blockWitnessProvider.createWitnessBuilderWithoutOwnSignature(_blockData!!.header)
+        if (!blockWitnessProvider.validateWitness(blockWitness, witnessBuilder)) {
             throw ProgrammerMistake("Invalid witness")
         }
         store.commitBlock(bctx, blockWitness)

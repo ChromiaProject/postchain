@@ -26,7 +26,7 @@ class BaseBlockBuilderTest {
     var bbs = BaseBlockStore()
     val tf = BaseTransactionFactory()
     val db: DatabaseAccess = mock {}
-    val ctx = BaseEContext(mock {}, 2L, 0, db)
+    val ctx = BaseEContext(mock {}, 2L, db)
 
     val dummyEventSink = object : TxEventSink {
         override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
@@ -40,7 +40,7 @@ class BaseBlockBuilderTest {
     val dummy = ByteArray(32, { 0 })
     val subjects = arrayOf("test".toByteArray())
     val signer = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
-    val validator = BaseBlockWitnessManager(cryptoSystem, signer, subjects)
+    val validator = BaseBlockWitnessProvider(cryptoSystem, signer, subjects)
     val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
         subjects, signer, validator, listOf(),  listOf(), false)

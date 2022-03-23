@@ -9,14 +9,12 @@ import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.HeartbeatListener
-
 
 open class BaseBlockchainInfrastructure(
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
         val apiInfrastructure: ApiInfrastructure,
         private val postchainContext: PostchainContext
-) : BlockchainInfrastructure, SynchronizationInfrastructure by defaultSynchronizationInfrastructure {
+) : BlockchainInfrastructure {
 
     val cryptoSystem = SECP256K1CryptoSystem()
     val blockSigMaker: SigMaker
@@ -34,10 +32,8 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun shutdown() {
-        for (infra in syncInfraCache.values)
-            infra.shutdown()
-        for (ext in syncInfraExtCache.values)
-            ext.shutdown()
+        syncInfraCache.values.forEach { it.shutdown() }
+        syncInfraExtCache.values.forEach { it.shutdown() }
         apiInfrastructure.shutdown()
     }
 
@@ -56,11 +52,10 @@ open class BaseBlockchainInfrastructure(
             eContext: EContext,
             nodeId: Int,
             chainId: Long,
-            configurationComponentMap: MutableMap<String, Any>
     ): BlockchainConfiguration {
 
         val confData = BaseBlockchainConfigurationData.build(
-            rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker, configurationComponentMap)
+            rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
 
         val bcfClass = Class.forName(confData.data[KEY_CONFIGURATIONFACTORY]!!.asString())
         val factory = (bcfClass.newInstance() as BlockchainConfigurationFactory)
@@ -77,7 +72,8 @@ open class BaseBlockchainInfrastructure(
             afterCommitHandler: AfterCommitHandler
     ): BaseBlockchainEngine {
 
-        val storage = StorageBuilder.buildStorage(postchainContext.nodeConfig.appConfig, NODE_ID_TODO)
+        // We create a new storage instance to open new db connections for each engine
+        val storage = StorageBuilder.buildStorage(postchainContext.nodeConfig.appConfig)
 
         val transactionQueue = BaseTransactionQueue(
                 (configuration as BaseBlockchainConfiguration) // TODO: Olle: Is this conversion harmless?
@@ -90,10 +86,51 @@ open class BaseBlockchainInfrastructure(
                 }
     }
 
+    override fun makeBlockchainProcess(
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            shouldProcessNewMessages: (Long) -> Boolean
+    ): BlockchainProcess {
+        val configuration = engine.getConfiguration()
+        val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, shouldProcessNewMessages)
+        connectProcess(configuration, process)
+        return process
+    }
+
+    override fun exitBlockchainProcess(process: BlockchainProcess) {
+        val configuration = process.blockchainEngine.getConfiguration()
+        val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
+        synchronizationInfrastructure.exitBlockchainProcess(process)
+        disconnectProcess(configuration, process)
+    }
+
+    override fun restartBlockchainProcess(process: BlockchainProcess) {
+        val configuration = process.blockchainEngine.getConfiguration()
+        val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
+        synchronizationInfrastructure.restartBlockchainProcess(process)
+        disconnectProcess(configuration, process)
+    }
+
+    private fun connectProcess(configuration: BlockchainConfiguration , process: BlockchainProcess) {
+        configuration.syncInfrastructureExtensionNames.forEach {
+            getSynchronizationInfrastructureExtension(it).connectProcess(process)
+        }
+        apiInfrastructure.connectProcess(process)
+    }
+
+    private fun disconnectProcess(configuration: BlockchainConfiguration, process: BlockchainProcess) {
+        configuration.syncInfrastructureExtensionNames.forEach {
+            getSynchronizationInfrastructureExtension(it).disconnectProcess(process)
+        }
+        apiInfrastructure.disconnectProcess(process)
+    }
+
     private fun getSynchronizationInfrastructure(dynClassName: DynamicClassName?): SynchronizationInfrastructure {
         if (dynClassName == null) return defaultSynchronizationInfrastructure
-        val name = dynClassName.className
-        val className = if (name == "ebft") "net.postchain.ebft.EBFTSynchronizationInfrastructure" else name
+        val className = dynClassName.className.let {
+            if (it == "ebft") "net.postchain.ebft.EBFTSynchronizationInfrastructure" else it
+        }
         return syncInfraCache.getOrPut(className) { getInstanceByClassName(className) }
     }
 
@@ -102,11 +139,10 @@ open class BaseBlockchainInfrastructure(
     }
 
     /**
-     * Will dynamically create an instance from the given class name (with the constructor params nodeConfigParam
-     * and nodeDiagnosticCtx).
+     * Will dynamically create an instance from the given class name (with the constructor param [PostchainContext]).
      *
      * @param className is the full name of the class to create an instance from
-     * @return the instance as a [Shutdownable]
+     * @return the instance as a subclass of [Shutdownable]
      */
     private inline fun <reified T : Shutdownable> getInstanceByClassName(className: String): T {
         val iClass = Class.forName(className)
@@ -118,22 +154,5 @@ open class BaseBlockchainInfrastructure(
             throw UserMistake(
                     "Class ${className} does not support required interface"
             )
-    }
-
-    override fun makeBlockchainProcess(
-            processName: BlockchainProcessName,
-            engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener?
-    ): BlockchainProcess {
-        val conf = engine.getConfiguration()
-        val synchronizationInfrastructure = getSynchronizationInfrastructure(conf.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, heartbeatListener)
-        if (conf is BaseBlockchainConfiguration) {
-            for (extName in conf.syncInfrastructureExtensionNames) {
-                getSynchronizationInfrastructureExtension(extName).connectProcess(process)
-            }
-        }
-        apiInfrastructure.connectProcess(process)
-        return process
     }
 }

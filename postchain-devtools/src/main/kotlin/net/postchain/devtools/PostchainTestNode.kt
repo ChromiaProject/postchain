@@ -4,11 +4,9 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.PostchainNode
-import net.postchain.StorageBuilder
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
-import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
@@ -16,6 +14,7 @@ import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
+import net.postchain.managed.ManagedBlockchainProcessManager
 import kotlin.properties.Delegates
 
 /**
@@ -27,17 +26,15 @@ import kotlin.properties.Delegates
  */
 class PostchainTestNode(
         nodeConfigProvider: NodeConfigurationProvider,
-        preWipeDatabase: Boolean = false
-) : PostchainNode(nodeConfigProvider) {
+        storage: Storage
+) : PostchainNode(nodeConfigProvider, storage) {
 
-    val testStorage: Storage
     val pubKey: String
     private var isInitialized by Delegates.notNull<Boolean>()
     private val blockchainRidMap = mutableMapOf<Long, BlockchainRid>() // Used to keep track of the BC RIDs of the chains
 
     init {
         val nodeConfig = nodeConfigProvider.getConfiguration()
-        testStorage = StorageBuilder.buildStorage(nodeConfig.appConfig, NODE_ID_TODO, preWipeDatabase)
         pubKey = nodeConfig.pubKey
         isInitialized = true
 
@@ -66,7 +63,7 @@ class PostchainTestNode(
     fun addBlockchain(chainId: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
             DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
@@ -78,7 +75,7 @@ class PostchainTestNode(
     fun addConfiguration(chainId: Long, height: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
             val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
@@ -89,7 +86,7 @@ class PostchainTestNode(
     fun setMustSyncUntil(chainId: Long, brid: BlockchainRid, height: Long): Boolean {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(testStorage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             logger.debug("Set must_sync_until for chain: $brid, height: $height")
             BaseConfigurationDataStore.setMustSyncUntil(eContext, brid, height)
         }
@@ -103,7 +100,6 @@ class PostchainTestNode(
         logger.debug("shutdown node ${peerName(pubKey)}")
         super.shutdown()
         logger.debug("shutdown node ${peerName(pubKey)} done")
-        testStorage.close()
     }
 
     fun getRestApiModel(): Model {

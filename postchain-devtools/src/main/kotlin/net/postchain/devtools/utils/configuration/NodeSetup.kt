@@ -1,6 +1,7 @@
 package net.postchain.devtools.utils.configuration
 
 import mu.KLogging
+import net.postchain.StorageBuilder
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
@@ -90,8 +91,9 @@ data class NodeSetup(
     ): PostchainTestNode {
 
         require(configurationProvider != null) { "Cannot build a PostchainTestNode without a NodeConfigurationProvider set" }
+        val storage = StorageBuilder.buildStorage(configurationProvider!!.getConfiguration().appConfig, preWipeDatabase)
 
-        val node = PostchainTestNode(configurationProvider!!, preWipeDatabase)
+        val node = PostchainTestNode(configurationProvider!!, storage)
 
         if (chainsToRead.isNotEmpty()) {
             logger.debug("Node ${sequenceNumber.nodeNumber}: Start all read only blockchains (dependencies must be installed first)")

@@ -6,7 +6,6 @@ import net.postchain.StorageBuilder
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
-import net.postchain.core.NODE_ID_NA
 
 fun <RT> Storage.withReadConnection(op: (AppContext) -> RT): RT {
     val ctx = openReadConnection()
@@ -90,7 +89,7 @@ fun <RT> withReadWriteConnection(storage: Storage, chainID: Long, op: (EContext)
 }
 
 fun <RT> runStorageCommand(appConfig: AppConfig, op: (ctx: AppContext) -> RT): RT {
-    val storage = StorageBuilder.buildStorage(appConfig, NODE_ID_NA)
+    val storage = StorageBuilder.buildStorage(appConfig)
 
     return storage.use {
         it.withWriteConnection { ctx ->
@@ -105,7 +104,7 @@ fun <RT> runStorageCommand(nodeConfigFile: String, op: (ctx: AppContext) -> RT):
 }
 
 fun <RT> runStorageCommand(appConfig: AppConfig, chainId: Long, op: (ctx: EContext) -> RT): RT {
-    val storage = StorageBuilder.buildStorage(appConfig, NODE_ID_NA)
+    val storage = StorageBuilder.buildStorage(appConfig)
 
     return storage.use {
         withReadWriteConnection(it, chainId) { ctx ->

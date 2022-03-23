@@ -23,7 +23,6 @@ import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.ebft.heartbeat.Chain0HeartbeatListener
 import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
 import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
 import net.postchain.ebft.heartbeat.HeartbeatListener
@@ -121,16 +120,13 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, heartbeatListener: HeartbeatListener?): BlockchainProcess {
-        val hbListener = buildHeartbeatListener(chainId)
-        heartbeatListeners[chainId] = hbListener!!
-        heartbeatManager.addListener(hbListener)
-        return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, hbListener)
-    }
-
-    private fun buildHeartbeatListener(chainId: Long): HeartbeatListener? {
-        return if (chainId == 0L) Chain0HeartbeatListener()
-        else DefaultHeartbeatListener(nodeConfig, chainId)
+    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
+        if (chainId == 0L) return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
+        val hbListener = DefaultHeartbeatListener(nodeConfig, chainId).also {
+            heartbeatManager.addListener(it)
+            heartbeatListeners[chainId] = it
+        }
+        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { hbListener.checkHeartbeat(it) }
     }
 
     override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {

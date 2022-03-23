@@ -3,19 +3,16 @@ package net.postchain.devtools
 import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.base.PeerInfo
-import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.toHex
-import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import net.postchain.core.BlockchainRid
-import net.postchain.core.NODE_ID_NA
+import net.postchain.core.NodeRid
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
-import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 
 open class AbstractSyncTest : IntegrationTestSetup() {
@@ -84,10 +81,6 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         createTestNodesAndStartAllChainsFromSystem(systemSetup)
 
         return nodeSetups.values.toTypedArray()
-    }
-
-    val DEFAULT_STORAGE_FACTORY: (AppConfig) -> Storage = {
-        StorageBuilder.buildStorage(it, NODE_ID_NA, false)
     }
 
     /** This function is used instead of the default one, to prepare the local database tables before node is started.
@@ -178,7 +171,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
             System.out.println("++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}")
         }
 
-        StorageBuilder.buildStorage(appConfig, nodeSetup.sequenceNumber.nodeNumber, wipeDb).close()
+        StorageBuilder.buildStorage(appConfig, wipeDb).close()
 
         // TODO: Olle: Not sure what's going on here
         if (wipeDb) {

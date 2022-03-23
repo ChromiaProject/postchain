@@ -7,7 +7,6 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.network.common.ConnectionManager
 
 /**
@@ -21,7 +20,7 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            heartbeatListener: HeartbeatListener?
+            shouldProcessNewMessages: (Long) -> Boolean = { true }
     ): BlockchainProcess
 
     /**
@@ -38,13 +37,34 @@ interface SynchronizationInfrastructure : Shutdownable {
 }
 
 /**
+ * Extends the [SynchronizationInfrastructure] with these BC related concepts:
+ * 1. [BlockchainConfiguration]
+ * 2. [BlockchainEngine]
+ */
+interface BlockchainInfrastructure : SynchronizationInfrastructure {
+
+    fun makeBlockchainConfiguration(rawConfigurationData: ByteArray,
+                                    eContext: EContext,
+                                    nodeId: Int,
+                                    chainId: Long,
+    ): BlockchainConfiguration
+
+    fun makeBlockchainEngine(
+            processName: BlockchainProcessName,
+            configuration: BlockchainConfiguration,
+            afterCommitHandler: (BlockTrace?, Long) -> Boolean
+    ): BlockchainEngine
+
+}
+
+/**
  * This interface works a bit like a lifecycle hook, basically you can create a chunk of logic that can use
  * a [BlockchainProcess] for something during startup of the process.
  *
  * To see how it all goes together, see: doc/extension_classes.graphml
  *
  */
-interface BlockchainProcessLifecycleHandler: Shutdownable {
+interface BlockchainProcessConnectable {
     /**
      * "connect" here is a loosely defined concept. Often we want to initiate the corresponding [GTXSpecialTxExtension]
      * during "connect" but it could be anything.
@@ -56,33 +76,16 @@ interface BlockchainProcessLifecycleHandler: Shutdownable {
     fun disconnectProcess(process: BlockchainProcess)
 }
 
-interface SynchronizationInfrastructureExtension: BlockchainProcessLifecycleHandler
-
 /**
- * Extends the [SynchronizationInfrastructure] with these BC related concepts:
- * 1. [BlockchainConfiguration]
- * 2. [BlockchainEngine]
+ * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
+ * (examples: BBB Ext and GTX Spec TX Ext).
+ * To see how it all goes together, see: doc/extension_classes.graphml
  */
-interface BlockchainInfrastructure : SynchronizationInfrastructure {
+interface SynchronizationInfrastructureExtension: BlockchainProcessConnectable, Shutdownable
 
-    fun makeBlockchainConfiguration(rawConfigurationData: ByteArray,
-                                    eContext: EContext,
-                                    nodeId: Int,
-                                    chainId: Long,
-                                    configurationComponentMap: MutableMap<String, Any> = HashMap() // For unusual settings, customizations etc.
-    ): BlockchainConfiguration
+interface ApiInfrastructure: BlockchainProcessConnectable, Shutdownable
 
-    fun makeBlockchainEngine(
-            processName: BlockchainProcessName,
-            configuration: BlockchainConfiguration,
-            afterCommitHandler: (BlockTrace?, Long) -> Boolean
-    ): BlockchainEngine
-
-}
-
-interface ApiInfrastructure: BlockchainProcessLifecycleHandler
-
-interface BlockchainProcessManagerExtension: BlockchainProcessLifecycleHandler {
+interface BlockchainProcessManagerExtension: BlockchainProcessConnectable, Shutdownable {
     fun afterCommit(process: BlockchainProcess, height: Long)
 }
 

@@ -6,7 +6,6 @@ import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.BaseBlockchainInfrastructure
-import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
@@ -22,11 +21,9 @@ import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvArray
-import net.postchain.gtv.GtvByteArray
-import net.postchain.gtv.GtvDictionary
-import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.*
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
@@ -84,6 +81,15 @@ open class ManagedModeTest : AbstractSyncTest() {
             if (historicChain != null) {
                 data.setValue(BaseBlockchainConfigurationData.KEY_HISTORIC_BRID, GtvByteArray(ChainUtil.ridOf(historicChain).data))
             }
+
+            data.setValue(BaseBlockchainConfigurationData.KEY_CONFIGURATIONFACTORY, GtvString(
+                GTXBlockchainConfigurationFactory::class.java.name
+            ))
+
+            val gtx = mapOf(BaseBlockchainConfigurationData.KEY_GTX_MODULES to GtvArray(arrayOf(
+                GtvString(StandardOpsGTXModule::class.java.name))
+            ))
+            data.setValue(BaseBlockchainConfigurationData.KEY_GTX, GtvFactory.gtv(gtx))
 
             val pubkey = if (nodeSet.chain == 0L) {
                 if (it.key < nodeSet.signers.size) {
@@ -270,7 +276,6 @@ class TestManagedBlockchainInfrastructure(postchainContext: PostchainContext,
         eContext: EContext,
         nodeId: Int,
         chainId: Long,
-        configurationComponentMap: MutableMap<String, Any>
     ): BlockchainConfiguration {
 
         return mockDataSource.getConf(rawConfigurationData)!!

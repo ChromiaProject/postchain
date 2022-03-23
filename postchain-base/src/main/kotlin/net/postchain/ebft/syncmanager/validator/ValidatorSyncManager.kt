@@ -4,6 +4,7 @@ package net.postchain.ebft.syncmanager.validator
 
 import mu.KLogging
 import net.postchain.common.toHex
+import net.postchain.core.NodeRid
 import net.postchain.core.NodeStateTracker
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Signature
@@ -18,10 +19,8 @@ import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.core.NodeRid
 import nl.komponents.kovenant.task
 import java.util.*
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The ValidatorSyncManager handles communications with our peers.
@@ -78,7 +77,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            while (workerContext.heartbeatListener?.let { !it.checkHeartbeat(getLastBlockTimestamp()) } == true) {
+            while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
                 if (!isProcessRunning()) return
                 Thread.sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
             }

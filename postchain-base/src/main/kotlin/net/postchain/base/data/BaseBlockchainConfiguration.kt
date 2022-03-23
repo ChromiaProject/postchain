@@ -23,7 +23,7 @@ open class BaseBlockchainConfiguration(
     override val effectiveBlockchainRID = configData.getHistoricBRID() ?: configData.context.blockchainRID
     override val signers = configData.getSigners()
 
-    private val blockWitnessManager: BlockWitnessManager = BaseBlockWitnessManager(
+    private val blockWitnessProvider: BlockWitnessProvider = BaseBlockWitnessProvider(
         cryptoSystem,
         configData.blockSigMaker,
         signers.toTypedArray()
@@ -37,8 +37,6 @@ open class BaseBlockchainConfiguration(
 
     // Only GTX config can have special TX, this is just "Base" so we settle for null
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
-    val componentMap: Map<String, Any> = configData.getComponentMap() // Used for things that might or might not exist
-
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
         return BaseBlockHeader(rawBlockHeader, cryptoSystem)
@@ -49,9 +47,9 @@ open class BaseBlockchainConfiguration(
     }
 
     /**
-     * We can get the [BlockWitnessManager] directly from the config, don't have to go to the [BlockBuilder]
+     * We can get the [BlockWitnessProvider] directly from the config, don't have to go to the [BlockBuilder]
      */
-    override fun getBlockHeaderValidator(): BlockWitnessManager = blockWitnessManager
+    override fun getBlockHeaderValidator(): BlockWitnessProvider = blockWitnessProvider
 
     override fun getTransactionFactory(): TransactionFactory {
         return BaseTransactionFactory()
@@ -77,7 +75,7 @@ open class BaseBlockchainConfiguration(
             getSpecialTxHandler(),
             signers.toTypedArray(),
             configData.blockSigMaker,
-            blockWitnessManager,
+            blockWitnessProvider,
             bcRelatedInfosDependencyList,
             makeBBExtensions(),
             effectiveBlockchainRID != blockchainRid,
@@ -140,22 +138,6 @@ open class BaseBlockchainConfiguration(
             throw ProgrammerMistake("The constructor of the block building strategy given was " +
                     "unable to finish. Class name given: $strategyClassName," +
                     " class found=$strategyClass, ctor=$ctor, Msg: ${e.message}")
-        }
-    }
-
-    /**
-     * It's not crystal clear when something is important enough to get a typed "getX()" method in the config, or if it
-     * should be hidden behind this generic getter. If you suspect your setting is unusual, put it as a component.
-     *
-     * @param name is the identifier for the component we need
-     * @return a component if found
-     */
-    override fun <T> getComponent(name: String): T? {
-        val obj: Any? = componentMap[name]
-        return if (obj != null) {
-            obj as T
-        } else {
-            null
         }
     }
 }

@@ -3,7 +3,7 @@
 package net.postchain.devtools.cli
 
 import net.postchain.StorageBuilder
-import net.postchain.core.BlockchainRid
+import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
 import net.postchain.base.runStorageCommand
@@ -13,12 +13,16 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.core.NODE_ID_NA
+import net.postchain.core.BlockchainRid
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /* schema name: test0 */
 class CliIntegrationTest {
@@ -29,6 +33,7 @@ class CliIntegrationTest {
     val expectedBlockchainRID = "3475C1EEC5836D9B38218F78C30D302DBC7CAAAFFAF0CC83AE054B7A208F71D4"
     val secondBlockChainConfig = fullPath("blockchain_config_4_signers.xml")
     val heightSecondConfig = 10L
+    private lateinit var storage: Storage
 
     private fun fullPath(name: String): String {
         return Paths.get(javaClass.getResource("/net/postchain/devtools/cli/${name}").toURI()).toString()
@@ -37,7 +42,7 @@ class CliIntegrationTest {
     @BeforeEach
     fun setup() {
         // this wipes the data base.
-        StorageBuilder.buildStorage(appConfig, NODE_ID_NA, true)
+        storage = StorageBuilder.buildStorage(appConfig, true)
         // add-blockchain goes here
         val blockChainConfig = fullPath("blockchain_config.xml")
         CliExecution.addBlockchain(nodeConfigPath, chainId, blockChainConfig, AlreadyExistMode.FORCE)
@@ -92,7 +97,7 @@ class CliIntegrationTest {
     @Test
     fun testAddConfigurationPeersAdded() {
         // add peerinfos for the new signers.
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig)
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
         val peerinfos = nodeConfigProvider.getConfiguration().peerInfoMap
         for ((_, value) in peerinfos) {
             CliExecution.peerinfoAdd(nodeConfigPath, value.host, value.port, value.pubKey.toHex(),
