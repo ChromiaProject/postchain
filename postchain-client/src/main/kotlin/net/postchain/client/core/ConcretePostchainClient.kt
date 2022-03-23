@@ -135,6 +135,7 @@ class ConcretePostchainClient(
                                 val statusString = jsonObject.get("status")?.asString?.toUpperCase()
                                 if (statusString == null) {
                                     logger.warn { "No status in response\n$responseBody" }
+                                    return TransactionResultImpl(REJECTED)
                                 } else {
                                     val status = valueOf(statusString)
 
