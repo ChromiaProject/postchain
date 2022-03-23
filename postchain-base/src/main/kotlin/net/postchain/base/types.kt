@@ -8,6 +8,7 @@ import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.EContext
+import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
 import net.postchain.core.TxEContext
 import net.postchain.gtv.Gtv
