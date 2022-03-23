@@ -23,6 +23,9 @@ import net.postchain.gtv.path.GtvPathFactory
 import net.postchain.gtv.path.GtvPathSet
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
+import org.spongycastle.jce.provider.BouncyCastleProvider
+import java.security.MessageDigest
+import java.security.Security
 
 const val PREFIX: String = "sys.x.el2"
 const val EL2: String = "el2"
@@ -34,6 +37,13 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
     )
 ) {
 
+    init {
+        // We add this provider so that we can get keccak-256 message digest instances
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(BouncyCastleProvider())
+        }
+    }
+
     override fun initializeDB(ctx: EContext) {
         val dba = DatabaseAccess.of(ctx)
         dba.createPageTable(ctx,"${PREFIX}_event")
@@ -43,7 +53,7 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf(EthereumL2Implementation(SimpleDigestSystem(KECCAK256), 2))
+        return listOf(EthereumL2Implementation(SimpleDigestSystem(MessageDigest.getInstance(KECCAK256)), 2))
     }
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
@@ -59,7 +69,7 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val eventInfo = db.getEvent(ctx, PREFIX, eventHash) ?: return GtvNull
     val blockHeight = eventInfo.blockHeight
     val bh = blockHeaderData(db, ctx, blockHeight)
-    val blockHeader = GtvEncoder.simpleEncodeGtv(bh)
+    val blockHeader = SimpleGtvEncoder.encodeGtv(bh)
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
     val eventProof = eventProof(ctx, blockHeight, eventInfo)
     val el2MerkleProof = el2MerkleProof(db, ctx, blockHeight)
@@ -77,10 +87,10 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val blockHeight = argsDict["blockHeight"]!!.asInteger()
     val accountNumber = argsDict["accountNumber"]!!.asInteger()
     val db = DatabaseAccess.of(ctx)
-    val blockHeader = GtvEncoder.simpleEncodeGtv(blockHeaderData(db, ctx, blockHeight))
+    val blockHeader = SimpleGtvEncoder.encodeGtv(blockHeaderData(db, ctx, blockHeight))
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
     val accountState = accountState(db.getAccountState(ctx, PREFIX, blockHeight, accountNumber))
-    val snapshot = SnapshotPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
+    val snapshot = SnapshotPageStore(ctx, 2, SimpleDigestSystem(MessageDigest.getInstance(KECCAK256)), PREFIX)
     val proofs = snapshot.getMerkleProof(blockHeight, accountNumber)
     var gtvProofs: List<GtvByteArray> = listOf()
     for (proof in proofs) {
@@ -96,7 +106,7 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
 
 private fun eventProof(ctx: EContext, blockHeight: Long, event: DatabaseAccess.EventInfo?): Gtv {
     if (event == null) return GtvNull
-    val es = EventPageStore(ctx, 2, SimpleDigestSystem(KECCAK256))
+    val es = EventPageStore(ctx, 2, SimpleDigestSystem(MessageDigest.getInstance(KECCAK256)), PREFIX)
     val proofs = es.getMerkleProof(blockHeight, event.pos)
     var gtvProofs: List<GtvByteArray> = listOf()
     for (proof in proofs) {

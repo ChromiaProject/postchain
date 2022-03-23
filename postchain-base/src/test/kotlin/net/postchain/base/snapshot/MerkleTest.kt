@@ -4,7 +4,7 @@ package net.postchain.base.snapshot
 
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
-import net.postchain.common.data.KECCAK256
+import net.postchain.common.data.SHA256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvEncoder
@@ -12,13 +12,14 @@ import net.postchain.gtv.GtvFactory
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.math.BigInteger
+import java.security.MessageDigest
 import java.util.*
 import kotlin.test.assertEquals
 
 class MerkleTest {
 
     private val leafHashes = TreeMap<Long, Hash>()
-    private val ds = SimpleDigestSystem(KECCAK256)
+    private val ds = SimpleDigestSystem(MessageDigest.getInstance(SHA256))
 
     private lateinit var snapshot: TestSnapshotPageStore
     private lateinit var event: TestEventPageStore
@@ -367,7 +368,7 @@ class MerkleTest {
             GtvFactory.gtv("000000000000000000000000e105ba42b66d08ac7ca7fc48c583599044a6dab3".hexStringToByteArray()),
             GtvFactory.gtv(300L)
         )
-        leafs.add(ds.digest(GtvEncoder.simpleEncodeGtv(data)))
+        leafs.add(ds.digest(GtvEncoder.encodeGtv(data)))
         val pos = 0L
         val root = event.writeEventTree(0, leafs)
         val proofs = event.getMerkleProof(0, pos)

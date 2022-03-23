@@ -9,6 +9,7 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvString
 import java.math.BigInteger
+import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -18,7 +19,7 @@ class MerkleTreeTest {
 
     @Test
     fun testGetMerkleProof_1() {
-        val ds = SimpleDigestSystem(SHA256)
+        val ds = SimpleDigestSystem(MessageDigest.getInstance(SHA256))
         val dict = HashMap<String, Gtv>()
         dict["el2"] = GtvByteArray("1a535d48ce851c5e5005da5a281f25ef3791449c089b8c6185be375693b8d9db1a535d48ce851c5e5005da5a281f25ef3791449c089b8c6185be375693b8d9db".hexStringToByteArray())
 
@@ -34,7 +35,7 @@ class MerkleTreeTest {
 
     @Test
     fun testGetMerkleProof_2() {
-        val ds = SimpleDigestSystem(SHA256)
+        val ds = SimpleDigestSystem(MessageDigest.getInstance(SHA256))
         val dict = HashMap<String, Gtv>()
         dict["el2"] = GtvByteArray("044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d".hexStringToByteArray())
         dict["icmf"] = GtvByteArray("c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6".hexStringToByteArray())
@@ -57,7 +58,7 @@ class MerkleTreeTest {
 
     @Test
     fun testGetMerkleProof_10() {
-        val ds = SimpleDigestSystem(SHA256)
+        val ds = SimpleDigestSystem(MessageDigest.getInstance(SHA256))
         val dict = HashMap<String, Gtv>()
         for (i in 0..9) {
             val l = i.toLong()
