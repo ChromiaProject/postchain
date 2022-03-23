@@ -12,6 +12,7 @@ import net.postchain.core.NodeRid
 import java.time.Instant
 
 open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeConfig) : ManagedNodeDataSource {
+    private val nmApiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger()
 
     override fun getPeerInfos(): Array<PeerInfo> {
         // TODO: [POS-90]: Implement correct error processing
@@ -80,7 +81,6 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: 
     }
 
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
-        val nmApiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger()
         return if (nmApiVersion == 1L) {
             mapOf()
         } else {
