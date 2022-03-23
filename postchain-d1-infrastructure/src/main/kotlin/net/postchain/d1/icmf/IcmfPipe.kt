@@ -3,17 +3,12 @@
 package net.postchain.d1.icmf
 
 import net.postchain.core.BlockEContext
-import net.postchain.gtv.Gtv
+import net.postchain.core.BlockchainRid
 
 data class PipeID<RT: Route> (
         val route: RT,
-        val key: Gtv
-) {
-    override fun toString(): String {
-        // TODO
-        return "PipeID(TODO)"
-    }
-}
+        val brid: BlockchainRid
+)
 
 interface IcmfPipe<RT: Route, PtrT> {
     val id: PipeID<RT>

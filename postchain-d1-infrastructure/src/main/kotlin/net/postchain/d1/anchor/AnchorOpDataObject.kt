@@ -10,12 +10,12 @@ import net.postchain.gtx.OpData
  * Can do primitive validation of [OpData] too.
  */
 data class AnchorOpDataObject(
-    val blockRid: ByteArray,
-    val headerData: BlockHeaderData,
-    val witness: ByteArray
-    )  {
+        val blockRid: ByteArray,
+        val headerData: BlockHeaderData,
+        val witness: ByteArray
+) {
 
-    companion object: KLogging() {
+    companion object : KLogging() {
 
         /**
          * Does first part of validation, and hands over a "decoded" [AnchorOpDataObject] for further validation
@@ -34,7 +34,7 @@ data class AnchorOpDataObject(
                 return null
             }
 
-            try {
+            return try {
                 val gtvBlockRid = op.args[0]
                 val gtvHeader = op.args[1]
                 val gtvWitness = op.args[2]
@@ -43,14 +43,11 @@ data class AnchorOpDataObject(
                 val header = BlockHeaderDataFactory.buildFromGtv(gtvHeader)
                 val rawWitness = gtvWitness.asByteArray()
 
-                return AnchorOpDataObject(blockRid, header, rawWitness)
-
+                AnchorOpDataObject(blockRid, header, rawWitness)
             } catch (e: RuntimeException) {
                 logger.info("Invalid spcl operation: Error: ${e.message}")
-                return null // We don't really care what's wrong, just log it and return null
+                null // We don't really care what's wrong, just log it and return null
             }
         }
     }
-
-
 }
