@@ -15,8 +15,8 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
 
     private val dataBuilder = GTXDataBuilder(blockchainRID, signers, SECP256K1CryptoSystem())
 
-    fun addOperation(opName: String, args: Array<Gtv>) {
-        dataBuilder.addOperation(opName, args)
+    fun addOperation(opName: String, vararg args: Gtv) {
+        dataBuilder.addOperation(opName, arrayOf(*args))
     }
 
     fun sign(sigMaker: SigMaker) {
