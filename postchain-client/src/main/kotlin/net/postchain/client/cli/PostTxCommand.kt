@@ -33,7 +33,7 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
             val appConfig = AppConfig.fromProperties(configFile())
 
             postTx(appConfig) {
-                it.addOperation(opName, args.map(::encodeArg).toTypedArray())
+                it.addOperation(opName, *args.map(::encodeArg).toTypedArray())
             }
 
             println("Tx with the operation has been posted: $opName(${args.joinToString()})")
