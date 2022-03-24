@@ -25,6 +25,7 @@ import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -93,8 +94,8 @@ class PostChainClientTest : IntegrationTestSetup() {
         val client = spy(createPostChainClient(blockchainRID))
         val txBuilder = client.makeTransaction()
 
-        txBuilder.addOperation("nop", arrayOf())
-        txBuilder.addOperation("nop", arrayOf())
+        txBuilder.addOperation("nop")
+        txBuilder.addOperation("nop", gtv(Instant.now().toEpochMilli()))
         txBuilder.sign(sigMaker0)
 
         // When
