@@ -19,6 +19,7 @@ Configuration:
       target: SYSTEM_OUT
       PatternLayout:
         pattern: ${logpattern}
+
     RollingFile:
       name: FileAppender
       fileName: "${logs}/${filename}.${fileExt}"
@@ -42,6 +43,10 @@ Configuration:
             IfAny:
               IfAccumulatedFileSize:
                 exceeds: 1 GB
+      # Prometheus is only used whet we have Grafana monitoring, so it's removed as default
+      Prometheus:
+        name: PrometheusAppender
+        class: "io.prometheus.client.log4j.InstrumentedAppender"
       PatternLayout:
         pattern: ${logpattern}
 
@@ -52,13 +57,15 @@ Configuration:
       AppenderRef:
       - ref: ConsoleAppender
       - ref: FileAppender
+      - ref: PrometheusAppender
 
     Logger:
-
     - name: net.postchain
       level: info
       additivity: false
       AppenderRef:
       - ref: ConsoleAppender
+      - ref: PrometheusAppender
+        level: info
       - ref: FileAppender
         level: debug
