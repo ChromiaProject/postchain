@@ -45,6 +45,10 @@ sealed class CliError(open val message: String? = null) : CliResult() {
             override val code: Int = 7,
             override val message: String?) : CliError()
 
+    data class IncompatibleParameters(
+            override val code: Int = 8,
+            override val message: String?) : CliError()
+
     companion object {
         open class CliException(override val message: String, override val cause: Exception? = null) : RuntimeException(message, cause)
     }

@@ -4,6 +4,8 @@ package net.postchain.cli
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.runStorageCommand
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 
@@ -34,6 +36,11 @@ class CommandAddConfiguration : Command {
             description = "Height of configuration")
     private var height = 0L
 
+    @Parameter(names = ["-fh", "--future-height"],
+    description = "Add a configuration this many blocks in the future. (Not compatible with --height)",
+    )
+    private var futureHeight = 0L
+
     @Parameter(
             names = ["-bc", "--blockchain-config"],
             description = "Configuration file of blockchain (GtvML (*.xml) or Gtv (*.gtv))",
@@ -57,8 +64,17 @@ class CommandAddConfiguration : Command {
         println("add-configuration will be executed with options: " +
                 ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
 
+        if (height != 0L && futureHeight != 0L) {
+            return CliError.IncompatibleParameters(message = "Cannot use --height and --future at the same time")
+        }
+
         return try {
             val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
+            if (futureHeight > 0) {
+                runStorageCommand(nodeConfigFile!!, chainId!!) {
+                    height = DatabaseAccess.of(it).getLastBlockHeight(it) + futureHeight
+                }
+            }
             CliExecution.addConfiguration(nodeConfigFile!!, blockchainConfigFile!!, chainId!!, height, mode, allowUnknownSigners)
             Ok("Configuration has been added successfully")
         } catch (e: CliError.Companion.CliException) {
