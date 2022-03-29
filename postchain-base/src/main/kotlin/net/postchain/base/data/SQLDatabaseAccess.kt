@@ -632,7 +632,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             SET $TABLE_PEERINFOS_FIELD_HOST = ?, $TABLE_PEERINFOS_FIELD_PORT = ?, $TABLE_PEERINFOS_FIELD_TIMESTAMP = ? 
             WHERE $TABLE_PEERINFOS_FIELD_PUBKEY = ?
         """.trimIndent()
-        val updated = queryRunner.update(ctx.conn, sql, ScalarHandler<Int>(), host, port, time, pubKey)
+        val updated = queryRunner.update(ctx.conn, sql, host, port, time, pubKey)
         return (updated >= 1)
     }
 
