@@ -20,7 +20,7 @@ class DefaultNodeDiagnosticContext(override val enabled: Boolean) : NodeDiagnost
         }
     }
 
-    override fun getProperty(property: DiagnosticProperty): Any? {
+    override fun getProperty(property: DiagnosticProperty): (() -> Any?)? {
         return properties[property]
     }
 

@@ -8,7 +8,7 @@ import net.postchain.debug.NodeDiagnosticContext
 
 interface DebugInfoQuery {
     /**
-     * TODO: [POS-90]
+     * Returns string representation of [NodeDiagnosticContext] object converted to Json
      */
     fun queryDebugInfo(query: String?): String
 }
