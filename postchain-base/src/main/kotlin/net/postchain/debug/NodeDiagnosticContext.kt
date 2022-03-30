@@ -4,6 +4,8 @@ package net.postchain.debug
 
 interface NodeDiagnosticContext {
 
+    val enabled: Boolean
+
     /**
      * TODO: [POS-97]
      */

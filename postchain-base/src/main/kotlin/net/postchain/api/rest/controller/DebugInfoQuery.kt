@@ -18,9 +18,13 @@ class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext) : 
     private val jsonBuilder = JsonFactory.makePrettyJson()
 
     override fun queryDebugInfo(query: String?): String {
-        return when (query) {
-            null -> collectDebugInfo()
-            else -> unknownDebugInfoQuery(query)
+        return if (nodeDiagnosticContext.enabled) {
+            when (query) {
+                null -> collectDebugInfo()
+                else -> unknownQuery(query)
+            }
+        } else {
+            debugDisabled()
         }
     }
 
@@ -33,9 +37,15 @@ class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext) : 
                 }.let(jsonBuilder::toJson)
     }
 
-    private fun unknownDebugInfoQuery(query: String): String {
+    private fun unknownQuery(query: String): String {
         return JsonObject().apply {
-            addProperty("unknown-debuginfo-query", query)
+            addProperty("Error", "Unknown query: $query")
+        }.toString()
+    }
+
+    private fun debugDisabled(): String {
+        return JsonObject().apply {
+            addProperty("Error", "Debug mode is not enabled. Use --debug cli option to enable it.")
         }.toString()
     }
 }
