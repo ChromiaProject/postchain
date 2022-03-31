@@ -37,6 +37,12 @@ class CommandRunNodeAuto : Command {
             description = "Configuration directory")
     private var configDirectory = "."
 
+    @Parameter(
+            names = ["--debug"],
+            description = "Enables diagnostic info on the /_debug REST endpoint",
+    )
+    private var debug = false
+
     private val NODE_CONFIG_FILE = "node-config.properties"
     private val BLOCKCHAIN_DIR = "blockchains"
 
@@ -54,7 +60,7 @@ class CommandRunNodeAuto : Command {
         return try {
             CliExecution.waitDb(50, 1000, nodeConfigFile)
             val chainIds = loadChainsConfigs(chainsDir, nodeConfigFile)
-            CliExecution.runNode(nodeConfigFile, chainIds.sorted())
+            CliExecution.runNode(nodeConfigFile, chainIds.sorted(), debug)
             Ok("Postchain node is running", isLongRunning = true)
 
         } catch (e: CliError.Companion.CliException) {

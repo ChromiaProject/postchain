@@ -3,13 +3,9 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
-import net.postchain.base.BaseBlockchainConfigurationData
-import net.postchain.base.BaseBlockchainContext
-import net.postchain.base.BaseBlockchainInfrastructure
-import net.postchain.base.PeerInfo
+import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.withReadWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -83,11 +79,11 @@ open class ManagedModeTest : AbstractSyncTest() {
             }
 
             data.setValue(BaseBlockchainConfigurationData.KEY_CONFIGURATIONFACTORY, GtvString(
-                GTXBlockchainConfigurationFactory::class.java.name
+                    GTXBlockchainConfigurationFactory::class.java.name
             ))
 
             val gtx = mapOf(BaseBlockchainConfigurationData.KEY_GTX_MODULES to GtvArray(arrayOf(
-                GtvString(StandardOpsGTXModule::class.java.name))
+                    GtvString(StandardOpsGTXModule::class.java.name))
             ))
             data.setValue(BaseBlockchainConfigurationData.KEY_GTX, GtvFactory.gtv(gtx))
 
@@ -266,16 +262,15 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
 }
 
 
-
 class TestManagedBlockchainInfrastructure(postchainContext: PostchainContext,
                                           syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
                                           val mockDataSource: MockManagedNodeDataSource) :
         BaseBlockchainInfrastructure(syncInfra, apiInfra, postchainContext) {
     override fun makeBlockchainConfiguration(
-        rawConfigurationData: ByteArray,
-        eContext: EContext,
-        nodeId: Int,
-        chainId: Long,
+            rawConfigurationData: ByteArray,
+            eContext: EContext,
+            nodeId: Int,
+            chainId: Long,
     ): BlockchainConfiguration {
 
         return mockDataSource.getConf(rawConfigurationData)!!

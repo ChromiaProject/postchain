@@ -77,16 +77,10 @@ open class ManagedBlockchainProcessManager(
             dataSource = buildChain0ManagedDataSource()
             peerListVersion = dataSource.getPeerListVersion()
 
-            // TODO: [POS-97]: Put this to DiagnosticContext
-//                logger.debug { "${nodeConfigProvider.javaClass}" }
-
             // Setting up managed data source to the nodeConfig
             (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
                     ?.setPeerInfoDataSource(dataSource)
                     ?: logger.warn { "Node config is not managed, no peer info updates possible" }
-
-            // TODO: [POS-97]: Put this to DiagnosticContext
-//                logger.debug { "${blockchainConfigProvider.javaClass}" }
 
             // Setting up managed data source to the blockchainConfig
             (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)

@@ -9,7 +9,7 @@ import java.net.URL
 
 class DefaultMasterApiInfra(
         nodeConfigProvider: NodeConfigurationProvider,
-        nodeDiagnosticContext: NodeDiagnosticContext
+        nodeDiagnosticContext: NodeDiagnosticContext?
 ) : BaseApiInfrastructure(
         nodeConfigProvider,
         nodeDiagnosticContext

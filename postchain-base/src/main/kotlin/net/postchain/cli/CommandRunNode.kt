@@ -26,16 +26,22 @@ class CommandRunNode : Command {
             required = true)
     private var chainIDs = listOf<Long>()
 
+    @Parameter(
+            names = ["--debug"],
+            description = "Enables diagnostic info on the /_debug REST endpoint"
+    )
+    private var debug = false
+
     override fun key(): String = "run-node"
 
     override fun execute(): CliResult {
         println("run-node will be executed with options: " +
-                "${ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE)}")
+                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
 
         nodeConfigFile = nodeConfigFile.takeIf { it != "" }
                 ?: "config/config.$nodeIndex.properties"
 
-        CliExecution.runNode(nodeConfigFile, chainIDs)
+        CliExecution.runNode(nodeConfigFile, chainIDs, debug)
         return Ok("Postchain node is running", isLongRunning = true)
     }
 }

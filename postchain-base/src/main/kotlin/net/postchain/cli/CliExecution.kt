@@ -227,13 +227,13 @@ object CliExecution {
         }
     }
 
-    fun runNode(nodeConfigFile: String, chainIds: List<Long>) {
+    fun runNode(nodeConfigFile: String, chainIds: List<Long>, debug: Boolean) {
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
         val storage = StorageBuilder.buildStorage(appConfig)
         val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(
                 appConfig) { storage }
 
-        with(PostchainNode(nodeConfigProvider, storage)) {
+        with(PostchainNode(nodeConfigProvider, storage, debug)) {
             chainIds.forEach { startBlockchain(it) }
         }
     }

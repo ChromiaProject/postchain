@@ -26,8 +26,9 @@ import kotlin.properties.Delegates
  */
 class PostchainTestNode(
         nodeConfigProvider: NodeConfigurationProvider,
-        storage: Storage
-) : PostchainNode(nodeConfigProvider, storage) {
+        storage: Storage,
+        debug: Boolean = false
+) : PostchainNode(nodeConfigProvider, storage, debug) {
 
     val pubKey: String
     private var isInitialized by Delegates.notNull<Boolean>()
