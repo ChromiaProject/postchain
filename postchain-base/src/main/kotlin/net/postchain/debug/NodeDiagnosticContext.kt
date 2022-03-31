@@ -5,11 +5,6 @@ package net.postchain.debug
 interface NodeDiagnosticContext {
 
     /**
-     * Indicates that [NodeDiagnosticContext] is enabled/disabled
-     */
-    val enabled: Boolean
-
-    /**
      * Adds [DiagnosticProperty] property to the context
      */
     fun addProperty(property: DiagnosticProperty, value: Any?)

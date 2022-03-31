@@ -41,13 +41,13 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage:
                 nodeConfigProvider,
                 storage,
                 infrastructureFactory.makeConnectionManager(nodeConfigProvider),
-                DefaultNodeDiagnosticContext(debug)
+                if (debug) DefaultNodeDiagnosticContext() else null
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
 
-        with(postchainContext.nodeDiagnosticContext) {
+        postchainContext.nodeDiagnosticContext?.apply {
             addProperty(DiagnosticProperty.VERSION, getVersion())
             addProperty(DiagnosticProperty.PUB_KEY, nodeConfig.pubKey)
             addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)

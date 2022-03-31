@@ -11,18 +11,13 @@ class DefaultNodeDiagnosticContextTest {
 
     @Test
     fun testEmptyContext() {
-        // debug = true
-        val sut = DefaultNodeDiagnosticContext(true)
+        val sut = DefaultNodeDiagnosticContext()
         assert(sut.getProperties().isEmpty())
-
-        // debug = false
-        val sut2 = DefaultNodeDiagnosticContext(false)
-        assert(sut2.getProperties().isEmpty())
     }
 
     @Test
-    fun testAddPropertyToContextWithDebug() {
-        val sut = DefaultNodeDiagnosticContext(true)
+    fun testAddPropertyToContext() {
+        val sut = DefaultNodeDiagnosticContext()
         sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
         sut.addProperty(DiagnosticProperty.PUB_KEY, "237823673673")
         sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" } // lazy
@@ -35,19 +30,8 @@ class DefaultNodeDiagnosticContextTest {
     }
 
     @Test
-    fun testAddPropertyToContextWithoutDebug() {
-        val sut = DefaultNodeDiagnosticContext(false)
-        sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
-        sut.addProperty(DiagnosticProperty.PUB_KEY, "237823673673")
-        sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" } // lazy
-
-        // Asserts
-        assert(sut.getProperties().isEmpty())
-    }
-
-    @Test
-    fun testRemovePropertyOnContextWithDebug() {
-        val sut = DefaultNodeDiagnosticContext(true)
+    fun testRemovePropertyOnContext() {
+        val sut = DefaultNodeDiagnosticContext()
         sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
         sut.addProperty(DiagnosticProperty.PUB_KEY, "237823673673")
         sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" } // lazy
@@ -66,25 +50,8 @@ class DefaultNodeDiagnosticContextTest {
     }
 
     @Test
-    fun testRemovePropertyOnContextWithoutDebug() {
-        val sut = DefaultNodeDiagnosticContext(false)
-        sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
-        sut.addProperty(DiagnosticProperty.PUB_KEY, "237823673673")
-        sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" } // lazy
-
-        // Asserts
-        assert(sut.getProperties().isEmpty())
-
-        // Remove
-        sut.removeProperty(DiagnosticProperty.PUB_KEY)
-
-        // Asserts
-        assert(sut.getProperties().isEmpty())
-    }
-
-    @Test
-    fun testGetPropertyForContextWithDebug() {
-        val sut = DefaultNodeDiagnosticContext(true)
+    fun testGetPropertyForContext() {
+        val sut = DefaultNodeDiagnosticContext()
         sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
         sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" }
 
@@ -92,18 +59,6 @@ class DefaultNodeDiagnosticContextTest {
         assertEquals(null, sut.getProperty(DiagnosticProperty.PUB_KEY)) // Unknown property
         assertEquals("4.4.4", sut.getProperty(DiagnosticProperty.VERSION)?.invoke())
         assertEquals("my-container", sut.getProperty(DiagnosticProperty.CONTAINER_NAME)?.invoke())
-    }
-
-    @Test
-    fun testGetPropertyForContextWithoutDebug() {
-        val sut = DefaultNodeDiagnosticContext(false)
-        sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
-        sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" }
-
-        // Asserts
-        assertEquals(null, sut.getProperty(DiagnosticProperty.PUB_KEY)) // Unknown property
-        assertEquals(null, sut.getProperty(DiagnosticProperty.VERSION)?.invoke())
-        assertEquals(null, sut.getProperty(DiagnosticProperty.CONTAINER_NAME)?.invoke())
     }
 
 }

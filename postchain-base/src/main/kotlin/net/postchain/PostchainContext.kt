@@ -9,7 +9,7 @@ data class PostchainContext(
         val nodeConfigProvider: NodeConfigurationProvider,
         val storage: Storage,
         val connectionManager: ConnectionManager,
-        val nodeDiagnosticContext: NodeDiagnosticContext
+        val nodeDiagnosticContext: NodeDiagnosticContext?
 ) {
 
     // NB: This will generate a new configuration on each call,

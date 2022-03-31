@@ -15,7 +15,7 @@ import net.postchain.ebft.worker.ValidatorBlockchainProcess
 
 open class BaseApiInfrastructure(
         val nodeConfigProvider: NodeConfigurationProvider,
-        val nodeDiagnosticContext: NodeDiagnosticContext
+        val nodeDiagnosticContext: NodeDiagnosticContext?
 ) : ApiInfrastructure {
 
     val restApi: RestApi? = with(nodeConfigProvider.getConfiguration()) {

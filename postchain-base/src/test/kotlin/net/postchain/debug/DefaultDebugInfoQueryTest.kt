@@ -1,6 +1,5 @@
 package net.postchain.debug
 
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import org.junit.jupiter.api.Test
@@ -10,33 +9,20 @@ import kotlin.test.assertEquals
 class DefaultDebugInfoQueryTest {
 
     @Test
-    fun testEmptyContextWithDebug() {
-        val actual = getDebugInfoFromEmptyContext(true)
+    fun testEmptyContext() {
+        val sut = DefaultDebugInfoQuery(DefaultNodeDiagnosticContext())
+
+        // Actions
+        val json = sut.queryDebugInfo(null)
+        val actual = JsonParser().parse(json).asJsonObject
 
         // Asserts
         assertEquals(0, actual.size())
     }
 
     @Test
-    fun testEmptyContextWithoutDebug() {
-        val actual = getDebugInfoFromEmptyContext(false)
-
-        // Asserts
-        assertEquals(1, actual.size())
-        assertEquals(true, actual.has("Error"))
-    }
-
-    private fun getDebugInfoFromEmptyContext(debug: Boolean): JsonObject {
-        val sut = DefaultDebugInfoQuery(DefaultNodeDiagnosticContext(debug))
-
-        // Actions
-        val json = sut.queryDebugInfo(null)
-        return JsonParser().parse(json).asJsonObject
-    }
-
-    @Test
-    fun testContextWithDebug() {
-        val debugContext = DefaultNodeDiagnosticContext(true).apply {
+    fun testNonEmptyContext() {
+        val debugContext = DefaultNodeDiagnosticContext().apply {
             addProperty(DiagnosticProperty.VERSION, "1.1.1")
             addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" }
         }
@@ -53,15 +39,15 @@ class DefaultDebugInfoQueryTest {
     }
 
     @Test
-    fun testError_When_ContextWithoutDebug() {
-        val debugContext = DefaultNodeDiagnosticContext(false).apply {
+    fun testError_When_Subquery_IsGiven() {
+        val debugContext = DefaultNodeDiagnosticContext().apply {
             addProperty(DiagnosticProperty.VERSION, "1.1.1")
             addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" }
         }
         val sut = DefaultDebugInfoQuery(debugContext)
 
         // Actions
-        val json = sut.queryDebugInfo(null)
+        val json = sut.queryDebugInfo("subquery")
         val actual = JsonParser().parse(json).asJsonObject
 
         // Asserts
@@ -70,33 +56,16 @@ class DefaultDebugInfoQueryTest {
     }
 
     @Test
-    fun testError_When_SubqueryIsGiven_WithDebug() {
-        val actual = getSubDebugInfoFromContext(true)
-
-        // Asserts
-        assertEquals(1, actual.size())
-        assertEquals(true, actual.has("Error"))
-    }
-
-    @Test
-    fun testError_When_SubqueryIsGiven_WithoutDebug() {
-        val actual = getSubDebugInfoFromContext(false)
-
-        // Asserts
-        assertEquals(1, actual.size())
-        assertEquals(true, actual.has("Error"))
-    }
-
-    private fun getSubDebugInfoFromContext(debug: Boolean): JsonObject {
-        val debugContext = DefaultNodeDiagnosticContext(debug).apply {
-            addProperty(DiagnosticProperty.VERSION, "1.1.1")
-            addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" }
-        }
-        val sut = DefaultDebugInfoQuery(debugContext)
+    fun testError_When_NullDiagnosticContext_IsGiven() {
+        val sut = DefaultDebugInfoQuery(null)
 
         // Actions
-        val json = sut.queryDebugInfo("subquery")
-        return JsonParser().parse(json).asJsonObject
+        val json = sut.queryDebugInfo(null)
+        val actual = JsonParser().parse(json).asJsonObject
+
+        // Asserts
+        assertEquals(1, actual.size())
+        assertEquals(true, actual.has("Error"))
     }
 
 }

@@ -7,18 +7,19 @@ import net.postchain.api.rest.json.JsonFactory
 import net.postchain.debug.NodeDiagnosticContext
 
 interface DebugInfoQuery {
+
     /**
      * Returns string representation of [NodeDiagnosticContext] object converted to Json
      */
     fun queryDebugInfo(query: String?): String
 }
 
-class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext) : DebugInfoQuery {
+class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext?) : DebugInfoQuery {
 
     private val jsonBuilder = JsonFactory.makePrettyJson()
 
     override fun queryDebugInfo(query: String?): String {
-        return if (nodeDiagnosticContext.enabled) {
+        return if (nodeDiagnosticContext != null) {
             when (query) {
                 null -> collectDebugInfo()
                 else -> unknownQuery(query)
@@ -31,7 +32,7 @@ class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext) : 
     private fun collectDebugInfo(): String {
         return JsonObject()
                 .apply {
-                    nodeDiagnosticContext.getProperties().forEach { (property, value) ->
+                    nodeDiagnosticContext?.getProperties()?.forEach { (property, value) ->
                         add(property, jsonBuilder.toJsonTree(value))
                     }
                 }.let(jsonBuilder::toJson)
