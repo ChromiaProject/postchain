@@ -73,21 +73,11 @@ open class NodeConfig(val appConfig: AppConfig) {
     /**
      * Database
      */
-    val databaseDriverclass: String
-        get() = appConfig.databaseDriverclass
-
-    val databaseUrl: String
-        get() = appConfig.databaseUrl
-
-    val databaseSchema: String
-        get() = appConfig.databaseSchema
-
-    val databaseUsername: String
-        get() = appConfig.databaseUsername
-
-    val databasePassword: String
-        get() = appConfig.databasePassword
-
+    val databaseDriverclass: String by appConfig::databaseDriverclass
+    val databaseUrl: String by appConfig::databaseUrl
+    val databaseSchema: String by appConfig::databaseSchema
+    val databaseUsername: String by appConfig::databaseUsername
+    val databasePassword: String by appConfig::databasePassword
 
     /**
      * Heartbeat and RemoteConfig (for Subnode only)

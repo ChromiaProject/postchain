@@ -11,7 +11,6 @@ import org.apache.commons.dbcp2.BasicDataSource
 import javax.sql.DataSource
 
 object StorageBuilder {
-    const val readConcurrency = 10 // TODO: make this configurable
 
     fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false, expectedDbVersion: Int = 2): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
@@ -20,7 +19,7 @@ object StorageBuilder {
         // Read DataSource
         val readDataSource = createBasicDataSource(appConfig).apply {
             defaultAutoCommit = true
-            maxTotal = readConcurrency
+            maxTotal = appConfig.databaseReadConcurrency
             defaultReadOnly = true
         }
 
@@ -35,7 +34,7 @@ object StorageBuilder {
                 readDataSource,
                 writeDataSource,
                 db,
-                readConcurrency,
+                appConfig.databaseReadConcurrency,
                 db.isSavepointSupported())
     }
 
