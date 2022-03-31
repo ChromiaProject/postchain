@@ -15,7 +15,13 @@ import net.postchain.devtools.NameHelper
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
-import net.postchain.network.common.*
+import net.postchain.network.common.ChainWithConnections
+import net.postchain.network.common.ChainsWithConnections
+import net.postchain.network.common.ConnectionDirection
+import net.postchain.network.common.LazyPacket
+import net.postchain.network.common.NetworkTopology
+import net.postchain.network.common.NodeConnector
+import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.netty2.NettyPeerConnector
 
 /**
@@ -221,8 +227,7 @@ open class DefaultPeerConnectionManager<PacketType>(
 
     @Synchronized
     override fun broadcastPacket(data: LazyPacket, chainId: Long) {
-        // TODO: lazypacket might be computed multiple times
-        val chain = chainsWithConnections.getOrThrow(chainId) as ChainWithPeerConnections
+        val chain = chainsWithConnections.getOrThrow(chainId)
         for (conn in chain.getAllConnections()) {
             conn.sendPacket(data)
         }
