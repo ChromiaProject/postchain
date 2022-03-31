@@ -46,9 +46,7 @@ abstract class EbftMessage(val topic: MessageTopic) {
         }
     }
 
-    val asGtv by lazy { toGtv() }
-
-    val encoded by lazy { GtvEncoder.encodeGtv(asGtv) }
+    val encoded: ByteArray by lazy { GtvEncoder.encodeGtv(toGtv()) }
 
     protected abstract fun toGtv(): Gtv
 

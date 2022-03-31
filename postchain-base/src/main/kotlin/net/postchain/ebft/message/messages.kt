@@ -38,21 +38,21 @@ class SignedMessage(val message: EbftMessage, val pubKey: ByteArray, val signatu
 class Transaction(val data: ByteArray): EbftMessage(MessageTopic.TX) {
 
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(data))
+        return gtv(topic.toGtv(), gtv(data))
     }
 }
 
 class Signature(val subjectID: ByteArray, val data: ByteArray): EbftMessage(MessageTopic.SIG) {
 
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(subjectID), gtv(data))
+        return gtv(topic.toGtv(), gtv(subjectID), gtv(data))
     }
 }
 
 class BlockSignature(val blockRID: ByteArray, val sig: Signature): EbftMessage(MessageTopic.BLOCKSIG) {
 
     override fun toGtv(): GtvArray {
-        return gtv(gtv(topic.toLong()), gtv(blockRID),
+        return gtv(topic.toGtv(), gtv(blockRID),
                 gtv(sig.subjectID), gtv(sig.data))
     }
 }
@@ -60,14 +60,14 @@ class BlockSignature(val blockRID: ByteArray, val sig: Signature): EbftMessage(M
 class GetBlockSignature(val blockRID: ByteArray): EbftMessage(MessageTopic.GETBLOCKSIG) {
 
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(blockRID))
+        return gtv(topic.toGtv(), gtv(blockRID))
     }
 }
 
 class BlockData(val header: ByteArray, val transactions: List<ByteArray>): EbftMessage(MessageTopic.BLOCKDATA) {
 
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(header),
+        return gtv(topic.toGtv(), gtv(header),
                 gtv(transactions.map { gtv(it) }))
     }
 }
@@ -75,7 +75,7 @@ class BlockData(val header: ByteArray, val transactions: List<ByteArray>): EbftM
 class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArray): EbftMessage(MessageTopic.COMPLETEBLOCK) {
 
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()),
+        return gtv(topic.toGtv(),
                 gtv(data.header), gtv(data.transactions.map { gtv(it) }),
                 gtv(height), gtv(witness))
     }
@@ -84,28 +84,28 @@ class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArra
 class GetBlockAtHeight(val height: Long): EbftMessage(MessageTopic.GETBLOCKATHEIGHT) {
 
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(height))
+        return gtv(topic.toGtv(), gtv(height))
     }
 }
 
 class GetUnfinishedBlock(val blockRID: ByteArray): EbftMessage(MessageTopic.GETUNFINISHEDBLOCK) {
 
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(blockRID))
+        return gtv(topic.toGtv(), gtv(blockRID))
     }
 }
 
 class UnfinishedBlock(val header: ByteArray, val transactions: List<ByteArray>): EbftMessage(MessageTopic.UNFINISHEDBLOCK) {
 
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(header), gtv(transactions.map { gtv(it) }))
+        return gtv(topic.toGtv(), gtv(header), gtv(transactions.map { gtv(it) }))
     }
 }
 
 class Identification(val pubKey: ByteArray, val blockchainRID: BlockchainRid, val timestamp: Long): EbftMessage(MessageTopic.ID) {
 
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(pubKey), gtv(blockchainRID), gtv(timestamp))
+        return gtv(topic.toGtv(), gtv(pubKey), gtv(blockchainRID), gtv(timestamp))
     }
 }
 
@@ -119,7 +119,7 @@ class Status(val blockRID: ByteArray?, val height: Long, val revolting: Boolean,
         } else {
             GtvNull
         }
-        return gtv(gtv(topic.toLong()), currentBlockRid, gtv(height),
+        return gtv(topic.toGtv(), currentBlockRid, gtv(height),
                 gtv(revolting), gtv(round), gtv(serial), gtv(state.toLong()))
     }
 }
@@ -134,7 +134,7 @@ class Status(val blockRID: ByteArray?, val height: Long, val revolting: Boolean,
  */
 class GetBlockHeaderAndBlock(val height: Long): EbftMessage(MessageTopic.GETBLOCKHEADERANDBLOCK) {
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(height))
+        return gtv(topic.toGtv(), gtv(height))
     }
 }
 
@@ -146,7 +146,7 @@ class GetBlockHeaderAndBlock(val height: Long): EbftMessage(MessageTopic.GETBLOC
 class BlockHeader(val header: ByteArray, val witness: ByteArray, val requestedHeight: Long)
     : EbftMessage(MessageTopic.BLOCKHEADER) {
     override fun toGtv(): Gtv {
-        return gtv(gtv(topic.toLong()), gtv(header), gtv(witness), gtv(requestedHeight))
+        return gtv(topic.toGtv(), gtv(header), gtv(witness), gtv(requestedHeight))
     }
 }
 

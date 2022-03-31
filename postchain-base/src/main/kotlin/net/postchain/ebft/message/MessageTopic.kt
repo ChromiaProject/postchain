@@ -1,5 +1,7 @@
 package net.postchain.ebft.message
 
+import net.postchain.gtv.GtvFactory.gtv
+
 enum class MessageTopic(val value: Int) {
     ID(0),
     STATUS(1),
@@ -15,5 +17,5 @@ enum class MessageTopic(val value: Int) {
     GETBLOCKHEADERANDBLOCK(11),
     BLOCKHEADER(12);
 
-    fun toLong() = value.toLong()
+    fun toGtv() = gtv(value.toLong())
 }
