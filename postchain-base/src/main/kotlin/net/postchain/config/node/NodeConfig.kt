@@ -21,14 +21,6 @@ open class NodeConfig(val appConfig: AppConfig) {
     private val config: Configuration
         get() = appConfig.config
 
-    @Deprecated("POS-129: Defined implicitly by 'infrastructure' param")
-            /**
-             * Blockchain configuration provider
-             */
-    val blockchainConfigProvider: String
-        // manual | managed
-        get() = config.getString("configuration.provider.blockchain", "")
-
     val infrastructure: String
         // "base/ebft" is the default
         get() = config.getString("infrastructure", Infrastructure.Ebft.get())
