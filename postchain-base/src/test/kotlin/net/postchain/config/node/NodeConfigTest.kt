@@ -5,9 +5,9 @@ package net.postchain.config.node
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.config.app.AppConfig
-import org.junit.jupiter.api.Test
 import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
+import org.junit.jupiter.api.Test
 
 class NodeConfigTest {
 
@@ -26,8 +26,6 @@ class NodeConfigTest {
                 javaClass.getResource("/net/postchain/config/empty-node-config.properties").file)
         val nodeConfig = NodeConfig(appConfig)
 
-        // TODO: [POS-129]: Remove it
-        assertk.assert(nodeConfig.blockchainConfigProvider).isEmpty()
         assertk.assert(nodeConfig.infrastructure).isEqualTo("ebft")
 
         assertk.assert(nodeConfig.databaseDriverclass).isEmpty()
