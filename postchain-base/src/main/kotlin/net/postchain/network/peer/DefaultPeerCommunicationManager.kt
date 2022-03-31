@@ -72,8 +72,9 @@ class DefaultPeerCommunicationManager<PacketType>(
     override fun broadcastPacket(packet: PacketType) {
         logger.trace { "$processName: broadcastPacket($packet)" }
 
+        val lazyPacket by lazy { packetEncoder.encodePacket(packet) }
         connectionManager.broadcastPacket(
-                { packetEncoder.encodePacket(packet) },
+                { lazyPacket },
                 chainId
         )
     }
