@@ -52,7 +52,7 @@ class DefaultDebugInfoQueryTest {
 
         // Asserts
         assertEquals(1, actual.size())
-        assertEquals(true, actual.has("Error"))
+        assert(actual.has("Error"))
     }
 
     @Test
@@ -65,7 +65,7 @@ class DefaultDebugInfoQueryTest {
 
         // Asserts
         assertEquals(1, actual.size())
-        assertEquals(true, actual.has("Error"))
+        assert(actual.has("Error"))
     }
 
 }
