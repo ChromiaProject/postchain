@@ -17,7 +17,7 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXDataBuilder
 import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.deferred
+import nl.komponents.kovenant.task
 import org.apache.http.StatusLine
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.methods.HttpPost
@@ -50,13 +50,7 @@ class ConcretePostchainClient(
     }
 
     override fun postTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception> {
-        val def = deferred<TransactionResult, Exception>()
-        try {
-            def.resolve(doPostTransaction(txBuilder, confirmationLevel))
-        } catch (e: Exception) {
-            def.reject(e)
-        }
-        return def.promise
+        return task { doPostTransaction(txBuilder, confirmationLevel) }
     }
 
     override fun postTransactionSync(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
@@ -64,13 +58,7 @@ class ConcretePostchainClient(
     }
 
     override fun query(name: String, gtv: Gtv): Promise<Gtv, Exception> {
-        val def = deferred<Gtv, Exception>()
-        try {
-            def.resolve(doQuery(name, gtv))
-        } catch (e: Exception) {
-            def.reject(e)
-        }
-        return def.promise
+        return task { doQuery(name, gtv) }
     }
 
     override fun querySync(name: String, gtv: Gtv) = doQuery(name, gtv)
