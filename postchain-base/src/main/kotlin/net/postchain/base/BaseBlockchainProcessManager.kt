@@ -246,7 +246,7 @@ open class BaseBlockchainProcessManager(
     }
 
     protected fun initiateChainDiagnosticData() {
-        nodeDiagnosticContext.addProperty(DiagnosticProperty.BLOCKCHAIN) {
+        nodeDiagnosticContext?.addProperty(DiagnosticProperty.BLOCKCHAIN) {
             val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
 
             connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->

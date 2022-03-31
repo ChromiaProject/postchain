@@ -5,27 +5,27 @@ package net.postchain.debug
 interface NodeDiagnosticContext {
 
     /**
-     * TODO: [POS-97]
+     * Adds [DiagnosticProperty] property to the context
      */
     fun addProperty(property: DiagnosticProperty, value: Any?)
 
     /**
-     * TODO: [POS-97]
+     * Adds lazy [DiagnosticProperty] property to the context
      */
     fun addProperty(property: DiagnosticProperty, lazyValue: () -> Any?)
 
     /**
-     * TODO: [POS-97]
+     * Returns [DiagnosticProperty] property by key
      */
     fun getProperty(property: DiagnosticProperty): Any?
 
     /**
-     * TODO: [POS-97]
+     * Returns properties key-value map where key is [DiagnosticProperty.prettyName]
      */
     fun getProperties(): Map<String, Any?>
 
     /**
-     * TODO: [POS-97]
+     * Removes property by [DiagnosticProperty] key
      */
     fun removeProperty(property: DiagnosticProperty)
 }
