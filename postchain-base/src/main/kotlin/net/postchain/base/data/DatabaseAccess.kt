@@ -2,11 +2,9 @@
 
 package net.postchain.base.data
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
-import net.postchain.core.*
 import net.postchain.common.data.Hash
-import net.postchain.core.NodeRid
+import net.postchain.core.*
 import java.sql.Connection
 import java.time.Instant
 

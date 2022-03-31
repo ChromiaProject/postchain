@@ -4,9 +4,6 @@ package net.postchain.devtools.cli
 
 import net.postchain.StorageBuilder
 import net.postchain.base.Storage
-import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.data.SQLDatabaseAccess
-import net.postchain.base.runStorageCommand
 import net.postchain.cli.AlreadyExistMode
 import net.postchain.cli.CliExecution
 import net.postchain.common.hexStringToByteArray
@@ -14,15 +11,10 @@ import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BlockchainRid
-import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
-import kotlin.test.fail
+import kotlin.test.*
 
 /* schema name: test0 */
 class CliIntegrationTest {
@@ -41,7 +33,7 @@ class CliIntegrationTest {
 
     @BeforeEach
     fun setup() {
-        // this wipes the data base.
+        // this wipes the database.
         storage = StorageBuilder.buildStorage(appConfig, true)
         // add-blockchain goes here
         val blockChainConfig = fullPath("blockchain_config.xml")
@@ -76,7 +68,7 @@ class CliIntegrationTest {
                     false)
             fail()
         } catch (e: net.postchain.cli.CliError.Companion.CliException) {
-            // asser config added
+            // assert config added
             val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
             assertNull(configData)
         }
@@ -89,7 +81,7 @@ class CliIntegrationTest {
                 true)
         // assert bc added
         CliExecution.checkBlockchain(nodeConfigPath, chainId, expectedBlockchainRID)
-        // asser config added
+        // assert config added
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
         assertNotNull(configData)
     }
@@ -107,49 +99,8 @@ class CliIntegrationTest {
         val secondBlockChainConfig = fullPath("blockchain_config_4_signers.xml")
         CliExecution.addConfiguration(nodeConfigPath, secondBlockChainConfig, chainId, heightSecondConfig, AlreadyExistMode.FORCE,
                 false)
-        // asser config added
+        // assert config added
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
         assertNotNull(configData)
-    }
-
-    @Test
-    fun testUpgradingPostChainCreateMissingTables() {
-
-        var version = 0;
-        // simulate postchain 3.3.0 which has meta version is 0, and do not have blockchain_replicas and must_sync_util yet
-        runStorageCommand(nodeConfigPath) { ctx ->
-            val databaseAccess = DatabaseAccess.of(ctx) as SQLDatabaseAccess
-            val conn = ctx.conn
-            val queryRunner = databaseAccess.queryRunner
-            // need to set version of meta table is 1
-            var sql = "UPDATE meta set value = ? where key = 'version'"
-            queryRunner.update(conn, sql, 1);
-
-            // try to drop blockchain_replicas, must_util_sync
-            val dropBlockchainReplicas = "DROP TABLE IF EXISTS blockchain_replicas CASCADE";
-            queryRunner.update(conn, dropBlockchainReplicas)
-            val dropMustUtilSync = "DROP TABLE IF EXISTS must_sync_until CASCADE";
-            queryRunner.update(conn, dropMustUtilSync)
-
-            version = queryRunner.query(conn, "SELECT value FROM meta WHERE key='version'", ScalarHandler<String>()).toInt()
-        }
-
-        assertEquals(1, version)
-        var isBlockChainReplicasExist = false
-        var isMustSyncUtilExist = false
-        runStorageCommand(nodeConfigPath) { ctx ->
-            val databaseAccess = DatabaseAccess.of(ctx) as SQLDatabaseAccess
-            val conn = ctx.conn
-            val queryRunner = databaseAccess.queryRunner
-            val sql = "SELECT value FROM meta WHERE key='version'"
-            version = queryRunner.query(conn, sql, ScalarHandler<String>()).toInt()
-
-            isBlockChainReplicasExist = databaseAccess.tableExists(conn, "blockchain_replicas")
-            isMustSyncUtilExist = databaseAccess.tableExists(conn, "must_sync_until")
-        }
-
-        assertEquals(2, version)
-        assertTrue(isBlockChainReplicasExist)
-        assertTrue(isMustSyncUtilExist)
     }
 }

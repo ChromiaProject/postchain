@@ -13,9 +13,9 @@ import javax.sql.DataSource
 object StorageBuilder {
     const val readConcurrency = 10 // TODO: make this configurable
 
-    fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false): Storage {
+    fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false, expectedDbVersion: Int = 2): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
-        initStorage(appConfig, wipeDatabase, db)
+        initStorage(appConfig, wipeDatabase, db, expectedDbVersion)
 
         // Read DataSource
         val readDataSource = createBasicDataSource(appConfig).apply {
@@ -39,7 +39,7 @@ object StorageBuilder {
                 db.isSavepointSupported())
     }
 
-    private fun initStorage(appConfig: AppConfig, wipeDatabase: Boolean, db: DatabaseAccess) {
+    private fun initStorage(appConfig: AppConfig, wipeDatabase: Boolean, db: DatabaseAccess, expectedDbVersion: Int) {
         val initDataSource = createBasicDataSource(appConfig)
 
         if (wipeDatabase) {
@@ -47,7 +47,7 @@ object StorageBuilder {
         }
 
         createSchemaIfNotExists(initDataSource, appConfig.databaseSchema, db)
-        createTablesIfNotExists(initDataSource, db)
+        createTablesIfNotExists(initDataSource, db, expectedDbVersion)
         initDataSource.close()
     }
 
@@ -103,9 +103,9 @@ object StorageBuilder {
         }
     }
 
-    private fun createTablesIfNotExists(dataSource: DataSource, db: DatabaseAccess) {
+    private fun createTablesIfNotExists(dataSource: DataSource, db: DatabaseAccess, expectedDbVersion: Int) {
         dataSource.connection.use { connection ->
-            db.initializeApp(connection, expectedDbVersion = 2) // TODO: [et]: Extract version
+            db.initializeApp(connection, expectedDbVersion)
             connection.commit()
         }
     }
