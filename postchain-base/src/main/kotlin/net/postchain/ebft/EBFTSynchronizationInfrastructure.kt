@@ -8,7 +8,7 @@ import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.message.Message
+import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
@@ -149,7 +149,7 @@ open class EBFTSynchronizationInfrastructure(
             blockchainConfig: BlockchainConfiguration,
             relevantPeerCommConfig: PeerCommConfiguration,
             blockchainRid: BlockchainRid
-    ): CommunicationManager<Message> {
+    ): CommunicationManager<EbftMessage> {
         val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, blockchainRid)
         val packetDecoder = EbftPacketDecoder(relevantPeerCommConfig)
 
