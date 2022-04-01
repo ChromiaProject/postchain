@@ -13,7 +13,7 @@ import net.postchain.ebft.message.SignedMessage
 fun encodeAndSign(message: EbftMessage, sigMaker: SigMaker): ByteArray {
     val signature = sigMaker.signMessage(message.encoded) // TODO POS-04_sig I THINK this is one of the cases where we actually sign the data
 
-    return SignedMessage(message, signature.subjectID, signature.data).encode()
+    return SignedMessage(message, signature.subjectID, signature.data).encoded
 }
 
 fun decodeSignedMessage(bytes: ByteArray): SignedMessage {
