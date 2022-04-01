@@ -55,8 +55,8 @@
 
         <!-- CLI -->
         <dependency>
-            <groupId>com.github.ajalt</groupId>
-            <artifactId>clikt</artifactId>
+            <groupId>com.github.ajalt.clikt</groupId>
+            <artifactId>clikt-jvm</artifactId>
         </dependency>
 
         <!-- Testing -->
