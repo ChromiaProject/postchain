@@ -151,9 +151,11 @@ class RestApi(
                     throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
                 }
 
-                logger.debug{ """
-                    Request body : {"tx": "${tx.bytes.sliceArray(0 until maxLength).toHex()}" } 
-                """.trimIndent() }
+                logger.debug {
+                    """
+                        Request body : {"tx": "${tx.bytes.sliceArray(0 until maxLength).toHex()}" }
+                    """.trimIndent()
+                }
                 if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
                     throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
                 }
@@ -301,7 +303,7 @@ class RestApi(
     }
 
     private fun handlePostQuery(request: Request): String {
-        logger.debug{ "Request body: ${request.body()}" }
+        logger.debug { "Request body: ${request.body()}" }
         return model(request)
                 .query(Query(request.body()))
                 .json
@@ -353,7 +355,7 @@ class RestApi(
         val response: MutableList<String> = mutableListOf()
 
         queriesArray.forEach {
-            var query = gson.toJson(it)
+            val query = gson.toJson(it)
             response.add(model(request).query(Query(query)).json)
         }
 
@@ -381,7 +383,11 @@ class RestApi(
 
     private fun handleDebugQuery(request: Request): String {
         logger.debug("Request body: ${request.body()}")
-        return model0(request).debugQuery(request.params(SUBQUERY))
+        return models.values
+                .filterIsInstance(Model::class.java)
+                .firstOrNull()
+                ?.debugQuery(request.params(SUBQUERY))
+                ?: throw NotFoundError("There are no running chains")
     }
 
     private fun checkTxHashHex(request: Request): String {
@@ -435,14 +441,6 @@ class RestApi(
 
     private fun model(request: Request): Model {
         return chainModel(request) as Model
-    }
-
-    private fun model0(request: Request): Model {
-        val chain0Rid = bridByIID[0L]
-                ?: throw NotFoundError("Can't find chain0 in DB. Is this node in managed mode?")
-
-        return models[chain0Rid] as? Model
-                ?: throw NotFoundError("Can't find blockchain with blockchainRID: $chain0Rid")
     }
 
     private fun parseMultipleQueriesRequest(request: Request): JsonArray {
