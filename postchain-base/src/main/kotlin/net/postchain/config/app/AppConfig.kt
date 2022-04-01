@@ -74,4 +74,7 @@ class AppConfig(val config: Configuration) {
         get() = System.getenv("POSTCHAIN_DB_PASSWORD")
                 ?: config.getString("database.password", "")
 
+    val databaseReadConcurrency: Int
+        get() = config.getInt("database.readConcurrency", 10)
+
 }

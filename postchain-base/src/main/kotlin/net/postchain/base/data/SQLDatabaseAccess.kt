@@ -2,7 +2,6 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
-import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
@@ -363,10 +362,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         } else {
             rows.map { data ->
                 DatabaseAccess.EventInfo(
-                    data["event_iid"] as Long,
-                    data["block_height"] as Long,
-                    data["hash"] as Hash,
-                    data["data"] as ByteArray
+                        data["event_iid"] as Long,
+                        data["block_height"] as Long,
+                        data["hash"] as Hash,
+                        data["data"] as ByteArray
                 )
             }
         }
@@ -420,39 +419,48 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             // meta table already exists. Check the version
             val sql = "SELECT value FROM ${tableMeta()} WHERE key='version'"
             val version = queryRunner.query(connection, sql, ScalarHandler<String>()).toInt()
-            if (version == 1) {
-                logger.info("Current version ${version} is lower than expectedVersion ${expectedDbVersion}")
-                queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
-                queryRunner.update(connection, cmdCreateTableMustSyncUntil())
 
-                // need to update db version to latest
-                var sql = "UPDATE ${tableMeta()} set value = ? where key = 'version'"
-                queryRunner.update(connection, sql, expectedDbVersion)
-                logger.info("Database version has been update to version: ${expectedDbVersion}")
-            } else if (version != expectedDbVersion) {
-                throw UserMistake("Unexpected version '$version' in database. Expected '$expectedDbVersion'")
+            when {
+                version == expectedDbVersion -> Unit
+
+                version == 1 && expectedDbVersion == 2 -> {
+                    logger.info("Current version $version is lower than expectedVersion $expectedDbVersion")
+                    queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
+                    queryRunner.update(connection, cmdCreateTableMustSyncUntil())
+
+                    // Update db version to the latest
+                    val sql = "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'"
+                    queryRunner.update(connection, sql, expectedDbVersion)
+                    logger.info("Database version has been updated to version: $expectedDbVersion")
+                }
+
+                else -> throw UserMistake("Unexpected version $version in database. Expected $expectedDbVersion")
             }
 
-            // Make some upgrades to the database schema
-            if (!tableExists(connection, tableBlockchainReplicas())) {
-                queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
-            }
-            if (!tableExists(connection, tableMustSyncUntil())) {
-                queryRunner.update(connection, cmdCreateTableMustSyncUntil())
-            }
         } else {
             logger.info("Meta table does not exist. Assume database does not exist and create it (version: $expectedDbVersion).")
             queryRunner.update(connection, cmdCreateTableMeta())
             val sql = "INSERT INTO ${tableMeta()} (key, value) values ('version', ?)"
             queryRunner.update(connection, sql, expectedDbVersion)
 
-            // Don't use "CREATE TABLE IF NOT EXISTS" because if they do exist
-            // we must throw an error. If these tables exists but meta did not exist,
-            // there is some serious problem that needs manual work
-            queryRunner.update(connection, cmdCreateTableBlockchains())
-            queryRunner.update(connection, cmdCreateTablePeerInfos())
-            queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
-            queryRunner.update(connection, cmdCreateTableMustSyncUntil())
+            /**
+             * NB: Don't use "CREATE TABLE IF NOT EXISTS" because if they do exist
+             * we must throw an error. If these tables exists but meta did not exist,
+             * there is some serious problem that needs manual work
+             */
+
+            // version 1:
+            if (1 <= expectedDbVersion) {
+                queryRunner.update(connection, cmdCreateTablePeerInfos())
+                queryRunner.update(connection, cmdCreateTableBlockchains())
+            }
+
+            // version 2:
+            if (2 <= expectedDbVersion) {
+                queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
+                queryRunner.update(connection, cmdCreateTableMustSyncUntil())
+            }
+
         }
     }
 
@@ -778,5 +786,4 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
         return false
     }
-
 }
