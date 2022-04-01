@@ -12,7 +12,9 @@ import javax.sql.DataSource
 
 object StorageBuilder {
 
-    fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false, expectedDbVersion: Int = 2): Storage {
+    private const val DB_VERSION = 2
+
+    fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
         initStorage(appConfig, wipeDatabase, db, expectedDbVersion)
 
