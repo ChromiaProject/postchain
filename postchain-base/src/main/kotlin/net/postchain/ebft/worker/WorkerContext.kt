@@ -5,7 +5,7 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.message.Message
+import net.postchain.ebft.message.EbftMessage
 import net.postchain.network.CommunicationManager
 
 /**
@@ -16,7 +16,7 @@ import net.postchain.network.CommunicationManager
 class WorkerContext(val processName: BlockchainProcessName,
                     val blockchainConfiguration: BlockchainConfiguration,
                     val engine: BlockchainEngine,
-                    val communicationManager: CommunicationManager<Message>,
+                    val communicationManager: CommunicationManager<EbftMessage>,
                     val peerCommConfiguration: PeerCommConfiguration,
                     val nodeConfig: NodeConfig,
                     val shouldProcessMessages: (Long) -> Boolean

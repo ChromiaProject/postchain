@@ -10,7 +10,7 @@ import net.postchain.ebft.EbftPacketDecoder
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoder
 import net.postchain.ebft.EbftPacketEncoderFactory
-import net.postchain.ebft.message.Message
+import net.postchain.ebft.message.EbftMessage
 import java.io.Closeable
 
 class EbftIntegrationTestContext(
@@ -21,7 +21,7 @@ class EbftIntegrationTestContext(
     val chainId = 1L
     //private val connectorFactory = NettyPeerConnectorFactory<Message>()
 
-    val connectionManager = DefaultPeerConnectionManager<Message>(
+    val connectionManager = DefaultPeerConnectionManager<EbftMessage>(
             EbftPacketEncoderFactory(),
             EbftPacketDecoderFactory(),
             SECP256K1CryptoSystem())

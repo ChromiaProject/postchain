@@ -9,7 +9,7 @@ import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.ebft.EbftPacketDecoder
 import net.postchain.ebft.EbftPacketEncoder
-import net.postchain.ebft.message.Message
+import net.postchain.ebft.message.EbftMessage
 import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeerConnectionDescriptor
@@ -22,7 +22,7 @@ class EbftTestContext(val config: PeerCommConfiguration, val blockchainRid: Bloc
         on { onNodeConnected(any()) } doReturn packets
     }
 
-    val peer = NettyPeerConnector<Message>(events)
+    val peer = NettyPeerConnector<EbftMessage>(events)
 
     fun init() = peer.init(config.myPeerInfo(), EbftPacketDecoder(config))
 
@@ -30,9 +30,9 @@ class EbftTestContext(val config: PeerCommConfiguration, val blockchainRid: Bloc
 
     fun buildPacketDecoder(): EbftPacketDecoder = EbftPacketDecoder(config)
 
-    fun encodePacket(message: Message): ByteArray = buildPacketEncoder().encodePacket(message)
+    fun encodePacket(message: EbftMessage): ByteArray = buildPacketEncoder().encodePacket(message)
 
-    fun decodePacket(bytes: ByteArray): Message = buildPacketDecoder().decodePacket(bytes)!!
+    fun decodePacket(bytes: ByteArray): EbftMessage = buildPacketDecoder().decodePacket(bytes)!!
 
     fun shutdown() = peer.shutdown()
 }
