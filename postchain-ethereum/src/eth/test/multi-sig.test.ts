@@ -273,4 +273,48 @@ describe("Multi-Sig", () => {
             }
         })
     })
+
+    describe("Mass Exit", async () => {
+        it("admins can manage mass exit",async () => {
+            let directoryNode1ChrL2 = new ChrL2__factory(directoryNode1).attach(chrL2Address)
+            let directoryNode2ChrL2 = new ChrL2__factory(directoryNode2).attach(chrL2Address)
+            let directoryNode3ChrL2 = new ChrL2__factory(directoryNode3).attach(chrL2Address)
+            expect(await directoryNode1ChrL2.isMassExit()).to.be.false
+            let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray("977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"))
+            let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray("49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"))
+            let blockRid = postchainMerkleNodeHash([0x7, node1, node2])
+
+            // trigger mass exit
+            let triggerMassExit = directoryNode1ChrL2.interface.encodeFunctionData("triggerMassExit", [100, blockRid])
+            await directoryNode1ChrL2.submitTransaction(chrL2Address, BigNumber.from(0), triggerMassExit)
+            var txId = (await directoryNode1ChrL2.transactionCount()).sub(1)
+            await directoryNode2ChrL2.confirmTransaction(txId)
+            await directoryNode3ChrL2.confirmTransaction(txId)
+
+            expect(await directoryNode1ChrL2.isMassExit()).to.be.true
+            expect((await directoryNode1ChrL2.massExitBlock()).height).to.equal(100)
+            expect((await directoryNode1ChrL2.massExitBlock()).blockRid).to.equal(blockRid)
+            
+            // update mass exit block
+            blockRid = postchainMerkleNodeHash([0x7, node2, node1])
+            let updateMassExitBlock = directoryNode1ChrL2.interface.encodeFunctionData("updateMassExitBlock", [200, blockRid])
+            await directoryNode1ChrL2.submitTransaction(chrL2Address, BigNumber.from(0), updateMassExitBlock)
+            var txId = (await directoryNode1ChrL2.transactionCount()).sub(1)
+            await directoryNode2ChrL2.confirmTransaction(txId)
+            await directoryNode3ChrL2.confirmTransaction(txId)
+
+            expect(await directoryNode1ChrL2.isMassExit()).to.be.true
+            expect((await directoryNode1ChrL2.massExitBlock()).height).to.equal(200)
+            expect((await directoryNode1ChrL2.massExitBlock()).blockRid).to.equal(blockRid)
+
+            // postpone mass exit
+            let postponeMassExit = directoryNode1ChrL2.interface.encodeFunctionData("postponeMassExit")
+            await directoryNode1ChrL2.submitTransaction(chrL2Address, BigNumber.from(0), postponeMassExit)
+            var txId = (await directoryNode1ChrL2.transactionCount()).sub(1)
+            await directoryNode2ChrL2.confirmTransaction(txId)
+            await directoryNode3ChrL2.confirmTransaction(txId)
+            
+            expect(await directoryNode1ChrL2.isMassExit()).to.be.false
+        })
+    })
 })

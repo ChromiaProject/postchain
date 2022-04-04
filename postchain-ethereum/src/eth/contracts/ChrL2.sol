@@ -16,6 +16,9 @@ import "./utils/Gtv.sol";
 import "./Postchain.sol";
 
 contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
+
+    uint8 constant ERC20_ACCOUNT_STATE_BYTE_SIZE = 64;
+    uint8 constant ERC721_ACCOUNT_STATE_BYTE_SIZE = 64;
     // This contract is upgradeable. This imposes restrictions on how storage layout can be modified once it is deployed
     // Some instructions are also not allowed. Read more at: https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     using Postchain for bytes32;
@@ -24,6 +27,29 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         ERC20,
         ERC721
     }
+
+    struct PostchainBlock {
+        uint height;
+        bytes32 blockRid;
+    }
+
+    struct ERC20AccountState {
+        IERC20 token;
+        uint amount;
+    }
+
+    struct ERC721AccountState {
+        IERC721 token;
+        uint tokenId;
+    }
+
+    struct AccountStateNumber {
+        uint blockHeight;
+        uint accountNumber;
+    }
+
+    bool public isMassExit;
+    PostchainBlock public massExitBlock;
 
     uint public transactionCount;
     mapping (uint => Transaction) public transactions;
@@ -38,6 +64,9 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
 
     // Each postchain event will be used to claim only one time.
     mapping (bytes32 => bool) private _events;
+
+    // Each account state snapshot will be used to claim only one time.
+    mapping (bytes32 => bool) private _snapshots;
 
     enum Status {
         Pending,
@@ -80,6 +109,8 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
     event Withdrawal(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawalNFT(address indexed beneficiary, IERC721 indexed nft, uint256 tokenId);
+    event MassExit(uint indexed height, bytes32 indexed blockRid);
+    event WithdrawalBySnapshot(address indexed beneficiary);
 
     /*
      *  Modifiers
@@ -121,6 +152,11 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
 
     modifier notNull(address _address) {
         require(_address != address(0), "ChrL2: null address is not allow");
+        _;
+    }
+
+    modifier whenMassExit() {
+        require(isMassExit, "ChrL2: mass exit was not triggered yet");
         _;
     }
 
@@ -302,6 +338,20 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         });
         transactionCount += 1;
         emit Submission(transactionId);
+    }
+
+    function triggerMassExit(uint height, bytes32 blockRid) onlyThis public {
+        require(!isMassExit, "ChrL2: mass exit already set");
+        isMassExit = true;
+        massExitBlock = PostchainBlock(height, blockRid);
+    }
+
+    function postponeMassExit() onlyThis whenMassExit public {
+        isMassExit = false;
+    }
+
+    function updateMassExitBlock(uint height, bytes32 blockRid) onlyThis whenMassExit public {
+        massExitBlock = PostchainBlock(height, blockRid);
     }
 
     function pendingWithdraw(bytes32 _hash) onlyThis public {
@@ -489,4 +539,47 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         wd.nft.safeTransferFrom(address(this), beneficiary, tokenId);
         emit WithdrawalNFT(beneficiary, wd.nft, tokenId);
     }
+
+    /// @dev withdraw all account assets in the postchain snapshot when mass exit was triggered
+    function withdrawBySnapshot(
+        AccountStateNumber memory account,
+        bytes calldata snapshot,
+        bytes32[] memory stateProofs,
+        bytes memory blockHeader,
+        bytes[] memory sigs,
+        Data.EL2ProofData memory el2Proof
+    ) whenMassExit nonReentrant public  {
+        bytes32 stateHash = keccak256(abi.encodePacked(account.accountNumber, snapshot));
+        require(_snapshots[stateHash] == false, "ChrL2: snapshot already used");
+        (bytes32 blockRid, , bytes32 stateRoot) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
+        require(blockRid == massExitBlock.blockRid, "ChrL2: account state block rid should equal to mass exit block rid");
+        require(account.blockHeight <= massExitBlock.height, "ChrL2: account state number should less than or equal to mass exit block");
+        if (!Postchain.isValidSignatures(blockRid, sigs, appNodes)) revert("ChrL2: block signature is invalid");
+        if (!MerkleProof.verify(stateProofs, stateHash, account.accountNumber, stateRoot)) revert("ChrL2: invalid merkle proof");
+
+        address beneficiary = abi.decode(snapshot[:32], (address));
+        uint offset = 32;
+        // Get byte size of all ERC20 balances
+        uint byteSize = abi.decode(snapshot[offset:offset + 32], (uint));
+        offset += 32;
+        for (uint i = offset; i < offset + byteSize; i += ERC20_ACCOUNT_STATE_BYTE_SIZE) {
+            ERC20AccountState memory accountState = abi.decode(snapshot[i:i + ERC20_ACCOUNT_STATE_BYTE_SIZE], (ERC20AccountState));
+            if (accountState.amount > 0) {
+                accountState.token.transfer(beneficiary, accountState.amount);
+            }
+        }
+        offset += byteSize;
+
+        // Get byte size of all ERC721 balances
+        byteSize = abi.decode(snapshot[offset:offset + 32], (uint));
+        offset += 32; // Byte size field (32)
+        // Decode each balance to find the one we are looking for
+        for (uint i = offset; i < offset + byteSize; i += ERC721_ACCOUNT_STATE_BYTE_SIZE) {
+            ERC721AccountState memory accountState = abi.decode(snapshot[i:i + ERC721_ACCOUNT_STATE_BYTE_SIZE], (ERC721AccountState));
+            accountState.token.safeTransferFrom(address(this), beneficiary, accountState.tokenId);
+        }
+
+        _snapshots[stateHash] = true;
+        emit WithdrawalBySnapshot(beneficiary);
+    }  
 }
