@@ -476,8 +476,7 @@ class RestApi(
                 Unirest.post(url)
                         .header("Content-Type", "application/json")
                         .body(request.body())
-                        .asEmptyAsync()
-                ""
+                        .asJson().body.toString()
             } else {
                 logger.trace { "Local REST API model found: $model" }
                 localHandler(request, response)
