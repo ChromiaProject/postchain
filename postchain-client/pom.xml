@@ -35,20 +35,34 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-base</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>nl.komponents.kovenant</groupId>
+            <artifactId>kovenant-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.madgag.spongycastle</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.madgag.spongycastle</groupId>
+            <artifactId>prov</artifactId>
+        </dependency>
         <!-- Tools -->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.github.microutils</groupId>
-            <artifactId>kotlin-logging</artifactId>
         </dependency>
 
         <!-- CLI -->
@@ -61,28 +75,29 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito.kotlin</groupId>
             <artifactId>mockito-kotlin</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
             <artifactId>assertk</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <!-- 3rd party -->
         <dependency>
-            <groupId>io.rest-assured</groupId>
-            <artifactId>rest-assured</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility-kotlin</artifactId>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>
