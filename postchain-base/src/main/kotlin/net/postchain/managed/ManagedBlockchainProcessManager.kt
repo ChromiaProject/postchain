@@ -177,7 +177,7 @@ open class ManagedBlockchainProcessManager(
         /**
          * Wrapping the [AfterCommitHandler] in a try-catch.
          */
-        fun wrappedAfterCommitHandler(bTrace: BlockTrace?, blockHeight: Long): Boolean {
+        fun wrappedAfterCommitHandler(bTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
             return try {
                 wrTrace("Before", chainId, bTrace)
                 synchronized(synchronizer) {

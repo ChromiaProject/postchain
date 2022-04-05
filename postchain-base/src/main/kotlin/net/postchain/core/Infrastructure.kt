@@ -5,7 +5,6 @@ package net.postchain.core
 import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ConnectionManager
 
@@ -52,7 +51,7 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     fun makeBlockchainEngine(
             processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
-            afterCommitHandler: (BlockTrace?, Long) -> Boolean
+            afterCommitHandler: AfterCommitHandler
     ): BlockchainEngine
 
 }
