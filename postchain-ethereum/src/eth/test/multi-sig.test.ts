@@ -14,7 +14,6 @@ const { expect } = chai;
 describe("Multi-Sig", () => {
     let tokenAddress: string;
     let chrL2Address: string;
-    let testDelegatorAddress: string;
     let directoryNode1: SignerWithAddress;
     let directoryNode2: SignerWithAddress;
     let directoryNode3: SignerWithAddress;
@@ -28,9 +27,6 @@ describe("Multi-Sig", () => {
         const tokenContract = await tokenFactory.deploy()
         tokenAddress = tokenContract.address
         expect(await tokenContract.totalSupply()).to.eq(0)
-        const testDelegatorFactory = new TestDelegator__factory(deployer);
-        const testDelegator = await testDelegatorFactory.deploy()
-        testDelegatorAddress = testDelegator.address;
 
         const chrl2Factory = new ChrL2__factory(deployer)
         const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[directoryNode1.address, directoryNode2.address, directoryNode3.address], [appNode1.address, appNode2.address]])
@@ -91,7 +87,7 @@ describe("Multi-Sig", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "05608E8DC1763FC003015CE81318E60C260EF71804770252D7E487CA33ABB2C2"
+                let extraDataMerkleRoot = "5E12CE28AF14C487A7CC433A8BE6C946F57D68D2410DAAB2FC2433905CE9B286"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
