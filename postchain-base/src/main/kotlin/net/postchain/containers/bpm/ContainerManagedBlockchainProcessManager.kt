@@ -65,7 +65,7 @@ open class ContainerManagedBlockchainProcessManager(
     override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, nodeConfig)
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return { blockTrace: BlockTrace?, blockTimestamp: Long ->
+        return { blockTrace: BlockTrace?, _, blockTimestamp: Long ->
             try {
                 rTrace("Before", chainId, blockTrace)
                 if (chainId != CHAIN0) {

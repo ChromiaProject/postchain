@@ -63,5 +63,5 @@ interface BlockchainProcessManager : Shutdownable, Synchronizable {
 }
 
 // A return value of "true" means a restart is needed.
-typealias AfterCommitHandler = (BlockTrace?, Long) -> Boolean
+typealias AfterCommitHandler = (bTrace: BlockTrace?, height: Long, blockTimestamp: Long) -> Boolean
 
