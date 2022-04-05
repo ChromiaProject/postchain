@@ -199,7 +199,7 @@ open class BaseBlockchainProcessManager(
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
     protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return { bTrace, height ->
+        return { bTrace, height, _ ->
 
             for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, height)
             val doRestart = withReadConnection(storage, chainId) { eContext ->
