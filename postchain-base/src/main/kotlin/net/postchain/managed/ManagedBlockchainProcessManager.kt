@@ -128,8 +128,10 @@ open class ManagedBlockchainProcessManager(
          *
          * @return "true" if a restart was needed
          */
-        fun afterCommitHandlerChain0(bTrace: BlockTrace?): Boolean {
+        fun afterCommitHandlerChain0(bTrace: BlockTrace?, blockTimestamp: Long): Boolean {
             wrTrace("chain0 begin", chainId, bTrace)
+            // Sending heartbeat to other chains
+            heartbeatManager.beat(blockTimestamp)
 
             // Preloading blockchain configuration
             preloadChain0Configuration()
@@ -184,9 +186,13 @@ open class ManagedBlockchainProcessManager(
                     wrTrace("Sync", chainId, bTrace)
                     for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
-                    val x = if (chainId == CHAIN0) afterCommitHandlerChain0(bTrace) else afterCommitHandlerChainN(bTrace)
+                    val restart = if (chainId == CHAIN0) {
+                        afterCommitHandlerChain0(bTrace, blockTimestamp)
+                    } else {
+                        afterCommitHandlerChainN(bTrace)
+                    }
                     wrTrace("After", chainId, bTrace)
-                    x
+                    restart
                 }
             } catch (e: Exception) {
                 logger.error("Exception in restart handler: $e")

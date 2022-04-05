@@ -140,7 +140,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
     fun buildBlock(nodeSet: NodeSet, toHeight: Long) {
-        buildBlock(nodes.filterIndexed { i, p -> nodeSet.contains(i) }, nodeSet.chain.toLong(), toHeight)
+        buildBlock(nodes.filterIndexed { i, _ -> nodeSet.contains(i) }, nodeSet.chain, toHeight)
     }
 
     fun buildBlock(nodeSet: NodeSet) {
@@ -217,7 +217,8 @@ open class ManagedModeTest : AbstractSyncTest() {
             replicas: Set<Int>,
             historicChain: Long? = null,
             excludeChain0Nodes: Set<Int> = setOf(),
-            waitForRestart: Boolean = true): NodeSet {
+            waitForRestart: Boolean = true
+    ): NodeSet {
         if (signers.intersect(replicas).isNotEmpty()) throw
         IllegalArgumentException("a node cannot be both signer and replica")
         val maxIndex = c0.all().size
