@@ -4,6 +4,7 @@ package net.postchain.config.node
 
 import net.postchain.base.Storage
 import net.postchain.config.app.AppConfig
+import net.postchain.config.node.NodeConfigProviders.Companion.fromAlias
 import net.postchain.config.node.NodeConfigProviders.File
 import net.postchain.config.node.NodeConfigProviders.Legacy
 import net.postchain.config.node.NodeConfigProviders.Managed
@@ -19,12 +20,12 @@ object NodeConfigurationProviderFactory {
         appConfig: AppConfig,
         storageFactory: (AppConfig) -> Storage
     ): NodeConfigurationProvider {
-        return when (appConfig.nodeConfigProvider.toLowerCase()) {
-            Legacy.name.toLowerCase() -> LegacyNodeConfigurationProvider(appConfig)
-            File.name.toLowerCase() -> FileNodeConfigurationProvider(appConfig)
-            Manual.name.toLowerCase() -> ManualNodeConfigurationProvider(appConfig, storageFactory)
-            Managed.name.toLowerCase() -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
-            else -> ManualNodeConfigurationProvider(appConfig, storageFactory)
+        return when (fromAlias(appConfig.nodeConfigProvider)) {
+            Legacy -> LegacyNodeConfigurationProvider(appConfig)
+            File -> FileNodeConfigurationProvider(appConfig)
+            Manual -> ManualNodeConfigurationProvider(appConfig, storageFactory)
+            Managed -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
+            else -> Class.forName(appConfig.nodeConfigProvider).getDeclaredConstructor(AppConfig::class.java).newInstance(appConfig) as NodeConfigurationProvider
         }
     }
 }
