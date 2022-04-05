@@ -50,7 +50,7 @@ class AppConfig(val config: Configuration) {
      */
     val nodeConfigProvider: String
         // legacy | manual | managed
-        get() = config.getString("configuration.provider.node", "")
+        get() = config.getString("configuration.provider.node", "legacy")
 
     /**
      * Database

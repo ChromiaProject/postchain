@@ -6,63 +6,44 @@ import assertk.assert
 import assertk.assertions.isInstanceOf
 import net.postchain.config.app.AppConfig
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import kotlin.reflect.KClass
 
 class NodeConfigurationProviderFactoryTest {
 
-    @Test
-    fun createLegacyProvider() {
+    @ParameterizedTest
+    @MethodSource("testData")
+    fun `Test valid node configurations`(config: String, expected: KClass<NodeConfigurationProvider>) {
         val appConfig: AppConfig = mock {
-            on { nodeConfigProvider } doReturn "legacy"
+            on { nodeConfigProvider } doReturn config
         }
         val mockStorage = MockStorage.mockAppContext()
+        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(expected)
+    }
 
-        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
-                LegacyNodeConfigurationProvider::class)
+    companion object {
+        @JvmStatic
+        fun testData() = listOf(
+                arrayOf("legacy", LegacyNodeConfigurationProvider::class),
+                arrayOf("Manual", ManualNodeConfigurationProvider::class),
+                arrayOf("ManageD", ManagedNodeConfigurationProvider::class),
+                arrayOf("", LegacyNodeConfigurationProvider::class)
+        )
     }
 
     @Test
-    fun createManualProvider() {
-        val appConfig: AppConfig = mock {
-            on { nodeConfigProvider } doReturn "Manual"
-        }
-        val mockStorage = MockStorage.mockAppContext()
-
-        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
-                ManualNodeConfigurationProvider::class)
-    }
-
-    @Test
-    fun createManagedProvider() {
-        val appConfig: AppConfig = mock {
-            on { nodeConfigProvider } doReturn "Managed"
-        }
-        val mockStorage = MockStorage.mockAppContext()
-
-        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
-                ManagedNodeConfigurationProvider::class)
-    }
-
-    @Test
-    fun createDefaultProvider() {
+    fun `Test invalid configuration`() {
         val appConfig: AppConfig = mock {
             on { nodeConfigProvider } doReturn "some-unknown-provider-here"
         }
         val mockStorage = MockStorage.mockAppContext()
 
-        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
-                ManualNodeConfigurationProvider::class)
-    }
-
-    @Test
-    fun createEmptyProvider() {
-        val appConfig: AppConfig = mock {
-            on { nodeConfigProvider } doReturn ""
+        assertThrows<ClassNotFoundException> {
+            NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }
         }
-        val mockStorage = MockStorage.mockAppContext()
-
-        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }).isInstanceOf(
-                ManualNodeConfigurationProvider::class)
     }
 }
