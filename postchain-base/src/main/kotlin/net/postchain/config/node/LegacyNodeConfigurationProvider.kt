@@ -21,17 +21,6 @@ class LegacyNodeConfigurationProvider(private val appConfig: AppConfig) : NodeCo
      * Retrieves peer information from config, including networking info and public keys
      */
     private fun createPeerInfoCollection(config: Configuration): Array<PeerInfo> {
-        // this is for testing only. We can prepare the configuration with a
-        // special Array<PeerInfo> for dynamic ports
-        val peerInfos = config.getProperty("testpeerinfos")
-        if (peerInfos != null) {
-            return if (peerInfos is PeerInfo) {
-                arrayOf(peerInfos)
-            } else {
-                (peerInfos as List<PeerInfo>).toTypedArray()
-            }
-        }
-
         // Calculating the number of nodes
         var peerCount = 0
         config.getKeys("node").forEach { _ -> peerCount++ }

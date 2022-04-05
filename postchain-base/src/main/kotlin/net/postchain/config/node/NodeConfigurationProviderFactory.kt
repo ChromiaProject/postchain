@@ -2,6 +2,7 @@
 
 package net.postchain.config.node
 
+import mu.KotlinLogging
 import net.postchain.base.Storage
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders.Companion.fromAlias
@@ -19,6 +20,9 @@ object NodeConfigurationProviderFactory {
         appConfig: AppConfig,
         storageFactory: (AppConfig) -> Storage
     ): NodeConfigurationProvider {
+        if (appConfig.nodeConfigProvider.toLowerCase() == "legacy") {
+            KotlinLogging.logger {  }.warn("Using deprecated legacy configuration provider, change to ${Legacy.name}")
+        }
         return when (fromAlias(appConfig.nodeConfigProvider)) {
             Legacy -> LegacyNodeConfigurationProvider(appConfig)
             Manual -> ManualNodeConfigurationProvider(appConfig, storageFactory)
