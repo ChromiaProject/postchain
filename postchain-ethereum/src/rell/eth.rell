@@ -230,10 +230,6 @@ query eth_has_erc721(token_address: text, token_id: integer, beneficiary: text):
     return not empty(b);
 }
 
-query get_account_link(beneficiary: text); integer {
-
-}
-
 function get_or_create_account_link(beneficiary: text): integer {
     val account = account_link @? { beneficiary };
     if (empty(account)) {
