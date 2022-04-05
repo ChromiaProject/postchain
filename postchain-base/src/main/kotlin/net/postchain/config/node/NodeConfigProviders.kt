@@ -8,7 +8,7 @@ enum class NodeConfigProviders(vararg val aliases: String) {
      * PeerInfo collection and other PostchainNode parameters are obtained
      * from *.properties file
      */
-    Legacy("legacy", "explicit", ""),
+    Explicit("legacy", "explicit", ""),
 
     /**
      * PeerInfo collection and other PostchainNode parameters are obtained
