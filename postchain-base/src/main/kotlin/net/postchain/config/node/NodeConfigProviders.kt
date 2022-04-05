@@ -12,14 +12,6 @@ enum class NodeConfigProviders(vararg val aliases: String) {
 
     /**
      * PeerInfo collection and other PostchainNode parameters are obtained
-     * from *.properties file.
-     *
-     * Similar to Legacy provider but with a different PeerInfo collection format.
-     */
-    File,
-
-    /**
-     * PeerInfo collection and other PostchainNode parameters are obtained
      * from database
      */
     Manual("manual"),
