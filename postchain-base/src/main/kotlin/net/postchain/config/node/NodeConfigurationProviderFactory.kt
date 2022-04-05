@@ -24,7 +24,7 @@ object NodeConfigurationProviderFactory {
             KotlinLogging.logger {  }.warn("Using deprecated legacy configuration provider, change to ${Legacy.name}")
         }
         return when (fromAlias(appConfig.nodeConfigProvider)) {
-            Legacy -> LegacyNodeConfigurationProvider(appConfig)
+            Legacy -> ExplicitPeerListNodeConfigurationProvider(appConfig)
             Manual -> ManualNodeConfigurationProvider(appConfig, storageFactory)
             Managed -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
             else -> Class.forName(appConfig.nodeConfigProvider).getDeclaredConstructor(AppConfig::class.java).newInstance(appConfig) as NodeConfigurationProvider

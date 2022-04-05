@@ -28,10 +28,10 @@ class NodeConfigurationProviderFactoryTest {
     companion object {
         @JvmStatic
         fun testData() = listOf(
-                arrayOf("legacy", LegacyNodeConfigurationProvider::class),
+                arrayOf("legacy", ExplicitPeerListNodeConfigurationProvider::class),
                 arrayOf("Manual", ManualNodeConfigurationProvider::class),
                 arrayOf("ManageD", ManagedNodeConfigurationProvider::class),
-                arrayOf("", LegacyNodeConfigurationProvider::class)
+                arrayOf("", ExplicitPeerListNodeConfigurationProvider::class)
         )
     }
 
