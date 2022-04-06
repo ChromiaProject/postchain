@@ -13,9 +13,9 @@ const val TRANSACTION_QUEUE_CAPACITY = 2500 // 5 seconds (if 500 tps)
  * Minimal/raw version of the BC configuration.
  */
 class BaseBlockchainConfigurationData(
-    val data: GtvDictionary,
-    partialContext: BlockchainContext,
-    val blockSigMaker: SigMaker,
+        val data: GtvDictionary,
+        partialContext: BlockchainContext,
+        val blockSigMaker: SigMaker,
 ) {
 
     val context: BlockchainContext

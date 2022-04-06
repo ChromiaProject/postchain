@@ -5,6 +5,7 @@ package net.postchain.ebft
 import mu.KLogging
 import net.postchain.common.toHex
 import net.postchain.core.*
+import net.postchain.core.Signature
 import net.postchain.debug.BlockTrace
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.deferred

@@ -2,6 +2,8 @@
 
 package net.postchain.core
 
+import net.postchain.core.Signature
+
 interface BlockHeader {
     val prevBlockRID: ByteArray
     val rawData: ByteArray

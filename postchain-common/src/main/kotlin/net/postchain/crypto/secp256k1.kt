@@ -15,6 +15,7 @@ import org.spongycastle.util.Arrays
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.*
 
 
 // signing code taken from bitcoinj ECKey
