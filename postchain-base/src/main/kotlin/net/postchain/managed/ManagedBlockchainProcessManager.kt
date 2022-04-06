@@ -120,7 +120,7 @@ open class ManagedBlockchainProcessManager(
             BaseManagedNodeDataSource(blockQueries, postchainContext.nodeConfig)
 
     override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {
-        return if (blockchainConfig.chainID == 0L) {
+        return if (!nodeConfig.heartbeatEnabled || blockchainConfig.chainID == 0L) {
             { true }
         } else {
             val hbListener: HeartbeatListener = DefaultHeartbeatListener(nodeConfig, blockchainConfig.chainID)
