@@ -4,9 +4,8 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
-import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
 import net.postchain.network.mastersub.subnode.SubConnectionManager
@@ -21,28 +20,23 @@ open class SubNodeBlockchainProcessManager(
         blockchainConfigProvider
 ) {
 
-    override fun createAndRegisterBlockchainProcess(
-            chainId: Long,
-            blockchainConfig: BlockchainConfiguration,
-            processName: BlockchainProcessName,
-            engine: BlockchainEngine,
-            shouldProcessNewMessages: (Long) -> Boolean
-    ) {
+    protected val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
+
+    override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {
         val hbListener: HeartbeatListener = RemoteConfigHeartbeatListener(
-                nodeConfig, chainId, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
+                nodeConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
         ).also {
             it.blockchainConfigProvider = blockchainConfigProvider
             it.storage = storage
-            heartbeatManager.addListener(chainId, it)
+            heartbeatManager.addListener(blockchainConfig.chainID, it)
         }
 
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine) {
-            hbListener.checkHeartbeat(it)
-        }.also {
-            it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
-            extensions.forEach { ext -> ext.connectProcess(it) }
-            chainIdToBrid[chainId] = blockchainConfig.blockchainRid
-        }
+        return { hbListener.checkHeartbeat(it) }
+    }
+
+    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
+        heartbeatManager.removeListener(chainId)
+        super.stopAndUnregisterBlockchainProcess(chainId, restart)
     }
 
 }

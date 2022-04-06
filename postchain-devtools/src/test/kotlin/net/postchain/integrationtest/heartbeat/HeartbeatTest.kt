@@ -15,7 +15,7 @@ class HeartbeatTest : ManagedModeTest() {
     val maxBlockTime = 500L
 
     @Test
-    fun testSyncManagedBlockchain() {
+    fun testHeartbeat() {
         // Configuring Heartbeat
         configOverrides.setProperty("heartbeat.enabled", true)
         configOverrides.setProperty("heartbeat.timeout", 5000)

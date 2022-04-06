@@ -11,6 +11,9 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
+import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
+import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
+import net.postchain.ebft.heartbeat.HeartbeatListener
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -58,6 +61,7 @@ open class ManagedBlockchainProcessManager(
     protected open lateinit var dataSource: ManagedNodeDataSource
     protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
+    protected val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
     protected var loggedChains: Array<Set<Long>> = emptyArray()
 
     companion object : KLogging()
@@ -114,6 +118,21 @@ open class ManagedBlockchainProcessManager(
 
     protected open fun createDataSource(blockQueries: BlockQueries) =
             BaseManagedNodeDataSource(blockQueries, postchainContext.nodeConfig)
+
+    override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {
+        return if (blockchainConfig.chainID == 0L) {
+            { true }
+        } else {
+            val hbListener: HeartbeatListener = DefaultHeartbeatListener(nodeConfig, blockchainConfig.chainID)
+            heartbeatManager.addListener(blockchainConfig.chainID, hbListener);
+            { timestamp: Long -> hbListener.checkHeartbeat(timestamp) }
+        }
+    }
+
+    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
+        heartbeatManager.removeListener(chainId)
+        super.stopAndUnregisterBlockchainProcess(chainId, restart)
+    }
 
     /**
      * @return a [AfterCommitHandler] which is a lambda (This lambda will be called by the Engine after each block
