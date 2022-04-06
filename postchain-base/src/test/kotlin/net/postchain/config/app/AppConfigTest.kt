@@ -15,7 +15,7 @@ class AppConfigTest {
         val appConfig = AppConfig.fromPropertiesFile(
                 javaClass.getResource("/net/postchain/config/empty-node-config.properties").file)
 
-        assertk.assert(appConfig.nodeConfigProvider).isEqualTo("legacy")
+        assertk.assert(appConfig.nodeConfigProvider).isEqualTo("properties")
         assertk.assert(appConfig.databaseDriverclass).isEmpty()
 
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
