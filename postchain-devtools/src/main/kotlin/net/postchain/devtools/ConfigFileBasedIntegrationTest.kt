@@ -274,7 +274,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
                 .configure(params)
                 .configuration
 
-        if (baseConfig.getString("configuration.provider.node") == "legacy") {
+        if (baseConfig.getString("configuration.provider.node") != "managed") {
             // append nodeIndex to schema name
             val dbSchema = baseConfig.getString("database.schema") + "_" + nodeIndex
             // To convert negative indexes of replica nodes to 'replica_' prefixed indexes.

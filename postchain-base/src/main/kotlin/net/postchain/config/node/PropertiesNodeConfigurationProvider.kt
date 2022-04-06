@@ -5,37 +5,24 @@ package net.postchain.config.node
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
-import net.postchain.core.NodeRid
 import org.apache.commons.configuration2.Configuration
 
-class LegacyNodeConfigurationProvider(private val appConfig: AppConfig) : NodeConfigurationProvider {
+class PropertiesNodeConfigurationProvider(private val appConfig: AppConfig) : NodeConfigurationProvider {
 
-    override fun getConfiguration(): NodeConfig {
-        return object : NodeConfig(appConfig) {
-            override val peerInfoMap = createPeerInfoMap(appConfig.config)
+    private val configuration by lazy {
+        object : NodeConfig(appConfig) {
+            override val peerInfoMap = createPeerInfoCollection(appConfig.config).associateBy { it.getNodeRid() }
         }
     }
 
-    override fun close() {}
+    override fun getConfiguration() = configuration
 
-    private fun createPeerInfoMap(config: Configuration): Map<NodeRid, PeerInfo> =
-            createPeerInfoCollection(config).map { NodeRid(it.pubKey) to it }.toMap()
+    override fun close() {}
 
     /**
      * Retrieves peer information from config, including networking info and public keys
      */
     private fun createPeerInfoCollection(config: Configuration): Array<PeerInfo> {
-        // this is for testing only. We can prepare the configuration with a
-        // special Array<PeerInfo> for dynamic ports
-        val peerInfos = config.getProperty("testpeerinfos")
-        if (peerInfos != null) {
-            return if (peerInfos is PeerInfo) {
-                arrayOf(peerInfos)
-            } else {
-                (peerInfos as List<PeerInfo>).toTypedArray()
-            }
-        }
-
         // Calculating the number of nodes
         var peerCount = 0
         config.getKeys("node").forEach { _ -> peerCount++ }

@@ -3,9 +3,10 @@
 package net.postchain.config.app
 
 import assertk.assertions.isEmpty
-import org.junit.jupiter.api.Test
+import assertk.assertions.isEqualTo
 import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
+import org.junit.jupiter.api.Test
 
 class AppConfigTest {
 
@@ -14,7 +15,7 @@ class AppConfigTest {
         val appConfig = AppConfig.fromPropertiesFile(
                 javaClass.getResource("/net/postchain/config/empty-node-config.properties").file)
 
-        assertk.assert(appConfig.nodeConfigProvider).isEmpty()
+        assertk.assert(appConfig.nodeConfigProvider).isEqualTo("properties")
         assertk.assert(appConfig.databaseDriverclass).isEmpty()
 
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
