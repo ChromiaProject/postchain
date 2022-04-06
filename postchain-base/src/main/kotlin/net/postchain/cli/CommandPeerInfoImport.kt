@@ -9,7 +9,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.ExplicitPeerListNodeConfigurationProvider
+import net.postchain.config.node.PropertiesNodeConfigurationProvider
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 
@@ -50,7 +50,7 @@ class CommandPeerInfoImport : Command {
 
     private fun peerinfoImport(nodeConfigFile: String): Array<PeerInfo> {
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
-        val nodeConfig = ExplicitPeerListNodeConfigurationProvider(appConfig).getConfiguration()
+        val nodeConfig = PropertiesNodeConfigurationProvider(appConfig).getConfiguration()
 
         return if (nodeConfig.peerInfoMap.isEmpty()) {
             emptyArray()

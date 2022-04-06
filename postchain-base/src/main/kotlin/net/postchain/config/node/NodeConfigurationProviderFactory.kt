@@ -6,9 +6,9 @@ import mu.KotlinLogging
 import net.postchain.base.Storage
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders.Companion.fromAlias
-import net.postchain.config.node.NodeConfigProviders.Explicit
 import net.postchain.config.node.NodeConfigProviders.Managed
 import net.postchain.config.node.NodeConfigProviders.Manual
+import net.postchain.config.node.NodeConfigProviders.Properties
 
 object NodeConfigurationProviderFactory {
     /**
@@ -21,10 +21,10 @@ object NodeConfigurationProviderFactory {
         storageFactory: (AppConfig) -> Storage
     ): NodeConfigurationProvider {
         if (appConfig.nodeConfigProvider.toLowerCase() == "legacy") {
-            KotlinLogging.logger {  }.warn("Using deprecated legacy configuration provider, change to ${Explicit.name.toLowerCase()}")
+            KotlinLogging.logger {  }.warn("Using deprecated legacy configuration provider, change to ${Properties.name.toLowerCase()}")
         }
         return when (fromAlias(appConfig.nodeConfigProvider)) {
-            Explicit -> ExplicitPeerListNodeConfigurationProvider(appConfig)
+            Properties -> PropertiesNodeConfigurationProvider(appConfig)
             Manual -> ManualNodeConfigurationProvider(appConfig, storageFactory)
             Managed -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
             else -> Class.forName(appConfig.nodeConfigProvider).getDeclaredConstructor(AppConfig::class.java).newInstance(appConfig) as NodeConfigurationProvider

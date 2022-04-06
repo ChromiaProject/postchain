@@ -7,7 +7,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import org.apache.commons.configuration2.Configuration
 
-class ExplicitPeerListNodeConfigurationProvider(private val appConfig: AppConfig) : NodeConfigurationProvider {
+class PropertiesNodeConfigurationProvider(private val appConfig: AppConfig) : NodeConfigurationProvider {
 
     private val configuration by lazy {
         object : NodeConfig(appConfig) {

@@ -28,10 +28,10 @@ class NodeConfigurationProviderFactoryTest {
     companion object {
         @JvmStatic
         fun testData() = listOf(
-                arrayOf("legacy", ExplicitPeerListNodeConfigurationProvider::class),
-                arrayOf("Manual", ManualNodeConfigurationProvider::class),
-                arrayOf("ManageD", ManagedNodeConfigurationProvider::class),
-                arrayOf("", ExplicitPeerListNodeConfigurationProvider::class)
+                arrayOf("legacy", PropertiesNodeConfigurationProvider::class), // Deprecated and will be removed in 3.6?
+                arrayOf("properties", PropertiesNodeConfigurationProvider::class),
+                arrayOf("Manual", ManualNodeConfigurationProvider::class), // case insensitive
+                arrayOf("ManageD", ManagedNodeConfigurationProvider::class), // case insensitive
         )
     }
 
