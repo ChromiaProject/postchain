@@ -34,6 +34,10 @@ class RemoteConfigHeartbeatListener(
     }
 
     override fun checkHeartbeat(timestamp: Long): Boolean {
+        // Check heartbeat
+        val superCheck = super.checkHeartbeat(timestamp)
+        if (!superCheck) return false
+
         // First block check
         if (timestamp < 0) {
             return resultLogger.log(1 to true, logger) {
@@ -42,10 +46,6 @@ class RemoteConfigHeartbeatListener(
                 "$pref Heartbeat check passed due to: timestamp = $timestamp < 0"
             }
         }
-
-        // Check heartbeat
-        val superCheck = super.checkHeartbeat(timestamp)
-        if (!superCheck) return false
 
         // If remote config check is disabled, consider it as always passed
         if (!nodeConfig.remoteConfigEnabled) {
