@@ -48,9 +48,8 @@ object NodeConfigurationProviderGenerator {
     ): NodeConfigurationProvider {
 
         val baseConfig = when (systemSetup.nodeConfProvider) {
-            "legacy", "manual" -> TestNodeConfigProducer.createLegacyNodeConfig(testName, nodeSetup, systemSetup, null)
             "managed" -> TestNodeConfigProducer.createManagedNodeConfig(testName, nodeSetup, systemSetup, null)
-            else -> throw IllegalArgumentException("Don't know this provider: ${systemSetup.nodeConfProvider}")
+            else -> TestNodeConfigProducer.createLegacyNodeConfig(testName, nodeSetup, systemSetup, null)
         }
         return buildBase(baseConfig, configOverrides, nodeSetup, setupAction)
     }
