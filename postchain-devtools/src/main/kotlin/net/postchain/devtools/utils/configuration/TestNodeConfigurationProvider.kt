@@ -8,10 +8,8 @@ import org.apache.commons.configuration2.Configuration
 
 class TestNodeConfigurationProvider(private val appConfig: AppConfig) : NodeConfigurationProvider {
 
-    private val configuration by lazy {
-        object : NodeConfig(appConfig) {
-            override val peerInfoMap = createPeerInfoCollection(appConfig.config).associateBy { it.getNodeRid() }
-        }
+    private val configuration = object : NodeConfig(appConfig) {
+        override val peerInfoMap = createPeerInfoCollection(appConfig.config).associateBy { it.getNodeRid() }
     }
 
     override fun getConfiguration() = configuration

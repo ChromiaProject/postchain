@@ -25,18 +25,16 @@ class ManagedNodeConfigurationProvider(
         managedPeerSource = peerInfoDataSource
     }
 
-    private val configuration by lazy {
-        object : NodeConfig(appConfig) {
-            override val peerInfoMap
-                get() = getPeerInfoCollection(appConfig)
-                        .associateBy(PeerInfo::peerId)
+    private val configuration = object : NodeConfig(appConfig) {
+        override val peerInfoMap
+            get() = getPeerInfoCollection(appConfig)
+                    .associateBy(PeerInfo::peerId)
 
-            // nodeReplicas: for making a node a full clone of another node
-            override val nodeReplicas get() = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
-            override val blockchainReplicaNodes get() = getBlockchainReplicaCollection(appConfig)
-            override val blockchainsToReplicate: Set<BlockchainRid> get() = getBlockchainsToReplicate(appConfig, pubKey)
-            override val mustSyncUntilHeight get() = getSyncUntilHeight(appConfig)
-        }
+        // nodeReplicas: for making a node a full clone of another node
+        override val nodeReplicas get() = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
+        override val blockchainReplicaNodes get() = getBlockchainReplicaCollection(appConfig)
+        override val blockchainsToReplicate: Set<BlockchainRid> get() = getBlockchainsToReplicate(appConfig, pubKey)
+        override val mustSyncUntilHeight get() = getSyncUntilHeight(appConfig)
     }
 
     override fun getConfiguration() = configuration

@@ -21,15 +21,13 @@ open class ManualNodeConfigurationProvider(
 
     private val storage = createStorage(appConfig)
 
-    private val configuration by lazy {
-        object : NodeConfig(appConfig) {
-            override val peerInfoMap
-                get() = getPeerInfoCollection(appConfig)
-                        .associateBy(PeerInfo::peerId)
-            override val blockchainReplicaNodes get() = getBlockchainReplicaCollection(appConfig)
-            override val blockchainsToReplicate: Set<BlockchainRid> get() = getBlockchainsToReplicate(appConfig, pubKey)
-            override val mustSyncUntilHeight: Map<Long, Long> get() = getSyncUntilHeight(appConfig)
-        }
+    private val configuration = object : NodeConfig(appConfig) {
+        override val peerInfoMap
+            get() = getPeerInfoCollection(appConfig)
+                    .associateBy(PeerInfo::peerId)
+        override val blockchainReplicaNodes get() = getBlockchainReplicaCollection(appConfig)
+        override val blockchainsToReplicate: Set<BlockchainRid> get() = getBlockchainsToReplicate(appConfig, pubKey)
+        override val mustSyncUntilHeight: Map<Long, Long> get() = getSyncUntilHeight(appConfig)
     }
 
     override fun getConfiguration() = configuration
