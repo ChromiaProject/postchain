@@ -23,8 +23,9 @@ open class ManualNodeConfigurationProvider(
 
     private val configuration by lazy {
         object : NodeConfig(appConfig) {
-            override val peerInfoMap get() = getPeerInfoCollection(appConfig)
-                    .associateBy(PeerInfo::peerId)
+            override val peerInfoMap
+                get() = getPeerInfoCollection(appConfig)
+                        .associateBy(PeerInfo::peerId)
             override val blockchainReplicaNodes get() = getBlockchainReplicaCollection(appConfig)
             override val blockchainsToReplicate: Set<BlockchainRid> get() = getBlockchainsToReplicate(appConfig, pubKey)
             override val mustSyncUntilHeight: Map<Long, Long> get() = getSyncUntilHeight(appConfig)
@@ -57,8 +58,8 @@ open class ManualNodeConfigurationProvider(
     }
 
     open fun getBlockchainsToReplicate(appConfig: AppConfig, nodePubKey: String): Set<BlockchainRid> {
-        return storage.withReadConnection {
-            ctx -> DatabaseAccess.of(ctx).getBlockchainsToReplicate(ctx, nodePubKey)
+        return storage.withReadConnection { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainsToReplicate(ctx, nodePubKey)
         }
     }
 

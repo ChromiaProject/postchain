@@ -3,9 +3,13 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
-import net.postchain.base.*
+import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.BaseBlockchainContext
+import net.postchain.base.BaseBlockchainInfrastructure
+import net.postchain.base.PeerInfo
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -17,7 +21,13 @@ import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvString
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.managed.ManagedBlockchainProcessManager
@@ -251,7 +261,7 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
             dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
 
             val syncInfra = EBFTSynchronizationInfrastructure(this)
-            val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
+            val apiInfra = BaseApiInfrastructure(nodeConfig, nodeDiagnosticContext)
             return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)
         }
     }

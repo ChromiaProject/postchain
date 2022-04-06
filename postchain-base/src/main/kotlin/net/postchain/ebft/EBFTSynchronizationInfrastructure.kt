@@ -3,10 +3,20 @@
 package net.postchain.ebft
 
 import net.postchain.PostchainContext
-import net.postchain.base.*
+import net.postchain.base.BasePeerCommConfiguration
+import net.postchain.base.HistoricBlockchainContext
+import net.postchain.base.PeerCommConfiguration
+import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.config.node.NodeConfig
-import net.postchain.core.*
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainRid
+import net.postchain.core.NODE_ID_READ_ONLY
+import net.postchain.core.NodeRid
+import net.postchain.core.SynchronizationInfrastructure
+import net.postchain.core.byteArrayKeyOf
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
@@ -14,8 +24,9 @@ import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
-import net.postchain.network.common.*
-import net.postchain.network.peer.*
+import net.postchain.network.peer.DefaultPeerCommunicationManager
+import net.postchain.network.peer.DefaultPeersCommConfigFactory
+import net.postchain.network.peer.PeersCommConfigFactory
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
@@ -175,45 +186,6 @@ open class EBFTSynchronizationInfrastructure(
 
         val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
             it in peersThatServeAncestorBrid || it == myPeerID
-        }
-
-        return BasePeerCommConfiguration.build(
-                relevantPeerMap.values,
-                SECP256K1CryptoSystem(),
-                nodeConfig.privKeyByteArray,
-                nodeConfig.pubKeyByteArray
-        )
-    }
-
-    /**
-     * To calculate the [relevantPeerMap] we need to:
-     *
-     * 1. begin with the signers (from the BC config)
-     * 2. add all NODE replicas (from node config)
-     * 3. add BC replicas (from node config)
-     *
-     * TODO: Could getRelevantPeers() be a method inside [NodeConfig]?
-     */
-    private fun buildPeerCommConfiguration(
-            nodeConfig: NodeConfig,
-            blockchainConfig: BaseBlockchainConfiguration,
-            historicBlockchainContext: HistoricBlockchainContext? = null
-    ): PeerCommConfiguration {
-        val myPeerID = NodeRid(nodeConfig.pubKeyByteArray)
-        val signers = blockchainConfig.signers.map { NodeRid(it) }
-        val signersReplicas = signers.flatMap {
-            nodeConfig.nodeReplicas[it] ?: listOf()
-        }
-        val blockchainReplicas = if (historicBlockchainContext != null) {
-            (nodeConfig.blockchainReplicaNodes[historicBlockchainContext.historicBrid] ?: listOf()).union(
-                    nodeConfig.blockchainReplicaNodes[blockchainConfig.blockchainRid] ?: listOf()
-            )
-        } else {
-            nodeConfig.blockchainReplicaNodes[blockchainConfig.blockchainRid] ?: listOf()
-        }
-
-        val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
-            it in signers || it in signersReplicas || it in blockchainReplicas || it == myPeerID
         }
 
         return BasePeerCommConfiguration.build(

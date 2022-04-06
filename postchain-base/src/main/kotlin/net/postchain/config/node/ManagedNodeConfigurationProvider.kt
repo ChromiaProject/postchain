@@ -27,8 +27,10 @@ class ManagedNodeConfigurationProvider(
 
     private val configuration by lazy {
         object : NodeConfig(appConfig) {
-            override val peerInfoMap get() = getPeerInfoCollection(appConfig)
-                    .associateBy(PeerInfo::peerId)
+            override val peerInfoMap
+                get() = getPeerInfoCollection(appConfig)
+                        .associateBy(PeerInfo::peerId)
+
             // nodeReplicas: for making a node a full clone of another node
             override val nodeReplicas get() = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
             override val blockchainReplicaNodes get() = getBlockchainReplicaCollection(appConfig)
@@ -81,7 +83,7 @@ class ManagedNodeConfigurationProvider(
         // Collect from local table (common for all bcs)
         val localResMap = super.getBlockchainReplicaCollection(appConfig)
         // get values from the chain0 table
-        val chain0ResMap = (managedPeerSource?.getBlockchainReplicaNodeMap() ?: mutableMapOf<BlockchainRid, List<NodeRid>>())
+        val chain0ResMap = managedPeerSource?.getBlockchainReplicaNodeMap() ?: mutableMapOf()
 
         val resMap = mutableMapOf<BlockchainRid, List<NodeRid>>()
         val allKeys = localResMap.keys + chain0ResMap.keys
