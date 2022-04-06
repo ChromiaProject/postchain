@@ -16,6 +16,7 @@ data class PostchainContext(
 
     fun shutDown() {
         connectionManager.shutdown()
+        nodeConfigProvider.close()
         storage.close()
     }
 }
