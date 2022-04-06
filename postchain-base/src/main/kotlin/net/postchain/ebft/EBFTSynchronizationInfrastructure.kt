@@ -23,7 +23,7 @@ open class EBFTSynchronizationInfrastructure(
         val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
 ) : SynchronizationInfrastructure {
 
-    val nodeConfig get() = postchainContext.nodeConfig
+    val nodeConfig = postchainContext.nodeConfig
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
     val connectionManager = postchainContext.connectionManager
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }

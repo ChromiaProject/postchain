@@ -2,11 +2,11 @@
 
 package net.postchain.config.node
 
-import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.Storage
 import net.postchain.base.peerId
 import net.postchain.config.app.AppConfig
+import net.postchain.core.BlockchainRid
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.NodeRid
 import java.time.Instant.EPOCH
@@ -25,17 +25,19 @@ class ManagedNodeConfigurationProvider(
         managedPeerSource = peerInfoDataSource
     }
 
-    override fun getConfiguration(): NodeConfig {
-        return object : NodeConfig(appConfig) {
-            override val peerInfoMap = getPeerInfoCollection(appConfig)
+    private val configuration by lazy {
+        object : NodeConfig(appConfig) {
+            override val peerInfoMap get() = getPeerInfoCollection(appConfig)
                     .associateBy(PeerInfo::peerId)
             // nodeReplicas: for making a node a full clone of another node
-            override val nodeReplicas = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
-            override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
-            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig, pubKey)
-            override val mustSyncUntilHeight = getSyncUntilHeight(appConfig)
+            override val nodeReplicas get() = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
+            override val blockchainReplicaNodes get() = getBlockchainReplicaCollection(appConfig)
+            override val blockchainsToReplicate: Set<BlockchainRid> get() = getBlockchainsToReplicate(appConfig, pubKey)
+            override val mustSyncUntilHeight get() = getSyncUntilHeight(appConfig)
         }
     }
+
+    override fun getConfiguration() = configuration
 
     /**
      * This will collect PeerInfos from two sources:

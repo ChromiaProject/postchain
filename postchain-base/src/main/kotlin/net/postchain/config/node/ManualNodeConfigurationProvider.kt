@@ -2,10 +2,13 @@
 
 package net.postchain.config.node
 
-import net.postchain.base.*
+import net.postchain.base.PeerInfo
+import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.core.BlockchainRid
+import net.postchain.base.peerId
+import net.postchain.base.withReadConnection
 import net.postchain.config.app.AppConfig
+import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 
 /**
@@ -18,15 +21,17 @@ open class ManualNodeConfigurationProvider(
 
     private val storage = createStorage(appConfig)
 
-    override fun getConfiguration(): NodeConfig {
-        return object : NodeConfig(appConfig) {
-            override val peerInfoMap = getPeerInfoCollection(appConfig)
+    private val configuration by lazy {
+        object : NodeConfig(appConfig) {
+            override val peerInfoMap get() = getPeerInfoCollection(appConfig)
                     .associateBy(PeerInfo::peerId)
-            override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
-            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig, pubKey)
-            override val mustSyncUntilHeight: Map<Long, Long> = getSyncUntilHeight(appConfig)
+            override val blockchainReplicaNodes get() = getBlockchainReplicaCollection(appConfig)
+            override val blockchainsToReplicate: Set<BlockchainRid> get() = getBlockchainsToReplicate(appConfig, pubKey)
+            override val mustSyncUntilHeight: Map<Long, Long> get() = getSyncUntilHeight(appConfig)
         }
     }
+
+    override fun getConfiguration() = configuration
 
     override fun close() {
         storage.close()
