@@ -47,19 +47,12 @@ class RemoteConfigHeartbeatListener(
         val superCheck = super.checkHeartbeat(timestamp)
         if (!superCheck) return false
 
-        // If remote config check is disabled, consider it as always passed
-        if (!nodeConfig.remoteConfigEnabled) {
-            return resultLogger.log(2 to true, logger) {
-                "$pref RemoteConfig check passed due to: nodeConfig.remote_config.enabled = ${nodeConfig.remoteConfigEnabled}"
-            }
-        }
-
         // Check remote config
         val intervalCheck = timestamp - responseTimestamp > nodeConfig.remoteConfigRequestInterval
         val details = "timestamp ($timestamp) - responseTimestamp ($responseTimestamp) " +
                 "> nodeConfig.remoteConfigRequestInterval (${nodeConfig.remoteConfigRequestInterval}) is $intervalCheck"
         if (intervalCheck) {
-            intervalLogger.registerOnly(3 to intervalCheck)
+            intervalLogger.registerOnly(2 to intervalCheck)
             logger.debug { "$pref Requesting of remote BlockchainConfig is required: $details" }
 
             val (height, nextHeight) = withReadConnection(storage, chainId) { ctx ->
@@ -74,19 +67,19 @@ class RemoteConfigHeartbeatListener(
                         "height: $height, nextHeight: $nextHeight"
             }
         } else {
-            intervalLogger.log(3 to intervalCheck, logger) {
+            intervalLogger.log(2 to intervalCheck, logger) {
                 "$pref Requesting of remote BlockchainConfig is NOT required: $details"
             }
         }
 
         val timeoutOccurred = timestamp - responseTimestamp > nodeConfig.remoteConfigTimeout
         return if (timeoutOccurred) {
-            resultLogger.log(4 to false, logger) {
+            resultLogger.log(3 to false, logger) {
                 "$pref Timeout check is failed: timestamp ($timestamp) - responseTimestamp ($responseTimestamp) >" +
                         " nodeConfig.remoteConfigTimeout (${nodeConfig.remoteConfigTimeout}) is true"
             }
         } else {
-            resultLogger.log(4 to true, logger) {
+            resultLogger.log(3 to true, logger) {
                 "$pref Heartbeat check is true"
             }
         }

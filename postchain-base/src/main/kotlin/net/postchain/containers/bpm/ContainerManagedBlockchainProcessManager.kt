@@ -16,16 +16,10 @@ import net.postchain.containers.bpm.DockerTools.shortContainerId
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockQueries
-import net.postchain.core.BlockchainConfiguration
-import net.postchain.core.BlockchainEngine
-import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
-import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
@@ -44,9 +38,6 @@ open class ContainerManagedBlockchainProcessManager(
 
     private val directoryDataSource: DirectoryDataSource by lazy { dataSource as DirectoryDataSource }
     private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
-
-    private val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
-    private val heartbeatListeners = mutableMapOf<Long, HeartbeatListener>()
 
     /**
      * TODO: [POS-129]: Implement handling of DockerException
@@ -117,22 +108,6 @@ open class ContainerManagedBlockchainProcessManager(
                 restartBlockchainAsync(chainId, blockTrace)
                 true // let's hope restarting a blockchain fixes the problem
             }
-        }
-    }
-
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
-        if (chainId == 0L) return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
-        val hbListener = DefaultHeartbeatListener(nodeConfig, chainId).also {
-            heartbeatManager.addListener(it)
-            heartbeatListeners[chainId] = it
-        }
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { hbListener.checkHeartbeat(it) }
-    }
-
-    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
-        super.stopAndUnregisterBlockchainProcess(chainId, restart)
-        heartbeatListeners.remove(chainId)?.run {
-            heartbeatManager.removeListener(this)
         }
     }
 
@@ -357,7 +332,7 @@ open class ContainerManagedBlockchainProcessManager(
             }
             process.transferConfigsToContainer()
             targetContainer.addProcess(process)
-            heartbeatManager.addListener(process)
+            heartbeatManager.addListener(chain.chainId, process)
             process
         } else {
             null
@@ -371,7 +346,7 @@ open class ContainerManagedBlockchainProcessManager(
         val process = container.findProcesses(chain.chainId)
         return if (process != null) {
             masterBlockchainInfra.exitMasterBlockchainProcess(process)
-            heartbeatManager.removeListener(process)
+            heartbeatManager.removeListener(chain.chainId)
             container.removeProcess(process)
             blockchainProcessesDiagnosticData.remove(chain.brid)
             chainIdToBrid.remove(chain.chainId)

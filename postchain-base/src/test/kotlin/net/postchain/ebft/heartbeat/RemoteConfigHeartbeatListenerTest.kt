@@ -9,7 +9,6 @@ import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessag
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 import kotlin.test.assertEquals
@@ -23,9 +22,7 @@ class RemoteConfigHeartbeatListenerTest {
 
     @Test
     fun testNoHeartbeatEventRegistered_then_checkFailed() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
-        }
+        val nodeConfig: NodeConfig = mock()
         val connManager: SubConnectionManager = mock()
         val sut = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainRid, connManager)
 
@@ -42,7 +39,6 @@ class RemoteConfigHeartbeatListenerTest {
     @Test
     fun testNoHeartbeatEvent_and_timeout_occurs() {
         val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
             on { heartbeatTimeout } doReturn 20_000L
         }
         val connManager: SubConnectionManager = mock()
@@ -58,13 +54,10 @@ class RemoteConfigHeartbeatListenerTest {
         verify(connManager, never()).sendMessageToMaster(eq(chainId), any())
     }
 
-    @Disabled
     @Test
     fun testHeartbeatCheckPassed_intervalCheckFailed_and_configRequested_then_timeoutCheck() {
         val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
             on { heartbeatTimeout } doReturn 20_000L
-            on { remoteConfigEnabled } doReturn (true)
             on { remoteConfigRequestInterval } doReturn 10_000L
             on { remoteConfigTimeout } doReturn 20_000L
         }

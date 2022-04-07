@@ -102,10 +102,11 @@ open class BaseBlockchainProcessManager(
                         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
                         val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
-                        val engine = blockchainInfrastructure.makeBlockchainEngine( processName, blockchainConfig, x)
+                        val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
                         startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
-                        createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
+                        createAndRegisterBlockchainProcess(
+                                chainId, blockchainConfig, processName, engine, shouldProcessNewMessages(blockchainConfig))
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                         startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
@@ -124,13 +125,22 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, shouldProcessNewMessages).also {
-            it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
-            extensions.forEach { ext -> ext.connectProcess(it) }
-            chainIdToBrid[chainId] = blockchainConfig.blockchainRid
-        }
+    protected open fun createAndRegisterBlockchainProcess(
+            chainId: Long,
+            blockchainConfig: BlockchainConfiguration,
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            shouldProcessNewMessages: (Long) -> Boolean
+    ) {
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, shouldProcessNewMessages)
+                .also {
+                    it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
+                    extensions.forEach { ext -> ext.connectProcess(it) }
+                    chainIdToBrid[chainId] = blockchainConfig.blockchainRid
+                }
     }
+
+    protected open fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean = { true }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
         return blockchainProcesses[chainId]
