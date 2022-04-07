@@ -19,6 +19,7 @@ class UpgradeDatabaseTest {
         on { databaseUsername } doReturn "postchain"
         on { databasePassword } doReturn "postchain"
         on { databaseSchema } doReturn "upgrade_database_test"
+        on { databaseReadConcurrency } doReturn 10
     }
 
     @Test
