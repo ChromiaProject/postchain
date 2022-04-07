@@ -23,7 +23,7 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
     private val args by argument().multiple()
 
     private fun configFile(): String {
-        return (context.parent?.command as? Cli)?.configFile ?: ""
+        return (currentContext.parent?.command as? Cli)?.configFile ?: ""
     }
 
     private val cryptoSystem = SECP256K1CryptoSystem()
