@@ -37,15 +37,8 @@ open class DefaultHeartbeatListener(val nodeConfig: NodeConfig, chainId: Long) :
     override fun checkHeartbeat(timestamp: Long): Boolean {
         // First block check
         if (timestamp < 0) {
-            return resultLogger.log(0 to true, logger) {
-                "$pref Heartbeat check passed due to: timestamp = $timestamp < 0"
-            }
-        }
-
-        // If heartbeat check is disabled, consider it as always passed
-        if (!nodeConfig.heartbeatEnabled) {
             return resultLogger.log(1 to true, logger) {
-                "$pref Heartbeat check passed due to: nodeConfig.heartbeat.enabled = ${nodeConfig.heartbeatEnabled}"
+                "$pref Heartbeat check passed due to: timestamp = $timestamp < 0"
             }
         }
 

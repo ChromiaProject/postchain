@@ -12,21 +12,8 @@ class DefaultHeartbeatListenerTest {
     private val now = System.currentTimeMillis()
 
     @Test
-    fun testHeartbeatIsDisabled_then_checkPassed() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (false)
-        }
-        val sut = DefaultHeartbeatListener(nodeConfig, chainId)
-
-        // No Heartbeat event registered, but Heartbeat Check passed
-        assert(sut.checkHeartbeat(now))
-    }
-
-    @Test
     fun testNoHeartbeatEventRegistered_then_checkFailed() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
-        }
+        val nodeConfig: NodeConfig = mock()
         val sut = DefaultHeartbeatListener(nodeConfig, chainId)
 
         // No Heartbeat event registered, then Heartbeat check failed
@@ -36,7 +23,6 @@ class DefaultHeartbeatListenerTest {
     @Test
     fun testHeartbeatCheckPassed() {
         val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
             on { heartbeatTimeout } doReturn 20_000L
         }
         val sut = DefaultHeartbeatListener(nodeConfig, chainId)
@@ -51,7 +37,6 @@ class DefaultHeartbeatListenerTest {
     @Test
     fun testNoHeartbeatEvent_and_timeout_occurs() {
         val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
             on { heartbeatTimeout } doReturn 20_000L
         }
         val sut = DefaultHeartbeatListener(nodeConfig, chainId)
