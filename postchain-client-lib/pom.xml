@@ -43,25 +43,6 @@
             <groupId>nl.komponents.kovenant</groupId>
             <artifactId>kovenant-core</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.madgag.spongycastle</groupId>
-            <artifactId>core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.madgag.spongycastle</groupId>
-            <artifactId>prov</artifactId>
-        </dependency>
-        <!-- Tools -->
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-        </dependency>
-
-        <!-- CLI -->
-        <dependency>
-            <groupId>com.github.ajalt.clikt</groupId>
-            <artifactId>clikt-jvm</artifactId>
-        </dependency>
 
     </dependencies>
 

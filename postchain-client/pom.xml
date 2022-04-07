@@ -19,12 +19,6 @@
     </description>
 
     <dependencies>
-        <!-- Kotlin -->
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
-        </dependency>
-
         <!-- Postchain -->
         <dependency>
             <groupId>net.postchain</groupId>
