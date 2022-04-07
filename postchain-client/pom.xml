@@ -1,34 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright (c) 2020 ChromaWay AB. See README for license information. -->
-
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
         <version>3.4.2-SNAPSHOT</version>
     </parent>
-
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>postchain-client</artifactId>
-    <packaging>jar</packaging>
 
     <name>Postchain Client</name>
     <description>
-        A CLI client which can be used to post transactions and query data against Postchain’s REST API.
+        A kotlin client which can be used to post transactions and query data against Postchain’s REST API.
     </description>
 
     <dependencies>
+        <!-- Kotlin -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+        </dependency>
+
         <!-- Postchain -->
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-client-lib</artifactId>
+            <artifactId>postchain-base</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-common</artifactId>
         </dependency>
 
-        <!-- CLI -->
         <dependency>
-            <groupId>com.github.ajalt.clikt</groupId>
-            <artifactId>clikt-jvm</artifactId>
+            <groupId>nl.komponents.kovenant</groupId>
+            <artifactId>kovenant-core</artifactId>
         </dependency>
 
     </dependencies>
@@ -41,23 +54,6 @@
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>net.postchain.client.AppKt</mainClass>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix/>
-                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
-                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                        </manifest>
-                    </archive>
-                </configuration>
             </plugin>
         </plugins>
     </build>
