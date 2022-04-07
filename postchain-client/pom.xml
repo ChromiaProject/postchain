@@ -39,9 +39,24 @@
             <artifactId>postchain-common</artifactId>
         </dependency>
 
+        <!-- Tools -->
         <dependency>
             <groupId>nl.komponents.kovenant</groupId>
             <artifactId>kovenant-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.madgag.spongycastle</groupId>
+            <artifactId>core</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.madgag.spongycastle</groupId>
+            <artifactId>prov</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
     </dependencies>
