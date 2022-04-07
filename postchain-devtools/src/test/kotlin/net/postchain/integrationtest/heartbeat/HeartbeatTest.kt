@@ -51,7 +51,7 @@ class HeartbeatTest : ManagedModeTest() {
 
         // Chain0 is getting stuck
         // When chain0 is stopped, chainX has to pause block production not to produce blocks on outdated configuration.
-        // (Blockchain of chain0 serves as a timeline for chainX; chain0' blocks contain configs for chainX.)
+        // (Blockchain of chain0 serves as a timeline for chainX; chain0's blocks contain configs for chainX.)
         bb0.pause()
 
         // Fixing heights
@@ -64,7 +64,7 @@ class HeartbeatTest : ManagedModeTest() {
                     assert(height1).isGreaterThan(6L) // newHeight ~= prevHeight + [(heartbeat.timeout) / maxBlockTime] ~= 9
                 }
 
-        // Waiting at least `2 * heartbeat.timeout` and asserting that heights are the same
+        // Waiting at least '2 * heartbeat.timeout' and asserting that heights are the same
         var newHeight0 = 0L
         var newHeight1 = 0L
         await().pollDelay(11_000, TimeUnit.MILLISECONDS)
@@ -81,8 +81,9 @@ class HeartbeatTest : ManagedModeTest() {
         // Chain0 resumes
         bb0.resume()
 
-        // Waiting at least `heartbeat.sleep_timeout` and asserting that both chains are building new blocks
-        await().pollDelay(11_000, TimeUnit.MILLISECONDS)
+        // Waiting at least 'maxBlocktime (c0) + heartbeat.sleep_timeout + maxBlocktime (c1) + delta'
+        // and asserting that both chains are building new blocks
+        await().pollDelay(5_000, TimeUnit.MILLISECONDS)
                 .atMost(Duration.ONE_MINUTE)
                 .untilAsserted {
                     val h0 = getLastHeight(c0)
@@ -122,7 +123,7 @@ class HeartbeatTest : ManagedModeTest() {
                 }
 
         // Chain0 is getting stuck
-        // While chain0 is stopped, chainX has not to pause block production b/c `nodeConfig.enabled = false`.
+        // While chain0 is stopped, chainX has not to pause block production b/c 'nodeConfig.enabled == false'.
         // (Blockchain of chain0 serves as a timeline for chainX; chain0' blocks contain configs for chainX.)
         bb0.pause()
 
@@ -136,7 +137,7 @@ class HeartbeatTest : ManagedModeTest() {
                     assert(height1).isGreaterThan(6L) // newHeight ~= prevHeight + [(heartbeat.timeout) / maxBlockTime] ~= 9
                 }
 
-        // Waiting at least `2 * heartbeat.timeout` and asserting that heights are the same
+        // Waiting at least '2 * heartbeat.timeout' and asserting that heights are the same
         await().pollDelay(11_000, TimeUnit.MILLISECONDS)
                 .atMost(Duration.ONE_MINUTE)
                 .untilAsserted {
