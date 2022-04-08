@@ -31,6 +31,16 @@
             <artifactId>clikt-jvm</artifactId>
         </dependency>
 
+        <!-- Test -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit5</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.willowtreeapps.assertk</groupId>
+            <artifactId>assertk</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
