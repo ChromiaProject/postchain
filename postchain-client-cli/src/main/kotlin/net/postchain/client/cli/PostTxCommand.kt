@@ -17,9 +17,6 @@ import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
 import kotlin.text.Typography.quote
 
-/**
- * Cli test command
- */
 class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
 
     private val opName by argument(help = "name of the operation to execute")
@@ -28,7 +25,8 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
             "integer" to "123",
             "string" to "foo, \"bar\"",
             "bytearray" to "will be encoded using the rell notation x\"<myByteArray>\" and will initially be interpreted as a hex-string.",
-            "array" to "[foo,123]"
+            "array" to "[foo,123]",
+            "dict" to "{key1=value1,key2=value2}"
     ))
             .multiple()
             .transformAll { args ->
@@ -58,8 +56,9 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
      * Encodes numbers as GtvInteger and strings as GtvString values
      */
     private fun encodeArg(arg: String): Gtv {
-        if (arg.startsWith("x\"")) return encodeByteArray(arg.substring(1))
-        if (arg.startsWith("[")) return encodeArray(arg.trim('[',']'))
+        if (arg.startsWith("x\"") && arg.endsWith(quote)) return encodeByteArray(arg.substring(1))
+        if (arg.startsWith("[") && arg.endsWith("]")) return encodeArray(arg.trim('[', ']'))
+        if (arg.startsWith("{") && arg.endsWith("}")) return encodeDict(arg.trim('{', '}'))
         return arg.toLongOrNull()
                 ?.let(::GtvInteger)
                 ?: GtvString(arg.trim(quote))
@@ -75,6 +74,12 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
     }
 
     private fun encodeArray(arg: String) = gtv(arg.split(",").map { encodeArg(it) })
+
+    private fun encodeDict(arg: String): Gtv {
+        val pairs = arg.split(",").map { it.split("=", limit = 2) }
+        return gtv(pairs.associateBy({ it[0] }, { encodeArg(it[1]) }))
+    }
+
 
     private fun postTx(appConfig: AppConfig, addOperations: (GTXTransactionBuilder) -> Unit) {
         val nodeResolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiUrl)
