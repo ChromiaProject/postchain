@@ -10,9 +10,12 @@ import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClientFactory
+import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
+import kotlin.text.Typography.quote
 
 /**
  * Cli test command
@@ -24,7 +27,7 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
     private val args by argument(help = "arguments to pass to the operation. Datatypes supported: integer, string")
             .multiple()
             .transformAll { args ->
-                args.map { encodeArg(it) }
+                args.flatMap { it.split(" ").map{ arg -> encodeArg(arg) } }
             }
 
     private val configFile by configFileOption()
@@ -50,10 +53,13 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
      * Encodes numbers as GtvInteger and strings as GtvString values
      */
     private fun encodeArg(arg: String): Gtv {
+        if (arg.startsWith("x\"")) return encodeByteArray(arg.substring(1))
         return arg.toLongOrNull()
                 ?.let(::GtvInteger)
-                ?: GtvString(arg)
+                ?: GtvString(arg.trim(quote))
     }
+
+    private fun encodeByteArray(arg: String) = gtv(arg.trim(quote).hexStringToByteArray())
 
     private fun postTx(appConfig: AppConfig, addOperations: (GTXTransactionBuilder) -> Unit) {
         val nodeResolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiUrl)
