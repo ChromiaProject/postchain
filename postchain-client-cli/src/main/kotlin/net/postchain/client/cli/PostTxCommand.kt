@@ -3,6 +3,7 @@ package net.postchain.client.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
+import com.github.ajalt.clikt.parameters.arguments.transformAll
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.client.AppConfig
 import net.postchain.client.core.ConfirmationLevel
@@ -18,11 +19,15 @@ import net.postchain.gtv.GtvString
  */
 class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
 
-    private val opName by argument()
+    private val opName by argument(help = "name of the operation to execute")
 
-    private val args by argument().multiple()
+    private val args by argument(help = "arguments to pass to the operation. Datatypes supported: integer, string")
+            .multiple()
+            .transformAll { args ->
+                args.map { encodeArg(it) }
+            }
 
-    private val configFile get() = (currentContext.parent?.command as? PostchainClient)?.configFile!!
+    private val configFile by configFileOption()
 
     private val cryptoSystem = SECP256K1CryptoSystem()
 
@@ -31,7 +36,7 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
             val appConfig = AppConfig.fromProperties(configFile.absolutePath)
 
             postTx(appConfig) {
-                it.addOperation(opName, *args.map(::encodeArg).toTypedArray())
+                it.addOperation(opName, *args.toTypedArray())
             }
 
             println("Tx with the operation has been posted: $opName(${args.joinToString()})")
