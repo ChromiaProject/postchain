@@ -56,12 +56,12 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
      * Encodes numbers as GtvInteger and strings as GtvString values
      */
     private fun encodeArg(arg: String): Gtv {
-        if (arg.startsWith("x\"") && arg.endsWith(quote)) return encodeByteArray(arg.substring(1))
-        if (arg.startsWith("[") && arg.endsWith("]")) return encodeArray(arg.trim('[', ']'))
-        if (arg.startsWith("{") && arg.endsWith("}")) return encodeDict(arg.trim('{', '}'))
-        return arg.toLongOrNull()
-                ?.let(::GtvInteger)
-                ?: GtvString(arg.trim(quote))
+        return when {
+            arg.startsWith("x\"") && arg.endsWith(quote) -> encodeByteArray(arg.substring(1))
+            arg.startsWith("[") && arg.endsWith("]") -> encodeArray(arg.trim('[', ']'))
+            arg.startsWith("{") && arg.endsWith("}") -> encodeDict(arg.trim('{', '}'))
+            else -> arg.toLongOrNull()?.let(::GtvInteger) ?: GtvString(arg.trim(quote))
+        }
     }
 
     private fun encodeByteArray(arg: String): Gtv {
