@@ -28,6 +28,7 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
             "integer" to "123",
             "string" to "foo, \"bar\"",
             "bytearray" to "will be encoded using the rell notation x\"<myByteArray>\" and will initially be interpreted as a hex-string.",
+            "array" to "[foo,123]"
     ))
             .multiple()
             .transformAll { args ->
@@ -58,6 +59,7 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
      */
     private fun encodeArg(arg: String): Gtv {
         if (arg.startsWith("x\"")) return encodeByteArray(arg.substring(1))
+        if (arg.startsWith("[")) return encodeArray(arg.trim('[',']'))
         return arg.toLongOrNull()
                 ?.let(::GtvInteger)
                 ?: GtvString(arg.trim(quote))
@@ -71,6 +73,8 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
             gtv(bytearray.toByteArray())
         }
     }
+
+    private fun encodeArray(arg: String) = gtv(arg.split(",").map { encodeArg(it) })
 
     private fun postTx(appConfig: AppConfig, addOperations: (GTXTransactionBuilder) -> Unit) {
         val nodeResolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiUrl)
