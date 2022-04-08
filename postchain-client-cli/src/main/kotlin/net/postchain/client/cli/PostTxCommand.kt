@@ -22,15 +22,13 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
 
     private val args by argument().multiple()
 
-    private fun configFile(): String {
-        return (currentContext.parent?.command as? Cli)?.configFile ?: ""
-    }
+    private val configFile get() = (currentContext.parent?.command as? PostchainClient)?.configFile!!
 
     private val cryptoSystem = SECP256K1CryptoSystem()
 
     override fun run() {
         try {
-            val appConfig = AppConfig.fromProperties(configFile())
+            val appConfig = AppConfig.fromProperties(configFile.absolutePath)
 
             postTx(appConfig) {
                 it.addOperation(opName, *args.map(::encodeArg).toTypedArray())
