@@ -24,10 +24,14 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
 
     private val opName by argument(help = "name of the operation to execute")
 
-    private val args by argument(help = "arguments to pass to the operation. Datatypes supported: integer, string")
+    private val args by argument(help = "arguments to pass to the operation.", helpTags = mapOf(
+            "integer" to "123",
+            "string" to "foo, \"bar\"",
+            "bytearray" to "will be encoded using the rell notation x\"<myByteArray>\" and will initially be interpreted as a hex-string.",
+    ))
             .multiple()
             .transformAll { args ->
-                args.flatMap { it.split(" ").map{ arg -> encodeArg(arg) } }
+                args.flatMap { it.split(" ").map { arg -> encodeArg(arg) } }
             }
 
     private val configFile by configFileOption()
@@ -59,7 +63,14 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
                 ?: GtvString(arg.trim(quote))
     }
 
-    private fun encodeByteArray(arg: String) = gtv(arg.trim(quote).hexStringToByteArray())
+    private fun encodeByteArray(arg: String): Gtv {
+        val bytearray = arg.trim(quote)
+        return try {
+            gtv(bytearray.hexStringToByteArray())
+        } catch (e: IllegalArgumentException) {
+            gtv(bytearray.toByteArray())
+        }
+    }
 
     private fun postTx(appConfig: AppConfig, addOperations: (GTXTransactionBuilder) -> Unit) {
         val nodeResolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiUrl)
