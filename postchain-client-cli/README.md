@@ -2,7 +2,22 @@
 
 This module is a CLI for sending transactions to a postchain node
 
-## Command line P.C. client
+## Setup
 
-Currently we only describe how to start manage a Postchain server via command line, since it's rather unusual to issue 
-TXs from the command line. See [the guide](https://gitlab.com/chromaway/postchain/-/wikis/QuickGuide) for more info.
+Configure the client by creating a file which points to a running node
+
+```properties
+api-url=http://<host>:<port>
+blockchain-rid=
+privkey=
+pubkey=
+```
+
+## Usage
+
+### Post transaction
+
+Post a transaction using the `post-tx` command. See help:
+```shell
+post-tx --help
+```

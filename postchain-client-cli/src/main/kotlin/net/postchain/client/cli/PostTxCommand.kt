@@ -17,7 +17,7 @@ import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
 import kotlin.text.Typography.quote
 
-class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
+class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts transactions to a postchain node") {
 
     private val opName by argument(help = "name of the operation to execute")
 
@@ -52,9 +52,6 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
         }
     }
 
-    /**
-     * Encodes numbers as GtvInteger and strings as GtvString values
-     */
     private fun encodeArg(arg: String): Gtv {
         return when {
             arg.startsWith("x\"") && arg.endsWith(quote) -> encodeByteArray(arg.substring(1))
