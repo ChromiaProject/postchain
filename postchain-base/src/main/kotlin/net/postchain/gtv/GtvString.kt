@@ -36,4 +36,8 @@ data class GtvString(val string: String) : GtvPrimitive() {
     override fun nrOfBytes(): Int {
         return (string.length * 2)
     }
+
+    override fun toString(): String {
+        return "\"$string\""
+    }
 }

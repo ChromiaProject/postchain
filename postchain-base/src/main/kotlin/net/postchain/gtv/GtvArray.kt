@@ -56,4 +56,8 @@ data class GtvArray(val array: Array<out Gtv>) : GtvCollection() {
         result = 31 * result + type.hashCode()
         return result
     }
+
+    override fun toString(): String {
+        return "${array.map { it.toString() }}"
+    }
 }

@@ -35,4 +35,8 @@ data class GtvInteger(val integer: BigInteger) : GtvPrimitive() {
     override fun nrOfBytes(): Int {
         return ((integer.bitLength() + 1) / 8) + 1
     }
+
+    override fun toString(): String {
+        return integer.toString()
+    }
 }
