@@ -70,4 +70,8 @@ data class GtvDictionary private constructor (val dict: Map<String, Gtv>) : GtvC
         }
         return sumNrOfBytes
     }
+
+    override fun toString(): String {
+        return dict.toString()
+    }
 }
