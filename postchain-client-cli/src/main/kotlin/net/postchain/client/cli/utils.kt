@@ -1,5 +1,10 @@
 package net.postchain.client.cli
 
+import net.postchain.base.CryptoSystem
+import net.postchain.client.AppConfig
+import net.postchain.client.core.DefaultSigner
+import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
@@ -29,5 +34,13 @@ private fun encodeArray(arg: String) = GtvFactory.gtv(arg.split(",").map { encod
 
 private fun encodeDict(arg: String): Gtv {
     val pairs = arg.split(",").map { it.split("=", limit = 2) }
+    if (pairs.any { it.size < 2 }) throw IllegalArgumentException("Wrong format. Expected dict $arg to contain key=value pairs")
     return GtvFactory.gtv(pairs.associateBy({ it[0] }, { encodeArg(it[1]) }))
+}
+
+fun createClient(cryptoSystem: CryptoSystem, appConfig: AppConfig): PostchainClient {
+    val nodeResolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiUrl)
+    val sigMaker = cryptoSystem.buildSigMaker(appConfig.pubKeyByteArray, appConfig.privKeyByteArray)
+    val signer = DefaultSigner(sigMaker, appConfig.pubKeyByteArray)
+    return PostchainClientFactory.getClient(nodeResolver, appConfig.blockchainRid, signer)
 }

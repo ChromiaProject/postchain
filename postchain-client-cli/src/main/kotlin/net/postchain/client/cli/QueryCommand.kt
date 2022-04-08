@@ -4,7 +4,10 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.arguments.transformAll
+import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.client.AppConfig
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
 
 class QueryCommand : CliktCommand(name = "query", help = "Make a query towards a postchain node") {
     private val configFile by configFileOption()
@@ -16,11 +19,22 @@ class QueryCommand : CliktCommand(name = "query", help = "Make a query towards a
             .transformAll { createDict(it) }
 
     private fun createDict(args: List<String>): Gtv {
-        if (args.size == 1 && args[0].startsWith("{") && args[0].endsWith("}")) return encodeArg(args[0])
-        return encodeArg("{${args.joinToString(",")}}")
+        return when {
+            args.isEmpty() -> gtv(mapOf())
+            args.size == 1 && args[0].startsWith("{") && args[0].endsWith("}") -> verifyAndEncodeDict(args[0])
+            else -> encodeArg("{${args.joinToString(",")}}")
+        }
+    }
+
+    private fun verifyAndEncodeDict(arg: String): Gtv {
+        return encodeArg(arg)
     }
 
     override fun run() {
+        val client = createClient(SECP256K1CryptoSystem(), AppConfig.fromProperties(configFile.absolutePath))
+
+        val res = client.querySync(queryName, args)
+        println("Query $queryName returned \n$res")
 
     }
 }
