@@ -2,6 +2,7 @@
 
 package net.postchain.gtv
 
+import net.postchain.common.toHex
 import net.postchain.gtv.messages.RawGtv
 import org.openmuc.jasn1.ber.types.BerOctetString
 import java.util.*
@@ -43,5 +44,9 @@ data class GtvByteArray(val bytearray: ByteArray) : GtvPrimitive() {
         var result = Arrays.hashCode(bytearray)
         result = 31 * result + type.hashCode()
         return result
+    }
+
+    override fun toString(): String {
+        return "x\"${bytearray.toHex()}\""
     }
 }
