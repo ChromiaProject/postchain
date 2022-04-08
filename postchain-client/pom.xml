@@ -58,6 +58,23 @@
             <artifactId>prov</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-configuration2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.openmuc/jasn1-compiler -->
+        <dependency>
+            <groupId>org.openmuc</groupId>
+            <artifactId>jasn1-compiler</artifactId>
+            <version>1.10.0</version>
+            <scope>runtime</scope>
+        </dependency>
 
     </dependencies>
 
