@@ -4,7 +4,6 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
-import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.core.*
 import net.postchain.core.BlockHeader
 import net.postchain.debug.BlockTrace
@@ -100,7 +99,9 @@ class FastSynchronizer(private val workerContext: WorkerContext,
                        val blockDatabase: BlockDatabase,
                        val params: FastSyncParameters,
                        val isProcessRunning: () -> Boolean
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
+) {
+    private val blockQueries = workerContext.engine.getBlockQueries()
+    private val communicationManager = workerContext.communicationManager
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
     private val jobs = TreeMap<Long, Job>()
@@ -676,8 +677,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             }
             try {
                 when (message) {
-                    is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
-                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight)
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
                     is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)

@@ -2,6 +2,11 @@
 
 package net.postchain.network.peer
 
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.collect
 import mu.KLogging
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.toHex
@@ -28,8 +33,13 @@ class DefaultPeerCommunicationManager<PacketType>(
 
     companion object : KLogging()
 
-    private var inboundPackets = mutableListOf<Pair<NodeRid, PacketType>>()
+    private val inboundPackets = MutableSharedFlow<Pair<NodeRid, PacketType>>(0, 1_000, BufferOverflow.DROP_LATEST)
+    override val messages = inboundPackets.asSharedFlow()
     var connected = false
+
+    //TODO: REMOVE. This is only here for compatibility
+    private lateinit var queueFillingJob: Job;
+    private var messageQueue = mutableListOf<Pair<NodeRid, PacketType>>()
 
     /**
      * Main job during init() is to connect our chain using the [ConnectionManager].
@@ -45,13 +55,23 @@ class DefaultPeerCommunicationManager<PacketType>(
         }
         val peerConfig = XChainPeersConfiguration(chainId, blockchainRid, config, packetHandlerImpl)
         connectionManager.connectChain(peerConfig, true) { processName.toString() }
+
+        //TODO: REMOVE. This is only here for compatibility
+        queueFillingJob = CoroutineScope(Dispatchers.Default).launch {
+            messages.collect {
+                synchronized(this) {
+                    messageQueue.add(it)
+                }
+            }
+        }
+
         connected = true
     }
 
     @Synchronized
     override fun getPackets(): MutableList<Pair<NodeRid, PacketType>> {
-        val currentQueue = inboundPackets
-        inboundPackets = mutableListOf()
+        val currentQueue = messageQueue
+        messageQueue = mutableListOf()
         return currentQueue
     }
 
@@ -108,6 +128,7 @@ class DefaultPeerCommunicationManager<PacketType>(
     @Synchronized
     override fun shutdown() {
         if (!connected) return
+        queueFillingJob.cancel()
         val prefixFun: () -> String = { processName.toString() }
         connectionManager.disconnectChain(prefixFun, chainId)
         connected = false
@@ -115,22 +136,18 @@ class DefaultPeerCommunicationManager<PacketType>(
 
 
     private fun consumePacket(packet: ByteArray, peerId: NodeRid) {
-        try {
-            /**
-             * Packet decoding should not be synchronized so we can make
-             * use of parallel processing in different threads
-             */
-            logger.trace { "Receiving a packet from peer: ${peerId.byteArray.toHex()}" }
-            val decodedPacket = packetDecoder.decodePacket(peerId.byteArray, packet)
-            synchronized(this) {
+        runBlocking {
+            try {
+                logger.trace { "Receiving a packet from peer: ${peerId.byteArray.toHex()}" }
+                val decodedPacket = packetDecoder.decodePacket(peerId.byteArray, packet)
                 logger.trace { "Successfully decoded the package, now adding it " }
-                inboundPackets.add(peerId to decodedPacket)
-            }
-        } catch (e: BadDataMistake) {
-            if (e.type == BadDataType.BAD_MESSAGE) {
-                logger.info("Bad message received from peer ${peerId}: ${e.message}")
-            } else {
-                logger.error("Error when receiving message from peer $peerId", e)
+                inboundPackets.emit(peerId to decodedPacket)
+            } catch (e: BadDataMistake) {
+                if (e.type == BadDataType.BAD_MESSAGE) {
+                    logger.info("Bad message received from peer ${peerId}: ${e.message}")
+                } else {
+                    logger.error("Error when receiving message from peer $peerId", e)
+                }
             }
         }
     }

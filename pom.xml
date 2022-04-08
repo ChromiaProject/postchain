@@ -25,6 +25,7 @@
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <kotlin.version>1.4.30</kotlin.version>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
+        <kotlinx.couroutines.version>1.4.2</kotlinx.couroutines.version>
 
         <!-- Maven -->
         <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
@@ -140,6 +141,11 @@
                 <version>${kotlin.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-coroutines-core</artifactId>
+                <version>${kotlinx.couroutines.version}</version>
             </dependency>
 
             <!-- Postchain -->

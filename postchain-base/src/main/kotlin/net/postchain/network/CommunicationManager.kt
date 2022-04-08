@@ -2,9 +2,12 @@
 
 package net.postchain.network
 
+import kotlinx.coroutines.flow.SharedFlow
 import net.postchain.core.NodeRid
 
 interface CommunicationManager<PacketType> {
+    val messages: SharedFlow<Pair<NodeRid, PacketType>>
+
     fun init()
 
     //fun peerMap(): Map<NodeRid, PeerInfo>

@@ -9,6 +9,7 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.syncmanager.common.BlockMessageHandler
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
@@ -46,13 +47,17 @@ open class EBFTSynchronizationInfrastructure(
         } else null
 
         val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
+        val communicationManager = buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid)
+
+        val blockMessageHandler = BlockMessageHandler(engine.getBlockQueries(), communicationManager)
         val workerContext = WorkerContext(
                 processName,
                 blockchainConfig,
                 engine,
-                buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
+                communicationManager,
                 peerCommConfiguration,
                 nodeConfig,
+                blockMessageHandler,
                 shouldProcessNewMessages
         )
 
@@ -88,6 +93,7 @@ open class EBFTSynchronizationInfrastructure(
                         histCommManager,
                         historicPeerCommConfiguration,
                         nodeConfig,
+                        blockMessageHandler,
                         shouldProcessNewMessages
                 )
 

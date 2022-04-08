@@ -17,7 +17,6 @@ import net.postchain.ebft.syncmanager.StatusLogInterval
 import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
-import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.worker.WorkerContext
 import nl.komponents.kovenant.task
 import java.util.*
@@ -32,7 +31,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val nodeStateTracker: NodeStateTracker,
                            private val isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
+) {
+    private val blockQueries = workerContext.engine.getBlockQueries()
+    private val communicationManager = workerContext.communicationManager
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(10000, statusManager)
     private val statusSender = StatusSender(1000, statusManager, workerContext.communicationManager)
@@ -90,73 +91,63 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             logger.trace { "$processName: Received message type ${message.javaClass.simpleName} from node $nodeIndex" }
 
             try {
-                when (message) {
-                    // same case for replica and validator node
-                    is GetBlockAtHeight -> sendBlockAtHeight(xPeerId, message.height)
-                    is GetBlockHeaderAndBlock -> {
-                        sendBlockHeaderAndBlock(xPeerId, message.height,
-                                this.statusManager.myStatus.height - 1)
-                    }
-                    else -> {
-                        if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
-                            // validator consensus logic
-                            when (message) {
-                                is Status -> {
-                                    NodeStatus(message.height, message.serial)
-                                            .apply {
-                                                blockRID = message.blockRID
-                                                revolting = message.revolting
-                                                round = message.round
-                                                state = NodeState.values()[message.state]
-                                            }.also {
-                                                statusManager.onStatusUpdate(nodeIndex, it)
-                                            }
-
-                                    tryToSwitchToFastSync()
-                                }
-                                is BlockSignature -> {
-                                    val signature = Signature(message.sig.subjectID, message.sig.data)
-                                    val smBlockRID = this.statusManager.myStatus.blockRID
-                                    if (smBlockRID == null) {
-                                        logger.info("$processName: Received signature not needed")
-                                    } else if (!smBlockRID.contentEquals(message.blockRID)) {
-                                        logger.info("$processName: Receive signature for a different block")
-                                    } else if (this.blockDatabase.verifyBlockSignature(signature)) {
-                                        this.statusManager.onCommitSignature(nodeIndex, message.blockRID, signature)
+                if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
+                    // validator consensus logic
+                    when (message) {
+                        is Status -> {
+                            NodeStatus(message.height, message.serial)
+                                    .apply {
+                                        blockRID = message.blockRID
+                                        revolting = message.revolting
+                                        round = message.round
+                                        state = NodeState.values()[message.state]
+                                    }.also {
+                                        statusManager.onStatusUpdate(nodeIndex, it)
                                     }
-                                }
-                                is CompleteBlock -> {
-                                    try {
-                                        blockManager.onReceivedBlockAtHeight(
-                                                decodeBlockDataWithWitness(message, blockchainConfiguration),
-                                                message.height)
-                                    } catch (e: Exception) {
-                                        logger.error("Failed to add block to database. Resetting state...", e)
-                                        // reset state to last known from database
-                                        val currentBlockHeight = blockQueries.getBestHeight().get()
-                                        statusManager.fastForwardHeight(currentBlockHeight)
-                                        blockManager.currentBlock = null
-                                    }
-                                }
-                                is UnfinishedBlock -> {
-                                    blockManager.onReceivedUnfinishedBlock(
-                                            decodeBlockData(
-                                                    BlockData(message.header, message.transactions),
-                                                    blockchainConfiguration)
-                                    )
-                                }
-                                is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
-                                is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
-                                is Transaction -> handleTransaction(nodeIndex, message)
-                                is BlockHeader -> {
-                                    // TODO: This might happen because we've already exited FastSync but other nodes
-                                    //  are still responding to our old requests. For this case this is harmless.
-                                }
 
-
-                                else -> throw ProgrammerMistake("Unhandled type ${message::class}")
+                            tryToSwitchToFastSync()
+                        }
+                        is BlockSignature -> {
+                            val signature = Signature(message.sig.subjectID, message.sig.data)
+                            val smBlockRID = this.statusManager.myStatus.blockRID
+                            if (smBlockRID == null) {
+                                logger.info("$processName: Received signature not needed")
+                            } else if (!smBlockRID.contentEquals(message.blockRID)) {
+                                logger.info("$processName: Receive signature for a different block")
+                            } else if (this.blockDatabase.verifyBlockSignature(signature)) {
+                                this.statusManager.onCommitSignature(nodeIndex, message.blockRID, signature)
                             }
                         }
+                        is CompleteBlock -> {
+                            try {
+                                blockManager.onReceivedBlockAtHeight(
+                                        decodeBlockDataWithWitness(message, blockchainConfiguration),
+                                        message.height)
+                            } catch (e: Exception) {
+                                logger.error("Failed to add block to database. Resetting state...", e)
+                                // reset state to last known from database
+                                val currentBlockHeight = blockQueries.getBestHeight().get()
+                                statusManager.fastForwardHeight(currentBlockHeight)
+                                blockManager.currentBlock = null
+                            }
+                        }
+                        is UnfinishedBlock -> {
+                            blockManager.onReceivedUnfinishedBlock(
+                                    decodeBlockData(
+                                            BlockData(message.header, message.transactions),
+                                            blockchainConfiguration)
+                            )
+                        }
+                        is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
+                        is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
+                        is Transaction -> handleTransaction(nodeIndex, message)
+                        is BlockHeader -> {
+                            // TODO: This might happen because we've already exited FastSync but other nodes
+                            //  are still responding to our old requests. For this case this is harmless.
+                        }
+
+
+                        else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                     }
                 }
             } catch (e: Exception) {

@@ -6,6 +6,7 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.syncmanager.common.BlockMessageHandler
 import net.postchain.network.CommunicationManager
 
 /**
@@ -19,10 +20,12 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val communicationManager: CommunicationManager<EbftMessage>,
                     val peerCommConfiguration: PeerCommConfiguration,
                     val nodeConfig: NodeConfig,
+                    val blockMessageHandler: BlockMessageHandler,
                     val shouldProcessMessages: (Long) -> Boolean
 ) {
     fun shutdown() {
         engine.shutdown()
         communicationManager.shutdown()
+        blockMessageHandler.shutdown()
     }
 }
