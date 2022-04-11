@@ -12,6 +12,8 @@ import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.StatusManager
+import net.postchain.ebft.syncmanager.validator.BlockAndSignatureSender
+import net.postchain.ebft.syncmanager.validator.TransactionHandler
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import java.lang.Thread.sleep
 
@@ -26,6 +28,8 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
 
     private val blockDatabase: BaseBlockDatabase
     private val blockManager: BaseBlockManager
+    private val blockAndSignatureSender: BlockAndSignatureSender
+    private val transactionHandler: TransactionHandler
     val syncManager: ValidatorSyncManager
     val networkAwareTxQueue: NetworkAwareTxQueue
     val nodeStateTracker = NodeStateTracker()
@@ -60,6 +64,19 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
                 startWithFastSync
         )
 
+        blockAndSignatureSender = BlockAndSignatureSender(
+                blockDatabase,
+                blockManager,
+                statusManager,
+                workerContext
+        )
+
+        transactionHandler = TransactionHandler(
+                workerContext.communicationManager,
+                workerContext.engine.getTransactionQueue(),
+                blockchainConfiguration.getTransactionFactory()
+        )
+
         networkAwareTxQueue = NetworkAwareTxQueue(
                 blockchainEngine.getTransactionQueue(),
                 workerContext.communicationManager)
@@ -82,6 +99,8 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     }
 
     override fun cleanup() {
+        transactionHandler.shutdown()
+        blockAndSignatureSender.shutdown()
         blockDatabase.stop()
         workerContext.shutdown()
     }

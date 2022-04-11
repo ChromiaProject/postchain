@@ -18,7 +18,6 @@ import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.worker.WorkerContext
-import nl.komponents.kovenant.task
 import java.util.*
 
 /**
@@ -138,79 +137,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                             blockchainConfiguration)
                             )
                         }
-                        is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
-                        is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
-                        is Transaction -> handleTransaction(nodeIndex, message)
-                        is BlockHeader -> {
-                            // TODO: This might happen because we've already exited FastSync but other nodes
-                            //  are still responding to our old requests. For this case this is harmless.
-                        }
-
-
-                        else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                     }
                 }
             } catch (e: Exception) {
                 logger.error("$processName: Couldn't handle message $message. Ignoring and continuing", e)
             }
-        }
-    }
-
-    /**
-     * Handle transaction received from peer
-     *
-     * @param index
-     * @param message message including the transaction
-     */
-    private fun handleTransaction(index: Int, message: Transaction) {
-        // TODO: reject if queue is full
-        task {
-            val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(message.data)
-            workerContext.engine.getTransactionQueue().enqueue(tx)
-        }
-
-    }
-
-    /**
-     * Send message to peer with our commit signature
-     *
-     * @param nodeIndex node index of receiving peer
-     * @param blockRID block identifier
-     */
-    private fun sendBlockSignature(nodeIndex: Int, blockRID: ByteArray) {
-        val currentBlock = this.blockManager.currentBlock
-        if (currentBlock != null && currentBlock.header.blockRID.contentEquals(blockRID)) {
-            if (!statusManager.myStatus.blockRID!!.contentEquals(currentBlock.header.blockRID)) {
-                throw ProgrammerMistake("status manager block RID (${statusManager.myStatus.blockRID!!.toHex()}) out of sync with current block RID (${currentBlock.header.blockRID.toHex()})")
-            }
-            val signature = statusManager.getCommitSignature()
-            if (signature != null) {
-                communicationManager.sendPacket(BlockSignature(
-                        blockRID,
-                        net.postchain.ebft.message.Signature(signature.subjectID, signature.data)),
-                        validatorAtIndex(nodeIndex))
-            }
-            return
-        }
-        val blockSignature = blockDatabase.getBlockSignature(blockRID)
-        blockSignature success {
-            val packet = BlockSignature(blockRID, net.postchain.ebft.message.Signature(it.subjectID, it.data))
-            communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
-        } fail {
-            logger.debug(it) { "$processName: Error sending BlockSignature" }
-        }
-    }
-
-    /**
-     * Send message to node with the current unfinished block.
-     *
-     * @param nodeIndex index of node to send block to
-     */
-    private fun sendUnfinishedBlock(nodeIndex: Int) {
-        val currentBlock = blockManager.currentBlock
-        if (currentBlock != null) {
-            communicationManager.sendPacket(UnfinishedBlock(currentBlock.header.rawData, currentBlock.transactions.toList()),
-                    validatorAtIndex(nodeIndex))
         }
     }
 
