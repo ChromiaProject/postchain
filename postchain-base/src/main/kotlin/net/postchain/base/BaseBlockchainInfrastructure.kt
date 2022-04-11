@@ -7,6 +7,8 @@ import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.BaseTransactionQueue
+import net.postchain.common.reflection.constructorOf
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 
@@ -57,9 +59,7 @@ open class BaseBlockchainInfrastructure(
         val confData = BaseBlockchainConfigurationData.build(
             rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
 
-        val bcfClass = Class.forName(confData.data[KEY_CONFIGURATIONFACTORY]!!.asString())
-        val factory = (bcfClass.newInstance() as BlockchainConfigurationFactory)
-
+        val factory = newInstanceOf<BlockchainConfigurationFactory>(confData.data[KEY_CONFIGURATIONFACTORY]!!.asString())
         val config = factory.makeBlockchainConfiguration(confData)
         config.initializeDB(eContext)
 
@@ -131,28 +131,10 @@ open class BaseBlockchainInfrastructure(
         val className = dynClassName.className.let {
             if (it == "ebft") "net.postchain.ebft.EBFTSynchronizationInfrastructure" else it
         }
-        return syncInfraCache.getOrPut(className) { getInstanceByClassName(className) }
+        return syncInfraCache.getOrPut(className) { constructorOf<SynchronizationInfrastructure>(className, PostchainContext::class.java).newInstance(postchainContext) }
     }
 
     private fun getSynchronizationInfrastructureExtension(dynClassName: DynamicClassName): SynchronizationInfrastructureExtension {
-        return syncInfraExtCache.getOrPut(dynClassName.className) { getInstanceByClassName(dynClassName.className) }
-    }
-
-    /**
-     * Will dynamically create an instance from the given class name (with the constructor param [PostchainContext]).
-     *
-     * @param className is the full name of the class to create an instance from
-     * @return the instance as a subclass of [Shutdownable]
-     */
-    private inline fun <reified T : Shutdownable> getInstanceByClassName(className: String): T {
-        val iClass = Class.forName(className)
-        val ctor = iClass.getConstructor(PostchainContext::class.java)
-        val instance = ctor.newInstance(postchainContext)
-        if (instance is T)
-            return instance
-        else
-            throw UserMistake(
-                    "Class ${className} does not support required interface"
-            )
+        return syncInfraExtCache.getOrPut(dynClassName.className) { constructorOf<SynchronizationInfrastructureExtension>(dynClassName.className, PostchainContext::class.java).newInstance(postchainContext) }
     }
 }
