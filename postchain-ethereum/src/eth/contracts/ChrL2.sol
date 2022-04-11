@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 // Upgradeable implementations
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 // Interfaces
 import "@openzeppelin/contracts/interfaces/IERC721.sol";
@@ -15,12 +16,13 @@ import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "./utils/Gtv.sol";
 import "./Postchain.sol";
 
-contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
+// This contract is upgradeable. This imposes restrictions on how storage layout can be modified once it is deployed
+// Some instructions are also not allowed. Read more at: https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
+// Note: To enhance the security & decentralization, we should call transferOwnership() to external multi-sig owner after deploy the smart contract
+contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, ReentrancyGuardUpgradeable {
 
     uint8 constant ERC20_ACCOUNT_STATE_BYTE_SIZE = 64;
     uint8 constant ERC721_ACCOUNT_STATE_BYTE_SIZE = 64;
-    // This contract is upgradeable. This imposes restrictions on how storage layout can be modified once it is deployed
-    // Some instructions are also not allowed. Read more at: https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
     enum AssetType {
@@ -50,17 +52,11 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
 
     bool public isMassExit;
     PostchainBlock public massExitBlock;
-
-    uint public transactionCount;
-    mapping (uint => Transaction) public transactions;
-    mapping (uint => mapping (address => bool)) public confirmations;
     mapping(IERC20 => uint256) public _balances;
     mapping(IERC721 => mapping(uint256 => address)) public _owners;
     mapping (bytes32 => Withdraw) public _withdraw;
     mapping (bytes32 => WithdrawNFT) public _withdrawNFT;
-    address[] public directoryNodes;
     address[] public appNodes;
-    mapping (address => bool) public isDirectoryNode;
 
     // Each postchain event will be used to claim only one time.
     mapping (bytes32 => bool) private _events;
@@ -97,13 +93,6 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         Status status;
     }
 
-    event DirectoryNodeAddition(address indexed directoryNode);
-    event DirectoryNodeRemoval(address indexed directoryNode);
-    event Confirmation(address indexed sender, uint indexed transactionId);
-    event Revocation(address indexed sender, uint indexed transactionId);
-    event Submission(uint indexed transactionId);
-    event Execution(uint indexed transactionId);
-    event ExecutionFailure(uint indexed transactionId);
     event Deposited(AssetType indexed asset, bytes payload);
     event WithdrawRequest(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
@@ -112,60 +101,14 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
     event MassExit(uint indexed height, bytes32 indexed blockRid);
     event WithdrawalBySnapshot(address indexed beneficiary);
 
-    /*
-     *  Modifiers
-     */
-    modifier onlyThis() {
-        require(msg.sender == address(this), "ChrL2: only the contract can execute");
-        _;
-    }
-
-    modifier directoryNodeDoesNotExist(address node) {
-        require(!isDirectoryNode[node], "ChrL2: directory node already exist");
-        _;
-    }
-
-    modifier directoryNodeExists(address node) {
-        require(isDirectoryNode[node], "ChrL2: directory node does not exist");
-        _;
-    }
-
-    modifier transactionExists(uint transactionId) {
-        require(transactions[transactionId].destination != address(0), "ChrL2: transaction does not exist");
-        _;
-    }
-
-    modifier confirmed(uint transactionId, address node) {
-        require(confirmations[transactionId][node], "ChrL2: transaction was not confirmed by the node yet");
-        _;
-    }
-
-    modifier notConfirmed(uint transactionId, address node) {
-        require(!confirmations[transactionId][node], "ChrL2: transaction was already confirmed by the node");
-        _;
-    }
-
-    modifier notExecuted(uint transactionId) {
-        require(!transactions[transactionId].executed, "Chrl2: transaction was already executed");
-        _;
-    }
-
-    modifier notNull(address _address) {
-        require(_address != address(0), "ChrL2: null address is not allow");
-        _;
-    }
-
     modifier whenMassExit() {
         require(isMassExit, "ChrL2: mass exit was not triggered yet");
         _;
     }
 
-    function initialize(address[] memory _directoryNodes, address[] memory _appNodes) public initializer {
-        directoryNodes = _directoryNodes;
+    function initialize(address[] memory _appNodes) public initializer {
+        __Ownable_init();
         appNodes = _appNodes;
-        for (uint i = 0; i < directoryNodes.length; i++) {
-            isDirectoryNode[directoryNodes[i]] = true;
-        }
     }
 
     /**
@@ -182,40 +125,7 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         return this.onERC721Received.selector;
     }
 
-    /// @dev Allows to add a new directory node. Transaction has to be sent by wallet.
-    /// @param _directoryNode Address of new directory node.
-    function addDirectoryNode(address _directoryNode)  
-        onlyThis 
-        directoryNodeDoesNotExist(_directoryNode)
-        notNull(_directoryNode)
-        public returns (bool)
-    {
-        isDirectoryNode[_directoryNode] = true;
-        directoryNodes.push(_directoryNode);
-        emit DirectoryNodeAddition(_directoryNode);
-        return true;
-    }
-
-    /// @dev Allows to remove an directory node. Transaction has to be sent by wallet.
-    /// @param _directoryNode Address of directory node.
-    function removeDirectoryNode(address _directoryNode)
-        onlyThis
-        directoryNodeExists(_directoryNode)
-        public returns (bool)
-    {
-        isDirectoryNode[_directoryNode] = false;
-        for (uint i=0; i < directoryNodes.length - 1; i++) {
-            if (directoryNodes[i] == _directoryNode) {
-                directoryNodes[i] = directoryNodes[directoryNodes.length - 1];
-                directoryNodes.pop();
-                break;
-            }
-        }
-        emit DirectoryNodeRemoval(_directoryNode);
-        return true;
-    }
-
-    function updateAppNodes(address[] memory _appNodes) onlyThis public returns (bool) {
+    function updateAppNodes(address[] memory _appNodes) onlyOwner public returns (bool) {
         for (uint i = 0; i < appNodes.length; i++) {
             appNodes.pop();
         }
@@ -223,144 +133,27 @@ contract ChrL2 is Initializable, IERC721Receiver, ReentrancyGuardUpgradeable {
         return true;
     }
 
-    /// @dev Allows an owner to submit and confirm a transaction.
-    /// @param destination Transaction target address.
-    /// @param value Transaction ether value.
-    /// @param data Transaction data payload.
-    /// @return transactionId Returns transaction ID.
-    function submitTransaction(address destination, uint value, bytes calldata data)
-        public
-        returns (uint transactionId)
-    {
-        transactionId = _addTransaction(destination, value, data);
-        confirmTransaction(transactionId);
-    }
-
-    /// @dev Allows an owner to confirm a transaction.
-    /// @param transactionId Transaction ID.
-    function confirmTransaction(uint transactionId)
-        public
-        directoryNodeExists(msg.sender)
-        transactionExists(transactionId)
-        notConfirmed(transactionId, msg.sender)
-    {
-        confirmations[transactionId][msg.sender] = true;
-        emit Confirmation(msg.sender, transactionId);
-        executeTransaction(transactionId);
-    }
-
-    /// @dev Allows an owner to revoke a confirmation for a transaction.
-    /// @param transactionId Transaction ID.
-    function revokeConfirmation(uint transactionId)
-        public
-        directoryNodeExists(msg.sender)
-        confirmed(transactionId, msg.sender)
-        notExecuted(transactionId)
-    {
-        confirmations[transactionId][msg.sender] = false;
-        emit Revocation(msg.sender, transactionId);
-    }    
-
-    /// @dev Allows anyone to execute a confirmed transaction.
-    /// @param transactionId Transaction ID.
-    function executeTransaction(uint transactionId)
-        public
-        directoryNodeExists(msg.sender)
-        confirmed(transactionId, msg.sender)
-        notExecuted(transactionId)
-    {
-        if (isConfirmed(transactionId)) {
-            Transaction storage txn = transactions[transactionId];
-            txn.executed = true;
-            if (external_call(txn.destination, txn.value, txn.data.length, txn.data))
-                emit Execution(transactionId);
-            else {
-                emit ExecutionFailure(transactionId);
-                txn.executed = false;
-            }
-        }
-    }
-
-    // call has been separated into its own function in order to take advantage
-    // of the Solidity's code generator to produce a loop that copies tx.data into memory.
-    function external_call(address destination, uint value, uint dataLength, bytes memory data) internal returns (bool) {
-        bool result;
-        assembly {
-            let x := mload(0x40)   // "Allocate" memory for output (0x40 is where "free memory" pointer is stored by convention)
-            let d := add(data, 0x20) // First 32 bytes are the padded length of data, so exclude that
-            result := call(
-                gas(),
-                destination,
-                value,
-                d,
-                dataLength,        // Size of the input (in bytes) - this is what fixes the padding problem
-                x,
-                0                  // Output is ignored, therefore the output size is zero
-            )
-        }
-        return result;
-    }    
-
-    /// @dev Returns the confirmation status of a transaction.
-    /// @param transactionId Transaction ID.
-    /// @return Confirmation status.
-    function isConfirmed(uint transactionId)
-        public
-        view
-        returns (bool)
-    {
-        uint count = 0;
-        for (uint i = 0; i < directoryNodes.length; i++) {
-            if (confirmations[transactionId][directoryNodes[i]]) count += 1;
-        }
-        if (count >= Postchain._calculateBFTRequiredNum(directoryNodes.length)) {
-            return true;
-        }
-        return false;
-    }
-
-    /// @dev Adds a new transaction to the transaction mapping, if transaction does not exist yet.
-    /// @param destination Transaction target address.
-    /// @param value Transaction ether value.
-    /// @param data Transaction data payload.
-    /// @return transactionId Returns transaction ID.
-    function _addTransaction(address destination, uint value, bytes calldata data)
-        internal
-        notNull(destination)
-        returns (uint transactionId)
-    {
-        transactionId = transactionCount;
-        transactions[transactionId] = Transaction({
-            destination: destination,
-            value: value,
-            data: data,
-            executed: false
-        });
-        transactionCount += 1;
-        emit Submission(transactionId);
-    }
-
-    function triggerMassExit(uint height, bytes32 blockRid) onlyThis public {
+    function triggerMassExit(uint height, bytes32 blockRid) onlyOwner public {
         require(!isMassExit, "ChrL2: mass exit already set");
         isMassExit = true;
         massExitBlock = PostchainBlock(height, blockRid);
     }
 
-    function postponeMassExit() onlyThis whenMassExit public {
+    function postponeMassExit() onlyOwner whenMassExit public {
         isMassExit = false;
     }
 
-    function updateMassExitBlock(uint height, bytes32 blockRid) onlyThis whenMassExit public {
+    function updateMassExitBlock(uint height, bytes32 blockRid) onlyOwner whenMassExit public {
         massExitBlock = PostchainBlock(height, blockRid);
     }
 
-    function pendingWithdraw(bytes32 _hash) onlyThis public {
+    function pendingWithdraw(bytes32 _hash) onlyOwner public {
         Withdraw storage wd = _withdraw[_hash];
         require(wd.status == Status.Withdrawable, "ChrL2: withdraw request status is not withdrawable");
         wd.status = Status.Pending;
     }
 
-    function unpendingWithdraw(bytes32 _hash) onlyThis public {
+    function unpendingWithdraw(bytes32 _hash) onlyOwner public {
         Withdraw storage wd = _withdraw[_hash];
         require(wd.status == Status.Pending, "ChrL2: withdraw request status is not pending");
         wd.status = Status.Withdrawable;

@@ -28,8 +28,8 @@ describe("Non Fungible Token", () => {
         const tokenContract = await tokenFactory.deploy(name, symbol)
         nftAddress = tokenContract.address
 
-        const chrl2Factory = new ChrL2__factory(deployer)
-        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[directoryNodes.address], [appNodes.address]])
+        const chrl2Factory = new ChrL2__factory(directoryNodes)
+        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[appNodes.address]])
         chrL2Address = chrl2Instance.address
     });
 
@@ -111,7 +111,7 @@ describe("Non Fungible Token", () => {
                 let state = blockNumber.substring(2, blockNumber.length).concat(event)
                 let hashRootState = keccak256(DecodeHexStringToByteArray(state))
                 let el2Leaf = hashRootEvent.substring(2, hashRootEvent.length).concat(hashRootState.substring(2, hashRootState.length))
-
+                
                 let blockchainRid = "977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"
                 let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
                 let merkleRootHash = "96defe74f43fcf2d12a1844bcd7a3a7bcb0d4fa191776953dae3f1efb508d866"
@@ -120,7 +120,7 @@ describe("Non Fungible Token", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "9AFE20AA13AD1B55CCD8AE2BA6704F879EEDF56B4F314F809F3E003BF70ACD58"
+                let extraDataMerkleRoot = "8A80BE4BCAB70E6688E68948AF7342DAEDD618EAD6BDE263D3FC89E82D2E936F"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))

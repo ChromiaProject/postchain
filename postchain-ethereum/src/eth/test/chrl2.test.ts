@@ -4,7 +4,7 @@ import { solidity } from "ethereum-waffle";
 import { TestToken__factory, ChrL2__factory, TestDelegator__factory } from "../src/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
-import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
+import { ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
 import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash} from "./utils"
 
@@ -30,8 +30,8 @@ describe("ChrL2", () => {
         const testDelegator = await testDelegatorFactory.deploy()
         testDelegatorAddress = testDelegator.address;
 
-        const chrl2Factory = new ChrL2__factory(deployer)
-        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[directoryNodes.address], [appNodes.address]])
+        const chrl2Factory = new ChrL2__factory(directoryNodes)
+        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[appNodes.address]])
         chrL2Address = chrl2Instance.address
     });
 
@@ -138,7 +138,7 @@ describe("ChrL2", () => {
     })
 
     describe("Nodes", async () => {
-        it("Update directory & app node(s) successfully", async () => {
+        it("Update app node(s) successfully", async () => {
             const [node1, node2, node3, other] = await ethers.getSigners()
             const chrL2Instance = new ChrL2__factory(directoryNodes).attach(chrL2Address)
             const otherChrL2Instance = new ChrL2__factory(other).attach(chrL2Address)
@@ -147,34 +147,13 @@ describe("ChrL2", () => {
                 node2.address, 
                 node3.address
             ]
-            await expect(chrL2Instance.updateAppNodes(nodes)).to.be.revertedWith('ChrL2: only the contract can execute')
-            expect(await chrL2Instance.directoryNodes(0)).to.eq(directoryNodes.address)
-            expect(await chrL2Instance.isDirectoryNode(directoryNodes.address)).to.be.true
-            expect(await chrL2Instance.isDirectoryNode(other.address)).to.be.false
+            await expect(otherChrL2Instance.updateAppNodes(nodes)).to.be.revertedWith("Ownable: caller is not the owner")
             // Update App Nodes
             let updateAppNodes = chrL2Instance.interface.encodeFunctionData("updateAppNodes", [nodes])
-            await chrL2Instance.submitTransaction(chrL2Address, BigNumber.from(0), updateAppNodes)
+            await chrL2Instance.updateAppNodes(nodes)
             expect(await chrL2Instance.appNodes(0)).to.eq(node1.address)
             expect(await chrL2Instance.appNodes(1)).to.eq(node2.address)
             expect(await chrL2Instance.appNodes(2)).to.eq(node3.address)
-
-            // Add Directory Nodes
-            let addDirectoryNode = chrL2Instance.interface.encodeFunctionData("addDirectoryNode", [other.address])
-            await chrL2Instance.submitTransaction(chrL2Address, BigNumber.from(0), addDirectoryNode)
-            expect(await chrL2Instance.directoryNodes(0)).to.eq(directoryNodes.address)
-            expect(await chrL2Instance.directoryNodes(1)).to.eq(other.address)
-            expect(await chrL2Instance.isDirectoryNode(directoryNodes.address)).to.be.true
-            expect(await chrL2Instance.isDirectoryNode(other.address)).to.be.true
-
-            // Remove Directory Nodes
-            let removeDirectoryNode = chrL2Instance.interface.encodeFunctionData("removeDirectoryNode", [directoryNodes.address])
-            await chrL2Instance.submitTransaction(chrL2Address, BigNumber.from(0), removeDirectoryNode)
-            let txId = (await chrL2Instance.transactionCount()).sub(1)
-            await otherChrL2Instance.confirmTransaction(txId)
-
-            expect(await chrL2Instance.directoryNodes(0)).to.eq(other.address)
-            expect(await chrL2Instance.isDirectoryNode(other.address)).to.be.true
-            expect(await chrL2Instance.isDirectoryNode(directoryNodes.address)).to.be.false
         })
     })
 
@@ -272,7 +251,7 @@ describe("ChrL2", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "C398AE47B09A8F25305AC410DE258BA98E60AA488C9C62B5B0795CE621BF250E"
+                let extraDataMerkleRoot = "E131830FA40F717D6F10B5C6B0C5CDFF808B20482D5D1FB47143DD2B67B9DB63"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
@@ -409,8 +388,7 @@ describe("ChrL2", () => {
 
                 // directoryNode can update withdraw request status to pending (emergency case)
                 let directoryNode = new ChrL2__factory(directoryNodes).attach(chrL2Address)
-                let pendingWithdraw = directoryNode.interface.encodeFunctionData("pendingWithdraw", [hashEvent])
-                await directoryNode.submitTransaction(chrL2Address, BigNumber.from(0), pendingWithdraw)
+                await directoryNode.pendingWithdraw(hashEvent)
 
                 // then user cannot withdraw the fund
                 await expect(chrL2Instance.withdraw(
@@ -418,8 +396,7 @@ describe("ChrL2", () => {
                     user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
 
                 // directoryNode can set withdraw request status back to withdrawable
-                let unpendingWithdraw = directoryNode.interface.encodeFunctionData("unpendingWithdraw", [hashEvent])
-                await directoryNode.submitTransaction(chrL2Address, BigNumber.from(0), unpendingWithdraw)
+                await directoryNode.unpendingWithdraw(hashEvent)
 
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
                 expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
@@ -441,4 +418,36 @@ describe("ChrL2", () => {
             }
         })
     })
+
+    describe("Mass Exit", async () => {
+        it("only admin can manage mass exit",async () => {
+            const [admin, other] = await ethers.getSigners()
+            let otherChrL2 = new ChrL2__factory(other).attach(chrL2Address)
+            
+            let directoryNode1ChrL2 = new ChrL2__factory(admin).attach(chrL2Address)
+            expect(await directoryNode1ChrL2.isMassExit()).to.be.false
+            let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray("977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"))
+            let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray("49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"))
+            let blockRid = postchainMerkleNodeHash([0x7, node1, node2])
+ 
+            // non admin cannot trigger mass exit
+            await expect(otherChrL2.triggerMassExit(100, blockRid)).to.be.revertedWith("Ownable: caller is not the owner")
+
+            // admin can trigger mass exit
+            await directoryNode1ChrL2.triggerMassExit(100, blockRid)
+            expect(await directoryNode1ChrL2.isMassExit()).to.be.true
+            expect((await directoryNode1ChrL2.massExitBlock()).blockRid).to.be.equal(blockRid)
+            expect((await directoryNode1ChrL2.massExitBlock()).height).to.be.equal(100)
+
+            // update mass exit block
+            await directoryNode1ChrL2.updateMassExitBlock(200, blockRid)
+            expect((await directoryNode1ChrL2.massExitBlock()).blockRid).to.be.equal(blockRid)
+            expect((await directoryNode1ChrL2.massExitBlock()).height).to.be.equal(200)
+            
+            // postpone mass exit
+            await expect(otherChrL2.postponeMassExit()).to.be.revertedWith("Ownable: caller is not the owner")
+            await directoryNode1ChrL2.postponeMassExit()
+            expect(await directoryNode1ChrL2.isMassExit()).to.be.false
+        })
+    })    
 })
