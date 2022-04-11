@@ -13,7 +13,7 @@ import net.postchain.core.Shutdownable
 class BlockMessageHandler(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<EbftMessage>) : Shutdownable {
     companion object: KLogging()
 
-    private var blockMessagesJob: Job
+    private val blockMessagesJob: Job
 
     init {
         blockMessagesJob = CoroutineScope(Dispatchers.Default).launch {

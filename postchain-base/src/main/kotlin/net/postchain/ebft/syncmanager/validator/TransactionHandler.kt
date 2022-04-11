@@ -18,7 +18,7 @@ class TransactionHandler(
         private val transactionFactory: TransactionFactory
 ) : Shutdownable {
 
-    private var transactionMessagesJob: Job
+    private val transactionMessagesJob: Job
 
     init {
         transactionMessagesJob = CoroutineScope(Dispatchers.Default).launch {

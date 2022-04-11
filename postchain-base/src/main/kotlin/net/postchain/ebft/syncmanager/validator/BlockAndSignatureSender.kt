@@ -27,7 +27,7 @@ class BlockAndSignatureSender(
 
     companion object : KLogging()
 
-    private var blockMessagesJob: Job
+    private val blockMessagesJob: Job
 
     init {
         blockMessagesJob = CoroutineScope(Dispatchers.Default).launch {
@@ -59,7 +59,7 @@ class BlockAndSignatureSender(
         val nodeIndex = indexOfValidator(nodeId)
         val currentBlock = blockManager.currentBlock
         if (currentBlock != null && currentBlock.header.blockRID.contentEquals(blockRID)) {
-            if (!statusManager.myStatus.blockRID!!.contentEquals(currentBlock.header.blockRID)) {
+            if (statusManager.myStatus.blockRID == null || !statusManager.myStatus.blockRID.contentEquals(currentBlock.header.blockRID)) {
                 throw ProgrammerMistake("status manager block RID (${statusManager.myStatus.blockRID!!.toHex()}) out of sync with current block RID (${currentBlock.header.blockRID.toHex()})")
             }
             val signature = statusManager.getCommitSignature()
