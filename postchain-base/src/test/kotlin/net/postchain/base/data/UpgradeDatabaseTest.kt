@@ -13,9 +13,11 @@ import kotlin.test.assertFalse
 
 class UpgradeDatabaseTest {
 
+    private val dbUrl = System.getenv("POSTCHAIN_DB_URL") ?: "jdbc:postgresql://localhost:5432/postchain"
+
     private val appConfig: AppConfig = mock {
         on { databaseDriverclass } doReturn "org.postgresql.Driver"
-        on { databaseUrl } doReturn "jdbc:postgresql://localhost:5432/postchain"
+        on { databaseUrl } doReturn dbUrl
         on { databaseUsername } doReturn "postchain"
         on { databasePassword } doReturn "postchain"
         on { databaseSchema } doReturn "upgrade_database_test"
