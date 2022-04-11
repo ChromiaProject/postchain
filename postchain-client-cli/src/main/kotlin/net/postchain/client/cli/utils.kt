@@ -1,7 +1,7 @@
 package net.postchain.client.cli
 
 import net.postchain.base.CryptoSystem
-import net.postchain.client.AppConfig
+import net.postchain.client.PostchainClientConfig
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientFactory
@@ -38,9 +38,9 @@ private fun encodeDict(arg: String): Gtv {
     return GtvFactory.gtv(pairs.associateBy({ it[0] }, { encodeArg(it[1]) }))
 }
 
-fun createClient(cryptoSystem: CryptoSystem, appConfig: AppConfig): PostchainClient {
-    val nodeResolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiUrl)
-    val sigMaker = cryptoSystem.buildSigMaker(appConfig.pubKeyByteArray, appConfig.privKeyByteArray)
-    val signer = DefaultSigner(sigMaker, appConfig.pubKeyByteArray)
-    return PostchainClientFactory.getClient(nodeResolver, appConfig.blockchainRid, signer)
+fun createClient(cryptoSystem: CryptoSystem, clientConfig: PostchainClientConfig): PostchainClient {
+    val nodeResolver = PostchainClientFactory.makeSimpleNodeResolver(clientConfig.apiUrl)
+    val sigMaker = cryptoSystem.buildSigMaker(clientConfig.pubKeyByteArray, clientConfig.privKeyByteArray)
+    val signer = DefaultSigner(sigMaker, clientConfig.pubKeyByteArray)
+    return PostchainClientFactory.getClient(nodeResolver, clientConfig.blockchainRid, signer)
 }
