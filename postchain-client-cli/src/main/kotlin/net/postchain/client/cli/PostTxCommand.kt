@@ -7,9 +7,11 @@ import com.github.ajalt.clikt.parameters.arguments.transformAll
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.client.PostchainClientConfig
 import net.postchain.client.core.ConfirmationLevel
-import net.postchain.client.core.GTXTransactionBuilder
+import net.postchain.client.core.DefaultSigner
+import net.postchain.client.core.PostchainClientProvider
+import net.postchain.gtv.Gtv
 
-class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts transactions to a postchain node") {
+class PostTxCommand(private val clientProvider: PostchainClientProvider) : CliktCommand(name = "post-tx", help = "Posts transactions to a postchain node") {
 
     private val opName by argument(help = "name of the operation to execute.")
 
@@ -30,26 +32,21 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts transactions 
     private val cryptoSystem = SECP256K1CryptoSystem()
 
     override fun run() {
-        try {
-            val config = PostchainClientConfig.fromProperties(configFile.absolutePath)
+        val config = PostchainClientConfig.fromProperties(configFile.absolutePath)
 
-            postTx(config) {
-                it.addOperation(opName, *args.toTypedArray())
-            }
+        runInternal(config, opName, *args.toTypedArray())
 
-            println("Tx with the operation has been posted: $opName(${args.joinToString()})")
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        println("Tx with the operation has been posted: $opName(${args.joinToString()})")
     }
 
-    private fun postTx(clientConfig: PostchainClientConfig, addOperations: (GTXTransactionBuilder) -> Unit) {
-        val sigMaker = cryptoSystem.buildSigMaker(clientConfig.pubKeyByteArray, clientConfig.privKeyByteArray)
-        val client = createClient(cryptoSystem, clientConfig)
-        val txBuilder = client.makeTransaction()
-        addOperations(txBuilder)
-        txBuilder.sign(sigMaker)
-        txBuilder.postSync(ConfirmationLevel.NO_WAIT)
+    internal fun runInternal(config: PostchainClientConfig, opName: String, vararg args: Gtv) {
+        val sigMaker = cryptoSystem.buildSigMaker(config.pubKeyByteArray, config.privKeyByteArray)
+        clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray))
+                .makeTransaction()
+                .apply {
+                    addOperation(opName, *args)
+                    sign(sigMaker)
+                    postSync(ConfirmationLevel.NO_WAIT)
+                }
     }
 }
