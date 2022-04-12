@@ -4,13 +4,15 @@ enum asset_type {
 }
 
 entity account_link {
-    key state_n: integer;
-    key eth_beneficiary: text;
+    state_n: integer;
+    eth_beneficiary: text;
+    key state_n, eth_beneficiary;
 }
 
 entity eth_block {
-    key eth_block_height: integer;
-    key eth_block_hash: text;
+    eth_block_height: integer;
+    eth_block_hash: text;
+    key eth_block_height, eth_block_hash;
 }
 
 entity eth_erc20 {
@@ -37,14 +39,16 @@ entity eth_event {
 }
 
 entity eth_erc20_balance {
-    key token: eth_erc20;
-    key beneficiary: text;
+    token: eth_erc20;
+    beneficiary: text;
     mutable amount: integer;
+    key token, beneficiary;
 }
 
 entity eth_erc721_balance {
-    key token: eth_erc721;
-    key beneficiary: text;
+    token: eth_erc721;
+    beneficiary: text;
+    key token, beneficiary;
 }
 
 entity eth_erc20_withdraw {
