@@ -105,5 +105,5 @@ yarn prepare-upgrade --network rinkeby --verify --address PROXY_ADDRESS
 ### Upgrade
 
 ```sh
-$ yarn upgrade-contract --network rinkeby --verify --address PROXY_ADDRESS
+$ yarn upgrade-contract --network rinkeby --address PROXY_ADDRESS
 ```

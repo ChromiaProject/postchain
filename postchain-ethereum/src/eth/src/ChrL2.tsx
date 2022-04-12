@@ -270,7 +270,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
   const [amount, setAmount] = useState(0)
   const [withdrawAmount, setWithdrawAmount] = useState(0)
   const [unit, setUnit] = useState(18)
-  const tokenId = 65696
+  const tokenId = 65695
   var tokenType: string
   if (tokenAddress === "0x064e16771A4864561f767e4Ef4a6989fc4045aE7") {
     tokenType = "ERC721"

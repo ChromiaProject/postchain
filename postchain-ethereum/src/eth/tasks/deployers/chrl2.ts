@@ -23,23 +23,23 @@ task("deploy:ChrL2")
 
 task("prepare:ChrL2")
     .addParam('address', '')
-    .setAction(async ({ address }, hre ) => {
+    .setAction(async ({ address, verify}, hre ) => {
         const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2");
         const upgrade = await hre.upgrades.prepareUpgrade(address, chrL2Factory);
         console.log("New logic contract of ChrL2 has been prepared for upgrade at: ", upgrade);
+
+        if (verify) {
+            await verifyContract(hre, upgrade);
+        }
     });
 
 task("upgrade:ChrL2")
     .addParam('address', '')
     .addFlag('verify', 'Verify contracts at Etherscan')
-    .setAction(async ({ address, verify }, hre) => {
+    .setAction(async ({ address }, hre) => {
         const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2");
         await hre.upgrades.upgradeProxy(address, chrL2Factory);
         console.log("ChrL2 has been upgraded");
-
-        if (verify) {
-            await verifyContract(hre, address);
-        }
     });
 
 async function verifyContract(hre: HardhatRuntimeEnvironment, proxyAddress: string) {
