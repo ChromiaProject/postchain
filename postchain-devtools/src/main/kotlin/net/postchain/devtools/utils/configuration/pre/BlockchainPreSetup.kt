@@ -2,21 +2,16 @@ package net.postchain.devtools.utils.configuration.pre
 
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_BLOCKSTRATEGY
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_BLOCKSTRATEGY_NAME
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_CONFIGURATIONFACTORY
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_SIGNERS
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_GTX
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_GTX_MODULES
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_DEPENDENCIES
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.config.BlockStrategyKeys
+import net.postchain.base.config.BlockchainConfigKeys
+import net.postchain.base.config.GtxConfigKeys
 import net.postchain.common.hexStringToByteArray
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import java.lang.IllegalArgumentException
 
 
 /**
@@ -115,10 +110,10 @@ data class BlockchainPreSetup(
     fun toGtvConfig(existingBcMap: Map<Int, BlockchainRelatedInfo>): Gtv {
 
         val properties = mutableListOf(
-                KEY_BLOCKSTRATEGY  to GtvFactory.gtv( KEY_BLOCKSTRATEGY_NAME to GtvFactory.gtv(DEFAULT_BLOCKSTRATEGY)),
-                KEY_CONFIGURATIONFACTORY to GtvFactory.gtv(DEFAULT_CONFIGURATIONFACTORY),
-                KEY_SIGNERS to GtvFactory.gtv(signersKeys.values.map { GtvFactory.gtv(it.first.hexStringToByteArray()) }),
-                KEY_GTX to fixGtxPart()
+                BlockchainConfigKeys.BlockStrategy.key to GtvFactory.gtv(BlockStrategyKeys.BlockStrategyClass.key to GtvFactory.gtv(DEFAULT_BLOCKSTRATEGY)),
+                BlockchainConfigKeys.ConfigurationFactory.key to GtvFactory.gtv(DEFAULT_CONFIGURATIONFACTORY),
+                BlockchainConfigKeys.Signers.key to GtvFactory.gtv(signersKeys.values.map { GtvFactory.gtv(it.first.hexStringToByteArray()) }),
+                BlockchainConfigKeys.Gtx.key to fixGtxPart()
         )
 
         if (!chainDependencies.isEmpty()) {
@@ -131,7 +126,7 @@ data class BlockchainPreSetup(
                     throw IllegalArgumentException("You are generating GTV in the incorrect order. This BC ($chainId) depends on $depChainId but $depChainId has no BC RID yet.")
                 }
             }
-            properties.add(KEY_DEPENDENCIES to BaseDependencyFactory.buildGtv(depsInfo.toList())!!)
+            properties.add(BlockchainConfigKeys.ChainDependencies.key to BaseDependencyFactory.buildGtv(depsInfo.toList())!!)
         }
 
         return GtvFactory.gtv(*properties.toTypedArray())
@@ -144,7 +139,7 @@ data class BlockchainPreSetup(
         val modules = listOf(DEFAULT_MODULE_TEST, DEFAULT_MODULE_STD_GTX_OPS)
 
         val properties: MutableList<Pair<String, Gtv>> = mutableListOf(
-                KEY_GTX_MODULES to GtvFactory.gtv(
+                GtxConfigKeys.GtxModules.key to GtvFactory.gtv(
                         modules.map { GtvFactory.gtv(it) }
                 )
         )

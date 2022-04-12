@@ -1,13 +1,13 @@
 package net.postchain.devtools.utils.configuration
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_DEPENDENCIES
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_SIGNERS
 import net.postchain.base.BaseDependencyFactory
-import net.postchain.core.BlockchainRid
+import net.postchain.base.config.BlockchainConfigKeys
 import net.postchain.common.toHex
+import net.postchain.core.BlockchainRid
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.gtvml.GtvMLParser
 
 object BlockchainSetupFactory : KLogging() {
@@ -46,9 +46,9 @@ object BlockchainSetupFactory : KLogging() {
 
         // 1. Get the signers
         val signers = mutableListOf<NodeSeqNumber>()
-        val signersArr = bcGtv[KEY_SIGNERS]!!
+        val signersArr = BlockchainConfigKeys.Signers from bcGtv as GtvDictionary
 
-        for (pubkey in signersArr.asArray()) {
+        for (pubkey in signersArr!!.asArray()) {
             val byteArray = pubkey.asByteArray()
             val nodeId = try {
                 // TODO [olle] this is not safe, sorry. Must have created these in the cache before this or it will explode
@@ -61,7 +61,7 @@ object BlockchainSetupFactory : KLogging() {
 
         // 2 Get dependencies
         val chainRidDependencies = mutableSetOf<BlockchainRid>()
-        val dep = bcGtv[KEY_DEPENDENCIES]
+        val dep = bcGtv[BlockchainConfigKeys.ChainDependencies.key]
         if (dep != null) {
             val bcRelatedInfos = BaseDependencyFactory.build(dep!!)
             for (bcRelatedInfo in bcRelatedInfos) {

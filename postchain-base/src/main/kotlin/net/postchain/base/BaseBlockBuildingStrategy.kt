@@ -2,20 +2,20 @@
 
 package net.postchain.base
 
+import net.postchain.base.config.BlockchainConfig
 import net.postchain.core.*
 
-class BaseBlockBuildingStrategy(val configData: BaseBlockchainConfigurationData,
+class BaseBlockBuildingStrategy(val configData: BlockchainConfig,
                                 val blockchainConfiguration: BlockchainConfiguration,
                                 blockQueries: BlockQueries,
                                 private val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
     private var lastBlockTime: Long
     private var firstTxTime = 0L
-    private val strategyData = configData.getBlockBuildingStrategy()
-    private val maxBlockTime = strategyData?.get("maxblocktime")?.asInteger() ?: 30000
-    private val maxBlockTransactions = strategyData?.get("maxblocktransactions")?.asInteger() ?: 100
-    private val maxTxDelay = strategyData?.get("maxtxdelay")?.asInteger() ?: 1000
-    private val minInterBlockInterval = strategyData?.get("mininterblockinterval")?.asInteger() ?: 25
+    private val maxBlockTime = configData.blockBuildingStrategyConfig.maxBlockTime
+    private val maxBlockTransactions = configData.blockBuildingStrategyConfig.maxBlockTransactions
+    private val maxTxDelay = configData.blockBuildingStrategyConfig.maxTxDelay
+    private val minInterBlockInterval = configData.blockBuildingStrategyConfig.minInterBlockInterval
 
     init {
         val height = blockQueries.getBestHeight().get()

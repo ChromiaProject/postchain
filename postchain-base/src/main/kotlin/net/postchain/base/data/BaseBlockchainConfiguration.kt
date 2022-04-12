@@ -4,27 +4,28 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
+import net.postchain.base.config.BlockchainConfig
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
 
 open class BaseBlockchainConfiguration(
-        val configData: BaseBlockchainConfigurationData,
+        val configData: BlockchainConfig,
 ) : BlockchainConfiguration {
 
     companion object : KLogging()
 
     override val blockchainContext: BlockchainContext
-        get() = configData.context
+        get() = configData.blockchainContext
 
     override val traits = setOf<String>()
     val cryptoSystem = SECP256K1CryptoSystem()
     val blockStore = BaseBlockStore()
-    override val chainID = configData.context.chainID
-    override val blockchainRid = configData.context.blockchainRID
-    override val effectiveBlockchainRID = configData.getHistoricBRID() ?: configData.context.blockchainRID
-    override val signers = configData.getSigners()
+    override val chainID = configData.blockchainContext.chainID
+    override val blockchainRid = configData.blockchainContext.blockchainRID
+    override val effectiveBlockchainRID = configData.historicBrid ?: configData.blockchainContext.blockchainRID
+    override val signers = configData.signers
 
     private val blockWitnessProvider: BlockWitnessProvider = BaseBlockWitnessProvider(
         cryptoSystem,
@@ -32,11 +33,11 @@ open class BaseBlockchainConfiguration(
         signers.toTypedArray()
     )
 
-    val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
+    val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.blockchainDependencies
 
     // Infrastructure settings
-    override val syncInfrastructureName = DynamicClassName.build(configData.getSyncInfrastructureName())
-    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.getSyncInfrastructureExtensions())
+    override val syncInfrastructureName = DynamicClassName.build(configData.synchronizationInfrastructure)
+    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.synchronizationInfrastructureExtensions)
 
     // Only GTX config can have special TX, this is just "Base" so we settle for null
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
@@ -82,8 +83,8 @@ open class BaseBlockchainConfiguration(
             bcRelatedInfosDependencyList,
             makeBBExtensions(),
             effectiveBlockchainRID != blockchainRid,
-            configData.getMaxBlockSize(),
-            configData.getMaxBlockTransactions())
+            configData.blockBuildingStrategyConfig.maxBlockSize,
+            configData.blockBuildingStrategyConfig.maxBlockTransactions)
 
         return bb
     }
@@ -110,7 +111,7 @@ open class BaseBlockchainConfiguration(
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {
         return BaseBlockQueries(
-                this, storage, blockStore, chainID, configData.subjectID)
+                this, storage, blockStore, chainID, configData.blockchainContext.nodeRID!!)
     }
 
     override fun initializeDB(ctx: EContext) {
@@ -118,13 +119,13 @@ open class BaseBlockchainConfiguration(
     }
 
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
-        val strategyClassName = configData.getBlockBuildingStrategyName()
+        val strategyClassName = configData.blockBuildingStrategy
         if (strategyClassName == "") {
             return BaseBlockBuildingStrategy(configData, this, blockQueries, txQueue)
         }
         return try {
             constructorOf<BlockBuildingStrategy>(strategyClassName,
-                    BaseBlockchainConfigurationData::class.java,
+                    BlockchainConfig::class.java,
                     BlockchainConfiguration::class.java,
                     BlockQueries::class.java,
                     TransactionQueue::class.java)

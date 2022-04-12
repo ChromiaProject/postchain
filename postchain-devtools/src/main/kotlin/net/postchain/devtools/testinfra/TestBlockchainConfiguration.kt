@@ -3,14 +3,14 @@
 package net.postchain.devtools.testinfra
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.config.BlockchainConfig
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.core.EContext
 import net.postchain.core.TransactionFactory
 import net.postchain.gtx.GTXModule
 
 open class TestBlockchainConfiguration(
-        configData: BaseBlockchainConfigurationData,
+        configData: BlockchainConfig,
         val module: GTXModule
 ) : BaseBlockchainConfiguration(configData) {
 

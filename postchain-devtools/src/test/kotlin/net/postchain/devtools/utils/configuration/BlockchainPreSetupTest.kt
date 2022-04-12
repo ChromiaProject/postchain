@@ -1,9 +1,10 @@
 package net.postchain.devtools.utils.configuration
 
-import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.config.BlockchainConfigKeys
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
+import net.postchain.gtv.GtvDictionary
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
@@ -23,8 +24,8 @@ class BlockchainPreSetupTest {
 
         // 1. Get the signers
         val signers = mutableSetOf<NodeSeqNumber>()
-        val signersArr = bcGtv[BaseBlockchainConfigurationData.KEY_SIGNERS]!!
-        for (pubkey in signersArr.asArray()) {
+        val signersArr = BlockchainConfigKeys.Signers from bcGtv as GtvDictionary
+        for (pubkey in signersArr!!.asArray()) {
             val byteArray = pubkey.asByteArray()
             val nodeId = KeyPairHelper.pubKeyFromByteArray(byteArray.toHex())!!
             signers.add(NodeSeqNumber(nodeId))

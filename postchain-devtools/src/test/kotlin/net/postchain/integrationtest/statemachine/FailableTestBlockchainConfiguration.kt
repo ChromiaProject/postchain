@@ -1,12 +1,12 @@
 package net.postchain.integrationtest.statemachine
 
-import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.config.BlockchainConfig
 import net.postchain.core.TransactionFactory
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 
 class FailableTestBlockchainConfiguration(
-        configData: BaseBlockchainConfigurationData,
+        configData: BlockchainConfig,
         module: GTXModule
 ) : TestBlockchainConfiguration(configData, module) {
 

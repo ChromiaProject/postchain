@@ -1,8 +1,8 @@
 package net.postchain.devtools
 
 import net.postchain.StorageBuilder
-import net.postchain.base.BaseBlockchainConfigurationData
 import net.postchain.base.PeerInfo
+import net.postchain.base.config.BlockStrategyKeys
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.base.runStorageCommand
@@ -13,6 +13,7 @@ import net.postchain.core.NodeRid
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
+import net.postchain.gtv.GtvDictionary
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 
 open class AbstractSyncTest : IntegrationTestSetup() {
@@ -49,7 +50,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         val blockchainPreSetup =
                 BlockchainPreSetup.simpleBuild(chainId, (0 until signerNodeCount).map { NodeSeqNumber(it) })
         val blockchainSetup = BlockchainSetup.buildFromGtv(chainId, blockchainPreSetup.toGtvConfig(mapOf()))
-        val strategyClassName = blockchainSetup.bcGtv[BaseBlockchainConfigurationData.KEY_BLOCKSTRATEGY]?.asDict()?.get("name")?.asString()
+        val strategyClassName = BlockStrategyKeys.BlockStrategyClass from blockchainSetup.bcGtv as GtvDictionary
         println("++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: $strategyClassName")
 
         // 2. Get NodeSetup

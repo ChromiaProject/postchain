@@ -3,9 +3,15 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
-import net.postchain.base.*
+import net.postchain.base.BaseBlockchainContext
+import net.postchain.base.BaseBlockchainInfrastructure
+import net.postchain.base.PeerInfo
+import net.postchain.base.config.BlockchainConfig
+import net.postchain.base.config.BlockchainConfigKeys
+import net.postchain.base.config.GtxConfigKeys
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -73,19 +79,19 @@ open class ManagedModeTest : AbstractSyncTest() {
 
         mockDataSources.forEach {
             val data = TestBlockchainConfigurationData()
-            data.setValue(BaseBlockchainConfigurationData.KEY_SIGNERS, GtvArray(signerGtvs.toTypedArray()))
+            data.setValue(BlockchainConfigKeys.Signers.key, GtvArray(signerGtvs.toTypedArray()))
             if (historicChain != null) {
-                data.setValue(BaseBlockchainConfigurationData.KEY_HISTORIC_BRID, GtvByteArray(ChainUtil.ridOf(historicChain).data))
+                data.setValue(BlockchainConfigKeys.HistoricBrid.key, GtvByteArray(ChainUtil.ridOf(historicChain).data))
             }
 
-            data.setValue(BaseBlockchainConfigurationData.KEY_CONFIGURATIONFACTORY, GtvString(
+            data.setValue(BlockchainConfigKeys.ConfigurationFactory.key, GtvString(
                     GTXBlockchainConfigurationFactory::class.java.name
             ))
 
-            val gtx = mapOf(BaseBlockchainConfigurationData.KEY_GTX_MODULES to GtvArray(arrayOf(
+            val gtx = mapOf(GtxConfigKeys.GtxModules.key to GtvArray(arrayOf(
                     GtvString(StandardOpsGTXModule::class.java.name))
             ))
-            data.setValue(BaseBlockchainConfigurationData.KEY_GTX, GtvFactory.gtv(gtx))
+            data.setValue(BlockchainConfigKeys.Gtx.key, GtvFactory.gtv(gtx))
 
             val pubkey = if (nodeSet.chain == 0L) {
                 if (it.key < nodeSet.signers.size) {
@@ -101,7 +107,7 @@ open class ManagedModeTest : AbstractSyncTest() {
 
             val privkey = KeyPairHelper.privKey(pubkey)
             val sigMaker = cryptoSystem.buildSigMaker(pubkey, privkey)
-            val confData = BaseBlockchainConfigurationData(data.getDict(), context, sigMaker)
+            val confData = BlockchainConfig.fromGtv(data.getDict(), sigMaker, brid, context.nodeID, context.chainID, context.nodeRID!!)
             val bcConf = TestBlockchainConfiguration(confData)
             it.value.addConf(brid, height, bcConf, nodeSet, GtvEncoder.encodeGtv(data.getDict()))
         }
@@ -195,7 +201,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
 
-    class TestBlockchainConfiguration(data: BaseBlockchainConfigurationData) :
+    class TestBlockchainConfiguration(data: BlockchainConfig) :
             BaseBlockchainConfiguration(data) {
         override fun getTransactionFactory(): TransactionFactory {
             return TestTransactionFactory()

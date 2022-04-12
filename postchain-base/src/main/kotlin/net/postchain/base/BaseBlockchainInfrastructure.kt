@@ -4,7 +4,7 @@ package net.postchain.base
 
 import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_CONFIGURATIONFACTORY
+import net.postchain.base.config.BlockchainConfig
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.common.reflection.constructorOf
@@ -56,11 +56,10 @@ open class BaseBlockchainInfrastructure(
             chainId: Long,
     ): BlockchainConfiguration {
 
-        val confData = BaseBlockchainConfigurationData.build(
-            rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
+        val chainConfig = BlockchainConfig.fromRaw(rawConfigurationData, blockSigMaker, eContext, nodeId, chainId, subjectID)
 
-        val factory = newInstanceOf<BlockchainConfigurationFactory>(confData.data[KEY_CONFIGURATIONFACTORY]!!.asString())
-        val config = factory.makeBlockchainConfiguration(confData)
+        val factory = newInstanceOf<BlockchainConfigurationFactory>(chainConfig.blockchainConfigFactory)
+        val config = factory.makeBlockchainConfiguration(chainConfig)
         config.initializeDB(eContext)
 
         return config
@@ -77,7 +76,7 @@ open class BaseBlockchainInfrastructure(
 
         val transactionQueue = BaseTransactionQueue(
                 (configuration as BaseBlockchainConfiguration) // TODO: Olle: Is this conversion harmless?
-                        .configData.getQueueCapacity())
+                        .configData.blockBuildingStrategyConfig.queueCapacity)
 
         return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue)
                 .apply {
