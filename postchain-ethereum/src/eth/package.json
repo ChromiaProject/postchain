@@ -25,6 +25,7 @@
     "@typechain/ethers-v5": "^7.0.1",
     "@typechain/hardhat": "^2.0.2",
     "@types/chai": "^4.2.18",
+    "@types/ethjs-util": "^0.1.1",
     "@types/fs-extra": "^9.0.12",
     "@types/mocha": "^8.2.2",
     "@types/node": "^15.12.2",
