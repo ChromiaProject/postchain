@@ -342,7 +342,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         bytes[] memory sigs,
         Data.EL2ProofData memory el2Proof
     ) whenMassExit nonReentrant public  {
-        bytes32 stateHash = keccak256(abi.encodePacked(account.accountNumber, snapshot));
+        bytes32 stateHash = keccak256(abi.encodePacked(snapshot));
         require(_snapshots[stateHash] == false, "ChrL2: snapshot already used");
         (bytes32 blockRid, , bytes32 stateRoot) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
         require(blockRid == massExitBlock.blockRid, "ChrL2: account state block rid should equal to mass exit block rid");
