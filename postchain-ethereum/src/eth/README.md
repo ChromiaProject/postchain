@@ -94,10 +94,16 @@ Find out more about deployment here:
 
 ## Upgrade ChrL2 contract
 
-You can upgrade a deployed instance of the ChrL2 contract.
+### Prepare
 
-Replace CONTRACT_ADDRESS with the address that the contract was deployed to
+Run below task to prepare upgrade ChrL2 smart contract
 
 ```sh
-$ yarn upgrade-contract --network rinkeby --verify --address CONTRACT_ADDRESS
+yarn prepare-upgrade --network rinkeby --verify --address PROXY_ADDRESS
+```
+
+### Upgrade
+
+```sh
+$ yarn upgrade-contract --network rinkeby --verify --address PROXY_ADDRESS
 ```

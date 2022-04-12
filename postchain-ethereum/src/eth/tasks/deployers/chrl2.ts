@@ -5,7 +5,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 task("deploy:ChrL2")
   .addOptionalParam('app', 'app node')
   .addFlag('verify', 'Verify contracts at Etherscan')
-  .setAction(async ({ verify, directory, app}, hre) => {
+  .setAction(async ({ verify, app}, hre) => {
     // deploy ChrL2 smart contract
     const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2")
     const appNode = app === undefined ? [] : getNodes(app);
@@ -20,6 +20,14 @@ task("deploy:ChrL2")
         await verifyContract(hre, chrL2.address);
     }
   });
+
+task("prepare:ChrL2")
+    .addParam('address', '')
+    .setAction(async ({ address }, hre ) => {
+        const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2");
+        const upgrade = await hre.upgrades.prepareUpgrade(address, chrL2Factory);
+        console.log("New logic contract of ChrL2 has been prepared for upgrade at: ", upgrade);
+    });
 
 task("upgrade:ChrL2")
     .addParam('address', '')
