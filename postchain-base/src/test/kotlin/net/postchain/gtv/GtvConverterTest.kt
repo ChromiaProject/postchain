@@ -21,6 +21,7 @@ data class ListList(@Name("listlist") val listlist: List<List<BasicWithAnnotatio
 
 data class BasicDict(@Name("dict") val basicWithAnnotation: BasicWithAnnotation)
 
+data class NestedDict(@Name("nestedDict") val nested: BasicDict)
 
 internal class GtvConverterTest {
 
@@ -80,15 +81,31 @@ internal class GtvConverterTest {
         val g = gtv(mapOf("listlist" to gtv(gtv(gtv(mapOf("bar" to gtv(1L)))))))
         val actual = GtvConverter.fromGtv(g, ListList::class)
         assert(actual.listlist).containsExactly(listOf(BasicWithAnnotation(1L)))
+    }
 
-
+    @Test
+    fun nestedDict() {
+        val g = gtv(mapOf(
+                "nestedDict" to gtv(mapOf(
+                        "dict" to gtv(mapOf(
+                                "bar" to gtv(1)
+                        ))
+                ))))
+        val actual = GtvConverter.fromGtv(g, NestedDict::class)
+        assert(actual).isEqualTo(NestedDict(BasicDict(BasicWithAnnotation(1))))
     }
 
 
     @Test
     @Disabled
     fun nonWorking() {
+        // Non-null is null
         assert(GtvConverter.fromGtv(gtv(mapOf()), BasicWithAnnotation::class)).isEqualTo(BasicWithAnnotation(0))
+
+        // save "raw" as a separate tag
+        data class Raw(/* some annotation */ val raw: Gtv, @Name("a") val dummy: Long)
+        val g = gtv("a" to gtv(1))
+        assert(GtvConverter.fromGtv(g, Raw::class)).isEqualTo(Raw(g, 1))
     }
 }
 
