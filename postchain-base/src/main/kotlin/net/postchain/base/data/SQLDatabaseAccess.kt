@@ -375,7 +375,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     override fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): DatabaseAccess.AccountState? {
         val sql = """SELECT block_height, state_n, data FROM ${tableStateLeafs(ctx, prefix)} 
             WHERE block_height <= ? AND state_n = ? 
-            ORDER BY block_height DESC LIMIT 1"""
+            ORDER BY state_iid DESC LIMIT 1"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, state_n)
         if (rows.isEmpty()) return null
         val data = rows.first()
