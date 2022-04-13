@@ -104,6 +104,20 @@ internal class GtvConverterTest {
         assert(g2.toList<Long>()).containsExactly(1L)
     }
 
+    @Test
+    fun saveRawData() {
+        // save "raw" as a separate tag
+        data class Raw(@RawGtv val raw: Gtv, @Name("a") val dummy: Long)
+        val g = gtv("a" to gtv(1))
+        assert(GtvConverter.fromGtv(g, Raw::class)).isEqualTo(Raw(g, 1))
+
+        data class NestedRaw(@RawGtv val raw: Gtv, @Name("nested") val nested: Raw)
+        val nested = gtv(mapOf("nested" to  gtv("a" to gtv(1))))
+        assert(nested.toClass<NestedRaw>()).isEqualTo(NestedRaw(nested, Raw(g, 1)))
+
+        data class UnConverted(@Name("asgtv") val g: Gtv)
+        assert(gtv(mapOf("asgtv" to gtv(1))).toClass<UnConverted>()).isEqualTo(UnConverted(gtv(1)))
+    }
 
     @Test
     @Disabled
@@ -116,10 +130,7 @@ internal class GtvConverterTest {
         // Non-null is null
         assert(GtvConverter.fromGtv(gtv(mapOf()), BasicWithAnnotation::class)).isEqualTo(BasicWithAnnotation(0))
 
-        // save "raw" as a separate tag
-        data class Raw(/* some annotation */ val raw: Gtv, @Name("a") val dummy: Long)
-        val g = gtv("a" to gtv(1))
-        assert(GtvConverter.fromGtv(g, Raw::class)).isEqualTo(Raw(g, 1))
+
 
         // Nested lists on top level
         val g3 = gtv(gtv(gtv(1)))

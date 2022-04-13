@@ -21,15 +21,19 @@ object GtvConverter {
     fun <T : Any> fromGtv(g: GtvDictionary, K: KClass<T>): T {
         val constructor = K.java.constructors[0]
         val v = constructor.parameters.map {
-            val gtv = g[it.getAnnotation(Name::class.java)?.s ?: it.name!!]
-            parameterToValue(it, gtv)
+            if (it.isAnnotationPresent(RawGtv::class.java)) {
+                g
+            } else {
+                val gtv = g[it.getAnnotation(Name::class.java)?.s ?: it.name!!]
+                parameterToValue(it, gtv)
+            }
         }
 
         return constructor.newInstance(*v.toTypedArray()) as T
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T: Any> toList(gtv: GtvArray, K: KClass<T>): List<T> {
+    fun <T : Any> toList(gtv: GtvArray, K: KClass<T>): List<T> {
         val v = gtv.array.map {
             when {
                 it is GtvDictionary -> fromGtv(it, K)
@@ -40,11 +44,11 @@ object GtvConverter {
     }
 }
 
-inline fun <reified T: Any> GtvDictionary.toClass(): T {
+inline fun <reified T : Any> GtvDictionary.toClass(): T {
     return GtvConverter.fromGtv(this, T::class)
 }
 
-inline fun <reified T: Any> GtvArray.toList(): List<T> {
+inline fun <reified T : Any> GtvArray.toList(): List<T> {
     return GtvConverter.toList(this, T::class)
 }
 
@@ -74,11 +78,16 @@ private fun classToValue(c: Class<*>, gtv: Gtv?): Any? {
         c isLong {} -> gtv.asInteger()
         c isString {} -> gtv.asString()
         c isByteArray {} -> gtv.asByteArray()
+        c isGtv {} -> gtv
         else -> {
             if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
             val n = c.constructors[0].parameters.map {
-                val g = gtv[it.getAnnotation(Name::class.java)?.s ?: it.name!!]
-                parameterToValue(it, g)
+                if (it.isAnnotationPresent(RawGtv::class.java)) {
+                    gtv
+                } else {
+                    val g = gtv[it.getAnnotation(Name::class.java)?.s ?: it.name!!]
+                    parameterToValue(it, g)
+                }
             }
             c.constructors[0].newInstance(*n.toTypedArray())
         }
@@ -96,3 +105,5 @@ private infix fun Class<*>.isString(u: () -> Unit): Boolean {
 private infix fun Class<*>.isByteArray(u: () -> Unit): Boolean {
     return this == ByteArray::class.java
 }
+
+private infix fun Class<*>.isGtv(u: () -> Unit) = this.isAssignableFrom(Gtv::class.java)
