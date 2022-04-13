@@ -91,14 +91,28 @@ internal class GtvConverterTest {
                                 "bar" to gtv(1)
                         ))
                 ))))
-        val actual = GtvConverter.fromGtv(g, NestedDict::class)
-        assert(actual).isEqualTo(NestedDict(BasicDict(BasicWithAnnotation(1))))
+        assert(g.toClass<NestedDict>()).isEqualTo(NestedDict(BasicDict(BasicWithAnnotation(1))))
+    }
+
+    @Test
+    fun listOfClass() {
+        val g = gtv(gtv(mapOf("bar" to gtv(1))))
+
+        assert(g.toList<BasicWithAnnotation>()).containsExactly(BasicWithAnnotation(1))
+
+        val g2 = gtv(gtv(1))
+        assert(g2.toList<Long>()).containsExactly(1L)
     }
 
 
     @Test
     @Disabled
     fun nonWorking() {
+        // Default value (annotation?)
+        data class DefaultValue(@Name("withdefault") val v: Long = 5) // Default value is not possible since this will generate a secondary constructor. Should be possible with a default-annotation though
+        val def = gtv(mapOf())
+        assert(def.toClass<DefaultValue>()).isEqualTo(DefaultValue(5))
+
         // Non-null is null
         assert(GtvConverter.fromGtv(gtv(mapOf()), BasicWithAnnotation::class)).isEqualTo(BasicWithAnnotation(0))
 
@@ -106,6 +120,10 @@ internal class GtvConverterTest {
         data class Raw(/* some annotation */ val raw: Gtv, @Name("a") val dummy: Long)
         val g = gtv("a" to gtv(1))
         assert(GtvConverter.fromGtv(g, Raw::class)).isEqualTo(Raw(g, 1))
+
+        // Nested lists on top level
+        val g3 = gtv(gtv(gtv(1)))
+        assert(g3.toList<List<Long>>()).containsExactly(listOf(1L))
     }
 }
 
