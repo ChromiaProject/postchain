@@ -14,7 +14,7 @@ import kotlin.reflect.KClass
 /**
  * Convert a [GtvDictionary] to a kotlin class. See [GtvObjectMapper]
  */
-inline fun <reified T : Any> Gtv.toClass(): T {
+inline fun <reified T : Any> Gtv.toObject(): T {
     return GtvObjectMapper.fromGtv(this, T::class)
 }
 
@@ -49,13 +49,18 @@ object GtvObjectMapper {
      * Convert a [GtvArray] to a kotlin class. See [GtvObjectMapper]
      */
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> fromArray(gtv: Gtv, classType: KClass<T>): List<T> {
-        if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be dictionary type")
+    fun <T : Any> fromArray(gtv: Gtv, classType: KClass<T>) = fromArray(gtv, classType.java)
+    /**
+     * Convert a [GtvArray] to a kotlin class. See [GtvObjectMapper]
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Any> fromArray(gtv: Gtv, classType: Class<T>): List<T> {
+        if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be array type")
         return gtv.array.map {
             when {
                 it is GtvDictionary -> fromGtv(it, classType)
                 classType.typeParameters.isNotEmpty() -> throw IllegalArgumentException("Generics are not allowed")
-                else -> classToValue(classType.java, it)
+                else -> classToValue(classType, it)
             }
         } as List<T>
     }
@@ -64,10 +69,16 @@ object GtvObjectMapper {
      * Convert a [GtvDictionary] to a kotlin class. See [GtvObjectMapper]
      */
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> fromGtv(gtv: Gtv, classType: KClass<T>): T {
+    fun <T : Any> fromGtv(gtv: Gtv, classType: KClass<T>) = fromGtv(gtv, classType.java)
+    /**
+     * Convert a [GtvDictionary] to a kotlin class. See [GtvObjectMapper]
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Any> fromGtv(gtv: Gtv, classType: Class<T>): T {
         if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be dictionary type")
-        if (classType.java.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")
-        val constructor = classType.java.constructors[0]
+        if (classType.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")
+        if (classType.constructors.size > 1) throw IllegalArgumentException("Type ${classType.name} must have a single primary constructor, found ${classType.constructors.map { it.parameters.map { p -> p.name } }}")
+        val constructor = classType.constructors[0]
         val constructorParameters = constructor.parameters.map {
             annotatedParameterToValue(it, gtv)
         }
@@ -100,16 +111,17 @@ private fun annotatedParameterToValue(param: Parameter, gtv: GtvDictionary): Any
 }
 
 private fun annotationToValue(gtv: Gtv, param: Parameter): Any? {
-    val gtvField = gtv[param.getAnnotation(Name::class.java)?.name!!]
-    if (gtvField != null) return parameterToValue(param, gtvField)
+    val name = param.getAnnotation(Name::class.java)?.name!!
+    val gtvField = gtv[name]
+    if (gtvField != null && !gtvField.isNull()) return parameterToValue(param, gtvField)
     if (param.isAnnotationPresent(DefaultValue::class.java)) {
         val default = param.getAnnotation(DefaultValue::class.java)
-        if (param.type isPrimitive {}) {
+        if (param.type.isPrimitiveType()) {
             return when {
-                param.type isLong {} -> default.defaultLong
-                param.type isString {} -> default.defaultString
-                param.type isBoolean {} -> default.defaultBoolean
-                param.type isBigInteger {} -> BigInteger(default.defaultBigInteger)
+                param.type.isLong() -> default.defaultLong
+                param.type.isString() -> default.defaultString
+                param.type.isBoolean() -> default.defaultBoolean
+                param.type.isBigInteger() -> BigInteger(default.defaultBigInteger)
                 else -> default.defaultByteArray
             }
         }
@@ -118,7 +130,7 @@ private fun annotationToValue(gtv: Gtv, param: Parameter): Any? {
     if (param.isAnnotationPresent(Nullable::class.java)) {
         return null
     }
-    throw IllegalArgumentException("Gtv is null, but neither default nor nullable annotation is present")
+    throw IllegalArgumentException("Gtv is null, but field \"$name\" is neither marked with default nor nullable annotations")
 }
 
 private fun parameterToValue(param: Parameter, gtv: Gtv?): Any? {
@@ -144,12 +156,12 @@ private fun parameterizedTypeArgumentToValue(type: Type, gtv: Gtv?): Any? {
 private fun classToValue(classType: Class<*>, gtv: Gtv?): Any? {
     if (gtv == null) return null
     return when {
-        classType isGtv {} -> gtv
-        classType isLong {} -> gtv.asInteger()
-        classType isString {} -> gtv.asString()
-        classType isBoolean {} -> gtv.asBoolean()
-        classType isByteArray {} -> gtv.asByteArray()
-        classType isBigInteger {} -> gtv.asBigInteger()
+        classType.isGtv() -> gtv
+        classType.isLong() -> gtv.asInteger()
+        classType.isString() -> gtv.asString()
+        classType.isBoolean() -> gtv.asBoolean()
+        classType.isByteArray() -> gtv.asByteArray()
+        classType.isBigInteger() -> gtv.asBigInteger()
         else -> {
             if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
             if (classType.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")
@@ -161,28 +173,28 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?): Any? {
     }
 }
 
-private infix fun Class<*>.isPrimitive(u: () -> Unit): Boolean {
-    return this isLong {} || this isString {} || this isByteArray {} || this isBigInteger {} || this isBoolean {}
+private fun Class<*>.isPrimitiveType(): Boolean {
+    return this.isLong() || this.isString() || this.isByteArray() || this.isBigInteger() || this.isBoolean()
 }
 
-private infix fun Class<*>.isLong(u: () -> Unit): Boolean {
+private fun Class<*>.isLong(): Boolean {
     return this == Long::class.java || this == java.lang.Long::class.java
 }
 
-private infix fun Class<*>.isString(u: () -> Unit): Boolean {
+private fun Class<*>.isString(): Boolean {
     return this == String::class.java || this == java.lang.String::class.java
 }
 
-private infix fun Class<*>.isByteArray(u: () -> Unit): Boolean {
+private fun Class<*>.isByteArray(): Boolean {
     return this == ByteArray::class.java
 }
 
-private infix fun Class<*>.isBigInteger(u: () -> Unit): Boolean {
+private fun Class<*>.isBigInteger(): Boolean {
     return this == BigInteger::class.java || this == java.math.BigInteger::class.java
 }
 
-private infix fun Class<*>.isBoolean(u: () -> Unit): Boolean {
+private fun Class<*>.isBoolean(): Boolean {
     return this == Boolean::class.java || this == java.lang.Boolean::class.java
 }
 
-private infix fun Class<*>.isGtv(u: () -> Unit) = this.isAssignableFrom(Gtv::class.java)
+private fun Class<*>.isGtv() = this.isAssignableFrom(Gtv::class.java)
