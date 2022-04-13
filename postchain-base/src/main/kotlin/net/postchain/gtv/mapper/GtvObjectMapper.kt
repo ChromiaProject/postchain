@@ -109,7 +109,7 @@ private fun annotationToValue(gtv: Gtv, param: Parameter): Any? {
                 param.type isLong {} -> default.defaultLong
                 param.type isString {} -> default.defaultString
                 param.type isBoolean {} -> default.defaultBoolean
-                param.type isBigInteger  {} -> BigInteger.valueOf(default.defaultLong)
+                param.type isBigInteger {} -> BigInteger(default.defaultBigInteger)
                 else -> default.defaultByteArray
             }
         }
@@ -149,7 +149,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?): Any? {
         classType isString {} -> gtv.asString()
         classType isBoolean {} -> gtv.asBoolean()
         classType isByteArray {} -> gtv.asByteArray()
-        classType isBigInteger  {} -> gtv.asBigInteger()
+        classType isBigInteger {} -> gtv.asBigInteger()
         else -> {
             if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
             if (classType.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")

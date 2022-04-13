@@ -19,13 +19,14 @@ annotation class Nullable
 /**
  * For primitive types, set the default value for this property if missing in [Gtv].
  *
- * @param defaultLong Default value if target property is type [Long] or [java.math.BigInteger]
+ * @param defaultLong Default value if target property is type [Long]
  * @param defaultString Default value if target property is type [String]
  * @param defaultByteArray Default value if target property is type [ByteArray]
  * @param defaultBoolean Default value if target property is type [Boolean]
+ * @param defaultBigInteger Default value if target property is type [java.math.BigInteger]
  */
 @Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
-annotation class DefaultValue(val defaultLong: Long = 0, val defaultString: String = "", val defaultByteArray: ByteArray = [], val defaultBoolean: Boolean = false)
+annotation class DefaultValue(val defaultLong: Long = 0, val defaultString: String = "", val defaultByteArray: ByteArray = [], val defaultBoolean: Boolean = false, val defaultBigInteger: String = "0")
 
 /**
  * Sets the path to this property if nested inside several [GtvDictionary].

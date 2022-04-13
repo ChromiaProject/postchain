@@ -75,7 +75,7 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun bigIntegerType() {
-        data class SimpleBigInteger(@Name("myBigInt") @DefaultValue(defaultLong = 15L) val myBigInteger: BigInteger)
+        data class SimpleBigInteger(@Name("myBigInt") @DefaultValue(defaultBigInteger = "15") val myBigInteger: BigInteger)
         assert(gtv(mapOf("myBigInt" to gtv(1L))).toClass<SimpleBigInteger>()).isEqualTo(SimpleBigInteger(BigInteger("1")))
         assert(gtv(mapOf()).toClass<SimpleBigInteger>()).isEqualTo(SimpleBigInteger(BigInteger("15")))
     }
@@ -165,13 +165,16 @@ internal class GtvObjectMapperTest {
     @Test
     fun saveRawData() {
         data class WithRawData(@RawGtv val raw: Gtv, @Name("a") val dummy: Long)
+
         val rawGtv = gtv("a" to gtv(1))
         assert(rawGtv.toClass<WithRawData>()).isEqualTo(WithRawData(rawGtv, 1))
 
     }
+
     @Test
     fun storeAsUnconverted() {
         data class UnConverted(@Name("asGtv") val g: Gtv)
+
         val actual = gtv(mapOf("asGtv" to gtv(1))).toClass<UnConverted>()
         assert(actual).isEqualTo(UnConverted(gtv(1)))
     }
