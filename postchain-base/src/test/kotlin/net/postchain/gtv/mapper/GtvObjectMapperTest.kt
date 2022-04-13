@@ -8,6 +8,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.math.BigInteger
 
 data class Simple(@Name("key") val value: Long)
 
@@ -70,6 +71,13 @@ internal class GtvObjectMapperTest {
         assert(actual.l).isEqualTo(1L)
         assert(actual.s).isEqualTo("a")
         assert(actual.b).isContentEqualTo("b".toByteArray())
+    }
+
+    @Test
+    fun bigIntegerType() {
+        data class WithBigInteger(@Name("myBigInt") @DefaultValue(defaultLong = 15L) val myBigInteger: BigInteger)
+        assert(gtv(mapOf("myBigInt" to gtv(1L))).toClass<WithBigInteger>()).isEqualTo(WithBigInteger(BigInteger("1")))
+        assert(gtv(mapOf()).toClass<WithBigInteger>()).isEqualTo(WithBigInteger(BigInteger("15")))
     }
 
     @Test

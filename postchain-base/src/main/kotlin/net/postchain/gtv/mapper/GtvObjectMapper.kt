@@ -7,6 +7,7 @@ import java.lang.reflect.Parameter
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
+import java.math.BigInteger
 import kotlin.reflect.KClass
 
 
@@ -31,6 +32,7 @@ inline fun <reified T : Any> Gtv.toList(): List<T> {
  * ```
  * gtv      <->  kotlin
  * Integer   -   Long
+ * Integer   -   BigInteger
  * String    -   String
  * ByteArray -   ByteArray
  * Array     -   List
@@ -105,6 +107,7 @@ private fun annotationToValue(gtv: Gtv, param: Parameter): Any? {
             return when {
                 param.type isLong {} -> default.defaultLong
                 param.type isString {} -> default.defaultString
+                param.type isBigInteger  {} -> BigInteger.valueOf(default.defaultLong)
                 else -> default.defaultByteArray
             }
         }
@@ -143,6 +146,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?): Any? {
         classType isLong {} -> gtv.asInteger()
         classType isString {} -> gtv.asString()
         classType isByteArray {} -> gtv.asByteArray()
+        classType isBigInteger  {} -> gtv.asBigInteger()
         else -> {
             if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
             if (classType.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")
@@ -155,7 +159,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?): Any? {
 }
 
 private infix fun Class<*>.isPrimitive(u: () -> Unit): Boolean {
-    return this isLong {} || this isString {} || this isByteArray {}
+    return this isLong {} || this isString {} || this isByteArray {} || this isBigInteger {}
 }
 
 private infix fun Class<*>.isLong(u: () -> Unit): Boolean {
@@ -168,6 +172,10 @@ private infix fun Class<*>.isString(u: () -> Unit): Boolean {
 
 private infix fun Class<*>.isByteArray(u: () -> Unit): Boolean {
     return this == ByteArray::class.java
+}
+
+private infix fun Class<*>.isBigInteger(u: () -> Unit): Boolean {
+    return this == BigInteger::class.java || this == java.math.BigInteger::class.java
 }
 
 private infix fun Class<*>.isGtv(u: () -> Unit) = this.isAssignableFrom(Gtv::class.java)

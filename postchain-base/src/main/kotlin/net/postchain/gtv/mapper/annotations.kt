@@ -19,7 +19,7 @@ annotation class Nullable
 /**
  * For primitive types, set the default value for this property if missing in [Gtv].
  *
- * @param defaultLong Default value if target property is type [Long]
+ * @param defaultLong Default value if target property is type [Long] or [java.math.BigInteger]
  * @param defaultString Default value if target property is type [String]
  * @param defaultByteArray Default value if target property is type [ByteArray]
  */
