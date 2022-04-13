@@ -33,6 +33,7 @@ inline fun <reified T : Any> Gtv.toList(): List<T> {
  * gtv      <->  kotlin
  * Integer   -   Long
  * Integer   -   BigInteger
+ * Integer   -   Boolean
  * String    -   String
  * ByteArray -   ByteArray
  * Array     -   List
@@ -107,6 +108,7 @@ private fun annotationToValue(gtv: Gtv, param: Parameter): Any? {
             return when {
                 param.type isLong {} -> default.defaultLong
                 param.type isString {} -> default.defaultString
+                param.type isBoolean {} -> default.defaultBoolean
                 param.type isBigInteger  {} -> BigInteger.valueOf(default.defaultLong)
                 else -> default.defaultByteArray
             }
@@ -145,6 +147,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?): Any? {
         classType isGtv {} -> gtv
         classType isLong {} -> gtv.asInteger()
         classType isString {} -> gtv.asString()
+        classType isBoolean {} -> gtv.asBoolean()
         classType isByteArray {} -> gtv.asByteArray()
         classType isBigInteger  {} -> gtv.asBigInteger()
         else -> {
@@ -159,7 +162,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?): Any? {
 }
 
 private infix fun Class<*>.isPrimitive(u: () -> Unit): Boolean {
-    return this isLong {} || this isString {} || this isByteArray {} || this isBigInteger {}
+    return this isLong {} || this isString {} || this isByteArray {} || this isBigInteger {} || this isBoolean {}
 }
 
 private infix fun Class<*>.isLong(u: () -> Unit): Boolean {
@@ -176,6 +179,10 @@ private infix fun Class<*>.isByteArray(u: () -> Unit): Boolean {
 
 private infix fun Class<*>.isBigInteger(u: () -> Unit): Boolean {
     return this == BigInteger::class.java || this == java.math.BigInteger::class.java
+}
+
+private infix fun Class<*>.isBoolean(u: () -> Unit): Boolean {
+    return this == Boolean::class.java || this == java.lang.Boolean::class.java
 }
 
 private infix fun Class<*>.isGtv(u: () -> Unit) = this.isAssignableFrom(Gtv::class.java)

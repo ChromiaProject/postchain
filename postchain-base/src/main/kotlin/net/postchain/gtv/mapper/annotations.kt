@@ -22,9 +22,10 @@ annotation class Nullable
  * @param defaultLong Default value if target property is type [Long] or [java.math.BigInteger]
  * @param defaultString Default value if target property is type [String]
  * @param defaultByteArray Default value if target property is type [ByteArray]
+ * @param defaultBoolean Default value if target property is type [Boolean]
  */
 @Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
-annotation class DefaultValue(val defaultLong: Long = 0, val defaultString: String = "", val defaultByteArray: ByteArray = [])
+annotation class DefaultValue(val defaultLong: Long = 0, val defaultString: String = "", val defaultByteArray: ByteArray = [], val defaultBoolean: Boolean = false)
 
 /**
  * Sets the path to this property if nested inside several [GtvDictionary].

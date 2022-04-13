@@ -75,9 +75,16 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun bigIntegerType() {
-        data class WithBigInteger(@Name("myBigInt") @DefaultValue(defaultLong = 15L) val myBigInteger: BigInteger)
-        assert(gtv(mapOf("myBigInt" to gtv(1L))).toClass<WithBigInteger>()).isEqualTo(WithBigInteger(BigInteger("1")))
-        assert(gtv(mapOf()).toClass<WithBigInteger>()).isEqualTo(WithBigInteger(BigInteger("15")))
+        data class SimpleBigInteger(@Name("myBigInt") @DefaultValue(defaultLong = 15L) val myBigInteger: BigInteger)
+        assert(gtv(mapOf("myBigInt" to gtv(1L))).toClass<SimpleBigInteger>()).isEqualTo(SimpleBigInteger(BigInteger("1")))
+        assert(gtv(mapOf()).toClass<SimpleBigInteger>()).isEqualTo(SimpleBigInteger(BigInteger("15")))
+    }
+
+    @Test
+    fun booleanType() {
+        data class SimpleBoolean(@Name("myBoolean") @DefaultValue(defaultBoolean = false) val myBoolean: Boolean)
+        assert(gtv(mapOf("myBoolean" to gtv(1L))).toClass<SimpleBoolean>()).isEqualTo(SimpleBoolean(true))
+        assert(gtv(mapOf()).toClass<SimpleBoolean>()).isEqualTo(SimpleBoolean(false))
     }
 
     @Test
