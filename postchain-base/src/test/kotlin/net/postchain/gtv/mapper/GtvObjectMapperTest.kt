@@ -5,6 +5,7 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import org.junit.jupiter.api.Test
@@ -234,6 +235,15 @@ internal class GtvObjectMapperTest {
         ))
 
         assert(a.toObject<A>()).isEqualTo(A("foo", bDict, B("foo", 1), a))
+    }
+
+    @Test
+    fun assignGtvTypes() {
+        data class SimpleDict(@Name("dict") val dict: GtvDictionary)
+        val a = gtv(mapOf(
+                "dict" to gtv(mapOf())
+        ))
+        assert(a.toObject<SimpleDict>()).isEqualTo(SimpleDict(gtv(mapOf())))
     }
 
     @Test

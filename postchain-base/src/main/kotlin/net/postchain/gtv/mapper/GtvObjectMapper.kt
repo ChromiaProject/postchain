@@ -50,6 +50,7 @@ object GtvObjectMapper {
      */
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> fromArray(gtv: Gtv, classType: KClass<T>) = fromArray(gtv, classType.java)
+
     /**
      * Convert a [GtvArray] to a kotlin class. See [GtvObjectMapper]
      */
@@ -70,6 +71,7 @@ object GtvObjectMapper {
      */
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> fromGtv(gtv: Gtv, classType: KClass<T>) = fromGtv(gtv, classType.java)
+
     /**
      * Convert a [GtvDictionary] to a kotlin class. See [GtvObjectMapper]
      */
@@ -197,4 +199,4 @@ private fun Class<*>.isBoolean(): Boolean {
     return this == Boolean::class.java || this == java.lang.Boolean::class.java
 }
 
-private fun Class<*>.isGtv() = this.isAssignableFrom(Gtv::class.java)
+private fun Class<*>.isGtv() = Gtv::class.java.isAssignableFrom(this)
