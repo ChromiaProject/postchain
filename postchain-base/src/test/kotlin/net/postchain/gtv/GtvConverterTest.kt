@@ -11,7 +11,7 @@ import org.junit.jupiter.api.assertThrows
 
 data class BasicWithAnnotation(@Name("bar") val bar: Long)
 data class BasicWithoutAnnotation(val bar: Long)
-data class Nullable(@Name("foo") val foo: Long?)
+data class WithNullable(@Name("foo") @Nullable val foo: Long?)
 data class AllTypes(@Name("s") val s: String, @Name("l") val l: Long, @Name("b") val b: ByteArray) // Do not run isEqualTo
 
 data class BasicWithList(@Name("list") val l: List<Long>) // Do not run isEqualTo
@@ -30,7 +30,7 @@ internal class GtvConverterTest {
         val foo = gtv(mapOf("bar" to gtv(123L)))
         assert(GtvConverter.fromGtv(foo, BasicWithAnnotation::class)).isEqualTo(BasicWithAnnotation(123))
         assertThrows<Exception> { (GtvConverter.fromGtv(foo, BasicWithoutAnnotation::class)) }
-        assert(GtvConverter.fromGtv(gtv(mapOf()), Nullable::class)).isEqualTo(Nullable(null))
+        assert(GtvConverter.fromGtv(gtv(mapOf()), WithNullable::class)).isEqualTo(WithNullable(null))
     }
 
     @Test
@@ -120,18 +120,44 @@ internal class GtvConverterTest {
     }
 
     @Test
+    fun defaultValue() {
+        data class WithDefaultValue(
+                @Name("defaultLong") @DefaultValue(defaultLong = 5L) val l: Long,
+                @Name("defaultString") @DefaultValue(defaultString = "foo") val s: String,
+                @Name("defaultByteArray") @DefaultValue(defaultByteArray = [0x2E]) val b: ByteArray,
+        )
+        val def = gtv(mapOf())
+        val actual = def.toClass<WithDefaultValue>()
+        assert(actual.b).isContentEqualTo(byteArrayOf(0x2E))
+        assert(actual.l).isEqualTo(5L)
+        assert(actual.s).isEqualTo("foo")
+    }
+
+    @Test
+    fun withoutAnnotationThrows() {
+        data class WithoutAnnotation(val foo: Long)
+        assertThrows<IllegalArgumentException> { gtv(mapOf("foo" to gtv(1))).toClass<WithoutAnnotation>() }
+    }
+
+    @Test
+    fun missingGtvThrows() {
+        assertThrows<IllegalArgumentException> { gtv(mapOf()).toClass<BasicWithAnnotation>() }
+    }
+
+    @Test
+    fun defaultValueIsNotPrimitive() {
+        data class NonPrimitiveDefault(
+                @Name("foo") @DefaultValue val foo: BasicWithAnnotation
+        )
+
+        assertThrows<IllegalArgumentException> {
+            gtv(mapOf()).toClass<NonPrimitiveDefault>()
+        }
+    }
+
+    @Test
     @Disabled
     fun nonWorking() {
-        // Default value (annotation?)
-        data class DefaultValue(@Name("withdefault") val v: Long = 5) // Default value is not possible since this will generate a secondary constructor. Should be possible with a default-annotation though
-        val def = gtv(mapOf())
-        assert(def.toClass<DefaultValue>()).isEqualTo(DefaultValue(5))
-
-        // Non-null is null
-        assert(GtvConverter.fromGtv(gtv(mapOf()), BasicWithAnnotation::class)).isEqualTo(BasicWithAnnotation(0))
-
-
-
         // Nested lists on top level
         val g3 = gtv(gtv(gtv(1)))
         assert(g3.toList<List<Long>>()).containsExactly(listOf(1L))
