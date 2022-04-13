@@ -1,35 +1,26 @@
-package net.postchain.gtv
+package net.postchain.gtv.mapper
 
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDictionary
 import java.lang.reflect.Parameter
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
 import kotlin.reflect.KClass
 
-@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
-annotation class Name(val name: String)
-
-@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
-annotation class RawGtv
-
-@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
-annotation class Nullable
-
-@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
-annotation class DefaultValue(val defaultLong: Long = 0, val defaultString: String = "", val defaultByteArray: ByteArray = [])
-
 inline fun <reified T : Any> Gtv.toClass(): T {
-    return GtvConverter.fromGtv(this, T::class)
+    return GtvObjectMapper.fromGtv(this, T::class)
 }
 
 inline fun <reified T : Any> Gtv.toList(): List<T> {
-    return GtvConverter.toList(this, T::class)
+    return GtvObjectMapper.fromArray(this, T::class)
 }
 
-object GtvConverter {
+object GtvObjectMapper {
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> toList(gtv: Gtv, classType: KClass<T>): List<T> {
+    fun <T : Any> fromArray(gtv: Gtv, classType: KClass<T>): List<T> {
         if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be dictionary type")
         return gtv.array.map {
             when {

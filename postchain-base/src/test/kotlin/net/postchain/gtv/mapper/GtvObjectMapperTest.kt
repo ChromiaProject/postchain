@@ -1,9 +1,10 @@
-package net.postchain.gtv
+package net.postchain.gtv.mapper
 
 import assertk.assert
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -22,14 +23,14 @@ data class BasicDict(@Name("dict") val basicWithAnnotation: BasicWithAnnotation)
 
 data class NestedDict(@Name("nestedDict") val nested: BasicDict)
 
-internal class GtvConverterTest {
+internal class GtvObjectMapperTest {
 
     @Test
     fun testBasic() {
         val foo = gtv(mapOf("bar" to gtv(123L)))
-        assert(GtvConverter.fromGtv(foo, BasicWithAnnotation::class)).isEqualTo(BasicWithAnnotation(123))
-        assertThrows<Exception> { (GtvConverter.fromGtv(foo, BasicWithoutAnnotation::class)) }
-        assert(GtvConverter.fromGtv(gtv(mapOf()), WithNullable::class)).isEqualTo(WithNullable(null))
+        assert(GtvObjectMapper.fromGtv(foo, BasicWithAnnotation::class)).isEqualTo(BasicWithAnnotation(123))
+        assertThrows<Exception> { (GtvObjectMapper.fromGtv(foo, BasicWithoutAnnotation::class)) }
+        assert(GtvObjectMapper.fromGtv(gtv(mapOf()), WithNullable::class)).isEqualTo(WithNullable(null))
     }
 
     @Test
@@ -39,7 +40,7 @@ internal class GtvConverterTest {
                 "l" to gtv(1),
                 "b" to gtv("b".toByteArray())
         ))
-        val actual = GtvConverter.fromGtv(g, AllTypes::class)
+        val actual = GtvObjectMapper.fromGtv(g, AllTypes::class)
         assert(actual.l).isEqualTo(1L)
         assert(actual.s).isEqualTo("a")
         assert(actual.b).isContentEqualTo("b".toByteArray())
@@ -48,7 +49,7 @@ internal class GtvConverterTest {
     @Test
     fun testListType() {
         val g = gtv(mapOf("list" to gtv(gtv(1))))
-        val actual = GtvConverter.fromGtv(g, BasicWithList::class)
+        val actual = GtvObjectMapper.fromGtv(g, BasicWithList::class)
         assert(actual.l).containsExactly(1L)
     }
 
@@ -57,13 +58,13 @@ internal class GtvConverterTest {
         val g = gtv(mapOf("dict" to gtv(mapOf("bar" to gtv(1)))))
         val inner = BasicWithAnnotation(1)
         val outer = BasicDict(inner)
-        assert(GtvConverter.fromGtv(g, BasicDict::class)).isEqualTo(outer)
+        assert(GtvObjectMapper.fromGtv(g, BasicDict::class)).isEqualTo(outer)
     }
 
     @Test
     fun listTypes() {
         val g = gtv(mapOf("str" to gtv(gtv("a".toByteArray()), gtv("b".toByteArray()))))
-        val actual = GtvConverter.fromGtv(g, ComplexList::class).stringList
+        val actual = GtvObjectMapper.fromGtv(g, ComplexList::class).stringList
         assert(actual[0]).isContentEqualTo("a".toByteArray())
         assert(actual[1]).isContentEqualTo("b".toByteArray())
     }
@@ -71,14 +72,14 @@ internal class GtvConverterTest {
     @Test
     fun listDict() {
         val g = gtv(mapOf("dict" to gtv(gtv(mapOf("bar" to gtv(1))))))
-        val actual = GtvConverter.fromGtv(g, ListDict::class)
+        val actual = GtvObjectMapper.fromGtv(g, ListDict::class)
         assert(actual.dict).containsExactly(BasicWithAnnotation(1L))
     }
 
     @Test
     fun listList() {
         val g = gtv(mapOf("listlist" to gtv(gtv(gtv(mapOf("bar" to gtv(1L)))))))
-        val actual = GtvConverter.fromGtv(g, ListList::class)
+        val actual = GtvObjectMapper.fromGtv(g, ListList::class)
         assert(actual.listlist).containsExactly(listOf(BasicWithAnnotation(1L)))
     }
 
@@ -108,7 +109,7 @@ internal class GtvConverterTest {
         // save "raw" as a separate tag
         data class Raw(@RawGtv val raw: Gtv, @Name("a") val dummy: Long)
         val g = gtv("a" to gtv(1))
-        assert(GtvConverter.fromGtv(g, Raw::class)).isEqualTo(Raw(g, 1))
+        assert(GtvObjectMapper.fromGtv(g, Raw::class)).isEqualTo(Raw(g, 1))
 
         data class NestedRaw(@RawGtv val raw: Gtv, @Name("nested") val nested: Raw)
         val nested = gtv(mapOf("nested" to  gtv("a" to gtv(1))))
