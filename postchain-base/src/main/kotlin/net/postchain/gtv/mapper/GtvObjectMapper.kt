@@ -39,7 +39,11 @@ object GtvObjectMapper {
         val constructorParameters = constructor.parameters.map {
             annotatedParameterToValue(it, gtv)
         }
-        return constructor.newInstance(*constructorParameters.toTypedArray()) as T
+        return try {
+            constructor.newInstance(*constructorParameters.toTypedArray()) as T
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException("Constructor for parameters $constructorParameters not found")
+        }
     }
 }
 

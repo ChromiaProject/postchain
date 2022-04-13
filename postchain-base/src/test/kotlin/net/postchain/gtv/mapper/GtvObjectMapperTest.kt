@@ -9,38 +9,64 @@ import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-data class BasicWithAnnotation(@Name("bar") val bar: Long)
-data class BasicWithoutAnnotation(val bar: Long)
-data class WithNullable(@Name("foo") @Nullable val foo: Long?)
-data class AllTypes(@Name("s") val s: String, @Name("l") val l: Long, @Name("b") val b: ByteArray) // Do not run isEqualTo
+data class Simple(@Name("key") val value: Long)
 
-data class BasicWithList(@Name("list") val l: List<Long>) // Do not run isEqualTo
-data class ComplexList(@Name("str") val stringList: List<ByteArray>) // Do not run isEqualTo
-data class ListDict(@Name("dict") val dict: List<BasicWithAnnotation>) // Do not run isEqualTo
-data class ListList(@Name("listlist") val listlist: List<List<BasicWithAnnotation>>) // Do not run isEqualTo
-
-data class BasicDict(@Name("dict") val basicWithAnnotation: BasicWithAnnotation)
-
-data class NestedDict(@Name("nestedDict") val nested: BasicDict)
+data class BasicDict(@Name("dict") val simple: Simple)
 
 internal class GtvObjectMapperTest {
 
     @Test
-    fun testBasic() {
-        val foo = gtv(mapOf("bar" to gtv(123L)))
-        assert(GtvObjectMapper.fromGtv(foo, BasicWithAnnotation::class)).isEqualTo(BasicWithAnnotation(123))
-        assertThrows<Exception> { (GtvObjectMapper.fromGtv(foo, BasicWithoutAnnotation::class)) }
-        assert(GtvObjectMapper.fromGtv(gtv(mapOf()), WithNullable::class)).isEqualTo(WithNullable(null))
+    fun missingAnnotation() {
+        data class SimpleWithoutAnnotation(val value: Long)
+        assertThrows<Exception> {
+            GtvObjectMapper.fromGtv(
+                    gtv(mapOf("key" to gtv(1))), SimpleWithoutAnnotation::class
+            )
+        }
+    }
+
+    @Test
+    fun annotationIsRespected() {
+        val dummy = gtv(mapOf("key" to gtv(123L)))
+        assert(GtvObjectMapper.fromGtv(dummy, Simple::class)).isEqualTo(Simple(123))
+    }
+
+    @Test
+    fun nullablePropertyIsNull() {
+        data class SimpleNullable(@Name("missing") @Nullable val foo: Long?)
+        assert(GtvObjectMapper.fromGtv(gtv(mapOf()), SimpleNullable::class)).isEqualTo(SimpleNullable(null))
+    }
+
+    @Test
+    fun invalidNullableUsage() {
+        data class SimpleNullable(@Name("missing") @Nullable val foo: Long)
+
+        val e = assertThrows<IllegalArgumentException> {
+            GtvObjectMapper.fromGtv(gtv(mapOf()), SimpleNullable::class)
+        }
+        assert(e.message).isEqualTo("Constructor for parameters [null] not found")
+    }
+
+    @Test
+    fun missingGtvThrows() {
+        assertThrows<IllegalArgumentException> {
+            gtv(mapOf()).toClass<Simple>()
+        }
     }
 
     @Test
     fun testAllPrimitiveTypes() {
-        val g = gtv(mapOf(
-                "s" to gtv("a"),
-                "l" to gtv(1),
-                "b" to gtv("b".toByteArray())
-        ))
-        val actual = GtvObjectMapper.fromGtv(g, AllTypes::class)
+        data class AllTypes(
+                @Name("string") val s: String,
+                @Name("long") val l: Long,
+                @Name("byte") val b: ByteArray // Do not run isEqualTo
+        )
+
+        val actual = gtv(mapOf(
+                "string" to gtv("a"),
+                "long" to gtv(1),
+                "byte" to gtv("b".toByteArray())
+        )).toClass<AllTypes>()
         assert(actual.l).isEqualTo(1L)
         assert(actual.s).isEqualTo("a")
         assert(actual.b).isContentEqualTo("b".toByteArray())
@@ -48,21 +74,27 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun testListType() {
-        val g = gtv(mapOf("list" to gtv(gtv(1))))
-        val actual = GtvObjectMapper.fromGtv(g, BasicWithList::class)
+        data class BasicWithList(@Name("list") val l: List<Long>) // Do not run isEqualTo
+
+        val actual = gtv(mapOf("list" to gtv(gtv(1))))
+                .toClass<BasicWithList>()
         assert(actual.l).containsExactly(1L)
     }
 
     @Test
     fun testDict() {
-        val g = gtv(mapOf("dict" to gtv(mapOf("bar" to gtv(1)))))
-        val inner = BasicWithAnnotation(1)
+        val inner = Simple(1)
         val outer = BasicDict(inner)
-        assert(GtvObjectMapper.fromGtv(g, BasicDict::class)).isEqualTo(outer)
+        val innerGtv = gtv(mapOf("key" to gtv(inner.value)))
+        val actual = gtv(mapOf("dict" to innerGtv))
+                .toClass<BasicDict>()
+        assert(actual).isEqualTo(outer)
     }
 
     @Test
     fun listTypes() {
+        data class ComplexList(@Name("str") val stringList: List<ByteArray>) // Do not run isEqualTo
+
         val g = gtv(mapOf("str" to gtv(gtv("a".toByteArray()), gtv("b".toByteArray()))))
         val actual = GtvObjectMapper.fromGtv(g, ComplexList::class).stringList
         assert(actual[0]).isContentEqualTo("a".toByteArray())
@@ -71,54 +103,62 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun listDict() {
-        val g = gtv(mapOf("dict" to gtv(gtv(mapOf("bar" to gtv(1))))))
+        data class ListDict(@Name("dict") val dict: List<Simple>) // Do not run isEqualTo
+
+        val g = gtv(mapOf("dict" to gtv(gtv(mapOf("key" to gtv(1))))))
         val actual = GtvObjectMapper.fromGtv(g, ListDict::class)
-        assert(actual.dict).containsExactly(BasicWithAnnotation(1L))
+        assert(actual.dict).containsExactly(Simple(1L))
     }
 
     @Test
     fun listList() {
-        val g = gtv(mapOf("listlist" to gtv(gtv(gtv(mapOf("bar" to gtv(1L)))))))
-        val actual = GtvObjectMapper.fromGtv(g, ListList::class)
-        assert(actual.listlist).containsExactly(listOf(BasicWithAnnotation(1L)))
+        data class ListOfList(@Name("listlist") val listOfList: List<List<Simple>>) // Do not run isEqualTo
+
+        val simple = gtv(mapOf("key" to gtv(1L)))
+        val listOfList = gtv(gtv(simple))
+        val actual = gtv(mapOf("listlist" to listOfList)).toClass<ListOfList>()
+        assert(actual.listOfList).containsExactly(listOf(Simple(1L)))
     }
 
     @Test
     fun nestedDict() {
-        val g = gtv(mapOf(
+        data class NestedDict(@Name("nestedDict") val nested: BasicDict)
+
+        val actual = gtv(mapOf(
                 "nestedDict" to gtv(mapOf(
                         "dict" to gtv(mapOf(
-                                "bar" to gtv(1)
+                                "key" to gtv(1)
                         ))
-                ))))
-        assert(g.toClass<NestedDict>()).isEqualTo(NestedDict(BasicDict(BasicWithAnnotation(1))))
+                )))).toClass<NestedDict>()
+        assert(actual).isEqualTo(NestedDict(BasicDict(Simple(1))))
     }
 
     @Test
     fun listOfClass() {
-        val g = gtv(gtv(mapOf("bar" to gtv(1))))
+        val listofSimple = gtv(gtv(mapOf("key" to gtv(1))))
+                .toList<Simple>()
 
-        assert(g.toList<BasicWithAnnotation>()).containsExactly(BasicWithAnnotation(1))
+        assert(listofSimple).containsExactly(Simple(1))
+    }
 
-        val g2 = gtv(gtv(1))
-        assert(g2.toList<Long>()).containsExactly(1L)
+    @Test
+    fun listOfPrimitive() {
+        val listOfLong = gtv(gtv(1)).toList<Long>()
+        assert(listOfLong).containsExactly(1L)
     }
 
     @Test
     fun saveRawData() {
-        // save "raw" as a separate tag
-        data class Raw(@RawGtv val raw: Gtv, @Name("a") val dummy: Long)
+        data class WithRawData(@RawGtv val raw: Gtv, @Name("a") val dummy: Long)
+        val rawGtv = gtv("a" to gtv(1))
+        assert(rawGtv.toClass<WithRawData>()).isEqualTo(WithRawData(rawGtv, 1))
 
-        val g = gtv("a" to gtv(1))
-        assert(GtvObjectMapper.fromGtv(g, Raw::class)).isEqualTo(Raw(g, 1))
-
-        data class NestedRaw(@RawGtv val raw: Gtv, @Name("nested") val nested: Raw)
-
-        val nested = gtv(mapOf("nested" to gtv("a" to gtv(1))))
-        assert(nested.toClass<NestedRaw>()).isEqualTo(NestedRaw(nested, Raw(g, 1)))
-
-        data class UnConverted(@Name("asgtv") val g: Gtv)
-        assert(gtv(mapOf("asgtv" to gtv(1))).toClass<UnConverted>()).isEqualTo(UnConverted(gtv(1)))
+    }
+    @Test
+    fun storeAsUnconverted() {
+        data class UnConverted(@Name("asGtv") val g: Gtv)
+        val actual = gtv(mapOf("asGtv" to gtv(1))).toClass<UnConverted>()
+        assert(actual).isEqualTo(UnConverted(gtv(1)))
     }
 
     @Test
@@ -129,28 +169,18 @@ internal class GtvObjectMapperTest {
                 @Name("defaultByteArray") @DefaultValue(defaultByteArray = [0x2E]) val b: ByteArray,
         )
 
-        val def = gtv(mapOf())
-        val actual = def.toClass<WithDefaultValue>()
+        val emptyGtv = gtv(mapOf())
+        val actual = emptyGtv.toClass<WithDefaultValue>()
         assert(actual.b).isContentEqualTo(byteArrayOf(0x2E))
         assert(actual.l).isEqualTo(5L)
         assert(actual.s).isEqualTo("foo")
     }
 
-    @Test
-    fun withoutAnnotationThrows() {
-        data class WithoutAnnotation(val foo: Long)
-        assertThrows<IllegalArgumentException> { gtv(mapOf("foo" to gtv(1))).toClass<WithoutAnnotation>() }
-    }
-
-    @Test
-    fun missingGtvThrows() {
-        assertThrows<IllegalArgumentException> { gtv(mapOf()).toClass<BasicWithAnnotation>() }
-    }
 
     @Test
     fun defaultValueIsNotPrimitive() {
         data class NonPrimitiveDefault(
-                @Name("foo") @DefaultValue val foo: BasicWithAnnotation
+                @Name("foo") @DefaultValue val foo: Simple
         )
 
         assertThrows<IllegalArgumentException> {
@@ -173,6 +203,7 @@ internal class GtvObjectMapperTest {
                 @Name("b") val b: B,
                 @RawGtv val raw: Gtv
         )
+
         val bDict = gtv(mapOf(
                 "name" to gtv("foo"),
                 "value" to gtv(1)
@@ -191,6 +222,7 @@ internal class GtvObjectMapperTest {
                 @Nested("b")
                 val name: String
         )
+
         val list = gtv(gtv(gtv("foo")))
         val e = assertThrows<IllegalArgumentException> {
             gtv(mapOf("b" to list)).toClass<C>()
@@ -205,6 +237,7 @@ internal class GtvObjectMapperTest {
                 @Nested("a", "b", "c")
                 val name: String
         )
+
         val g = gtv(mapOf(
                 "a" to gtv(mapOf(
                         "b" to gtv(mapOf(
@@ -222,6 +255,4 @@ internal class GtvObjectMapperTest {
         assertThrows<IllegalArgumentException> { gtv(mapOf("a" to gtv(1))).toClass<Map<String, Gtv>>() }
         assertThrows<IllegalArgumentException> { gtv(gtv(gtv(1))).toList<List<Long>>() }
     }
-
 }
-
