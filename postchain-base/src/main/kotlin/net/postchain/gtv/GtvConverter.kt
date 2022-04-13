@@ -18,39 +18,38 @@ annotation class Nullable
 @Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
 annotation class DefaultValue(val defaultLong: Long = 0, val defaultString: String = "", val defaultByteArray: ByteArray = [])
 
-inline fun <reified T : Any> GtvDictionary.toClass(): T {
+inline fun <reified T : Any> Gtv.toClass(): T {
     return GtvConverter.fromGtv(this, T::class)
 }
 
-inline fun <reified T : Any> GtvArray.toList(): List<T> {
+inline fun <reified T : Any> Gtv.toList(): List<T> {
     return GtvConverter.toList(this, T::class)
 }
 
 object GtvConverter {
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> toList(gtv: GtvArray, K: KClass<T>): List<T> {
-        val v = gtv.array.map {
+    fun <T : Any> toList(gtv: Gtv, classType: KClass<T>): List<T> {
+        if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be dictionary type")
+        return gtv.array.map {
             when {
-                it is GtvDictionary -> fromGtv(it, K)
-                K.typeParameters.isNotEmpty() -> throw IllegalArgumentException("Generics are not allowed")
-                else -> classToValue(K.java, it)
+                it is GtvDictionary -> fromGtv(it, classType)
+                classType.typeParameters.isNotEmpty() -> throw IllegalArgumentException("Generics are not allowed")
+                else -> classToValue(classType.java, it)
             }
-        }
-        return v as List<T>
+        } as List<T>
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> fromGtv(g: GtvDictionary, K: KClass<T>): T {
-        if (K.java.constructors.isEmpty()) throw IllegalArgumentException("Type must have primary constructor")
-        val constructor = K.java.constructors[0]
-        val v = constructor.parameters.map {
-            annotatedParameterToValue(it, g)
+    fun <T : Any> fromGtv(gtv: Gtv, classType: KClass<T>): T {
+        if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be dictionary type")
+        if (classType.java.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")
+        val constructor = classType.java.constructors[0]
+        val constructorParameters = constructor.parameters.map {
+            annotatedParameterToValue(it, gtv)
         }
-
-        return constructor.newInstance(*v.toTypedArray()) as T
+        return constructor.newInstance(*constructorParameters.toTypedArray()) as T
     }
-
 }
 
 private fun annotatedParameterToValue(param: Parameter, gtv: GtvDictionary): Any? {
@@ -58,24 +57,22 @@ private fun annotatedParameterToValue(param: Parameter, gtv: GtvDictionary): Any
         param.isAnnotationPresent(RawGtv::class.java) -> gtv
         param.isAnnotationPresent(Name::class.java) -> {
             val gtvField = gtv[param.getAnnotation(Name::class.java)?.name!!]
-            if (gtvField == null) {
-                if (param.isAnnotationPresent(DefaultValue::class.java)) {
-                    val default =  param.getAnnotation(DefaultValue::class.java)
-                    if (param.type isPrimitive {}) {
-                        return when {
-                            param.type isLong {} -> default.defaultLong
-                            param.type isString {} -> default.defaultString
-                            else -> default.defaultByteArray
-                        }
+            if (gtvField != null) return parameterToValue(param, gtvField)
+            if (param.isAnnotationPresent(DefaultValue::class.java)) {
+                val default = param.getAnnotation(DefaultValue::class.java)
+                if (param.type isPrimitive {}) {
+                    return when {
+                        param.type isLong {} -> default.defaultLong
+                        param.type isString {} -> default.defaultString
+                        else -> default.defaultByteArray
                     }
-                    throw IllegalArgumentException("Default value not accepted for type: ${param.type}, must be Long, String or Bytearray")
                 }
-                if (param.isAnnotationPresent(Nullable::class.java)) {
-                    return null
-                }
-                throw IllegalArgumentException("Gtv is null, but neither default nor nullable annotation is present")
+                throw IllegalArgumentException("Default value not accepted for type: ${param.type}, must be Long, String or Bytearray")
             }
-            parameterToValue(param, gtvField)
+            if (param.isAnnotationPresent(Nullable::class.java)) {
+                return null
+            }
+            throw IllegalArgumentException("Gtv is null, but neither default nor nullable annotation is present")
         }
         else -> {
             throw IllegalArgumentException("No annotation for parameter ${param.name} is present.")
@@ -83,39 +80,40 @@ private fun annotatedParameterToValue(param: Parameter, gtv: GtvDictionary): Any
     }
 }
 
-private fun parameterToValue(p: Parameter, gtv: Gtv?): Any? {
+private fun parameterToValue(param: Parameter, gtv: Gtv?): Any? {
     if (gtv == null) return null
-    if (p.parameterizedType is ParameterizedType) { // List types
+    if (param.parameterizedType is ParameterizedType) { // List types
         if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be array, but is ${gtv.type} with values $gtv")
-        val listTypeArgument = (p.parameterizedType as ParameterizedType).actualTypeArguments[0]
+        val listTypeArgument = (param.parameterizedType as ParameterizedType).actualTypeArguments[0]
         return parameterizedTypeArgumentToValue(listTypeArgument, gtv)
     }
-    return classToValue(p.type, gtv)
+    return classToValue(param.type, gtv)
 }
 
-private fun parameterizedTypeArgumentToValue(t: Type, gtv: Gtv?): Any? {
+private fun parameterizedTypeArgumentToValue(type: Type, gtv: Gtv?): Any? {
     if (gtv == null) return null
     val gtvArray = gtv.asArray()
-    if (t is WildcardType) {
-        return gtvArray.map { parameterizedTypeArgumentToValue((t.upperBounds[0] as ParameterizedType).actualTypeArguments[0], it) }
+    if (type is WildcardType) { // List types
+        return gtvArray.map { parameterizedTypeArgumentToValue((type.upperBounds[0] as ParameterizedType).actualTypeArguments[0], it) }
     }
-    if (t.typeName == "byte[]") return gtvArray.map { classToValue(ByteArray::class.java, it) }
-    return gtvArray.map { classToValue(Class.forName(t.typeName), it) }
+    if (type.typeName == "byte[]") return gtvArray.map { classToValue(ByteArray::class.java, it) }
+    return gtvArray.map { classToValue(Class.forName(type.typeName), it) }
 }
 
-private fun classToValue(c: Class<*>, gtv: Gtv?): Any? {
+private fun classToValue(classType: Class<*>, gtv: Gtv?): Any? {
     if (gtv == null) return null
     return when {
-        c isLong {} -> gtv.asInteger()
-        c isString {} -> gtv.asString()
-        c isByteArray {} -> gtv.asByteArray()
-        c isGtv {} -> gtv
+        classType isGtv {} -> gtv
+        classType isLong {} -> gtv.asInteger()
+        classType isString {} -> gtv.asString()
+        classType isByteArray {} -> gtv.asByteArray()
         else -> {
             if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
-            val n = c.constructors[0].parameters.map {
+            if (classType.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")
+            val n = classType.constructors[0].parameters.map {
                 annotatedParameterToValue(it, gtv)
             }
-            c.constructors[0].newInstance(*n.toTypedArray())
+            classType.constructors[0].newInstance(*n.toTypedArray())
         }
     }
 }
