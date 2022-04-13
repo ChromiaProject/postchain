@@ -21,6 +21,7 @@ inline fun <reified T : Any> GtvDictionary.toClass(): T {
 inline fun <reified T : Any> GtvArray.toList(): List<T> {
     return GtvConverter.toList(this, T::class)
 }
+
 object GtvConverter {
 
     @Suppress("UNCHECKED_CAST")
@@ -28,13 +29,16 @@ object GtvConverter {
         val v = gtv.array.map {
             when {
                 it is GtvDictionary -> fromGtv(it, K)
+                K.typeParameters.isNotEmpty() -> throw IllegalArgumentException("Generics are not allowed")
                 else -> classToValue(K.java, it)
             }
         }
         return v as List<T>
     }
+
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> fromGtv(g: GtvDictionary, K: KClass<T>): T {
+        if (K.java.constructors.isEmpty()) throw IllegalArgumentException("Type must have primary constructor")
         val constructor = K.java.constructors[0]
         val v = constructor.parameters.map {
             annotatedParameterToValue(it, g)

@@ -5,7 +5,6 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.gtv.GtvFactory.gtv
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -156,11 +155,10 @@ internal class GtvConverterTest {
     }
 
     @Test
-    @Disabled
-    fun nonWorking() {
-        // Nested lists on top level
-        val g3 = gtv(gtv(gtv(1)))
-        assert(g3.toList<List<Long>>()).containsExactly(listOf(1L))
+    fun genericTypesWillThrow() {
+        assertThrows<IllegalArgumentException> { gtv(mapOf("a" to gtv(1))).toClass<Map<String, Gtv>>() }
+        assertThrows<IllegalArgumentException> { gtv(gtv(gtv(1))).toList<List<Long>>() }
     }
+
 }
 
