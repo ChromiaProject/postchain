@@ -9,16 +9,42 @@ import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
 import kotlin.reflect.KClass
 
+
+/**
+ * Convert a [GtvDictionary] to a kotlin class. See [GtvObjectMapper]
+ */
 inline fun <reified T : Any> Gtv.toClass(): T {
     return GtvObjectMapper.fromGtv(this, T::class)
 }
 
+/**
+ * Convert a [GtvArray] to a kotlin class. See [GtvObjectMapper]
+ */
 inline fun <reified T : Any> Gtv.toList(): List<T> {
     return GtvObjectMapper.fromArray(this, T::class)
 }
 
+/**
+ * Maps [Gtv] to kotlin objects.
+ *
+ * The following mapping between data types will be performed:
+ * ```
+ * gtv      <->  kotlin
+ * Integer   -   Long
+ * String    -   String
+ * ByteArray -   ByteArray
+ * Array     -   List
+ * Dict      -   Class
+ * ```
+ *
+ * The target class must have a public primary constructor with one or several of the following annotations:
+ * [Name], [Nullable], [DefaultValue], [Nested], [RawGtv]
+ */
 object GtvObjectMapper {
 
+    /**
+     * Convert a [GtvArray] to a kotlin class. See [GtvObjectMapper]
+     */
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> fromArray(gtv: Gtv, classType: KClass<T>): List<T> {
         if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be dictionary type")
@@ -31,6 +57,9 @@ object GtvObjectMapper {
         } as List<T>
     }
 
+    /**
+     * Convert a [GtvDictionary] to a kotlin class. See [GtvObjectMapper]
+     */
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> fromGtv(gtv: Gtv, classType: KClass<T>): T {
         if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be dictionary type")
