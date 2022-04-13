@@ -108,11 +108,13 @@ internal class GtvObjectMapperTest {
     fun saveRawData() {
         // save "raw" as a separate tag
         data class Raw(@RawGtv val raw: Gtv, @Name("a") val dummy: Long)
+
         val g = gtv("a" to gtv(1))
         assert(GtvObjectMapper.fromGtv(g, Raw::class)).isEqualTo(Raw(g, 1))
 
         data class NestedRaw(@RawGtv val raw: Gtv, @Name("nested") val nested: Raw)
-        val nested = gtv(mapOf("nested" to  gtv("a" to gtv(1))))
+
+        val nested = gtv(mapOf("nested" to gtv("a" to gtv(1))))
         assert(nested.toClass<NestedRaw>()).isEqualTo(NestedRaw(nested, Raw(g, 1)))
 
         data class UnConverted(@Name("asgtv") val g: Gtv)
@@ -126,6 +128,7 @@ internal class GtvObjectMapperTest {
                 @Name("defaultString") @DefaultValue(defaultString = "foo") val s: String,
                 @Name("defaultByteArray") @DefaultValue(defaultByteArray = [0x2E]) val b: ByteArray,
         )
+
         val def = gtv(mapOf())
         val actual = def.toClass<WithDefaultValue>()
         assert(actual.b).isContentEqualTo(byteArrayOf(0x2E))
@@ -153,6 +156,65 @@ internal class GtvObjectMapperTest {
         assertThrows<IllegalArgumentException> {
             gtv(mapOf()).toClass<NonPrimitiveDefault>()
         }
+    }
+
+    @Test
+    fun explicitPath() {
+        data class B(
+                @Name("name") val name: String,
+                @Name("value") val value: Long
+        )
+
+        data class A(
+                @Name("name")
+                @Nested("b")
+                val bName: String,
+                @Name("b") val bRaw: Gtv,
+                @Name("b") val b: B,
+                @RawGtv val raw: Gtv
+        )
+        val bDict = gtv(mapOf(
+                "name" to gtv("foo"),
+                "value" to gtv(1)
+        ))
+        val a = gtv(mapOf(
+                "b" to bDict
+        ))
+
+        assert(a.toClass<A>()).isEqualTo(A("foo", bDict, B("foo", 1), a))
+    }
+
+    @Test
+    fun invalidPath() {
+        data class C(
+                @Name("name")
+                @Nested("b")
+                val name: String
+        )
+        val list = gtv(gtv(gtv("foo")))
+        val e = assertThrows<IllegalArgumentException> {
+            gtv(mapOf("b" to list)).toClass<C>()
+        }
+        assert(e.message).isEqualTo("Expected path b to be GtvDictionary")
+    }
+
+    @Test
+    fun multiLevelPath() {
+        data class Multi(
+                @Name("name")
+                @Nested("a", "b", "c")
+                val name: String
+        )
+        val g = gtv(mapOf(
+                "a" to gtv(mapOf(
+                        "b" to gtv(mapOf(
+                                "c" to gtv(mapOf(
+                                        "name" to gtv("foo")
+                                ))
+                        ))
+                ))
+        ))
+        assert(g.toClass<Multi>()).isEqualTo(Multi("foo"))
     }
 
     @Test

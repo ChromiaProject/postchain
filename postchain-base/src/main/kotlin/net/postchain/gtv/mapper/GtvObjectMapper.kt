@@ -46,29 +46,41 @@ object GtvObjectMapper {
 private fun annotatedParameterToValue(param: Parameter, gtv: GtvDictionary): Any? {
     return when {
         param.isAnnotationPresent(RawGtv::class.java) -> gtv
+        param.isAnnotationPresent(Nested::class.java) && param.isAnnotationPresent(Name::class.java) -> {
+            val path = param.getAnnotation(Nested::class.java).path
+            val gtvNode = path.fold(gtv) { acc, s ->
+                if (acc[s] !is GtvDictionary) throw IllegalArgumentException("Expected path $s to be GtvDictionary")
+                acc[s] as GtvDictionary
+            }
+            return annotationToValue(gtvNode, param)
+        }
         param.isAnnotationPresent(Name::class.java) -> {
-            val gtvField = gtv[param.getAnnotation(Name::class.java)?.name!!]
-            if (gtvField != null) return parameterToValue(param, gtvField)
-            if (param.isAnnotationPresent(DefaultValue::class.java)) {
-                val default = param.getAnnotation(DefaultValue::class.java)
-                if (param.type isPrimitive {}) {
-                    return when {
-                        param.type isLong {} -> default.defaultLong
-                        param.type isString {} -> default.defaultString
-                        else -> default.defaultByteArray
-                    }
-                }
-                throw IllegalArgumentException("Default value not accepted for type: ${param.type}, must be Long, String or Bytearray")
-            }
-            if (param.isAnnotationPresent(Nullable::class.java)) {
-                return null
-            }
-            throw IllegalArgumentException("Gtv is null, but neither default nor nullable annotation is present")
+            return annotationToValue(gtv, param)
         }
         else -> {
             throw IllegalArgumentException("No annotation for parameter ${param.name} is present.")
         }
     }
+}
+
+private fun annotationToValue(gtv: Gtv, param: Parameter): Any? {
+    val gtvField = gtv[param.getAnnotation(Name::class.java)?.name!!]
+    if (gtvField != null) return parameterToValue(param, gtvField)
+    if (param.isAnnotationPresent(DefaultValue::class.java)) {
+        val default = param.getAnnotation(DefaultValue::class.java)
+        if (param.type isPrimitive {}) {
+            return when {
+                param.type isLong {} -> default.defaultLong
+                param.type isString {} -> default.defaultString
+                else -> default.defaultByteArray
+            }
+        }
+        throw IllegalArgumentException("Default value not accepted for type: ${param.type}, must be Long, String or Bytearray")
+    }
+    if (param.isAnnotationPresent(Nullable::class.java)) {
+        return null
+    }
+    throw IllegalArgumentException("Gtv is null, but neither default nor nullable annotation is present")
 }
 
 private fun parameterToValue(param: Parameter, gtv: Gtv?): Any? {
