@@ -37,6 +37,14 @@ annotation class DefaultValue(val defaultLong: Long = 0, val defaultString: Stri
 annotation class Nested(vararg val path: String)
 
 /**
+ * Mark this propery as transient and thus not present in the gtv. Cannot be used together with [Name].
+ *
+ * @param mappedName name of this property in the supplied map
+ */
+@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
+annotation class Transient(val mappedName: String)
+
+/**
  * Store a gtv-view of this object.
  *
  * [Note]: Must be of type [Gtv] and used exclusively
