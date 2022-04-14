@@ -11,7 +11,7 @@ fun <T> constructorOf(className: String, vararg constructorArgs: Class<*>): Cons
     } catch (e: ClassNotFoundException) {
         throw UserMistake("Configured class $className not found")
     } catch (e: NoSuchMethodException) {
-        throw ProgrammerMistake("Constructor with arguments ${constructorArgs.map { it.name }} was not found in class $className")
+        throw ProgrammerMistake("Constructor with arguments ${constructorArgs.map { it.typeName }} was not found in class $className")
     }
 }
 
