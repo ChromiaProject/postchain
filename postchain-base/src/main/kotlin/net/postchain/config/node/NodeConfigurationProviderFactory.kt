@@ -4,6 +4,7 @@ package net.postchain.config.node
 
 import mu.KotlinLogging
 import net.postchain.base.Storage
+import net.postchain.common.reflection.constructorOf
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders.Companion.fromAlias
 import net.postchain.config.node.NodeConfigProviders.Managed
@@ -27,7 +28,7 @@ object NodeConfigurationProviderFactory {
             Properties -> PropertiesNodeConfigurationProvider(appConfig)
             Manual -> ManualNodeConfigurationProvider(appConfig, storageFactory)
             Managed -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
-            else -> Class.forName(appConfig.nodeConfigProvider).getDeclaredConstructor(AppConfig::class.java).newInstance(appConfig) as NodeConfigurationProvider
+            else -> constructorOf<NodeConfigurationProvider>(appConfig.nodeConfigProvider, AppConfig::class.java).newInstance(appConfig)
         }
     }
 }
