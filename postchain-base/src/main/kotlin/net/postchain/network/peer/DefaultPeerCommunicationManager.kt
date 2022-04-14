@@ -37,10 +37,6 @@ class DefaultPeerCommunicationManager<PacketType>(
     override val messages = inboundPackets.asSharedFlow()
     var connected = false
 
-    //TODO: REMOVE. This is only here for compatibility
-    private lateinit var queueFillingJob: Job;
-    private var messageQueue = mutableListOf<Pair<NodeRid, PacketType>>()
-
     /**
      * Main job during init() is to connect our chain using the [ConnectionManager].
      */
@@ -55,24 +51,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         }
         val peerConfig = XChainPeersConfiguration(chainId, blockchainRid, config, packetHandlerImpl)
         connectionManager.connectChain(peerConfig, true) { processName.toString() }
-
-        //TODO: REMOVE. This is only here for compatibility
-        queueFillingJob = CoroutineScope(Dispatchers.Default).launch {
-            messages.collect {
-                synchronized(this) {
-                    messageQueue.add(it)
-                }
-            }
-        }
-
         connected = true
-    }
-
-    @Synchronized
-    override fun getPackets(): MutableList<Pair<NodeRid, PacketType>> {
-        val currentQueue = messageQueue
-        messageQueue = mutableListOf()
-        return currentQueue
     }
 
     override fun sendPacket(packet: PacketType, recipient: NodeRid) {
@@ -128,7 +107,6 @@ class DefaultPeerCommunicationManager<PacketType>(
     @Synchronized
     override fun shutdown() {
         if (!connected) return
-        queueFillingJob.cancel()
         val prefixFun: () -> String = { processName.toString() }
         connectionManager.disconnectChain(prefixFun, chainId)
         connected = false

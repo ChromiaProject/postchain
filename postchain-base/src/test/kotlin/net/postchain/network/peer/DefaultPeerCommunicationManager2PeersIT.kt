@@ -4,6 +4,10 @@ package net.postchain.network.peer
 
 import assertk.assert
 import assertk.assertions.containsExactly
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.SECP256K1CryptoSystem
@@ -74,6 +78,26 @@ class DefaultPeerCommunicationManager2PeersIT {
                     assert(actual2).containsExactly(peerInfo1.pubKey.byteArrayKeyOf())
                 }
 
+        // * Listening
+        val actual1 = mutableListOf<Long>()
+        val actual2 = mutableListOf<Long>()
+        val listener1 = CoroutineScope(Dispatchers.Default).launch {
+            context1.communicationManager.messages
+                    .collect {
+                        synchronized(actual1) {
+                            actual1.add((it.second as GetBlockAtHeight).height)
+                        }
+                    }
+        }
+        val listener2 = CoroutineScope(Dispatchers.Default).launch {
+            context2.communicationManager.messages
+                    .collect {
+                        synchronized(actual2) {
+                            actual2.add((it.second as GetBlockAtHeight).height)
+                        }
+                    }
+        }
+
         // Sending packets
         // * 1 -> 2
         val packets1 = arrayOf(
@@ -90,20 +114,14 @@ class DefaultPeerCommunicationManager2PeersIT {
         context2.communicationManager.sendPacket(packets2[1], NodeRid(pubKey1))
         context2.communicationManager.sendPacket(packets2[2], NodeRid(pubKey1))
 
-        // * asserting
-        val actual1 = mutableListOf<Long>()
-        val actual2 = mutableListOf<Long>()
+        // Asserting
         await().atMost(Duration.TEN_SECONDS)
                 .untilAsserted {
-                    // Peer1
-                    val actualPackets1 = context1.communicationManager.getPackets()
-                    actual1.addAll(actualPackets1.map { (it.second as GetBlockAtHeight).height })
-                    assert(actual1).containsExactly(20L, 21L, 22L)
+            assert(actual1).containsExactly(20L, 21L, 22L)
+            assert(actual2).containsExactly(10L, 11L)
+        }
 
-                    // Peer2
-                    val actualPackets2 = context2.communicationManager.getPackets()
-                    actual2.addAll(actualPackets2.map { (it.second as GetBlockAtHeight).height })
-                    assert(actual2).containsExactly(10L, 11L)
-                }
+        listener1.cancel()
+        listener2.cancel()
     }
 }

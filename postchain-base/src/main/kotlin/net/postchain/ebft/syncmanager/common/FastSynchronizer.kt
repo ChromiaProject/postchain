@@ -14,6 +14,7 @@ import net.postchain.ebft.message.*
 import net.postchain.ebft.worker.WorkerContext
 import java.lang.Thread.sleep
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import net.postchain.ebft.message.BlockData as MessageBlockData
 import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
@@ -104,10 +105,9 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     private val communicationManager = workerContext.communicationManager
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
-    private val jobs = TreeMap<Long, Job>()
+    private val jobs = ConcurrentHashMap<Long, Job>()
     private val peerStatuses = PeerStatuses(params)
     private var lastJob: Job? = null
-    private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
 
     // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
     private var addBlockCompletionPromise: CompletionPromise? = null
@@ -137,17 +137,11 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         try {
             blockHeight = blockQueries.getBestHeight().get()
             syncDebug("Start", blockHeight)
-            lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
-                if (workerContext.shouldProcessMessages(lastBlockTimestamp)) {
-                    refillJobs()
-                    processMessages(exitCondition)
-                    processDoneJobs()
-                    processStaleJobs()
-                    sleep(params.loopInterval)
-                } else {
-                    sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
-                }
+                refillJobs()
+                processDoneJobs()
+                processStaleJobs()
+                sleep(params.loopInterval)
             }
         } catch (e: BadDataMistake) {
             logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
@@ -590,10 +584,9 @@ class FastSynchronizer(private val workerContext: WorkerContext,
 
     private fun commitJobsAsNecessary(bTrace: BlockTrace?) {
         // We have to make sure blocks are committed in the correct order. If we are missing a block we have to wait for it.
-        for (job in jobs.values) {
+        for (job in jobs.values.sortedBy { it.height }) {
             if (!isProcessRunning()) return
 
-            // The values are iterated in key-ascending order (see TreeMap)
             if (job.block == null) {
                 // The next block to be committed hasn't arrived yet
                 unfinishedTrace("Done. Next job, $job, to commit hasn't arrived yet.")
@@ -658,34 +651,25 @@ class FastSynchronizer(private val workerContext: WorkerContext,
                 .always { finishedJobs.add(job) }
     }
 
-    private fun processMessages(exitCondition: () -> Boolean) {
-        for (packet in communicationManager.getPackets()) {
-            // We do heartbeat check for each network message because
-            // communicationManager.getPackets() might give a big portion of messages.
-            while (!workerContext.shouldProcessMessages(lastBlockTimestamp)) {
-                if (!isProcessRunning() || exitCondition()) return
-                sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
+    fun processMessage(packet: Pair<NodeRid, EbftMessage>) {
+        val peerId = packet.first
+        if (peerStatuses.isBlacklisted(peerId)) {
+            return
+        }
+        val message = packet.second
+        if (message is GetBlockHeaderAndBlock || message is BlockHeaderMessage) {
+            peerStatuses.confirmModern(peerId)
+        }
+        try {
+            when (message) {
+                is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
+                is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
+                is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
+                is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
+                else -> logger.trace { "Unhandled type ${message} from peer $peerId" }
             }
-
-            val peerId = packet.first
-            if (peerStatuses.isBlacklisted(peerId)) {
-                continue
-            }
-            val message = packet.second
-            if (message is GetBlockHeaderAndBlock || message is BlockHeaderMessage) {
-                peerStatuses.confirmModern(peerId)
-            }
-            try {
-                when (message) {
-                    is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
-                    is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
-                    is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
-                    is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
-                    else -> logger.trace { "Unhandled type ${message} from peer $peerId" }
-                }
-            } catch (e: Exception) {
-                logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
-            }
+        } catch (e: Exception) {
+            logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
         }
     }
 

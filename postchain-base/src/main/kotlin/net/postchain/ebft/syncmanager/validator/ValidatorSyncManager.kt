@@ -18,7 +18,9 @@ import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.worker.WorkerContext
+import nl.komponents.kovenant.task
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The ValidatorSyncManager handles communications with our peers.
@@ -42,7 +44,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var processingIntentDeadline = 0L
     private var lastStatusLogged: Long
     private val processName = workerContext.processName
-    private var useFastSyncAlgorithm: Boolean
+    private var useFastSyncAlgorithm = AtomicBoolean()
     private val fastSynchronizer: FastSynchronizer
 
     companion object : KLogging()
@@ -60,9 +62,13 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
         // Init useFastSyncAlgorithm
         val lastHeight = blockQueries.getBestHeight().get()
-        useFastSyncAlgorithm = when {
+        val startWithFastSync = when {
             lastHeight < params.mustSyncUntilHeight -> true
             else -> startInFastSync
+        }
+        if (startWithFastSync) {
+            useFastSyncAlgorithm.set(startWithFastSync)
+            runFastSync()
         }
     }
 
@@ -73,75 +79,85 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     /**
      * Handle incoming messages
      */
-    private fun dispatchMessages() {
-        for (packet in communicationManager.getPackets()) {
-            // We do heartbeat check for each network message because
-            // communicationManager.getPackets() might give a big portion of messages.
-            while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
-                if (!isProcessRunning()) return
-                Thread.sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
-            }
+    fun dispatchMessage(packet: Pair<NodeRid, EbftMessage>) {
+        if (useFastSyncAlgorithm.get()) {
+            fastSynchronizer.processMessage(packet)
+            return
+        }
 
-            val (xPeerId, message) = packet
+        val (xPeerId, message) = packet
 
-            val nodeIndex = indexOfValidator(xPeerId)
-            val isReadOnlyNode = nodeIndex == -1 // This must be a read-only node since not in the validator list
+        val nodeIndex = indexOfValidator(xPeerId)
+        logger.trace { "$processName: Received message type ${message.javaClass.simpleName} from node $nodeIndex" }
 
-            logger.trace { "$processName: Received message type ${message.javaClass.simpleName} from node $nodeIndex" }
-
-            try {
-                if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
-                    // validator consensus logic
-                    when (message) {
-                        is Status -> {
-                            NodeStatus(message.height, message.serial)
-                                    .apply {
-                                        blockRID = message.blockRID
-                                        revolting = message.revolting
-                                        round = message.round
-                                        state = NodeState.values()[message.state]
-                                    }.also {
-                                        statusManager.onStatusUpdate(nodeIndex, it)
-                                    }
-
-                            tryToSwitchToFastSync()
-                        }
-                        is BlockSignature -> {
-                            val signature = Signature(message.sig.subjectID, message.sig.data)
-                            val smBlockRID = this.statusManager.myStatus.blockRID
-                            if (smBlockRID == null) {
-                                logger.info("$processName: Received signature not needed")
-                            } else if (!smBlockRID.contentEquals(message.blockRID)) {
-                                logger.info("$processName: Receive signature for a different block")
-                            } else if (this.blockDatabase.verifyBlockSignature(signature)) {
-                                this.statusManager.onCommitSignature(nodeIndex, message.blockRID, signature)
+        try {
+            // validator consensus logic
+            when (message) {
+                is Status -> {
+                    NodeStatus(message.height, message.serial)
+                            .apply {
+                                blockRID = message.blockRID
+                                revolting = message.revolting
+                                round = message.round
+                                state = NodeState.values()[message.state]
+                            }.also {
+                                statusManager.onStatusUpdate(nodeIndex, it)
                             }
-                        }
-                        is CompleteBlock -> {
-                            try {
-                                blockManager.onReceivedBlockAtHeight(
-                                        decodeBlockDataWithWitness(message, blockchainConfiguration),
-                                        message.height)
-                            } catch (e: Exception) {
-                                logger.error("Failed to add block to database. Resetting state...", e)
-                                // reset state to last known from database
-                                val currentBlockHeight = blockQueries.getBestHeight().get()
-                                statusManager.fastForwardHeight(currentBlockHeight)
-                                blockManager.currentBlock = null
-                            }
-                        }
-                        is UnfinishedBlock -> {
-                            blockManager.onReceivedUnfinishedBlock(
-                                    decodeBlockData(
-                                            BlockData(message.header, message.transactions),
-                                            blockchainConfiguration)
-                            )
-                        }
+
+                    if (tryToSwitchToFastSync()) {
+                        runFastSync()
                     }
                 }
-            } catch (e: Exception) {
-                logger.error("$processName: Couldn't handle message $message. Ignoring and continuing", e)
+                is BlockSignature -> {
+                    val signature = Signature(message.sig.subjectID, message.sig.data)
+                    val smBlockRID = this.statusManager.myStatus.blockRID
+                    if (smBlockRID == null) {
+                        logger.info("$processName: Received signature not needed")
+                    } else if (!smBlockRID.contentEquals(message.blockRID)) {
+                        logger.info("$processName: Receive signature for a different block")
+                    } else if (this.blockDatabase.verifyBlockSignature(signature)) {
+                        this.statusManager.onCommitSignature(nodeIndex, message.blockRID, signature)
+                    }
+                }
+                is CompleteBlock -> {
+                    try {
+                        blockManager.onReceivedBlockAtHeight(
+                                decodeBlockDataWithWitness(message, blockchainConfiguration),
+                                message.height)
+                    } catch (e: Exception) {
+                        logger.error("Failed to add block to database. Resetting state...", e)
+                        // reset state to last known from database
+                        val currentBlockHeight = blockQueries.getBestHeight().get()
+                        statusManager.fastForwardHeight(currentBlockHeight)
+                        blockManager.currentBlock = null
+                    }
+                }
+                is UnfinishedBlock -> {
+                    blockManager.onReceivedUnfinishedBlock(
+                            decodeBlockData(
+                                    BlockData(message.header, message.transactions),
+                                    blockchainConfiguration)
+                    )
+                }
             }
+        } catch (e: Exception) {
+            logger.error("$processName: Couldn't handle message $message. Ignoring and continuing", e)
+        }
+    }
+
+    private fun runFastSync() {
+        task {
+            if (logger.isDebugEnabled) {
+                logger.debug("$processName Using fast sync") // Doesn't happen very often
+            }
+            fastSynchronizer.syncUntilResponsiveNodesDrained()
+            val currentBlockHeight = blockQueries.getBestHeight().get()
+            statusManager.fastForwardHeight(currentBlockHeight)
+            blockManager.currentBlock = null
+            logFastSyncStatus(currentBlockHeight)
+            // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
+            // possible race conditions
+            useFastSyncAlgorithm.set(false)
         }
     }
 
@@ -219,9 +235,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
         when (intent) {
             DoNothingIntent -> Unit
-            is FetchBlockAtHeightIntent -> if (!useFastSyncAlgorithm) {
-                fetchBlockAtHeight(intent.height)
-            }
+            is FetchBlockAtHeightIntent -> fetchBlockAtHeight(intent.height)
             is FetchCommitSignatureIntent -> fetchCommitSignatures(intent.blockRID, intent.nodes)
             is FetchUnfinishedBlockIntent -> fetchUnfinishedBlock(intent.blockRID)
             else -> throw ProgrammerMistake("Unrecognized intent: ${intent::class}")
@@ -288,61 +302,43 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
     }
 
-    private fun tryToSwitchToFastSync() {
-        useFastSyncAlgorithm = EBFTNodesCondition(statusManager.nodeStatuses) { status ->
+    private fun tryToSwitchToFastSync(): Boolean {
+        val fastSyncConditionSatisfied = EBFTNodesCondition(statusManager.nodeStatuses) { status ->
             status.height - statusManager.myStatus.height >= 3
         }.satisfied()
+        useFastSyncAlgorithm.set(fastSyncConditionSatisfied)
+        return fastSyncConditionSatisfied
     }
 
     /**
-     * Process peer messages, how we should proceed with the current block, updating the revolt tracker and
+     * Process how we should proceed with the current block, updating the revolt tracker and
      * notify peers of our current status.
      */
     fun update() {
-        if (useFastSyncAlgorithm) {
-            if (logger.isDebugEnabled) {
-                logger.debug("$processName Using fast sync") // Doesn't happen very often
-            }
-            fastSynchronizer.syncUntilResponsiveNodesDrained()
-            // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
-            // possible race conditions
-            useFastSyncAlgorithm = false
-            val currentBlockHeight = blockQueries.getBestHeight().get()
-            statusManager.fastForwardHeight(currentBlockHeight)
-            blockManager.currentBlock = null
-            logFastSyncStatus(currentBlockHeight)
-        } else {
-            synchronized(statusManager) {
-                // Process all messages from peers, one at a time. Some
-                // messages may trigger asynchronous code which will
-                // send replies at a later time, others will send replies
-                // immediately
-                dispatchMessages()
+        if (!useFastSyncAlgorithm.get()) {
+            // An intent is something that we want to do with our current block.
+            // The current intent is fetched from the BlockManager and will result in
+            // some messages being sent to peers requesting data like signatures or
+            // complete blocks
+            processIntent()
 
-                // An intent is something that we want to do with our current block.
-                // The current intent is fetched from the BlockManager and will result in
-                // some messages being sent to peers requesting data like signatures or
-                // complete blocks
-                processIntent()
+            // RevoltTracker will check trigger a revolt if conditions for revolting are met
+            // A revolt will be triggerd by calling statusManager.onStartRevolting()
+            // Typical revolt conditions
+            //    * A timeout happens and round has not increased. Round is increased then 2f+1 nodes
+            //      are revolting.
+            revoltTracker.update()
 
-                // RevoltTracker will check trigger a revolt if conditions for revolting are met
-                // A revolt will be triggerd by calling statusManager.onStartRevolting()
-                // Typical revolt conditions
-                //    * A timeout happens and round has not increased. Round is increased then 2f+1 nodes
-                //      are revolting.
-                revoltTracker.update()
+            // Sends a status message to all peers when my status has changed or after a timeout
+            statusSender.update()
 
-                // Sends a status message to all peers when my status has changed or after a timeout
-                statusSender.update()
+            nodeStateTracker.myStatus = statusManager.myStatus.serialize()
+            nodeStateTracker.nodeStatuses = statusManager.nodeStatuses.map { it.serialize() }.toTypedArray()
+            nodeStateTracker.blockHeight = statusManager.myStatus.height
 
-                nodeStateTracker.myStatus = statusManager.myStatus.serialize()
-                nodeStateTracker.nodeStatuses = statusManager.nodeStatuses.map { it.serialize() }.toTypedArray()
-                nodeStateTracker.blockHeight = statusManager.myStatus.height
-
-                if (Date().time - lastStatusLogged >= StatusLogInterval) {
-                    logStatus()
-                    lastStatusLogged = Date().time
-                }
+            if (Date().time - lastStatusLogged >= StatusLogInterval) {
+                logStatus()
+                lastStatusLogged = Date().time
             }
         }
     }
@@ -355,11 +351,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     }
 
     fun getHeight(): Long {
-        return if (useFastSyncAlgorithm) fastSynchronizer.blockHeight
+        return if (useFastSyncAlgorithm.get()) fastSynchronizer.blockHeight
         else nodeStateTracker.blockHeight
     }
 
     fun isInFastSync(): Boolean {
-        return useFastSyncAlgorithm
+        return useFastSyncAlgorithm.get()
     }
 }

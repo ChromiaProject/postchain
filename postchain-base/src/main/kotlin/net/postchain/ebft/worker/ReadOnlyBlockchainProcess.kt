@@ -2,6 +2,8 @@
 
 package net.postchain.ebft.worker
 
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 import mu.KLogging
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.framework.AbstractBlockchainProcess
@@ -25,11 +27,28 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
             ::isProcessRunning
     )
 
+    private val messageJob: Job
+
+    init {
+        messageJob = CoroutineScope(Dispatchers.Default).launch {
+            workerContext.communicationManager.messages
+                    .collect {
+                        // We do heartbeat check for each network message
+                        while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
+                            delay(workerContext.nodeConfig.heartbeatSleepTimeout)
+                        }
+
+                        fastSynchronizer.processMessage(it)
+                    }
+        }
+    }
+
     override fun action() {
         fastSynchronizer.syncUntil { !isProcessRunning() }
     }
 
     override fun cleanup() {
+        messageJob.cancel()
         blockDatabase.stop()
         workerContext.shutdown()
     }
@@ -42,4 +61,7 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
         ))
     }
 
+    private fun getLastBlockTimestamp(): Long {
+         return workerContext.engine.getBlockQueries().getLastBlockTimestamp().get()
+    }
 }

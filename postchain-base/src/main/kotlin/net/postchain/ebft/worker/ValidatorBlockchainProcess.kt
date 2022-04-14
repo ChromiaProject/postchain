@@ -2,6 +2,8 @@
 
 package net.postchain.ebft.worker
 
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
 import net.postchain.core.NodeStateTracker
@@ -30,6 +32,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     private val blockManager: BaseBlockManager
     private val blockAndSignatureSender: BlockAndSignatureSender
     private val transactionHandler: TransactionHandler
+    private val messageJob: Job
     val syncManager: ValidatorSyncManager
     val networkAwareTxQueue: NetworkAwareTxQueue
     val nodeStateTracker = NodeStateTracker()
@@ -82,11 +85,24 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
                 workerContext.communicationManager)
 
         statusManager.recomputeStatus()
+
+        messageJob = CoroutineScope(Dispatchers.Default).launch {
+            workerContext.communicationManager.messages
+                    .collect {
+                        // We do heartbeat check for each network message.
+                        while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
+                            delay(workerContext.nodeConfig.heartbeatSleepTimeout)
+                        }
+
+                        syncManager.dispatchMessage(it)
+                    }
+        }
     }
 
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
+        // The name shouldProcessMessages is kind of misleading now
         if (workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
             syncManager.update()
             sleep(20)
@@ -101,6 +117,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     override fun cleanup() {
         transactionHandler.shutdown()
         blockAndSignatureSender.shutdown()
+        messageJob.cancel()
         blockDatabase.stop()
         workerContext.shutdown()
     }

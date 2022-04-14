@@ -2,6 +2,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.core.NodeRid
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Keeps track of peer's statuses. The currently trackeed statuses are
@@ -58,6 +59,8 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         private var timeOfLastError: Long = 0
 
         fun isBlacklisted() = isBlacklisted(System.currentTimeMillis())
+
+        @Synchronized
         fun isBlacklisted(now: Long): Boolean {
             if (state == State.BLACKLISTED && (now > timeOfLastError + params.blacklistingTimeoutMs)) {
                 // Alex suggested that peers should be given new chances often
@@ -72,6 +75,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
             return state == State.BLACKLISTED
         }
 
+        @Synchronized
         fun isUnresponsive(now: Long): Boolean {
             if (state == State.UNRESPONSIVE && (now > unresponsiveTime + params.resurrectUnresponsiveTime)) {
                 if (logger.isDebugEnabled) {
@@ -84,6 +88,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
             return state == State.UNRESPONSIVE
         }
 
+        @Synchronized
         fun isDrained(now: Long): Boolean {
             if (state == State.DRAINED && (now > drainedTime + params.resurrectDrainedTime)) {
                 if (logger.isDebugEnabled) {
@@ -104,6 +109,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         /**
          * @param height is where the node's highest block can be found (but higher than that the node has no blocks).
          */
+        @Synchronized
         fun drained(height: Long, now: Long) {
             state = State.DRAINED
             drainedTime = now
@@ -112,6 +118,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
             }
         }
 
+        @Synchronized
         fun headerReceived(height: Long) {
             if (state == State.DRAINED && height > drainedHeight) {
                 if (logger.isDebugEnabled) {
@@ -120,6 +127,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
                 state = State.SYNCABLE
             }
         }
+        @Synchronized
         fun statusReceived(height: Long) {
             // We take a Status message as an indication that
             // there might be more blocks to fetch now. But
@@ -136,6 +144,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
          * Note: this will get into conflict with connection manager, which also has a way of dealing with
          * unresponsive peers.
          */
+        @Synchronized
         fun unresponsive(desc: String, now: Long) {
             if (this.state != State.UNRESPONSIVE) {
                 this.state = State.UNRESPONSIVE
@@ -146,6 +155,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
             }
         }
 
+        @Synchronized
         fun maybeLegacy(isLegacy: Boolean) {
             if (!this.confirmedModern) {
                 if (this.maybeLegacy != isLegacy) {
@@ -156,6 +166,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
                 this.maybeLegacy = isLegacy
             }
         }
+        @Synchronized
         fun confirmedModern() {
             if (logger.isDebugEnabled) {
                 if (!this.confirmedModern) {
@@ -166,6 +177,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
             this.maybeLegacy = false
         }
 
+        @Synchronized
         fun blacklist(desc: String, now: Long) {
             if (this.state != State.BLACKLISTED) {
                 errorCount++
@@ -192,7 +204,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         }
     }
 
-    private val statuses = HashMap<NodeRid, KnownState>()
+    private val statuses = ConcurrentHashMap<NodeRid, KnownState>()
 
     private fun resurrectDrainedAndUnresponsivePeers(now: Long) {
         statuses.forEach {

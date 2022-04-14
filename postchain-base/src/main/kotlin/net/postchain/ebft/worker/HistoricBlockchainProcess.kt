@@ -2,6 +2,9 @@
 
 package net.postchain.ebft.worker
 
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.collect
 import mu.KLogging
 import net.postchain.base.BaseBlockchainEngine
 import net.postchain.base.HistoricBlockchainContext
@@ -16,6 +19,7 @@ import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
+import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import nl.komponents.kovenant.Promise
@@ -59,6 +63,12 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     // Logging only
     var blockTrace: BlockTrace? = null // For logging only
     val myBRID = blockchainEngine.getConfiguration().blockchainRid
+
+    private val messageJob: Job
+
+    init {
+        messageJob = startFastSynchronizerMessageJob(fastSynchronizer, workerContext.communicationManager.messages)
+    }
 
     override fun action() {
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
@@ -114,8 +124,10 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                 try {
                     val historicWorkerContext = historicBlockchainContext.contextCreator(brid)
                     historicSynchronizer = FastSynchronizer(historicWorkerContext, blockDatabase, params, ::isProcessRunning)
+                    val historicMessageJob = startFastSynchronizerMessageJob(historicSynchronizer!!, historicWorkerContext.communicationManager.messages)
                     historicSynchronizer!!.syncUntilResponsiveNodesDrained()
                     netDebug("Done network sync")
+                    historicMessageJob.cancel()
                     historicWorkerContext.communicationManager.shutdown()
                 } catch (e: Exception) {
                     netErr("Exception while attempting remote sync", e)
@@ -252,9 +264,27 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     override fun cleanup() {
         shutdownDebug("Historic worker shutting down")
+        messageJob.cancel()
         blockDatabase.stop()
         workerContext.shutdown()
         shutdownDebug("Shutdown finished")
+    }
+
+    private fun startFastSynchronizerMessageJob(synchronizer: FastSynchronizer, messageFlow: SharedFlow<Pair<NodeRid, EbftMessage>>): Job {
+        return CoroutineScope(Dispatchers.Default).launch {
+            messageFlow.collect {
+                // We do heartbeat check for each network message
+                while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
+                    delay(workerContext.nodeConfig.heartbeatSleepTimeout)
+                }
+
+                synchronizer.processMessage(it)
+            }
+        }
+    }
+
+    private fun getLastBlockTimestamp(): Long {
+        return workerContext.engine.getBlockQueries().getLastBlockTimestamp().get()
     }
 
     // ----------------------------------------------
