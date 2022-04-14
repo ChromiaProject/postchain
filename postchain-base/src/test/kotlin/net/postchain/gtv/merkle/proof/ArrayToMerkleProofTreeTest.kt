@@ -95,20 +95,20 @@ class ArrayToMerkleProofTreeTest {
         val serialize: GtvArray = merkleProofTree.serializeToGtv()
         //println("Serilalized: $serialize")
 
-        val expectedSerialization = "GtvArray(array=[$ln" +
-                "  GtvInteger(integer=103), $ln" +  // 103 =  node type is array
-                "  GtvInteger(integer=1), $ln" +  // lenght of array
-                "  GtvInteger(integer=-10),$ln" + // (no path/position given)
-                "  GtvArray(array=[$ln" +
-                "    GtvInteger(integer=101), $ln" + // 101 = value to prove
-                "    GtvInteger(integer=0), $ln" + //path/position = 0
-                "    GtvInteger(integer=1)$ln" + // Actual value
-                "  ]), $ln" +
-                "  GtvArray(array=[$ln" +
-                "    GtvInteger(integer=100), $ln" + // 100 = hash
-                "    GtvByteArray(bytearray=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])$ln" +
-                "  ])$ln" +
-                "])$ln"
+        val expectedSerialization = "[$ln" +
+                "  103,$ln" +  // 103 =  node type is array
+                "  1,$ln" +  // lenght of array
+                "  -10,$ln" + // (no path/position given)
+                "  [$ln" +
+                "    101,$ln" + // 101 = value to prove
+                "    0,$ln" + //path/position = 0
+                "    1$ln" + // Actual value
+                "  ],$ln" +
+                "  [$ln" +
+                "    100,$ln" + // 100 = hash
+                "    x\"0000000000000000000000000000000000000000000000000000000000000000\"$ln" +
+                "  ]$ln" +
+                "]$ln"
        assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
@@ -169,27 +169,27 @@ class ArrayToMerkleProofTreeTest {
         val serialize: GtvArray = merkleProofTree.serializeToGtv()
         //println("Serilalized: $serialize")
 
-        val expectedSerialization = "GtvArray(array=[$ln" +
-                "  GtvInteger(integer=103), $ln" +// 103 = array head node type
-                "  GtvInteger(integer=4), $ln" + // length of array
-                "  GtvInteger(integer=-10), $ln" + // no path elem
-                "  GtvArray(array=[$ln" +
-                "    GtvInteger(integer=102), $ln" +
-                "    GtvArray(array=[$ln" +
-                "      GtvInteger(integer=101), $ln" +// 101 = value to prove
-                "      GtvInteger(integer=0), $ln" + // path elem = 0
-                "      GtvInteger(integer=1)$ln" +
-                "    ]), $ln" +
-                "    GtvArray(array=[$ln" +
-                "      GtvInteger(integer=100), $ln" +// 100 = hash
-                "      GtvByteArray(bytearray=[2, 3])$ln" +
-                "    ])$ln" +
-                "  ]), $ln" +
-                "  GtvArray(array=[$ln" +
-                "    GtvInteger(integer=100), $ln" +// 100 = hash
-                "    GtvByteArray(bytearray=[1, 3, 5, 3, 6])$ln" +
-                "  ])$ln" +
-                "])$ln"
+        val expectedSerialization = "[$ln" +
+                "  103, $ln" +// 103 = array head node type
+                "  4, $ln" + // length of array
+                "  -10, $ln" + // no path elem
+                "  [$ln" +
+                "    102, $ln" +
+                "    [$ln" +
+                "      101, $ln" +// 101 = value to prove
+                "      0, $ln" + // path elem = 0
+                "      1$ln" +
+                "    ], $ln" +
+                "    [$ln" +
+                "      100, $ln" +// 100 = hash
+                "      x\"0203\"$ln" +
+                "    ]$ln" +
+                "  ], $ln" +
+                "  [$ln" +
+                "    100, $ln" +// 100 = hash
+                "    x\"0103050306\"$ln" +
+                "  ]$ln" +
+                "]$ln"
 
        assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 
@@ -259,33 +259,34 @@ class ArrayToMerkleProofTreeTest {
         val serialize: GtvArray = merkleProofTree.serializeToGtv()
         //println("Serilalized: $serialize")
 
-        val expectedSerialization = "GtvArray(array=[$ln" +
-                "  GtvInteger(integer=103),$ln" + // 103 = array head node type
-                "  GtvInteger(integer=7),$ln" + // length of array
-                "  GtvInteger(integer=-10),$ln" + // no path elem
-                "  GtvArray(array=[$ln" +
-                "    GtvInteger(integer=102),$ln" + // 102 = dummy node
-                "    GtvArray(array=[$ln" +
-                "      GtvInteger(integer=100),$ln" + // 100 = hash
-                "      GtvByteArray(bytearray=[1, 3, 3, 3, 4])]),$ln" +
-                "      GtvArray(array=[$ln" +
-                "        GtvInteger(integer=102),$ln" + // 102 = dummy node
-                "        GtvArray(array=[$ln" +
-                "          GtvInteger(integer=100),$ln" +  // 100 = hash
-                "          GtvByteArray(bytearray=[2, 4])$ln" +
-                "        ]),$ln" +
-                "        GtvArray(array=[$ln" +
-                "          GtvInteger(integer=101),$ln" + // 101 = value to prove
-                "          GtvInteger(integer=3),$ln" + // path elem = 3
-                "          GtvInteger(integer=4)$ln" +
-                "        ])$ln" +
-                "      ])$ln" +
-                "    ]),$ln" +
-                "    GtvArray(array=[$ln" +
-                "      GtvInteger(integer=100),$ln" + // 100 = hash
-                "      GtvByteArray(bytearray=[1, 2, 4, 8, 4, 9, 3, 9])$ln" +
-                "    ])$ln" +
-                "  ])$ln"
+        val expectedSerialization = "[$ln" +
+                "  103,$ln" + // 103 = array head node type
+                "  7,$ln" + // length of array
+                "  -10,$ln" + // no path elem
+                "  [$ln" +
+                "    102,$ln" + // 102 = dummy node
+                "      [$ln" +
+                "        100,$ln" + // 100 = hash
+                "        x\"0103030304\"$ln" +
+                "      ],$ln" +
+                "      [$ln" +
+                "        102,$ln" + // 102 = dummy node
+                "        [$ln" +
+                "          100,$ln" +  // 100 = hash
+                "          x\"0204\"$ln" +
+                "        ],$ln" +
+                "        [$ln" +
+                "          101,$ln" + // 101 = value to prove
+                "          3,$ln" + // path elem = 3
+                "          4$ln" +
+                "        ]$ln" +
+                "      ]$ln" +
+                "    ],$ln" +
+                "    [$ln" +
+                "      100,$ln" + // 100 = hash
+                "      x\"0102040804090309\"$ln" +
+                "    ]$ln" +
+                "  ]$ln"
 
        assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 
@@ -479,7 +480,7 @@ class ArrayToMerkleProofTreeTest {
                 " /   \\          $ln" +
                 " 0103030304   +   .   .   $ln" +
                 "    / \\         $ln" +
-                "- - 0204 *GtvArray(array=[GtvInteger(integer=1), GtvInteger(integer=9), GtvInteger(integer=3)]) - - - - "
+                "- - 0204 *[1, 9, 3] - - - - "
 
 
         val merkleProofTree = orgGtvArr.generateProof(gtvPaths, calculator)
@@ -500,38 +501,38 @@ class ArrayToMerkleProofTreeTest {
         val serialize: GtvArray = merkleProofTree.serializeToGtv()
         println("Serilalized: $serialize")
 
-        val expectedSerialization = "GtvArray(array=[$ln" +
-                "  GtvInteger(integer=103), $ln" + // 103 = array head node type
-                "  GtvInteger(integer=7), $ln" + // length of array
-                "  GtvInteger(integer=-10), $ln" + // no path elem
-                "  GtvArray(array=[$ln" +
-                "    GtvInteger(integer=102), $ln" + // 102 = dummy node
-                "    GtvArray(array=[$ln" +
-                "      GtvInteger(integer=100), $ln" + // 100 = hash
-                "      GtvByteArray(bytearray=[1, 3, 3, 3, 4])$ln" +
-                "    ]),$ln" +
-                "    GtvArray(array=[$ln" +
-                "      GtvInteger(integer=102), $ln" + // 102 = dummy node
-                "      GtvArray(array=[$ln" +
-                "        GtvInteger(integer=100), $ln" + // 100 = hash
-                "        GtvByteArray(bytearray=[2, 4])$ln" +
-                "      ]), $ln" +
-                "      GtvArray(array=[$ln" +
-                "        GtvInteger(integer=101), $ln" + // 101 = value to prove
-                "        GtvInteger(integer=3), $ln" + // path elem = 2
-                "        GtvArray(array=[$ln" +  // Here the value to prove is a regular GtvArray. Interesting to see that this is deserialized propely (i.e. kept)
-                "          GtvInteger(integer=1), $ln" +
-                "          GtvInteger(integer=9), $ln" +
-                "          GtvInteger(integer=3)$ln" +
-                "        ])$ln" +
-                "      ])$ln" +
-                "    ])$ln" +
-                "  ]), $ln" +
-                "  GtvArray(array=[$ln" +
-                "    GtvInteger(integer=100), $ln" + // 100 = hash
-                "    GtvByteArray(bytearray=[1, 2, 4, 8, 4, 9, 3, 9])$ln" +
-                "  ])$ln" +
-                "])$ln"
+        val expectedSerialization = "[$ln" +
+                "  103, $ln" + // 103 = array head node type
+                "  7, $ln" + // length of array
+                "  -10, $ln" + // no path elem
+                "  [$ln" +
+                "    102, $ln" + // 102 = dummy node
+                "    [$ln" +
+                "      100, $ln" + // 100 = hash
+                "      x\"0103030304\"$ln" +
+                "    ],$ln" +
+                "    [$ln" +
+                "      102, $ln" + // 102 = dummy node
+                "      [$ln" +
+                "        100, $ln" + // 100 = hash
+                "        x\"0204\"$ln" +
+                "      ], $ln" +
+                "      [$ln" +
+                "        101, $ln" + // 101 = value to prove
+                "        3, $ln" + // path elem = 2
+                "        [$ln" +  // Here the value to prove is a regular GtvArray. Interesting to see that this is deserialized propely (i.e. kept)
+                "          1, $ln" +
+                "          9, $ln" +
+                "          3$ln" +
+                "        ]$ln" +
+                "      ]$ln" +
+                "    ]$ln" +
+                "  ], $ln" +
+                "  [$ln" +
+                "    100, $ln" + // 100 = hash
+                "    x\"0102040804090309\"$ln" +
+                "  ]$ln" +
+                "]$ln"
 
        assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 

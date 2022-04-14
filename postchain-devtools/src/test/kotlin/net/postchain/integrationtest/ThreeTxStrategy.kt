@@ -9,7 +9,6 @@ import java.util.concurrent.LinkedBlockingQueue
 
 class ThreeTxStrategy(
         val configData: BaseBlockchainConfigurationData,
-        val blockchainConfiguration: BlockchainConfiguration,
         blockQueries: BlockQueries,
         private val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {

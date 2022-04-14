@@ -2,10 +2,12 @@
 
 package net.postchain.core
 
+@Deprecated("Moved to common", replaceWith = ReplaceWith("ProgrammerMistake", "net.postchain.common.exception.ProgrammerMistake"))
 open class ProgrammerMistake(message: String, cause: Exception? = null) : RuntimeException(message, cause)
 
 open class PmEngineIsAlreadyClosed(message: String, cause: Exception? = null) : ProgrammerMistake(message, cause)
 
+@Deprecated("Moved to common", replaceWith = ReplaceWith("UserMistake", "net.postchain.common.exception.UserMistake"))
 open class UserMistake(message: String, cause: Exception? = null) : RuntimeException(message, cause)
 
 /**

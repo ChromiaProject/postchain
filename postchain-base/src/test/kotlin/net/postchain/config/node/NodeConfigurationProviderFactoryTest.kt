@@ -4,6 +4,7 @@ package net.postchain.config.node
 
 import assertk.assert
 import assertk.assertions.isInstanceOf
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -42,7 +43,7 @@ class NodeConfigurationProviderFactoryTest {
         }
         val mockStorage = MockStorage.mockAppContext()
 
-        assertThrows<ClassNotFoundException> {
+        assertThrows<UserMistake> {
             NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage }
         }
     }

@@ -4,6 +4,9 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
 
 open class BaseBlockchainConfiguration(
@@ -119,24 +122,19 @@ open class BaseBlockchainConfiguration(
         if (strategyClassName == "") {
             return BaseBlockBuildingStrategy(configData, blockQueries, txQueue)
         }
-        val strategyClass = try {
-            Class.forName(strategyClassName)
-        } catch (e: ClassNotFoundException) {
+        return try {
+            constructorOf<BlockBuildingStrategy>(
+                    strategyClassName,
+                    BaseBlockchainConfigurationData::class.java,
+                    BlockQueries::class.java,
+                    TransactionQueue::class.java
+            ).newInstance(configData, blockQueries, txQueue)
+        } catch (e: UserMistake) {
             throw UserMistake("The block building strategy given was in the configuration is invalid, " +
                     "Class name given: $strategyClassName.")
-        }
-
-        val ctor = strategyClass.getConstructor(
-                BaseBlockchainConfigurationData::class.java,
-                BlockQueries::class.java,
-                TransactionQueue::class.java)
-
-        try {
-            return ctor.newInstance(configData, blockQueries, txQueue) as BlockBuildingStrategy
         } catch (e: java.lang.reflect.InvocationTargetException) {
             throw ProgrammerMistake("The constructor of the block building strategy given was " +
-                    "unable to finish. Class name given: $strategyClassName," +
-                    " class found=$strategyClass, ctor=$ctor, Msg: ${e.message}")
+                    "unable to finish. Class name given: $strategyClassName, Msg: ${e.message}")
         }
     }
 }

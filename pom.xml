@@ -38,7 +38,7 @@
         <junit.version>5.8.2</junit.version>
         <junitparams.version>1.1.1</junitparams.version>
         <mockito-kotlin.version>4.0.0</mockito-kotlin.version>
-        <mockito.version>2.23.0</mockito.version>
+        <mockito.version>4.4.0</mockito.version>
         <assertk.version>0.10</assertk.version>
         <awaitility.version>3.1.2</awaitility.version>
 
@@ -482,6 +482,12 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.surefire.plugin.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                        <exclude>**/*Nightly.java</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
 
             <plugin>
@@ -557,9 +563,6 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <includes>
-                                <include>**/*Nightly.java</include>
-                            </includes>
                             <systemPropertyVariables>
                                 <!--suppress UnresolvedMavenProperty -->
                                 <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml</log4j.configurationFile>
@@ -571,6 +574,10 @@
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>${maven.failsafe.plugin.version}</version>
                         <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                                <include>**/*Nightly.java</include>
+                            </includes>
                             <systemPropertyVariables>
                                 <!--suppress UnresolvedMavenProperty -->
                                 <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml</log4j.configurationFile>
