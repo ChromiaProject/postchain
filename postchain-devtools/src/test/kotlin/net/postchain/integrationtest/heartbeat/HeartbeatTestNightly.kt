@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.timer
 
-class HeartbeatTest : ManagedModeTest() {
+class HeartbeatTestNightly : ManagedModeTest() {
 
     private val maxBlockTime = 500L
 
@@ -159,7 +159,7 @@ class HeartbeatTest : ManagedModeTest() {
         return nodeSet.nodes().first().blockQueries(nodeSet.chain).getBestHeight().get()
     }
 
-    private class ManagedBlockBuildingStrategy(val context: HeartbeatTest, val nodeSet: ManagedModeTest.NodeSet) {
+    private class ManagedBlockBuildingStrategy(val context: HeartbeatTestNightly, val nodeSet: ManagedModeTest.NodeSet) {
 
         private var running = true
 

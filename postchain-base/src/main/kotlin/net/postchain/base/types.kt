@@ -2,14 +2,8 @@
 
 package net.postchain.base
 
-import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.core.AppContext
-import net.postchain.core.BlockEContext
-import net.postchain.core.ByteArrayKey
-import net.postchain.core.EContext
-import net.postchain.core.Transaction
-import net.postchain.core.TxEContext
+import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import java.sql.Connection
 
@@ -114,6 +108,6 @@ open class BaseTxEContext(
  * To see how it all goes together, see: doc/extension_classes.graphml
  */
 interface BaseBlockBuilderExtension {
-    fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder)
+    fun init(blockEContext: BlockEContext, baseBB: BlockBuilder)
     fun finalize(): Map<String, Gtv>
 }
