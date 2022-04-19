@@ -18,7 +18,7 @@ import net.postchain.managed.ManagedEBFTInfrastructureFactory
 class BaseInfrastructureFactoryProvider : InfrastructureFactoryProvider {
 
     override fun createInfrastructureFactory(nodeConfigProvider: NodeConfigurationProvider): InfrastructureFactory {
-        return when (val infra = nodeConfigProvider.getConfiguration().infrastructure) {
+        return when (val infra = nodeConfigProvider.getConfiguration().appConfig.infrastructure) {
             // Base
             in Ebft.key -> BaseEBFTInfrastructureFactory()
             in EbftManaged.key -> ManagedEBFTInfrastructureFactory()

@@ -32,7 +32,7 @@ class ManagedNodeConfigurationProvider(
             // nodeReplicas: for making a node a full clone of another node
             override val nodeReplicas = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
             override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
-            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig, pubKey)
+            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig)
             override val mustSyncUntilHeight = getSyncUntilHeight(appConfig)
         }
     }

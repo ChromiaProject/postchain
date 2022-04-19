@@ -26,18 +26,18 @@ class NodeConfigTest {
                 javaClass.getResource("/net/postchain/config/empty-node-config.properties").file)
         val nodeConfig = NodeConfig(appConfig)
 
-        assertk.assert(nodeConfig.infrastructure).isEqualTo("ebft")
+        assertk.assert(appConfig.infrastructure).isEqualTo("ebft")
 
-        assertk.assert(nodeConfig.appConfig.databaseDriverclass).isEmpty()
-        assertIsEmptyOrEqualsToEnvVar(nodeConfig.appConfig.databaseUrl, "POSTCHAIN_DB_URL")
-        assertIsDefaultOrEqualsToEnvVar(nodeConfig.appConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
-        assertIsEmptyOrEqualsToEnvVar(nodeConfig.appConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
-        assertIsEmptyOrEqualsToEnvVar(nodeConfig.appConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
+        assertk.assert(appConfig.databaseDriverclass).isEmpty()
+        assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
+        assertIsDefaultOrEqualsToEnvVar(appConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
+        assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
+        assertIsEmptyOrEqualsToEnvVar(appConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
 
-        assertk.assert(nodeConfig.privKey).isEmpty()
-        assertk.assert(nodeConfig.privKeyByteArray.isEmpty())
-        assertk.assert(nodeConfig.pubKey).isEmpty()
-        assertk.assert(nodeConfig.pubKeyByteArray.isEmpty())
+        assertk.assert(appConfig.privKey).isEmpty()
+        assertk.assert(appConfig.privKeyByteArray.isEmpty())
+        assertk.assert(appConfig.pubKey).isEmpty()
+        assertk.assert(appConfig.pubKeyByteArray.isEmpty())
 
         assertk.assert(nodeConfig.peerInfoMap.entries).isEmpty()
 

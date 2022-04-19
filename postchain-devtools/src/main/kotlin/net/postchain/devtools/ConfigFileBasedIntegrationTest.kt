@@ -155,7 +155,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
         val nodeConfig = nodeConfigProvider.getConfiguration()
 
-        nodesNames[nodeConfig.pubKey] = "$nodeIndex"
+        nodesNames[appConfig.pubKey] = "$nodeIndex"
         val blockchainConfig = readBlockchainConfig(blockchainConfigFilename)
         val chainId = nodeConfig.activeChainIds.first().toLong()
 

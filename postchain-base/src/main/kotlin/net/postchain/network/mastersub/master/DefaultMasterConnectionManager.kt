@@ -1,7 +1,7 @@
 package net.postchain.network.mastersub.master
 
 import mu.KLogging
-import net.postchain.config.node.NodeConfig
+import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
@@ -15,7 +15,7 @@ import net.postchain.network.mastersub.protocol.MsMessage
  * Enables the master node to pass on messages to one sub-node.
  */
 class DefaultMasterConnectionManager(
-        val nodeConfig: NodeConfig,
+        val appConfig: AppConfig,
         private val containerNodeConfig: ContainerNodeConfig
 ) : MasterConnectionManager, MasterConnectorEvents {
 
@@ -144,6 +144,6 @@ class DefaultMasterConnectionManager(
     }
 
     private fun buildProcessName(descriptor: MasterConnectionDescriptor): String = BlockchainProcessName(
-        nodeConfig.pubKey, descriptor.blockchainRid
+        appConfig.pubKey, descriptor.blockchainRid
     ).toString()
 }

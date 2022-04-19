@@ -4,14 +4,14 @@ package net.postchain.managed
 
 import net.postchain.core.BlockchainRid
 import net.postchain.base.PeerInfo
-import net.postchain.config.node.NodeConfig
+import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockQueries
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.core.NodeRid
 import java.time.Instant
 
-open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: NodeConfig) : ManagedNodeDataSource {
+open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: AppConfig) : ManagedNodeDataSource {
     private val nmApiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger()
 
     override fun getPeerInfos(): Array<PeerInfo> {
@@ -38,7 +38,7 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val nodeConfig: 
     override fun computeBlockchainList(): List<ByteArray> {
         val res = queries.query(
                 "nm_compute_blockchain_list",
-                buildArgs("node_id" to GtvFactory.gtv(nodeConfig.pubKeyByteArray))
+                buildArgs("node_id" to GtvFactory.gtv(appConfig.pubKeyByteArray))
         ).get()
 
         return res.asArray().map { it.asByteArray() }

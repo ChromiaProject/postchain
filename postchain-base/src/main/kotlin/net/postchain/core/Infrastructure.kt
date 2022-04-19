@@ -3,6 +3,7 @@
 package net.postchain.core
 
 import net.postchain.PostchainContext
+import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
@@ -90,7 +91,7 @@ interface BlockchainProcessManagerExtension: BlockchainProcessConnectable, Shutd
 
 interface InfrastructureFactory {
 
-    fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager
+    fun makeConnectionManager(appConfig: AppConfig): ConnectionManager
 
     fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider
 

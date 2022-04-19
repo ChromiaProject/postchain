@@ -14,7 +14,7 @@ import org.apache.commons.configuration2.ConfigurationUtils
 import java.io.File
 import java.nio.file.Path
 
-internal class DefaultContainerInitializer(val nodeConfig: NodeConfig, private val heartbeatConfig: HeartbeatConfig, private val containerConfig: ContainerNodeConfig) : ContainerInitializer {
+internal class DefaultContainerInitializer(val appConfig: AppConfig, private val heartbeatConfig: HeartbeatConfig, private val containerConfig: ContainerNodeConfig) : ContainerInitializer {
 
     companion object : KLogging()
 
@@ -45,7 +45,7 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig, private v
 
     override fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path) {
         // Cloning original nodeConfig
-        val config = ConfigurationUtils.cloneConfiguration(nodeConfig.appConfig.config)
+        val config = ConfigurationUtils.cloneConfiguration(appConfig.config)
 
         // Setting up params for container node
         config.setProperty("configuration.provider.node", NodeConfigProviders.Manual.name.toLowerCase())
@@ -86,7 +86,7 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig, private v
         val peers = """
             export NODE_HOST=127.0.0.1
             export NODE_PORT=${ContainerNodeConfig.DEFAULT_PORT}
-            export NODE_PUBKEY=${nodeConfig.pubKey}
+            export NODE_PUBKEY=${appConfig.pubKey}
             
         """.trimIndent()
 
@@ -114,6 +114,6 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig, private v
     }
 
     private fun databaseSchema(containerName: ContainerName): String {
-        return "${nodeConfig.appConfig.databaseSchema}_${containerName}"
+        return "${appConfig.databaseSchema}_${containerName}"
     }
 }

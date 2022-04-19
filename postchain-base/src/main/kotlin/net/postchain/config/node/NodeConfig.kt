@@ -16,26 +16,6 @@ open class NodeConfig(val appConfig: AppConfig) {
     private val config: Configuration
         get() = appConfig.config
 
-    val infrastructure: String
-        // "base/ebft" is the default
-        get() = config.getString("infrastructure", Infrastructure.Ebft.get())
-
-    /**
-     * Pub/Priv keys
-     */
-    val privKey: String
-        get() = config.getString("messaging.privkey", "")
-
-    val privKeyByteArray: ByteArray
-        get() = privKey.hexStringToByteArray()
-
-    val pubKey: String
-        get() = config.getString("messaging.pubkey", "")
-
-    val pubKeyByteArray: ByteArray
-        get() = pubKey.hexStringToByteArray()
-
-
     /**
      * Peers
      */

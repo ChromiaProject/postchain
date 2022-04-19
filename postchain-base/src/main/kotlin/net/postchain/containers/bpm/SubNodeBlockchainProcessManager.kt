@@ -22,7 +22,7 @@ open class SubNodeBlockchainProcessManager(
         blockchainConfigProvider
 ) {
 
-    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(nodeConfig.appConfig)
+    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
     protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
 
     override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {

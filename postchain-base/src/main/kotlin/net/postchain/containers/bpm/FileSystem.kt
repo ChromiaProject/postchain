@@ -1,7 +1,7 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
-import net.postchain.config.node.NodeConfig
+import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.FileSystem.Type.ZFS
 import net.postchain.containers.infra.ContainerNodeConfig
 import java.io.File
@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit
  *          /node-config.properties                 node config file
  *
  */
-class FileSystem(val nodeConfig: NodeConfig, private val containerNodeConfig: ContainerNodeConfig) {
+class FileSystem(val appConfig: AppConfig, private val containerNodeConfig: ContainerNodeConfig) {
 
     // Filesystem type
     enum class Type {
@@ -98,7 +98,7 @@ class FileSystem(val nodeConfig: NodeConfig, private val containerNodeConfig: Co
     }
 
     private fun localRootOf(containerName: ContainerName): Path {
-        return Paths.get(nodeConfig.appConfig.configDir, CONTAINERS_DIR, containerName.name)
+        return Paths.get(appConfig.configDir, CONTAINERS_DIR, containerName.name)
     }
 
     private fun createZfsContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {

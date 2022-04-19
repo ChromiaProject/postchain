@@ -16,9 +16,9 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
-            val containerNodeConfig = ContainerNodeConfig.fromAppConfig(nodeConfig.appConfig)
-            val restApiConfig = RestApiConfig.fromAppConfig(nodeConfig.appConfig)
-            val syncInfra = DefaultMasterSyncInfra(this, DefaultMasterConnectionManager(nodeConfig, containerNodeConfig), containerNodeConfig)
+            val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
+            val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
+            val syncInfra = DefaultMasterSyncInfra(this, DefaultMasterConnectionManager(appConfig, containerNodeConfig), containerNodeConfig)
             val apiInfra = DefaultMasterApiInfra(restApiConfig, nodeDiagnosticContext, containerNodeConfig)
 
             return DefaultMasterBlockchainInfra(this, syncInfra, apiInfra)

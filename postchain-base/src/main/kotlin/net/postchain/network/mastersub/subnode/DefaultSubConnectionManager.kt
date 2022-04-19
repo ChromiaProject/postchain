@@ -2,7 +2,7 @@ package net.postchain.network.mastersub.subnode
 
 import mu.KLogging
 import net.postchain.base.PeerInfo
-import net.postchain.config.node.NodeConfig
+import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
@@ -47,7 +47,7 @@ interface SubConnectionManager : ConnectionManager {
  * much like a regular peer would.
  */
 class DefaultSubConnectionManager(
-        private val nodeConfig: NodeConfig,
+        private val appConfig: AppConfig,
         private val containerNodeConfig: ContainerNodeConfig
 ) : SubConnectionManager, SubConnectorEvents {
 
@@ -122,7 +122,7 @@ class DefaultSubConnectionManager(
         if (chain.isConnected()) {
             val message = MsDataMessage(
                     chain.config.blockchainRid.data,
-                    nodeConfig.pubKeyByteArray,
+                    appConfig.pubKeyByteArray,
                     nodeRid.byteArray,
                     data()
             )
@@ -269,7 +269,7 @@ class DefaultSubConnectionManager(
     }
 
     private fun loggerPrefix(blockchainRid: BlockchainRid): String =
-            BlockchainProcessName(nodeConfig.pubKey, blockchainRid).toString()
+            BlockchainProcessName(appConfig.pubKey, blockchainRid).toString()
 
     private fun logger(descriptor: SubConnectionDescriptor): String = loggerPrefix(descriptor.blockchainRid)
 

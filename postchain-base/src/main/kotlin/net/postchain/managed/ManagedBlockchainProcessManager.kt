@@ -62,7 +62,7 @@ open class ManagedBlockchainProcessManager(
     protected open lateinit var dataSource: ManagedNodeDataSource
     protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
-    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(nodeConfig.appConfig)
+    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
     protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
     protected var loggedChains: Array<Set<Long>> = emptyArray()
 
@@ -102,7 +102,7 @@ open class ManagedBlockchainProcessManager(
     // TODO: [POS-129]: 'protected open' for tests only. Change that.
     protected open fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
         val storage = StorageBuilder.buildStorage(
-                postchainContext.nodeConfig.appConfig)
+                postchainContext.appConfig)
 
         val blockQueries = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
             val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(ctx0, CHAIN0)
@@ -119,7 +119,7 @@ open class ManagedBlockchainProcessManager(
     }
 
     protected open fun createDataSource(blockQueries: BlockQueries) =
-            BaseManagedNodeDataSource(blockQueries, postchainContext.nodeConfig)
+            BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
 
     override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {
         return if (!heartbeatConfig.heartbeatEnabled || blockchainConfig.chainID == 0L) {
@@ -315,8 +315,8 @@ open class ManagedBlockchainProcessManager(
             val toLaunch0 = if (reloadChain0 && CHAIN0 !in toLaunch) toLaunch.plus(0L) else toLaunch
 
             logger./*info*/ debug {
-                val pubKey = postchainContext.nodeConfig.pubKey
-                val peerInfos = postchainContext.nodeConfig.peerInfoMap
+                val pubKey = postchainContext.appConfig.pubKey
+                val peerInfos = postchainContext.nodeConfigProvider.getConfiguration().peerInfoMap
                 "pubKey: $pubKey" +
                         ", peerInfos: ${peerInfos.keys.toTypedArray().contentToString()}" +
                         ", chains to launch: ${toLaunch0.toTypedArray().contentDeepToString()}" +
@@ -368,7 +368,7 @@ open class ManagedBlockchainProcessManager(
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
 
-            val locallyConfiguredReplicas = nodeConfig.blockchainsToReplicate
+            val locallyConfiguredReplicas = postchainContext.nodeConfigProvider.getConfiguration().blockchainsToReplicate
             val domainBlockchainSet = dataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
             val allMyBlockchains = domainBlockchainSet.union(locallyConfiguredReplicas)
             allMyBlockchains.map { blockchainRid ->

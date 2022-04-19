@@ -21,7 +21,7 @@ class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBloc
     private val fastSynchronizer = FastSynchronizer(
             workerContext,
             blockDatabase,
-            FastSyncParameters.fromAppConfig(workerContext.nodeConfig.appConfig),
+            FastSyncParameters.fromAppConfig(workerContext.appConfig),
             ::isProcessRunning
     )
 

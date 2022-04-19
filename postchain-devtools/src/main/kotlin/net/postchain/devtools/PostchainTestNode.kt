@@ -36,7 +36,7 @@ class PostchainTestNode(
 
     init {
         val nodeConfig = nodeConfigProvider.getConfiguration()
-        pubKey = nodeConfig.pubKey
+        pubKey = nodeConfig.appConfig.pubKey
         isInitialized = true
 
         // We don't have specific test classes for Proc Man

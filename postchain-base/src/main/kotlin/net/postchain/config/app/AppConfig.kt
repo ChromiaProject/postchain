@@ -2,6 +2,8 @@
 
 package net.postchain.config.app
 
+import net.postchain.common.hexStringToByteArray
+import net.postchain.core.Infrastructure
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -76,6 +78,25 @@ class AppConfig(val config: Configuration) {
 
     val databaseReadConcurrency: Int
         get() = config.getInt("database.readConcurrency", 10)
+
+    val infrastructure: String
+        // "base/ebft" is the default
+        get() = config.getString("infrastructure", Infrastructure.Ebft.get())
+
+    /**
+     * Pub/Priv keys
+     */
+    val privKey: String
+        get() = config.getString("messaging.privkey", "")
+
+    val privKeyByteArray: ByteArray
+        get() = privKey.hexStringToByteArray()
+
+    val pubKey: String
+        get() = config.getString("messaging.pubkey", "")
+
+    val pubKeyByteArray: ByteArray
+        get() = pubKey.hexStringToByteArray()
 
     /**
      * Wrappers for [Configuration] getters

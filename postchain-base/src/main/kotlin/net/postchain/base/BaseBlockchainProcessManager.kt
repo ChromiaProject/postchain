@@ -32,7 +32,7 @@ open class BaseBlockchainProcessManager(
 
     override val synchronizer = Any()
 
-    val nodeConfig = postchainContext.nodeConfig
+    val appConfig = postchainContext.appConfig
     val connectionManager = postchainContext.connectionManager
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
     val storage get() = postchainContext.storage
@@ -98,7 +98,7 @@ open class BaseBlockchainProcessManager(
                         val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
                                 configuration, eContext, NODE_ID_AUTO, chainId)
 
-                        val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
+                        val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
                         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
                         val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
@@ -226,7 +226,7 @@ open class BaseBlockchainProcessManager(
     }
 
     protected fun nodeName(): String {
-        return peerName(nodeConfig.pubKey)
+        return peerName(appConfig.pubKey)
     }
 
     // FYI: [et]: For integration testing. Will be removed or refactored later

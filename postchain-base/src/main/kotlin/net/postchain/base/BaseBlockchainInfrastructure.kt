@@ -28,7 +28,7 @@ open class BaseBlockchainInfrastructure(
     val syncInfraExtCache = mutableMapOf<String, SynchronizationInfrastructureExtension>()
 
     init {
-        val privKey = postchainContext.nodeConfig.privKeyByteArray
+        val privKey = postchainContext.appConfig.privKeyByteArray
         val pubKey = secp256k1_derivePubKey(privKey)
         blockSigMaker = cryptoSystem.buildSigMaker(pubKey, privKey)
         subjectID = pubKey
@@ -75,7 +75,7 @@ open class BaseBlockchainInfrastructure(
     ): BaseBlockchainEngine {
 
         // We create a new storage instance to open new db connections for each engine
-        val storage = StorageBuilder.buildStorage(postchainContext.nodeConfig.appConfig)
+        val storage = StorageBuilder.buildStorage(postchainContext.appConfig)
 
         val transactionQueue = BaseTransactionQueue(
                 (configuration as BaseBlockchainConfiguration) // TODO: Olle: Is this conversion harmless?

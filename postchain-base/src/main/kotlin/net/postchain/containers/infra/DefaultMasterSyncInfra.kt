@@ -35,6 +35,7 @@ open class DefaultMasterSyncInfra(
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
+                postchainContext.appConfig,
                 nodeConfig,
                 containerNodeConfig,
                 chainId,

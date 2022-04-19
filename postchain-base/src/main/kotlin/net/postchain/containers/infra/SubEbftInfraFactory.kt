@@ -6,9 +6,9 @@ import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.BaseBlockchainInfrastructure
+import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.SubNodeBlockchainProcessManager
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
@@ -20,10 +20,9 @@ import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class SubEbftInfraFactory : InfrastructureFactory {
 
-    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): SubConnectionManager {
-        val nodeConfig = nodeConfigProvider.getConfiguration()
-        val containerNodeConfig = ContainerNodeConfig.fromAppConfig(nodeConfig.appConfig)
-        return DefaultSubConnectionManager(nodeConfig, containerNodeConfig)
+    override fun makeConnectionManager(appConfig: AppConfig): SubConnectionManager {
+        val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
+        return DefaultSubConnectionManager(appConfig, containerNodeConfig)
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
@@ -33,7 +32,7 @@ class SubEbftInfraFactory : InfrastructureFactory {
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             val syncInfra = EBFTSynchronizationInfrastructure(this, DefaultSubPeersCommConfigFactory())
-            val restApiConfig = RestApiConfig.fromAppConfig(nodeConfig.appConfig)
+            val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
             val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
 
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)

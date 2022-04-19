@@ -1,6 +1,6 @@
 package net.postchain.managed
 
-import net.postchain.config.node.NodeConfig
+import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.CPU_KEY
@@ -12,15 +12,15 @@ import net.postchain.gtv.GtvFactory
 
 class BaseDirectoryDataSource(
         queries: BlockQueries,
-        nodeConfig: NodeConfig,
+        appConfig: AppConfig,
         private val containerNodeConfig: ContainerNodeConfig
-) : BaseManagedNodeDataSource(queries, nodeConfig),
+) : BaseManagedNodeDataSource(queries, appConfig),
         DirectoryDataSource {
 
     override fun getContainersToRun(): List<String>? {
         val res = queries.query(
                 "nm_get_containers",
-                buildArgs("pubkey" to GtvFactory.gtv(nodeConfig.pubKeyByteArray))
+                buildArgs("pubkey" to GtvFactory.gtv(appConfig.pubKeyByteArray))
         ).get()
 
         return res.asArray().map { it.asString() }

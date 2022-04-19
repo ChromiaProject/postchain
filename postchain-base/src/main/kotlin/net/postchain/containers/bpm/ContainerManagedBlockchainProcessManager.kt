@@ -44,10 +44,10 @@ open class ContainerManagedBlockchainProcessManager(
     /**
      * TODO: [POS-129]: Implement handling of DockerException
      */
-    private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(nodeConfig.appConfig)
-    private val restApiConfig = RestApiConfig.fromAppConfig(nodeConfig.appConfig)
-    private val fs = FileSystem(nodeConfig, containerNodeConfig)
-    private val containerInitializer = DefaultContainerInitializer(nodeConfig, heartbeatConfig, containerNodeConfig)
+    private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
+    private val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
+    private val fs = FileSystem(appConfig, containerNodeConfig)
+    private val containerInitializer = DefaultContainerInitializer(appConfig, heartbeatConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
@@ -57,7 +57,7 @@ open class ContainerManagedBlockchainProcessManager(
         stopRunningChainContainers()
     }
 
-    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, nodeConfig, containerNodeConfig)
+    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, appConfig, containerNodeConfig)
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         return { blockTrace: BlockTrace?, _, blockTimestamp: Long ->
@@ -180,7 +180,7 @@ open class ContainerManagedBlockchainProcessManager(
             if (chainsToStart.isNotEmpty()) {
                 logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
                 val port = getRestApiHostPort(dockerContainer)
-                val newPsContainer = DefaultPostchainContainer(nodeConfig, directoryDataSource, containerName, port, STARTING)
+                val newPsContainer = DefaultPostchainContainer(directoryDataSource, containerName, port, STARTING)
                 val dir = containerInitializer.initContainerWorkingDir(fs, newPsContainer)
                 if (dir != null) {
                     postchainContainers.add(newPsContainer)
@@ -318,7 +318,7 @@ open class ContainerManagedBlockchainProcessManager(
     private fun createBlockchainProcess(chain: Chain, targetContainer: PostchainContainer): ContainerBlockchainProcess? {
         val dir = containerInitializer.initContainerChainWorkingDir(fs, chain)
         return if (dir != null) {
-            val processName = BlockchainProcessName(nodeConfig.pubKey, chain.brid)
+            val processName = BlockchainProcessName(appConfig.pubKey, chain.brid)
             val process = masterBlockchainInfra.makeMasterBlockchainProcess(
                     processName,
                     chain.chainId,
@@ -394,7 +394,7 @@ open class ContainerManagedBlockchainProcessManager(
         return chains.computeIfAbsent(chainId) {
             val brid = getBridByChainId(chainId)
             val container = directoryDataSource.getContainerForBlockchain(brid)
-            val containerName = ContainerName.create(nodeConfig, container)
+            val containerName = ContainerName.create(appConfig, container)
             Chain(containerName, chainId, brid)
         }
     }
