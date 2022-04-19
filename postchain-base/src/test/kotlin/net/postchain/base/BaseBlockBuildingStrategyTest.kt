@@ -2,15 +2,16 @@ package net.postchain.base
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import net.postchain.core.*
+import net.postchain.core.BlockData
+import net.postchain.core.BlockQueries
+import net.postchain.core.BlockchainContext
+import net.postchain.core.BlockchainRid.Companion.ZERO_RID
+import net.postchain.core.TransactionQueue
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import nl.komponents.kovenant.Promise
 import org.awaitility.Awaitility.await
-import org.junit.jupiter.api.MethodOrderer
-import org.junit.jupiter.api.Order
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestMethodOrder
+import org.junit.jupiter.api.*
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.*
 import org.mockito.stubbing.Answer
@@ -22,12 +23,7 @@ class BaseBlockBuildingStrategyTest {
     companion object {
 
         // Mocks
-        private val context: BlockchainContext = mock {
-            on { blockchainRID } doReturn BlockchainRid.ZERO_RID
-            on { nodeID } doReturn 0
-            on { chainID } doReturn 0L
-            on { nodeRID } doReturn byteArrayOf()
-        }
+        private val context: BlockchainContext = BaseBlockchainContext(ZERO_RID, 0, 0L, byteArrayOf())
 
         private val blockQueries: BlockQueries = mock {
             val height: Promise<Long, Exception> = mock {
