@@ -2,11 +2,11 @@
 
 package net.postchain.devtools
 
-import net.postchain.base.CryptoSystem
-import net.postchain.base.SigMaker
-import net.postchain.base.Verifier
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
+import net.postchain.crypto.Verifier
 import net.postchain.common.data.Hash
-import net.postchain.base.secp256k1_verify
+import net.postchain.crypto.secp256k1_verify
 import net.postchain.core.Signature
 import java.security.MessageDigest
 import kotlin.experimental.xor

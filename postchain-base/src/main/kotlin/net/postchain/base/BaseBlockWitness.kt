@@ -5,7 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.base.CryptoSystem
+import net.postchain.crypto.CryptoSystem
 import net.postchain.core.Signature
 import java.nio.ByteBuffer
 

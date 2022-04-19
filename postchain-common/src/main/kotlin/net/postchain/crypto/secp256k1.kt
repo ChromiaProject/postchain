@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base
+package net.postchain.crypto
 
 import net.postchain.common.data.Hash
 import net.postchain.core.Signature
@@ -128,7 +128,7 @@ fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
  *
  * (See super class for doc)
  */
-class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val digestFun: (ByteArray) -> Hash) : SigMaker {
+open class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val digestFun: (ByteArray) -> Hash) : SigMaker {
     override fun signMessage(msg: ByteArray): Signature {
         val digestedMsg = digestFun(msg)
         return signDigest(digestedMsg)
@@ -142,7 +142,7 @@ class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val diges
 /**
  * A collection of cryptographic functions based on the elliptic curve secp256k1
  */
-class SECP256K1CryptoSystem : CryptoSystem {
+open class SECP256K1CryptoSystem : CryptoSystem {
     private val rand = SecureRandom()
 
     /**

@@ -1,6 +1,6 @@
 package net.postchain.client.cli
 
-import net.postchain.base.CryptoSystem
+import net.postchain.crypto.CryptoSystem
 import net.postchain.client.PostchainClientConfig
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.PostchainClient

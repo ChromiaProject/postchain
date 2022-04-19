@@ -3,6 +3,8 @@
 package net.postchain.base.data
 
 import mu.KLogging
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.base.*
 import net.postchain.common.data.Hash
 import net.postchain.common.toHex

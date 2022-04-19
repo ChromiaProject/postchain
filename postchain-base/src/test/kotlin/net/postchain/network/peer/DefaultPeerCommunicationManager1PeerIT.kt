@@ -5,6 +5,7 @@ package net.postchain.network.peer
 import assertk.assert
 import assertk.assertions.isEmpty
 import net.postchain.core.BlockchainRid
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.base.*
 import net.postchain.core.UserMistake
 import net.postchain.network.util.peerInfoFromPublicKey
