@@ -2,8 +2,7 @@
 
 package net.postchain.devtools
 
-import net.postchain.base.secp256k1_derivePubKey
-import net.postchain.common.hexStringToByteArray
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.common.toHex
 
 /**

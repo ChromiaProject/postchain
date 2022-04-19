@@ -3,8 +3,8 @@
 package net.postchain.gtx.gtxml
 
 import net.postchain.core.BlockchainRid
-import net.postchain.base.CryptoSystem
-import net.postchain.base.SigMaker
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.base.gtxml.OperationsType
 import net.postchain.base.gtxml.ParamType
 import net.postchain.base.gtxml.SignersType

@@ -1,7 +1,10 @@
 package net.postchain.base.data
 
-import net.postchain.base.*
+import net.postchain.base.BaseBlockWitnessBuilder
+import net.postchain.base.BlockWitnessProvider
 import net.postchain.core.*
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.getBFTRequiredSignatureCount
 
 /**

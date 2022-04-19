@@ -7,6 +7,7 @@ import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.*
+import net.postchain.crypto.Signature
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
 import java.sql.Connection

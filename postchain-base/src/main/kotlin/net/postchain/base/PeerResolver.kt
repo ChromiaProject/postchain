@@ -2,6 +2,9 @@
 
 package net.postchain.base
 
+import net.postchain.crypto.SigMaker
+import net.postchain.crypto.Verifier
+
 interface PeerResolver {
     fun resolvePeer(peerID: PeerID): PeerInfo?
 }
