@@ -147,7 +147,7 @@ open class NodeConfig(val appConfig: AppConfig) {
     open val nodeReplicas: Map<NodeRid, List<NodeRid>> = mapOf()
     open val blockchainReplicaNodes: Map<BlockchainRid, List<NodeRid>> = mapOf()
     open val blockchainsToReplicate: Set<BlockchainRid> = setOf()
-    open val blockchainAncestors: Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> = getAncestors()
+    open val blockchainAncestors: Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> get() = getAncestors()
 
     open val mustSyncUntilHeight: Map<Long, Long>? = mapOf() //mapOf<chainID, height>
 
@@ -208,7 +208,7 @@ open class NodeConfig(val appConfig: AppConfig) {
             cont2=EB7387FD,94F29578
             cont3=0B942264
     */
-    val dappsContainers: Map<String, String> = initDappsContainers()
+    val dappsContainers: Map<String, String> get() = initDappsContainers()
 
     private fun initDappsContainers(): Map<String, String> {
         val res = mutableMapOf<String, String>()

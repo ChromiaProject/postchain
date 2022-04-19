@@ -252,7 +252,7 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
             dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
 
             val syncInfra = EBFTSynchronizationInfrastructure(this)
-            val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
+            val apiInfra = BaseApiInfrastructure(nodeConfig, nodeDiagnosticContext)
             return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)
         }
     }
