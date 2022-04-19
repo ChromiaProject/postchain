@@ -3,10 +3,10 @@
 package net.postchain.gtx
 
 import net.postchain.core.BlockchainRid
-import net.postchain.base.CryptoSystem
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionFactory
 import net.postchain.core.UserMistake
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator

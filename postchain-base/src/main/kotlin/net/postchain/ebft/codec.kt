@@ -2,11 +2,11 @@
 
 package net.postchain.ebft
 
-import net.postchain.base.SigMaker
-import net.postchain.base.Verifier
+import net.postchain.crypto.Verifier
 import net.postchain.common.toHex
-import net.postchain.core.Signature
+import net.postchain.crypto.Signature
 import net.postchain.core.UserMistake
+import net.postchain.crypto.SigMaker
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.SignedMessage
 

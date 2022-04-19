@@ -7,7 +7,7 @@ import net.postchain.common.toHex
 import net.postchain.core.NodeRid
 import net.postchain.core.NodeStateTracker
 import net.postchain.core.ProgrammerMistake
-import net.postchain.core.Signature
+import net.postchain.crypto.Signature
 import net.postchain.ebft.*
 import net.postchain.ebft.message.*
 import net.postchain.ebft.rest.contract.serialize

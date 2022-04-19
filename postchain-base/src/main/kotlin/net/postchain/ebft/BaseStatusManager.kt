@@ -4,7 +4,7 @@ package net.postchain.ebft
 
 import mu.KLogging
 import net.postchain.common.toHex
-import net.postchain.core.Signature
+import net.postchain.crypto.Signature
 import net.postchain.getBFTRequiredSignatureCount
 import java.util.*
 

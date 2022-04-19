@@ -5,7 +5,7 @@ package net.postchain.cli
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.secp256k1_derivePubKey
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.common.toHex
 import org.bitcoinj.crypto.MnemonicCode
 
