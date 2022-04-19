@@ -27,9 +27,9 @@ open class BaseBlockchainConfiguration(
     override val signers = configData.getSigners()
 
     private val blockWitnessProvider: BlockWitnessProvider = BaseBlockWitnessProvider(
-        cryptoSystem,
-        configData.blockSigMaker,
-        signers.toTypedArray()
+            cryptoSystem,
+            configData.blockSigMaker,
+            signers.toTypedArray()
     )
 
     val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
@@ -70,20 +70,20 @@ open class BaseBlockchainConfiguration(
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
 
         val bb = BaseBlockBuilder(
-            effectiveBlockchainRID,
-            cryptoSystem,
-            ctx,
-            blockStore,
-            getTransactionFactory(),
-            getSpecialTxHandler(),
-            signers.toTypedArray(),
-            configData.blockSigMaker,
-            blockWitnessProvider,
-            bcRelatedInfosDependencyList,
-            makeBBExtensions(),
-            effectiveBlockchainRID != blockchainRid,
-            configData.getMaxBlockSize(),
-            configData.getMaxBlockTransactions())
+                effectiveBlockchainRID,
+                cryptoSystem,
+                ctx,
+                blockStore,
+                getTransactionFactory(),
+                getSpecialTxHandler(),
+                signers.toTypedArray(),
+                configData.blockSigMaker,
+                blockWitnessProvider,
+                bcRelatedInfosDependencyList,
+                makeBBExtensions(),
+                effectiveBlockchainRID != blockchainRid,
+                configData.getMaxBlockSize(),
+                configData.getMaxBlockTransactions())
 
         return bb
     }
@@ -120,15 +120,15 @@ open class BaseBlockchainConfiguration(
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
         val strategyClassName = configData.getBlockBuildingStrategyName()
         if (strategyClassName == "") {
-            return BaseBlockBuildingStrategy(configData, this, blockQueries, txQueue)
+            return BaseBlockBuildingStrategy(configData, blockQueries, txQueue)
         }
         return try {
-            constructorOf<BlockBuildingStrategy>(strategyClassName,
+            constructorOf<BlockBuildingStrategy>(
+                    strategyClassName,
                     BaseBlockchainConfigurationData::class.java,
-                    BlockchainConfiguration::class.java,
                     BlockQueries::class.java,
-                    TransactionQueue::class.java)
-                    .newInstance(configData, this, blockQueries, txQueue)
+                    TransactionQueue::class.java
+            ).newInstance(configData, blockQueries, txQueue)
         } catch (e: UserMistake) {
             throw UserMistake("The block building strategy given was in the configuration is invalid, " +
                     "Class name given: $strategyClassName.")
