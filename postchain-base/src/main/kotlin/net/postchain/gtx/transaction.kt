@@ -5,6 +5,7 @@ package net.postchain.gtx
 import net.postchain.common.data.Hash
 import net.postchain.core.*
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 

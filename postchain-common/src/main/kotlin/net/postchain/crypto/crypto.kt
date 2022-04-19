@@ -3,7 +3,6 @@
 package net.postchain.crypto
 
 import net.postchain.common.data.Hash
-import net.postchain.core.Signature
 
 /**
  * Can sign digests/messages.

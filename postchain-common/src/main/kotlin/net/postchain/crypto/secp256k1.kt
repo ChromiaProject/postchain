@@ -3,7 +3,6 @@
 package net.postchain.crypto
 
 import net.postchain.common.data.Hash
-import net.postchain.core.Signature
 import org.spongycastle.crypto.digests.SHA256Digest
 import org.spongycastle.crypto.ec.CustomNamedCurves
 import org.spongycastle.crypto.params.ECDomainParameters

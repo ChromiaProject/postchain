@@ -4,7 +4,7 @@ package net.postchain.ebft
 
 import net.postchain.core.BlockData
 import net.postchain.core.BlockDataWithWitness
-import net.postchain.core.Signature
+import net.postchain.crypto.Signature
 import net.postchain.debug.BlockTrace
 import nl.komponents.kovenant.Promise
 import java.util.*

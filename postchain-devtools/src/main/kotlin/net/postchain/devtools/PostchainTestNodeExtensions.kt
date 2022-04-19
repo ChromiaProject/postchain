@@ -6,7 +6,7 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import net.postchain.core.BlockQueries
 import net.postchain.core.MultiSigBlockWitness
-import net.postchain.core.Signature
+import net.postchain.crypto.Signature
 import net.postchain.core.Transaction
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction

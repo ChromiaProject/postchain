@@ -7,7 +7,7 @@ import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Verifier
 import net.postchain.common.data.Hash
 import net.postchain.crypto.secp256k1_verify
-import net.postchain.core.Signature
+import net.postchain.crypto.Signature
 import java.security.MessageDigest
 import kotlin.experimental.xor
 
