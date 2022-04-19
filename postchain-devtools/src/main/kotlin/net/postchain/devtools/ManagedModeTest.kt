@@ -202,7 +202,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         }
 
         override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
-            return OnDemandBlockBuildingStrategy(configData, this, blockQueries, txQueue)
+            return OnDemandBlockBuildingStrategy(configData, blockQueries, txQueue)
         }
     }
 

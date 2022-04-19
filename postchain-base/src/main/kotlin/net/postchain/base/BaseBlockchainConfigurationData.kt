@@ -8,14 +8,13 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
-const val TRANSACTION_QUEUE_CAPACITY = 2500 // 5 seconds (if 500 tps)
 /**
  * Minimal/raw version of the BC configuration.
  */
 class BaseBlockchainConfigurationData(
-    val data: GtvDictionary,
-    partialContext: BlockchainContext,
-    val blockSigMaker: SigMaker,
+        val data: GtvDictionary,
+        partialContext: BlockchainContext,
+        val blockSigMaker: SigMaker,
 ) {
 
     val context: BlockchainContext
@@ -23,42 +22,45 @@ class BaseBlockchainConfigurationData(
 
     init {
         context = BaseBlockchainContext(
-            partialContext.blockchainRID,
-            resolveNodeID(partialContext.nodeID),
-            partialContext.chainID,
-            partialContext.nodeRID)
+                partialContext.blockchainRID,
+                resolveNodeID(partialContext.nodeID),
+                partialContext.chainID,
+                partialContext.nodeRID)
     }
 
     fun getSigners(): List<ByteArray> {
         return data[KEY_SIGNERS]!!.asArray().map { it.asByteArray() }
     }
 
-    fun getBlockBuildingStrategyName(): String {
-        val stratDict = data[KEY_BLOCKSTRATEGY]
-        return stratDict?.get(KEY_BLOCKSTRATEGY_NAME)?.asString() ?: ""
-    }
-
-    fun getHistoricBRID(): BlockchainRid? {
-        val bytes = data[KEY_HISTORIC_BRID]?.asByteArray()
-        return if (bytes != null)
-            BlockchainRid(bytes)
-        else
-            null
-    }
-
     fun getBlockBuildingStrategy(): Gtv? {
         return data[KEY_BLOCKSTRATEGY]
     }
 
-    // default is 26 MiB
+    internal fun strategy() = getBlockBuildingStrategy() // alias
+
+    fun getBlockBuildingStrategyName(): String {
+        return strategy()?.get(KEY_BLOCKSTRATEGY_NAME)?.asString() ?: ""
+    }
+
     fun getMaxBlockSize(): Long {
-        val stratDict = data[KEY_BLOCKSTRATEGY]
-        return stratDict?.get(KEY_BLOCKSTRATEGY_MAXBLOCKSIZE)?.asInteger() ?: 26 * 1024 * 1024
+        return strategy()?.get(KEY_BLOCKSTRATEGY_MAXBLOCKSIZE)?.asInteger()
+                ?: (26 * 1024 * 1024) // default is 26 MiB
     }
 
     fun getMaxBlockTransactions(): Long {
-        val stratDict = data[KEY_BLOCKSTRATEGY]
-        return stratDict?.get(KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS)?.asInteger() ?: 100
+        return strategy()?.get(KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS)?.asInteger() ?: 100
+    }
+
+    fun getMinInterBlockInterval(): Long {
+        return strategy()?.get(KEY_BLOCKSTRATEGY_MININTERBLOCKINTERVAL)?.asInteger() ?: 25
+    }
+
+    fun getMaxBlocktime(): Long {
+        return getBlockBuildingStrategy()?.get(KEY_BLOCKSTRATEGY_MAXBLOCKTIME)?.asInteger() ?: 30000
+    }
+
+    fun getMaxTxDelay(): Long {
+        return strategy()?.get(KEY_BLOCKSTRATEGY_MAXTXDELAY)?.asInteger() ?: 1000
     }
 
     /**
@@ -68,24 +70,20 @@ class BaseBlockchainConfigurationData(
      * from the user's side has to be taken to eventually get the TX into the queue.
      */
     fun getQueueCapacity(): Int {
-        val stratDict = data[KEY_BLOCKSTRATEGY]
-        return stratDict?.get(KEY_BLOCKSTRATEGY_QUEUE_CAPACITY)?.asInteger()?.toInt() ?: TRANSACTION_QUEUE_CAPACITY
+        return strategy()?.get(KEY_BLOCKSTRATEGY_QUEUE_CAPACITY)?.asInteger()?.toInt()
+                ?: 2500 // 5 seconds (if 500 tps)
+    }
+
+    fun getHistoricBRID(): BlockchainRid? {
+        return data[KEY_HISTORIC_BRID]?.asByteArray()?.let { BlockchainRid(it) }
     }
 
     fun getDependenciesAsList(): List<BlockchainRelatedInfo> {
-        val dep = data[KEY_DEPENDENCIES]
-        return if (dep != null) {
-            BaseDependencyFactory.build(dep)
-        } else {
-            // It is allowed to have no dependencies
-            listOf<BlockchainRelatedInfo>()
-        }
+        return data[KEY_DEPENDENCIES]?.let { BaseDependencyFactory.build(it) } ?: listOf()
     }
 
-    // default is 25 MiB
     fun getMaxTransactionSize(): Long {
-        val gtxDict = data[KEY_GTX]
-        return gtxDict?.get(KEY_GTX_TX_SIZE)?.asInteger() ?: 25 * 1024 * 1024
+        return data[KEY_GTX]?.get(KEY_GTX_TX_SIZE)?.asInteger() ?: (25 * 1024 * 1024) // default is 25 MiB
     }
 
     fun getSyncInfrastructureName(): String? {
@@ -93,12 +91,7 @@ class BaseBlockchainConfigurationData(
     }
 
     fun getSyncInfrastructureExtensions(): List<String> {
-        val e = data[KEY_SYNC_EXT]
-        return if (e != null) {
-            e.asArray().map { it.asString() }
-        } else {
-            listOf()
-        }
+        return data[KEY_SYNC_EXT]?.asArray()?.map { it.asString() } ?: listOf()
     }
 
     companion object {
@@ -107,6 +100,9 @@ class BaseBlockchainConfigurationData(
         const val KEY_BLOCKSTRATEGY_NAME = "name"
         const val KEY_BLOCKSTRATEGY_MAXBLOCKSIZE = "maxblocksize"
         const val KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS = "maxblocktransactions"
+        const val KEY_BLOCKSTRATEGY_MININTERBLOCKINTERVAL = "mininterblockinterval"
+        const val KEY_BLOCKSTRATEGY_MAXBLOCKTIME = "maxblocktime"
+        const val KEY_BLOCKSTRATEGY_MAXTXDELAY = "maxtxdelay"
         const val KEY_BLOCKSTRATEGY_QUEUE_CAPACITY = "queuecapacity"
 
         const val KEY_CONFIGURATIONFACTORY = "configurationfactory"
@@ -127,12 +123,13 @@ class BaseBlockchainConfigurationData(
         /**
          * Factory method
          */
-        fun build(rawConfigurationData: ByteArray,
-                  eContext: EContext,
-                  nodeId: Int,
-                  chainId: Long,
-                  subjectID: ByteArray,
-                  blockSigMaker: SigMaker,
+        fun build(
+                rawConfigurationData: ByteArray,
+                eContext: EContext,
+                nodeId: Int,
+                chainId: Long,
+                subjectID: ByteArray,
+                blockSigMaker: SigMaker,
         ): BaseBlockchainConfigurationData {
             val gtvData = GtvFactory.decodeGtv(rawConfigurationData)
             val brid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
@@ -147,8 +144,8 @@ class BaseBlockchainConfigurationData(
                 NODE_ID_READ_ONLY
             } else {
                 getSigners()
-                    .indexOfFirst { it.contentEquals(subjectID) }
-                    .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
+                        .indexOfFirst { it.contentEquals(subjectID) }
+                        .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
             }
         } else {
             nodeID
