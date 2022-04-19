@@ -47,12 +47,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
     private val fastSynchronizer = FastSynchronizer(
             workerContext, blockDatabase,
-            workerContext.nodeConfig.let { conf ->
-                FastSyncParameters(
-                    exitDelay = conf.fastSyncExitDelay,
-                    jobTimeout = conf.fastSyncJobTimeout
-                )
-            },
+            FastSyncParameters.fromAppConfig(workerContext.nodeConfig.appConfig),
             ::isProcessRunning
     )
 

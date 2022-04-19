@@ -28,22 +28,16 @@ class NodeConfigTest {
 
         assertk.assert(nodeConfig.infrastructure).isEqualTo("ebft")
 
-        assertk.assert(nodeConfig.databaseDriverclass).isEmpty()
-        assertIsEmptyOrEqualsToEnvVar(nodeConfig.databaseUrl, "POSTCHAIN_DB_URL")
-        assertIsDefaultOrEqualsToEnvVar(nodeConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
-        assertIsEmptyOrEqualsToEnvVar(nodeConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
-        assertIsEmptyOrEqualsToEnvVar(nodeConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
+        assertk.assert(nodeConfig.appConfig.databaseDriverclass).isEmpty()
+        assertIsEmptyOrEqualsToEnvVar(nodeConfig.appConfig.databaseUrl, "POSTCHAIN_DB_URL")
+        assertIsDefaultOrEqualsToEnvVar(nodeConfig.appConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
+        assertIsEmptyOrEqualsToEnvVar(nodeConfig.appConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
+        assertIsEmptyOrEqualsToEnvVar(nodeConfig.appConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
 
         assertk.assert(nodeConfig.privKey).isEmpty()
         assertk.assert(nodeConfig.privKeyByteArray.isEmpty())
         assertk.assert(nodeConfig.pubKey).isEmpty()
         assertk.assert(nodeConfig.pubKeyByteArray.isEmpty())
-
-        assertk.assert(nodeConfig.restApiBasePath).isEmpty()
-        assertk.assert(nodeConfig.restApiPort).isEqualTo(7740)
-        assertk.assert(nodeConfig.restApiSsl).isEqualTo(false)
-        assertk.assert(nodeConfig.restApiSslCertificate).isEmpty()
-        assertk.assert(nodeConfig.restApiSslCertificatePassword).isEmpty()
 
         assertk.assert(nodeConfig.peerInfoMap.entries).isEmpty()
 

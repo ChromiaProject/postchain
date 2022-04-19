@@ -4,6 +4,7 @@ package net.postchain.containers.infra
 
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
@@ -32,7 +33,8 @@ class SubEbftInfraFactory : InfrastructureFactory {
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             val syncInfra = EBFTSynchronizationInfrastructure(this, DefaultSubPeersCommConfigFactory())
-            val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
+            val restApiConfig = RestApiConfig.fromAppConfig(nodeConfig.appConfig)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
 
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }

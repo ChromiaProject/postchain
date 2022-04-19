@@ -285,11 +285,11 @@ object CliExecution {
             ) { storage }.getConfiguration()
 
             BasicDataSource().apply {
-                addConnectionProperty("currentSchema", nodeConfig.databaseSchema)
-                driverClassName = nodeConfig.databaseDriverclass
-                url = "${nodeConfig.databaseUrl}" //?loggerLevel=OFF"
-                username = nodeConfig.databaseUsername
-                password = nodeConfig.databasePassword
+                addConnectionProperty("currentSchema", nodeConfig.appConfig.databaseSchema)
+                driverClassName = nodeConfig.appConfig.databaseDriverclass
+                url = nodeConfig.appConfig.databaseUrl //?loggerLevel=OFF"
+                username = nodeConfig.appConfig.databaseUsername
+                password = nodeConfig.appConfig.databasePassword
                 defaultAutoCommit = false
             }.connection
         } catch (e: SQLException) {

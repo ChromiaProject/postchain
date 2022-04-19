@@ -74,7 +74,7 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig, private v
          * control here and know that it is always free.
          * If -1, no API communication => subnodeRestApiPort=restApiPost
          */
-        if (nodeConfig.restApiPort > -1) config.setProperty("api.port", containerConfig.subnodeRestApiPort)
+        if (config.getInt("restApiPort") > -1) config.setProperty("api.port", containerConfig.subnodeRestApiPort)
 
         // Creating a nodeConfig file
         val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()

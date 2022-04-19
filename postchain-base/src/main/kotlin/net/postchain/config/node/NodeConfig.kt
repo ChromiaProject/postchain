@@ -21,15 +21,6 @@ open class NodeConfig(val appConfig: AppConfig) {
         get() = config.getString("infrastructure", Infrastructure.Ebft.get())
 
     /**
-     * Database
-     */
-    val databaseDriverclass: String by appConfig::databaseDriverclass
-    val databaseUrl: String by appConfig::databaseUrl
-    val databaseSchema: String by appConfig::databaseSchema
-    val databaseUsername: String by appConfig::databaseUsername
-    val databasePassword: String by appConfig::databasePassword
-
-    /**
      * Pub/Priv keys
      */
     val privKey: String
@@ -46,24 +37,6 @@ open class NodeConfig(val appConfig: AppConfig) {
 
 
     /**
-     * REST API
-     */
-    val restApiBasePath: String
-        get() = config.getString("api.basepath", "")
-
-    val restApiPort: Int
-        get() = config.getInt("api.port", 7740)
-
-    val restApiSsl: Boolean
-        get() = config.getBoolean("api.enable_ssl", false)
-
-    val restApiSslCertificate: String
-        get() = config.getString("api.ssl_certificate", "")
-
-    val restApiSslCertificatePassword: String
-        get() = config.getString("api.ssl_certificate.password", "")
-
-    /**
      * Peers
      */
     open val peerInfoMap: Map<NodeRid, PeerInfo> = mapOf()
@@ -75,13 +48,6 @@ open class NodeConfig(val appConfig: AppConfig) {
     open val blockchainAncestors: Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> = getAncestors()
 
     open val mustSyncUntilHeight: Map<Long, Long>? = mapOf() //mapOf<chainID, height>
-
-    // FastSync
-    val fastSyncExitDelay: Long
-        get() = config.getLong("fastsync.exit_delay", 60000)
-
-    val fastSyncJobTimeout: Long
-        get() = config.getLong("fastsync.job_timeout", 10000)
 
     private fun getAncestors(): Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> {
         val ancestors = config.subset("blockchain_ancestors") ?: return emptyMap()

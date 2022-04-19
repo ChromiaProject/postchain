@@ -4,6 +4,7 @@ import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import mu.KLogging
 import net.postchain.PostchainContext
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.Utils
@@ -44,6 +45,7 @@ open class ContainerManagedBlockchainProcessManager(
      * TODO: [POS-129]: Implement handling of DockerException
      */
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(nodeConfig.appConfig)
+    private val restApiConfig = RestApiConfig.fromAppConfig(nodeConfig.appConfig)
     private val fs = FileSystem(nodeConfig, containerNodeConfig)
     private val containerInitializer = DefaultContainerInitializer(nodeConfig, heartbeatConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
@@ -237,7 +239,7 @@ open class ContainerManagedBlockchainProcessManager(
                 logger.debug { msg("not found", null) }
 
                 if (!psContainer!!.isEmpty()) {
-                    val config = ContainerConfigFactory.createConfig(fs, nodeConfig, containerNodeConfig, psContainer)
+                    val config = ContainerConfigFactory.createConfig(fs, restApiConfig, containerNodeConfig, psContainer)
 
                     psContainer.containerId = dockerClient.createContainer(config, containerName.toString()).id()!!
                     logger.debug { msg("created", psContainer) }

@@ -3,6 +3,7 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.base.data.DatabaseAccess
@@ -252,7 +253,8 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
             dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
 
             val syncInfra = EBFTSynchronizationInfrastructure(this)
-            val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
+            val restApiConfig = RestApiConfig.fromAppConfig(nodeConfig.appConfig)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
             return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)
         }
     }
