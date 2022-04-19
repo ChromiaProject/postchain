@@ -20,7 +20,9 @@ import net.postchain.network.mastersub.subnode.SubConnectionManager
 class SubEbftInfraFactory : InfrastructureFactory {
 
     override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): SubConnectionManager {
-        return DefaultSubConnectionManager(nodeConfigProvider.getConfiguration())
+        val nodeConfig = nodeConfigProvider.getConfiguration()
+        val containerNodeConfig = ContainerNodeConfig.fromAppConfig(nodeConfig.appConfig)
+        return DefaultSubConnectionManager(nodeConfig, containerNodeConfig)
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {

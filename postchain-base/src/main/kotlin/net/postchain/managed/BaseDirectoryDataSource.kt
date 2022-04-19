@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.CPU_KEY
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.RAM_KEY
@@ -11,7 +12,8 @@ import net.postchain.gtv.GtvFactory
 
 class BaseDirectoryDataSource(
         queries: BlockQueries,
-        nodeConfig: NodeConfig
+        nodeConfig: NodeConfig,
+        private val containerNodeConfig: ContainerNodeConfig
 ) : BaseManagedNodeDataSource(queries, nodeConfig),
         DirectoryDataSource {
 
@@ -39,16 +41,16 @@ class BaseDirectoryDataSource(
         //return "ps$num"
 
         val short = brid.toHex().toUpperCase().take(8)
-        return nodeConfig.dappsContainers[short] ?: "cont0"
+        return containerNodeConfig.dappsContainers[short] ?: "cont0"
     }
 
     // TODO: [et]: directory vs containerId?
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
-        return if (nodeConfig.containersTestmode) {
+        return if (containerNodeConfig.containersTestmode) {
             ContainerResourceLimits(
-                    nodeConfig.containersTestmodeResourceLimitsRAM,
-                    nodeConfig.containersTestmodeResourceLimitsCPU,
-                    nodeConfig.containersTestmodeResourceLimitsSTORAGE
+                    containerNodeConfig.containersTestmodeResourceLimitsRAM,
+                    containerNodeConfig.containersTestmodeResourceLimitsCPU,
+                    containerNodeConfig.containersTestmodeResourceLimitsSTORAGE
             )
         } else {
             val queryReply = queries.query(

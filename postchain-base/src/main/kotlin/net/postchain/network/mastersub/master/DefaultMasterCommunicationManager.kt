@@ -3,6 +3,7 @@ package net.postchain.network.mastersub.master
 import mu.KLogging
 import net.postchain.common.toHex
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
@@ -24,6 +25,7 @@ import java.util.*
  */
 open class DefaultMasterCommunicationManager(
         val nodeConfig: NodeConfig,
+        private val containerNodeConfig: ContainerNodeConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         private val peersCommConfigFactory: PeersCommConfigFactory,
@@ -42,7 +44,7 @@ open class DefaultMasterCommunicationManager(
         masterConnectionManager.connectSubChain(processName, subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = scheduleTask(nodeConfig.containerSendConnectedPeersPeriod) {
+        sendConnectedPeersTask = scheduleTask(containerNodeConfig.containerSendConnectedPeersPeriod) {
             val peers = connectionManager.getConnectedNodes(chainId)
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.byteArray })
             masterConnectionManager.sendPacketToSub(msg)

@@ -7,12 +7,14 @@ import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.FileSystem.Companion.BLOCKCHAINS_DIR
 import net.postchain.containers.bpm.FileSystem.Companion.NODE_CONFIG_FILE
 import net.postchain.containers.bpm.FileSystem.Companion.PEERS_FILE
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
+import net.postchain.ebft.heartbeat.HeartbeatConfig
 import org.apache.commons.configuration2.ConfigurationUtils
 import java.io.File
 import java.nio.file.Path
 
-internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitializer {
+internal class DefaultContainerInitializer(val nodeConfig: NodeConfig, private val heartbeatConfig: HeartbeatConfig, private val containerConfig: ContainerNodeConfig) : ContainerInitializer {
 
     companion object : KLogging()
 
@@ -61,18 +63,18 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
         // Heartbeat and RemoteConfig
         // TODO: [POS-164]: Heartbeat and RemoteConfig
         // val defaultNodeConfig = NodeConfig(AppConfig(<empty-apache-config>))
-        config.setProperty("heartbeat.enabled", nodeConfig.heartbeatEnabled)
-        config.setProperty("remote_config.enabled", nodeConfig.remoteConfigEnabled)
+        config.setProperty("heartbeat.enabled", heartbeatConfig.heartbeatEnabled)
+        config.setProperty("remote_config.enabled", heartbeatConfig.remoteConfigEnabled)
 
-        config.setProperty("containerChains.masterHost", nodeConfig.masterHost)
-        config.setProperty("containerChains.masterPort", nodeConfig.masterPort)
+        config.setProperty("containerChains.masterHost", containerConfig.masterHost)
+        config.setProperty("containerChains.masterPort", containerConfig.masterPort)
 
         /**
          * If nodeConfig.restApiPost > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
          * control here and know that it is always free.
          * If -1, no API communication => subnodeRestApiPort=restApiPost
          */
-        if (nodeConfig.restApiPort > -1) config.setProperty("api.port", nodeConfig.subnodeRestApiPort)
+        if (nodeConfig.restApiPort > -1) config.setProperty("api.port", containerConfig.subnodeRestApiPort)
 
         // Creating a nodeConfig file
         val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()
@@ -83,7 +85,7 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
     override fun createPeersConfig(container: PostchainContainer, containerDir: Path) {
         val peers = """
             export NODE_HOST=127.0.0.1
-            export NODE_PORT=${NodeConfig.DEFAULT_PORT}
+            export NODE_PORT=${ContainerNodeConfig.DEFAULT_PORT}
             export NODE_PUBKEY=${nodeConfig.pubKey}
             
         """.trimIndent()

@@ -13,6 +13,7 @@ import net.postchain.containers.bpm.ContainerState.STARTING
 import net.postchain.containers.bpm.DockerTools.checkContainerName
 import net.postchain.containers.bpm.DockerTools.containerName
 import net.postchain.containers.bpm.DockerTools.shortContainerId
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockQueries
@@ -42,8 +43,9 @@ open class ContainerManagedBlockchainProcessManager(
     /**
      * TODO: [POS-129]: Implement handling of DockerException
      */
-    private val fs = FileSystem(nodeConfig)
-    private val containerInitializer = DefaultContainerInitializer(nodeConfig)
+    private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(nodeConfig.appConfig)
+    private val fs = FileSystem(nodeConfig, containerNodeConfig)
+    private val containerInitializer = DefaultContainerInitializer(nodeConfig, heartbeatConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
@@ -53,7 +55,7 @@ open class ContainerManagedBlockchainProcessManager(
         stopRunningChainContainers()
     }
 
-    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, nodeConfig)
+    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, nodeConfig, containerNodeConfig)
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         return { blockTrace: BlockTrace?, _, blockTimestamp: Long ->
@@ -235,7 +237,7 @@ open class ContainerManagedBlockchainProcessManager(
                 logger.debug { msg("not found", null) }
 
                 if (!psContainer!!.isEmpty()) {
-                    val config = ContainerConfigFactory.createConfig(fs, nodeConfig, psContainer)
+                    val config = ContainerConfigFactory.createConfig(fs, nodeConfig, containerNodeConfig, psContainer)
 
                     psContainer.containerId = dockerClient.createContainer(config, containerName.toString()).id()!!
                     logger.debug { msg("created", psContainer) }
@@ -264,7 +266,7 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun executeDockerContainersHealthcheck() {
-        val period = nodeConfig.runningContainersCheckPeriod.toLong()
+        val period = containerNodeConfig.runningContainersCheckPeriod.toLong()
         if (period > 0 && postchainContainers.isNotEmpty()) {
             val height = withReadConnection(storage, CHAIN0) { ctx ->
                 DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
@@ -396,12 +398,12 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun stopRunningChainContainers() {
-        if (nodeConfig.runningContainersAtStartRegexp.isNotEmpty()) {
+        if (containerNodeConfig.runningContainersAtStartRegexp.isNotEmpty()) {
             val toStop = dockerClient.listContainers().filter {
                 try {
-                    containerName(it).contains(Regex(nodeConfig.runningContainersAtStartRegexp))
+                    containerName(it).contains(Regex(containerNodeConfig.runningContainersAtStartRegexp))
                 } catch (e: Exception) {
-                    logger.error { "Regexp expression error: ${nodeConfig.runningContainersAtStartRegexp}" }
+                    logger.error { "Regexp expression error: ${containerNodeConfig.runningContainersAtStartRegexp}" }
                     false
                 }
             }
@@ -422,7 +424,7 @@ open class ContainerManagedBlockchainProcessManager(
     private fun getRestApiHostPort(dockerContainer: Container?): Int {
         return if (dockerContainer != null) {
             val info = dockerClient.inspectContainer(dockerContainer.id())
-            val port = ContainerConfigFactory.getHostPort(info, nodeConfig.subnodeRestApiPort)
+            val port = ContainerConfigFactory.getHostPort(info, containerNodeConfig.subnodeRestApiPort)
             port ?: Utils.findFreePort()
         } else {
             Utils.findFreePort()

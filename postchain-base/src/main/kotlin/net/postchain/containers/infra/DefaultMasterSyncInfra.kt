@@ -18,7 +18,8 @@ import java.nio.file.Path
 
 open class DefaultMasterSyncInfra(
         postchainContext: PostchainContext,
-        protected val masterConnectionManager: MasterConnectionManager
+        protected val masterConnectionManager: MasterConnectionManager,
+        private val containerNodeConfig: ContainerNodeConfig
 ) : EBFTSynchronizationInfrastructure(postchainContext), MasterSyncInfra {
 
     /**
@@ -35,6 +36,7 @@ open class DefaultMasterSyncInfra(
 
         val communicationManager = DefaultMasterCommunicationManager(
                 nodeConfig,
+                containerNodeConfig,
                 chainId,
                 blockchainRid,
                 peersCommConfigFactory,

@@ -23,7 +23,7 @@ interface HeartbeatManager {
 }
 
 
-class DefaultHeartbeatManager(val nodeConfig: NodeConfig) : HeartbeatManager {
+class DefaultHeartbeatManager(val heartbeatConfig: HeartbeatConfig) : HeartbeatManager {
 
     companion object : KLogging()
 
@@ -41,7 +41,7 @@ class DefaultHeartbeatManager(val nodeConfig: NodeConfig) : HeartbeatManager {
 
     override fun beat(timestamp: Long) {
         // TODO: [POS-164]: For manual test only. Delete this later
-        if (nodeConfig.heartbeatTestmode) {
+        if (heartbeatConfig.heartbeatTestmode) {
             if ((heartbeatTestmodeCounter++ / 25) % 2 == 0) {
                 logger.debug { "Heartbeat event received and skipped: timestamp $timestamp" }
                 return

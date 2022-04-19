@@ -13,6 +13,7 @@ import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
 import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
+import net.postchain.ebft.heartbeat.HeartbeatConfig
 import net.postchain.ebft.heartbeat.HeartbeatListener
 
 /**
@@ -61,7 +62,8 @@ open class ManagedBlockchainProcessManager(
     protected open lateinit var dataSource: ManagedNodeDataSource
     protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
-    protected val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
+    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(nodeConfig.appConfig)
+    protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
     protected var loggedChains: Array<Set<Long>> = emptyArray()
 
     companion object : KLogging()
@@ -120,12 +122,19 @@ open class ManagedBlockchainProcessManager(
             BaseManagedNodeDataSource(blockQueries, postchainContext.nodeConfig)
 
     override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {
-        return if (!nodeConfig.heartbeatEnabled || blockchainConfig.chainID == 0L) {
+        return if (!heartbeatConfig.heartbeatEnabled || blockchainConfig.chainID == 0L) {
             { true }
         } else {
-            val hbListener: HeartbeatListener = DefaultHeartbeatListener(nodeConfig, blockchainConfig.chainID)
+            val hbListener: HeartbeatListener = DefaultHeartbeatListener(heartbeatConfig, blockchainConfig.chainID)
             heartbeatManager.addListener(blockchainConfig.chainID, hbListener);
-            { timestamp: Long -> hbListener.checkHeartbeat(timestamp) }
+
+            { timestamp ->
+                hbListener.checkHeartbeat(timestamp).also { passed ->
+                    if (!passed) {
+                        Thread.sleep(heartbeatConfig.heartbeatSleepTimeout)
+                    }
+                }
+            }
         }
     }
 

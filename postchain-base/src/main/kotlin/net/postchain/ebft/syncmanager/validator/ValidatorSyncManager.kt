@@ -79,7 +79,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             // communicationManager.getPackets() might give a big portion of messages.
             while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
                 if (!isProcessRunning()) return
-                Thread.sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
             }
 
             val (xPeerId, message) = packet

@@ -3,7 +3,7 @@
 package net.postchain.cli
 
 import com.beust.jcommander.Parameters
-import net.postchain.config.node.NodeConfig
+import net.postchain.containers.infra.ContainerNodeConfig
 import java.io.File
 
 @Parameters(commandDescription = "Generates container-zfs-init-script.sh file")
@@ -26,7 +26,7 @@ class CommandGenerateContainerZfsInitScript : Command {
             fi
             
         """.trimIndent()
-        File(NodeConfig.CONTAINER_ZFS_INIT_SCRIPT).writeText(body)
+        File(ContainerNodeConfig.CONTAINER_ZFS_INIT_SCRIPT).writeText(body)
         return Ok()
     }
 }

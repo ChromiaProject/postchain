@@ -144,8 +144,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
                     processDoneJobs()
                     processStaleJobs()
                     sleep(params.loopInterval)
-                } else {
-                    sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
                 }
             }
         } catch (e: BadDataMistake) {
@@ -663,7 +661,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             // communicationManager.getPackets() might give a big portion of messages.
             while (!workerContext.shouldProcessMessages(lastBlockTimestamp)) {
                 if (!isProcessRunning() || exitCondition()) return
-                sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
             }
 
             val peerId = packet.first

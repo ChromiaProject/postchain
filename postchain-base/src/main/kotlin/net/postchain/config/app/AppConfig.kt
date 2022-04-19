@@ -77,4 +77,12 @@ class AppConfig(val config: Configuration) {
     val databaseReadConcurrency: Int
         get() = config.getInt("database.readConcurrency", 10)
 
+    /**
+     * Wrappers for [Configuration] getters
+     */
+    fun getBoolean(key: String, defaultValue: Boolean) = config.getBoolean(key, defaultValue)
+    fun getLong(key: String, defaultValue: Long) = config.getLong(key, defaultValue)
+    fun getInt(key: String, defaultValue: Int) = config.getInt(key, defaultValue)
+    fun getString(key: String, defaultValue: String) = config.getString(key, defaultValue)
+    fun getStringArray(key: String) = config.getStringArray(key)
 }

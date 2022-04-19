@@ -2,6 +2,7 @@ package net.postchain.network.mastersub.master
 
 import mu.KLogging
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ChainsWithOneConnection
@@ -14,7 +15,8 @@ import net.postchain.network.mastersub.protocol.MsMessage
  * Enables the master node to pass on messages to one sub-node.
  */
 class DefaultMasterConnectionManager(
-    val nodeConfig: NodeConfig
+        val nodeConfig: NodeConfig,
+        private val containerNodeConfig: ContainerNodeConfig
 ) : MasterConnectionManager, MasterConnectorEvents {
 
     companion object : KLogging()
@@ -23,7 +25,7 @@ class DefaultMasterConnectionManager(
 
     // Here we don't bother with factory
     private val masterConnector = NettyMasterConnector(this).apply {
-        init(nodeConfig.masterPort)
+        init(containerNodeConfig.masterPort)
     }
 
     private val chainsWithOneSubConnection = ChainsWithOneConnection<
