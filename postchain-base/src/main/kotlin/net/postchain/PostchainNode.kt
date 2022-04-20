@@ -3,8 +3,8 @@
 package net.postchain
 
 import mu.KLogging
-import net.postchain.base.Storage
-import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.config.app.AppConfig
+import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
@@ -16,7 +16,7 @@ import nl.komponents.kovenant.Kovenant
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
  */
-open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage: Storage, debug: Boolean = false) : Shutdownable {
+open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false) : Shutdownable {
 
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
@@ -32,14 +32,14 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage:
                 concurrentTasks = 5
             }
         }
+        val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
 
-        val infrastructureFactory = BaseInfrastructureFactoryProvider().createInfrastructureFactory(nodeConfigProvider)
-        val appConfig = nodeConfigProvider.getConfiguration().appConfig
+        val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
 
         postchainContext = PostchainContext(
                 appConfig,
-                nodeConfigProvider,
+                NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 if (debug) DefaultNodeDiagnosticContext() else null
