@@ -22,7 +22,7 @@ class DefaultHeartbeatListenerTest {
     @Test
     fun testHeartbeatCheckPassed() {
         val heartbeatConfig: HeartbeatConfig = mock {
-            on { heartbeatTimeout } doReturn 20_000L
+            on { timeout } doReturn 20_000L
         }
         val sut = DefaultHeartbeatListener(heartbeatConfig, chainId)
 
@@ -36,7 +36,7 @@ class DefaultHeartbeatListenerTest {
     @Test
     fun testNoHeartbeatEvent_and_timeout_occurs() {
         val heartbeatConfig: HeartbeatConfig = mock {
-            on { heartbeatTimeout } doReturn 20_000L
+            on { timeout } doReturn 20_000L
         }
         val sut = DefaultHeartbeatListener(heartbeatConfig, chainId)
 

@@ -3,7 +3,6 @@ package net.postchain.ebft.heartbeat
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.MockStorage
-import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainRid
 import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.mastersub.protocol.MsMessage
@@ -39,7 +38,7 @@ class RemoteConfigHeartbeatListenerTest {
     @Test
     fun testNoHeartbeatEvent_and_timeout_occurs() {
         val heartbeatConfig: HeartbeatConfig = mock {
-            on { heartbeatTimeout } doReturn 20_000L
+            on { timeout } doReturn 20_000L
         }
         val connManager: SubConnectionManager = mock()
         val sut = RemoteConfigHeartbeatListener(heartbeatConfig, chainId, blockchainRid, connManager)
@@ -57,7 +56,7 @@ class RemoteConfigHeartbeatListenerTest {
     @Test
     fun testHeartbeatCheckPassed_intervalCheckFailed_and_configRequested_then_timeoutCheck() {
         val heartbeatConfig: HeartbeatConfig = mock {
-            on { heartbeatTimeout } doReturn 20_000L
+            on { timeout } doReturn 20_000L
             on { remoteConfigRequestInterval } doReturn 10_000L
             on { remoteConfigTimeout } doReturn 20_000L
         }

@@ -5,7 +5,6 @@ import com.spotify.docker.client.messages.ContainerInfo
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import net.postchain.api.rest.infra.RestApiConfig
-import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 
 object ContainerConfigFactory {
@@ -54,7 +53,7 @@ object ContainerConfigFactory {
          * Therefore, use random port selection
          */
         val dockerPort = "${containerNodeConfig.subnodeRestApiPort}/tcp"
-        val portBindings = if (restApiConfig.restApiPort > -1) {
+        val portBindings = if (restApiConfig.port > -1) {
             mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", container.restApiPort)))
         } else mapOf()
 

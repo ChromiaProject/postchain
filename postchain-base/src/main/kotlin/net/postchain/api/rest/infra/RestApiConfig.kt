@@ -3,11 +3,11 @@ package net.postchain.api.rest.infra
 import net.postchain.config.app.AppConfig
 
 data class RestApiConfig(
-        val restApiBasePath: String,
-        val restApiPort: Int,
-        val restApiSsl: Boolean,
-        val restApiSslCertificate: String,
-        val restApiSslCertificatePassword: String
+        val basePath: String,
+        val port: Int,
+        val ssl: Boolean,
+        val sslCertificate: String,
+        val sslCertificatePassword: String
 ) {
     companion object {
         @JvmStatic

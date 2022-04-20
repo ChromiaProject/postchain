@@ -2,7 +2,6 @@ package net.postchain.containers.bpm
 
 import mu.KLogging
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.FileSystem.Companion.BLOCKCHAINS_DIR
 import net.postchain.containers.bpm.FileSystem.Companion.NODE_CONFIG_FILE
@@ -14,7 +13,7 @@ import org.apache.commons.configuration2.ConfigurationUtils
 import java.io.File
 import java.nio.file.Path
 
-internal class DefaultContainerInitializer(val appConfig: AppConfig, private val heartbeatConfig: HeartbeatConfig, private val containerConfig: ContainerNodeConfig) : ContainerInitializer {
+internal class DefaultContainerInitializer(private val appConfig: AppConfig, private val heartbeatConfig: HeartbeatConfig, private val containerConfig: ContainerNodeConfig) : ContainerInitializer {
 
     companion object : KLogging()
 
@@ -45,7 +44,7 @@ internal class DefaultContainerInitializer(val appConfig: AppConfig, private val
 
     override fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path) {
         // Cloning original nodeConfig
-        val config = ConfigurationUtils.cloneConfiguration(appConfig.config)
+        val config = appConfig.cloneConfiguration()
 
         // Setting up params for container node
         config.setProperty("configuration.provider.node", NodeConfigProviders.Manual.name.toLowerCase())
@@ -63,7 +62,7 @@ internal class DefaultContainerInitializer(val appConfig: AppConfig, private val
         // Heartbeat and RemoteConfig
         // TODO: [POS-164]: Heartbeat and RemoteConfig
         // val defaultNodeConfig = NodeConfig(AppConfig(<empty-apache-config>))
-        config.setProperty("heartbeat.enabled", heartbeatConfig.heartbeatEnabled)
+        config.setProperty("heartbeat.enabled", heartbeatConfig.enabled)
         config.setProperty("remote_config.enabled", heartbeatConfig.remoteConfigEnabled)
 
         config.setProperty("containerChains.masterHost", containerConfig.masterHost)
@@ -74,7 +73,7 @@ internal class DefaultContainerInitializer(val appConfig: AppConfig, private val
          * control here and know that it is always free.
          * If -1, no API communication => subnodeRestApiPort=restApiPost
          */
-        if (config.getInt("restApiPort") > -1) config.setProperty("api.port", containerConfig.subnodeRestApiPort)
+        if (config.getInt("restApiPort", -1) > -1) config.setProperty("api.port", containerConfig.subnodeRestApiPort)
 
         // Creating a nodeConfig file
         val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()

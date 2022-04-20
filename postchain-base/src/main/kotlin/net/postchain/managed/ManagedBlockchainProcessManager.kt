@@ -122,7 +122,7 @@ open class ManagedBlockchainProcessManager(
             BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
 
     override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {
-        return if (!heartbeatConfig.heartbeatEnabled || blockchainConfig.chainID == 0L) {
+        return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {
             { true }
         } else {
             val hbListener: HeartbeatListener = DefaultHeartbeatListener(heartbeatConfig, blockchainConfig.chainID)
@@ -131,7 +131,7 @@ open class ManagedBlockchainProcessManager(
             { timestamp ->
                 hbListener.checkHeartbeat(timestamp).also { passed ->
                     if (!passed) {
-                        Thread.sleep(heartbeatConfig.heartbeatSleepTimeout)
+                        Thread.sleep(heartbeatConfig.sleepTimeout)
                     }
                 }
             }

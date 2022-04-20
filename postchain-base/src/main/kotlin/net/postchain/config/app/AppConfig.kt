@@ -99,11 +99,13 @@ class AppConfig(val config: Configuration) {
         get() = pubKey.hexStringToByteArray()
 
     /**
-     * Wrappers for [Configuration] getters
+     * Wrappers for [Configuration] getters and other functionalities
      */
     fun getBoolean(key: String, defaultValue: Boolean) = config.getBoolean(key, defaultValue)
     fun getLong(key: String, defaultValue: Long) = config.getLong(key, defaultValue)
     fun getInt(key: String, defaultValue: Int) = config.getInt(key, defaultValue)
-    fun getString(key: String, defaultValue: String) = config.getString(key, defaultValue)
-    fun getStringArray(key: String) = config.getStringArray(key)
+    fun getString(key: String, defaultValue: String): String = config.getString(key, defaultValue)
+    fun getStringArray(key: String): Array<String> = config.getStringArray(key)
+
+    fun cloneConfiguration(): Configuration = ConfigurationUtils.cloneConfiguration(config)
 }

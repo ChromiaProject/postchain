@@ -39,7 +39,7 @@ open class SubNodeBlockchainProcessManager(
             {
                 hbListener.checkHeartbeat(it).also { passed ->
                     if (!passed) {
-                        sleep(heartbeatConfig.heartbeatSleepTimeout)
+                        sleep(heartbeatConfig.sleepTimeout)
                     }
                 }
             }

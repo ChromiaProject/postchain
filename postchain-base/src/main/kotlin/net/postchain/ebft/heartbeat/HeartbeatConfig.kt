@@ -3,10 +3,10 @@ package net.postchain.ebft.heartbeat
 import net.postchain.config.app.AppConfig
 
 data class HeartbeatConfig(
-        val heartbeatEnabled: Boolean,
-        val heartbeatTestmode: Boolean,
-        val heartbeatTimeout: Long,
-        val heartbeatSleepTimeout: Long,
+        val enabled: Boolean,
+        val testmode: Boolean,
+        val timeout: Long,
+        val sleepTimeout: Long,
         val remoteConfigEnabled: Boolean,
         val remoteConfigRequestInterval: Long,
         val remoteConfigTimeout: Long

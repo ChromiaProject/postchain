@@ -49,11 +49,11 @@ open class DefaultHeartbeatListener(val heartbeatConfig: HeartbeatConfig, chainI
             }
         }
 
-        val res = timestamp - heartbeat!!.timestamp < heartbeatConfig.heartbeatTimeout
+        val res = timestamp - heartbeat!!.timestamp < heartbeatConfig.timeout
         return resultLogger.log(3 to res, logger) {
             "$pref Heartbeat check result: $res (" +
                     "timestamp ($timestamp) - heartbeat.timestamp (${heartbeat!!.timestamp}) " +
-                    "< nodeConfig.heartbeatTimeout (${heartbeatConfig.heartbeatTimeout}))"
+                    "< nodeConfig.heartbeatTimeout (${heartbeatConfig.timeout}))"
         }
     }
 

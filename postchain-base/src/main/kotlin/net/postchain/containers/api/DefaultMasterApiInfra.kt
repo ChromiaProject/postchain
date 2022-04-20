@@ -3,7 +3,6 @@ package net.postchain.containers.api
 import net.postchain.api.rest.controller.HttpExternalModel
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.api.rest.infra.RestApiConfig
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.debug.NodeDiagnosticContext
@@ -23,7 +22,7 @@ class DefaultMasterApiInfra(
             val path = URL("http",
                     containerNodeConfig.slaveHost,
                     process.restApiPort,
-                    restApiConfig.restApiBasePath
+                    restApiConfig.basePath
             ).toString()
 
             val model = HttpExternalModel(path, process.chainId)

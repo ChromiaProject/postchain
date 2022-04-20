@@ -1,7 +1,6 @@
 package net.postchain.ebft.heartbeat
 
 import mu.KLogging
-import net.postchain.config.node.NodeConfig
 import java.util.concurrent.ConcurrentHashMap
 
 interface HeartbeatManager {
@@ -41,7 +40,7 @@ class DefaultHeartbeatManager(val heartbeatConfig: HeartbeatConfig) : HeartbeatM
 
     override fun beat(timestamp: Long) {
         // TODO: [POS-164]: For manual test only. Delete this later
-        if (heartbeatConfig.heartbeatTestmode) {
+        if (heartbeatConfig.testmode) {
             if ((heartbeatTestmodeCounter++ / 25) % 2 == 0) {
                 logger.debug { "Heartbeat event received and skipped: timestamp $timestamp" }
                 return
