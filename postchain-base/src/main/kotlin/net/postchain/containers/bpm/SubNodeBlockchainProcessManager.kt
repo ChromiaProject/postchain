@@ -5,12 +5,8 @@ import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
-import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
-import net.postchain.ebft.heartbeat.HeartbeatConfig
-import net.postchain.ebft.heartbeat.HeartbeatListener
-import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
+import net.postchain.ebft.heartbeat.*
 import net.postchain.network.mastersub.subnode.SubConnectionManager
-import java.lang.Thread.sleep
 
 open class SubNodeBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -36,15 +32,7 @@ open class SubNodeBlockchainProcessManager(
                 it.storage = storage
                 heartbeatManager.addListener(blockchainConfig.chainID, it)
             };
-            hbCheck@ { timestamp, exitCondition ->
-                while (!hbListener.checkHeartbeat(timestamp)) {
-                    if (exitCondition()) {
-                        return@hbCheck false
-                    }
-                    sleep(heartbeatConfig.sleepTimeout)
-                }
-                true
-            }
+            awaitHeartbeatHandler(hbListener, heartbeatConfig)
         }
     }
 

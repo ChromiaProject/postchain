@@ -11,10 +11,7 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
-import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
-import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
-import net.postchain.ebft.heartbeat.HeartbeatConfig
-import net.postchain.ebft.heartbeat.HeartbeatListener
+import net.postchain.ebft.heartbeat.*
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -127,16 +124,7 @@ open class ManagedBlockchainProcessManager(
         } else {
             val hbListener: HeartbeatListener = DefaultHeartbeatListener(heartbeatConfig, blockchainConfig.chainID)
             heartbeatManager.addListener(blockchainConfig.chainID, hbListener);
-
-            hbCheck@ { timestamp, exitCondition ->
-                while (!hbListener.checkHeartbeat(timestamp)) {
-                    if (exitCondition()) {
-                        return@hbCheck false
-                    }
-                    Thread.sleep(heartbeatConfig.sleepTimeout)
-                }
-                true
-            }
+            awaitHeartbeatHandler(hbListener, heartbeatConfig)
         }
     }
 
