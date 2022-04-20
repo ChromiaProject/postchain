@@ -20,10 +20,8 @@ object GtvDecoder {
             return GtvNull
         }
         if (r.integer != null && r.integer.value > Long.MAX_VALUE.toBigInteger()) {
-            return GtvBigInteger(r.integer.value)
-        }
-        if (r.integer != null) {
-            return GtvInteger(r.integer.value)
+            if (r.integer.value > Long.MAX_VALUE.toBigInteger()) return GtvBigInteger(r.integer.value)
+            return GtvInteger(r.integer.value.longValueExact())
         }
         if (r.string != null ) {
             return GtvString(r.string.toString())

@@ -8,8 +8,6 @@ import java.math.BigInteger
 
 data class GtvInteger(val integer: Long) : GtvPrimitive() {
 
-    constructor(l: BigInteger): this(l.longValueExact())
-
     override val type: GtvType = GtvType.INTEGER
 
     override fun asInteger(): Long {

@@ -9,8 +9,17 @@ import java.math.BigInteger
  * Enum class of GTXML types
  * Note: order is same as in ASN.1, thus we can use same integer ids.
  */
-enum class GtvType {
-    NULL, BYTEARRAY, STRING, INTEGER, DICT, ARRAY
+enum class GtvType(val s: String) {
+    NULL("null"), BYTEARRAY("bytea"), STRING("string"), INTEGER("int"), DICT("dict"), ARRAY("array"), BIGINTEGER("bigint");
+
+    companion object {
+        /**
+         * Returns [GtvType] object correspondent to [String]
+         */
+        fun fromString(s: String): GtvType {
+            return values().firstOrNull { it.s == s } ?: throw IllegalArgumentException("Unknown type of GtvType: $s")
+        }
+    }
 }
 
 /**

@@ -19,7 +19,7 @@ object GtvFactory {
 
     // helper methods:
     fun gtv(l: Long): GtvInteger {
-        return GtvInteger(BigInteger.valueOf(l))
+        return GtvInteger(l)
     }
 
     fun gtv(i: BigInteger): GtvBigInteger {
@@ -27,7 +27,7 @@ object GtvFactory {
     }
 
     fun gtv(b: Boolean): GtvInteger {
-        return GtvInteger(BigInteger.valueOf(b.toLong()))
+        return GtvInteger(b.toLong())
     }
 
     fun gtv(s: String): GtvString {

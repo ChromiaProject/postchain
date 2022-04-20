@@ -6,7 +6,6 @@ import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.toHex
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.math.BigInteger
 import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
@@ -23,10 +22,7 @@ class GtvEncoderTest {
 
     @Test
     fun testGtvInteger() {
-        assertThrows<ArithmeticException> {
-           GtvEncoder.encodeGtv(GtvInteger(BigInteger.valueOf(Long.MAX_VALUE).pow(3)))
-        }
-        val expected = GtvInteger(BigInteger.valueOf(Long.MAX_VALUE))
+        val expected = GtvInteger(Long.MAX_VALUE)
         val b = GtvEncoder.encodeGtv(expected)
         val result = GtvDecoder.decodeGtv(b)
         assertEquals(expected, result)

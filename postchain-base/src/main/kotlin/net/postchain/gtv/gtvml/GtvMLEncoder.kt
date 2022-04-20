@@ -33,7 +33,8 @@ object GtvMLEncoder {
              */
             is GtvNull -> objectFactory.createNull(null)
             is GtvString -> objectFactory.createString(gtv.string)
-            is GtvInteger -> objectFactory.createInt(gtv.asBigInteger())
+            is GtvInteger -> objectFactory.createInt(gtv.asInteger())
+            is GtvBigInteger -> objectFactory.createBigInt(gtv.asBigInteger())
             is GtvByteArray -> objectFactory.createBytea(gtv.bytearray) // See comments in GTXMLValueEncodeScalarsTest
             is GtvArray -> createArrayElement(gtv)
             is GtvDictionary -> createDictElement(gtv)

@@ -8,7 +8,9 @@ import java.math.BigInteger
 
 data class GtvBigInteger(val integer: BigInteger) : GtvPrimitive() {
 
-    override val type: GtvType = GtvType.INTEGER
+    constructor(l: Long): this(BigInteger.valueOf(l))
+
+    override val type: GtvType = GtvType.BIGINTEGER
 
     override fun asBigInteger(): BigInteger {
         return integer
