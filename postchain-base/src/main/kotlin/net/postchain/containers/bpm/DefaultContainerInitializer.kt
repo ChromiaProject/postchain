@@ -8,11 +8,10 @@ import net.postchain.containers.bpm.FileSystem.Companion.NODE_CONFIG_FILE
 import net.postchain.containers.bpm.FileSystem.Companion.PEERS_FILE
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
-import net.postchain.ebft.heartbeat.HeartbeatConfig
 import java.io.File
 import java.nio.file.Path
 
-internal class DefaultContainerInitializer(private val appConfig: AppConfig, private val heartbeatConfig: HeartbeatConfig, private val containerConfig: ContainerNodeConfig) : ContainerInitializer {
+internal class DefaultContainerInitializer(private val appConfig: AppConfig, private val containerConfig: ContainerNodeConfig) : ContainerInitializer {
 
     companion object : KLogging()
 
@@ -59,9 +58,9 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         config.setProperty("database.schema", scheme)
 
         /**
-         * If nodeConfig.restApiPost > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
+         * If restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
          * control here and know that it is always free.
-         * If -1, no API communication => subnodeRestApiPort=restApiPost
+         * If -1, no API communication => subnodeRestApiPort=-1
          */
         if (config.getInt("api.port", 7740) > -1) config.setProperty("api.port", containerConfig.subnodeRestApiPort)
 
