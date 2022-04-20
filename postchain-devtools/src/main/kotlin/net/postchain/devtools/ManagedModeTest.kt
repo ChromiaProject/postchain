@@ -250,7 +250,7 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
-            dataSource = appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
+            dataSource = appConfig.getProperty("infrastructure.datasource") as MockManagedNodeDataSource
 
             val syncInfra = EBFTSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
