@@ -15,9 +15,12 @@ object GtvDecoder {
         return wrapValue(gtv)
     }
 
-    private fun wrapValue(r: RawGtv): net.postchain.gtv.Gtv {
+    private fun wrapValue(r: RawGtv): Gtv {
         if (r.null_ != null) {
             return GtvNull
+        }
+        if (r.integer != null && r.integer.value > Long.MAX_VALUE.toBigInteger()) {
+            return GtvBigInteger(r.integer.value)
         }
         if (r.integer != null) {
             return GtvInteger(r.integer.value)

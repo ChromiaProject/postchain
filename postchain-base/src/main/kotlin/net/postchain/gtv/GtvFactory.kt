@@ -22,8 +22,8 @@ object GtvFactory {
         return GtvInteger(BigInteger.valueOf(l))
     }
 
-    fun gtv(i: BigInteger): GtvInteger {
-        return GtvInteger(i)
+    fun gtv(i: BigInteger): GtvBigInteger {
+        return GtvBigInteger(i)
     }
 
     fun gtv(b: Boolean): GtvInteger {

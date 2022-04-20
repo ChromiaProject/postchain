@@ -87,7 +87,7 @@ internal class GtvObjectMapperTest {
     @Test
     fun booleanType() {
         data class SimpleBoolean(@Name("myBoolean") @DefaultValue(defaultBoolean = false) val myBoolean: Boolean)
-        assert(gtv(mapOf("myBoolean" to gtv(BigInteger("9999209385237856329573295739345354354354353")))).toObject<SimpleBoolean>()).isEqualTo(SimpleBoolean(true))
+        assert(gtv(mapOf("myBoolean" to gtv(1L))).toObject<SimpleBoolean>()).isEqualTo(SimpleBoolean(true))
         assert(gtv(mapOf()).toObject<SimpleBoolean>()).isEqualTo(SimpleBoolean(false))
     }
 
