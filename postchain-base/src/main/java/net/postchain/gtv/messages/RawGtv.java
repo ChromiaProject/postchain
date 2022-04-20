@@ -13,7 +13,6 @@ import org.openmuc.jasn1.ber.types.BerInteger;
 import org.openmuc.jasn1.ber.types.BerNull;
 import org.openmuc.jasn1.ber.types.BerOctetString;
 import org.openmuc.jasn1.ber.types.BerType;
-import org.openmuc.jasn1.ber.types.string.BerNumericString;
 import org.openmuc.jasn1.ber.types.string.BerUTF8String;
 
 import java.io.IOException;
@@ -280,7 +279,7 @@ public class RawGtv implements BerType, Serializable {
 	public BerOctetString byteArray = null;
 	public BerUTF8String string = null;
 	public BerInteger integer = null;
-	public BerNumericString bigInteger = null;
+	public BerInteger bigInteger = null;
 	public Dict dict = null;
 	public Array array = null;
 	
@@ -291,7 +290,7 @@ public class RawGtv implements BerType, Serializable {
 		this.code = code;
 	}
 
-	public RawGtv(BerNull null_, BerOctetString byteArray, BerUTF8String string, BerInteger integer, Dict dict, Array array, BerNumericString bigInteger) {
+	public RawGtv(BerNull null_, BerOctetString byteArray, BerUTF8String string, BerInteger integer, Dict dict, Array array, BerInteger bigInteger) {
 		this.null_ = null_;
 		this.byteArray = byteArray;
 		this.string = string;
@@ -443,7 +442,7 @@ public class RawGtv implements BerType, Serializable {
 		}
 		if (berTag.equals(BerTag.CONTEXT_CLASS, BerTag.CONSTRUCTED, 18)) {
 			codeLength += BerLength.skip(is);
-			bigInteger = new BerNumericString();
+			bigInteger = new BerInteger();
 			codeLength += bigInteger.decode(is, true);
 			return codeLength;
 		}
