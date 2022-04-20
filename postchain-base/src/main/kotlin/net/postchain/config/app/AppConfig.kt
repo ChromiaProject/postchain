@@ -18,7 +18,7 @@ import java.io.PrintWriter
  * Wrapper to the generic [Configuration]
  * Adding some convenience fields, for example regarding database connection.
  */
-class AppConfig(val config: Configuration) {
+class AppConfig(private val config: Configuration) {
 
     companion object {
 
@@ -27,7 +27,7 @@ class AppConfig(val config: Configuration) {
                     .setFileName(configFile)
                     .setListDelimiterHandler(DefaultListDelimiterHandler(','))
 
-            val configuration = FileBasedConfigurationBuilder<PropertiesConfiguration>(PropertiesConfiguration::class.java)
+            val configuration = FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
                     .configure(params)
                     .configuration
 
@@ -109,6 +109,7 @@ class AppConfig(val config: Configuration) {
     fun subset(prefix: String): Configuration = config.subset(prefix)
     fun getProperty(key: String): Any = config.getProperty(key)
     fun getKeys(prefix: String): MutableIterator<String> = config.getKeys(prefix)
+    fun containsKey(key: String) = config.containsKey(key)
 
     fun cloneConfiguration(): Configuration = ConfigurationUtils.cloneConfiguration(config)
 }

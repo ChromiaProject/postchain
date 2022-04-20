@@ -4,8 +4,8 @@ import net.postchain.config.app.AppConfig
 
 val AppConfig.activeChainIds: Array<String>
     get() {
-        return if (config.containsKey("activechainids"))
-            config.getStringArray("activechainids")
+        return if (containsKey("activechainids"))
+            getStringArray("activechainids")
         else
             emptyArray()
     }

@@ -52,7 +52,7 @@ object CliExecution {
         fun getBrid(): BlockchainRid {
             val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
             val keyString = "brid.chainid." + chainId.toString()
-            val brid = if (appConfig.config.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.config.getString(keyString)) else
+            val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
                 BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             return brid
         }
