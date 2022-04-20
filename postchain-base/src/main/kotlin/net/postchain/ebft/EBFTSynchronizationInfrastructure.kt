@@ -36,16 +36,17 @@ open class EBFTSynchronizationInfrastructure(
             shouldProcessNewMessages: (Long) -> Boolean
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
+        val currentNodeConfig = nodeConfig
 
         val historicBrid = blockchainConfig.effectiveBlockchainRID
         val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
             HistoricBlockchainContext(
-                    historicBrid, nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
+                    historicBrid, currentNodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
                     ?: emptyMap()
             )
         } else null
 
-        val peerCommConfiguration = peersCommConfigFactory.create(postchainContext.appConfig, nodeConfig, blockchainConfig, historicBlockchainContext)
+        val peerCommConfiguration = peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
         val workerContext = WorkerContext(
                 processName,
                 blockchainConfig,

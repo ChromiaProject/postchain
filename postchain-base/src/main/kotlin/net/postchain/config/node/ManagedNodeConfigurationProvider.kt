@@ -111,7 +111,11 @@ class ManagedNodeConfigurationProvider(
         val c0Heights = mutableMapOf<Long, Long>()
         for (x in bridToHeightMap) {
             val chainIdKey = bridToChainID[x.key]
-            c0Heights.put(chainIdKey!!, x.value)
+            // We may be computing this when chain has been added to chain0 table but not yet to "blockchains" table
+            // this should not result in a NPE, ignore setting height until we have the chain in both tables
+            if (chainIdKey != null) {
+                c0Heights[chainIdKey] = x.value
+            }
         }
 
         // Primary source of height information is from local table, if not found there, use values from c0 tables.
