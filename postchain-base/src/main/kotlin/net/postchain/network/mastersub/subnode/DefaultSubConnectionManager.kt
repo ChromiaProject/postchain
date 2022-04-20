@@ -269,7 +269,7 @@ class DefaultSubConnectionManager(
     }
 
     private fun loggerPrefix(blockchainRid: BlockchainRid): String =
-            BlockchainProcessName(appConfig.pubKey, blockchainRid).toString()
+            BlockchainProcessName(appConfig.pubKey.asString, blockchainRid).toString()
 
     private fun logger(descriptor: SubConnectionDescriptor): String = loggerPrefix(descriptor.blockchainRid)
 

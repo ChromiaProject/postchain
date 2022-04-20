@@ -58,7 +58,7 @@ class DefaultPeerCommunicationManager<PacketType>(
     override fun sendPacket(packet: PacketType, recipient: NodeRid) {
         logger.trace { "$processName: sendPacket($packet, ${peerName(recipient.toString())})" }
 
-        require(NodeRid(config.pubKey) != recipient) {
+        require(NodeRid(config.pubKey.byteArray) != recipient) {
             "CommunicationManager.sendPacket(): sender can not be the recipient"
         }
 

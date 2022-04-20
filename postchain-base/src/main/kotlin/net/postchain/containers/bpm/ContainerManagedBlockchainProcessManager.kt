@@ -318,7 +318,7 @@ open class ContainerManagedBlockchainProcessManager(
     private fun createBlockchainProcess(chain: Chain, targetContainer: PostchainContainer): ContainerBlockchainProcess? {
         val dir = containerInitializer.initContainerChainWorkingDir(fs, chain)
         return if (dir != null) {
-            val processName = BlockchainProcessName(appConfig.pubKey, chain.brid)
+            val processName = BlockchainProcessName(appConfig.pubKey.asString, chain.brid)
             val process = masterBlockchainInfra.makeMasterBlockchainProcess(
                     processName,
                     chain.chainId,

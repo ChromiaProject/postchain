@@ -34,9 +34,9 @@ class NodeConfigTest {
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
         assertIsEmptyOrEqualsToEnvVar(appConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
 
-        assertk.assert(appConfig.privKey).isEmpty()
+        assertk.assert(appConfig.privKey.asString).isEmpty()
         assertk.assert(appConfig.privKeyByteArray.isEmpty())
-        assertk.assert(appConfig.pubKey).isEmpty()
+        assertk.assert(appConfig.pubKey.asString).isEmpty()
         assertk.assert(appConfig.pubKeyByteArray.isEmpty())
 
         assertk.assert(nodeConfig.peerInfoMap.entries).isEmpty()

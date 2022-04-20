@@ -43,8 +43,8 @@ class QueryCommand(private val clientProvider: PostchainClientProvider) : CliktC
 
     internal fun runInternal(config: PostchainClientConfig, queryName: String, args: Gtv): Gtv {
         if (args !is GtvDictionary) throw IllegalArgumentException("query must be done with named parameters in a dict")
-        val sigMaker = cryptoSystem.buildSigMaker(config.pubKeyByteArray, config.privKeyByteArray)
-        return clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray))
+        val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.byteArray, config.privKey.byteArray)
+        return clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKey.byteArray))
                 .querySync(queryName, args)
     }
 }

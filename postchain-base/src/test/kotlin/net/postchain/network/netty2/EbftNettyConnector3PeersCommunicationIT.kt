@@ -4,24 +4,28 @@ package net.postchain.network.netty2
 
 import assertk.assert
 import assertk.assertions.isIn
-import net.postchain.crypto.secp256k1_derivePubKey
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import net.postchain.base.*
+import net.postchain.base.BasePeerCommConfiguration
+import net.postchain.base.PeerInfo
+import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.base.peerId
 import net.postchain.core.BlockchainRid
+import net.postchain.crypto.Key
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.common.ConnectionDirection
-import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerConnectionDescriptor
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.FIVE_SECONDS
 import org.awaitility.Duration.TEN_SECONDS
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 
 class EbftNettyConnector3PeersCommunicationIT {
 
@@ -54,15 +58,15 @@ class EbftNettyConnector3PeersCommunicationIT {
 
         // Creating
         context1 = EbftTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey1, pubKey1),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, Key(privKey1), Key(pubKey1)),
                 blockchainRid)
 
         context2 = EbftTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey2, pubKey2),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, Key(privKey2), Key(pubKey2)),
                 blockchainRid)
 
         context3 = EbftTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey3, pubKey3),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, Key(privKey3), Key(pubKey3)),
                 blockchainRid)
 
         // Initializing

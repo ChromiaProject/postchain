@@ -182,8 +182,8 @@ open class EBFTSynchronizationInfrastructure(
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
                 SECP256K1CryptoSystem(),
-                postchainContext.appConfig.privKeyByteArray,
-                postchainContext.appConfig.pubKeyByteArray
+                postchainContext.appConfig.privKey,
+                postchainContext.appConfig.pubKey
         )
     }
 
@@ -221,8 +221,8 @@ open class EBFTSynchronizationInfrastructure(
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
                 SECP256K1CryptoSystem(),
-                postchainContext.appConfig.privKeyByteArray,
-                postchainContext.appConfig.pubKeyByteArray
+                postchainContext.appConfig.privKey,
+                postchainContext.appConfig.pubKey
         )
     }
 

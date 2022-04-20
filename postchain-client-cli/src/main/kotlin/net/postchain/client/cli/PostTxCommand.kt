@@ -40,8 +40,8 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
     }
 
     internal fun runInternal(config: PostchainClientConfig, opName: String, vararg args: Gtv) {
-        val sigMaker = cryptoSystem.buildSigMaker(config.pubKeyByteArray, config.privKeyByteArray)
-        clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray))
+        val sigMaker = cryptoSystem.buildSigMaker(config.pubKey.byteArray, config.privKey.byteArray)
+        clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKey.byteArray))
                 .makeTransaction()
                 .apply {
                     addOperation(opName, *args)

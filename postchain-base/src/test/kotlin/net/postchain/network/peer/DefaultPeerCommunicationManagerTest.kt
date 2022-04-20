@@ -5,20 +5,20 @@ package net.postchain.network.peer
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
-import org.mockito.kotlin.*
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
+import net.postchain.crypto.Key
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.lang.IllegalArgumentException
+import org.mockito.kotlin.*
 
 class DefaultPeerCommunicationManagerTest {
 
@@ -104,7 +104,7 @@ class DefaultPeerCommunicationManagerTest {
         // Given
         val peersConfig: PeerCommConfiguration = mock {
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), NodeRid(pubKey2))
-            on { pubKey } doReturn pubKey1
+            on { pubKey } doReturn Key(pubKey1)
         }
 
         // When / Then exception
@@ -123,7 +123,7 @@ class DefaultPeerCommunicationManagerTest {
         val connectionManager: PeerConnectionManager = mock()
         val config = object : PeerCommConfigurationDummy() {
             override val networkNodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1Mock, peerInfo2), NodeRid(pubKey2))
-            override val pubKey = pubKey2
+            override val pubKey = Key(pubKey2)
         }
 
         // When

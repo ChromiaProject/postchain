@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import net.postchain.crypto.Key
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Verifier
 
@@ -11,7 +12,7 @@ interface PeerResolver {
 
 interface PeerCommConfiguration : PeerResolver {
     val networkNodes: NetworkNodes
-    val pubKey: ByteArray
+    val pubKey: Key
     fun myPeerInfo(): PeerInfo
     fun sigMaker(): SigMaker
     fun verifier(): Verifier

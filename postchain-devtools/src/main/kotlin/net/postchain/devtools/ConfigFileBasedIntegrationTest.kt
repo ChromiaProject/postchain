@@ -152,7 +152,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         val appConfig = createAppConfig(nodeIndex, totalNodesCount, nodeConfigFilename)
         StorageBuilder.buildStorage(appConfig, preWipeDatabase)
 
-        nodesNames[appConfig.pubKey] = "$nodeIndex"
+        nodesNames[appConfig.pubKey.asString] = "$nodeIndex"
         val blockchainConfig = readBlockchainConfig(blockchainConfigFilename)
         val chainId = appConfig.activeChainIds.first().toLong()
 

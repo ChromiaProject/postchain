@@ -144,6 +144,6 @@ class DefaultMasterConnectionManager(
     }
 
     private fun buildProcessName(descriptor: MasterConnectionDescriptor): String = BlockchainProcessName(
-        appConfig.pubKey, descriptor.blockchainRid
+        appConfig.pubKey.asString, descriptor.blockchainRid
     ).toString()
 }

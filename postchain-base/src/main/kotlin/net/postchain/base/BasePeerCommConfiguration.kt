@@ -4,32 +4,33 @@ package net.postchain.base
 
 import net.postchain.core.ByteArrayKey
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Key
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Verifier
 
 open class BasePeerCommConfiguration(
         override val networkNodes: NetworkNodes,
         private val cryptoSystem: CryptoSystem,
-        private val privKey: ByteArray,
-        override val pubKey: ByteArray
+        private val privKey: Key,
+        override val pubKey: Key
 ) : PeerCommConfiguration {
 
     companion object {
         // Used in tests only
         fun build(peers: Array<PeerInfo>,
                   cryptoSystem: CryptoSystem,
-                  privKey: ByteArray,
-                  pubKey: ByteArray
+                  privKey: Key,
+                  pubKey: Key
         ): BasePeerCommConfiguration {
             return build(peers.toSet(), cryptoSystem, privKey, pubKey)
         }
 
         fun build(peers: Collection<PeerInfo>,
                   cryptoSystem: CryptoSystem,
-                  privKey: ByteArray,
-                  pubKey: ByteArray
+                  privKey: Key,
+                  pubKey: Key
         ): BasePeerCommConfiguration {
-            val nn = NetworkNodes.buildNetworkNodes(peers, ByteArrayKey(pubKey))
+            val nn = NetworkNodes.buildNetworkNodes(peers, ByteArrayKey(pubKey.byteArray))
             return BasePeerCommConfiguration(nn, cryptoSystem, privKey, pubKey)
         }
     }
@@ -42,7 +43,7 @@ open class BasePeerCommConfiguration(
     override fun myPeerInfo(): PeerInfo = networkNodes.myself
 
     override fun sigMaker(): SigMaker {
-        return cryptoSystem.buildSigMaker(pubKey, privKey)
+        return cryptoSystem.buildSigMaker(pubKey.byteArray, privKey.byteArray)
     }
 
     override fun verifier(): Verifier = cryptoSystem.makeVerifier()

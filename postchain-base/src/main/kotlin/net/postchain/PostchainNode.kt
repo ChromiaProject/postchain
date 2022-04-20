@@ -35,7 +35,7 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
         val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
-        logPrefix = peerName(appConfig.pubKey)
+        logPrefix = peerName(appConfig.pubKey.asString)
 
         postchainContext = PostchainContext(
                 appConfig,
@@ -95,7 +95,7 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
                 logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.appConfig.pubKey}?" }
                 null
             } else {
-                val procName = BlockchainProcessName(postchainContext.appConfig.pubKey, x.blockchainEngine.getConfiguration().blockchainRid)
+                val procName = BlockchainProcessName(postchainContext.appConfig.pubKey.asString, x.blockchainEngine.getConfiguration().blockchainRid)
                 BlockTrace.buildBeforeBlock(procName)
             }
         } else {

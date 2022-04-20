@@ -35,7 +35,7 @@ class PostchainTestNode(
     private val blockchainRidMap = mutableMapOf<Long, BlockchainRid>() // Used to keep track of the BC RIDs of the chains
 
     init {
-        pubKey = appConfig.pubKey
+        pubKey = appConfig.pubKey.asString
         isInitialized = true
 
         // We don't have specific test classes for Proc Man

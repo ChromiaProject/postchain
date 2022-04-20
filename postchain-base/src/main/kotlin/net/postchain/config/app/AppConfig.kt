@@ -2,8 +2,8 @@
 
 package net.postchain.config.app
 
-import net.postchain.common.hexStringToByteArray
 import net.postchain.core.Infrastructure
+import net.postchain.crypto.Key
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -86,17 +86,17 @@ class AppConfig(private val config: Configuration) {
     /**
      * Pub/Priv keys
      */
-    val privKey: String
-        get() = config.getString("messaging.privkey", "")
+    val privKey: Key
+        get() = Key.fromString(config.getString("messaging.privkey", ""))
 
     val privKeyByteArray: ByteArray
-        get() = privKey.hexStringToByteArray()
+        get() = privKey.byteArray
 
-    val pubKey: String
-        get() = config.getString("messaging.pubkey", "")
+    val pubKey: Key
+        get() = Key.fromString(config.getString("messaging.pubkey", ""))
 
     val pubKeyByteArray: ByteArray
-        get() = pubKey.hexStringToByteArray()
+        get() = pubKey.byteArray
 
     /**
      * Wrappers for [Configuration] getters and other functionalities

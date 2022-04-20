@@ -7,10 +7,11 @@ import assertk.assertions.containsExactly
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.core.byteArrayKeyOf
+import net.postchain.crypto.Key
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
@@ -44,11 +45,11 @@ class DefaultPeerCommunicationManager2PeersIT {
 
         // Creating
         context1 = EbftIntegrationTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey1, pubKey1),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, Key(privKey1), Key(pubKey1)),
                 blockchainRid)
 
         context2 = EbftIntegrationTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey2, pubKey2),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, Key(privKey2), Key(pubKey2)),
                 blockchainRid)
 
         // Initializing

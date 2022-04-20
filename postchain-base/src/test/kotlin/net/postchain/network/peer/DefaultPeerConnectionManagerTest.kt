@@ -10,6 +10,7 @@ import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.byteArrayKeyOf
+import net.postchain.crypto.Key
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketDecoderFactory
@@ -127,7 +128,7 @@ class DefaultPeerConnectionManagerTest {
         // TODO: [et]: Maybe use arg captor here
         // Given
         val communicationConfig: PeerCommConfiguration = mock {
-            on { pubKey } doReturn peerInfo2.pubKey// See DefaultPeersConnectionStrategy
+            on { pubKey } doReturn Key(peerInfo2.pubKey)// See DefaultPeersConnectionStrategy
             on { myPeerInfo() } doReturn peerInfo2
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), NodeRid(peerInfo2.pubKey))
             on { resolvePeer(peerInfo1.pubKey) } doReturn peerInfo1
@@ -187,7 +188,7 @@ class DefaultPeerConnectionManagerTest {
     fun connectChainPeer_connects_peer_successfully() {
         // Given
         val communicationConfig: PeerCommConfiguration = mock {
-            on { pubKey } doReturn peerInfo1.pubKey
+            on { pubKey } doReturn Key(peerInfo1.pubKey)
             on { myPeerInfo() } doReturn peerInfo1
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), NodeRid(peerInfo1.pubKey))
             on { resolvePeer(peerInfo2.pubKey) } doReturn peerInfo2
@@ -222,7 +223,7 @@ class DefaultPeerConnectionManagerTest {
     fun connectChainPeer_connects_already_connected_peer_and_nothing_happens() {
         // Given
         val communicationConfig: PeerCommConfiguration = mock {
-            on { pubKey } doReturn peerInfo2.pubKey // See DefaultPeersConnectionStrategy
+            on { pubKey } doReturn Key(peerInfo2.pubKey) // See DefaultPeersConnectionStrategy
             on { myPeerInfo() } doReturn peerInfo2
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), NodeRid(peerInfo2.pubKey))
             on { resolvePeer(peerInfo1.pubKey) } doReturn peerInfo1
@@ -273,7 +274,7 @@ class DefaultPeerConnectionManagerTest {
     fun isPeerConnected_and_getConnectedPeers_are_succeeded() {
         // Given
         val communicationConfig: PeerCommConfiguration = mock {
-            on { pubKey } doReturn peerInfo2.pubKey // See DefaultPeersConnectionStrategy
+            on { pubKey } doReturn Key(peerInfo2.pubKey) // See DefaultPeersConnectionStrategy
             on { myPeerInfo() } doReturn peerInfo2
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), NodeRid(peerInfo2.pubKey))
             on { resolvePeer(peerInfo1.pubKey) } doReturn peerInfo1
@@ -348,7 +349,7 @@ class DefaultPeerConnectionManagerTest {
     fun sendPacket_sends_packet_to_receiver_via_connection_successfully() {
         // Given
         val communicationConfig: PeerCommConfiguration = mock {
-            on { pubKey } doReturn peerInfo2.pubKey // See DefaultPeersConnectionStrategy
+            on { pubKey } doReturn Key(peerInfo2.pubKey) // See DefaultPeersConnectionStrategy
             on { myPeerInfo() } doReturn peerInfo2
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), NodeRid(peerInfo2.pubKey))
             on { resolvePeer(peerInfo1.pubKey) } doReturn peerInfo1
@@ -403,7 +404,7 @@ class DefaultPeerConnectionManagerTest {
     fun broadcastPacket_sends_packet_to_all_receivers_successfully() {
         // Given
         val communicationConfig: PeerCommConfiguration = mock {
-            on { pubKey } doReturn peerInfo1.pubKey
+            on { pubKey } doReturn Key(peerInfo1.pubKey)
             on { myPeerInfo() } doReturn peerInfo1
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), NodeRid(peerInfo1.pubKey))
             on { resolvePeer(peerInfo2.pubKey) } doReturn peerInfo2

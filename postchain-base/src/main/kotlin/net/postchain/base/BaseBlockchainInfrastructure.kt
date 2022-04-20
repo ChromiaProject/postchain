@@ -28,7 +28,7 @@ open class BaseBlockchainInfrastructure(
     val syncInfraExtCache = mutableMapOf<String, SynchronizationInfrastructureExtension>()
 
     init {
-        val privKey = postchainContext.appConfig.privKeyByteArray
+        val privKey = postchainContext.appConfig.privKey.byteArray
         val pubKey = secp256k1_derivePubKey(privKey)
         blockSigMaker = cryptoSystem.buildSigMaker(pubKey, privKey)
         subjectID = pubKey

@@ -4,10 +4,13 @@ package net.postchain.network.peer
 
 import assertk.assert
 import assertk.assertions.isEmpty
+import net.postchain.base.BasePeerCommConfiguration
+import net.postchain.base.PeerInfo
+import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.BlockchainRid
-import net.postchain.crypto.secp256k1_derivePubKey
-import net.postchain.base.*
 import net.postchain.core.UserMistake
+import net.postchain.crypto.Key
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
@@ -29,7 +32,7 @@ class DefaultPeerCommunicationManager1PeerIT {
 
     private fun startTestContext(peers: Array<PeerInfo>, pubKey: ByteArray): EbftIntegrationTestContext {
         val peerConfiguration = BasePeerCommConfiguration.build(
-                peers, cryptoSystem, privKey, pubKey)
+                peers, cryptoSystem, Key(privKey), Key(pubKey))
 
         return EbftIntegrationTestContext(peerConfiguration, blockchainRid)
     }

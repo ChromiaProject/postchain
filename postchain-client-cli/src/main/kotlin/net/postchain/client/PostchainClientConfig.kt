@@ -1,17 +1,16 @@
 package net.postchain.client
 
 import net.postchain.common.PropertiesFileLoader
-import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainRid
+import net.postchain.crypto.KeyPair
 
 data class PostchainClientConfig(
         val apiUrl: String,
         val blockchainRid: BlockchainRid,
-        private val privKey: String,
-        private val pubKey: String
+        val keyPair: KeyPair
 ) {
-    val pubKeyByteArray = pubKey.hexStringToByteArray()
-    val privKeyByteArray = privKey.hexStringToByteArray()
+    val pubKey = keyPair.pubKey
+    val privKey = keyPair.privKey
 
     companion object {
         @JvmStatic
@@ -22,10 +21,12 @@ data class PostchainClientConfig(
                             ?: config.getString("api-url", ""),
                     blockchainRid = (System.getenv("POSTCHAIN_CLIENT_BLOCKCHAIN_RID")
                             ?: config.getString("blockchain-rid", "")).let { BlockchainRid.buildFromHex(it) },
-                    privKey = System.getenv("POSTCHAIN_CLIENT_PRIVKEY")
-                            ?: config.getString("privkey", ""),
-                    pubKey = System.getenv("POSTCHAIN_CLIENT_PUBKEY")
-                            ?: config.getString("pubkey", "")
+                    keyPair = KeyPair.fromStrings(
+                            System.getenv("POSTCHAIN_CLIENT_PUBKEY")
+                                    ?: config.getString("pubkey", ""),
+                            System.getenv("POSTCHAIN_CLIENT_PRIVKEY")
+                                    ?: config.getString("privkey", "")
+                    )
             )
         }
     }

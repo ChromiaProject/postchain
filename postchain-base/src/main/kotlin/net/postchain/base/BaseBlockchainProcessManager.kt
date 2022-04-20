@@ -98,7 +98,7 @@ open class BaseBlockchainProcessManager(
                         val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
                                 configuration, eContext, NODE_ID_AUTO, chainId)
 
-                        val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
+                        val processName = BlockchainProcessName(appConfig.pubKey.asString, blockchainConfig.blockchainRid)
                         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
                         val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
@@ -226,7 +226,7 @@ open class BaseBlockchainProcessManager(
     }
 
     protected fun nodeName(): String {
-        return peerName(appConfig.pubKey)
+        return peerName(appConfig.pubKey.asString)
     }
 
     // FYI: [et]: For integration testing. Will be removed or refactored later

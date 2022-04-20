@@ -8,10 +8,10 @@ import net.postchain.gtv.Gtv
 import java.sql.Connection
 
 class ConfirmationProofMaterial(
-    val txHash: ByteArrayKey,
-    val txHashes: Array<ByteArrayKey>,
-    val header: ByteArray,
-    val witness: ByteArray
+        val txHash: ByteArrayKey,
+        val txHashes: Array<ByteArrayKey>,
+        val header: ByteArray,
+        val witness: ByteArray
 )
 
 open class BaseAppContext(

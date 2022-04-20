@@ -10,7 +10,7 @@ data class ContainerName(
     companion object {
 
         fun create(appConfig: AppConfig, directory: String): ContainerName {
-            val name = "n${appConfig.pubKey.take(8)}_${directory}"
+            val name = "n${appConfig.pubKey.asString.take(8)}_${directory}"
             return ContainerName(name, directory)
         }
 
