@@ -41,6 +41,5 @@ class NodeConfigTest {
 
         assertk.assert(nodeConfig.peerInfoMap.entries).isEmpty()
 
-        assertk.assert(nodeConfig.activeChainIds).isEmpty()
     }
 }

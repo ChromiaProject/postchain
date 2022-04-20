@@ -5,16 +5,10 @@ package net.postchain.config.node
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
-import net.postchain.containers.bpm.FileSystem
 import net.postchain.core.BlockchainRid
-import net.postchain.core.Infrastructure
 import net.postchain.core.NodeRid
-import org.apache.commons.configuration2.Configuration
 
 open class NodeConfig(val appConfig: AppConfig) {
-
-    private val config: Configuration
-        get() = appConfig.config
 
     /**
      * Peers
@@ -30,8 +24,8 @@ open class NodeConfig(val appConfig: AppConfig) {
     open val mustSyncUntilHeight: Map<Long, Long>? = mapOf() //mapOf<chainID, height>
 
     private fun getAncestors(): Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> {
-        val ancestors = config.subset("blockchain_ancestors") ?: return emptyMap()
-        val forBrids = ancestors.getKeys()
+        val ancestors = appConfig.subset("blockchain_ancestors")
+        val forBrids = ancestors.keys
         val result = mutableMapOf<BlockchainRid, MutableMap<BlockchainRid, MutableSet<NodeRid>>>()
         forBrids.forEach {
             val list = ancestors.getList(String::class.java, it)
@@ -46,18 +40,4 @@ open class NodeConfig(val appConfig: AppConfig) {
         }
         return result
     }
-
-    /**
-     * Active Chains
-     *
-     * Note: This is only needed for tests (asked Tykulov about it)
-     * TODO: [et]: Resolve this issue ('activeChainIds')
-     */
-    val activeChainIds: Array<String>
-        get() {
-            return if (config.containsKey("activechainids"))
-                config.getStringArray("activechainids")
-            else
-                emptyArray()
-        }
 }

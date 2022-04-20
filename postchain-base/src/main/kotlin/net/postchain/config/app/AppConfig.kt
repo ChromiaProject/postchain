@@ -101,11 +101,14 @@ class AppConfig(val config: Configuration) {
     /**
      * Wrappers for [Configuration] getters and other functionalities
      */
-    fun getBoolean(key: String, defaultValue: Boolean) = config.getBoolean(key, defaultValue)
-    fun getLong(key: String, defaultValue: Long) = config.getLong(key, defaultValue)
-    fun getInt(key: String, defaultValue: Int) = config.getInt(key, defaultValue)
-    fun getString(key: String, defaultValue: String): String = config.getString(key, defaultValue)
+    fun getBoolean(key: String, defaultValue: Boolean = false) = config.getBoolean(key, defaultValue)
+    fun getLong(key: String, defaultValue: Long = 0) = config.getLong(key, defaultValue)
+    fun getInt(key: String, defaultValue: Int = 0) = config.getInt(key, defaultValue)
+    fun getString(key: String, defaultValue: String = ""): String = config.getString(key, defaultValue)
     fun getStringArray(key: String): Array<String> = config.getStringArray(key)
+    fun subset(prefix: String): Configuration = config.subset(prefix)
+    fun getProperty(key: String): Any = config.getProperty(key)
+    fun getKeys(prefix: String): MutableIterator<String> = config.getKeys(prefix)
 
     fun cloneConfiguration(): Configuration = ConfigurationUtils.cloneConfiguration(config)
 }

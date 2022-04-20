@@ -5,7 +5,6 @@ package net.postchain.core
 import net.postchain.PostchainContext
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ConnectionManager
 
@@ -120,5 +119,5 @@ enum class Infrastructure(vararg val key: String) {
 }
 
 interface InfrastructureFactoryProvider {
-    fun createInfrastructureFactory(nodeConfigProvider: NodeConfigurationProvider): InfrastructureFactory
+    fun createInfrastructureFactory(appConfig: AppConfig): InfrastructureFactory
 }

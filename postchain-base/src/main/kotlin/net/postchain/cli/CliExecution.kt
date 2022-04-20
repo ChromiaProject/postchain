@@ -4,14 +4,9 @@ package net.postchain.cli
 
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
-import net.postchain.base.BaseBlockchainConfigurationData
-import net.postchain.base.BaseConfigurationDataStore
-import net.postchain.base.BlockchainRelatedInfo
-import net.postchain.base.BlockchainRidFactory
-import net.postchain.base.PeerInfo
+import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
-import net.postchain.base.runStorageCommand
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
@@ -229,11 +224,8 @@ object CliExecution {
 
     fun runNode(nodeConfigFile: String, chainIds: List<Long>, debug: Boolean) {
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
-        val storage = StorageBuilder.buildStorage(appConfig)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(
-                appConfig) { storage }
 
-        with(PostchainNode(nodeConfigProvider, storage, debug)) {
+        with(PostchainNode(appConfig, wipeDb = false, debug = debug)) {
             chainIds.forEach { startBlockchain(it) }
         }
     }
