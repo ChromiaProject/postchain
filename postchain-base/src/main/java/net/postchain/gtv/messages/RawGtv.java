@@ -346,7 +346,7 @@ public class RawGtv implements BerType, Serializable {
 			sublength = bigInteger.encode(reverseOS, true);
 			codeLength += sublength;
 			codeLength += BerLength.encodeLength(reverseOS, sublength);
-			// write tag: CONTEXT_CLASS, CONSTRUCTED, 3
+			// write tag: CONTEXT_CLASS, CONSTRUCTED, 18
 			reverseOS.write(0xB2);
 			codeLength += 1;
 			return codeLength;
