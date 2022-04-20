@@ -9,7 +9,6 @@ import net.postchain.containers.bpm.FileSystem.Companion.PEERS_FILE
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
 import net.postchain.ebft.heartbeat.HeartbeatConfig
-import org.apache.commons.configuration2.ConfigurationUtils
 import java.io.File
 import java.nio.file.Path
 
@@ -58,15 +57,6 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         }
         val scheme = databaseSchema(container.containerName)
         config.setProperty("database.schema", scheme)
-
-        // Heartbeat and RemoteConfig
-        // TODO: [POS-164]: Heartbeat and RemoteConfig
-        // val defaultNodeConfig = NodeConfig(AppConfig(<empty-apache-config>))
-        config.setProperty("heartbeat.enabled", heartbeatConfig.enabled)
-        config.setProperty("remote_config.enabled", heartbeatConfig.remoteConfigEnabled)
-
-        config.setProperty("containerChains.masterHost", containerConfig.masterHost)
-        config.setProperty("containerChains.masterPort", containerConfig.masterPort)
 
         /**
          * If nodeConfig.restApiPost > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
