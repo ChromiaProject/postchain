@@ -3,6 +3,13 @@ package net.postchain.containers.infra
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.FileSystem
 
+/**
+ * Container chains configuration
+ *
+ * @param masterHost Used by subnode to connect to master for inter-node communication
+ * @param slaveHost Used by master for restAPI communication with subnode
+ * @param runningContainersCheckPeriod In number of blocks of chain0, set 0 to disable a check
+ */
 data class ContainerNodeConfig(
         val containerImage: String,
         val subnodeRestApiPort: Int,
@@ -11,7 +18,7 @@ data class ContainerNodeConfig(
         val slaveHost: String,
         val containerSendConnectedPeersPeriod: Long,
         val runningContainersAtStartRegexp: String,
-        val runningContainersCheckPeriod: Int, // In number of blocks of chain0, set 0 to disable a check
+        val runningContainersCheckPeriod: Int,
         // Container FileSystem
         val containerFilesystem: String,
         val containerZfsPool: String,
