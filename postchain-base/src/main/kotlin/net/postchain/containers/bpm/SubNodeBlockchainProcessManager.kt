@@ -36,16 +36,14 @@ open class SubNodeBlockchainProcessManager(
                 it.storage = storage
                 heartbeatManager.addListener(blockchainConfig.chainID, it)
             };
-            { timestamp, exitCondition ->
-                var passed = true
+            hbCheck@ { timestamp, exitCondition ->
                 while (!hbListener.checkHeartbeat(timestamp)) {
                     if (exitCondition()) {
-                        passed = false
-                        break
+                        return@hbCheck false
                     }
                     sleep(heartbeatConfig.sleepTimeout)
                 }
-                passed
+                true
             }
         }
     }
