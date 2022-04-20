@@ -19,15 +19,15 @@ object GtvFactory {
 
     // helper methods:
     fun gtv(l: Long): GtvInteger {
-        return GtvInteger(BigInteger.valueOf(l))
+        return GtvInteger(l)
     }
 
-    fun gtv(i: BigInteger): GtvInteger {
-        return GtvInteger(i)
+    fun gtv(i: BigInteger): GtvBigInteger {
+        return GtvBigInteger(i)
     }
 
     fun gtv(b: Boolean): GtvInteger {
-        return GtvInteger(BigInteger.valueOf(b.toLong()))
+        return GtvInteger(b.toLong())
     }
 
     fun gtv(s: String): GtvString {

@@ -37,7 +37,8 @@ object GtvMLParser {
             when (GtvTypeOf(qName)) {
                 NULL -> GtvNull
                 STRING -> GtvString(value as String)
-                INTEGER -> GtvInteger(value as BigInteger)
+                INTEGER -> GtvInteger(value as Long)
+                BIGINTEGER -> GtvBigInteger(value as BigInteger)
                 BYTEARRAY -> GtvByteArray(value as ByteArray)
                 ARRAY -> parseArrayGtvML(value as ArrayType, params)
                 DICT -> parseDictGtvML(value as DictType, params)
@@ -63,9 +64,9 @@ object GtvMLParser {
         val gtv = params[paramType.key]
                 ?: throw IllegalArgumentException("Can't resolve param ${paramType.key}")
 
-        if (paramType.type != null && GtvTypeOf(paramType.type) != gtv.type) {
+        if (paramType.type != null && GtvType.fromString(paramType.type) != gtv.type) {
             throw IllegalArgumentException("Incompatible types of <param> and Gtv: " +
-                    "found: '${gtv.type}', required: '${GtvTypeOf(paramType.type)}'")
+                    "found: '${gtv.type}', required: '${GtvType.fromString(paramType.type)}'")
         }
 
         return gtv

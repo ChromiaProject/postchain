@@ -23,7 +23,7 @@ data class GtvArray(val array: Array<out Gtv>) : GtvCollection() {
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(null, null, null, null, null, RawGtv.Array(array.map { it.getRawGtv() }))
+        return RawGtv(null, null, null, null, null, RawGtv.Array(array.map { it.getRawGtv() }), null)
     }
 
     override fun asPrimitive(): Any? {

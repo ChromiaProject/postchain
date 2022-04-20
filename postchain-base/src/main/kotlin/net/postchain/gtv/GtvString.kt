@@ -16,7 +16,7 @@ data class GtvString(val string: String) : GtvPrimitive() {
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(null, null, BerUTF8String(string), null, null, null)
+        return RawGtv(null, null, BerUTF8String(string), null, null, null, null)
     }
 
     override fun asByteArray(convert: Boolean): ByteArray {

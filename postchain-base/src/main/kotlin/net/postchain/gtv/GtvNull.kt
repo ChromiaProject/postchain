@@ -14,7 +14,7 @@ object GtvNull : GtvPrimitive() {
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(BerNull(), null, null, null, null, null)
+        return RawGtv(BerNull(), null, null, null, null, null, null)
     }
 
     override fun asPrimitive(): Any? {
