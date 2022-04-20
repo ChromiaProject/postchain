@@ -5,6 +5,7 @@ package net.postchain.gtv
 import net.postchain.core.ProgrammerMistake
 import net.postchain.gtv.messages.RawGtv
 import java.io.ByteArrayInputStream
+import java.math.BigInteger
 
 object GtvDecoder {
 
@@ -19,9 +20,11 @@ object GtvDecoder {
         if (r.null_ != null) {
             return GtvNull
         }
-        if (r.integer != null && r.integer.value > Long.MAX_VALUE.toBigInteger()) {
-            if (r.integer.value > Long.MAX_VALUE.toBigInteger()) return GtvBigInteger(r.integer.value)
+        if (r.integer != null) {
             return GtvInteger(r.integer.value.longValueExact())
+        }
+        if (r.bigInteger != null) {
+            return GtvBigInteger(BigInteger(r.bigInteger.value))
         }
         if (r.string != null ) {
             return GtvString(r.string.toString())

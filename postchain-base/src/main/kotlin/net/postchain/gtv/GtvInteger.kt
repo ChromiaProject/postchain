@@ -23,7 +23,7 @@ data class GtvInteger(val integer: Long) : GtvPrimitive() {
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(null, null, null, BerInteger(integer), null, null)
+        return RawGtv(null, null, null, BerInteger(integer), null, null, null)
     }
 
     override fun asPrimitive(): Any {
