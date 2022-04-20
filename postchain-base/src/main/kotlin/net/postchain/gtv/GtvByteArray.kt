@@ -17,7 +17,7 @@ data class GtvByteArray(val bytearray: ByteArray) : GtvPrimitive() {
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(null, BerOctetString(bytearray), null, null, null, null)
+        return RawGtv(null, BerOctetString(bytearray), null, null, null, null, null)
     }
 
     override fun asPrimitive(): Any? {

@@ -206,11 +206,20 @@ public class ObjectFactory {
     }
 
     /**
+     * Create an instance of {@link JAXBElement }{@code <}{@link Long }{@code >}}
+     *
+     */
+    @XmlElementDecl(namespace = "", name = "int")
+    public JAXBElement<Long> createInt(Long value) {
+        return new JAXBElement<Long>(_Int_QNAME, Long.class, null, value);
+    }
+
+    /**
      * Create an instance of {@link JAXBElement }{@code <}{@link BigInteger }{@code >}}
      * 
      */
-    @XmlElementDecl(namespace = "", name = "int")
-    public JAXBElement<BigInteger> createInt(BigInteger value) {
+    @XmlElementDecl(namespace = "", name = "bigint")
+    public JAXBElement<BigInteger> createBigInt(BigInteger value) {
         return new JAXBElement<BigInteger>(_Int_QNAME, BigInteger.class, null, value);
     }
 

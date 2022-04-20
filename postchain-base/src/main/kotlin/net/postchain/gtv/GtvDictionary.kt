@@ -52,7 +52,7 @@ data class GtvDictionary private constructor (val dict: Map<String, Gtv>) : GtvC
         return RawGtv(null, null, null, null,
                 RawGtv.Dict(dict.entries.map {
                     DictPair(BerUTF8String(it.key), it.value.getRawGtv())
-                }), null)
+                }), null, null)
     }
 
     override fun asPrimitive(): Any? {
