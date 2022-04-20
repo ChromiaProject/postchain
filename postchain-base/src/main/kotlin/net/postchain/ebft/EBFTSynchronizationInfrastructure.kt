@@ -54,7 +54,7 @@ open class EBFTSynchronizationInfrastructure(
                 buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
                 peerCommConfiguration,
                 postchainContext.appConfig,
-                nodeConfig,
+                currentNodeConfig,
                 awaitPermissionToProcessMessages
         )
 
@@ -76,7 +76,7 @@ open class EBFTSynchronizationInfrastructure(
 
             historicBlockchainContext.contextCreator = { brid ->
                 val historicPeerCommConfiguration = if (brid == historicBrid) {
-                    peersCommConfigFactory.create(postchainContext.appConfig, nodeConfig, blockchainConfig, historicBlockchainContext)
+                    peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
                 } else {
                     // It's an ancestor brid for historicBrid
                     buildPeerCommConfigurationForAncestor(historicBlockchainContext, brid)
@@ -90,7 +90,7 @@ open class EBFTSynchronizationInfrastructure(
                         histCommManager,
                         historicPeerCommConfiguration,
                         postchainContext.appConfig,
-                        nodeConfig,
+                        currentNodeConfig,
                         awaitPermissionToProcessMessages
                 )
 
