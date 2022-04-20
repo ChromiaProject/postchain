@@ -106,7 +106,7 @@ open class BaseBlockchainProcessManager(
                         startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
                         createAndRegisterBlockchainProcess(
-                                chainId, blockchainConfig, processName, engine, shouldProcessNewMessages(blockchainConfig))
+                                chainId, blockchainConfig, processName, engine, awaitPermissionToProcessMessages(blockchainConfig))
                         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                         startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
@@ -130,9 +130,9 @@ open class BaseBlockchainProcessManager(
             blockchainConfig: BlockchainConfiguration,
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            shouldProcessNewMessages: (Long) -> Boolean
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, shouldProcessNewMessages)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
                 .also {
                     it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
                     extensions.forEach { ext -> ext.connectProcess(it) }
@@ -140,7 +140,7 @@ open class BaseBlockchainProcessManager(
                 }
     }
 
-    protected open fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean = { true }
+    protected open fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean = { _, _ -> true }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
         return blockchainProcesses[chainId]

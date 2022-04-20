@@ -33,7 +33,7 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            shouldProcessNewMessages: (Long) -> Boolean
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
         val currentNodeConfig = nodeConfig
@@ -55,7 +55,7 @@ open class EBFTSynchronizationInfrastructure(
                 peerCommConfiguration,
                 postchainContext.appConfig,
                 nodeConfig,
-                shouldProcessNewMessages
+                awaitPermissionToProcessMessages
         )
 
         /*
@@ -91,7 +91,7 @@ open class EBFTSynchronizationInfrastructure(
                         historicPeerCommConfiguration,
                         postchainContext.appConfig,
                         nodeConfig,
-                        shouldProcessNewMessages
+                        awaitPermissionToProcessMessages
                 )
 
             }

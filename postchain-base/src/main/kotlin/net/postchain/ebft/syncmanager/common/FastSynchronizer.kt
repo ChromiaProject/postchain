@@ -149,13 +149,11 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             syncDebug("Start", blockHeight)
             lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
-                if (workerContext.shouldProcessMessages(lastBlockTimestamp)) {
-                    refillJobs()
-                    processMessages(exitCondition)
-                    processDoneJobs()
-                    processStaleJobs()
-                    sleep(params.loopInterval)
-                }
+                refillJobs()
+                processMessages(exitCondition)
+                processDoneJobs()
+                processStaleJobs()
+                sleep(params.loopInterval)
             }
         } catch (e: BadDataMistake) {
             logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
@@ -670,8 +668,8 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            while (!workerContext.shouldProcessMessages(lastBlockTimestamp)) {
-                if (!isProcessRunning() || exitCondition()) return
+            if (!workerContext.awaitPermissionToProcessMessages(lastBlockTimestamp) { !isProcessRunning() || exitCondition() }) {
+                return
             }
 
             val peerId = packet.first

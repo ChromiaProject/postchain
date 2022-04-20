@@ -25,9 +25,9 @@ open class SubNodeBlockchainProcessManager(
     protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
     protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
 
-    override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {
+    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration):  (Long, () -> Boolean) -> Boolean {
         return if (!heartbeatConfig.remoteConfigEnabled) {
-            { true }
+            { _, _ -> true }
         } else {
             val hbListener: HeartbeatListener = RemoteConfigHeartbeatListener(
                     heartbeatConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
@@ -36,12 +36,16 @@ open class SubNodeBlockchainProcessManager(
                 it.storage = storage
                 heartbeatManager.addListener(blockchainConfig.chainID, it)
             };
-            {
-                hbListener.checkHeartbeat(it).also { passed ->
-                    if (!passed) {
-                        sleep(heartbeatConfig.sleepTimeout)
+            { timestamp, exitCondition ->
+                var passed = true
+                while (!hbListener.checkHeartbeat(timestamp)) {
+                    if (exitCondition()) {
+                        passed = false
+                        break
                     }
+                    sleep(heartbeatConfig.sleepTimeout)
                 }
+                passed
             }
         }
     }

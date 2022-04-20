@@ -76,8 +76,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
-                if (!isProcessRunning()) return
+            if (!workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
+                return
             }
 
             val (xPeerId, message) = packet

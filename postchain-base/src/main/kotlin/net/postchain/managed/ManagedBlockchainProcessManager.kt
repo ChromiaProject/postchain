@@ -121,19 +121,23 @@ open class ManagedBlockchainProcessManager(
     protected open fun createDataSource(blockQueries: BlockQueries) =
             BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
 
-    override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {
+    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
         return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {
-            { true }
+            { _, _ -> true }
         } else {
             val hbListener: HeartbeatListener = DefaultHeartbeatListener(heartbeatConfig, blockchainConfig.chainID)
             heartbeatManager.addListener(blockchainConfig.chainID, hbListener);
 
-            { timestamp ->
-                hbListener.checkHeartbeat(timestamp).also { passed ->
-                    if (!passed) {
-                        Thread.sleep(heartbeatConfig.sleepTimeout)
+            { timestamp, exitCondition ->
+                var passed = true
+                while (!hbListener.checkHeartbeat(timestamp)) {
+                    if (exitCondition()) {
+                        passed = false
+                        break
                     }
+                    Thread.sleep(heartbeatConfig.sleepTimeout)
                 }
+                passed
             }
         }
     }
