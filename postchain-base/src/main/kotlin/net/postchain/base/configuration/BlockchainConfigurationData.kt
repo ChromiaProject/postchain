@@ -1,6 +1,7 @@
 package net.postchain.base.configuration
 
-import net.postchain.base.*
+import net.postchain.base.BaseBlockchainContext
+import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.*
 import net.postchain.crypto.SigMaker
@@ -26,7 +27,12 @@ data class BlockchainConfigurationData(
         val synchronizationInfrastructureExtension: List<String>?,
         @Name(KEY_CONFIGURATIONFACTORY)
         val configurationFactory: String,
-
+        /**
+         * NB: The default value is set so that the TX queue will fill up fast, b/c the client should display this
+         * info to the user (spinning ball etc) so that the client understands that the system is down.
+         * Alex spoke about making TX resend automatic, after a pause, when 503 error is returned, so that no action
+         * from the user's side has to be taken to eventually get the TX into the queue.
+         */
         @Name(KEY_QUEUE_CAPACITY)
         @DefaultValue(defaultLong =  2500) // 5 seconds (if 500 tps)
         val txQueueSize: Long,

@@ -5,6 +5,7 @@ package net.postchain.cli
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
 import net.postchain.base.*
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.toHex

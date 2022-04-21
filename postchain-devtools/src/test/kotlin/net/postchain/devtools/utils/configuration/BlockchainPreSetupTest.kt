@@ -1,6 +1,6 @@
 package net.postchain.devtools.utils.configuration
 
-import net.postchain.base.KEY_SIGNERS
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup

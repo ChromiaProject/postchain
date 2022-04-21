@@ -1,5 +1,6 @@
 package net.postchain.base
 
+import net.postchain.base.configuration.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.DefaultValue

@@ -2,13 +2,13 @@ package net.postchain.devtools.utils.configuration.pre
 
 
 import mu.KLogging
-import net.postchain.base.KEY_BLOCKSTRATEGY
-import net.postchain.base.KEY_BLOCKSTRATEGY_NAME
-import net.postchain.base.KEY_CONFIGURATIONFACTORY
-import net.postchain.base.KEY_SIGNERS
-import net.postchain.base.KEY_GTX
-import net.postchain.base.KEY_GTX_MODULES
-import net.postchain.base.KEY_DEPENDENCIES
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY_NAME
+import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
+import net.postchain.base.configuration.KEY_SIGNERS
+import net.postchain.base.configuration.KEY_GTX
+import net.postchain.base.configuration.KEY_GTX_MODULES
+import net.postchain.base.configuration.KEY_DEPENDENCIES
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.common.hexStringToByteArray

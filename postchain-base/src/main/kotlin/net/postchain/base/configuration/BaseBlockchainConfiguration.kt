@@ -124,9 +124,6 @@ open class BaseBlockchainConfiguration(
 
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
         val strategyClassName = configData.blockStrategyName
-        if (strategyClassName == "") {
-            return BaseBlockBuildingStrategy(blockStrategyConfig, blockQueries, txQueue)
-        }
         return try {
             constructorOf<BlockBuildingStrategy>(
                     strategyClassName,
@@ -135,7 +132,7 @@ open class BaseBlockchainConfiguration(
                     TransactionQueue::class.java
             ).newInstance(blockStrategyConfig, blockQueries, txQueue)
         } catch (e: UserMistake) {
-            throw UserMistake("The block building strategy given was in the configuration is invalid, " +
+            throw UserMistake("The block building strategy in the configuration is invalid, " +
                     "Class name given: $strategyClassName.")
         } catch (e: java.lang.reflect.InvocationTargetException) {
             throw ProgrammerMistake("The constructor of the block building strategy given was " +

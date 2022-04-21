@@ -1,7 +1,7 @@
 package net.postchain.devtools
 
 import net.postchain.StorageBuilder
-import net.postchain.base.KEY_BLOCKSTRATEGY
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory

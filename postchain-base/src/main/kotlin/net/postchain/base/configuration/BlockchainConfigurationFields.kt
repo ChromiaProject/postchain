@@ -1,4 +1,4 @@
-package net.postchain.base
+package net.postchain.base.configuration
 
 const val KEY_BLOCKSTRATEGY = "blockstrategy"
 const val KEY_BLOCKSTRATEGY_NAME = "name"
@@ -7,7 +7,7 @@ const val KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS = "maxblocktransactions"
 const val KEY_BLOCKSTRATEGY_MININTERBLOCKINTERVAL = "mininterblockinterval"
 const val KEY_BLOCKSTRATEGY_MAXBLOCKTIME = "maxblocktime"
 const val KEY_BLOCKSTRATEGY_MAXTXDELAY = "maxtxdelay"
-const val KEY_QUEUE_CAPACITY = "queuecapacity"
+const val KEY_QUEUE_CAPACITY = "txqueuecapacity"
 
 const val KEY_CONFIGURATIONFACTORY = "configurationfactory"
 

@@ -1,9 +1,9 @@
 package net.postchain.gtx
 
-import net.postchain.base.KEY_GTX_ALLOWOVERRIDES
-import net.postchain.base.KEY_GTX_MODULES
-import net.postchain.base.KEY_GTX_SQL_MODULES
-import net.postchain.base.KEY_GTX_TX_SIZE
+import net.postchain.base.configuration.KEY_GTX_ALLOWOVERRIDES
+import net.postchain.base.configuration.KEY_GTX_MODULES
+import net.postchain.base.configuration.KEY_GTX_SQL_MODULES
+import net.postchain.base.configuration.KEY_GTX_TX_SIZE
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.*
