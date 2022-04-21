@@ -51,7 +51,7 @@ class AppConfig(private val config: Configuration) {
      * Configuration provider
      */
     val nodeConfigProvider: String
-        // legacy | manual | managed
+        // properties | manual | managed
         get() = config.getString("configuration.provider.node", "properties")
 
     /**

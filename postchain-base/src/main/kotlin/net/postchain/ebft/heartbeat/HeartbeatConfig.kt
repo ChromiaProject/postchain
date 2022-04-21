@@ -3,13 +3,14 @@ package net.postchain.ebft.heartbeat
 import net.postchain.config.app.AppConfig
 
 /**
- * Heartbeat and RemoteConfig (for Subnode only)
+ * Heartbeat and RemoteConfig
  *
  * @param enabled Enables/disables heartbeat check
  * @param timeout Heartbeat check is failed if there is no heartbeat event registered for the last `max(maxBlockTime, heartbeatTimeout)` ms
- * @param remoteConfigEnabled Enables/disables remote config check
+ * @param sleepTimeout BlockchainProcess sleeps for `sleepTimeout` ms after every failed Heartbeat check
+ * @param remoteConfigEnabled Enables/disables remote config check (for subnode only)
  * @param remoteConfigRequestInterval Remote config is requested every `max(maxBlockTime, remoteConfigRequestInterval)` ms
- * @param remoteConfigTimeout Remote config check is failed if there is no remote config response registered for the last
+ * @param remoteConfigTimeout Remote config check is failed if there is no remote config response registered for the last `max(maxBlockTime, remoteConfigTimeout)` ms
  */
 data class HeartbeatConfig(
         val enabled: Boolean,
