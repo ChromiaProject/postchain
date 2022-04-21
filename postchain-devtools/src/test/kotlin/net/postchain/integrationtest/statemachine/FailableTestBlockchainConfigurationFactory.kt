@@ -4,12 +4,12 @@ import net.postchain.base.BlockchainConfigurationData
 import net.postchain.common.toHex
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
-import net.postchain.devtools.testinfra.TestBlockchainConfigurationFactory
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
-class FailableTestBlockchainConfigurationFactory : TestBlockchainConfigurationFactory() {
+class FailableTestBlockchainConfigurationFactory : GTXBlockchainConfigurationFactory() {
 
-    override fun makeBlockchainConfiguration(configData: Any): BlockchainConfiguration {
-        val owner = (configData as BlockchainConfigurationData)
+    override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
+        val owner = (configurationData as BlockchainConfigurationData)
                 .context.nodeRID!!.toHex().toUpperCase()
 
         /*return TestBlockchainConfiguration(
@@ -19,13 +19,13 @@ class FailableTestBlockchainConfigurationFactory : TestBlockchainConfigurationFa
 
         return if (owner == Nodes.pubKey0) {
             TestBlockchainConfiguration(
-                    configData,
-                    createGtxModule(configData.context.blockchainRID, configData.gtx)
+                    configurationData,
+                    createGtxModule(configurationData.context.blockchainRID, configurationData)
             )
         } else {
             FailableTestBlockchainConfiguration(
-                    configData,
-                    createGtxModule(configData.context.blockchainRID, configData.gtx)
+                    configurationData,
+                    createGtxModule(configurationData.context.blockchainRID, configurationData)
             )
         }
 

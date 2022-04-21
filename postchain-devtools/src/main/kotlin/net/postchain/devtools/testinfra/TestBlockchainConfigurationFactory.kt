@@ -11,7 +11,7 @@ open class TestBlockchainConfigurationFactory : GTXBlockchainConfigurationFactor
     override fun makeBlockchainConfiguration(configData: Any): BlockchainConfiguration {
         return TestBlockchainConfiguration(
                 configData as BlockchainConfigurationData,
-                createGtxModule(configData.context.blockchainRID, configData.gtx)
+                createGtxModule(configData.context.blockchainRID, configData)
         )
     }
 }

@@ -7,7 +7,6 @@ import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.toObject
@@ -77,11 +76,13 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         val effectiveBRID = cfData.historicBrid ?: configurationData.context.blockchainRID
         return GTXBlockchainConfiguration(
                 cfData,
-                createGtxModule(effectiveBRID, configurationData.gtx))
+                createGtxModule(effectiveBRID, configurationData)
+        )
     }
 
-    open fun createGtxModule(blockchainRID: BlockchainRid, data: Gtv?): GTXModule {
-        val gtxConfig = data?.toObject() ?: GtxConfigurationData.default
+    open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
+
+        val gtxConfig = data.gtx?.toObject() ?: GtxConfigurationData.default
         val list = gtxConfig.modules
         if (list.isEmpty()) {
             throw UserMistake("Missing GTX module in config. expected property 'blockchain.<chainId>.gtx.modules'")
@@ -92,7 +93,7 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
             val instance = moduleClass.newInstance()
             return when (instance) {
                 is GTXModule -> instance
-                is GTXModuleFactory -> instance.makeModule(gtv(mapOf(KEY_GTX to gtxConfig.rawGtv)), blockchainRID) //TODO
+                is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID) //TODO
                 else -> throw UserMistake("Module class not recognized")
             }
         }

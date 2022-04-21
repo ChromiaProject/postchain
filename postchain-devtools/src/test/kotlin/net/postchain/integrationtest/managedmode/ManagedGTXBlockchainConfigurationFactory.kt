@@ -16,7 +16,7 @@ class ManagedGTXBlockchainConfigurationFactory : GTXBlockchainConfigurationFacto
 
     override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
         val baseConfigData = configurationData as BlockchainConfigurationData
-        val module = createGtxModule(baseConfigData.context.blockchainRID, baseConfigData.gtx)
+        val module = createGtxModule(baseConfigData.context.blockchainRID, baseConfigData)
         val configuration = GTXBlockchainConfiguration(baseConfigData, module)
         moduleRegistry[module.javaClass.simpleName] = module
         return configuration
