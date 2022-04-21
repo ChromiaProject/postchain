@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.*
 
-class SECP256K1CryptoSystemTest {
+class Secp256K1CryptoSystemTest {
     @Test
     fun testSignVerify() {
         val SUT = SECP256K1CryptoSystem()
