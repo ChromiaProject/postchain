@@ -2,7 +2,7 @@
 
 package net.postchain.integrationtest.managedmode
 
-import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.BlockchainConfigurationData
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
@@ -15,8 +15,8 @@ class ManagedGTXBlockchainConfigurationFactory : GTXBlockchainConfigurationFacto
     }
 
     override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
-        val baseConfigData = configurationData as BaseBlockchainConfigurationData
-        val module = createGtxModule(baseConfigData.context.blockchainRID, baseConfigData.data)
+        val baseConfigData = configurationData as BlockchainConfigurationData
+        val module = createGtxModule(baseConfigData.context.blockchainRID, baseConfigData.gtx)
         val configuration = GTXBlockchainConfiguration(baseConfigData, module)
         moduleRegistry[module.javaClass.simpleName] = module
         return configuration

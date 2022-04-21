@@ -8,9 +8,10 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
+import net.postchain.gtv.mapper.toObject
 
 open class BaseBlockchainConfiguration(
-        val configData: BaseBlockchainConfigurationData,
+        val configData: BlockchainConfigurationData,
 ) : BlockchainConfiguration {
 
     companion object : KLogging()
@@ -23,8 +24,10 @@ open class BaseBlockchainConfiguration(
     val blockStore = BaseBlockStore()
     override val chainID = configData.context.chainID
     override val blockchainRid = configData.context.blockchainRID
-    override val effectiveBlockchainRID = configData.getHistoricBRID() ?: configData.context.blockchainRID
-    override val signers = configData.getSigners()
+    override val effectiveBlockchainRID = configData.historicBrid ?: configData.context.blockchainRID
+    override val signers = configData.signers
+
+    protected val blockStrategyConfig = configData.blockStrategy?.toObject() ?: BaseBlockchainStrategyConfiguration.default
 
     private val blockWitnessProvider: BlockWitnessProvider = BaseBlockWitnessProvider(
             cryptoSystem,
@@ -32,11 +35,11 @@ open class BaseBlockchainConfiguration(
             signers.toTypedArray()
     )
 
-    val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.getDependenciesAsList()
+    val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.blockchainDependencies
 
     // Infrastructure settings
-    override val syncInfrastructureName = DynamicClassName.build(configData.getSyncInfrastructureName())
-    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.getSyncInfrastructureExtensions())
+    override val syncInfrastructureName = DynamicClassName.build(configData.synchronizationInfrastructure)
+    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.synchronizationInfrastructureExtension ?: listOf())
 
     // Only GTX config can have special TX, this is just "Base" so we settle for null
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
@@ -82,8 +85,9 @@ open class BaseBlockchainConfiguration(
                 bcRelatedInfosDependencyList,
                 makeBBExtensions(),
                 effectiveBlockchainRID != blockchainRid,
-                configData.getMaxBlockSize(),
-                configData.getMaxBlockTransactions())
+                blockStrategyConfig.maxBlockSize,
+                blockStrategyConfig.maxBlockTransactions
+        )
 
         return bb
     }
@@ -110,7 +114,7 @@ open class BaseBlockchainConfiguration(
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {
         return BaseBlockQueries(
-                this, storage, blockStore, chainID, configData.subjectID)
+                this, storage, blockStore, chainID, configData.context.nodeRID!!)
     }
 
     override fun initializeDB(ctx: EContext) {
@@ -118,17 +122,17 @@ open class BaseBlockchainConfiguration(
     }
 
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
-        val strategyClassName = configData.getBlockBuildingStrategyName()
+        val strategyClassName = configData.blockStrategyName
         if (strategyClassName == "") {
-            return BaseBlockBuildingStrategy(configData, blockQueries, txQueue)
+            return BaseBlockBuildingStrategy(blockStrategyConfig, blockQueries, txQueue)
         }
         return try {
             constructorOf<BlockBuildingStrategy>(
                     strategyClassName,
-                    BaseBlockchainConfigurationData::class.java,
+                    BaseBlockchainStrategyConfiguration::class.java,
                     BlockQueries::class.java,
                     TransactionQueue::class.java
-            ).newInstance(configData, blockQueries, txQueue)
+            ).newInstance(blockStrategyConfig, blockQueries, txQueue)
         } catch (e: UserMistake) {
             throw UserMistake("The block building strategy given was in the configuration is invalid, " +
                     "Class name given: $strategyClassName.")

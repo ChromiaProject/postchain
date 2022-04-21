@@ -3,10 +3,13 @@
 package net.postchain.gtx
 
 import net.postchain.base.BaseBlockBuilderExtension
-import net.postchain.core.BlockchainRid
+import net.postchain.base.GtxConfigurationData
+import net.postchain.base.KEY_GTX
 import net.postchain.core.*
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.Name
+import net.postchain.gtv.mapper.toObject
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
@@ -276,11 +279,10 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
 }
 
 class SQLGTXModuleFactory : GTXModuleFactory {
+    data class WrappedGtxConfiguration(@Name(KEY_GTX) val gtxConfig: GtxConfigurationData)
+
     override fun makeModule(data: Gtv, blockchainRID: BlockchainRid): GTXModule {
         return SQLGTXModule(
-                data["gtx"]!!["sqlmodules"]
-                        ?.asArray()
-                        ?.map(Gtv::asString)
-                !!.toTypedArray())
+                data.toObject<WrappedGtxConfiguration>().gtxConfig.sqlModules.toTypedArray())
     }
 }
