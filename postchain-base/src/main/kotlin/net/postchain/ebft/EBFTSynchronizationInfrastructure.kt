@@ -19,11 +19,11 @@ import net.postchain.network.peer.*
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
-        private val postchainContext: PostchainContext,
+        protected val postchainContext: PostchainContext,
         val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
 ) : SynchronizationInfrastructure {
 
-    val nodeConfig get() = postchainContext.nodeConfig
+    val nodeConfig get() = postchainContext.nodeConfigProvider.getConfiguration()
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
     val connectionManager = postchainContext.connectionManager
     private val startWithFastSync: MutableMap<Long, Boolean> = mutableMapOf() // { chainId -> true/false }
@@ -33,27 +33,29 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            shouldProcessNewMessages: (Long) -> Boolean
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
+        val currentNodeConfig = nodeConfig
 
         val historicBrid = blockchainConfig.effectiveBlockchainRID
         val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
             HistoricBlockchainContext(
-                    historicBrid, nodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
+                    historicBrid, currentNodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
                     ?: emptyMap()
             )
         } else null
 
-        val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
+        val peerCommConfiguration = peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
         val workerContext = WorkerContext(
                 processName,
                 blockchainConfig,
                 engine,
                 buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
                 peerCommConfiguration,
-                nodeConfig,
-                shouldProcessNewMessages
+                postchainContext.appConfig,
+                currentNodeConfig,
+                awaitPermissionToProcessMessages
         )
 
         /*
@@ -74,10 +76,10 @@ open class EBFTSynchronizationInfrastructure(
 
             historicBlockchainContext.contextCreator = { brid ->
                 val historicPeerCommConfiguration = if (brid == historicBrid) {
-                    peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
+                    peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
                 } else {
                     // It's an ancestor brid for historicBrid
-                    buildPeerCommConfigurationForAncestor(nodeConfig, historicBlockchainContext, brid)
+                    buildPeerCommConfigurationForAncestor(historicBlockchainContext, brid)
                 }
                 val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, brid)
 
@@ -87,8 +89,9 @@ open class EBFTSynchronizationInfrastructure(
                         engine,
                         histCommManager,
                         historicPeerCommConfiguration,
-                        nodeConfig,
-                        shouldProcessNewMessages
+                        postchainContext.appConfig,
+                        currentNodeConfig,
+                        awaitPermissionToProcessMessages
                 )
 
             }
@@ -166,11 +169,10 @@ open class EBFTSynchronizationInfrastructure(
 
     // TODO: [POS-129] Merge: move it to [DefaultPeersCommConfigFactory]
     private fun buildPeerCommConfigurationForAncestor(
-            nodeConfig: NodeConfig,
             historicBlockchainContext: HistoricBlockchainContext,
             ancBrid: BlockchainRid
     ): PeerCommConfiguration {
-        val myPeerID = NodeRid(nodeConfig.pubKeyByteArray)
+        val myPeerID = NodeRid(postchainContext.appConfig.pubKeyByteArray)
         val peersThatServeAncestorBrid = historicBlockchainContext.ancestors[ancBrid]!!
 
         val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
@@ -180,8 +182,8 @@ open class EBFTSynchronizationInfrastructure(
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
                 SECP256K1CryptoSystem(),
-                nodeConfig.privKeyByteArray,
-                nodeConfig.pubKeyByteArray
+                postchainContext.appConfig.privKeyByteArray,
+                postchainContext.appConfig.pubKeyByteArray
         )
     }
 
@@ -199,7 +201,7 @@ open class EBFTSynchronizationInfrastructure(
             blockchainConfig: BaseBlockchainConfiguration,
             historicBlockchainContext: HistoricBlockchainContext? = null
     ): PeerCommConfiguration {
-        val myPeerID = NodeRid(nodeConfig.pubKeyByteArray)
+        val myPeerID = NodeRid(postchainContext.appConfig.pubKeyByteArray)
         val signers = blockchainConfig.signers.map { NodeRid(it) }
         val signersReplicas = signers.flatMap {
             nodeConfig.nodeReplicas[it] ?: listOf()
@@ -219,8 +221,8 @@ open class EBFTSynchronizationInfrastructure(
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
                 SECP256K1CryptoSystem(),
-                nodeConfig.privKeyByteArray,
-                nodeConfig.pubKeyByteArray
+                postchainContext.appConfig.privKeyByteArray,
+                postchainContext.appConfig.pubKeyByteArray
         )
     }
 

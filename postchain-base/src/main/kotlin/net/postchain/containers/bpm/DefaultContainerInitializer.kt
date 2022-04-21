@@ -2,17 +2,16 @@ package net.postchain.containers.bpm
 
 import mu.KLogging
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.FileSystem.Companion.BLOCKCHAINS_DIR
 import net.postchain.containers.bpm.FileSystem.Companion.NODE_CONFIG_FILE
 import net.postchain.containers.bpm.FileSystem.Companion.PEERS_FILE
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
-import org.apache.commons.configuration2.ConfigurationUtils
 import java.io.File
 import java.nio.file.Path
 
-internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : ContainerInitializer {
+internal class DefaultContainerInitializer(private val appConfig: AppConfig, private val containerConfig: ContainerNodeConfig) : ContainerInitializer {
 
     companion object : KLogging()
 
@@ -43,7 +42,7 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
 
     override fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path) {
         // Cloning original nodeConfig
-        val config = ConfigurationUtils.cloneConfiguration(nodeConfig.appConfig.config)
+        val config = appConfig.cloneConfiguration()
 
         // Setting up params for container node
         config.setProperty("configuration.provider.node", NodeConfigProviders.Manual.name.toLowerCase())
@@ -58,21 +57,12 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
         val scheme = databaseSchema(container.containerName)
         config.setProperty("database.schema", scheme)
 
-        // Heartbeat and RemoteConfig
-        // TODO: [POS-164]: Heartbeat and RemoteConfig
-        // val defaultNodeConfig = NodeConfig(AppConfig(<empty-apache-config>))
-        config.setProperty("heartbeat.enabled", nodeConfig.heartbeatEnabled)
-        config.setProperty("remote_config.enabled", nodeConfig.remoteConfigEnabled)
-
-        config.setProperty("containerChains.masterHost", nodeConfig.masterHost)
-        config.setProperty("containerChains.masterPort", nodeConfig.masterPort)
-
         /**
-         * If nodeConfig.restApiPost > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
+         * If restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
          * control here and know that it is always free.
-         * If -1, no API communication => subnodeRestApiPort=restApiPost
+         * If -1, no API communication => subnodeRestApiPort=-1
          */
-        if (nodeConfig.restApiPort > -1) config.setProperty("api.port", nodeConfig.subnodeRestApiPort)
+        if (config.getInt("api.port", 7740) > -1) config.setProperty("api.port", containerConfig.subnodeRestApiPort)
 
         // Creating a nodeConfig file
         val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()
@@ -83,8 +73,8 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
     override fun createPeersConfig(container: PostchainContainer, containerDir: Path) {
         val peers = """
             export NODE_HOST=127.0.0.1
-            export NODE_PORT=${NodeConfig.DEFAULT_PORT}
-            export NODE_PUBKEY=${nodeConfig.pubKey}
+            export NODE_PORT=${ContainerNodeConfig.DEFAULT_PORT}
+            export NODE_PUBKEY=${appConfig.pubKey}
             
         """.trimIndent()
 
@@ -112,6 +102,6 @@ internal class DefaultContainerInitializer(val nodeConfig: NodeConfig) : Contain
     }
 
     private fun databaseSchema(containerName: ContainerName): String {
-        return "${nodeConfig.appConfig.databaseSchema}_${containerName}"
+        return "${appConfig.databaseSchema}_${containerName}"
     }
 }

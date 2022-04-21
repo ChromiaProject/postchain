@@ -1,6 +1,7 @@
 package net.postchain.managed
 
-import net.postchain.config.node.NodeConfig
+import net.postchain.config.app.AppConfig
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.CPU_KEY
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.RAM_KEY
@@ -11,14 +12,15 @@ import net.postchain.gtv.GtvFactory
 
 class BaseDirectoryDataSource(
         queries: BlockQueries,
-        nodeConfig: NodeConfig
-) : BaseManagedNodeDataSource(queries, nodeConfig),
+        appConfig: AppConfig,
+        private val containerNodeConfig: ContainerNodeConfig
+) : BaseManagedNodeDataSource(queries, appConfig),
         DirectoryDataSource {
 
     override fun getContainersToRun(): List<String>? {
         val res = queries.query(
                 "nm_get_containers",
-                buildArgs("pubkey" to GtvFactory.gtv(nodeConfig.pubKeyByteArray))
+                buildArgs("pubkey" to GtvFactory.gtv(appConfig.pubKeyByteArray))
         ).get()
 
         return res.asArray().map { it.asString() }
@@ -39,16 +41,16 @@ class BaseDirectoryDataSource(
         //return "ps$num"
 
         val short = brid.toHex().toUpperCase().take(8)
-        return nodeConfig.dappsContainers[short] ?: "cont0"
+        return containerNodeConfig.dappsContainers[short] ?: "cont0"
     }
 
     // TODO: [et]: directory vs containerId?
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
-        return if (nodeConfig.containersTestmode) {
+        return if (containerNodeConfig.containersTestmode) {
             ContainerResourceLimits(
-                    nodeConfig.containersTestmodeResourceLimitsRAM,
-                    nodeConfig.containersTestmodeResourceLimitsCPU,
-                    nodeConfig.containersTestmodeResourceLimitsSTORAGE
+                    containerNodeConfig.containersTestmodeResourceLimitsRAM,
+                    containerNodeConfig.containersTestmodeResourceLimitsCPU,
+                    containerNodeConfig.containersTestmodeResourceLimitsSTORAGE
             )
         } else {
             val queryReply = queries.query(

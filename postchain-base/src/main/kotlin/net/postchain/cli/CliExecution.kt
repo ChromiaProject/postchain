@@ -4,14 +4,9 @@ package net.postchain.cli
 
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
-import net.postchain.base.BaseBlockchainConfigurationData
-import net.postchain.base.BaseConfigurationDataStore
-import net.postchain.base.BlockchainRelatedInfo
-import net.postchain.base.BlockchainRidFactory
-import net.postchain.base.PeerInfo
+import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
-import net.postchain.base.runStorageCommand
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
@@ -57,7 +52,7 @@ object CliExecution {
         fun getBrid(): BlockchainRid {
             val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
             val keyString = "brid.chainid." + chainId.toString()
-            val brid = if (appConfig.config.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.config.getString(keyString)) else
+            val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
                 BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             return brid
         }
@@ -229,11 +224,8 @@ object CliExecution {
 
     fun runNode(nodeConfigFile: String, chainIds: List<Long>, debug: Boolean) {
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
-        val storage = StorageBuilder.buildStorage(appConfig)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(
-                appConfig) { storage }
 
-        with(PostchainNode(nodeConfigProvider, storage, debug)) {
+        with(PostchainNode(appConfig, wipeDb = false, debug = debug)) {
             chainIds.forEach { startBlockchain(it) }
         }
     }
@@ -285,11 +277,11 @@ object CliExecution {
             ) { storage }.getConfiguration()
 
             BasicDataSource().apply {
-                addConnectionProperty("currentSchema", nodeConfig.databaseSchema)
-                driverClassName = nodeConfig.databaseDriverclass
-                url = "${nodeConfig.databaseUrl}" //?loggerLevel=OFF"
-                username = nodeConfig.databaseUsername
-                password = nodeConfig.databasePassword
+                addConnectionProperty("currentSchema", appConfig.databaseSchema)
+                driverClassName = appConfig.databaseDriverclass
+                url = appConfig.databaseUrl //?loggerLevel=OFF"
+                username = appConfig.databaseUsername
+                password = appConfig.databasePassword
                 defaultAutoCommit = false
             }.connection
         } catch (e: SQLException) {

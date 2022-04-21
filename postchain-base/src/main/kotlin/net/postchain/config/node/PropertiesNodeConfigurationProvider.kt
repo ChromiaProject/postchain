@@ -5,13 +5,12 @@ package net.postchain.config.node
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
-import org.apache.commons.configuration2.Configuration
 
 class PropertiesNodeConfigurationProvider(private val appConfig: AppConfig) : NodeConfigurationProvider {
 
     private val configuration by lazy {
         object : NodeConfig(appConfig) {
-            override val peerInfoMap = createPeerInfoCollection(appConfig.config).associateBy { it.getNodeRid() }
+            override val peerInfoMap = createPeerInfoCollection(appConfig).associateBy { it.getNodeRid() }
         }
     }
 
@@ -22,7 +21,7 @@ class PropertiesNodeConfigurationProvider(private val appConfig: AppConfig) : No
     /**
      * Retrieves peer information from config, including networking info and public keys
      */
-    private fun createPeerInfoCollection(config: Configuration): Array<PeerInfo> {
+    private fun createPeerInfoCollection(config: AppConfig): Array<PeerInfo> {
         // Calculating the number of nodes
         var peerCount = 0
         config.getKeys("node").forEach { _ -> peerCount++ }

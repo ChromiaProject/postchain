@@ -5,9 +5,7 @@ import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
-import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
-import net.postchain.ebft.heartbeat.HeartbeatListener
-import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
+import net.postchain.ebft.heartbeat.*
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 open class SubNodeBlockchainProcessManager(
@@ -20,20 +18,21 @@ open class SubNodeBlockchainProcessManager(
         blockchainConfigProvider
 ) {
 
-    protected val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
+    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
+    protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
 
-    override fun shouldProcessNewMessages(blockchainConfig: BlockchainConfiguration): (Long) -> Boolean {
-        return if (!nodeConfig.remoteConfigEnabled) {
-            { true }
+    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration):  (Long, () -> Boolean) -> Boolean {
+        return if (!heartbeatConfig.remoteConfigEnabled) {
+            { _, _ -> true }
         } else {
             val hbListener: HeartbeatListener = RemoteConfigHeartbeatListener(
-                    nodeConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
+                    heartbeatConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
             ).also {
                 it.blockchainConfigProvider = blockchainConfigProvider
                 it.storage = storage
                 heartbeatManager.addListener(blockchainConfig.chainID, it)
             };
-            { hbListener.checkHeartbeat(it) }
+            awaitHeartbeatHandler(hbListener, heartbeatConfig)
         }
     }
 

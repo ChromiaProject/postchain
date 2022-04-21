@@ -51,11 +51,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         this.currentTimeout = defaultTimeout
         this.processingIntent = DoNothingIntent
         this.lastStatusLogged = Date().time
-        val params = FastSyncParameters()
         val nodeConfig = workerContext.nodeConfig
-        params.exitDelay = nodeConfig.fastSyncExitDelay
-        params.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
-        params.jobTimeout = nodeConfig.fastSyncJobTimeout
+        val params = FastSyncParameters.fromAppConfig(workerContext.appConfig) {
+            it.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
+        }
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params, isProcessRunning)
 
         // Init useFastSyncAlgorithm
@@ -77,9 +76,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
-                if (!isProcessRunning()) return
-                Thread.sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
+            if (!workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
+                return
             }
 
             val (xPeerId, message) = packet

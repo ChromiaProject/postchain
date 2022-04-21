@@ -21,7 +21,7 @@ interface HeartbeatListener {
     fun checkHeartbeat(timestamp: Long): Boolean
 }
 
-open class DefaultHeartbeatListener(val nodeConfig: NodeConfig, chainId: Long) : HeartbeatListener {
+open class DefaultHeartbeatListener(val heartbeatConfig: HeartbeatConfig, chainId: Long) : HeartbeatListener {
 
     companion object : KLogging()
 
@@ -49,11 +49,11 @@ open class DefaultHeartbeatListener(val nodeConfig: NodeConfig, chainId: Long) :
             }
         }
 
-        val res = timestamp - heartbeat!!.timestamp < nodeConfig.heartbeatTimeout
+        val res = timestamp - heartbeat!!.timestamp < heartbeatConfig.timeout
         return resultLogger.log(3 to res, logger) {
             "$pref Heartbeat check result: $res (" +
                     "timestamp ($timestamp) - heartbeat.timestamp (${heartbeat!!.timestamp}) " +
-                    "< nodeConfig.heartbeatTimeout (${nodeConfig.heartbeatTimeout}))"
+                    "< nodeConfig.heartbeatTimeout (${heartbeatConfig.timeout}))"
         }
     }
 

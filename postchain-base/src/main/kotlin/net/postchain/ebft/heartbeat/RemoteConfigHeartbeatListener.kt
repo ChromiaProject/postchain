@@ -14,11 +14,11 @@ import net.postchain.network.mastersub.protocol.*
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class RemoteConfigHeartbeatListener(
-        nodeConfig: NodeConfig,
+        heartbeatConfig: HeartbeatConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         val connectionManager: SubConnectionManager
-) : DefaultHeartbeatListener(nodeConfig, chainId), MsMessageHandler {
+) : DefaultHeartbeatListener(heartbeatConfig, chainId), MsMessageHandler {
 
     companion object : KLogging()
 
@@ -48,9 +48,9 @@ class RemoteConfigHeartbeatListener(
         if (!superCheck) return false
 
         // Check remote config
-        val intervalCheck = timestamp - responseTimestamp > nodeConfig.remoteConfigRequestInterval
+        val intervalCheck = timestamp - responseTimestamp > heartbeatConfig.remoteConfigRequestInterval
         val details = "timestamp ($timestamp) - responseTimestamp ($responseTimestamp) " +
-                "> nodeConfig.remoteConfigRequestInterval (${nodeConfig.remoteConfigRequestInterval}) is $intervalCheck"
+                "> heartbeatConfig.remoteConfigRequestInterval (${heartbeatConfig.remoteConfigRequestInterval}) is $intervalCheck"
         if (intervalCheck) {
             intervalLogger.registerOnly(2 to intervalCheck)
             logger.debug { "$pref Requesting of remote BlockchainConfig is required: $details" }
@@ -72,11 +72,11 @@ class RemoteConfigHeartbeatListener(
             }
         }
 
-        val timeoutOccurred = timestamp - responseTimestamp > nodeConfig.remoteConfigTimeout
+        val timeoutOccurred = timestamp - responseTimestamp > heartbeatConfig.remoteConfigTimeout
         return if (timeoutOccurred) {
             resultLogger.log(3 to false, logger) {
                 "$pref Timeout check is failed: timestamp ($timestamp) - responseTimestamp ($responseTimestamp) >" +
-                        " nodeConfig.remoteConfigTimeout (${nodeConfig.remoteConfigTimeout}) is true"
+                        " heartbeatConfig.remoteConfigTimeout (${heartbeatConfig.remoteConfigTimeout}) is true"
             }
         } else {
             resultLogger.log(3 to true, logger) {
