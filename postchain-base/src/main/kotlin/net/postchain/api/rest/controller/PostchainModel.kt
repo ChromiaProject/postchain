@@ -11,7 +11,10 @@ import net.postchain.base.ConfirmationProof
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.core.TransactionStatus.*
+import net.postchain.core.TransactionStatus.CONFIRMED
+import net.postchain.core.TransactionStatus.REJECTED
+import net.postchain.core.TransactionStatus.UNKNOWN
+import net.postchain.crypto.Key
 import net.postchain.gtv.Gtv
 
 open class PostchainModel(
@@ -80,7 +83,7 @@ open class PostchainModel(
         }
 
         return if (status == REJECTED) {
-            val exception = txQueue.getRejectionReason(txRID.bytes.byteArrayKeyOf())
+            val exception = txQueue.getRejectionReason(Key(txRID.bytes))
             ApiStatus(status, exception?.message)
         } else {
             ApiStatus(status)

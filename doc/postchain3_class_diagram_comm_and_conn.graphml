@@ -1209,7 +1209,7 @@ fun getTransactionStatus(txHash: ByteArray): TransactionStatus
 fun getTransactionQueueSize(): Int
 fun removeAll(transactionsToRemove: Collection&lt;Transaction&gt;)
 fun rejectTransaction(tx: Transaction, reason: Exception?)
-fun getRejectionReason(txRID: ByteArrayKey): Exception?</y:MethodLabel>
+fun getRejectionReason(txRID: Key): Exception?</y:MethodLabel>
           </y:UML>
         </y:UMLClassNode>
       </data>
@@ -1225,9 +1225,9 @@ fun getRejectionReason(txRID: ByteArrayKey): Exception?</y:MethodLabel>
           <y:UML clipContent="true" constraint="" hasDetailsColor="false" omitDetails="false" stereotype="" use3DEffect="true">
             <y:AttributeLabel xml:space="preserve">queueCapacity: Int = 2500
 queue = LinkedBlockingQueue&lt;ComparableTransaction&gt;
-queueSet = HashSet&lt;ByteArrayKey&gt;
+queueSet = HashSet&lt;Key&gt;
 taken = List&lt;ComparableTransaction&gt;
-rejects = LinkedHashMap&lt;ByteArrayKey, Exception?&gt;</y:AttributeLabel>
+rejects = LinkedHashMap&lt;Key, Exception?&gt;</y:AttributeLabel>
             <y:MethodLabel xml:space="preserve"/>
           </y:UML>
         </y:UMLClassNode>
@@ -1700,7 +1700,7 @@ peerCommConfiguration: PeerCommConfiguration
 cryptoSystem: CryptoSystem
 -peersConnectionStrategy: PeersConnectionStrategy
 -chains: MutableMap&lt;Long, Chain&gt;
--chainIDforBlockchainRID: MutableMap&lt;ByteArrayKey, Long&gt;
+-chainIDforBlockchainRID: MutableMap&lt;Key, Long&gt;
 -isShutDown: Boolean</y:AttributeLabel>
             <y:MethodLabel xml:space="preserve"/>
           </y:UML>
@@ -1765,7 +1765,7 @@ fun onPeerDisconnected(
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.310546875" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="187.7265625" x="25.48322080761318" xml:space="preserve" y="3.0">XPeerConnectionDescriptor<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:ModelParameter><y:SmartNodeLabelModelParameter labelRatioX="0.0" labelRatioY="0.0" nodeRatioX="0.0" nodeRatioY="0.0" offsetX="0.0" offsetY="0.0" upX="0.0" upY="-1.0"/></y:ModelParameter></y:NodeLabel>
           <y:UML clipContent="true" constraint="" hasDetailsColor="false" omitDetails="false" stereotype="" use3DEffect="true">
             <y:AttributeLabel xml:space="preserve">peerId: XPeerID
-blockchainRID: ByteArrayKey
+blockchainRID: Key
 sessionKey: ByteArray?</y:AttributeLabel>
             <y:MethodLabel xml:space="preserve"/>
           </y:UML>

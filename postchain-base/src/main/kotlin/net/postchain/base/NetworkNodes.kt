@@ -4,9 +4,9 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.common.toHex
-import net.postchain.core.ByteArrayKey
-import net.postchain.core.UserMistake
 import net.postchain.core.NodeRid
+import net.postchain.core.UserMistake
+import net.postchain.crypto.Key
 
 /**
  * Network nodes can be either signers/block builders or nodes that just want to read your data (= replicas).
@@ -63,7 +63,7 @@ class NetworkNodes(
     }
 
     operator fun get(key: NodeRid): PeerInfo? = peerInfoMap[key]
-    operator fun get(key: ByteArray): PeerInfo? = peerInfoMap[ByteArrayKey(key)]
+    operator fun get(key: ByteArray): PeerInfo? = peerInfoMap[Key(key)]
 
     fun getPeerIds(): Set<NodeRid> {
         return peerInfoMap.keys

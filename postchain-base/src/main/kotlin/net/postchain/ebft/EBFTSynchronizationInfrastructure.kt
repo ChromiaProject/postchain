@@ -7,6 +7,7 @@ import net.postchain.base.*
 import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
+import net.postchain.crypto.Key
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
@@ -138,7 +139,7 @@ open class EBFTSynchronizationInfrastructure(
 
     @Deprecated("POS-90")
     private fun validateConfigurations(nodeConfig: NodeConfig, blockchainConfig: BaseBlockchainConfiguration) {
-        val chainPeers = blockchainConfig.signers.map { it.byteArrayKeyOf() }
+        val chainPeers = blockchainConfig.signers.map { Key(it) }
 
         val unreachableSigners = chainPeers.filter { !nodeConfig.peerInfoMap.contains(it) }
         require(unreachableSigners.isEmpty()) {

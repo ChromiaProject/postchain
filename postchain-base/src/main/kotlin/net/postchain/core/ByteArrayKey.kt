@@ -3,8 +3,10 @@
 package net.postchain.core
 
 import net.postchain.common.toHex
+import net.postchain.crypto.Key
 import org.spongycastle.util.Arrays
 
+@Deprecated("Use Key from crypto module in stead", ReplaceWith("Key(byteArray)", "net.postchain.crypto.Key"))
 class ByteArrayKey(val byteArray: ByteArray): Comparable<ByteArrayKey> {
 
     override fun equals(other: Any?): Boolean {
@@ -32,8 +34,9 @@ class ByteArrayKey(val byteArray: ByteArray): Comparable<ByteArrayKey> {
 }
 
 /**
- * Returns [ByteArrayKey] for given [ByteArray] object
+ * Returns [Key] for given [ByteArray] object
  */
+@Deprecated("Use Key directly from crypto module in stead", ReplaceWith("Key(this)", "net.postchain.crypto.Key"))
 fun ByteArray.byteArrayKeyOf() =
-        ByteArrayKey(this)
+        Key(this)
 

@@ -2,8 +2,8 @@
 
 package net.postchain.base
 
-import net.postchain.core.ByteArrayKey
 import net.postchain.core.NodeRid
+import net.postchain.crypto.Key
 import java.time.Instant
 
 // TODO: Will be replaced by NodeRid
@@ -19,7 +19,7 @@ typealias PeerID = ByteArray
  */
 open class PeerInfo(val host: String, val port: Int, val pubKey: ByteArray, val timestamp: Instant? = null) {
 
-    constructor(host: String, port: Int, pubKey: ByteArrayKey, timestamp: Instant? = null) : this(host, port, pubKey.byteArray, timestamp)
+    constructor(host: String, port: Int, pubKey: Key, timestamp: Instant? = null) : this(host, port, pubKey.byteArray, timestamp)
 
     fun getNodeRid() = NodeRid(pubKey)
 

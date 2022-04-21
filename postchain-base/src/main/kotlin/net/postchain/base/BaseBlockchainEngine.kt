@@ -8,6 +8,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
 import net.postchain.core.*
+import net.postchain.crypto.Key
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.gtv.GtvArray
@@ -107,7 +108,7 @@ open class BaseBlockchainEngine(
 
     private fun smartDecodeTransaction(txData: ByteArray): Transaction {
         var tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(txData)
-        val enqueuedTx = transactionQueue.findTransaction(ByteArrayKey(tx.getRID()))
+        val enqueuedTx = transactionQueue.findTransaction(Key(tx.getRID()))
         if (enqueuedTx != null && enqueuedTx.getHash().contentEquals(tx.getHash())) {
             // if transaction is identical (has same hash) then use transaction
             // from queue, which is already verified
@@ -213,7 +214,7 @@ open class BaseBlockchainEngine(
                     if (txException != null) {
                         rejectedTxs++
                         transactionQueue.rejectTransaction(tx, txException)
-                        logger.warn { "Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}" }
+                        logger.warn { "Rejected Tx: ${Key(tx.getRID())}, reason: ${txException.message}" }
                     } else {
                         acceptedTxs++
                         // tx is fine, consider stopping

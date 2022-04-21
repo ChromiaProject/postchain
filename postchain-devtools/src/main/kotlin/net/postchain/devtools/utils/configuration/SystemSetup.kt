@@ -3,7 +3,7 @@ package net.postchain.devtools.utils.configuration
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.ByteArrayKey
+import net.postchain.crypto.Key
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.utils.configuration.pre.SystemPreSetup
@@ -117,7 +117,7 @@ data class SystemSetup(
     fun toPeerInfoList(): List<PeerInfo> {
         val peerInfos = mutableListOf<PeerInfo>()
         for (node in this. nodeMap.values) {
-            val key = ByteArrayKey(node.pubKeyHex.hexStringToByteArray())
+            val key = Key(node.pubKeyHex.hexStringToByteArray())
             val pi = PeerInfo("localhost", node.getPortNumber(), key)
             peerInfos.add(pi)
         }

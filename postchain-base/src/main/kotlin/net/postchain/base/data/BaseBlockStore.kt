@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.base.*
 import net.postchain.common.data.Hash
 import net.postchain.core.*
+import net.postchain.crypto.Key
 
 /**
  * Provides database access to the location where the blockchain with related metadata and transactions
@@ -152,8 +153,8 @@ class BaseBlockStore : BlockStore {
         val db = DatabaseAccess.of(ctx)
         val block = db.getBlockInfo(ctx, txRID)
         return ConfirmationProofMaterial(
-                ByteArrayKey(db.getTxHash(ctx, txRID)),
-                db.getBlockTxHashes(ctx, block.blockIid).map { ByteArrayKey(it) }.toTypedArray(),
+                Key(db.getTxHash(ctx, txRID)),
+                db.getBlockTxHashes(ctx, block.blockIid).map { Key(it) }.toTypedArray(),
                 block.blockHeader,
                 block.witness
         )

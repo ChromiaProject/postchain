@@ -7,11 +7,11 @@ import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.BlockHeader
-import net.postchain.core.ByteArrayKey
 import net.postchain.core.InitialBlockData
 import net.postchain.core.UserMistake
-import net.postchain.gtv.Gtv
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Key
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.generateProof
@@ -83,7 +83,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
      * @param txHashes All hashes are the leaves part of this Merkle tree
      * @return The Merkle proof tree for [txHash]
      */
-    fun merklePath(txHash: ByteArrayKey, txHashes: Array<ByteArrayKey>): GtvMerkleProofTree {
+    fun merklePath(txHash: Key, txHashes: Array<Key>): GtvMerkleProofTree {
         //println("looking for tx hash: ${txHash.toHex()} in array where first is: ${txHashes[0].toHex()}")
         val positionOfOurTxToProve = txHashes.indexOf(txHash) //txHash.positionInArray(txHashes)
         if (positionOfOurTxToProve < 0) {

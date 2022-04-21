@@ -5,7 +5,7 @@ package net.postchain.gtx.gtxml
 import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.core.BlockchainRid
-import net.postchain.core.byteArrayKeyOf
+import net.postchain.crypto.Key
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.MockCryptoSystem
@@ -75,8 +75,8 @@ class GTXMLTransactionParserAutoSignTest {
                         mapOf(),
                         true,
                         mapOf(
-                                pubKey0.byteArrayKeyOf() to sigMaker0,
-                                pubKey1.byteArrayKeyOf() to sigMaker1)
+                                Key(pubKey0) to sigMaker0,
+                                Key(pubKey1) to sigMaker1)
                 ),
                 MockCryptoSystem()
         )
@@ -185,8 +185,8 @@ class GTXMLTransactionParserAutoSignTest {
                         mapOf(),
                         true,
                         mapOf(
-                                pubKey0.byteArrayKeyOf() to sigMaker0,
-                                pubKey1.byteArrayKeyOf() to sigMaker1
+                                Key(pubKey0) to sigMaker0,
+                                Key(pubKey1) to sigMaker1
                         )
                 ),
                 MockCryptoSystem()

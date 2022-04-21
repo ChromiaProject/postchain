@@ -2,6 +2,8 @@
 
 package net.postchain.core
 
+import net.postchain.crypto.Key
+
 /**
  * Transactor is an individual operation which can be applied to the database
  * Transaction might consist of one or more operations
@@ -45,12 +47,12 @@ interface TransactionFactory {
 interface TransactionQueue {
     fun takeTransaction(): Transaction?
     fun enqueue(tx: Transaction): TransactionResult
-    fun findTransaction(txRID: ByteArrayKey): Transaction?
+    fun findTransaction(txRID: Key): Transaction?
     fun getTransactionStatus(txHash: ByteArray): TransactionStatus
     fun getTransactionQueueSize(): Int
     fun removeAll(transactionsToRemove: Collection<Transaction>)
     fun rejectTransaction(tx: Transaction, reason: Exception?)
-    fun getRejectionReason(txRID: ByteArrayKey): Exception?
+    fun getRejectionReason(txRID: Key): Exception?
 }
 
 

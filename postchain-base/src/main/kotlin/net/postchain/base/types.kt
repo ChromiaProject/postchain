@@ -4,12 +4,13 @@ package net.postchain.base
 
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.*
+import net.postchain.crypto.Key
 import net.postchain.gtv.Gtv
 import java.sql.Connection
 
 class ConfirmationProofMaterial(
-        val txHash: ByteArrayKey,
-        val txHashes: Array<ByteArrayKey>,
+        val txHash: Key,
+        val txHashes: Array<Key>,
         val header: ByteArray,
         val witness: ByteArray
 )

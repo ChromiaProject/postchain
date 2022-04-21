@@ -6,8 +6,8 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import net.postchain.core.BlockQueries
 import net.postchain.core.MultiSigBlockWitness
-import net.postchain.crypto.Signature
 import net.postchain.core.Transaction
+import net.postchain.crypto.Signature
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.Gtv
@@ -33,7 +33,7 @@ fun PostchainTestNode.assertChainNotStarted(chainId: Long = PostchainTestNode.DE
 }
 
 fun PostchainTestNode.assertNodeConnectedWith(chainId: Long, vararg nodes: PostchainTestNode) {
-    assertEquals(nodes.map(PostchainTestNode::pubKey).toSet(), networkTopology(chainId).keys)
+    assertEquals(nodes.map { it.pubKey }.toSet(), networkTopology(chainId).keys)
 }
 
 fun <T> PostchainTestNode.query(chainId: Long, action: (BlockQueries) -> Promise<T, Exception>): T? {

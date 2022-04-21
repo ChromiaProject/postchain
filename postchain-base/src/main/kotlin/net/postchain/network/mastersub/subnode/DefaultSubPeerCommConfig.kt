@@ -28,7 +28,7 @@ class DefaultSubPeerCommConfig(
                 pubKey: Key,
                 peers: List<ByteArray>
         ): DefaultSubPeerCommConfig {
-            val nn = NetworkNodes.buildNetworkNodes(peerInfoMap.values, net.postchain.core.ByteArrayKey(pubKey.byteArray))
+            val nn = NetworkNodes.buildNetworkNodes(peerInfoMap.values, Key(pubKey.byteArray))
             return DefaultSubPeerCommConfig(nn, cryptoSystem, privKey, pubKey, peers)
         }
     }
