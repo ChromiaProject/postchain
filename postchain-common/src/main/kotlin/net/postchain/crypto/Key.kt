@@ -4,7 +4,21 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import org.spongycastle.util.Arrays
 
-class Key(val byteArray: ByteArray): Comparable<Key> {
+class PubKey(byteArray: ByteArray): Key(byteArray) {
+    companion object {
+        @JvmStatic
+        fun fromString(str: String) = PubKey(str.hexStringToByteArray())
+    }
+}
+
+class PrivKey(byteArray: ByteArray): Key(byteArray) {
+    companion object {
+        @JvmStatic
+        fun fromString(str: String) = PrivKey(str.hexStringToByteArray())
+    }
+}
+
+open class Key(val byteArray: ByteArray): Comparable<Key> {
     val asString get() = byteArray.toHex()
 
     override fun toString() = "Key($asString)"
@@ -26,10 +40,5 @@ class Key(val byteArray: ByteArray): Comparable<Key> {
 
     override fun compareTo(other: Key): Int {
         return Arrays.compareUnsigned(this.byteArray, other.byteArray)
-    }
-
-    companion object {
-        @JvmStatic
-        fun fromString(str: String) = Key(str.hexStringToByteArray())
     }
 }

@@ -127,14 +127,18 @@ fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
  *
  * (See super class for doc)
  */
-open class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val digestFun: (ByteArray) -> Hash) : SigMaker {
+open class Secp256k1SigMaker(val pubKey: PubKey, val privKey: PrivKey, val digestFun: (ByteArray) -> Hash) : SigMaker {
+
+    @Deprecated("Use primary constructor", ReplaceWith("Secp256k1SigMaker(PubKey(pubKey), PrivKey(privKey), digestFun)"))
+    constructor(pubKey: ByteArray, privKey: ByteArray, digestFun: (ByteArray) -> Hash): this(PubKey(pubKey), PrivKey(privKey), digestFun)
+
     override fun signMessage(msg: ByteArray): Signature {
         val digestedMsg = digestFun(msg)
         return signDigest(digestedMsg)
     }
 
     override fun signDigest(digest: Hash): Signature {
-        return Signature(pubKey, secp256k1_sign(digest, privKey))
+        return Signature(pubKey.byteArray, secp256k1_sign(digest, privKey.byteArray))
     }
 }
 
