@@ -12,6 +12,7 @@
         <module>postchain-devtools</module>
         <module>postchain-client</module>
         <module>postchain-client-cli</module>
+        <module>postchain-cli</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -146,6 +147,11 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-base</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-cli</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

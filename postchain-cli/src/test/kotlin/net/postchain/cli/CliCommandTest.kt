@@ -2,8 +2,8 @@
 
 package net.postchain.cli
 
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.toHex
+import net.postchain.crypto.Secp256K1CryptoSystem
 import org.bitcoinj.crypto.MnemonicCode
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -13,7 +13,7 @@ class CliCommandTest {
     // mostly test external lib
     @Test
     fun testMnemonic() {
-        val cs = SECP256K1CryptoSystem()
+        val cs = Secp256K1CryptoSystem()
         val privKey = cs.getRandomBytes(32)
 
         val wordList = MnemonicCode.INSTANCE.toMnemonic(privKey)
