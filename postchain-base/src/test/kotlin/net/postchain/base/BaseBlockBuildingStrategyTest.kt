@@ -4,14 +4,16 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.core.BlockData
 import net.postchain.core.BlockQueries
-import net.postchain.core.BlockchainContext
-import net.postchain.core.BlockchainRid.Companion.ZERO_RID
 import net.postchain.core.TransactionQueue
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.toObject
 import nl.komponents.kovenant.Promise
 import org.awaitility.Awaitility.await
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.MethodOrderer
+import org.junit.jupiter.api.Order
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestMethodOrder
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.*
 import org.mockito.stubbing.Answer
@@ -23,8 +25,6 @@ class BaseBlockBuildingStrategyTest {
     companion object {
 
         // Mocks
-        private val context: BlockchainContext = BaseBlockchainContext(ZERO_RID, 0, 0L, byteArrayOf())
-
         private val blockQueries: BlockQueries = mock {
             val height: Promise<Long, Exception> = mock {
                 onGeneric { get() } doReturn -1L
@@ -49,18 +49,13 @@ class BaseBlockBuildingStrategyTest {
                 "maxtxdelay" to gtv(500),
         ))
 
-        private val spyingConfigData = BaseBlockchainConfigurationData(strategyData, context, mock())
-        private val configData = spy(spyingConfigData) {
-            on { getBlockBuildingStrategy() } doReturn strategyData
-        }
-
         private var txQueueSize = DynamicValueAnswer(120)
 
         private val txQueue: TransactionQueue = mock {
             on { getTransactionQueueSize() } doAnswer txQueueSize
         }
 
-        private val sut = BaseBlockBuildingStrategy(configData, blockQueries, txQueue)
+        private val sut = BaseBlockBuildingStrategy(strategyData.toObject(), blockQueries, txQueue)
 
         class DynamicValueAnswer(var value: Int) : Answer<Int> {
             override fun answer(p0: InvocationOnMock?): Int = value

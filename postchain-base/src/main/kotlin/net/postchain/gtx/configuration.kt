@@ -4,18 +4,23 @@ package net.postchain.gtx
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.mapper.toObject
 import nl.komponents.kovenant.Promise
 
-open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationData,
+open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                                       val module: GTXModule)
     : BaseBlockchainConfiguration(configData) {
+
+    private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
+
     private val txFactory = GTXTransactionFactory(
-        effectiveBlockchainRID, module, cryptoSystem, configData.getMaxTransactionSize()
+        effectiveBlockchainRID, module, cryptoSystem, gtxConfig.maxTxSize
     )
     private lateinit var specTxHandler: GTXSpecialTxHandler // Note: this is NOT the same as the variable in Base.
 
@@ -43,7 +48,7 @@ open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationDat
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {
         return object : BaseBlockQueries(this@GTXBlockchainConfiguration, storage, blockStore,
-                chainID, configData.subjectID) {
+                chainID, configData.context.nodeRID!!) {
             private val gson = make_gtv_gson()
 
             override fun query(query: String): Promise<String, Exception> {
@@ -68,16 +73,18 @@ open class GTXBlockchainConfiguration(configData: BaseBlockchainConfigurationDat
 open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
     override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
-        val cfData = configurationData as BaseBlockchainConfigurationData
-        val effectiveBRID = cfData.getHistoricBRID() ?: configurationData.context.blockchainRID
+        val cfData = configurationData as BlockchainConfigurationData
+        val effectiveBRID = cfData.historicBrid ?: configurationData.context.blockchainRID
         return GTXBlockchainConfiguration(
                 cfData,
-                createGtxModule(effectiveBRID, configurationData.data))
+                createGtxModule(effectiveBRID, configurationData)
+        )
     }
 
-    open fun createGtxModule(blockchainRID: BlockchainRid, data: Gtv): GTXModule {
-        val gtxConfig = data["gtx"]!!
-        val list = gtxConfig["modules"]!!.asArray().map { it.asString() }
+    open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
+
+        val gtxConfig = data.gtx?.toObject() ?: GtxConfigurationData.default
+        val list = gtxConfig.modules
         if (list.isEmpty()) {
             throw UserMistake("Missing GTX module in config. expected property 'blockchain.<chainId>.gtx.modules'")
         }
@@ -87,7 +94,7 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
             val instance = moduleClass.newInstance()
             return when (instance) {
                 is GTXModule -> instance
-                is GTXModuleFactory -> instance.makeModule(data, blockchainRID) //TODO
+                is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID) //TODO
                 else -> throw UserMistake("Module class not recognized")
             }
         }
@@ -96,8 +103,7 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
             makeModule(list[0])
         } else {
             val moduleList = list.map(::makeModule)
-            val allowOverrides = (gtxConfig["allowoverrides"]?.asInteger() ?: 0L) == 0L
-            CompositeGTXModule(moduleList.toTypedArray(), allowOverrides)
+            CompositeGTXModule(moduleList.toTypedArray(), gtxConfig.allowOverrides)
         }
     }
 }

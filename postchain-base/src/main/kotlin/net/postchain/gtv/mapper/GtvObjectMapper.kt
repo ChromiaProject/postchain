@@ -3,6 +3,7 @@ package net.postchain.gtv.mapper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvFactory.gtv
 import java.lang.reflect.Parameter
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -111,6 +112,7 @@ private fun annotatedParameterToValue(param: Parameter, gtv: GtvDictionary, tran
         param.isAnnotationPresent(Nested::class.java) && param.isAnnotationPresent(Name::class.java) -> {
             val path = param.getAnnotation(Nested::class.java).path
             val gtvNode = path.fold(gtv) { acc, s ->
+                if (acc[s] == null)  return@fold gtv(mapOf())
                 if (acc[s] !is GtvDictionary) throw IllegalArgumentException("Expected path $s to be GtvDictionary")
                 acc[s] as GtvDictionary
             }
