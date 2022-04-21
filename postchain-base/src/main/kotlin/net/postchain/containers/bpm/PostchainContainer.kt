@@ -26,7 +26,6 @@ interface PostchainContainer {
 }
 
 class DefaultPostchainContainer(
-        val nodeConfig: NodeConfig,
         dataSource: DirectoryDataSource,
         override val containerName: ContainerName,
         override var restApiPort: Int,

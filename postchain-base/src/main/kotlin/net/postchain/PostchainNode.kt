@@ -3,8 +3,8 @@
 package net.postchain
 
 import mu.KLogging
-import net.postchain.base.Storage
-import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.config.app.AppConfig
+import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
@@ -16,7 +16,7 @@ import nl.komponents.kovenant.Kovenant
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
  */
-open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage: Storage, debug: Boolean = false) : Shutdownable {
+open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false) : Shutdownable {
 
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
@@ -32,15 +32,16 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage:
                 concurrentTasks = 5
             }
         }
+        val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
 
-        val nodeConfig = nodeConfigProvider.getConfiguration()
-        val infrastructureFactory = BaseInfrastructureFactoryProvider().createInfrastructureFactory(nodeConfigProvider)
-        logPrefix = peerName(nodeConfig.pubKey)
+        val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
+        logPrefix = peerName(appConfig.pubKey)
 
         postchainContext = PostchainContext(
-                nodeConfigProvider,
+                appConfig,
+                NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
                 storage,
-                infrastructureFactory.makeConnectionManager(nodeConfigProvider),
+                infrastructureFactory.makeConnectionManager(appConfig),
                 if (debug) DefaultNodeDiagnosticContext() else null
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
@@ -49,7 +50,7 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage:
 
         postchainContext.nodeDiagnosticContext?.apply {
             addProperty(DiagnosticProperty.VERSION, getVersion())
-            addProperty(DiagnosticProperty.PUB_KEY, nodeConfig.pubKey)
+            addProperty(DiagnosticProperty.PUB_KEY, appConfig.pubKey)
             addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
         }
     }
@@ -91,10 +92,10 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage:
         return if (logger.isDebugEnabled) {
             val x = processManager.retrieveBlockchain(chainId)
             if (x == null) {
-                logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.nodeConfig.pubKey}?" }
+                logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.appConfig.pubKey}?" }
                 null
             } else {
-                val procName = BlockchainProcessName(postchainContext.nodeConfig.pubKey, x.blockchainEngine.getConfiguration().blockchainRid)
+                val procName = BlockchainProcessName(postchainContext.appConfig.pubKey, x.blockchainEngine.getConfiguration().blockchainRid)
                 BlockTrace.buildBeforeBlock(procName)
             }
         } else {

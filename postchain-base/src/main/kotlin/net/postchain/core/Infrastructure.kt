@@ -3,8 +3,8 @@
 package net.postchain.core
 
 import net.postchain.PostchainContext
+import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ConnectionManager
 
@@ -19,7 +19,7 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            shouldProcessNewMessages: (Long) -> Boolean = { true }
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean = { _, _ -> true }
     ): BlockchainProcess
 
     /**
@@ -90,7 +90,7 @@ interface BlockchainProcessManagerExtension: BlockchainProcessConnectable, Shutd
 
 interface InfrastructureFactory {
 
-    fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager
+    fun makeConnectionManager(appConfig: AppConfig): ConnectionManager
 
     fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider
 
@@ -119,5 +119,5 @@ enum class Infrastructure(vararg val key: String) {
 }
 
 interface InfrastructureFactoryProvider {
-    fun createInfrastructureFactory(nodeConfigProvider: NodeConfigurationProvider): InfrastructureFactory
+    fun createInfrastructureFactory(appConfig: AppConfig): InfrastructureFactory
 }

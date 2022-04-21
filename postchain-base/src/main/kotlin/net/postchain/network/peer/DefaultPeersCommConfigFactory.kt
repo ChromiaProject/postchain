@@ -1,6 +1,7 @@
 package net.postchain.network.peer
 
 import net.postchain.base.*
+import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
@@ -9,27 +10,29 @@ import net.postchain.core.BlockchainRid
 open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 
     override fun create(
+            appConfig: AppConfig,
             nodeConfig: NodeConfig,
             blockchainConfig: BlockchainConfiguration,
             historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration {
-        return create(nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers, historicBlockchainContext)
+        return create(appConfig, nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers, historicBlockchainContext)
     }
 
     override fun create(
+            appConfig: AppConfig,
             nodeConfig: NodeConfig,
             blockchainRid: BlockchainRid,
             peers: List<ByteArray>,
             historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration {
 
-        val relevantPeerMap = buildRelevantNodeInfoMap(nodeConfig, blockchainRid, peers, historicBlockchainContext)
+        val relevantPeerMap = buildRelevantNodeInfoMap(appConfig, nodeConfig, blockchainRid, peers, historicBlockchainContext)
 
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
                 SECP256K1CryptoSystem(),
-                nodeConfig.privKeyByteArray,
-                nodeConfig.pubKeyByteArray
+                appConfig.privKeyByteArray,
+                appConfig.pubKeyByteArray
         )
     }
 
@@ -46,12 +49,13 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
      *         to the given BC. Only nodes that are obviously useless are removed.
      */
     protected fun buildRelevantNodeInfoMap(
+            appConfig: AppConfig,
             nodeConfig: NodeConfig,
             blockchainRid: BlockchainRid,
             peers: List<ByteArray>, // signers
             historicBlockchainContext: HistoricBlockchainContext?
     ): Map<NodeRid, PeerInfo> {
-        val myNodeRid = NodeRid(nodeConfig.pubKeyByteArray)
+        val myNodeRid = NodeRid(appConfig.pubKeyByteArray)
         val peers0 = peers.map { NodeRid(it) }
         val peersReplicas = peers0.flatMap {
             nodeConfig.nodeReplicas[it] ?: listOf()

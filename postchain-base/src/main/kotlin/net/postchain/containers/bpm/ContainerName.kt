@@ -1,6 +1,6 @@
 package net.postchain.containers.bpm
 
-import net.postchain.config.node.NodeConfig
+import net.postchain.config.app.AppConfig
 
 data class ContainerName(
         val name: String,
@@ -9,8 +9,8 @@ data class ContainerName(
 
     companion object {
 
-        fun create(nodeConfig: NodeConfig, directory: String): ContainerName {
-            val name = "n${nodeConfig.pubKey.take(8)}_${directory}"
+        fun create(appConfig: AppConfig, directory: String): ContainerName {
+            val name = "n${appConfig.pubKey.take(8)}_${directory}"
             return ContainerName(name, directory)
         }
 
