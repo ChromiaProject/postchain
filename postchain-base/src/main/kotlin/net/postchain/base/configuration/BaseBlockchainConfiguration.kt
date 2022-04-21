@@ -1,9 +1,10 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.data
+package net.postchain.base.configuration
 
 import mu.KLogging
 import net.postchain.base.*
+import net.postchain.base.data.*
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
@@ -27,7 +28,7 @@ open class BaseBlockchainConfiguration(
     override val effectiveBlockchainRID = configData.historicBrid ?: configData.context.blockchainRID
     override val signers = configData.signers
 
-    protected val blockStrategyConfig = configData.blockStrategy?.toObject() ?: BaseBlockchainStrategyConfiguration.default
+    protected val blockStrategyConfig = configData.blockStrategy?.toObject() ?: BaseBlockBuildingStrategyConfigurationData.default
 
     private val blockWitnessProvider: BlockWitnessProvider = BaseBlockWitnessProvider(
             cryptoSystem,
@@ -129,7 +130,7 @@ open class BaseBlockchainConfiguration(
         return try {
             constructorOf<BlockBuildingStrategy>(
                     strategyClassName,
-                    BaseBlockchainStrategyConfiguration::class.java,
+                    BaseBlockBuildingStrategyConfigurationData::class.java,
                     BlockQueries::class.java,
                     TransactionQueue::class.java
             ).newInstance(blockStrategyConfig, blockQueries, txQueue)

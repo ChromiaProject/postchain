@@ -1,5 +1,6 @@
-package net.postchain.base
+package net.postchain.base.configuration
 
+import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.*
 import net.postchain.crypto.SigMaker

@@ -3,12 +3,12 @@
 package net.postchain.integrationtest
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainStrategyConfiguration
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.core.*
 import java.util.concurrent.LinkedBlockingQueue
 
 class ThreeTxStrategy(
-        val configData: BaseBlockchainStrategyConfiguration,
+        val configData: BaseBlockBuildingStrategyConfigurationData,
         blockQueries: BlockQueries,
         private val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {

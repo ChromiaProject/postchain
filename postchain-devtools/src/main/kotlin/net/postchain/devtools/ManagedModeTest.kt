@@ -5,7 +5,8 @@ import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.*
-import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex

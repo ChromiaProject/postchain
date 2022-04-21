@@ -1,6 +1,6 @@
 package net.postchain.integrationtest.statemachine
 
-import net.postchain.base.BlockchainConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.common.toHex
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration

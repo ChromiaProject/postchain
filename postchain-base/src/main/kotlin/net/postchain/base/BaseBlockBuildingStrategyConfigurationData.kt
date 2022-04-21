@@ -7,7 +7,7 @@ import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.RawGtv
 import net.postchain.gtv.mapper.toObject
 
-data class BaseBlockchainStrategyConfiguration(
+data class BaseBlockBuildingStrategyConfigurationData(
         @RawGtv
         val rawGtv: Gtv,
         @Name(KEY_BLOCKSTRATEGY_MAXBLOCKSIZE)
@@ -28,6 +28,6 @@ data class BaseBlockchainStrategyConfiguration(
 ) {
         companion object {
                 @JvmStatic
-                val default = gtv(mapOf()).toObject<BaseBlockchainStrategyConfiguration>()
+                val default = gtv(mapOf()).toObject<BaseBlockBuildingStrategyConfigurationData>()
         }
 }

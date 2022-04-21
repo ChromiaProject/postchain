@@ -4,7 +4,7 @@ package net.postchain.ebft
 
 import net.postchain.PostchainContext
 import net.postchain.base.*
-import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName

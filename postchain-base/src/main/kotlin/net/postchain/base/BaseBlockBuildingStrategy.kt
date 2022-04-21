@@ -4,7 +4,7 @@ package net.postchain.base
 
 import net.postchain.core.*
 
-class BaseBlockBuildingStrategy(val configData: BaseBlockchainStrategyConfiguration,
+class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigurationData,
                                 blockQueries: BlockQueries,
                                 private val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {

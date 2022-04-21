@@ -4,7 +4,8 @@ package net.postchain.gtx
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvToJSON

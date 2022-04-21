@@ -2,7 +2,7 @@
 
 package net.postchain.devtools.testinfra
 
-import net.postchain.base.BlockchainConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
