@@ -56,6 +56,7 @@ public class OperationType {
         @XmlElementRef(name = "string", type = JAXBElement.class, required = false),
         @XmlElementRef(name = "null", type = JAXBElement.class, required = false),
         @XmlElementRef(name = "int", type = JAXBElement.class, required = false),
+        @XmlElementRef(name = "bigint", type = JAXBElement.class, required = false),
         @XmlElementRef(name = "dict", type = JAXBElement.class, required = false)
     })
     protected List<JAXBElement<?>> parameters;
@@ -86,6 +87,7 @@ public class OperationType {
      * {@link JAXBElement }{@code <}{@link byte[]}{@code >}
      * {@link JAXBElement }{@code <}{@link String }{@code >}
      * {@link JAXBElement }{@code <}{@link Object }{@code >}
+     * {@link JAXBElement }{@code <}{@link Long }{@code >}
      * {@link JAXBElement }{@code <}{@link BigInteger }{@code >}
      * {@link JAXBElement }{@code <}{@link DictType }{@code >}
      * 

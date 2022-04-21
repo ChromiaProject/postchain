@@ -44,6 +44,7 @@ public class ObjectFactory {
     private final static QName _Param_QNAME = new QName("", "param");
     private final static QName _Dict_QNAME = new QName("", "dict");
     private final static QName _Int_QNAME = new QName("", "int");
+    private final static QName _BigInt_QNAME = new QName("", "bigint");
     private final static QName _Transaction_QNAME = new QName("", "transaction");
 
     /**
@@ -220,7 +221,7 @@ public class ObjectFactory {
      */
     @XmlElementDecl(namespace = "", name = "bigint")
     public JAXBElement<BigInteger> createBigInt(BigInteger value) {
-        return new JAXBElement<BigInteger>(_Int_QNAME, BigInteger.class, null, value);
+        return new JAXBElement<BigInteger>(_BigInt_QNAME, BigInteger.class, null, value);
     }
 
     /**

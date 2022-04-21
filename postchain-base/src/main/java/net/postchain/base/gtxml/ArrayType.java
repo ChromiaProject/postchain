@@ -55,6 +55,7 @@ public class ArrayType {
         @XmlElementRef(name = "string", type = JAXBElement.class, required = false),
         @XmlElementRef(name = "null", type = JAXBElement.class, required = false),
         @XmlElementRef(name = "int", type = JAXBElement.class, required = false),
+        @XmlElementRef(name = "bigint", type = JAXBElement.class, required = false),
         @XmlElementRef(name = "dict", type = JAXBElement.class, required = false)
     })
     protected List<JAXBElement<?>> elements;
