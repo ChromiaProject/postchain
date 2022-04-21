@@ -141,7 +141,7 @@ open class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val 
 /**
  * A collection of cryptographic functions based on the elliptic curve secp256k1
  */
-open class SECP256K1CryptoSystem : CryptoSystem {
+open class Secp256K1CryptoSystem : CryptoSystem {
     private val rand = SecureRandom()
 
     /**
