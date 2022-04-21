@@ -3,6 +3,7 @@ package net.postchain.gtv.mapper
 import assertk.assert
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import assertk.isContentEqualTo
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
@@ -259,6 +260,17 @@ internal class GtvObjectMapperTest {
             gtv(mapOf("b" to list)).toObject<C>()
         }
         assert(e.message).isEqualTo("Expected path b to be GtvDictionary")
+    }
+
+    @Test
+    fun nestedMissingPath() {
+        data class C(
+                @Name("name")
+                @Nested("b")
+                @Nullable
+                val name: String?
+        )
+        assert(gtv(mapOf()).toObject<C>().name).isNull()
     }
 
     @Test

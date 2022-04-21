@@ -4,7 +4,6 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
-import net.postchain.base.data.BaseBlockchainConfiguration
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
 import net.postchain.core.BlockHeader

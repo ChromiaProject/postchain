@@ -5,6 +5,7 @@ package net.postchain.cli
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
 import net.postchain.base.*
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.toHex
@@ -158,7 +159,7 @@ object CliExecution {
             val db = DatabaseAccess.of(eContext)
             val brid = db.getBlockchainRid(eContext)!!
             val confGtvDict = gtvData as GtvDictionary
-            val signers = confGtvDict[BaseBlockchainConfigurationData.KEY_SIGNERS]!!.asArray().map { it.asByteArray() }
+            val signers = confGtvDict[KEY_SIGNERS]!!.asArray().map { it.asByteArray() }
             for (sig in signers) {
                 val nodePubkey = sig.toHex()
                 // Node must be in PeerInfo, or else it cannot be a blockchain replica.
