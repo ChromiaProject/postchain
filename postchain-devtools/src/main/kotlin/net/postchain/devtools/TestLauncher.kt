@@ -4,7 +4,6 @@ package net.postchain.devtools
 
 import com.google.gson.GsonBuilder
 import mu.KLogging
-import net.postchain.base.gtxml.TestType
 import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
@@ -15,6 +14,7 @@ import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.activeChainIds
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.gtxml.TestType
 import net.postchain.gtx.gtxml.GTXMLTransactionParser
 import net.postchain.gtx.gtxml.TransactionContext
 import java.io.File
@@ -30,7 +30,7 @@ class TestLauncher : IntegrationTestSetup() {
 
     companion object : KLogging()
 
-    private val jaxbContext = JAXBContext.newInstance("net.postchain.base.gtxml")
+    private val jaxbContext = JAXBContext.newInstance("net.postchain.gtv.gtxml")
 
     class TransactionFailure(val blockHeight: Long, val txIdx: Long,
                              val exception: Exception?)
