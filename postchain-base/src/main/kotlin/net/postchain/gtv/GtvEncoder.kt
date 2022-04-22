@@ -2,7 +2,8 @@
 
 package net.postchain.gtv
 
-import org.openmuc.jasn1.ber.ReverseByteArrayOutputStream;
+import com.beanit.jasn1.ber.ReverseByteArrayOutputStream
+
 
 /**
  * Responsible for turning GTV objects into binary data.

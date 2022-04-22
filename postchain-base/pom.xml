@@ -108,12 +108,6 @@
             <artifactId>javax.activation-api</artifactId>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.openmuc/jasn1-compiler -->
-        <dependency>
-            <groupId>org.openmuc</groupId>
-            <artifactId>jasn1-compiler</artifactId>
-        </dependency>
-
         <!-- Docker Client -->
         <dependency>
             <groupId>com.spotify</groupId>
@@ -175,7 +169,11 @@
             <groupId>org.skyscreamer</groupId>
             <artifactId>jsonassert</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.beanit</groupId>
+            <artifactId>jasn1-compiler</artifactId>
+            <version>1.11.3</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -195,7 +193,7 @@
                             <sourceDirs>
                                 <sourceDir>src/main/kotlin</sourceDir>
                                 <sourceDir>src/main/java</sourceDir>
-                                <sourceDir>target/generated-sources/jaxb</sourceDir>
+                                <sourceDir>target/generated-sources</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
@@ -240,8 +238,45 @@
                     <xjbSources>
                         <xjbSource>src/main/resources/net/postchain/gtx/gtxml/bindings.xml</xjbSource>
                     </xjbSources>
+                    <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
                     <!-- The package of your generated sources -->
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.beanit</groupId>
+                        <artifactId>jasn1-compiler</artifactId>
+                        <version>1.11.3</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>generate-stuff</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <includePluginDependencies>true</includePluginDependencies>
+                            <mainClass>com.beanit.jasn1.compiler.Compiler</mainClass>
+                            <arguments>
+                                <argument>-f</argument>
+                                <!--argument>${project.basedir}/src/main/resources/asn/base_messages.asn</argument-->
+                                <argument>${project.basedir}/src/main/resources/asn/gtv_messages.asn</argument>
+                                <!--argument>${project.basedir}/src/main/resources/asn/gtx_messages.asn</argument-->
+                                <argument>-o</argument>
+                                <argument>${project.build.directory}/generated-sources/</argument>
+                                <argument>-p</argument>
+                                <argument>net.postchain.gtv</argument>
+                                <argument>-l</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
