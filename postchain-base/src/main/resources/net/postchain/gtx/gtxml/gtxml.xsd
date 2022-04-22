@@ -9,7 +9,9 @@
 
     <xs:element name="null"/>
     <xs:element name="string" type="xs:string"/>
-    <xs:element name="int" type="xs:integer"/>
+    <xs:element name="int" type="xs:int"/>
+    <xs:element name="long" type="xs:long"/>
+    <xs:element name="bigint" type="xs:integer"/>
     <xs:element name="bytea" type="xs:hexBinary"/>
     <xs:element name="array" type="arrayType"/>
     <xs:element name="dict" type="dictType"/>
@@ -25,6 +27,8 @@
             <xs:element ref="null"/>
             <xs:element ref="string"/>
             <xs:element ref="int"/>
+            <xs:element ref="long"/>
+            <xs:element ref="bigint"/>
             <xs:element ref="bytea"/>
             <xs:element ref="array"/>
             <xs:element ref="dict"/>
@@ -48,6 +52,8 @@
             <xs:element ref="null"/>
             <xs:element ref="string"/>
             <xs:element ref="int"/>
+            <xs:element ref="long"/>
+            <xs:element ref="bigint"/>
             <xs:element ref="bytea"/>
             <xs:element ref="array"/>
             <xs:element ref="dict"/>
@@ -104,6 +110,8 @@
             <xs:element ref="null"/>
             <xs:element ref="string"/>
             <xs:element ref="int"/>
+            <xs:element ref="long"/>
+            <xs:element ref="bigint"/>
             <xs:element ref="bytea"/>
             <xs:element ref="array"/>
             <xs:element ref="dict"/>
