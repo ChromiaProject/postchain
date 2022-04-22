@@ -9,6 +9,9 @@
         <jaxb:bindings jaxb:node="/xs:schema//xs:complexType[@name='entryType']">
             <jaxb:globalBindings choiceContentProperty="true" />
         </jaxb:bindings>
+        <jaxb:schemaBindings>
+            <jaxb:package name="net.postchain.gtv.gtxml"/>
+        </jaxb:schemaBindings>
     </jaxb:bindings>
 
 </jaxb:bindings>
