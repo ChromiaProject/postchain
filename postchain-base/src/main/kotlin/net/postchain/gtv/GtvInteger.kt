@@ -2,8 +2,8 @@
 
 package net.postchain.gtv
 
+import com.beanit.jasn1.ber.types.BerInteger
 import net.postchain.gtv.messages.RawGtv
-import org.openmuc.jasn1.ber.types.BerInteger
 import java.math.BigInteger
 
 data class GtvInteger(val integer: Long) : GtvPrimitive() {
@@ -23,7 +23,7 @@ data class GtvInteger(val integer: Long) : GtvPrimitive() {
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(null, null, null, BerInteger(integer), null, null, null)
+        return RawGtv().apply { integer = BerInteger(this@GtvInteger.integer) }
     }
 
     override fun asPrimitive(): Any {

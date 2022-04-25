@@ -2,10 +2,10 @@
 
 package net.postchain.gtv.gtvml
 
-import net.postchain.base.gtxml.ArrayType
-import net.postchain.base.gtxml.DictType
-import net.postchain.base.gtxml.ObjectFactory
 import net.postchain.gtv.*
+import net.postchain.gtv.gtxml.ArrayType
+import net.postchain.gtv.gtxml.DictType
+import net.postchain.gtv.gtxml.ObjectFactory
 import java.io.StringWriter
 import javax.xml.bind.JAXB
 import javax.xml.bind.JAXBElement
@@ -34,7 +34,7 @@ object GtvMLEncoder {
             is GtvNull -> objectFactory.createNull(null)
             is GtvString -> objectFactory.createString(gtv.string)
             is GtvInteger -> objectFactory.createInt(gtv.asInteger())
-            is GtvBigInteger -> objectFactory.createBigInt(gtv.asBigInteger())
+            is GtvBigInteger -> objectFactory.createBigint(gtv.asBigInteger())
             is GtvByteArray -> objectFactory.createBytea(gtv.bytearray) // See comments in GTXMLValueEncodeScalarsTest
             is GtvArray -> createArrayElement(gtv)
             is GtvDictionary -> createDictElement(gtv)
