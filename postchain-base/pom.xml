@@ -171,8 +171,8 @@
         </dependency>
         <dependency>
             <groupId>com.beanit</groupId>
-            <artifactId>jasn1-compiler</artifactId>
-            <version>1.11.3</version>
+            <artifactId>jasn1</artifactId>
+            <version>${jasn.version}</version>
         </dependency>
     </dependencies>
 
@@ -250,7 +250,7 @@
                     <dependency>
                         <groupId>com.beanit</groupId>
                         <artifactId>jasn1-compiler</artifactId>
-                        <version>1.11.3</version>
+                        <version>${jasn.version}</version>
                     </dependency>
                 </dependencies>
                 <executions>

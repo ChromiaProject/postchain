@@ -6,6 +6,7 @@ import net.postchain.gtv.*
 import net.postchain.gtv.GtvType.*
 import net.postchain.gtv.gtxml.ArrayType
 import net.postchain.gtv.gtxml.DictType
+import net.postchain.gtv.gtxml.ObjectFactory
 import net.postchain.gtv.gtxml.ParamType
 import net.postchain.gtx.gtxml.GtvTypeOf
 import net.postchain.gtx.gtxml.component1
@@ -18,7 +19,7 @@ import javax.xml.bind.JAXBElement
 
 object GtvMLParser {
 
-    private val jaxbContext = JAXBContext.newInstance("net.postchain.gtv.gtxml")
+    private val jaxbContext = JAXBContext.newInstance(ObjectFactory::class.java.packageName)
 
     /**
      * Parses XML represented as string into [Gtv] and resolves params ('<param />') by [params] map

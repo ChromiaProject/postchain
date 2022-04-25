@@ -14,6 +14,7 @@ import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.activeChainIds
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.gtxml.ObjectFactory
 import net.postchain.gtv.gtxml.TestType
 import net.postchain.gtx.gtxml.GTXMLTransactionParser
 import net.postchain.gtx.gtxml.TransactionContext
@@ -30,7 +31,7 @@ class TestLauncher : IntegrationTestSetup() {
 
     companion object : KLogging()
 
-    private val jaxbContext = JAXBContext.newInstance("net.postchain.gtv.gtxml")
+    private val jaxbContext = JAXBContext.newInstance(ObjectFactory::class.java.packageName)
 
     class TransactionFailure(val blockHeight: Long, val txIdx: Long,
                              val exception: Exception?)
