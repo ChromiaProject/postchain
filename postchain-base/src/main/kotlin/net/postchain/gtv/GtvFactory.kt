@@ -2,10 +2,10 @@
 
 package net.postchain.gtv
 
+import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.core.BlockchainRid
 import net.postchain.gtv.messages.DictPair
 import net.postchain.gtv.messages.RawGtv
-import org.openmuc.jasn1.ber.types.string.BerUTF8String
 import java.math.BigInteger
 
 fun Boolean.toLong() = if (this) 1L else 0L
