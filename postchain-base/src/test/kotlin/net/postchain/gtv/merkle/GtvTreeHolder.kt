@@ -13,7 +13,7 @@ open class TreeHolderFromArray(orgIntArray: IntArray,
                                clfbTree:GtvBinaryTree,
                                treePrintout: String,
                                expectedPrintout: String,
-                               val orgGtvArray: GtvArray  ):
+                               val orgGtvArray: GtvArray):
         TreeHolderWithIntArray(orgIntArray, clfbTree, treePrintout, expectedPrintout)
 
 class TreeHolderSubTree(orgIntArray: IntArray,

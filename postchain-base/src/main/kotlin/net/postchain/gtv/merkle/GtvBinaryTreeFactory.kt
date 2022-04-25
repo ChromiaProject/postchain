@@ -83,8 +83,8 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
      */
     override fun innerHandleLeaf(leaf: Gtv, gtvPaths: GtvPathSet): BinaryTreeElement {
         return when (leaf) {
-            is GtvPrimitive  -> handlePrimitiveLeaf(leaf, gtvPaths)
-            is GtvArray      -> GtvBinaryTreeFactoryArray.buildFromGtvArray(leaf, gtvPaths)
+            is GtvPrimitive -> handlePrimitiveLeaf(leaf, gtvPaths)
+            is GtvArray -> GtvBinaryTreeFactoryArray.buildFromGtvArray(leaf, gtvPaths)
             is GtvDictionary -> GtvBinaryTreeFactoryDict.buildFromGtvDictionary(leaf, gtvPaths)
             is GtvCollection -> throw IllegalStateException("Programmer should have dealt with this container type: ${leaf.type}")
             else ->             throw IllegalStateException("What is this? Not container and not primitive? type: ${leaf.type}")

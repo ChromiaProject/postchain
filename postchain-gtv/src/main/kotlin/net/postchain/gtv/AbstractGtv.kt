@@ -2,7 +2,7 @@
 
 package net.postchain.gtv
 
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
 import java.math.BigInteger
 
 /**

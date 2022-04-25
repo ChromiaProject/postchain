@@ -2,7 +2,7 @@
 
 package net.postchain.gtv
 
-import net.postchain.core.ProgrammerMistake
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.gtv.messages.RawGtv
 import java.io.ByteArrayInputStream
 
@@ -35,7 +35,7 @@ object GtvDecoder {
             return GtvArray((r.array.seqOf.map { wrapValue(it) }).toTypedArray())
         }
         if (r.dict != null) {
-            return GtvDictionary.build(r.dict.seqOf.map { it.name.toString() to wrapValue(it.value)}.toMap())
+            return GtvDictionary.build(r.dict.seqOf.map { it.name.toString() to wrapValue(it.value) }.toMap())
         }
         throw ProgrammerMistake("Unknown type identifier")
     }

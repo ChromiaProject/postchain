@@ -26,6 +26,10 @@
         <!-- Postchain -->
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-gtv</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>postchain-base</artifactId>
             <exclusions>
                 <exclusion>

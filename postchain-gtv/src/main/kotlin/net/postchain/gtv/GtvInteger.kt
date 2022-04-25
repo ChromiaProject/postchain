@@ -6,22 +6,24 @@ import com.beanit.jasn1.ber.types.BerInteger
 import net.postchain.gtv.messages.RawGtv
 import java.math.BigInteger
 
-data class GtvBigInteger(val integer: BigInteger) : GtvPrimitive() {
+data class GtvInteger(val integer: Long) : GtvPrimitive() {
 
-    constructor(l: Long): this(BigInteger.valueOf(l))
+    override val type: GtvType = GtvType.INTEGER
 
-    override val type: GtvType = GtvType.BIGINTEGER
-
-    override fun asBigInteger(): BigInteger {
+    override fun asInteger(): Long {
         return integer
     }
 
+    override fun asBigInteger(): BigInteger {
+        return integer.toBigInteger()
+    }
+
     override fun asBoolean(): Boolean {
-        return integer.toLong().toBoolean()
+        return integer != 0L
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv().apply { bigInteger = BerInteger(this@GtvBigInteger.integer) }
+        return RawGtv().apply { integer = BerInteger(this@GtvInteger.integer) }
     }
 
     override fun asPrimitive(): Any {
@@ -29,7 +31,7 @@ data class GtvBigInteger(val integer: BigInteger) : GtvPrimitive() {
     }
 
     override fun nrOfBytes(): Int {
-        return ((integer.bitLength() + 1) / 8) + 1
+        return Long.SIZE_BYTES
     }
 
     override fun toString(): String {

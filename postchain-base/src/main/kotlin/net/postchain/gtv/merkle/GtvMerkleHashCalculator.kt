@@ -18,7 +18,7 @@ import net.postchain.gtv.GtvEncoder.encodeGtv
  */
 fun serializeGtvToByteArary(gtv: Gtv): ByteArray {
     return when (gtv) {
-        is GtvNull      -> encodeGtv(gtv)
+        is GtvNull -> encodeGtv(gtv)
         is GtvInteger   -> encodeGtv(gtv)
         is GtvString    -> encodeGtv(gtv)
         is GtvByteArray -> encodeGtv(gtv)
