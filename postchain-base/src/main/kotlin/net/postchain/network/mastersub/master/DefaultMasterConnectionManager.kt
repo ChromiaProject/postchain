@@ -3,7 +3,7 @@ package net.postchain.network.mastersub.master
 import mu.KLogging
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ChainsWithOneConnection
 import net.postchain.network.mastersub.MsMessageHandler

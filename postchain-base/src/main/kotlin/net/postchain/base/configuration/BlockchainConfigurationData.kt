@@ -4,6 +4,7 @@ import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.*
+import net.postchain.common.BlockchainRid
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory

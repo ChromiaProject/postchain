@@ -2,6 +2,7 @@
 
 package net.postchain.core
 
+import net.postchain.common.BlockchainRid
 import net.postchain.crypto.Signature
 
 interface BlockHeader {

@@ -7,8 +7,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfig
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.*
 import net.postchain.network.mastersub.subnode.SubConnectionManager

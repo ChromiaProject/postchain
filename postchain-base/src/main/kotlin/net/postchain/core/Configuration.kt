@@ -4,6 +4,7 @@ package net.postchain.core
 
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.Storage
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 
 /**

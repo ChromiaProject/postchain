@@ -2,7 +2,7 @@
 
 package net.postchain.network.mastersub.subnode
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.network.common.ConnectionDescriptor
 
 /**

@@ -1,7 +1,7 @@
 package net.postchain.integrationtest.sync
 
 import mu.KLogging
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.toHex
