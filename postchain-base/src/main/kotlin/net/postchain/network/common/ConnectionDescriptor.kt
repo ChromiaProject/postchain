@@ -1,6 +1,6 @@
 package net.postchain.network.common
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 /**
  * General info about the connection

@@ -4,7 +4,7 @@ package net.postchain.gtx
 
 import net.postchain.base.merkle.MerkleHashCalculator
 import net.postchain.common.data.Hash
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.crypto.Signature
 import net.postchain.core.UserMistake

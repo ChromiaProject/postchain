@@ -1,7 +1,4 @@
-package net.postchain.core
-
-import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
+package net.postchain.common
 
 /**
  * Wrapper type for a blockchain's external identifier (which is an array of bytes)

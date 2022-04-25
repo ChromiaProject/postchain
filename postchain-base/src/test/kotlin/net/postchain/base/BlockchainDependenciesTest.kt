@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 class BlockchainDependenciesTest {
 

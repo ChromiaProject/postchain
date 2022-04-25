@@ -1,6 +1,6 @@
 package net.postchain.network.peer
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.config.app.AppConfig

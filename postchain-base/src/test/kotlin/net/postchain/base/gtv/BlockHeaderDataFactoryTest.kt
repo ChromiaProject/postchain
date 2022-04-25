@@ -2,7 +2,7 @@
 
 package net.postchain.base.gtv
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.InitialBlockData
 import net.postchain.gtv.*
 import org.junit.jupiter.api.Test

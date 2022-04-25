@@ -2,7 +2,7 @@ package net.postchain.gtx
 
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.crypto.CryptoSystem
 
 /**
@@ -18,9 +18,9 @@ interface GTXSpecialTxExtension {
      * The extension is handed a lot of things that it might need
      */
     fun init(
-        module: GTXModule,
-        blockchainRID: BlockchainRid,
-        cs: CryptoSystem
+            module: GTXModule,
+            blockchainRID: BlockchainRid,
+            cs: CryptoSystem
     )
 
     /**

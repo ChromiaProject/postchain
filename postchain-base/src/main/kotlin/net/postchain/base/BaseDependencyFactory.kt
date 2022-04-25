@@ -1,6 +1,6 @@
 package net.postchain.base
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.gtv.*

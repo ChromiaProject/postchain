@@ -4,7 +4,7 @@ package net.postchain.gtx.gtxml
 
 import net.postchain.base.merkle.MerkleHashCalculator
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.crypto.CryptoSystem

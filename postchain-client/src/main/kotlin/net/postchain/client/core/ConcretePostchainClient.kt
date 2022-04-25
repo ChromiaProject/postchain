@@ -6,7 +6,7 @@ import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import mu.KLogging
 import net.postchain.api.rest.json.JsonFactory
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.TransactionStatus.*

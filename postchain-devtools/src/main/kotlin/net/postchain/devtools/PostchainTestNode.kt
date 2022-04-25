@@ -10,6 +10,7 @@ import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
+import net.postchain.common.BlockchainRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
