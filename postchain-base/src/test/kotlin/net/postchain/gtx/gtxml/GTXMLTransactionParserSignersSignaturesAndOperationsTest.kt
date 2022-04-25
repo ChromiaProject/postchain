@@ -5,7 +5,7 @@ package net.postchain.gtx.gtxml
 import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.core.BlockchainRid
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.devtools.MockCryptoSystem
 import net.postchain.gtv.*
 import net.postchain.gtx.GTXTransactionBodyData
