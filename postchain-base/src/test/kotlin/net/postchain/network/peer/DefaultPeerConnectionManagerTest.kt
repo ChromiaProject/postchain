@@ -6,7 +6,7 @@ import assertk.assert
 import assertk.assertions.isEmpty
 import assertk.isContentEqualTo
 import net.postchain.base.*
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.byteArrayKeyOf

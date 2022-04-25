@@ -10,7 +10,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import net.postchain.base.*
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.util.peerInfoFromPublicKey

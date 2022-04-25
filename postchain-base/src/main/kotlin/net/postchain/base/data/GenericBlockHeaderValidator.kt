@@ -2,6 +2,7 @@ package net.postchain.base.data
 
 import net.postchain.base.BaseBlockHeader
 import net.postchain.core.*
+import net.postchain.common.BlockchainRid
 import java.util.*
 
 /**
@@ -95,10 +96,10 @@ object GenericBlockHeaderValidator {
      * Same as above, but we must validate an entire group of headers
      */
     fun multiValidationAgainstKnownBlocks(
-        bcRid: BlockchainRid,
-        headerMap: Map<Long, MinimalBlockHeaderInfo>, // headerHeight: Long -> Minimal header
-        prevMinimalHeader: MinimalBlockHeaderInfo?,
-        blockRidFromHeight: (height: Long) -> ByteArray? // We will probably need to go to DB to find this, so don't call this in vain
+            bcRid: BlockchainRid,
+            headerMap: Map<Long, MinimalBlockHeaderInfo>, // headerHeight: Long -> Minimal header
+            prevMinimalHeader: MinimalBlockHeaderInfo?,
+            blockRidFromHeight: (height: Long) -> ByteArray? // We will probably need to go to DB to find this, so don't call this in vain
     ): ValidationResult {
 
         // Go through them in order and check for gaps

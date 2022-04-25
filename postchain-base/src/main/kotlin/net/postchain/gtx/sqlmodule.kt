@@ -5,6 +5,7 @@ package net.postchain.gtx
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.configuration.KEY_GTX
 import net.postchain.core.*
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.Name

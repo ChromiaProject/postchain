@@ -1,6 +1,6 @@
 package net.postchain.containers.bpm
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 internal class Chain(
         val containerName: ContainerName,

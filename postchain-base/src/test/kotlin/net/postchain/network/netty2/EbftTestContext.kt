@@ -5,7 +5,7 @@ package net.postchain.network.netty2
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.ebft.EbftPacketDecoder
 import net.postchain.ebft.EbftPacketEncoder
