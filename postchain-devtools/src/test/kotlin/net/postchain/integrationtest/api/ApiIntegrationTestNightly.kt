@@ -10,7 +10,7 @@ import net.postchain.common.RestTools
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
-import net.postchain.core.Signature
+import net.postchain.crypto.Signature
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction

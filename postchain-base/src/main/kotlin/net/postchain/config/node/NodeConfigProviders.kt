@@ -2,31 +2,31 @@
 
 package net.postchain.config.node
 
-enum class NodeConfigProviders {
+enum class NodeConfigProviders(vararg val aliases: String) {
 
     /**
      * PeerInfo collection and other PostchainNode parameters are obtained
      * from *.properties file
      */
-    Legacy,
-
-    /**
-     * PeerInfo collection and other PostchainNode parameters are obtained
-     * from *.properties file.
-     *
-     * Similar to Legacy provider but with a different PeerInfo collection format.
-     */
-    File,
+    Properties("legacy", "properties"),
 
     /**
      * PeerInfo collection and other PostchainNode parameters are obtained
      * from database
      */
-    Manual,
+    Manual("manual"),
 
     /**
      * PeerInfo collection and other PostchainNode parameters are obtained
      * from system blockchain (chain0)
      */
-    Managed
+    Managed("managed");
+
+
+    companion object {
+        @JvmStatic
+        fun fromAlias(str: String): NodeConfigProviders? {
+            return values().firstOrNull { it.aliases.any { alias -> alias == str.toLowerCase() } }
+        }
+    }
 }

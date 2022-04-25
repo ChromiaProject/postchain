@@ -38,7 +38,7 @@ open class BaseBlockchainEngine(
     private lateinit var blockQueries: BlockQueries
     private var initialized = false
     private var closed = false
-    private var afterCommitHandlerInternal: (BlockTrace?, Long) -> Boolean = { _, _ -> false }
+    private var afterCommitHandlerInternal: AfterCommitHandler = { _, _, _ -> false }
     private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
 
     override fun isRunning() = !closed
@@ -90,7 +90,8 @@ open class BaseBlockchainEngine(
                     strategy.blockCommitted(blockBuilder.getBlockData())
                     if (afterCommitHandler(
                                     blockBuilder.getBTrace(), // This is a big reason for BTrace to exist
-                                    blockBuilder.bctx.height)) {
+                                    blockBuilder.bctx.height,
+                                    blockBuilder.bctx.timestamp)) {
                         closed = true
                     }
                     afterLog("End", it.getBTrace())

@@ -3,13 +3,11 @@ package net.postchain.ebft.heartbeat
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.MockStorage
-import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainRid
 import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 import kotlin.test.assertEquals
@@ -23,11 +21,9 @@ class RemoteConfigHeartbeatListenerTest {
 
     @Test
     fun testNoHeartbeatEventRegistered_then_checkFailed() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
-        }
+        val heartbeatConfig: HeartbeatConfig = mock()
         val connManager: SubConnectionManager = mock()
-        val sut = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainRid, connManager)
+        val sut = RemoteConfigHeartbeatListener(heartbeatConfig, chainId, blockchainRid, connManager)
 
         // No interaction
         // ...
@@ -41,12 +37,11 @@ class RemoteConfigHeartbeatListenerTest {
 
     @Test
     fun testNoHeartbeatEvent_and_timeout_occurs() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
-            on { heartbeatTimeout } doReturn 20_000L
+        val heartbeatConfig: HeartbeatConfig = mock {
+            on { timeout } doReturn 20_000L
         }
         val connManager: SubConnectionManager = mock()
-        val sut = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainRid, connManager)
+        val sut = RemoteConfigHeartbeatListener(heartbeatConfig, chainId, blockchainRid, connManager)
 
         // Interaction: Register the first Heartbeat event
         sut.onHeartbeat(HeartbeatEvent(now - 30_000L))
@@ -58,13 +53,10 @@ class RemoteConfigHeartbeatListenerTest {
         verify(connManager, never()).sendMessageToMaster(eq(chainId), any())
     }
 
-    @Disabled
     @Test
     fun testHeartbeatCheckPassed_intervalCheckFailed_and_configRequested_then_timeoutCheck() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
-            on { heartbeatTimeout } doReturn 20_000L
-            on { remoteConfigEnabled } doReturn (true)
+        val heartbeatConfig: HeartbeatConfig = mock {
+            on { timeout } doReturn 20_000L
             on { remoteConfigRequestInterval } doReturn 10_000L
             on { remoteConfigTimeout } doReturn 20_000L
         }
@@ -72,7 +64,7 @@ class RemoteConfigHeartbeatListenerTest {
         val mockBlockchainConfigProvider: BlockchainConfigurationProvider = mock {
             on { findNextConfigurationHeight(any(), any()) } doReturn 0
         }
-        val sut = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainRid, connManager).apply {
+        val sut = RemoteConfigHeartbeatListener(heartbeatConfig, chainId, blockchainRid, connManager).apply {
             storage = MockStorage.mockEContext(chainId)
             blockchainConfigProvider = mockBlockchainConfigProvider
         }

@@ -2,12 +2,14 @@
 
 package net.postchain.config.node
 
+import mu.KotlinLogging
 import net.postchain.base.Storage
+import net.postchain.common.reflection.constructorOf
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigProviders.File
-import net.postchain.config.node.NodeConfigProviders.Legacy
+import net.postchain.config.node.NodeConfigProviders.Companion.fromAlias
 import net.postchain.config.node.NodeConfigProviders.Managed
 import net.postchain.config.node.NodeConfigProviders.Manual
+import net.postchain.config.node.NodeConfigProviders.Properties
 
 object NodeConfigurationProviderFactory {
     /**
@@ -19,12 +21,14 @@ object NodeConfigurationProviderFactory {
         appConfig: AppConfig,
         storageFactory: (AppConfig) -> Storage
     ): NodeConfigurationProvider {
-        return when (appConfig.nodeConfigProvider.toLowerCase()) {
-            Legacy.name.toLowerCase() -> LegacyNodeConfigurationProvider(appConfig)
-            File.name.toLowerCase() -> FileNodeConfigurationProvider(appConfig)
-            Manual.name.toLowerCase() -> ManualNodeConfigurationProvider(appConfig, storageFactory)
-            Managed.name.toLowerCase() -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
-            else -> ManualNodeConfigurationProvider(appConfig, storageFactory)
+        if (appConfig.nodeConfigProvider.toLowerCase() == "legacy") {
+            KotlinLogging.logger {  }.warn("Using deprecated legacy configuration provider, change to ${Properties.name.toLowerCase()}")
+        }
+        return when (fromAlias(appConfig.nodeConfigProvider)) {
+            Properties -> PropertiesNodeConfigurationProvider(appConfig)
+            Manual -> ManualNodeConfigurationProvider(appConfig, storageFactory)
+            Managed -> ManagedNodeConfigurationProvider(appConfig, storageFactory)
+            else -> constructorOf<NodeConfigurationProvider>(appConfig.nodeConfigProvider, AppConfig::class.java).newInstance(appConfig)
         }
     }
 }

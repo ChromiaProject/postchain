@@ -1,6 +1,6 @@
 package net.postchain.gtx
 
-import net.postchain.base.CryptoSystem
+import net.postchain.crypto.CryptoSystem
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockchainRid

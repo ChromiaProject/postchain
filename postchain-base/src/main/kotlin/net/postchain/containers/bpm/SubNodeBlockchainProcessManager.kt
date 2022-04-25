@@ -4,13 +4,8 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
-import net.postchain.core.BlockchainProcess
-import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
-import net.postchain.ebft.heartbeat.HeartbeatListener
-import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
+import net.postchain.ebft.heartbeat.*
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 open class SubNodeBlockchainProcessManager(
@@ -23,27 +18,27 @@ open class SubNodeBlockchainProcessManager(
         blockchainConfigProvider
 ) {
 
-    private val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
-    private val heartbeatListeners = mutableMapOf<Long, HeartbeatListener>()
+    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
+    protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
 
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
-        if (!nodeConfig.remoteConfigEnabled) return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
-        val hbListener = RemoteConfigHeartbeatListener(nodeConfig, chainId, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager)
-                .also {
-                    it.blockchainConfigProvider = blockchainConfigProvider
-                    it.storage = storage
-                    heartbeatManager.addListener(it)
-                    heartbeatListeners[chainId] = it
-                }
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { hbListener.checkHeartbeat(it) }
-    }
-
-    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
-        super.stopAndUnregisterBlockchainProcess(chainId, restart)
-        heartbeatListeners.remove(chainId)?.also {
-            heartbeatManager.removeListener(it)
+    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration):  (Long, () -> Boolean) -> Boolean {
+        return if (!heartbeatConfig.remoteConfigEnabled) {
+            { _, _ -> true }
+        } else {
+            val hbListener: HeartbeatListener = RemoteConfigHeartbeatListener(
+                    heartbeatConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
+            ).also {
+                it.blockchainConfigProvider = blockchainConfigProvider
+                it.storage = storage
+                heartbeatManager.addListener(blockchainConfig.chainID, it)
+            };
+            awaitHeartbeatHandler(hbListener, heartbeatConfig)
         }
     }
 
+    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
+        heartbeatManager.removeListener(chainId)
+        super.stopAndUnregisterBlockchainProcess(chainId, restart)
+    }
 
 }

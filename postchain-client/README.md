@@ -1,36 +1,31 @@
-# JVM client that can be used to connect to Postchain
+# Postchain-client
 
-The "postchain-client" can be used in two ways:
+Postchain-client is a kotlin client for making queries and transactions from an application
 
-- As a command line tool.
-- As a lib inside a Java (Kotlin or any JVM language) program.
+## Setup
 
-## Command line P.C. client
-
-Currently we only describe how to start manage a Postchain server via command line, since it's rather unusual to issue 
-TXs from the command line. See [the guide](https://gitlab.com/chromaway/postchain/-/wikis/QuickGuide) for more info.
-
-## jar client-lib inside a Java program
-
-To depend on this jar file you need to add this to your Maven "pom.xml" (currently it's not on Maven central, so this 
+To depend on this jar file you need to add this to your Maven "pom.xml" (currently it's not on Maven central, so this
 requires Gitlab access):
 
 ```xml
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-client</artifactId>
-        </dependency>
-        <repository>
-            <id>postchain</id>
-            <name>Postchain GitLab Registry</name>
-            <url>https://gitlab.com/api/v4/projects/32294340/packages/maven</url>
-        </repository>
+<dependency>
+    <groupId>net.postchain</groupId>
+    <artifactId>postchain-client</artifactId>
+</dependency>
 ```
+```xml
+<repository>
+    <id>postchain</id>
+    <name>Postchain GitLab Registry</name>
+    <url>https://gitlab.com/api/v4/projects/32294340/packages/maven</url>
+</repository>
+```
+
+## Usage
 
 To generate a client one could go about it like this:
 
 ```kotlin
-
   import net.postchain.base.SECP256K1CryptoSystem
   import net.postchain.client.core.DefaultSigner
   import net.postchain.client.core.PostchainClient
@@ -59,8 +54,5 @@ To generate a client one could go about it like this:
       else ->  // Investigate
   }
 ```
-... see PostChainClientTest in the devtools Maven module for more examples. 
-
-
-End
+... see PostChainClientTest in the devtools Maven module for more examples.
 

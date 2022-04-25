@@ -2,7 +2,7 @@
 
 package net.postchain.gtx.gtxml
 
-import net.postchain.base.gtxml.ObjectFactory
+import net.postchain.gtv.gtxml.ObjectFactory
 import javax.xml.bind.JAXBElement
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 import javax.xml.namespace.QName

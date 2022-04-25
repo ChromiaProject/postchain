@@ -4,18 +4,18 @@ package net.postchain.devtools
 
 import com.google.gson.GsonBuilder
 import mu.KLogging
-import net.postchain.StorageBuilder
-import net.postchain.base.gtxml.TestType
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BlockchainRid
 import net.postchain.core.UserMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
+import net.postchain.devtools.utils.configuration.activeChainIds
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.gtxml.ObjectFactory
+import net.postchain.gtv.gtxml.TestType
 import net.postchain.gtx.gtxml.GTXMLTransactionParser
 import net.postchain.gtx.gtxml.TransactionContext
 import java.io.File
@@ -31,7 +31,7 @@ class TestLauncher : IntegrationTestSetup() {
 
     companion object : KLogging()
 
-    private val jaxbContext = JAXBContext.newInstance("net.postchain.base.gtxml")
+    private val jaxbContext = JAXBContext.newInstance(ObjectFactory::class.java.packageName)
 
     class TransactionFailure(val blockHeight: Long, val txIdx: Long,
                              val exception: Exception?)
@@ -50,15 +50,13 @@ class TestLauncher : IntegrationTestSetup() {
 
     private fun createTestNode(configFile: String, blockchainConfigFile: String): PostchainTestNode {
         val appConfig = AppConfig.fromPropertiesFile(configFile)
-        val storage = StorageBuilder.buildStorage(appConfig, true)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
 
         val blockchainConfig = GtvMLParser.parseGtvML(
                 File(blockchainConfigFile).readText())
 
-        val chainId = nodeConfigProvider.getConfiguration().activeChainIds.first().toLong()
+        val chainId = appConfig.activeChainIds.first().toLong()
 
-        return PostchainTestNode(nodeConfigProvider, storage).apply {
+        return PostchainTestNode(appConfig, true).apply {
             val blockchainRID = addBlockchain(chainId, blockchainConfig)
             mapBlockchainRID(chainId, blockchainRID)
             startBlockchain()

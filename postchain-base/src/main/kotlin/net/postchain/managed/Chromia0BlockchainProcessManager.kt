@@ -67,7 +67,7 @@ class Chromia0BlockchainProcessManager(
         if (chainId == 0L)
             return baseHandler
         else {
-            return { bTrace: BlockTrace?, height: Long ->
+            return { bTrace: BlockTrace?, height: Long, blockTimestamp: Long ->
                 rhTrace("Begin", chainId, bTrace)
                 try {
                     anchorLastBlock(chainId)
@@ -76,7 +76,7 @@ class Chromia0BlockchainProcessManager(
                     logger.error("Error when anchoring $e", e)
                     e.printStackTrace()
                 }
-                baseHandler(bTrace, height)
+                baseHandler(bTrace, height, blockTimestamp)
             }
         }
     }

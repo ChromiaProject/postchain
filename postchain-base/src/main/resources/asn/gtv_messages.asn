@@ -11,7 +11,8 @@ Messages DEFINITIONS ::= BEGIN
 		string [2] UTF8String,
 		integer [3] INTEGER,
 		dict [4] SEQUENCE OF DictPair,
-		array [5] SEQUENCE OF RawGtv
+		array [5] SEQUENCE OF RawGtv,
+		bigInteger [6] INTEGER
 	}
 
 END

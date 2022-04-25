@@ -2,8 +2,8 @@
 
 package net.postchain.gtv
 
+import com.beanit.jasn1.ber.types.BerNull
 import net.postchain.gtv.messages.RawGtv
-import org.openmuc.jasn1.ber.types.BerNull
 
 object GtvNull : GtvPrimitive() {
 
@@ -14,7 +14,7 @@ object GtvNull : GtvPrimitive() {
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(BerNull(), null, null, null, null, null)
+        return RawGtv().apply { null_ = BerNull() }
     }
 
     override fun asPrimitive(): Any? {

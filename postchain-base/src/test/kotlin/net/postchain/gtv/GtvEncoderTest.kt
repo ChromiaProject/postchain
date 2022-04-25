@@ -22,7 +22,16 @@ class GtvEncoderTest {
 
     @Test
     fun testGtvInteger() {
-        val expected = GtvInteger(BigInteger.valueOf(Long.MAX_VALUE).pow(3))
+        val expected = GtvInteger(Long.MAX_VALUE)
+        val b = GtvEncoder.encodeGtv(expected)
+        val result = GtvDecoder.decodeGtv(b)
+        assertEquals(expected, result)
+        assertEquals(expected.asBigInteger().toString(10), result.asBigInteger().toString(10))
+    }
+
+    @Test
+    fun testGtvBigInteger() {
+        val expected = GtvBigInteger(BigInteger.valueOf(Long.MAX_VALUE).pow(3))
         val b = GtvEncoder.encodeGtv(expected)
         val result = GtvDecoder.decodeGtv(b)
         assertEquals(expected, result)

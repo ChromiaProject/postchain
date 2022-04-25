@@ -2,11 +2,12 @@
 
 package net.postchain.gtv.gtvml
 
-import net.postchain.base.gtxml.ArrayType
-import net.postchain.base.gtxml.DictType
-import net.postchain.base.gtxml.ParamType
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvType.*
+import net.postchain.gtv.gtxml.ArrayType
+import net.postchain.gtv.gtxml.DictType
+import net.postchain.gtv.gtxml.ObjectFactory
+import net.postchain.gtv.gtxml.ParamType
 import net.postchain.gtx.gtxml.GtvTypeOf
 import net.postchain.gtx.gtxml.component1
 import net.postchain.gtx.gtxml.component2
@@ -18,7 +19,7 @@ import javax.xml.bind.JAXBElement
 
 object GtvMLParser {
 
-    private val jaxbContext = JAXBContext.newInstance("net.postchain.base.gtxml")
+    private val jaxbContext = JAXBContext.newInstance(ObjectFactory::class.java.packageName)
 
     /**
      * Parses XML represented as string into [Gtv] and resolves params ('<param />') by [params] map
@@ -37,7 +38,8 @@ object GtvMLParser {
             when (GtvTypeOf(qName)) {
                 NULL -> GtvNull
                 STRING -> GtvString(value as String)
-                INTEGER -> GtvInteger(value as BigInteger)
+                INTEGER -> GtvInteger(value as Long)
+                BIGINTEGER -> GtvBigInteger(value as BigInteger)
                 BYTEARRAY -> GtvByteArray(value as ByteArray)
                 ARRAY -> parseArrayGtvML(value as ArrayType, params)
                 DICT -> parseDictGtvML(value as DictType, params)
@@ -63,9 +65,9 @@ object GtvMLParser {
         val gtv = params[paramType.key]
                 ?: throw IllegalArgumentException("Can't resolve param ${paramType.key}")
 
-        if (paramType.type != null && GtvTypeOf(paramType.type) != gtv.type) {
+        if (paramType.type != null && GtvType.fromString(paramType.type) != gtv.type) {
             throw IllegalArgumentException("Incompatible types of <param> and Gtv: " +
-                    "found: '${gtv.type}', required: '${GtvTypeOf(paramType.type)}'")
+                    "found: '${gtv.type}', required: '${GtvType.fromString(paramType.type)}'")
         }
 
         return gtv

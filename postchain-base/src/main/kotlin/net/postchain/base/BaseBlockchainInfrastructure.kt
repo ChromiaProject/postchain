@@ -4,10 +4,14 @@ package net.postchain.base
 
 import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_CONFIGURATIONFACTORY
-import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseTransactionQueue
+import net.postchain.common.reflection.constructorOf
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.*
+import net.postchain.crypto.SigMaker
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.debug.BlockchainProcessName
 
 open class BaseBlockchainInfrastructure(
@@ -24,7 +28,7 @@ open class BaseBlockchainInfrastructure(
     val syncInfraExtCache = mutableMapOf<String, SynchronizationInfrastructureExtension>()
 
     init {
-        val privKey = postchainContext.nodeConfig.privKeyByteArray
+        val privKey = postchainContext.appConfig.privKeyByteArray
         val pubKey = secp256k1_derivePubKey(privKey)
         blockSigMaker = cryptoSystem.buildSigMaker(pubKey, privKey)
         subjectID = pubKey
@@ -54,13 +58,11 @@ open class BaseBlockchainInfrastructure(
             chainId: Long,
     ): BlockchainConfiguration {
 
-        val confData = BaseBlockchainConfigurationData.build(
-            rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
+        val blockConfData = BlockchainConfigurationData.fromRaw(
+                rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
 
-        val bcfClass = Class.forName(confData.data[KEY_CONFIGURATIONFACTORY]!!.asString())
-        val factory = (bcfClass.newInstance() as BlockchainConfigurationFactory)
-
-        val config = factory.makeBlockchainConfiguration(confData)
+        val factory = newInstanceOf<BlockchainConfigurationFactory>(blockConfData.configurationFactory)
+        val config = factory.makeBlockchainConfiguration(blockConfData)
         config.initializeDB(eContext)
 
         return config
@@ -73,11 +75,11 @@ open class BaseBlockchainInfrastructure(
     ): BaseBlockchainEngine {
 
         // We create a new storage instance to open new db connections for each engine
-        val storage = StorageBuilder.buildStorage(postchainContext.nodeConfig.appConfig)
+        val storage = StorageBuilder.buildStorage(postchainContext.appConfig)
 
         val transactionQueue = BaseTransactionQueue(
                 (configuration as BaseBlockchainConfiguration) // TODO: Olle: Is this conversion harmless?
-                        .configData.getQueueCapacity())
+                        .configData.txQueueSize.toInt())
 
         return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue)
                 .apply {
@@ -89,11 +91,11 @@ open class BaseBlockchainInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            shouldProcessNewMessages: (Long) -> Boolean
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, shouldProcessNewMessages)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
         connectProcess(configuration, process)
         return process
     }
@@ -131,28 +133,10 @@ open class BaseBlockchainInfrastructure(
         val className = dynClassName.className.let {
             if (it == "ebft") "net.postchain.ebft.EBFTSynchronizationInfrastructure" else it
         }
-        return syncInfraCache.getOrPut(className) { getInstanceByClassName(className) }
+        return syncInfraCache.getOrPut(className) { constructorOf<SynchronizationInfrastructure>(className, PostchainContext::class.java).newInstance(postchainContext) }
     }
 
     private fun getSynchronizationInfrastructureExtension(dynClassName: DynamicClassName): SynchronizationInfrastructureExtension {
-        return syncInfraExtCache.getOrPut(dynClassName.className) { getInstanceByClassName(dynClassName.className) }
-    }
-
-    /**
-     * Will dynamically create an instance from the given class name (with the constructor param [PostchainContext]).
-     *
-     * @param className is the full name of the class to create an instance from
-     * @return the instance as a subclass of [Shutdownable]
-     */
-    private inline fun <reified T : Shutdownable> getInstanceByClassName(className: String): T {
-        val iClass = Class.forName(className)
-        val ctor = iClass.getConstructor(PostchainContext::class.java)
-        val instance = ctor.newInstance(postchainContext)
-        if (instance is T)
-            return instance
-        else
-            throw UserMistake(
-                    "Class ${className} does not support required interface"
-            )
+        return syncInfraExtCache.getOrPut(dynClassName.className) { constructorOf<SynchronizationInfrastructureExtension>(dynClassName.className, PostchainContext::class.java).newInstance(postchainContext) }
     }
 }

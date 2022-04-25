@@ -6,7 +6,7 @@ import mu.KLogging
 import net.postchain.common.toHex
 import net.postchain.core.TransactionQueue
 import net.postchain.core.TransactionResult
-import net.postchain.ebft.message.Message
+import net.postchain.ebft.message.EbftMessage
 import net.postchain.network.CommunicationManager
 
 /**
@@ -14,7 +14,7 @@ import net.postchain.network.CommunicationManager
  */
 class NetworkAwareTxQueue(
         private val queue: TransactionQueue,
-        private val network: CommunicationManager<Message>)
+        private val network: CommunicationManager<EbftMessage>)
     : TransactionQueue by queue {
 
     companion object : KLogging()

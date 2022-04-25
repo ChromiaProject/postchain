@@ -3,13 +3,13 @@
 package net.postchain.network.peer
 
 import mu.KLogging
-import net.postchain.base.CryptoSystem
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.toHex
 import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.core.ProgrammerMistake
+import net.postchain.crypto.CryptoSystem
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper
 import net.postchain.devtools.NameHelper.peerName
@@ -221,8 +221,7 @@ open class DefaultPeerConnectionManager<PacketType>(
 
     @Synchronized
     override fun broadcastPacket(data: LazyPacket, chainId: Long) {
-        // TODO: lazypacket might be computed multiple times
-        val chain = chainsWithConnections.getOrThrow(chainId) as ChainWithPeerConnections
+        val chain = chainsWithConnections.getOrThrow(chainId)
         for (conn in chain.getAllConnections()) {
             conn.sendPacket(data)
         }

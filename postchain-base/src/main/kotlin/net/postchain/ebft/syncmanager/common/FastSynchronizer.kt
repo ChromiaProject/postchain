@@ -4,7 +4,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
-import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.config.app.AppConfig
 import net.postchain.core.*
 import net.postchain.core.BlockHeader
 import net.postchain.debug.BlockTrace
@@ -72,7 +72,17 @@ data class FastSyncParameters(
         /**
          * 10 minutes in milliseconds
          */
-        var blacklistingTimeoutMs: Long = 10 * 60 * 1000)
+        var blacklistingTimeoutMs: Long = 10 * 60 * 1000) {
+    companion object {
+        @JvmStatic
+        fun fromAppConfig(config: AppConfig, init: (FastSyncParameters) -> Unit = {}): FastSyncParameters {
+            return FastSyncParameters(
+                    exitDelay = config.getLong("fastsync.exit_delay", 60000),
+                    jobTimeout = config.getLong("fastsync.job_timeout", 10000)
+            ).also(init)
+        }
+    }
+}
 
 /**
  * This class syncs blocks from its peers by requesting <parallelism> blocks
@@ -138,15 +148,11 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             syncDebug("Start", blockHeight)
             lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
-                if (workerContext.shouldProcessMessages(lastBlockTimestamp)) {
-                    refillJobs()
-                    processMessages(exitCondition)
-                    processDoneJobs()
-                    processStaleJobs()
-                    sleep(params.loopInterval)
-                } else {
-                    sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
-                }
+                refillJobs()
+                processMessages(exitCondition)
+                processDoneJobs()
+                processStaleJobs()
+                sleep(params.loopInterval)
             }
         } catch (e: BadDataMistake) {
             logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
@@ -661,9 +667,8 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do heartbeat check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            while (!workerContext.shouldProcessMessages(lastBlockTimestamp)) {
-                if (!isProcessRunning() || exitCondition()) return
-                sleep(workerContext.nodeConfig.heartbeatSleepTimeout)
+            if (!workerContext.awaitPermissionToProcessMessages(lastBlockTimestamp) { !isProcessRunning() || exitCondition() }) {
+                return
             }
 
             val peerId = packet.first

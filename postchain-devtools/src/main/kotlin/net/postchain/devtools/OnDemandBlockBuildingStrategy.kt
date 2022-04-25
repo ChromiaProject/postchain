@@ -3,14 +3,13 @@
 package net.postchain.devtools
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.core.*
 import java.util.concurrent.LinkedBlockingQueue
 
 @Suppress("UNUSED_PARAMETER")
 class OnDemandBlockBuildingStrategy(
-        configData: BaseBlockchainConfigurationData,
-        val blockchainConfiguration: BlockchainConfiguration,
+        configData: BaseBlockBuildingStrategyConfigurationData,
         val blockQueries: BlockQueries,
         val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
@@ -19,6 +18,7 @@ class OnDemandBlockBuildingStrategy(
 
     @Volatile
     var upToHeight: Long = -1
+
     @Volatile
     var committedHeight = blockQueries.getBestHeight().get().toInt()
     val blocks = LinkedBlockingQueue<BlockData>()
@@ -28,7 +28,7 @@ class OnDemandBlockBuildingStrategy(
     }
 
     fun buildBlocksUpTo(height: Long) {
-        logger.trace{ "buildBlocksUpTo() - height: $height" }
+        logger.trace { "buildBlocksUpTo() - height: $height" }
         upToHeight = height
     }
 
@@ -46,7 +46,7 @@ class OnDemandBlockBuildingStrategy(
         }
         while (committedHeight < height) {
             blocks.take()
-            logger.debug{ "awaitCommitted() - took a block height: $height, committedHeight: $committedHeight" }
+            logger.debug { "awaitCommitted() - took a block height: $height, committedHeight: $committedHeight" }
         }
         var x = -2
         if (this.blockQueries != null) {

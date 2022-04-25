@@ -1,8 +1,6 @@
 package net.postchain.ebft.heartbeat
 
 import mu.KLogging
-import net.postchain.config.node.NodeConfig
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 interface HeartbeatManager {
@@ -10,12 +8,12 @@ interface HeartbeatManager {
     /**
      * Adds a listener of [HeartbeatEvent]
      */
-    fun addListener(listener: HeartbeatListener)
+    fun addListener(chainId: Long, listener: HeartbeatListener)
 
     /**
-     * Removes a listener of [HeartbeatEvent]
+     * Removes a listener of [HeartbeatEvent] by [chainId] key
      */
-    fun removeListener(listener: HeartbeatListener)
+    fun removeListener(chainId: Long)
 
     /**
      * Sends heartbeat to listeners
@@ -24,25 +22,25 @@ interface HeartbeatManager {
 }
 
 
-class DefaultHeartbeatManager(val nodeConfig: NodeConfig) : HeartbeatManager {
+class DefaultHeartbeatManager(val heartbeatConfig: HeartbeatConfig) : HeartbeatManager {
 
     companion object : KLogging()
 
-    private val listeners: MutableSet<HeartbeatListener> =
-            Collections.newSetFromMap(ConcurrentHashMap())
+    private val listeners: MutableMap<Long, HeartbeatListener> = ConcurrentHashMap()
 
-    override fun addListener(listener: HeartbeatListener) {
-        listeners.add(listener)
+    override fun addListener(chainId: Long, listener: HeartbeatListener) {
+        listeners[chainId] = listener
     }
 
-    override fun removeListener(listener: HeartbeatListener) {
-        listeners.remove(listener)
+    override fun removeListener(chainId: Long) {
+        listeners.remove(chainId)
     }
 
     private var heartbeatTestmodeCounter = 0
+
     override fun beat(timestamp: Long) {
         // TODO: [POS-164]: For manual test only. Delete this later
-        if (nodeConfig.heartbeatTestmode) {
+        if (heartbeatConfig.testmode) {
             if ((heartbeatTestmodeCounter++ / 25) % 2 == 0) {
                 logger.debug { "Heartbeat event received and skipped: timestamp $timestamp" }
                 return
@@ -51,7 +49,7 @@ class DefaultHeartbeatManager(val nodeConfig: NodeConfig) : HeartbeatManager {
 
         val event = HeartbeatEvent(timestamp)
         logger.debug { "Heartbeat event received: timestamp $timestamp" }
-        listeners.forEach {
+        listeners.values.forEach {
             it.onHeartbeat(event)
         }
     }

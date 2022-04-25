@@ -23,7 +23,7 @@ data class GtvArray(val array: Array<out Gtv>) : GtvCollection() {
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(null, null, null, null, null, RawGtv.Array(array.map { it.getRawGtv() }))
+        return RawGtv().apply { array = RawGtv.Array(this@GtvArray.array.map { it.getRawGtv() }) }
     }
 
     override fun asPrimitive(): Any? {
@@ -55,5 +55,9 @@ data class GtvArray(val array: Array<out Gtv>) : GtvCollection() {
         var result = Arrays.hashCode(array)
         result = 31 * result + type.hashCode()
         return result
+    }
+
+    override fun toString(): String {
+        return "${array.map { it.toString() }}"
     }
 }

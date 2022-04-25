@@ -38,6 +38,15 @@ class GtvMLParserScalarsTest {
     }
 
     @Test
+    fun parseGtv_bigint_successfully() {
+        val xml = "<bigint>42</bigint>"
+        val actual = GtvMLParser.parseGtvML(xml)
+        val expected = GtvBigInteger(42L)
+
+        assert(actual).isEqualTo(expected)
+    }
+
+    @Test
     fun parseGtv_bytea_successfully() {
         val xml = "<bytea>0102030A0B0C</bytea>"
         val actual = GtvMLParser.parseGtvML(xml)

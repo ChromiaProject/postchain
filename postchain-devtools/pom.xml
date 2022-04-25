@@ -24,6 +24,10 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-cli</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
         </dependency>
         <dependency>
@@ -55,8 +59,8 @@
 
         <!-- CLI -->
         <dependency>
-            <groupId>com.github.ajalt</groupId>
-            <artifactId>clikt</artifactId>
+            <groupId>com.github.ajalt.clikt</groupId>
+            <artifactId>clikt-jvm</artifactId>
         </dependency>
 
         <!-- Testing -->

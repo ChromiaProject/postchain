@@ -3,7 +3,7 @@
 package net.postchain.base
 
 import net.postchain.core.ProgrammerMistake
-import java.util.*
+import net.postchain.crypto.CryptoSystem
 
 val internalNodePrefix = byteArrayOf(0)
 val leafPrefix = byteArrayOf(1)

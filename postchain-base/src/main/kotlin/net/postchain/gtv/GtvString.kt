@@ -2,10 +2,10 @@
 
 package net.postchain.gtv
 
+import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.UserMistake
 import net.postchain.gtv.messages.RawGtv
-import org.openmuc.jasn1.ber.types.string.BerUTF8String
 
 data class GtvString(val string: String) : GtvPrimitive() {
 
@@ -16,7 +16,7 @@ data class GtvString(val string: String) : GtvPrimitive() {
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(null, null, BerUTF8String(string), null, null, null)
+        return RawGtv().apply { string = BerUTF8String(this@GtvString.string) }
     }
 
     override fun asByteArray(convert: Boolean): ByteArray {
@@ -35,5 +35,9 @@ data class GtvString(val string: String) : GtvPrimitive() {
 
     override fun nrOfBytes(): Int {
         return (string.length * 2)
+    }
+
+    override fun toString(): String {
+        return "\"$string\""
     }
 }

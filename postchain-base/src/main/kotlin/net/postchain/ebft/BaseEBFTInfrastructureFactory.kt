@@ -4,12 +4,13 @@ package net.postchain.ebft
 
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.InfrastructureFactory
@@ -18,7 +19,7 @@ import net.postchain.network.peer.DefaultPeerConnectionManager
 
 open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
 
-    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager {
+    override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {
         return DefaultPeerConnectionManager(
                 EbftPacketEncoderFactory(),
                 EbftPacketDecoderFactory(),
@@ -33,7 +34,8 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             val syncInfra = EBFTSynchronizationInfrastructure(this)
-            val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
+            val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }
     }

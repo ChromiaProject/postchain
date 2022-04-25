@@ -7,10 +7,10 @@ import assertk.assertions.isNotEmpty
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
-import net.postchain.hasSize
 import net.postchain.devtools.assertChainNotStarted
 import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.getModules
+import net.postchain.hasSize
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Disabled
@@ -24,7 +24,7 @@ class ManagedModeTest : ConfigFileBasedIntegrationTest() {
         val blockchainConfig0 = "/net/postchain/devtools/managedmode/singlepeer_loads_config_and_reconfigures/blockchain_config_reconfiguring_0.xml"
 
         // Creating node0
-        createSingleNode(0, 1, nodeConfig0, blockchainConfig0) { appConfig, _ ->
+        createSingleNode(0, 1, nodeConfig0, blockchainConfig0) { appConfig ->
             runStorageCommand(appConfig) { ctx ->
                 DatabaseAccess.of(ctx).addPeerInfo(ctx, TestPeerInfos.peerInfo0)
             }
@@ -70,7 +70,7 @@ class ManagedModeTest : ConfigFileBasedIntegrationTest() {
         val blockchainConfig0 = "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_0_height_0.xml"
 
         // Creating node0
-        createSingleNode(0, 1, nodeConfig0, blockchainConfig0) { appConfig, _ ->
+        createSingleNode(0, 1, nodeConfig0, blockchainConfig0) { appConfig ->
             runStorageCommand(appConfig) { ctx ->
                 DatabaseAccess.of(ctx).addPeerInfo(ctx, TestPeerInfos.peerInfo0)
             }
@@ -120,14 +120,14 @@ class ManagedModeTest : ConfigFileBasedIntegrationTest() {
         val blockchainConfig1 = "/net/postchain/devtools/managedmode/two_peers_connect_to_each_other/blockchain_config_two_peers_connect_1.xml"
 
         // Creating node0
-        createSingleNode(0, 1, nodeConfig0, blockchainConfig0) { appConfig, _ ->
+        createSingleNode(0, 1, nodeConfig0, blockchainConfig0) { appConfig ->
             runStorageCommand(appConfig) { ctx ->
                 DatabaseAccess.of(ctx).addPeerInfo(ctx, TestPeerInfos.peerInfo0)
             }
         }
 
         // Creating node1
-        createSingleNode(0, 1, nodeConfig1, blockchainConfig1) { appConfig, _ ->
+        createSingleNode(0, 1, nodeConfig1, blockchainConfig1) { appConfig ->
             runStorageCommand(appConfig) { ctx ->
                 DatabaseAccess.of(ctx).addPeerInfo(ctx, TestPeerInfos.peerInfo1)
             }

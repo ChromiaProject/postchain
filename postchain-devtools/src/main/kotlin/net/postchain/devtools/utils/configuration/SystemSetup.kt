@@ -49,7 +49,7 @@ data class SystemSetup(
 
         // Default configurations are set to make the test as realistic as possible.
         var realGtxTransactions: Boolean = true,
-        var nodeConfProvider: String = "legacy", // Override with "managed" if that's what you need.
+        var nodeConfProvider: String = "net.postchain.devtools.utils.configuration.TestNodeConfigurationProvider", // Override with "managed" if that's what you need.
         var chainConfProvider: String = "manual", // Override with "managed" if that's what you need.
         var confInfrastructure: String = "base/ebft", // Override with "base/test" if you don't need real consensus.
         var needRestApi: Boolean = false // If this is set to true, all nodes will start the REST API (default is "false" since most test don't use the API)

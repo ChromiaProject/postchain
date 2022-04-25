@@ -2,11 +2,11 @@
 
 package net.postchain.gtv
 
+import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.gtv.messages.DictPair
 import net.postchain.gtv.messages.RawGtv
-import org.openmuc.jasn1.ber.types.string.BerUTF8String
 
-data class GtvDictionary private constructor (val dict: Map<String, Gtv>) : GtvCollection() {
+data class GtvDictionary private constructor(val dict: Map<String, Gtv>) : GtvCollection() {
 
     override val type = GtvType.DICT
 
@@ -49,10 +49,11 @@ data class GtvDictionary private constructor (val dict: Map<String, Gtv>) : GtvC
     }
 
     override fun getRawGtv(): RawGtv {
-        return RawGtv(null, null, null, null,
-                RawGtv.Dict(dict.entries.map {
-                    DictPair(BerUTF8String(it.key), it.value.getRawGtv())
-                }), null)
+        return RawGtv().apply {
+            dict = RawGtv.Dict(this@GtvDictionary.dict.entries.map {
+                DictPair(BerUTF8String(it.key), it.value.getRawGtv())
+            })
+        }
     }
 
     override fun asPrimitive(): Any? {
@@ -63,11 +64,15 @@ data class GtvDictionary private constructor (val dict: Map<String, Gtv>) : GtvC
 
     override fun nrOfBytes(): Int {
         // This could be expensive since it will go all the way down to the leaf
-        var sumNrOfBytes =0
+        var sumNrOfBytes = 0
         for (key in dict.keys) {
             sumNrOfBytes += (key.length * 2)
             sumNrOfBytes += dict.getValue(key).nrOfBytes()
         }
         return sumNrOfBytes
+    }
+
+    override fun toString(): String {
+        return dict.toString()
     }
 }

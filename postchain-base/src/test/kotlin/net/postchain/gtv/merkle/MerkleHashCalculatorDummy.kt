@@ -2,7 +2,7 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.base.CryptoSystem
+import net.postchain.crypto.CryptoSystem
 import net.postchain.common.data.Hash
 import net.postchain.base.merkle.MerkleHashCalculator
 import net.postchain.base.merkle.TreeHelper

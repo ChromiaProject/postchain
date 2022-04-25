@@ -4,6 +4,7 @@ package net.postchain.network.netty2
 
 import assertk.assert
 import assertk.assertions.isIn
+import net.postchain.crypto.secp256k1_derivePubKey
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.times
