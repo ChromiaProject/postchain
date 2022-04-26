@@ -7,6 +7,15 @@ image: maven:3.8.4-jdk-11
       - "**/*.log"
     expire_in: 1 week
 
+# TODO: GITLAB_TOKEN needs to be created with a user that has write access to dev and master
+# Username and email should be change to match the user we create.
+# We are in detached HEAD state in build container, we need to attach it to remote branch
+.git_template: &git_setup |
+  git remote set-url --push origin "https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+  git config user.name "Gitlab"
+  git config user.email gitlab@chromaway.com
+  git symbolic-ref refs/heads/$CI_COMMIT_REF_NAME refs/remotes/origin/$CI_COMMIT_REF_NAME
+
 deploy:
   extends: .setup
   stage: deploy
@@ -22,6 +31,29 @@ build:
     - dev
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+
+release:
+  stage: release
+  script:
+    - *git_setup
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+    - mvn -B gitflow:release-start
+    - mvn -B gitflow:release-finish -DskipTestProject=true -DversionDigitToIncrement=1
+  only:
+    - dev
+  when: manual
+
+patch:
+  stage: release
+  script:
+    - *git_setup
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+    - mvn -B gitflow:hotfix-start -DfromBranch=$CI_COMMIT_BRANCH
+    - HOTFIX_BRANCH=$(git branch --show-current)
+    - mvn -B gitflow:hotfix-finish -DskipTestProject=true -DhotfixBranch=$HOTFIX_BRANCH -DversionDigitToIncrement=2
+  only:
+    - /^support\/.*$/
+  when: manual
 
 variables:
   # This will suppress any download for dependencies and plugins or upload messages which would clutter the console log.
