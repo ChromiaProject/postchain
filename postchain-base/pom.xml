@@ -63,11 +63,6 @@
             <artifactId>commons-beanutils</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-reflect</artifactId>
-        </dependency>
-
         <!-- Spark -->
         <dependency>
             <groupId>com.sparkjava</groupId>
