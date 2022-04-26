@@ -1,7 +1,7 @@
 package net.postchain.devtools.utils.configuration
 
 import net.postchain.base.BlockchainRidFactory
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 
 /**

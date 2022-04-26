@@ -2,7 +2,7 @@ package net.postchain.base.data
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockRid
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.ValidationResult
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

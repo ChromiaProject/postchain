@@ -7,7 +7,7 @@ import com.google.gson.reflect.TypeToken
 import mu.KLogging
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.common.exception.UserMistake
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.TransactionStatus.*

@@ -10,6 +10,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.core.*
 import net.postchain.core.framework.AbstractBlockchainProcess
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType

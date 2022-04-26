@@ -2,7 +2,7 @@
 
 package net.postchain.debug
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 data class BlockchainProcessName(val pubKey: String, val blockchainRid: BlockchainRid) {
 

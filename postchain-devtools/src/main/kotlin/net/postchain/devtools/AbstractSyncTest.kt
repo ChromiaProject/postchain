@@ -8,7 +8,7 @@ import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.toHex
 import net.postchain.core.AppContext
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup

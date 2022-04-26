@@ -2,7 +2,7 @@ package net.postchain.containers.bpm
 
 import mu.KLogging
 import net.postchain.config.node.NodeConfig
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.HeartbeatListener

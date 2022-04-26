@@ -3,7 +3,7 @@
 package net.postchain.network.peer
 
 import org.mockito.kotlin.mock
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.ebft.EbftPacketDecoder

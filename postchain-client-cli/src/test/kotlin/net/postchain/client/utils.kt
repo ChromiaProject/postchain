@@ -1,6 +1,6 @@
 package net.postchain.client
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 val testConfig = PostchainClientConfig(
         "http://localhost:7740",

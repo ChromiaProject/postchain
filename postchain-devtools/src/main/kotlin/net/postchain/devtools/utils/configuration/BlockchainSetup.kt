@@ -1,7 +1,7 @@
 package net.postchain.devtools.utils.configuration
 
 import net.postchain.base.BlockchainRelatedInfo
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.gtv.Gtv
 
@@ -23,12 +23,12 @@ import net.postchain.gtv.Gtv
  *
  */
 data class BlockchainSetup(
-    val chainId: Int,
-    val rid: BlockchainRid,
-    val bcGtv: Gtv,
-    val signerNodeList: List<NodeSeqNumber>,
-    val chainDependencies: Set<Int> = setOf(), // default is none
-    private var shouldHaveNormalTx: Boolean = true,  // Set to false to prevent normal TXs to go to this chain
+        val chainId: Int,
+        val rid: BlockchainRid,
+        val bcGtv: Gtv,
+        val signerNodeList: List<NodeSeqNumber>,
+        val chainDependencies: Set<Int> = setOf(), // default is none
+        private var shouldHaveNormalTx: Boolean = true,  // Set to false to prevent normal TXs to go to this chain
 ) {
 
     /**

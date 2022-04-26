@@ -4,7 +4,7 @@ package net.postchain.ebft
 
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.toHex
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.core.UserMistake
 import net.postchain.ebft.message.EbftMessage

@@ -5,7 +5,7 @@ package net.postchain.devtools
 import com.google.gson.GsonBuilder
 import mu.KLogging
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.UserMistake
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.devtools.KeyPairHelper.privKey

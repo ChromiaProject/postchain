@@ -6,7 +6,7 @@ import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.toHex
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.crypto.CryptoSystem

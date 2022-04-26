@@ -2,7 +2,7 @@
 
 package net.postchain.network.mastersub.master
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.network.common.ConnectionDescriptor
 import net.postchain.network.mastersub.protocol.MsHandshakeMessage
 
