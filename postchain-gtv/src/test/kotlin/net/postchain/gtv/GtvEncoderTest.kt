@@ -2,8 +2,8 @@
 
 package net.postchain.gtv
 
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.toHex
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import org.junit.jupiter.api.Test
 import java.math.BigInteger
@@ -95,7 +95,7 @@ class GtvEncoderTest {
         }
         println("Execution time deserialization: ${deserializationTime} milliseconds")
 
-        val cs = SECP256K1CryptoSystem()
+        val cs = Secp256K1CryptoSystem()
         val hashingTime = measureTimeMillis {
             val hash = gtv.merkleHash(GtvMerkleHashCalculator(cs))
             println(hash.toHex())

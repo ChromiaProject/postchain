@@ -2,8 +2,7 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.merkle.TreeHelper
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvInteger
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -32,7 +31,7 @@ class GtvMerkleHashCalculatorTest {
     @Test
     fun testHashOfGtvCalculation_RealSerialization_RealHash() {
 
-        val calculator =GtvMerkleHashCalculator(SECP256K1CryptoSystem())
+        val calculator =GtvMerkleHashCalculator(Secp256K1CryptoSystem())
 
         val iGtv = GtvInteger(7)
         // The "7" is expected to serialize to "A303020107" (in hex)

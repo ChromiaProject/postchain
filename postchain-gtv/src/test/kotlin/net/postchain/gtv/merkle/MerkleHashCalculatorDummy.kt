@@ -2,10 +2,8 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.crypto.CryptoSystem
 import net.postchain.common.data.Hash
-import net.postchain.gtv.merkle.MerkleHashCalculator
-import net.postchain.base.merkle.TreeHelper
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.*
 import java.nio.charset.Charset
 

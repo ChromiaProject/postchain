@@ -1,22 +1,15 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle.proof
+package net.postchain.gtv.merkle.proof
 
-import net.postchain.base.merkle.PrintableTreeFactory
-import net.postchain.base.merkle.TreeHelper
-import net.postchain.base.merkle.TreeHelper.stripWhite
-import net.postchain.base.merkle.TreePrinter
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.generateProof
-import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper
+import net.postchain.gtv.merkle.*
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected1ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected4ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected7ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expectet7and3ElementArrayMerkleRoot
-import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
-import net.postchain.gtv.merkle.proof.merkleHash
+import net.postchain.gtv.merkle.TreeHelper.stripWhite
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet

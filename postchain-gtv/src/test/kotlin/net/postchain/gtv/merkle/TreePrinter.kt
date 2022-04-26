@@ -1,18 +1,11 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle
+package net.postchain.gtv.merkle
 
-import net.postchain.gtv.merkle.proof.MerkleProofElement
-import net.postchain.gtv.merkle.proof.ProofHashedLeaf
-import net.postchain.gtv.merkle.proof.ProofNode
-import net.postchain.gtv.merkle.proof.ProofValueLeaf
-import net.postchain.gtv.*
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
-import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
-import net.postchain.gtv.merkle.proof.ProofNodeGtvDictHead
-import kotlin.math.pow
 import net.postchain.common.data.Hash
-import net.postchain.gtv.merkle.*
+import net.postchain.gtv.*
+import net.postchain.gtv.merkle.proof.*
+import kotlin.math.pow
 
 
 /**

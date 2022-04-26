@@ -2,16 +2,16 @@
 
 package net.postchain.gtv.merkle.virtual
 
-import net.postchain.base.merkle.TreeHelper
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.generateProof
 import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
 import net.postchain.gtv.merkle.MixArrayDictToGtvBinaryTreeHelper
-import net.postchain.gtv.merkle.proof.toGtvVirtual
-import net.postchain.gtv.merkleHash
+import net.postchain.gtv.merkle.TreeHelper
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet
+import net.postchain.gtv.merkle.proof.toGtvVirtual
+import net.postchain.gtv.merkleHash
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail

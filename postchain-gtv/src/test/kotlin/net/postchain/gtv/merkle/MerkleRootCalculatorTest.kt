@@ -1,12 +1,10 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle
+package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
 import net.postchain.gtv.merkleHash
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

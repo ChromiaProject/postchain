@@ -3,22 +3,15 @@
 package net.postchain.gtv.merkle.virtual
 
 import mu.KLogging
-import net.postchain.gtv.merkle.proof.MerkleProofElement
-import net.postchain.gtv.merkle.proof.ProofHashedLeaf
-import net.postchain.gtv.merkle.proof.ProofNode
-import net.postchain.gtv.merkle.proof.ProofValueLeaf
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvVirtual
 import net.postchain.gtv.GtvVirtualArray
 import net.postchain.gtv.GtvVirtualDictionary
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
-import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
-import net.postchain.gtv.merkle.proof.ProofNodeGtvDictHead
-import net.postchain.gtv.merkle.proof.ProofValueGtvLeaf
 import net.postchain.gtv.merkle.path.ArrayGtvPathElement
 import net.postchain.gtv.merkle.path.DictGtvPathElement
 import net.postchain.gtv.merkle.path.SearchableGtvPathElement
+import net.postchain.gtv.merkle.proof.*
 
 
 /**
