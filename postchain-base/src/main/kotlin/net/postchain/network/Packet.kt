@@ -3,7 +3,7 @@
 package net.postchain.network
 
 import net.postchain.base.PeerCommConfiguration
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 
 

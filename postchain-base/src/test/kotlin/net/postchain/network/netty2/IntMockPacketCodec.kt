@@ -2,7 +2,7 @@
 
 package net.postchain.network.netty2
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.base.PeerInfo
 import net.postchain.network.IdentPacketInfo

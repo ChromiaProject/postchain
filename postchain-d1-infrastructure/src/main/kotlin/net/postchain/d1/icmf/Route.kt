@@ -2,7 +2,7 @@
 
 package net.postchain.d1.icmf
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.ByteArrayKey
 
 sealed class Route

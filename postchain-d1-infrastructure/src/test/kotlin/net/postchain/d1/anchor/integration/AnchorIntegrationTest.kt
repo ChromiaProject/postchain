@@ -1,20 +1,15 @@
 package net.postchain.d1.anchor.integration
 
 import mu.KLogging
+import net.postchain.base.SECP256K1CryptoSystem
+import net.postchain.common.BlockchainRid
 import net.postchain.d1.anchor.AnchorGTXModule
 import net.postchain.d1.anchor.AnchorSpecialTxExtension
 import net.postchain.d1.anchor.AnchorTestGTXModule
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.core.BlockchainRid
 import net.postchain.devtools.TxCache
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
-import net.postchain.gtx.CompositeGTXModule
-import net.postchain.gtx.GTXModule
-import net.postchain.gtx.GTXOperation
-import net.postchain.gtx.GTXTransaction
-import net.postchain.gtx.GTXTransactionFactory
-import net.postchain.gtx.StandardOpsGTXModule
+import net.postchain.gtx.*
 import org.junit.Assert
 import org.junit.Test
 

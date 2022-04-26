@@ -1,6 +1,6 @@
 package net.postchain.config.blockchain
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 /**
  * This will mock only one configuration, so create a different mock for every BC.

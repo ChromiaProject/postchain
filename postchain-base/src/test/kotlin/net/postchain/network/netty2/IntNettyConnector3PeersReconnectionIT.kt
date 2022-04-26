@@ -6,7 +6,7 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
 import org.mockito.kotlin.*
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.core.byteArrayKeyOf

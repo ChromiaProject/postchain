@@ -5,7 +5,7 @@ import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.containers.api.MasterApiInfra
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
 import java.nio.file.Path

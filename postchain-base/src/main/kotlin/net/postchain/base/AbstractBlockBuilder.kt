@@ -9,6 +9,7 @@ import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.OK
 import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockTrace
 
 /**

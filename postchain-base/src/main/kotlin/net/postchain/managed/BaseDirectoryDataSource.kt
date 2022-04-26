@@ -7,7 +7,7 @@ import net.postchain.containers.bpm.ContainerResourceLimits.Companion.CPU_KEY
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.RAM_KEY
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.STORAGE_KEY
 import net.postchain.core.BlockQueries
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.GtvFactory
 
 class BaseDirectoryDataSource(

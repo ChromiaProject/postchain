@@ -2,8 +2,8 @@ package net.postchain.d1.anchor
 
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockRid
-import net.postchain.core.BlockchainRid
 import net.postchain.core.TxEContext
 import net.postchain.gtx.ExtOpData
 import net.postchain.gtx.GTXOperation

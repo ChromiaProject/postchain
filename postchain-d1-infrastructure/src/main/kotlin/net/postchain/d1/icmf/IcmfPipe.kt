@@ -2,8 +2,8 @@
 
 package net.postchain.d1.icmf
 
+import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
-import net.postchain.core.BlockchainRid
 
 data class PipeID<RT: Route> (
         val route: RT,

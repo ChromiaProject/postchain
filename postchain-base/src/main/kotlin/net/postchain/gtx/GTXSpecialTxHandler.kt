@@ -6,7 +6,7 @@ import mu.KLogging
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
 import net.postchain.crypto.CryptoSystem

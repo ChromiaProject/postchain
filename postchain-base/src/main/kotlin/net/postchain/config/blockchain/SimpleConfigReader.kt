@@ -1,6 +1,6 @@
 package net.postchain.config.blockchain
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 /**
  * A very simple BC configuration reader.

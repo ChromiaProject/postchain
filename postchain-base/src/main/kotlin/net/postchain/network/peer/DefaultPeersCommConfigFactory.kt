@@ -5,7 +5,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 

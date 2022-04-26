@@ -2,7 +2,7 @@
 
 package net.postchain.managed
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockQueries

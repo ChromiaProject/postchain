@@ -5,7 +5,7 @@ package net.postchain.d1.icmf
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 class IcmfLocalDispatcher(val storage: Storage) {
     val receivers = mutableMapOf<Long, ClusterAnchorIcmfReceiver>()

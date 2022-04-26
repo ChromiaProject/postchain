@@ -2,7 +2,7 @@ package net.postchain.config.blockchain
 
 import net.postchain.base.Storage
 import net.postchain.base.withReadConnection
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.ProgrammerMistake
 import net.postchain.gtv.*
 

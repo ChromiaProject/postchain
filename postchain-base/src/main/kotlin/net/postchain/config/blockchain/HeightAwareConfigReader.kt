@@ -1,6 +1,6 @@
 package net.postchain.config.blockchain
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 /**
  * A simple BC configuration reader that remember what height you looked for last time and updates the config when
