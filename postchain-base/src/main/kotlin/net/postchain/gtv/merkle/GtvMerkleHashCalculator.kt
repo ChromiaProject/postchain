@@ -2,10 +2,8 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.base.merkle.MerkleBasics
-import net.postchain.base.merkle.MerkleHashCalculator
 import net.postchain.common.data.Hash
-import net.postchain.core.ProgrammerMistake
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvEncoder.encodeGtv

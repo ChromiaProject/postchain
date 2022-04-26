@@ -2,9 +2,9 @@
 
 package net.postchain.gtv.merkle.virtual
 
-import net.postchain.base.merkle.proof.MerkleProofElement
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvVirtualArray
+import net.postchain.gtv.merkle.proof.MerkleProofElement
 
 /**
  * @property index is the

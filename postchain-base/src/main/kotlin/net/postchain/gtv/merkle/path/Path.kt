@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.path
+package net.postchain.gtv.merkle.path
 
 
 open class Path<T: PathElement>(val pathElements: List<T>) {

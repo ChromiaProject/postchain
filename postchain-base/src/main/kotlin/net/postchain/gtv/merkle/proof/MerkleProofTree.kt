@@ -1,10 +1,10 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle.proof
+package net.postchain.gtv.merkle.proof
 
 import net.postchain.common.data.Hash
-import net.postchain.base.merkle.MerkleBasics.HASH_PREFIX_NODE
-import net.postchain.base.merkle.MerkleBasics.UNKNOWN_SIZE_IN_BYTE
+import net.postchain.gtv.merkle.MerkleBasics.HASH_PREFIX_NODE
+import net.postchain.gtv.merkle.MerkleBasics.UNKNOWN_SIZE_IN_BYTE
 import java.util.*
 
 const val SERIALIZATION_HASH_LEAF_TYPE: Long = 100

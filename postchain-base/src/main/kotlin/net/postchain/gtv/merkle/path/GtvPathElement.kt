@@ -1,9 +1,7 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.gtv.path
+package net.postchain.gtv.merkle.path
 
-import net.postchain.base.path.PathElement
-import net.postchain.base.path.PathLeafElement
 import net.postchain.gtv.*
 
 

@@ -10,9 +10,9 @@ import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.toGtvVirtual
 import net.postchain.gtv.merkleHash
-import net.postchain.gtv.path.GtvPath
-import net.postchain.gtv.path.GtvPathFactory
-import net.postchain.gtv.path.GtvPathSet
+import net.postchain.gtv.merkle.path.GtvPath
+import net.postchain.gtv.merkle.path.GtvPathFactory
+import net.postchain.gtv.merkle.path.GtvPathSet
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

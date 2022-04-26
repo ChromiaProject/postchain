@@ -1,13 +1,13 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle
+package net.postchain.gtv.merkle
 
-import net.postchain.base.merkle.MerkleBasics.HASH_PREFIX_LEAF
-import net.postchain.base.merkle.MerkleBasics.HASH_PREFIX_NODE
-import net.postchain.base.merkle.proof.MerkleHashSummary
-import net.postchain.base.path.PathElement
-import net.postchain.base.path.PathLeafElement
-import net.postchain.core.UserMistake
+import net.postchain.gtv.merkle.MerkleBasics.HASH_PREFIX_LEAF
+import net.postchain.gtv.merkle.MerkleBasics.HASH_PREFIX_NODE
+import net.postchain.gtv.merkle.proof.MerkleHashSummary
+import net.postchain.gtv.merkle.path.PathElement
+import net.postchain.gtv.merkle.path.PathLeafElement
+import net.postchain.common.exception.UserMistake
 
 
 /**

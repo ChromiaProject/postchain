@@ -3,10 +3,10 @@
 package net.postchain.gtv.merkle.virtual
 
 import mu.KLogging
-import net.postchain.base.merkle.proof.MerkleProofElement
-import net.postchain.base.merkle.proof.ProofHashedLeaf
-import net.postchain.base.merkle.proof.ProofNode
-import net.postchain.base.merkle.proof.ProofValueLeaf
+import net.postchain.gtv.merkle.proof.MerkleProofElement
+import net.postchain.gtv.merkle.proof.ProofHashedLeaf
+import net.postchain.gtv.merkle.proof.ProofNode
+import net.postchain.gtv.merkle.proof.ProofValueLeaf
 import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvVirtual
@@ -16,9 +16,9 @@ import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
 import net.postchain.gtv.merkle.proof.ProofNodeGtvDictHead
 import net.postchain.gtv.merkle.proof.ProofValueGtvLeaf
-import net.postchain.gtv.path.ArrayGtvPathElement
-import net.postchain.gtv.path.DictGtvPathElement
-import net.postchain.gtv.path.SearchableGtvPathElement
+import net.postchain.gtv.merkle.path.ArrayGtvPathElement
+import net.postchain.gtv.merkle.path.DictGtvPathElement
+import net.postchain.gtv.merkle.path.SearchableGtvPathElement
 
 
 /**
@@ -55,9 +55,9 @@ object GtvVirtualFactory: KLogging() {
         return when (currentElement) {
             is ProofNodeGtvArrayHead -> buildGtvVirtualArray(currentElement, true)
             is ProofNodeGtvDictHead  -> buildGtvVirtualDictionary(currentElement, true)
-            is ProofNode             -> throw UserMistake("A proof structure cannot have an (internal) node as root.")
-            is ProofHashedLeaf       -> throw UserMistake("A proof structure cannot have a hash as root.")
-            is ProofValueLeaf<*>     -> throw UserMistake("A proof structure cannot be just the value that should be proven (meaningless).") // TODO: Maybe this shoud change?
+            is ProofNode -> throw UserMistake("A proof structure cannot have an (internal) node as root.")
+            is ProofHashedLeaf -> throw UserMistake("A proof structure cannot have a hash as root.")
+            is ProofValueLeaf<*> -> throw UserMistake("A proof structure cannot be just the value that should be proven (meaningless).") // TODO: Maybe this shoud change?
             else                     -> throw UserMistake("We don't handle proofs that begin with type: ${currentElement::class.simpleName}")
         }
     }
@@ -97,7 +97,7 @@ object GtvVirtualFactory: KLogging() {
 
     private fun buildGtvVirtualArrayInner(currentElement: MerkleProofElement): ArrayIndexAndGtvList {
         return when(currentElement) {
-            is ProofHashedLeaf       -> ArrayIndexAndGtvList()                 // Empty leaf (we don't care about these)
+            is ProofHashedLeaf -> ArrayIndexAndGtvList()                 // Empty leaf (we don't care about these)
             is ProofValueGtvLeaf     -> {                                     // Valuable leaf (at a leaf that holds a real value [Gtv])
                 val index = getIndex(currentElement.pathElem)
                 ArrayIndexAndGtvList(index, currentElement.content)
@@ -157,7 +157,7 @@ object GtvVirtualFactory: KLogging() {
 
     private fun buildGtvVirtualDictionaryInner(currentElement: MerkleProofElement): MutableMap<String, Gtv> {
         return when(currentElement) {
-            is ProofHashedLeaf       -> mutableMapOf()                                     // Empty leaf
+            is ProofHashedLeaf -> mutableMapOf()                                     // Empty leaf
             is ProofValueGtvLeaf     -> {                                                  // Valuable leaf (at a leaf that holds a real value [Gtv])
                 val key = (currentElement.pathElem as DictGtvPathElement).key
                 val pair = Pair(key, currentElement.content)

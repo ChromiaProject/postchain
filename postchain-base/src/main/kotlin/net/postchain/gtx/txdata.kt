@@ -2,7 +2,7 @@
 
 package net.postchain.gtx
 
-import net.postchain.base.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.common.data.Hash
 import net.postchain.common.BlockchainRid
 import net.postchain.core.ProgrammerMistake

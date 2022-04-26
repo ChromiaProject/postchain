@@ -1,9 +1,8 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.gtv.path
+package net.postchain.gtv.merkle.path
 
 import mu.KLogging
-import net.postchain.base.path.Path
 
 /**
  * [GtvPath] is used for referencing a sub-structure of a Gtv graph (a mix of arrays and dictionaries)

@@ -13,7 +13,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
 import net.postchain.gtv.merkle.proof.ProofValueGtvLeaf
-import net.postchain.gtv.path.ArrayGtvPathElement
+import net.postchain.gtv.merkle.path.ArrayGtvPathElement
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever

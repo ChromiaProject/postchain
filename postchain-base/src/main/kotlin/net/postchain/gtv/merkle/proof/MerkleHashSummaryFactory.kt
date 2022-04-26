@@ -1,12 +1,12 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle.proof
+package net.postchain.gtv.merkle.proof
 
-import net.postchain.base.merkle.BinaryTreeFactory
 import net.postchain.common.data.Hash
-import net.postchain.base.merkle.MerkleHashCalculator
-import net.postchain.base.path.PathSet
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.merkle.BinaryTreeFactory
+import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkle.path.PathSet
 
 
 /**

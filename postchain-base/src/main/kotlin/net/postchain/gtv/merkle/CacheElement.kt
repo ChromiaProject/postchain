@@ -2,8 +2,8 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.base.merkle.proof.MerkleHashSummary
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.merkle.proof.MerkleHashSummary
 import java.util.*
 
 

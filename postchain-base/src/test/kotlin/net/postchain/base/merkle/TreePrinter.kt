@@ -2,17 +2,17 @@
 
 package net.postchain.base.merkle
 
-import net.postchain.base.merkle.proof.MerkleProofElement
-import net.postchain.base.merkle.proof.ProofHashedLeaf
-import net.postchain.base.merkle.proof.ProofNode
-import net.postchain.base.merkle.proof.ProofValueLeaf
+import net.postchain.gtv.merkle.proof.MerkleProofElement
+import net.postchain.gtv.merkle.proof.ProofHashedLeaf
+import net.postchain.gtv.merkle.proof.ProofNode
+import net.postchain.gtv.merkle.proof.ProofValueLeaf
 import net.postchain.gtv.*
-import net.postchain.gtv.merkle.GtvBinaryTree
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
 import net.postchain.gtv.merkle.proof.ProofNodeGtvDictHead
 import kotlin.math.pow
 import net.postchain.common.data.Hash
+import net.postchain.gtv.merkle.*
 
 
 /**

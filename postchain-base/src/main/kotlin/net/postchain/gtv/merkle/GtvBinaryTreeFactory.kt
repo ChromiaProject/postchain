@@ -2,13 +2,11 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.base.merkle.BinaryTreeElement
-import net.postchain.base.merkle.BinaryTreeFactory
 import net.postchain.gtv.*
 import net.postchain.gtv.merkle.factory.GtvBinaryTreeFactoryArray
 import net.postchain.gtv.merkle.factory.GtvBinaryTreeFactoryDict
-import net.postchain.gtv.path.GtvPath
-import net.postchain.gtv.path.GtvPathSet
+import net.postchain.gtv.merkle.path.GtvPath
+import net.postchain.gtv.merkle.path.GtvPathSet
 
 
 /**

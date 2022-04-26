@@ -1,9 +1,9 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle
+package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
-import net.postchain.core.ProgrammerMistake
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree

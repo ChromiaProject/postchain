@@ -1,13 +1,13 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base.merkle
+package net.postchain.gtv.merkle
 
 import mu.KLogging
-import net.postchain.base.path.PathLeafElement
-import net.postchain.base.path.PathSet
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvPrimitive
+import net.postchain.gtv.merkle.path.PathLeafElement
+import net.postchain.gtv.merkle.path.PathSet
 
 
 /**

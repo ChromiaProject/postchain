@@ -8,9 +8,9 @@ import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper
 import net.postchain.gtv.merkle.GtvBinaryTree
 import net.postchain.gtv.merkle.GtvBinaryTreeFactory
 import net.postchain.gtv.merkle.GtvTreeHelper
-import net.postchain.gtv.path.GtvPath
-import net.postchain.gtv.path.GtvPathFactory
-import net.postchain.gtv.path.GtvPathSet
+import net.postchain.gtv.merkle.path.GtvPath
+import net.postchain.gtv.merkle.path.GtvPathFactory
+import net.postchain.gtv.merkle.path.GtvPathSet
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

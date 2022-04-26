@@ -2,6 +2,10 @@
 
 package net.postchain.gtv.path
 
+import net.postchain.gtv.merkle.path.ArrayGtvPathElement
+import net.postchain.gtv.merkle.path.GtvPath
+import net.postchain.gtv.merkle.path.GtvPathFactory
+import net.postchain.gtv.merkle.path.GtvPathLeafElement
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 

@@ -2,8 +2,8 @@
 
 package net.postchain.gtv
 
-import net.postchain.base.merkle.proof.MerkleProofElement
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
+import net.postchain.gtv.merkle.proof.MerkleProofElement
 
 
 /**

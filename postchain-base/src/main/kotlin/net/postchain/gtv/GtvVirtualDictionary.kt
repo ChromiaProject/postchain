@@ -2,8 +2,8 @@
 
 package net.postchain.gtv
 
-import net.postchain.base.merkle.proof.MerkleProofElement
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
+import net.postchain.gtv.merkle.proof.MerkleProofElement
 import net.postchain.gtv.messages.RawGtv
 
 /**
@@ -17,7 +17,7 @@ import net.postchain.gtv.messages.RawGtv
  *           doesn't exist we will explode (because we have no way of knowing if this key exists in the original dict).
  * @property size is the number of elements in the original dictionary (sometimes we don't know this).
  */
-data class GtvVirtualDictionary(val proofElement: MerkleProofElement ,val dict: Map<String, Gtv>, val size: Int? = null) : GtvVirtual(proofElement) {
+data class GtvVirtualDictionary(val proofElement: MerkleProofElement, val dict: Map<String, Gtv>, val size: Int? = null) : GtvVirtual(proofElement) {
 
     override val type = GtvType.DICT // The virtual Dict pretends to be a normal [GtvDictionary].
 
