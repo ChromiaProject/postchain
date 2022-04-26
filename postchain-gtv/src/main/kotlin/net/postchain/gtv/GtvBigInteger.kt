@@ -17,7 +17,7 @@ data class GtvBigInteger(val integer: BigInteger) : GtvPrimitive() {
     }
 
     override fun asBoolean(): Boolean {
-        return integer != BigInteger.valueOf(0L)
+        return integer != BigInteger.ZERO
     }
 
     override fun getRawGtv(): RawGtv {
