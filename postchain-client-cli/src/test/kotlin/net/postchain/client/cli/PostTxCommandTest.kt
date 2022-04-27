@@ -24,7 +24,7 @@ internal class PostTxCommandTest {
 
         val command = PostTxCommand(provider)
 
-        command.runInternal(testConfig, "test_tx", gtv(1))
+        command.runInternal(testConfig, false, "test_tx", gtv(1))
 
         verify(client).makeTransaction()
         verify(txBuilder).postSync(ConfirmationLevel.NO_WAIT)
