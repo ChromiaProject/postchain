@@ -4,19 +4,25 @@ package net.postchain.ebft.syncmanager.validator
 
 import net.postchain.ebft.StatusManager
 import java.util.*
+import kotlin.math.pow
 
 class RevoltTracker(private val revoltTimeout: Int, private val statusManager: StatusManager) {
-    var deadLine = newDeadLine()
+    var deadLine = newDeadLine(0)
     var prevHeight = statusManager.myStatus.height
     var prevRound = statusManager.myStatus.round
 
+    companion object {
+        const val BASE_DELAY = 100
+        const val DELAY_POWER_BASE = 2.0
+    }
+
     /**
-     * Set new deadline for the revolt tracker
+     * Set new deadline for the revolt tracker with exponential delay for each round
      *
      * @return the time at which the deadline is passed
      */
-    private fun newDeadLine(): Long {
-        return Date().time + revoltTimeout
+    private fun newDeadLine(round: Long): Long {
+        return Date().time + revoltTimeout + (BASE_DELAY * (DELAY_POWER_BASE.pow(round.toDouble()))).toLong()
     }
 
     /**
@@ -28,7 +34,7 @@ class RevoltTracker(private val revoltTimeout: Int, private val statusManager: S
                 current.height == prevHeight && current.round > prevRound) {
             prevHeight = current.height
             prevRound = current.round
-            deadLine = newDeadLine()
+            deadLine = newDeadLine(current.round)
         } else if (Date().time > deadLine && !current.revolting) {
             this.statusManager.onStartRevolting()
         }

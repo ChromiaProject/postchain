@@ -25,3 +25,5 @@ const val KEY_HISTORIC_BRID = "historic_brid"
 
 const val KEY_SYNC = "sync"
 const val KEY_SYNC_EXT = "sync_ext"
+
+const val KEY_MAX_TX_EXECUTION_TIME = "max_transaction_execution_time"

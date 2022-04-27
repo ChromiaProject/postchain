@@ -95,7 +95,8 @@ open class BaseBlockchainEngine(
                         closed = true
                     }
                     afterLog("End", it.getBTrace())
-                })
+                }, { transactionQueue.retryAllTakenTransactions() }
+        )
     }
 
     override fun loadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
@@ -184,10 +185,6 @@ open class BaseBlockchainEngine(
             blockBuilder.begin(null)
             val abstractBlockBuilder = ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
             val netStart = System.nanoTime()
-
-            // TODO Potential problem: if the block fails for some reason,
-            // the transaction queue is gone. This could potentially happen
-            // during a revolt. We might need a "transactional" tx queue...
 
             TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendTransactions")
             var acceptedTxs = 0

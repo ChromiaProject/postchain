@@ -27,7 +27,8 @@ class BaseManagedBlockBuilder(
         val storage: Storage,
         val blockBuilder: BlockBuilder,
         val beforeCommit: (BlockBuilder) -> Unit,
-        val afterCommit: (BlockBuilder) -> Unit
+        val afterCommit: (BlockBuilder) -> Unit,
+        val onRollBack: () -> Unit
 ) : ManagedBlockBuilder {
     companion object : KLogging()
 
@@ -140,6 +141,7 @@ class BaseManagedBlockBuilder(
                 rollbackLog("Got lock")
                 storage.closeWriteConnection(eContext, false)
                 closed = true
+                onRollBack()
             }
         }
         rollbackDebugLog("End")

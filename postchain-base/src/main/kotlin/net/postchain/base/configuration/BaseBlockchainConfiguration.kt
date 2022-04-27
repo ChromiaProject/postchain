@@ -87,7 +87,8 @@ open class BaseBlockchainConfiguration(
                 makeBBExtensions(),
                 effectiveBlockchainRID != blockchainRid,
                 blockStrategyConfig.maxBlockSize,
-                blockStrategyConfig.maxBlockTransactions
+                blockStrategyConfig.maxBlockTransactions,
+                configData.maxTxExecutionTime
         )
 
         return bb

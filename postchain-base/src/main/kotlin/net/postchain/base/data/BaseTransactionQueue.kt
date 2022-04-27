@@ -31,6 +31,7 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
     private val queue = LinkedBlockingQueue<ComparableTransaction>(queueCapacity)
     private val queueMap = HashMap<ByteArrayKey, ComparableTransaction>() // transaction by RID
     private val taken = mutableListOf<ComparableTransaction>()
+    private val txsToRetry = mutableListOf<ComparableTransaction>()
     private val rejects = object : LinkedHashMap<ByteArrayKey, Exception?>() {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ByteArrayKey, java.lang.Exception?>?): Boolean {
             return size > MAX_REJECTED
@@ -39,6 +40,9 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
 
     @Synchronized
     override fun takeTransaction(): Transaction? {
+        if (txsToRetry.isNotEmpty()) {
+            return txsToRetry.removeFirst().tx
+        }
         val tx = queue.poll()
         return if (tx != null) {
             taken.add(tx)
@@ -122,11 +126,17 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
             queue.remove(ct)
             queueMap.remove(ByteArrayKey(tx.getRID()))
             taken.remove(ct)
+            txsToRetry.remove(ct)
         }
     }
 
     @Synchronized
     override fun getRejectionReason(txRID: ByteArrayKey): Exception? {
         return rejects[txRID]
+    }
+
+    @Synchronized
+    override fun retryAllTakenTransactions() {
+        txsToRetry.addAll(taken)
     }
 }
