@@ -14,6 +14,7 @@
         <module>postchain-d1-infrastructure</module>
         <module>postchain-client-cli</module>
         <module>postchain-cli</module>
+        <module>postchain-gtv</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -146,6 +147,11 @@
             </dependency>
 
             <!-- Postchain -->
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-gtv</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-base</artifactId>

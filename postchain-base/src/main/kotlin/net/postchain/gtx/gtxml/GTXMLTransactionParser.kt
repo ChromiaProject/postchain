@@ -2,7 +2,7 @@
 
 package net.postchain.gtx.gtxml
 
-import net.postchain.base.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
 import net.postchain.core.ByteArrayKey
@@ -145,7 +145,7 @@ object GTXMLTransactionParser {
      * @param tx is the transaction to sign
      * @param signersMap is a map that tells us what [SigMaker] should be usd for each signer
      */
-    private fun signTransaction(tx: GTXTransactionData, signersMap: Map<ByteArrayKey, SigMaker>, calculator: MerkleHashCalculator<Gtv> ) {
+    private fun signTransaction(tx: GTXTransactionData, signersMap: Map<ByteArrayKey, SigMaker>, calculator: MerkleHashCalculator<Gtv>) {
         val txSigners = tx.transactionBodyData.signers
         val txBodyMerkleRoot = tx.transactionBodyData.calculateRID(calculator)
         for (i in 0 until txSigners.size) {
