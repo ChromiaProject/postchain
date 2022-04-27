@@ -22,6 +22,10 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-gtv</artifactId>
+        </dependency>
 
         <!-- Kotlin -->
         <dependency>
@@ -63,11 +67,6 @@
             <artifactId>commons-beanutils</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-reflect</artifactId>
-        </dependency>
-
         <!-- Spark -->
         <dependency>
             <groupId>com.sparkjava</groupId>
@@ -91,18 +90,6 @@
             <classifier>linux-x86_64</classifier>
         </dependency>
 
-        <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-impl</artifactId>
-        </dependency>
         <dependency>
             <groupId>javax.activation</groupId>
             <artifactId>javax.activation-api</artifactId>
@@ -169,115 +156,10 @@
             <groupId>org.skyscreamer</groupId>
             <artifactId>jsonassert</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.beanit</groupId>
-            <artifactId>jasn1</artifactId>
-            <version>${jasn.version}</version>
-        </dependency>
     </dependencies>
 
     <build>
-        <sourceDirectory>src/main/java</sourceDirectory>
+        <sourceDirectory>src/main/kotlin</sourceDirectory>
         <testSourceDirectory>src/test/kotlin</testSourceDirectory>
-        <plugins>
-            <plugin>
-                <artifactId>kotlin-maven-plugin</artifactId>
-                <groupId>org.jetbrains.kotlin</groupId>
-                <executions>
-                    <execution>
-                        <id>compile</id>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                        <configuration>
-                            <sourceDirs>
-                                <sourceDir>src/main/kotlin</sourceDir>
-                                <sourceDir>src/main/java</sourceDir>
-                                <sourceDir>target/generated-sources</sourceDir>
-                            </sourceDirs>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>test-compile</id>
-                        <goals>
-                            <goal>test-compile</goal>
-                        </goals>
-                        <configuration>
-                            <sourceDirs>
-                                <sourceDir>src/test/kotlin</sourceDir>
-                                <sourceDir>src/test/java</sourceDir>
-                            </sourceDirs>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>jaxb2-maven-plugin</artifactId>
-                <version>2.5.0</version>
-                <executions>
-                    <execution>
-                        <id>xjc</id>
-                        <goals>
-                            <goal>xjc</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <xjbExcludeFilters>
-                        <filter implementation="org.codehaus.mojo.jaxb2.shared.filters.pattern.PatternFileFilter">
-                            <patterns>
-                                <pattern>\.txt</pattern>
-                                <pattern>\.xsd</pattern>
-                            </patterns>
-                        </filter>
-                    </xjbExcludeFilters>
-                    <sources>
-                        <source>src/main/resources/net/postchain/gtx/gtxml/gtxml.xsd</source>
-                    </sources>
-                    <xjbSources>
-                        <xjbSource>src/main/resources/net/postchain/gtx/gtxml/bindings.xml</xjbSource>
-                    </xjbSources>
-                    <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
-                    <!-- The package of your generated sources -->
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.0.0</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.beanit</groupId>
-                        <artifactId>jasn1-compiler</artifactId>
-                        <version>${jasn.version}</version>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                        <id>generate-stuff</id>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <phase>generate-sources</phase>
-                        <configuration>
-                            <includePluginDependencies>true</includePluginDependencies>
-                            <mainClass>com.beanit.jasn1.compiler.Compiler</mainClass>
-                            <arguments>
-                                <argument>-f</argument>
-                                <!--argument>${project.basedir}/src/main/resources/asn/base_messages.asn</argument-->
-                                <argument>${project.basedir}/src/main/resources/asn/gtv_messages.asn</argument>
-                                <!--argument>${project.basedir}/src/main/resources/asn/gtx_messages.asn</argument-->
-                                <argument>-o</argument>
-                                <argument>${project.build.directory}/generated-sources/</argument>
-                                <argument>-p</argument>
-                                <argument>net.postchain.gtv</argument>
-                                <argument>-l</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
     </build>
 </project>
