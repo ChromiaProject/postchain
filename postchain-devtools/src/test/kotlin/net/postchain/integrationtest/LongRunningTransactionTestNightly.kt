@@ -31,9 +31,10 @@ class LongRunningTransactionTestNightly : IntegrationTestSetup() {
         val nodes = createNodes(3, "/net/postchain/devtools/long_running/blockchain_config_max_execution_time.xml")
 
         val firstTx = TestTransaction(0)
-        val delayedTx = DelayedTransaction(1, 20_000)
+        val delayedTx = DelayedTransaction(1, 11_000)
         val lastTx = TestTransaction(2)
-        buildBlock(1L, 0, firstTx, delayedTx, lastTx)
+        // Build 3 blocks so that each node can reject the delayed tx
+        buildBlock(1L, 2, firstTx, delayedTx, lastTx)
         nodes.forEach { node ->
             // Sorting the txs so we can do our assertions safely
             val txsInBlock = getTxRidsAtHeight(node, 0).apply { sortBy { it.toHex() } }
@@ -45,7 +46,7 @@ class LongRunningTransactionTestNightly : IntegrationTestSetup() {
             assert(transactionQueue.getTransactionStatus(delayedTx.getRID()))
                     .isEqualTo(TransactionStatus.REJECTED)
             assert(transactionQueue.getRejectionReason(delayedTx.getRID().byteArrayKeyOf())?.message)
-                    .isEqualTo("Transaction failed to execute within given time constraint: 15000 ms")
+                    .isEqualTo("Transaction failed to execute within given time constraint: 10000 ms")
         }
     }
 }

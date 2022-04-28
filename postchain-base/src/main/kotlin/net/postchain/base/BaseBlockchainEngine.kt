@@ -86,10 +86,7 @@ open class BaseBlockchainEngine(
                 {
                     afterLog("Begin", it.getBTrace())
                     val blockBuilder = it as AbstractBlockBuilder
-                    with(transactionQueue) {
-                        removeAll(blockBuilder.transactions)
-                        reset()
-                    }
+                    transactionQueue.removeAll(blockBuilder.transactions)
                     strategy.blockCommitted(blockBuilder.getBlockData())
                     if (afterCommitHandler(
                                     blockBuilder.getBTrace(), // This is a big reason for BTrace to exist

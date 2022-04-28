@@ -35,7 +35,7 @@
     </entry>
     <entry key="max_transaction_execution_time">
         <!-- Max time will be 10s -->
-        <int>15000</int>
+        <int>10000</int>
     </entry>
     <entry key="gtx">
         <!--

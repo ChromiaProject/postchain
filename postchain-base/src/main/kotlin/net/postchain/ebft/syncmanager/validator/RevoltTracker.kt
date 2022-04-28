@@ -12,7 +12,7 @@ class RevoltTracker(private val revoltTimeout: Int, private val statusManager: S
     var prevRound = statusManager.myStatus.round
 
     companion object {
-        const val BASE_DELAY = 100
+        const val BASE_DELAY = 1_000
         const val DELAY_POWER_BASE = 2.0
     }
 
@@ -22,7 +22,8 @@ class RevoltTracker(private val revoltTimeout: Int, private val statusManager: S
      * @return the time at which the deadline is passed
      */
     private fun newDeadLine(round: Long): Long {
-        return Date().time + revoltTimeout + (BASE_DELAY * (DELAY_POWER_BASE.pow(round.toDouble()))).toLong()
+        return Date().time + revoltTimeout +
+                (BASE_DELAY * (DELAY_POWER_BASE.pow(round.toDouble()))).toLong() - BASE_DELAY
     }
 
     /**
