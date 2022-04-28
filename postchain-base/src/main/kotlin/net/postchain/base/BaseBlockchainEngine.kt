@@ -98,8 +98,7 @@ open class BaseBlockchainEngine(
                         closed = true
                     }
                     afterLog("End", it.getBTrace())
-                }, { transactionQueue.retryAllTakenTransactions() }
-        )
+                })
     }
 
     override fun loadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
