@@ -52,6 +52,7 @@ interface TransactionQueue {
     fun rejectTransaction(tx: Transaction, reason: Exception?)
     fun getRejectionReason(txRID: ByteArrayKey): Exception?
     fun retryAllTakenTransactions()
+    fun reset()
 }
 
 

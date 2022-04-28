@@ -125,8 +125,6 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
             val ct = ComparableTransaction(tx)
             queue.remove(ct)
             queueMap.remove(ByteArrayKey(tx.getRID()))
-            taken.remove(ct)
-            txsToRetry.remove(ct)
         }
     }
 
@@ -138,5 +136,11 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
     @Synchronized
     override fun retryAllTakenTransactions() {
         txsToRetry.addAll(taken)
+    }
+
+    @Synchronized
+    override fun reset() {
+        taken.clear()
+        txsToRetry.clear()
     }
 }
