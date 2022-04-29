@@ -53,6 +53,16 @@
             <artifactId>httpclient</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-core</artifactId>
+            <version>4.25.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-format-gson</artifactId>
+            <version>4.25.10.1</version>
+        </dependency>
+        <dependency>
             <groupId>com.madgag.spongycastle</groupId>
             <artifactId>core</artifactId>
             <scope>runtime</scope>

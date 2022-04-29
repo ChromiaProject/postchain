@@ -2,18 +2,9 @@
 
 package net.postchain.client
 
-import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.spy
-import org.mockito.kotlin.verify
+import net.postchain.client.core.*
 import net.postchain.common.BlockchainRid
-import net.postchain.client.core.ConfirmationLevel
-import net.postchain.client.core.DefaultSigner
-import net.postchain.client.core.PostchainClient
-import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.toHex
-import net.postchain.core.ProgrammerMistake
-import net.postchain.core.TransactionStatus
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
@@ -24,7 +15,10 @@ import org.awaitility.Awaitility.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
@@ -78,13 +72,11 @@ class PostChainClientTest : IntegrationTestSetup() {
     fun makingAndPostingSyncTransaction_UnsignedTransactionGiven_throws_Exception() {
         // Mock
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
-        val client = spy(createPostChainClient(blockchainRID))
+        val client = createPostChainClient(blockchainRID)
         val txBuilder = client.makeTransaction()
 
         // When
-        assertThrows<ProgrammerMistake> {
-            txBuilder.postSync(ConfirmationLevel.NO_WAIT)
-        }
+        assertEquals(TransactionStatus.REJECTED, txBuilder.postSync(ConfirmationLevel.NO_WAIT).status)
     }
 
     @Test

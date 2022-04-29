@@ -25,7 +25,7 @@
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
-        <kotlin.version>1.4.30</kotlin.version>
+        <kotlin.version>1.6.21</kotlin.version>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
 
         <!-- Maven -->
