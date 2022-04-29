@@ -9,6 +9,8 @@ import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.special.GTXAutoSpecialTxExtension
+import net.postchain.gtx.special.GTXSpecialTxExtension
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
 /**
@@ -154,7 +156,6 @@ fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
  * Module that should be included in the [CompositeGTXModule] of all "normal/real world" DApp modules.
  * It holds some standard things that are very useful, bordering on mandatory.
  */
-
 class StandardOpsGTXModule : SimpleGTXModule<Unit>(
         Unit,
         mapOf(

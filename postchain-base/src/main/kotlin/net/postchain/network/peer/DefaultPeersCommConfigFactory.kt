@@ -1,11 +1,15 @@
 package net.postchain.network.peer
 
-import net.postchain.base.*
+import net.postchain.base.BasePeerCommConfiguration
+import net.postchain.base.HistoricBlockchainContext
+import net.postchain.base.PeerCommConfiguration
+import net.postchain.base.PeerInfo
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
-import net.postchain.core.NodeRid
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.common.BlockchainRid
+import net.postchain.core.NodeRid
+import net.postchain.crypto.Secp256K1CryptoSystem
 
 open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 
@@ -30,7 +34,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
-                SECP256K1CryptoSystem(),
+                Secp256K1CryptoSystem(),
                 appConfig.privKeyByteArray,
                 appConfig.pubKeyByteArray
         )

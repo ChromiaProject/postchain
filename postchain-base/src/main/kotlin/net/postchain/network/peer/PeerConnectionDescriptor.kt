@@ -2,10 +2,10 @@ package net.postchain.network.peer
 
 import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.IdentPacketInfo
 import net.postchain.network.common.ConnectionDescriptor
 import net.postchain.network.common.ConnectionDirection
+import net.postchain.core.block.BlockchainProcessName
 
 /**
  * Describes a peer-2-peer connection

@@ -5,9 +5,13 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.Storage
 import net.postchain.common.TimeLog
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.*
+import net.postchain.core.*
+import net.postchain.core.*
+import net.postchain.core.block.*
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
@@ -23,11 +27,11 @@ import net.postchain.debug.BlockTrace
  *
  */
 class BaseManagedBlockBuilder(
-        private val eContext: EContext,
-        val storage: Storage,
-        val blockBuilder: BlockBuilder,
-        val beforeCommit: (BlockBuilder) -> Unit,
-        val afterCommit: (BlockBuilder) -> Unit
+    private val eContext: EContext,
+    val storage: Storage,
+    val blockBuilder: BlockBuilder,
+    val beforeCommit: (BlockBuilder) -> Unit,
+    val afterCommit: (BlockBuilder) -> Unit
 ) : ManagedBlockBuilder {
     companion object : KLogging()
 

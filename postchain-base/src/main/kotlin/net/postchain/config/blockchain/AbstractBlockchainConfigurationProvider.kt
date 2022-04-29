@@ -2,8 +2,8 @@ package net.postchain.config.blockchain
 
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.EContext
-import net.postchain.core.ProgrammerMistake
 
 /**
  * Just a place to put some common things to make the code more DRY.

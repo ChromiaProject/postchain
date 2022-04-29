@@ -1,0 +1,30 @@
+// Copyright (c) 2020 ChromaWay AB. See README for license information.
+
+package net.postchain.gtv.common
+
+import net.postchain.common.BlockchainRid
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
+
+/**
+ * TODO: [Olle] Not entierly clean to have this in here, since GTV should be ignorant about Postchain's
+ */
+object GtvToBlockchainRidFactory {
+
+    val cryptoSystem = Secp256K1CryptoSystem()
+    private val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+
+    /**
+     * Calculates blockchain RID by the given blockchain configuration.
+     *
+     * @param data is the [Gtv] data of the configuration
+     * @return the blockchain RID
+     */
+    fun calculateBlockchainRid(data: Gtv): BlockchainRid {
+        // Need to calculate it the RID, and we do it the usual way (same as merkle root of block)
+        val bcBinary = data.merkleHash(merkleHashCalculator)
+        return BlockchainRid(bcBinary)
+    }
+}

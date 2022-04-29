@@ -5,9 +5,9 @@ package net.postchain.devtools.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.base.BlockchainRidFactory
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.common.GtvToBlockchainRidFactory
 import java.io.File
 
 class EncodeBlockchainConfigurationCommand : CliktCommand(
@@ -34,7 +34,7 @@ class EncodeBlockchainConfigurationCommand : CliktCommand(
 
             // brid
             val bridFilename = "brid.txt"
-            val blockchainRid = BlockchainRidFactory.calculateBlockchainRid(gtv)
+            val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(gtv)
             File(bridFilename).writeText(blockchainRid.toHex())
             println("Brid file has been created: brid.txt")
 

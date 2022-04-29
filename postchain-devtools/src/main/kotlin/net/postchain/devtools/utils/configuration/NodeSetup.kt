@@ -2,7 +2,7 @@ package net.postchain.devtools.utils.configuration
 
 import mu.KLogging
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.PropertiesConfiguration

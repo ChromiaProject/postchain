@@ -4,14 +4,18 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
-import net.postchain.core.*
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.TransactionQueue
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockData
 import java.util.concurrent.LinkedBlockingQueue
 
 @Suppress("UNUSED_PARAMETER")
 class OnDemandBlockBuildingStrategy(
-        configData: BaseBlockBuildingStrategyConfigurationData,
-        val blockQueries: BlockQueries,
-        val txQueue: TransactionQueue
+    configData: BaseBlockBuildingStrategyConfigurationData,
+    val blockQueries: BlockQueries,
+    val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
 
     companion object : KLogging()

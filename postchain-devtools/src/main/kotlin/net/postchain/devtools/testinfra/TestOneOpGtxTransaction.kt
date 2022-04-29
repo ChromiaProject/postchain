@@ -3,7 +3,7 @@
 package net.postchain.devtools.testinfra
 
 import net.postchain.common.data.Hash
-import net.postchain.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXDataBuilder
 import net.postchain.gtx.GTXTransaction

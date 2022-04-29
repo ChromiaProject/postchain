@@ -5,8 +5,8 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
-import net.postchain.core.ProgrammerMistake
 
 
 /**

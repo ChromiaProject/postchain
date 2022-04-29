@@ -8,12 +8,13 @@
     <version>3.4.2-SNAPSHOT</version>
     <modules>
         <module>postchain-common</module>
+        <module>postchain-gtv</module>
+        <module>postchain-gtxdata</module>
         <module>postchain-base</module>
         <module>postchain-devtools</module>
         <module>postchain-client</module>
         <module>postchain-client-cli</module>
         <module>postchain-cli</module>
-        <module>postchain-gtv</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -148,7 +149,17 @@
             <!-- Postchain -->
             <dependency>
                 <groupId>net.postchain</groupId>
+                <artifactId>postchain-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
                 <artifactId>postchain-gtv</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-gtxdata</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -159,11 +170,6 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-cli</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
-                <artifactId>postchain-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

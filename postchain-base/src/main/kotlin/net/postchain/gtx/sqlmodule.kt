@@ -4,12 +4,17 @@ package net.postchain.gtx
 
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.configuration.KEY_GTX
-import net.postchain.core.*
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
+import net.postchain.core.EContext
+import net.postchain.core.Transactor
+import net.postchain.core.TxEContext
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.special.GTXSpecialTxExtension
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler

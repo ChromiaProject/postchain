@@ -4,20 +4,24 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.api.rest.infra.RestApiConfig
-import net.postchain.base.*
+import net.postchain.base.BaseBlockchainContext
+import net.postchain.base.BaseBlockchainInfrastructure
+import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadWriteConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.ManagedModeTest.NodeSet
 import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
+import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.*
 import net.postchain.gtv.mapper.toObject
@@ -26,12 +30,20 @@ import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.TransactionFactory
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockQueries
 import java.lang.Thread.sleep
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 
-
+/**
+ * This is still somewhat not in line with the [SystemSetup] architecture, defined in the parent class.
+ *
+ *
+ */
 open class ManagedModeTest : AbstractSyncTest() {
 
     private companion object : KLogging()
@@ -41,6 +53,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     /**
      * Create a set of signers and replicas for the given chainID.
      */
+    @Deprecated("Should conform with Setup arch.", replaceWith= ReplaceWith("NodeSetup", "net.postchain.devtools.utils.configuration.NodeSetup"))
     inner class NodeSet(val chain: Long, val signers: Set<Int>, val replicas: Set<Int>) {
         val size: Int = signers.size + replicas.size
         fun contains(i: Int) = signers.contains(i) || replicas.contains(i)

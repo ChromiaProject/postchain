@@ -5,22 +5,22 @@ package net.postchain.ebft
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.toHex
-import net.postchain.core.BlockBuildingStrategy
-import net.postchain.core.BlockData
-import net.postchain.core.BlockDataWithWitness
+import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.PmEngineIsAlreadyClosed
-import net.postchain.debug.BlockTrace
-import net.postchain.debug.BlockchainProcessName
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.BlockchainProcessName
 import nl.komponents.kovenant.Promise
 
 /**
  * Manages intents and acts as a wrapper for [blockDatabase] and [statusManager]
  */
 class BaseBlockManager(
-        private val processName: BlockchainProcessName,
-        private val blockDB: BlockDatabase,
-        private val statusManager: StatusManager,
-        val blockStrategy: BlockBuildingStrategy
+    private val processName: BlockchainProcessName,
+    private val blockDB: BlockDatabase,
+    private val statusManager: StatusManager,
+    val blockStrategy: BlockBuildingStrategy
 ) : BlockManager {
 
     @Volatile

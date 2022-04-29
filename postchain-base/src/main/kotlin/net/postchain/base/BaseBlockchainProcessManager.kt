@@ -4,11 +4,10 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.PostchainContext
+import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
-import net.postchain.debug.BlockchainProcessName
+import net.postchain.core.block.*
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
 import java.util.*
@@ -127,11 +126,11 @@ open class BaseBlockchainProcessManager(
     }
 
     protected open fun createAndRegisterBlockchainProcess(
-            chainId: Long,
-            blockchainConfig: BlockchainConfiguration,
-            processName: BlockchainProcessName,
-            engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+        chainId: Long,
+        blockchainConfig: BlockchainConfiguration,
+        processName: BlockchainProcessName,
+        engine: BlockchainEngine,
+        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ) {
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
                 .also {

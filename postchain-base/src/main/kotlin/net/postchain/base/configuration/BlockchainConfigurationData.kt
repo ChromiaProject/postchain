@@ -3,12 +3,15 @@ package net.postchain.base.configuration
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.core.*
 import net.postchain.common.BlockchainRid
+import net.postchain.core.BlockchainContext
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.mapper.*
+import net.postchain.core.EContext
+import net.postchain.core.NODE_ID_AUTO
+import net.postchain.core.NODE_ID_READ_ONLY
 
 data class BlockchainConfigurationData(
         @RawGtv

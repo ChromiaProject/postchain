@@ -2,15 +2,17 @@
 
 package net.postchain.client.core
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import mu.KLogging
-import net.postchain.api.rest.json.JsonFactory
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.TransactionStatus.*
+import net.postchain.common.tx.TransactionStatus
+import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
@@ -36,12 +38,19 @@ class ConcretePostchainClient(
 
     companion object : KLogging()
 
-    private val gson = JsonFactory.makeJson()
+    private val gson = buildGson()
     private val serverUrl = resolver.getNodeURL(blockchainRID)
     private val httpClient = HttpClients.createDefault()
     private val blockchainRIDHex = blockchainRID.toHex()
     private val retrieveTxStatusAttempts = 20
     private val retrieveTxStatusIntervalMs = 500L
+
+    /**
+     * We don't use any adapters b/c this is very simple
+     */
+    private fun buildGson(): Gson {
+        return GsonBuilder().create()!!
+    }
 
     override fun makeTransaction(): GTXTransactionBuilder {
         return GTXTransactionBuilder(this, blockchainRID, arrayOf(defaultSigner!!.pubkey))
@@ -51,11 +60,11 @@ class ConcretePostchainClient(
         return GTXTransactionBuilder(this, blockchainRID, signers)
     }
 
-    override fun postTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception> {
+    override fun postTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): Promise<TransactionAck, Exception> {
         return task { doPostTransaction(txBuilder, confirmationLevel) }
     }
 
-    override fun postTransactionSync(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
+    override fun postTransactionSync(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionAck {
         return doPostTransaction(txBuilder, confirmationLevel)
     }
 
@@ -92,7 +101,7 @@ class ConcretePostchainClient(
         }
     }
 
-    private fun doPostTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
+    private fun doPostTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionAck {
         val txHex = txBuilder.serialize().toHex()
         val txJson = """{"tx" : $txHex}"""
         val txHashHex = txBuilder.getDigestForSigning().toHex()
@@ -109,16 +118,16 @@ class ConcretePostchainClient(
             ConfirmationLevel.NO_WAIT -> {
                 val statusLine = submitTransaction()
                 return if (statusLine.statusCode == 200) {
-                    TransactionResultImpl(WAITING)
+                    TransactionAckImpl(TransactionStatus.WAITING)
                 } else {
-                    TransactionResultImpl(REJECTED)
+                    TransactionAckImpl(TransactionStatus.REJECTED)
                 }
             }
 
             ConfirmationLevel.UNVERIFIED -> {
                 val statusLine = submitTransaction()
                 if (statusLine.statusCode in 400..499) {
-                    return TransactionResultImpl(REJECTED)
+                    return TransactionAckImpl(TransactionStatus.REJECTED)
                 }
                 val httpGet = HttpGet("$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
                 httpGet.setHeader("Content-type", APPLICATION_JSON)
@@ -137,7 +146,7 @@ class ConcretePostchainClient(
                                     val status = valueOf(statusString)
 
                                     if (status == CONFIRMED || status == REJECTED) {
-                                        return TransactionResultImpl(status)
+                                        return TransactionAckImpl(status)
                                     }
                                 }
 
@@ -150,11 +159,11 @@ class ConcretePostchainClient(
                     }
                 }
 
-                return TransactionResultImpl(REJECTED)
+                return TransactionAckImpl(REJECTED)
             }
 
             else -> {
-                return TransactionResultImpl(REJECTED)
+                return TransactionAckImpl(REJECTED)
             }
         }
     }

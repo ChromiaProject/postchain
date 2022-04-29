@@ -9,6 +9,8 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
+import net.postchain.core.block.*
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.mapper.toObject
 
 open class BaseBlockchainConfiguration(
@@ -21,7 +23,7 @@ open class BaseBlockchainConfiguration(
         get() = configData.context
 
     override val traits = setOf<String>()
-    val cryptoSystem = SECP256K1CryptoSystem()
+    val cryptoSystem = Secp256K1CryptoSystem()
     val blockStore = BaseBlockStore()
     override val chainID = configData.context.chainID
     override val blockchainRid = configData.context.blockchainRID

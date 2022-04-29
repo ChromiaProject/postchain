@@ -8,14 +8,19 @@ import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
-import net.postchain.common.BlockchainRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
 import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.gtv.common.GtvToBlockchainRidFactory
+import net.postchain.core.*
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockQueries
 import kotlin.properties.Delegates
 
 /**
@@ -65,7 +70,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
-            val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
             DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
             BaseConfigurationDataStore.addConfigurationData(eContext, 0, blockchainConfig)
@@ -78,7 +83,7 @@ class PostchainTestNode(
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
-            val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
             brid
         }
@@ -115,7 +120,12 @@ class PostchainTestNode(
     }
 
     fun getBlockchainInstance(chainId: Long = DEFAULT_CHAIN_IID): BlockchainProcess {
-        return processManager.retrieveBlockchain(chainId) as BlockchainProcess
+        val x = processManager.retrieveBlockchain(chainId)
+        if (x != null) {
+            return x as BlockchainProcess
+        } else {
+            throw ProgrammerMistake("Whut")
+        }
     }
 
     fun retrieveBlockchain(chainId: Long = DEFAULT_CHAIN_IID): BlockchainProcess? {

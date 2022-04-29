@@ -4,10 +4,12 @@ package net.postchain.network.peer
 
 import assertk.assert
 import assertk.assertions.isEmpty
+import net.postchain.base.BasePeerCommConfiguration
+import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
-import net.postchain.base.*
-import net.postchain.core.UserMistake
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
@@ -16,7 +18,7 @@ import org.junit.jupiter.api.assertThrows
 
 class DefaultPeerCommunicationManager1PeerIT {
 
-    private val cryptoSystem = SECP256K1CryptoSystem()
+    private val cryptoSystem = Secp256K1CryptoSystem()
     private val blockchainRid = BlockchainRid.buildRepeat(0)
 
     private val privKey = cryptoSystem.getRandomBytes(32)

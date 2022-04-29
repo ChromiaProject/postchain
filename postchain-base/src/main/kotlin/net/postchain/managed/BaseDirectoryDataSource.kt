@@ -6,14 +6,14 @@ import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.CPU_KEY
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.RAM_KEY
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.STORAGE_KEY
-import net.postchain.core.BlockQueries
+import net.postchain.core.block.BlockQueries
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.GtvFactory
 
 class BaseDirectoryDataSource(
-        queries: BlockQueries,
-        appConfig: AppConfig,
-        private val containerNodeConfig: ContainerNodeConfig
+    queries: BlockQueries,
+    appConfig: AppConfig,
+    private val containerNodeConfig: ContainerNodeConfig
 ) : BaseManagedNodeDataSource(queries, appConfig),
         DirectoryDataSource {
 

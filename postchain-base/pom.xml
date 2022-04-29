@@ -26,6 +26,10 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-gtv</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-gtxdata</artifactId>
+        </dependency>
 
         <!-- Kotlin -->
         <dependency>
@@ -67,12 +71,12 @@
             <artifactId>commons-beanutils</artifactId>
         </dependency>
 
-        <!-- Spark -->
+        <!-- REST -->
         <dependency>
             <groupId>com.sparkjava</groupId>
             <artifactId>spark-core</artifactId>
         </dependency>
-        <!-- Unirest -->
+
         <dependency>
             <groupId>com.konghq</groupId>
             <artifactId>unirest-java</artifactId>
@@ -151,6 +155,12 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility-kotlin</artifactId>
+        </dependency>
+
+        <!-- REST test -->
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
         </dependency>
         <dependency>
             <groupId>org.skyscreamer</groupId>

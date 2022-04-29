@@ -1,9 +1,8 @@
-// Copyright (c) 2020 ChromaWay AB. See README for license information.
-
-package net.postchain.gtx
-
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
+import net.postchain.gtx.ExtOpData
+import net.postchain.gtx.GTXOperation
+import net.postchain.gtx.SimpleGTXModule
 
 /**
  * nop operation that replaces GtxNop and doesn't impose any size or argument restrictions.

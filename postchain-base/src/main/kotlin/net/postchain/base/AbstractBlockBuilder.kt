@@ -4,13 +4,16 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.base.data.GenericBlockHeaderValidator
+import net.postchain.common.BlockchainRid
 import net.postchain.common.TimeLog
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.OK
 import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
+import net.postchain.core.TransactionFactory
+import net.postchain.core.block.*
 
 /**
  * The abstract block builder has only a vague concept about the core procedures of a block builder, for example:
@@ -22,10 +25,10 @@ import net.postchain.debug.BlockTrace
  * Everything else is left to sub-classes.
  */
 abstract class AbstractBlockBuilder(
-        val ectx: EContext,               // a general DB context (use bctx when possible)
-        val blockchainRID: BlockchainRid, // is the RID of the chain
-        val store: BlockStore,
-        val txFactory: TransactionFactory // Used for serializing transaction data
+    val ectx: EContext,               // a general DB context (use bctx when possible)
+    val blockchainRID: BlockchainRid, // is the RID of the chain
+    val store: BlockStore,
+    val txFactory: TransactionFactory // Used for serializing transaction data
 ) : BlockBuilder, TxEventSink {
 
     companion object: KLogging()

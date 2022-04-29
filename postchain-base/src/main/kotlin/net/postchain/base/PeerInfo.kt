@@ -2,7 +2,7 @@
 
 package net.postchain.base
 
-import net.postchain.core.ByteArrayKey
+import net.postchain.common.data.ByteArrayKey
 import net.postchain.core.NodeRid
 import java.time.Instant
 

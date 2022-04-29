@@ -13,22 +13,22 @@ import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 
 open class BaseApiInfrastructure(
-        protected val restApiConfig: RestApiConfig,
-        val nodeDiagnosticContext: NodeDiagnosticContext?
+    protected val restApiConfig: RestApiConfig,
+    val nodeDiagnosticContext: NodeDiagnosticContext?
 ) : ApiInfrastructure {
 
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
             if (ssl) {
                 RestApi(
-                        port,
-                        basePath,
-                        sslCertificate,
-                        sslCertificatePassword)
+                    port,
+                    basePath,
+                    sslCertificate,
+                    sslCertificatePassword)
             } else {
                 RestApi(
-                        port,
-                        basePath)
+                    port,
+                    basePath)
             }
         } else {
             null

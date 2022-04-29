@@ -4,11 +4,11 @@ package net.postchain.gtx
 
 import mu.KLogging
 import net.postchain.common.BlockchainRid
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper.privKey
+import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
-import net.postchain.devtools.KeyPairHelper.privKey
-import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
@@ -69,7 +69,7 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
         }
         var total = 0
         val module = GTXTestModule()
-        val cs = SECP256K1CryptoSystem()
+        val cs = Secp256K1CryptoSystem()
         val txFactory = GTXTransactionFactory(dummyBcRid ,module, cs)
         val nanoDelta = measureNanoTime {
             for (rawTx in transactions) {
@@ -88,7 +88,7 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
         }
         var total = 0
         val module = GTXTestModule()
-        val cs = SECP256K1CryptoSystem()
+        val cs = Secp256K1CryptoSystem()
         val txFactory = GTXTransactionFactory(dummyBcRid ,module, cs)
         val nanoDelta = measureNanoTime {
             for (rawTx in transactions) {

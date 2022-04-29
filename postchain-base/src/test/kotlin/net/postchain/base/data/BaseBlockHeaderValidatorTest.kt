@@ -5,7 +5,7 @@ import assertk.assertions.isEqualTo
 import net.postchain.base.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
-import net.postchain.core.InitialBlockData
+import net.postchain.core.block.InitialBlockData
 import net.postchain.core.ValidationResult
 import org.junit.jupiter.api.Test
 

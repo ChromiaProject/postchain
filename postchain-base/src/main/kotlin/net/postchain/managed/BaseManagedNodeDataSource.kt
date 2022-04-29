@@ -5,7 +5,7 @@ package net.postchain.managed
 import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BlockQueries
+import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.core.NodeRid

@@ -6,10 +6,12 @@ import mu.KLogging
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
+import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.debug.BlockTrace
-import net.postchain.debug.BlockchainProcessName
+import net.postchain.core.block.*
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import nl.komponents.kovenant.task
@@ -24,12 +26,12 @@ const val LOG_STATS = true // Was this the reason this entire class was muted?
  * Usually we don't log single (successful) transactions, not even at trace level.
  */
 open class BaseBlockchainEngine(
-        private val processName: BlockchainProcessName,
-        private val blockchainConfiguration: BlockchainConfiguration,
-        val storage: Storage,
-        private val chainID: Long,
-        private val transactionQueue: TransactionQueue,
-        private val useParallelDecoding: Boolean = true
+    private val processName: BlockchainProcessName,
+    private val blockchainConfiguration: BlockchainConfiguration,
+    val storage: Storage,
+    private val chainID: Long,
+    private val transactionQueue: TransactionQueue,
+    private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
     companion object : KLogging()
@@ -135,8 +137,8 @@ open class BaseBlockchainEngine(
     }
 
     private fun loadUnfinishedBlockImpl(
-            block: BlockData,
-            transactionsDecoder: (List<ByteArray>) -> List<Transaction>
+        block: BlockData,
+        transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
 
         val grossStart = System.nanoTime()
@@ -261,11 +263,11 @@ open class BaseBlockchainEngine(
     // -----------------
 
     private fun prettyBlockHeader(
-            blockHeader: BlockHeader,
-            acceptedTxs: Int,
-            rejectedTxs: Int,
-            gross: Pair<Long, Long>,
-            net: Pair<Long, Long>
+        blockHeader: BlockHeader,
+        acceptedTxs: Int,
+        rejectedTxs: Int,
+        gross: Pair<Long, Long>,
+        net: Pair<Long, Long>
     ): String {
 
         val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first, 1)

@@ -3,14 +3,17 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.crypto.CryptoSystem
-import net.postchain.crypto.SigMaker
 import net.postchain.base.*
+import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.*
-import net.postchain.common.BlockchainRid
+import net.postchain.core.block.*
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -36,20 +39,20 @@ import java.util.*
  * @property maxBlockTransactions
  */
 open class BaseBlockBuilder(
-        blockchainRID: BlockchainRid,
-        val cryptoSystem: CryptoSystem,
-        eContext: EContext,
-        store: BlockStore,
-        txFactory: TransactionFactory,
-        val specialTxHandler: SpecialTransactionHandler,
-        val subjects: Array<ByteArray>,
-        val blockSigMaker: SigMaker,
-        override val blockWitnessProvider: BlockWitnessProvider,
-        val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
-        val extensions: List<BaseBlockBuilderExtension>,
-        val usingHistoricBRID: Boolean,
-        val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
-        val maxBlockTransactions: Long = 100
+    blockchainRID: BlockchainRid,
+    val cryptoSystem: CryptoSystem,
+    eContext: EContext,
+    store: BlockStore,
+    txFactory: TransactionFactory,
+    val specialTxHandler: SpecialTransactionHandler,
+    val subjects: Array<ByteArray>,
+    val blockSigMaker: SigMaker,
+    override val blockWitnessProvider: BlockWitnessProvider,
+    val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
+    val extensions: List<BaseBlockBuilderExtension>,
+    val usingHistoricBRID: Boolean,
+    val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
+    val maxBlockTransactions: Long = 100
 ): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory) {
 
     companion object : KLogging()

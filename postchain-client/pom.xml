@@ -26,13 +26,7 @@
         <!-- Postchain -->
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>*</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
+            <artifactId>postchain-common</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -40,8 +34,9 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-common</artifactId>
+            <artifactId>postchain-gtxdata</artifactId>
         </dependency>
+
 
         <!-- Tools -->
         <dependency>

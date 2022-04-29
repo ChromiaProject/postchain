@@ -3,16 +3,16 @@
 package net.postchain.containers.infra
 
 import net.postchain.PostchainContext
+import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
+import net.postchain.core.block.BlockchainProcessName
 import java.nio.file.Path
 
 
@@ -26,12 +26,12 @@ open class DefaultMasterSyncInfra(
      * We create a new [MasterCommunicationManager] for every new BC process we make.
      */
     override fun makeMasterBlockchainProcess(
-            processName: BlockchainProcessName,
-            chainId: Long,
-            blockchainRid: BlockchainRid,
-            dataSource: DirectoryDataSource,
-            targetContainer: PostchainContainer,
-            containerChainDir: Path
+        processName: BlockchainProcessName,
+        chainId: Long,
+        blockchainRid: BlockchainRid,
+        dataSource: DirectoryDataSource,
+        targetContainer: PostchainContainer,
+        containerChainDir: Path
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(

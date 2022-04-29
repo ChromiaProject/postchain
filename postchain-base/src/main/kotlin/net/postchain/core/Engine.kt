@@ -3,7 +3,8 @@
 package net.postchain.core
 
 import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
+import net.postchain.core.*
+import net.postchain.core.block.*
 import net.postchain.debug.DiagnosticProperty
 
 interface Shutdownable {

@@ -3,7 +3,12 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.core.*
+import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.tx.TransactionResult
+import net.postchain.common.tx.TransactionStatus
+import net.postchain.core.TransactionQueue
+import net.postchain.core.Transaction
 import java.util.concurrent.LinkedBlockingQueue
 
 class ComparableTransaction(val tx: Transaction) {

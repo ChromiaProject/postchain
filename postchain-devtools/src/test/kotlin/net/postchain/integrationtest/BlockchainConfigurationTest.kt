@@ -4,8 +4,8 @@ package net.postchain.integrationtest
 
 import net.postchain.common.BlockchainRid
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
-import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXDataBuilder

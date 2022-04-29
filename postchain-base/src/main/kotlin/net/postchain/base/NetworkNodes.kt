@@ -3,9 +3,9 @@
 package net.postchain.base
 
 import mu.KLogging
+import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.core.ByteArrayKey
-import net.postchain.core.UserMistake
 import net.postchain.core.NodeRid
 
 /**

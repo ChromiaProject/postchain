@@ -3,19 +3,18 @@
 package net.postchain.configurations
 
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.core.EContext
-import net.postchain.core.TxEContext
-import net.postchain.core.UserMistake
+import net.postchain.gtx.GTXSchemaManager
+import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.ExtOpData
 import net.postchain.gtx.GTXOperation
-import net.postchain.gtx.GTXSchemaManager
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.core.EContext
+import net.postchain.core.TxEContext
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
-import java.lang.Exception
 
 // TODO: [POS-128]: Refactor this
 
