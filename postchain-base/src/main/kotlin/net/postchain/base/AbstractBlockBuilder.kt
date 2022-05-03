@@ -15,6 +15,10 @@ import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.debug.BlockTrace
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /**
  * The abstract block builder has only a vague concept about the core procedures of a block builder, for example:
@@ -29,7 +33,8 @@ abstract class AbstractBlockBuilder(
         val ectx: EContext,               // a general DB context (use bctx when possible)
         val blockchainRID: BlockchainRid, // is the RID of the chain
         val store: BlockStore,
-        val txFactory: TransactionFactory // Used for serializing transaction data
+        val txFactory: TransactionFactory, // Used for serializing transaction data
+        private val maxTxExecutionTime: Long
 ) : BlockBuilder, TxEventSink {
 
     companion object: KLogging()
@@ -109,7 +114,8 @@ abstract class AbstractBlockBuilder(
         }
         // In case of errors, tx.apply may either return false or throw UserMistake
         TimeLog.startSum("AbstractBlockBuilder.appendTransaction().apply")
-        if (tx.apply(txctx)) {
+
+        if (applyTransaction(tx, txctx)) {
             txctx.done()
             transactions.add(tx)
             rawTransactions.add(tx.getRawData())
@@ -117,6 +123,24 @@ abstract class AbstractBlockBuilder(
             throw TransactionFailed("Transaction ${tx.getRID().toHex()} failed")
         }
         TimeLog.end("AbstractBlockBuilder.appendTransaction().apply")
+    }
+
+    private fun applyTransaction(tx: Transaction, txctx: TxEContext): Boolean {
+        return if (maxTxExecutionTime > 0) {
+            try {
+                CompletableFuture.supplyAsync { tx.apply(txctx) }
+                        .orTimeout(maxTxExecutionTime, TimeUnit.MILLISECONDS)
+                        .get()
+            } catch (e: ExecutionException) {
+                throw if (e.cause is TimeoutException) {
+                    TransactionFailed("Transaction failed to execute within given time constraint: $maxTxExecutionTime ms")
+                } else {
+                    e
+                }
+            }
+        } else {
+            tx.apply(txctx)
+        }
     }
 
     /**

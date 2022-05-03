@@ -187,10 +187,6 @@ open class BaseBlockchainEngine(
             val abstractBlockBuilder = ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
             val netStart = System.nanoTime()
 
-            // TODO Potential problem: if the block fails for some reason,
-            // the transaction queue is gone. This could potentially happen
-            // during a revolt. We might need a "transactional" tx queue...
-
             TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendTransactions")
             var acceptedTxs = 0
             var rejectedTxs = 0
