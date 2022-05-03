@@ -51,6 +51,7 @@ interface TransactionQueue {
     fun removeAll(transactionsToRemove: Collection<Transaction>)
     fun rejectTransaction(tx: Transaction, reason: Exception?)
     fun getRejectionReason(txRID: ByteArrayKey): Exception?
+    fun retryAllTakenTransactions()
 }
 
 

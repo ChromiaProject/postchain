@@ -87,6 +87,7 @@ class BaseBlockDatabase(
         logger.trace{ "maybeRollback() node: $nodeIndex." }
         if (blockBuilder != null) {
             logger.debug{ "maybeRollback() node: $nodeIndex, blockBuilder is not null." }
+            engine.getTransactionQueue().retryAllTakenTransactions()
         }
         blockBuilder?.rollback()
         blockBuilder = null

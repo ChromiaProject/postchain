@@ -49,8 +49,9 @@ open class BaseBlockBuilder(
         val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
         val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
-        val maxBlockTransactions: Long = 100
-): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory) {
+        val maxBlockTransactions: Long = 100,
+        maxTxExecutionTime: Long = 0
+): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
 
     companion object : KLogging()
 
