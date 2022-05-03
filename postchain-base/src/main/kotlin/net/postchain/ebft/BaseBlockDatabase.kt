@@ -4,6 +4,8 @@ package net.postchain.ebft
 
 import mu.KLogging
 import net.postchain.common.toHex
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.*
 import net.postchain.crypto.Signature
 import net.postchain.debug.BlockTrace
