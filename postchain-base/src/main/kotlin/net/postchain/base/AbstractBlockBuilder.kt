@@ -10,6 +10,10 @@ import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.OK
 import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.TransactionFailed
+import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.UserMistake
 import net.postchain.debug.BlockTrace
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
@@ -97,7 +101,7 @@ abstract class AbstractBlockBuilder(
         // a meaningful error message to log.
         TimeLog.startSum("AbstractBlockBuilder.appendTransaction().isCorrect")
         if (!tx.isCorrect()) {
-            throw UserMistake("Transaction ${tx.getRID().toHex()} is not correct")
+            throw TransactionIncorrect("Transaction ${tx.getRID().toHex()} is not correct")
         }
         TimeLog.end("AbstractBlockBuilder.appendTransaction().isCorrect")
         val txctx: TxEContext
@@ -121,7 +125,7 @@ abstract class AbstractBlockBuilder(
             transactions.add(tx)
             rawTransactions.add(tx.getRawData())
         } else {
-            throw UserMistake("Transaction ${tx.getRID().toHex()} failed")
+            throw TransactionFailed("Transaction ${tx.getRID().toHex()} failed")
         }
         TimeLog.end("AbstractBlockBuilder.appendTransaction().apply")
     }
@@ -249,3 +253,4 @@ abstract class AbstractBlockBuilder(
         }
     }
 }
+
