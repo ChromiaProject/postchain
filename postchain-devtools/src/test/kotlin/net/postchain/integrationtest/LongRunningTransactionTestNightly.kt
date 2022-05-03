@@ -17,7 +17,7 @@ class LongRunningTransactionTestNightly : IntegrationTestSetup() {
     fun `Long running tx should be accepted eventually`() {
         val nodes = createNodes(3, "/net/postchain/devtools/long_running/blockchain_config.xml")
 
-        val delayedTx = DelayedTransaction(0, 15_000)
+        val delayedTx = DelayedTransaction(0, 11_000)
         buildBlock(1L, 0, delayedTx)
         nodes.forEach {
             val txsInBlock = getTxRidsAtHeight(it, 0)

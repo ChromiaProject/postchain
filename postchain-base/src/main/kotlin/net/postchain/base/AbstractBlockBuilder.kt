@@ -115,12 +115,7 @@ abstract class AbstractBlockBuilder(
         // In case of errors, tx.apply may either return false or throw UserMistake
         TimeLog.startSum("AbstractBlockBuilder.appendTransaction().apply")
 
-        val txSuccessful = if (maxTxExecutionTime > 0) {
-            applyTransactionAsync(tx, txctx)
-        } else {
-            tx.apply(txctx)
-        }
-        if (txSuccessful) {
+        if (applyTransaction(tx, txctx)) {
             txctx.done()
             transactions.add(tx)
             rawTransactions.add(tx.getRawData())
@@ -130,17 +125,21 @@ abstract class AbstractBlockBuilder(
         TimeLog.end("AbstractBlockBuilder.appendTransaction().apply")
     }
 
-    private fun applyTransactionAsync(tx: Transaction, txctx: TxEContext): Boolean {
-        return try {
-            CompletableFuture.supplyAsync { tx.apply(txctx) }
-                    .orTimeout(maxTxExecutionTime, TimeUnit.MILLISECONDS)
-                    .get()
-        } catch (e: ExecutionException) {
-            throw if (e.cause is TimeoutException) {
-                UserMistake("Transaction failed to execute within given time constraint: $maxTxExecutionTime ms")
-            } else {
-                e
+    private fun applyTransaction(tx: Transaction, txctx: TxEContext): Boolean {
+        return if (maxTxExecutionTime > 0) {
+            try {
+                CompletableFuture.supplyAsync { tx.apply(txctx) }
+                        .orTimeout(maxTxExecutionTime, TimeUnit.MILLISECONDS)
+                        .get()
+            } catch (e: ExecutionException) {
+                throw if (e.cause is TimeoutException) {
+                    TransactionFailed("Transaction failed to execute within given time constraint: $maxTxExecutionTime ms")
+                } else {
+                    e
+                }
             }
+        } else {
+            tx.apply(txctx)
         }
     }
 
