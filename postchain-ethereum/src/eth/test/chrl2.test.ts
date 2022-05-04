@@ -250,7 +250,7 @@ describe("ChrL2", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "E131830FA40F717D6F10B5C6B0C5CDFF808B20482D5D1FB47143DD2B67B9DB63"
+                let extraDataMerkleRoot = "5E8FEB8B6241A5247309A196B837701F707BEAE4AF36B3DE05B27E331A4DA2B4"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
@@ -390,7 +390,7 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length))
                     ], 
                     el2Proof)
-                ).to.be.revertedWith('ChrL2: block signature is invalid')
+                ).to.be.revertedWith('Postchain: duplicate signature')
 
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),

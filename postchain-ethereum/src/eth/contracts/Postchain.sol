@@ -52,10 +52,13 @@ library Postchain {
     function isValidSignatures(bytes32 hash, bytes[] memory signatures, address[] memory signers) internal pure returns (bool) {
         uint _actualSignature = 0;
         uint _requiredSignature = _calculateBFTRequiredNum(signers.length);
+        address _lastSigner = address(0);
         for (uint i = 0; i < signatures.length; i++) {
             for (uint k = 0; k < signers.length; k++) {
                 if (_isValidSignature(hash, signatures[i], signers[k])) {
                     _actualSignature++;
+                    require(signers[k] > _lastSigner, "Postchain: duplicate signature");
+                    _lastSigner = signers[k];
                     break;
                 }
             }
