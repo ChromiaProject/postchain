@@ -185,8 +185,8 @@ private fun blockWitnessData(
     val witness = BaseBlockWitness.fromBytes(db.getWitnessData(ctx, blockRid)) as MultiSigBlockWitness
     var sigs = listOf<Gtv>()
     val signatures = witness.getSignatures()
-        for (s in signatures) {
-            sigs = sigs.plus(gtv(
+    for (s in signatures) {
+        sigs = sigs.plus(gtv(
             "sig" to GtvByteArray(encodeSignatureWithV(blockRid, s.subjectID, s.data)),
             "pubkey" to GtvByteArray(getEthereumAddress(s.subjectID))
             )

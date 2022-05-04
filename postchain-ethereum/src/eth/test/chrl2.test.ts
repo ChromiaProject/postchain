@@ -15,13 +15,13 @@ describe("ChrL2", () => {
     let tokenAddress: string;
     let chrL2Address: string;
     let testDelegatorAddress: string;
-    let directoryNodes: SignerWithAddress;
-    let appNode1: SignerWithAddress;
-    let appNode2: SignerWithAddress;
+    let admin: SignerWithAddress;
+    let validator1: SignerWithAddress;
+    let validator2: SignerWithAddress;
 
     beforeEach(async () => {
         const [deployer] = await ethers.getSigners()
-        ;[directoryNodes, appNode1, appNode2] = await ethers.getSigners()
+        ;[admin, validator1, validator2] = await ethers.getSigners()
         const tokenFactory = new TestToken__factory(deployer)
         const tokenContract = await tokenFactory.deploy()
         tokenAddress = tokenContract.address
@@ -31,8 +31,8 @@ describe("ChrL2", () => {
         const testDelegator = await testDelegatorFactory.deploy()
         testDelegatorAddress = testDelegator.address;
 
-        const chrl2Factory = new ChrL2__factory(directoryNodes)
-        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[appNode1.address, appNode2.address]])
+        const chrl2Factory = new ChrL2__factory(admin)
+        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[validator1.address, validator2.address]])
         chrL2Address = chrl2Instance.address
     });
 
@@ -141,19 +141,18 @@ describe("ChrL2", () => {
     describe("Nodes", async () => {
         it("Update app node(s) successfully", async () => {
             const [node1, node2, node3, other] = await ethers.getSigners()
-            const chrL2Instance = new ChrL2__factory(directoryNodes).attach(chrL2Address)
+            const chrL2Instance = new ChrL2__factory(admin).attach(chrL2Address)
             const otherChrL2Instance = new ChrL2__factory(other).attach(chrL2Address)
-            let nodes = [
-                node1.address, 
-                node2.address, 
-                node3.address
-            ]
-            await expect(otherChrL2Instance.updateAppNodes(nodes)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(otherChrL2Instance.addValidator(node1.address)).to.be.revertedWith("Ownable: caller is not the owner")
             // Update App Nodes
-            await chrL2Instance.updateAppNodes(nodes)
-            expect(await chrL2Instance.appNodes(0)).to.eq(node1.address)
-            expect(await chrL2Instance.appNodes(1)).to.eq(node2.address)
-            expect(await chrL2Instance.appNodes(2)).to.eq(node3.address)
+            await chrL2Instance.removeValidator(validator1.address)
+            await chrL2Instance.removeValidator(validator2.address)
+            await chrL2Instance.addValidator(node1.address)
+            await chrL2Instance.addValidator(node2.address)
+            await chrL2Instance.addValidator(node3.address)
+            expect(await chrL2Instance.validators(0)).to.eq(node1.address)
+            expect(await chrL2Instance.validators(1)).to.eq(node2.address)
+            expect(await chrL2Instance.validators(2)).to.eq(node3.address)
         })
     })
 
@@ -283,8 +282,8 @@ describe("ChrL2", () => {
                                     extraDataMerkleRoot
                 )
 
-                let sig1 = await appNode1.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
-                let sig2 = await appNode2.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
+                let sig1 = await validator1.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
+                let sig2 = await validator2.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
                 let merkleProof = [
                                     DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
                                     DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")
@@ -428,7 +427,7 @@ describe("ChrL2", () => {
                 let hashEvent = DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length))
 
                 // directoryNode can update withdraw request status to pending (emergency case)
-                let directoryNode = new ChrL2__factory(directoryNodes).attach(chrL2Address)
+                let directoryNode = new ChrL2__factory(admin).attach(chrL2Address)
                 await directoryNode.pendingWithdraw(hashEvent)
 
                 // then user cannot withdraw the fund

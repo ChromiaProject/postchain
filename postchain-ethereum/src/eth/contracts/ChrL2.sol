@@ -56,7 +56,8 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
     mapping(IERC721 => mapping(uint256 => address)) public _owners;
     mapping (bytes32 => Withdraw) public _withdraw;
     mapping (bytes32 => WithdrawNFT) public _withdrawNFT;
-    address[] public appNodes;
+    mapping(address => bool) validatorMap;
+    address[] public validators;
 
     // Each postchain event will be used to claim only one time.
     mapping (bytes32 => bool) private _events;
@@ -93,6 +94,8 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         Status status;
     }
 
+    event ValidatorAdded(address indexed _validator);
+    event ValidatorRemoved(address indexed _validator);
     event Deposited(AssetType indexed asset, bytes payload);
     event WithdrawRequest(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
@@ -106,11 +109,43 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         _;
     }
 
-    function initialize(address[] memory _appNodes) public initializer {
+    function initialize(address[] memory _validators) public initializer {
         __Ownable_init();
-        appNodes = _appNodes;
+        validators = _validators;
+
+        for (uint i = 0; i < validators.length; i++) {
+            validatorMap[validators[i]] = true;
+        }
+    }
+    
+    function isValidator(address _addr) public view returns (bool) {
+        return validatorMap[_addr];
+    }
+    
+    function addValidator(address _validator) external onlyOwner {
+        require(!validatorMap[_validator]);
+        validators.push(_validator);
+        validatorMap[_validator] = true;
+        emit ValidatorAdded(_validator);
     }
 
+    function removeValidator(address _validator) external onlyOwner {
+        require(isValidator(_validator));
+        uint index;
+        uint validatorCount = validators.length;
+        for (uint i = 0; i < validatorCount; i++) {
+            if (validators[i] == _validator) {
+                index = i;
+                break;
+            }
+        }
+
+        validatorMap[_validator] = false;
+        validators[index] = validators[validatorCount - 1];
+        validators.pop();
+
+        emit ValidatorRemoved(_validator);
+  }
     /**
      * @dev See {IERC721Receiver-onERC721Received}.
      *
@@ -123,14 +158,6 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         bytes memory
     ) public virtual override returns (bytes4) {
         return this.onERC721Received.selector;
-    }
-
-    function updateAppNodes(address[] memory _appNodes) onlyOwner public returns (bool) {
-        for (uint i = 0; i < appNodes.length; i++) {
-            appNodes.pop();
-        }
-        appNodes = _appNodes;
-        return true;
     }
 
     function triggerMassExit(uint height, bytes32 blockRid) onlyOwner public {
@@ -268,7 +295,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
         {
             (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
-            if (!Postchain.isValidSignatures(blockRid, sigs, appNodes)) revert("ChrL2: block signature is invalid");
+            if (!Postchain.isValidSignatures(blockRid, sigs, validators)) revert("ChrL2: block signature is invalid");
             if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("ChrL2: invalid merkle proof");
         }
         return;
@@ -347,7 +374,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         (bytes32 blockRid, , bytes32 stateRoot) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
         require(blockRid == massExitBlock.blockRid, "ChrL2: account state block rid should equal to mass exit block rid");
         require(account.blockHeight <= massExitBlock.height, "ChrL2: account state number should less than or equal to mass exit block");
-        if (!Postchain.isValidSignatures(blockRid, sigs, appNodes)) revert("ChrL2: block signature is invalid");
+        if (!Postchain.isValidSignatures(blockRid, sigs, validators)) revert("ChrL2: block signature is invalid");
         if (!MerkleProof.verify(stateProofs, stateHash, account.accountNumber, stateRoot)) revert("ChrL2: invalid merkle proof");
 
         address beneficiary = abi.decode(snapshot[:32], (address));
