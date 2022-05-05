@@ -263,26 +263,34 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         return true;
     }
 
+    /**
+     * @dev signers should be order ascending
+     */
     function withdrawRequest(
         bytes memory _event,
         Data.EventProof memory eventProof,
         bytes memory blockHeader,
         bytes[] memory sigs,
+        address[] memory signers,
         Data.EL2ProofData memory el2Proof
-    ) public nonReentrant {
-        _withdrawRequest(eventProof, blockHeader, sigs, el2Proof);
+    ) external nonReentrant {
+        _withdrawRequest(eventProof, blockHeader, sigs, signers, el2Proof);
         _events[eventProof.leaf] = _updateWithdraw(eventProof.leaf, _event); // mark the event hash was already used.
     }
 
+    /**
+     * @dev signers should be order ascending
+     */
     function withdrawRequestNFT(
         bytes memory _event,
         Data.EventProof memory eventProof,
         bytes memory blockHeader,
         bytes[] memory sigs,
+        address[] memory signers,
         Data.EL2ProofData memory el2Proof
-    ) public nonReentrant {
+    ) external nonReentrant {
 
-        _withdrawRequest(eventProof, blockHeader, sigs, el2Proof);
+        _withdrawRequest(eventProof, blockHeader, sigs, signers, el2Proof);
         _events[eventProof.leaf] = _updateWithdrawNFT(eventProof.leaf, _event); // mark the event hash was already used.
     }
 
@@ -290,12 +298,13 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         Data.EventProof memory eventProof,
         bytes memory blockHeader,
         bytes[] memory sigs,
+        address[] memory signers,
         Data.EL2ProofData memory el2Proof
     ) internal view {
         require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
         {
             (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
-            if (!Postchain.isValidSignatures(blockRid, sigs, validators)) revert("ChrL2: block signature is invalid");
+            if (!Postchain.isValidSignatures(blockRid, sigs, signers, validators.length)) revert("ChrL2: block signature is invalid");
             if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("ChrL2: invalid merkle proof");
         }
         return;
@@ -367,6 +376,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         bytes32[] memory stateProofs,
         bytes memory blockHeader,
         bytes[] memory sigs,
+        address[] memory signers,
         Data.EL2ProofData memory el2Proof
     ) whenMassExit nonReentrant public  {
         bytes32 stateHash = keccak256(abi.encodePacked(snapshot));
@@ -374,7 +384,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         (bytes32 blockRid, , bytes32 stateRoot) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
         require(blockRid == massExitBlock.blockRid, "ChrL2: account state block rid should equal to mass exit block rid");
         require(account.blockHeight <= massExitBlock.height, "ChrL2: account state number should less than or equal to mass exit block");
-        if (!Postchain.isValidSignatures(blockRid, sigs, validators)) revert("ChrL2: block signature is invalid");
+        if (!Postchain.isValidSignatures(blockRid, sigs, signers, validators.length)) revert("ChrL2: block signature is invalid");
         if (!MerkleProof.verify(stateProofs, stateHash, account.accountNumber, stateRoot)) revert("ChrL2: invalid merkle proof");
 
         address beneficiary = abi.decode(snapshot[:32], (address));

@@ -337,6 +337,7 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
+                    [validator1.address, validator2.address],
                     el2Proof)
                 ).to.be.revertedWith('Postchain: invalid event')
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
@@ -345,6 +346,7 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
+                    [validator1.address, validator2.address],
                     invalidEl2Leaf)
                 ).to.be.revertedWith('Postchain: invalid el2 extra data')
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
@@ -353,6 +355,7 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
+                    [validator1.address, validator2.address],
                     invalidExtraDataRoot)
                 ).to.be.revertedWith('Postchain: invalid extra data root')
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
@@ -361,6 +364,7 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
+                    [validator1.address, validator2.address],
                     el2Proof)
                 ).to.be.revertedWith('Postchain: invalid block header')
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
@@ -369,6 +373,7 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
+                    [validator1.address, validator2.address],
                     maliciousEl2Proof)
                 ).to.be.revertedWith('Postchain: invalid el2 extra merkle proof')
                 await expect(chrL2Instance.withdrawRequest(data, maliciousEventProof,
@@ -377,11 +382,12 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
+                    [validator1.address, validator2.address],
                     el2Proof)
                 ).to.be.revertedWith('ChrL2: invalid merkle proof')
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [], el2Proof)
+                    [], [], el2Proof)
                 ).to.be.revertedWith('ChrL2: block signature is invalid')
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
@@ -389,15 +395,25 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length))
                     ], 
+                    [validator1.address, validator2.address],
                     el2Proof)
-                ).to.be.revertedWith('Postchain: duplicate signature')
-
+                ).to.be.revertedWith('Postchain: duplicate signature or signers is out of order')
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                    DecodeHexStringToByteArray(blockHeader),
+                    [
+                        DecodeHexStringToByteArray(sig2.substring(2, sig2.length)), 
+                        DecodeHexStringToByteArray(sig1.substring(2, sig1.length))
+                    ], 
+                    [validator2.address, validator1.address],
+                    el2Proof)
+                ).to.be.revertedWith('Postchain: duplicate signature or signers is out of order')
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
+                    [validator1.address, validator2.address],
                     el2Proof)
                 ).to.emit(chrL2Instance, "WithdrawRequest")
                 .withArgs(user.address, tokenAddress, toDeposit)
@@ -408,6 +424,7 @@ describe("ChrL2", () => {
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
+                    [validator1.address, validator2.address],
                     el2Proof)
                 ).to.be.revertedWith('ChrL2: event hash was already used')
 

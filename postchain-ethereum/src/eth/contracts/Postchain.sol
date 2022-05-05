@@ -49,15 +49,15 @@ library Postchain {
         return _nodes.root() == hash;
     }
 
-    function isValidSignatures(bytes32 hash, bytes[] memory signatures, address[] memory signers) internal pure returns (bool) {
+    function isValidSignatures(bytes32 hash, bytes[] memory signatures, address[] memory signers, uint n) internal pure returns (bool) {
         uint _actualSignature = 0;
-        uint _requiredSignature = _calculateBFTRequiredNum(signers.length);
+        uint _requiredSignature = _calculateBFTRequiredNum(n);
         address _lastSigner = address(0);
         for (uint i = 0; i < signatures.length; i++) {
             for (uint k = 0; k < signers.length; k++) {
                 if (_isValidSignature(hash, signatures[i], signers[k])) {
                     _actualSignature++;
-                    require(signers[k] > _lastSigner, "Postchain: duplicate signature");
+                    require(signers[k] > _lastSigner, "Postchain: duplicate signature or signers is out of order");
                     _lastSigner = signers[k];
                     break;
                 }
