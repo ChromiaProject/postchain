@@ -21,7 +21,7 @@ open class SubNodeBlockchainProcessManager(
     protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
     protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
 
-    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration):  (Long, () -> Boolean) -> Boolean {
+    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): suspend (Long, () -> Boolean) -> Boolean {
         return if (!heartbeatConfig.remoteConfigEnabled) {
             { _, _ -> true }
         } else {

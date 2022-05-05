@@ -270,8 +270,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         return CoroutineScope(Dispatchers.Default).launch {
             messageFlow.collect {
                 // We do heartbeat check for each network message
-                while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
-                    delay(workerContext.nodeConfig.heartbeatSleepTimeout)
+                if (!workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
+                    // This job will be cancelled
+                    return@collect
                 }
 
                 synchronizer.processMessage(it)

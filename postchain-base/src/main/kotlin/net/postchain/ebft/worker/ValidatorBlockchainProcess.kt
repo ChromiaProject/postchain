@@ -90,8 +90,9 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
             workerContext.communicationManager.messages
                     .collect {
                         // We do heartbeat check for each network message.
-                        while (!workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
-                            delay(workerContext.nodeConfig.heartbeatSleepTimeout)
+                        if (!workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
+                            // This job will be cancelled
+                            return@collect
                         }
 
                         syncManager.dispatchMessage(it)
@@ -102,10 +103,12 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
-        // The name awaitPermissionToProcessMessages is kind of misleading now
-        if (workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
-            syncManager.update()
-            sleep(20)
+        runBlocking {
+            // The name awaitPermissionToProcessMessages is kind of misleading now
+            if (workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
+                syncManager.update()
+                sleep(20)
+            }
         }
     }
 

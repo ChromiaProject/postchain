@@ -148,7 +148,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         try {
             blockHeight = blockQueries.getBestHeight().get()
             syncDebug("Start", blockHeight)
-            lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
                 processDoneJobs()

@@ -1,15 +1,15 @@
 package net.postchain.ebft.heartbeat
 
-import java.lang.Thread.sleep
+import kotlinx.coroutines.delay
 
 
-fun awaitHeartbeatHandler(hbListener: HeartbeatListener, heartbeatConfig: HeartbeatConfig): (Long, () -> Boolean) -> Boolean {
+fun awaitHeartbeatHandler(hbListener: HeartbeatListener, heartbeatConfig: HeartbeatConfig): suspend (Long, () -> Boolean) -> Boolean {
     return hbCheck@{ timestamp, exitCondition ->
         while (!hbListener.checkHeartbeat(timestamp)) {
             if (exitCondition()) {
                 return@hbCheck false
             }
-            sleep(heartbeatConfig.sleepTimeout)
+            delay(heartbeatConfig.sleepTimeout)
         }
         true
     }

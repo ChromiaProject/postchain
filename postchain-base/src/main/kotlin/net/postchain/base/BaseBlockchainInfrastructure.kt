@@ -91,7 +91,7 @@ open class BaseBlockchainInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+            awaitPermissionToProcessMessages: suspend (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)

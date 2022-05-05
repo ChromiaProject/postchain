@@ -119,7 +119,7 @@ open class ManagedBlockchainProcessManager(
     protected open fun createDataSource(blockQueries: BlockQueries) =
             BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
 
-    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
+    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): suspend (Long, () -> Boolean) -> Boolean {
         return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {
             { _, _ -> true }
         } else {

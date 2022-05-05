@@ -35,7 +35,7 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+            awaitPermissionToProcessMessages: suspend (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
         val currentNodeConfig = nodeConfig
@@ -48,7 +48,7 @@ open class EBFTSynchronizationInfrastructure(
             )
         } else null
 
-        val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig, blockchainConfig, historicBlockchainContext)
+        val peerCommConfiguration = peersCommConfigFactory.create(nodeConfig.appConfig, nodeConfig, blockchainConfig, historicBlockchainContext)
         val communicationManager = buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid)
 
         val blockMessageHandler = BlockMessageHandler(engine.getBlockQueries(), communicationManager)

@@ -23,7 +23,7 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val appConfig: AppConfig,
                     val nodeConfig: NodeConfig,
                     val blockMessageHandler: BlockMessageHandler,
-                    val awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+                    val awaitPermissionToProcessMessages: suspend (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
 ) {
     fun shutdown() {
         engine.shutdown()
