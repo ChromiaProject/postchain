@@ -14,6 +14,7 @@ import net.postchain.base.ConfirmationProof
 import net.postchain.base.cryptoSystem
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import org.junit.jupiter.api.AfterEach
