@@ -2,6 +2,9 @@
 
 package net.postchain.core
 
+import net.postchain.common.tx.TransactionResult
+import net.postchain.common.tx.TransactionStatus
+
 /**
  * Transactor is an individual operation which can be applied to the database
  * Transaction might consist of one or more operations
@@ -21,21 +24,6 @@ interface Transaction : Transactor {
     fun getRawData(): ByteArray
     fun getRID(): ByteArray  // transaction unique identifier which is used as a reference to it
     fun getHash(): ByteArray // hash of transaction content
-}
-
-enum class TransactionStatus(val status: String) {
-    UNKNOWN("unknown"),
-    WAITING("waiting"),
-    CONFIRMED("confirmed"),
-    REJECTED("rejected")
-}
-
-enum class TransactionResult(val code: Int) {
-    OK(0),
-    FULL(1),
-    DUPLICATE(2),
-    INVALID(3),
-    UNKNOWN(9999)
 }
 
 interface TransactionFactory {

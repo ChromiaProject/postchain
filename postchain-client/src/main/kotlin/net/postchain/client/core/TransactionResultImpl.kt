@@ -2,6 +2,6 @@
 
 package net.postchain.client.core
 
-import net.postchain.core.TransactionStatus
+import net.postchain.common.tx.TransactionStatus
 
 class TransactionResultImpl(override val status: TransactionStatus) : TransactionResult

@@ -5,7 +5,7 @@ package net.postchain.client.core
 import net.postchain.common.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.crypto.SigMaker
-import net.postchain.core.TransactionStatus
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtx.GTXDataBuilder

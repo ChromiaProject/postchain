@@ -2,15 +2,15 @@
 
 package net.postchain.client.core
 
+import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import mu.KLogging
-import net.postchain.api.rest.json.JsonFactory
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.TransactionStatus.*
+import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
@@ -36,7 +36,7 @@ class ConcretePostchainClient(
 
     companion object : KLogging()
 
-    private val gson = JsonFactory.makeJson()
+    private val gson = GsonBuilder().create()!! // We don't use any adapters b/c this is very simple
     private val serverUrl = resolver.getNodeURL(blockchainRID)
     private val httpClient = HttpClients.createDefault()
     private val blockchainRIDHex = blockchainRID.toHex()
