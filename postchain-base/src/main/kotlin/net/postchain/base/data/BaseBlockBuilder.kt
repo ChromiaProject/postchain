@@ -3,11 +3,14 @@
 package net.postchain.base.data
 
 import mu.KLogging
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.base.*
 import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.ValidationResult.Result.*
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -46,8 +49,9 @@ open class BaseBlockBuilder(
         val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
         val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
-        val maxBlockTransactions: Long = 100
-): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory) {
+        val maxBlockTransactions: Long = 100,
+        maxTxExecutionTime: Long = 0
+): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
 
     companion object : KLogging()
 

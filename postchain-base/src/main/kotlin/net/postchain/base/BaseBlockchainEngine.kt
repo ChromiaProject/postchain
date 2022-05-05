@@ -6,6 +6,8 @@ import mu.KLogging
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
+import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
@@ -115,7 +117,7 @@ open class BaseBlockchainEngine(
         }
 
         return if (tx.isCorrect()) tx
-        else throw UserMistake("Transaction is not correct")
+        else throw TransactionIncorrect("Transaction is not correct")
     }
 
     private fun sequentialLoadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
@@ -185,10 +187,6 @@ open class BaseBlockchainEngine(
             val abstractBlockBuilder = ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
             val netStart = System.nanoTime()
 
-            // TODO Potential problem: if the block fails for some reason,
-            // the transaction queue is gone. This could potentially happen
-            // during a revolt. We might need a "transactional" tx queue...
-
             TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendTransactions")
             var acceptedTxs = 0
             var rejectedTxs = 0
@@ -213,7 +211,7 @@ open class BaseBlockchainEngine(
                     if (txException != null) {
                         rejectedTxs++
                         transactionQueue.rejectTransaction(tx, txException)
-                        logger.warn { "Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}" }
+                        logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
                     } else {
                         acceptedTxs++
                         // tx is fine, consider stopping

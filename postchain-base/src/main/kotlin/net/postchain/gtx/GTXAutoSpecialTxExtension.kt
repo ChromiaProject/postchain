@@ -1,9 +1,9 @@
 package net.postchain.gtx
 
-import net.postchain.base.CryptoSystem
+import net.postchain.crypto.CryptoSystem
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.core.BlockEContext
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 

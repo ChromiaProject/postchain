@@ -10,7 +10,7 @@ import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder

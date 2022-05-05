@@ -1,7 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 interface DirectoryDataSource : ManagedNodeDataSource {
 

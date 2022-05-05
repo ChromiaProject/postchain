@@ -4,11 +4,12 @@ import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.ContainerInfo
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
-import net.postchain.config.node.NodeConfig
+import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.containers.infra.ContainerNodeConfig
 
 object ContainerConfigFactory {
 
-    fun createConfig(fs: FileSystem, nodeConfig: NodeConfig, container: PostchainContainer): ContainerConfig {
+    fun createConfig(fs: FileSystem, restApiConfig: RestApiConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
         // Container volumes
         val volumes = mutableListOf<HostConfig.Bind>()
 
@@ -35,7 +36,7 @@ object ContainerConfigFactory {
         volumes.add(targetVol)
 
         // pgdata volume
-        if (nodeConfig.containerBindPgdataVolume) {
+        if (containerNodeConfig.containerBindPgdataVolume) {
             val pgdataVol = HostConfig.Bind
                     .from(fs.hostPgdataOf(container.containerName).toString())
                     .to(fs.containerPgdataPath())
@@ -45,14 +46,14 @@ object ContainerConfigFactory {
 
         /**
          * Rest API port binding.
-         * If nodeConfig.restApiPort == -1 => no communication with API => no binding needed.
-         * If nodeConfig.restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
+         * If restApiConfig.restApiPort == -1 => no communication with API => no binding needed.
+         * If restApiConfig.restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
          * control here and know that it is always free.
          * DockerPort must be both node and container specific and cannot be -1 or 0 (at least not allowed in Ubuntu.)
          * Therefore, use random port selection
          */
-        val dockerPort = "${nodeConfig.subnodeRestApiPort}/tcp"
-        val portBindings = if (nodeConfig.restApiPort > -1) {
+        val dockerPort = "${containerNodeConfig.subnodeRestApiPort}/tcp"
+        val portBindings = if (restApiConfig.port > -1) {
             mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", container.restApiPort)))
         } else mapOf()
 
@@ -75,7 +76,7 @@ object ContainerConfigFactory {
                 .build()
 
         return ContainerConfig.builder()
-                .image(nodeConfig.containerImage)
+                .image(containerNodeConfig.containerImage)
                 .hostConfig(hostConfig)
                 .exposedPorts(dockerPort)
                 .build()

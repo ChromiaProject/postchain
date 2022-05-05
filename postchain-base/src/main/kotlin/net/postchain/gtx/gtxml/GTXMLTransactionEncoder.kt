@@ -2,11 +2,11 @@
 
 package net.postchain.gtx.gtxml
 
-import net.postchain.base.gtxml.ObjectFactory
-import net.postchain.base.gtxml.OperationsType
-import net.postchain.base.gtxml.SignaturesType
-import net.postchain.base.gtxml.SignersType
 import net.postchain.gtv.gtvml.GtvMLEncoder
+import net.postchain.gtv.gtxml.ObjectFactory
+import net.postchain.gtv.gtxml.OperationsType
+import net.postchain.gtv.gtxml.SignaturesType
+import net.postchain.gtv.gtxml.SignersType
 import net.postchain.gtx.GTXTransactionData
 import net.postchain.gtx.OpData
 import java.io.StringWriter

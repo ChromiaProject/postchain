@@ -4,22 +4,18 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.arguments.transformAll
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.client.AppConfig
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
+import net.postchain.client.PostchainClientConfig
 import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.DefaultSigner
-import net.postchain.client.core.GTXTransactionBuilder
-import net.postchain.client.core.PostchainClientFactory
-import net.postchain.common.hexStringToByteArray
+import net.postchain.client.core.PostchainClientProvider
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvInteger
-import net.postchain.gtv.GtvString
-import kotlin.text.Typography.quote
 
-class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
+class PostTxCommand(private val clientProvider: PostchainClientProvider) : CliktCommand(name = "post-tx", help = "Posts transactions to a postchain node") {
 
-    private val opName by argument(help = "name of the operation to execute")
+    private val opName by argument(help = "name of the operation to execute.")
 
     private val args by argument(help = "arguments to pass to the operation.", helpTags = mapOf(
             "integer" to "123",
@@ -35,60 +31,26 @@ class PostTxCommand : CliktCommand(name = "post-tx", help = "Posts tx") {
 
     private val configFile by configFileOption()
 
-    private val cryptoSystem = SECP256K1CryptoSystem()
+    private val awaitCompleted by option("--await", "-a", help = "Wait for transaction to be included in a block").flag()
+
+    private val cryptoSystem = Secp256K1CryptoSystem()
 
     override fun run() {
-        try {
-            val appConfig = AppConfig.fromProperties(configFile.absolutePath)
+        val config = PostchainClientConfig.fromProperties(configFile.absolutePath)
 
-            postTx(appConfig) {
-                it.addOperation(opName, *args.toTypedArray())
-            }
+        runInternal(config, awaitCompleted, opName, *args.toTypedArray())
 
-            println("Tx with the operation has been posted: $opName(${args.joinToString()})")
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        println("Tx with the operation has been posted: $opName(${args.joinToString()})")
     }
 
-    /**
-     * Encodes numbers as GtvInteger and strings as GtvString values
-     */
-    private fun encodeArg(arg: String): Gtv {
-        return when {
-            arg.startsWith("x\"") && arg.endsWith(quote) -> encodeByteArray(arg.substring(1))
-            arg.startsWith("[") && arg.endsWith("]") -> encodeArray(arg.trim('[', ']'))
-            arg.startsWith("{") && arg.endsWith("}") -> encodeDict(arg.trim('{', '}'))
-            else -> arg.toLongOrNull()?.let(::GtvInteger) ?: GtvString(arg.trim(quote))
-        }
-    }
-
-    private fun encodeByteArray(arg: String): Gtv {
-        val bytearray = arg.trim(quote)
-        return try {
-            gtv(bytearray.hexStringToByteArray())
-        } catch (e: IllegalArgumentException) {
-            gtv(bytearray.toByteArray())
-        }
-    }
-
-    private fun encodeArray(arg: String) = gtv(arg.split(",").map { encodeArg(it) })
-
-    private fun encodeDict(arg: String): Gtv {
-        val pairs = arg.split(",").map { it.split("=", limit = 2) }
-        return gtv(pairs.associateBy({ it[0] }, { encodeArg(it[1]) }))
-    }
-
-
-    private fun postTx(appConfig: AppConfig, addOperations: (GTXTransactionBuilder) -> Unit) {
-        val nodeResolver = PostchainClientFactory.makeSimpleNodeResolver(appConfig.apiUrl)
-        val sigMaker = cryptoSystem.buildSigMaker(appConfig.pubKeyByteArray, appConfig.privKeyByteArray)
-        val signer = DefaultSigner(sigMaker, appConfig.pubKeyByteArray)
-        val client = PostchainClientFactory.getClient(nodeResolver, appConfig.blockchainRid, signer)
-        val txBuilder = client.makeTransaction()
-        addOperations(txBuilder)
-        txBuilder.sign(sigMaker)
-        txBuilder.postSync(ConfirmationLevel.NO_WAIT)
+    internal fun runInternal(config: PostchainClientConfig, awaitConfirmation: Boolean, opName: String, vararg args: Gtv) {
+        val sigMaker = cryptoSystem.buildSigMaker(config.pubKeyByteArray, config.privKeyByteArray)
+        clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray))
+                .makeTransaction()
+                .apply {
+                    addOperation(opName, *args)
+                    sign(sigMaker)
+                    postSync(if (awaitConfirmation) ConfirmationLevel.UNVERIFIED else ConfirmationLevel.NO_WAIT)
+                }
     }
 }

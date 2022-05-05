@@ -2,9 +2,9 @@
 
 package net.postchain.gtx
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.core.Signature
+import net.postchain.crypto.Signature
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv

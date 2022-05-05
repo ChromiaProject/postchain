@@ -3,6 +3,8 @@
 package net.postchain.core
 
 import net.postchain.common.data.Hash
+import net.postchain.common.BlockchainRid
+import net.postchain.crypto.Signature
 import net.postchain.debug.BlockTrace
 import net.postchain.gtv.Gtv
 import nl.komponents.kovenant.Promise

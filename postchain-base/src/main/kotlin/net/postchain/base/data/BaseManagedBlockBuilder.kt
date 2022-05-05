@@ -5,6 +5,8 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.Storage
 import net.postchain.common.TimeLog
+import net.postchain.common.exception.TransactionFailed
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.debug.BlockTrace
@@ -84,11 +86,22 @@ class BaseManagedBlockBuilder(
         val exception = if (storage.isSavepointSupported()) {
             storage.withSavepoint(eContext, action).also {
                 if (it != null) {
-                    logger.info("Failed to append transaction ${tx.getRID().toHex()}", it)
+                    when (it) {
+                        is TransactionIncorrect -> logger.debug {
+                            "Tx Incorrect ${tx.getRID().toHex()}."
+                        }   // Don't log stacktrace
+                        is TransactionFailed -> logger.debug {
+                            "Tx failed ${tx.getRID().toHex()}."
+                        } // Don't log stacktrace
+                        else -> logger.error(
+                            "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it
+                        ) // Should be unusual, so let's log everything
+                    }
                 }
             }
 
         } else {
+            logger.warn("Savepoint not supported! Unclear if Postchain will work under these conditions")
             action()
             null
         }

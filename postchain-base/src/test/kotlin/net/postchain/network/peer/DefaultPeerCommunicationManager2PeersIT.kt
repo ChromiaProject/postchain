@@ -11,8 +11,8 @@ import kotlinx.coroutines.launch
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.secp256k1_derivePubKey
-import net.postchain.core.BlockchainRid
+import net.postchain.crypto.secp256k1_derivePubKey
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.ebft.message.GetBlockAtHeight

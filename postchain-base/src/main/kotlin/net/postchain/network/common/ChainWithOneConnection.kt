@@ -1,6 +1,6 @@
 package net.postchain.network.common
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 /**
  * This is a mapping between a blockchain and its connection to another node.

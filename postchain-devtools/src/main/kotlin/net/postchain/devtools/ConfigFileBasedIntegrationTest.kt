@@ -4,12 +4,11 @@ import mu.KLogging
 import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfig
-import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.*
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.NodeNameWithBlockchains
 import net.postchain.devtools.utils.configuration.UniversalFileLocationStrategy
+import net.postchain.devtools.utils.configuration.activeChainIds
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import org.apache.commons.configuration2.CompositeConfiguration
@@ -147,22 +146,20 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
             nodeConfigFilename: String,
             blockchainConfigFilename: String,
             preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { }
     ): PostchainTestNode {
 
         val appConfig = createAppConfig(nodeIndex, totalNodesCount, nodeConfigFilename)
-        val storage = StorageBuilder.buildStorage(appConfig, preWipeDatabase)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
-        val nodeConfig = nodeConfigProvider.getConfiguration()
+        StorageBuilder.buildStorage(appConfig, preWipeDatabase)
 
-        nodesNames[nodeConfig.pubKey] = "$nodeIndex"
+        nodesNames[appConfig.pubKey] = "$nodeIndex"
         val blockchainConfig = readBlockchainConfig(blockchainConfigFilename)
-        val chainId = nodeConfig.activeChainIds.first().toLong()
+        val chainId = appConfig.activeChainIds.first().toLong()
 
         // Performing setup action
-        setupAction(appConfig, nodeConfig)
+        setupAction(appConfig)
 
-        return PostchainTestNode(nodeConfigProvider, storage)
+        return PostchainTestNode(appConfig, false)
                 .apply {
                     val blockchainRid = addBlockchain(chainId, blockchainConfig)
                     mapBlockchainRID(chainId, blockchainRid)
@@ -239,13 +236,11 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     ): PostchainTestNode {
 
         val appConfig = createAppConfig(nodeIndex, nodeCount, nodeConfigFilename)
-        val storage = StorageBuilder.buildStorage(appConfig, preWipeDatabase)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
 
-        val node = PostchainTestNode(nodeConfigProvider, storage)
+        val node = PostchainTestNode(appConfig, preWipeDatabase)
                 .also { nodes.add(it) }
 
-        nodeConfigProvider.getConfiguration().activeChainIds
+        appConfig.activeChainIds
                 .filter(String::isNotEmpty)
                 .forEachIndexed { i, chainId ->
                     val filename = blockchainConfigFilenames[i]

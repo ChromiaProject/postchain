@@ -1,6 +1,6 @@
 package net.postchain.devtools.utils.configuration
 
-import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.toHex
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
@@ -23,7 +23,7 @@ class BlockchainPreSetupTest {
 
         // 1. Get the signers
         val signers = mutableSetOf<NodeSeqNumber>()
-        val signersArr = bcGtv[BaseBlockchainConfigurationData.KEY_SIGNERS]!!
+        val signersArr = bcGtv[KEY_SIGNERS]!!
         for (pubkey in signersArr.asArray()) {
             val byteArray = pubkey.asByteArray()
             val nodeId = KeyPairHelper.pubKeyFromByteArray(byteArray.toHex())!!

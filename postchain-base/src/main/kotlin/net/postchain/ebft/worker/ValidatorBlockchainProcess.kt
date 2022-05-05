@@ -102,15 +102,10 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
-        // The name shouldProcessMessages is kind of misleading now
-        if (workerContext.shouldProcessMessages(getLastBlockTimestamp())) {
+        // The name awaitPermissionToProcessMessages is kind of misleading now
+        if (workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
             syncManager.update()
             sleep(20)
-        } else {
-            val timeout = workerContext.nodeConfig.heartbeatSleepTimeout
-            logger.warn { "Heartbeat check failed: sleep for $timeout ms" }
-            sleep(timeout)
-            logger.info { "Heartbeat check resumed" }
         }
     }
 

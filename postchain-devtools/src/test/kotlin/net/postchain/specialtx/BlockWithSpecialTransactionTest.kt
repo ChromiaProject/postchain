@@ -3,7 +3,7 @@
 package net.postchain.specialtx
 
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.specialtx.SpecialTxTestGTXModule
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction

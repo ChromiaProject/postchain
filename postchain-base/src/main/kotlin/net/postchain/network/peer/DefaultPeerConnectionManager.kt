@@ -3,25 +3,19 @@
 package net.postchain.network.peer
 
 import mu.KLogging
-import net.postchain.base.CryptoSystem
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.toHex
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.core.ProgrammerMistake
+import net.postchain.crypto.CryptoSystem
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
-import net.postchain.network.common.ChainWithConnections
-import net.postchain.network.common.ChainsWithConnections
-import net.postchain.network.common.ConnectionDirection
-import net.postchain.network.common.LazyPacket
-import net.postchain.network.common.NetworkTopology
-import net.postchain.network.common.NodeConnector
-import net.postchain.network.common.NodeConnectorEvents
+import net.postchain.network.common.*
 import net.postchain.network.netty2.NettyPeerConnector
 
 /**

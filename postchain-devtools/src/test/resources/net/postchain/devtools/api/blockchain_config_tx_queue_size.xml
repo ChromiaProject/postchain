@@ -2,6 +2,9 @@
 <!-- Copyright (c) 2020 ChromaWay AB. See README for license information. -->
 
 <dict>
+    <entry key="txqueuecapacity">
+        <int>1</int> <!-- This is a very small number, and that is the aim of the test -->
+    </entry>
     <entry key="blockstrategy">
         <!--
         This block strategy is the default one if no config is made
@@ -11,9 +14,6 @@
         <dict>
             <entry key="name">
                 <string>net.postchain.devtools.OnDemandBlockBuildingStrategy</string>
-            </entry>
-            <entry key="queuecapacity">
-                <int>1</int> <!-- This is a very small number, and that is the aim of the test -->
             </entry>
         </dict>
     </entry>

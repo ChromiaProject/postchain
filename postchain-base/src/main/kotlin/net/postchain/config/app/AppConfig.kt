@@ -2,6 +2,8 @@
 
 package net.postchain.config.app
 
+import net.postchain.common.hexStringToByteArray
+import net.postchain.core.Infrastructure
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -16,7 +18,7 @@ import java.io.PrintWriter
  * Wrapper to the generic [Configuration]
  * Adding some convenience fields, for example regarding database connection.
  */
-class AppConfig(val config: Configuration) {
+class AppConfig(private val config: Configuration) {
 
     companion object {
 
@@ -25,7 +27,7 @@ class AppConfig(val config: Configuration) {
                     .setFileName(configFile)
                     .setListDelimiterHandler(DefaultListDelimiterHandler(','))
 
-            val configuration = FileBasedConfigurationBuilder<PropertiesConfiguration>(PropertiesConfiguration::class.java)
+            val configuration = FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
                     .configure(params)
                     .configuration
 
@@ -49,7 +51,7 @@ class AppConfig(val config: Configuration) {
      * Configuration provider
      */
     val nodeConfigProvider: String
-        // legacy | manual | managed
+        // properties | manual | managed
         get() = config.getString("configuration.provider.node", "properties")
 
     /**
@@ -77,4 +79,37 @@ class AppConfig(val config: Configuration) {
     val databaseReadConcurrency: Int
         get() = config.getInt("database.readConcurrency", 10)
 
+    val infrastructure: String
+        // "base/ebft" is the default
+        get() = config.getString("infrastructure", Infrastructure.Ebft.get())
+
+    /**
+     * Pub/Priv keys
+     */
+    val privKey: String
+        get() = config.getString("messaging.privkey", "")
+
+    val privKeyByteArray: ByteArray
+        get() = privKey.hexStringToByteArray()
+
+    val pubKey: String
+        get() = config.getString("messaging.pubkey", "")
+
+    val pubKeyByteArray: ByteArray
+        get() = pubKey.hexStringToByteArray()
+
+    /**
+     * Wrappers for [Configuration] getters and other functionalities
+     */
+    fun getBoolean(key: String, defaultValue: Boolean = false) = config.getBoolean(key, defaultValue)
+    fun getLong(key: String, defaultValue: Long = 0) = config.getLong(key, defaultValue)
+    fun getInt(key: String, defaultValue: Int = 0) = config.getInt(key, defaultValue)
+    fun getString(key: String, defaultValue: String = ""): String = config.getString(key, defaultValue)
+    fun getStringArray(key: String): Array<String> = config.getStringArray(key)
+    fun subset(prefix: String): Configuration = config.subset(prefix)
+    fun getProperty(key: String): Any = config.getProperty(key)
+    fun getKeys(prefix: String): MutableIterator<String> = config.getKeys(prefix)
+    fun containsKey(key: String) = config.containsKey(key)
+
+    fun cloneConfiguration(): Configuration = ConfigurationUtils.cloneConfiguration(config)
 }

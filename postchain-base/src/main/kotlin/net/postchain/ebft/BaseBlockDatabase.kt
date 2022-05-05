@@ -4,7 +4,10 @@ package net.postchain.ebft
 
 import mu.KLogging
 import net.postchain.common.toHex
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.*
+import net.postchain.crypto.Signature
 import net.postchain.debug.BlockTrace
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.deferred
@@ -84,6 +87,7 @@ class BaseBlockDatabase(
         logger.trace{ "maybeRollback() node: $nodeIndex." }
         if (blockBuilder != null) {
             logger.debug{ "maybeRollback() node: $nodeIndex, blockBuilder is not null." }
+            engine.getTransactionQueue().retryAllTakenTransactions()
         }
         blockBuilder?.rollback()
         blockBuilder = null

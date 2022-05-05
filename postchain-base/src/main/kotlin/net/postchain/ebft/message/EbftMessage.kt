@@ -2,7 +2,7 @@ package net.postchain.ebft.message
 
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray

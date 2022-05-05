@@ -4,8 +4,6 @@ package net.postchain.integrationtest.reconfiguration
 
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
-import net.postchain.StorageBuilder
-import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.getModules
@@ -19,9 +17,7 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
     fun reconfigurationAtHeight_is_successful() {
         // Node config
         val appConfig = createAppConfig(0, 1, DEFAULT_CONFIG_FILE)
-        val storage = StorageBuilder.buildStorage(appConfig, true)
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
-        val chainId = nodeConfigProvider.getConfiguration().activeChainIds.first().toLong()
+        val chainId = 1L
 
         // Chains configs
         val blockchainConfig1 = readBlockchainConfig(
@@ -29,7 +25,7 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
         val blockchainConfig2 = readBlockchainConfig(
                 "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_2.xml")
 
-        PostchainTestNode(nodeConfigProvider, storage)
+        PostchainTestNode(appConfig, true)
                 .apply {
                     // Adding chain1 with blockchainConfig1 with DummyModule1
                     addBlockchain(chainId, blockchainConfig1)

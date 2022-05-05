@@ -2,8 +2,11 @@
 
 package net.postchain.client.core
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
+@Deprecated("Client factory has been deprecated",
+        replaceWith = ReplaceWith("ConcretePostchainClientProvider()",
+                "net.postchain.client.core.ConcretePostchainClientProvider"))
 object PostchainClientFactory {
 
     fun makeSimpleNodeResolver(serverURL: String): PostchainNodeResolver {

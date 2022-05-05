@@ -4,7 +4,10 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.core.*
+import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
+import kotlin.collections.HashMap
+import kotlin.collections.LinkedHashMap
 
 class ComparableTransaction(val tx: Transaction) {
     override fun equals(other: Any?): Boolean {
@@ -31,6 +34,7 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
     private val queue = LinkedBlockingQueue<ComparableTransaction>(queueCapacity)
     private val queueMap = HashMap<ByteArrayKey, ComparableTransaction>() // transaction by RID
     private val taken = mutableListOf<ComparableTransaction>()
+    private val txsToRetry: Queue<ComparableTransaction> = LinkedList()
     private val rejects = object : LinkedHashMap<ByteArrayKey, Exception?>() {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ByteArrayKey, java.lang.Exception?>?): Boolean {
             return size > MAX_REJECTED
@@ -39,6 +43,9 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
 
     @Synchronized
     override fun takeTransaction(): Transaction? {
+        if (txsToRetry.isNotEmpty()) {
+            return txsToRetry.poll().tx
+        }
         val tx = queue.poll()
         return if (tx != null) {
             taken.add(tx)
@@ -122,11 +129,20 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
             queue.remove(ct)
             queueMap.remove(ByteArrayKey(tx.getRID()))
             taken.remove(ct)
+            txsToRetry.remove(ct)
         }
     }
 
     @Synchronized
     override fun getRejectionReason(txRID: ByteArrayKey): Exception? {
         return rejects[txRID]
+    }
+
+    @Synchronized
+    override fun retryAllTakenTransactions() {
+        with(txsToRetry) {
+            clear()
+            addAll(taken)
+        }
     }
 }

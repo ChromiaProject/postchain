@@ -4,6 +4,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.config.app.AppConfig
 import net.postchain.core.*
 import net.postchain.core.BlockHeader
 import net.postchain.debug.BlockTrace
@@ -72,7 +73,17 @@ data class FastSyncParameters(
         /**
          * 10 minutes in milliseconds
          */
-        var blacklistingTimeoutMs: Long = 10 * 60 * 1000)
+        var blacklistingTimeoutMs: Long = 10 * 60 * 1000) {
+    companion object {
+        @JvmStatic
+        fun fromAppConfig(config: AppConfig, init: (FastSyncParameters) -> Unit = {}): FastSyncParameters {
+            return FastSyncParameters(
+                    exitDelay = config.getLong("fastsync.exit_delay", 60000),
+                    jobTimeout = config.getLong("fastsync.job_timeout", 10000)
+            ).also(init)
+        }
+    }
+}
 
 /**
  * This class syncs blocks from its peers by requesting <parallelism> blocks
@@ -137,6 +148,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         try {
             blockHeight = blockQueries.getBestHeight().get()
             syncDebug("Start", blockHeight)
+            lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
                 processDoneJobs()
