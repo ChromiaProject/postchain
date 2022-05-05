@@ -397,7 +397,7 @@ describe("ChrL2", () => {
                     ], 
                     [validator1.address, validator2.address],
                     el2Proof)
-                ).to.be.revertedWith('Postchain: duplicate signature or signers is out of order')
+                ).to.be.revertedWith('ChrL2: duplicate signature or signers is out of order')
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
@@ -406,7 +406,17 @@ describe("ChrL2", () => {
                     ], 
                     [validator2.address, validator1.address],
                     el2Proof)
-                ).to.be.revertedWith('Postchain: duplicate signature or signers is out of order')
+                ).to.be.revertedWith('ChrL2: duplicate signature or signers is out of order')
+                let sig = await admin.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
+                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                    DecodeHexStringToByteArray(blockHeader),
+                    [
+                        DecodeHexStringToByteArray(sig.substring(2, sig.length)), 
+                        DecodeHexStringToByteArray(sig1.substring(2, sig1.length))
+                    ], 
+                    [admin.address, validator1.address],
+                    el2Proof)
+                ).to.be.revertedWith('ChrL2: signer is not validator')
                 await expect(chrL2Instance.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [

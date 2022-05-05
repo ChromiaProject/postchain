@@ -23,6 +23,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
 
     uint8 constant ERC20_ACCOUNT_STATE_BYTE_SIZE = 64;
     uint8 constant ERC721_ACCOUNT_STATE_BYTE_SIZE = 64;
+    using EC for bytes32;
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
     enum AssetType {
@@ -304,7 +305,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
         {
             (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
-            if (!Postchain.isValidSignatures(blockRid, sigs, signers, validators.length)) revert("ChrL2: block signature is invalid");
+            if (!isValidSignatures(blockRid, sigs, signers)) revert("ChrL2: block signature is invalid");
             if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("ChrL2: invalid merkle proof");
         }
         return;
@@ -384,7 +385,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         (bytes32 blockRid, , bytes32 stateRoot) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
         require(blockRid == massExitBlock.blockRid, "ChrL2: account state block rid should equal to mass exit block rid");
         require(account.blockHeight <= massExitBlock.height, "ChrL2: account state number should less than or equal to mass exit block");
-        if (!Postchain.isValidSignatures(blockRid, sigs, signers, validators.length)) revert("ChrL2: block signature is invalid");
+        if (!isValidSignatures(blockRid, sigs, signers)) revert("ChrL2: block signature is invalid");
         if (!MerkleProof.verify(stateProofs, stateHash, account.accountNumber, stateRoot)) revert("ChrL2: invalid merkle proof");
 
         address beneficiary = abi.decode(snapshot[:32], (address));
@@ -411,5 +412,34 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
 
         _snapshots[stateHash] = true;
         emit WithdrawalBySnapshot(beneficiary);
-    }  
+    }
+
+    function isValidSignatures(bytes32 hash, bytes[] memory signatures, address[] memory signers) internal view returns (bool) {
+        uint _actualSignature = 0;
+        uint _requiredSignature = _calculateBFTRequiredNum(validators.length);
+        address _lastSigner = address(0);
+        for (uint i = 0; i < signatures.length; i++) {
+            for (uint k = 0; k < signers.length; k++) {
+                require(isValidator(signers[k]), "ChrL2: signer is not validator");
+                if (_isValidSignature(hash, signatures[i], signers[k])) {
+                    _actualSignature++;
+                    require(signers[k] > _lastSigner, "ChrL2: duplicate signature or signers is out of order");
+                    _lastSigner = signers[k];
+                    break;
+                }
+            }
+        }
+        return (_actualSignature >= _requiredSignature);
+    }
+
+    function _calculateBFTRequiredNum(uint total) internal pure returns (uint) {
+        if (total == 0) return 0;
+        return (total - (total - 1) / 3);
+    }
+
+    function _isValidSignature(bytes32 hash, bytes memory signature, address signer) internal pure returns (bool) {
+        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
+        bytes32 prefixedProof = keccak256(abi.encodePacked(prefix, hash));
+        return (prefixedProof.recover(signature) == signer || hash.recover(signature) == signer);
+    }    
 }
