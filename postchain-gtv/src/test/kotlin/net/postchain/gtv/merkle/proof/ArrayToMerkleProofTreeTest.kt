@@ -89,20 +89,35 @@ class ArrayToMerkleProofTreeTest {
         val serialize: GtvArray = merkleProofTree.serializeToGtv()
         //println("Serialized: $serialize")
 
-        val expectedSerialization = "GtvArray(array=[$ln" +
-                "  GtvInteger(integer=103), $ln" +  // 103 =  node type is array
-                "  GtvInteger(integer=1), $ln" +  // length of array
-                "  GtvInteger(integer=-10),$ln" + // (no path/position given)
-                "  GtvArray(array=[$ln" +
-                "    GtvInteger(integer=101), $ln" + // 101 = value to prove
-                "    GtvInteger(integer=0), $ln" + //path/position = 0
-                "    GtvInteger(integer=1)$ln" + // Actual value
-                "  ]), $ln" +
-                "  GtvArray(array=[$ln" +
-                "    GtvInteger(integer=100), $ln" + // 100 = hash
-                "    GtvByteArray(bytearray=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])$ln" +
-                "  ])$ln" +
-                "])$ln"
+//        val expectedSerialization = "GtvArray(array=[$ln" +
+//                "  GtvInteger(integer=103), $ln" +  // 103 =  node type is array
+//                "  GtvInteger(integer=1), $ln" +  // length of array
+//                "  GtvInteger(integer=-10),$ln" + // (no path/position given)
+//                "  GtvArray(array=[$ln" +
+//                "    GtvInteger(integer=101), $ln" + // 101 = value to prove
+//                "    GtvInteger(integer=0), $ln" + //path/position = 0
+//                "    GtvInteger(integer=1)$ln" + // Actual value
+//                "  ]), $ln" +
+//                "  GtvArray(array=[$ln" +
+//                "    GtvInteger(integer=100), $ln" + // 100 = hash
+//                "    GtvByteArray(bytearray=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])$ln" +
+//                "  ])$ln" +
+//                "])$ln"
+        val expectedSerialization = "[$ln" +
+                "  103,$ln" +  // 103 =  node type is array
+                "  1,$ln" +  // lenght of array
+                "  -10,$ln" + // (no path/position given)
+                "  [$ln" +
+                "    101,$ln" + // 101 = value to prove
+                "    0,$ln" + //path/position = 0
+                "    1$ln" + // Actual value
+                "  ],$ln" +
+                "  [$ln" +
+                "    100,$ln" + // 100 = hash
+                "    x\"0000000000000000000000000000000000000000000000000000000000000000\"$ln" +
+                "  ]$ln" +
+                "]$ln"
+
        assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize
