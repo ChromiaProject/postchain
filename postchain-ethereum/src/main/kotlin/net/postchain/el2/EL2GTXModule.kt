@@ -4,9 +4,6 @@ package net.postchain.el2
 
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.merkle.MerkleBasics
-import net.postchain.base.merkle.PrintableTreeFactory
-import net.postchain.base.merkle.TreePrinter
 import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotPageStore
@@ -14,13 +11,17 @@ import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
 import net.postchain.core.MultiSigBlockWitness
+import net.postchain.crypto.encodeSignatureWithV
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import net.postchain.gtv.path.GtvPath
-import net.postchain.gtv.path.GtvPathFactory
-import net.postchain.gtv.path.GtvPathSet
+import net.postchain.gtv.merkle.MerkleBasics
+import net.postchain.gtv.merkle.PrintableTreeFactory
+import net.postchain.gtv.merkle.TreePrinter
+import net.postchain.gtv.merkle.path.GtvPath
+import net.postchain.gtv.merkle.path.GtvPathFactory
+import net.postchain.gtv.merkle.path.GtvPathSet
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 import org.spongycastle.jce.provider.BouncyCastleProvider

@@ -7,11 +7,13 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.generateProof
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.PrintableTreeFactory
+import net.postchain.gtv.merkle.TreePrinter
+import net.postchain.gtv.merkle.path.GtvPath
+import net.postchain.gtv.merkle.path.GtvPathFactory
+import net.postchain.gtv.merkle.path.GtvPathSet
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtv.merkleHash
-import net.postchain.gtv.path.GtvPath
-import net.postchain.gtv.path.GtvPathFactory
-import net.postchain.gtv.path.GtvPathSet
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 

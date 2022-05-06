@@ -6,7 +6,7 @@ import net.postchain.ebft.message.*
 import net.postchain.network.CommunicationManager
 import net.postchain.core.NodeRid
 
-abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<Message>) {
+abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<EbftMessage>) {
     companion object: KLogging()
 
     /**

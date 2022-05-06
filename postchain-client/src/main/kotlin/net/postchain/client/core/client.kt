@@ -3,8 +3,8 @@
 package net.postchain.client.core
 
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.base.SigMaker
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
+import net.postchain.crypto.SigMaker
 import net.postchain.core.TransactionStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
@@ -15,8 +15,8 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
 
     private val dataBuilder = GTXDataBuilder(blockchainRID, signers, SECP256K1CryptoSystem())
 
-    fun addOperation(opName: String, args: Array<Gtv>) {
-        dataBuilder.addOperation(opName, args)
+    fun addOperation(opName: String, vararg args: Gtv) {
+        dataBuilder.addOperation(opName, arrayOf(*args))
     }
 
     fun sign(sigMaker: SigMaker) {

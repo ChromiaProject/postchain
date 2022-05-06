@@ -3,29 +3,26 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
-import net.postchain.base.BaseBlockchainConfigurationData
-import net.postchain.base.BaseBlockchainContext
-import net.postchain.base.BaseBlockchainInfrastructure
-import net.postchain.base.PeerInfo
-import net.postchain.base.data.BaseBlockchainConfiguration
+import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.base.*
+import net.postchain.base.configuration.*
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.withReadWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockTrace
 import net.postchain.devtools.ManagedModeTest.NodeSet
 import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvArray
-import net.postchain.gtv.GtvByteArray
-import net.postchain.gtv.GtvDictionary
-import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.*
+import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import net.postchain.managed.ManagedNodeDataSource
@@ -79,10 +76,19 @@ open class ManagedModeTest : AbstractSyncTest() {
 
         mockDataSources.forEach {
             val data = TestBlockchainConfigurationData()
-            data.setValue(BaseBlockchainConfigurationData.KEY_SIGNERS, GtvArray(signerGtvs.toTypedArray()))
+            data.setValue(KEY_SIGNERS, GtvArray(signerGtvs.toTypedArray()))
             if (historicChain != null) {
-                data.setValue(BaseBlockchainConfigurationData.KEY_HISTORIC_BRID, GtvByteArray(ChainUtil.ridOf(historicChain).data))
+                data.setValue(KEY_HISTORIC_BRID, GtvByteArray(ChainUtil.ridOf(historicChain).data))
             }
+
+            data.setValue(KEY_CONFIGURATIONFACTORY, GtvString(
+                    GTXBlockchainConfigurationFactory::class.java.name
+            ))
+
+            val gtx = mapOf(KEY_GTX_MODULES to GtvArray(arrayOf(
+                    GtvString(StandardOpsGTXModule::class.java.name))
+            ))
+            data.setValue(KEY_GTX, GtvFactory.gtv(gtx))
 
             val pubkey = if (nodeSet.chain == 0L) {
                 if (it.key < nodeSet.signers.size) {
@@ -98,7 +104,7 @@ open class ManagedModeTest : AbstractSyncTest() {
 
             val privkey = KeyPairHelper.privKey(pubkey)
             val sigMaker = cryptoSystem.buildSigMaker(pubkey, privkey)
-            val confData = BaseBlockchainConfigurationData(data.getDict(), context, sigMaker)
+            val confData = data.getDict().toObject<BlockchainConfigurationData>(mapOf("partialContext" to context, "sigmaker" to sigMaker))
             val bcConf = TestBlockchainConfiguration(confData)
             it.value.addConf(brid, height, bcConf, nodeSet, GtvEncoder.encodeGtv(data.getDict()))
         }
@@ -137,7 +143,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
     fun buildBlock(nodeSet: NodeSet, toHeight: Long) {
-        buildBlock(nodes.filterIndexed { i, p -> nodeSet.contains(i) }, nodeSet.chain.toLong(), toHeight)
+        buildBlock(nodes.filterIndexed { i, _ -> nodeSet.contains(i) }, nodeSet.chain, toHeight)
     }
 
     fun buildBlock(nodeSet: NodeSet) {
@@ -192,14 +198,14 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
 
-    class TestBlockchainConfiguration(data: BaseBlockchainConfigurationData) :
+    class TestBlockchainConfiguration(data: BlockchainConfigurationData) :
             BaseBlockchainConfiguration(data) {
         override fun getTransactionFactory(): TransactionFactory {
             return TestTransactionFactory()
         }
 
         override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
-            return OnDemandBlockBuildingStrategy(configData, this, blockQueries, txQueue)
+            return OnDemandBlockBuildingStrategy(blockStrategyConfig, blockQueries, txQueue)
         }
     }
 
@@ -214,7 +220,8 @@ open class ManagedModeTest : AbstractSyncTest() {
             replicas: Set<Int>,
             historicChain: Long? = null,
             excludeChain0Nodes: Set<Int> = setOf(),
-            waitForRestart: Boolean = true): NodeSet {
+            waitForRestart: Boolean = true
+    ): NodeSet {
         if (signers.intersect(replicas).isNotEmpty()) throw
         IllegalArgumentException("a node cannot be both signer and replica")
         val maxIndex = c0.all().size
@@ -245,10 +252,11 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
-            dataSource = nodeConfig.appConfig.config.get(MockManagedNodeDataSource::class.java, "infrastructure.datasource")!!
+            dataSource = appConfig.getProperty("infrastructure.datasource") as MockManagedNodeDataSource
 
             val syncInfra = EBFTSynchronizationInfrastructure(this)
-            val apiInfra = BaseApiInfrastructure(nodeConfigProvider, nodeDiagnosticContext)
+            val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
             return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)
         }
     }
@@ -259,16 +267,15 @@ class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() 
 }
 
 
-
 class TestManagedBlockchainInfrastructure(postchainContext: PostchainContext,
                                           syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
                                           val mockDataSource: MockManagedNodeDataSource) :
         BaseBlockchainInfrastructure(syncInfra, apiInfra, postchainContext) {
     override fun makeBlockchainConfiguration(
-        rawConfigurationData: ByteArray,
-        eContext: EContext,
-        nodeId: Int,
-        chainId: Long,
+            rawConfigurationData: ByteArray,
+            eContext: EContext,
+            nodeId: Int,
+            chainId: Long,
     ): BlockchainConfiguration {
 
         return mockDataSource.getConf(rawConfigurationData)!!

@@ -4,10 +4,7 @@ import net.postchain.core.BlockQueries
 import net.postchain.core.BlockchainEngine
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.ethereum.contracts.TestToken
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvDictionary
-import net.postchain.gtv.GtvInteger
-import net.postchain.gtv.GtvNull
+import net.postchain.gtv.*
 import net.postchain.gtx.OpData
 import nl.komponents.kovenant.Promise
 import org.awaitility.Awaitility
@@ -165,7 +162,7 @@ class EthereumEventProcessorTest {
         return if (height == null) {
             Promise.ofSuccess<Gtv, Exception>(GtvNull)
         } else {
-            Promise.ofSuccess<Gtv, Exception>(GtvDictionary.build(mapOf("eth_block_height" to GtvInteger(height))))
+            Promise.ofSuccess<Gtv, Exception>(GtvDictionary.build(mapOf("eth_block_height" to GtvBigInteger(height))))
         }
     }
 }

@@ -30,7 +30,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     val networkAwareTxQueue: NetworkAwareTxQueue
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
-    
+
     init {
         val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
         val blockchainConfiguration = workerContext.blockchainConfiguration
@@ -58,7 +58,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
                 nodeStateTracker,
                 ::isProcessRunning,
                 startWithFastSync
-                )
+        )
 
         networkAwareTxQueue = NetworkAwareTxQueue(
                 blockchainEngine.getTransactionQueue(),
@@ -70,8 +70,10 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
-        syncManager.update()
-        sleep(20)
+        if (workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
+            syncManager.update()
+            sleep(20)
+        }
     }
 
     override fun cleanup() {
@@ -85,5 +87,15 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
                 DiagnosticProperty.BLOCKCHAIN_NODE_TYPE to { DpNodeType.NODE_TYPE_VALIDATOR.prettyName },
                 DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to syncManager::getHeight
         ))
+    }
+
+    private fun getLastBlockTimestamp(): Long {
+        /**
+         * NB: The field blockManager.lastBlockTimestamp will be set to non-null value
+         * after the first block db operation. So we read lastBlockTimestamp value from db
+         * until blockManager.lastBlockTimestamp is non-null.
+         */
+        return blockManager.lastBlockTimestamp
+                ?: workerContext.engine.getBlockQueries().getLastBlockTimestamp().get()
     }
 }

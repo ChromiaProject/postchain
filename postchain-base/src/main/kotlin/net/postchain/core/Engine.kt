@@ -2,6 +2,7 @@
 
 package net.postchain.core
 
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.DiagnosticProperty
 
@@ -63,5 +64,5 @@ interface BlockchainProcessManager : Shutdownable, Synchronizable {
 }
 
 // A return value of "true" means a restart is needed.
-typealias AfterCommitHandler = (BlockTrace?, Long) -> Boolean
+typealias AfterCommitHandler = (bTrace: BlockTrace?, height: Long, blockTimestamp: Long) -> Boolean
 

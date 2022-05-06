@@ -2,9 +2,12 @@
 
 package net.postchain.gtx
 
-import net.postchain.base.CryptoSystem
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.*
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 
@@ -135,7 +138,7 @@ class GTXTransaction (
     }
 
     override fun apply(ctx: TxEContext): Boolean {
-        if (!isCorrect()) throw UserMistake("Transaction is not correct")
+        if (!isCorrect()) throw TransactionIncorrect("Transaction is not correct")
         for (op in ops) {
             if (!op.apply(ctx))
                 throw UserMistake("Operation failed")

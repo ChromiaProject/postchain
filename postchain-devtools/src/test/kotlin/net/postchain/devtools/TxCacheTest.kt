@@ -2,9 +2,9 @@
 
 package net.postchain.devtools
 
+import net.postchain.common.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.configurations.GTXTestModule
-import net.postchain.core.BlockchainRid
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import org.junit.jupiter.api.Test

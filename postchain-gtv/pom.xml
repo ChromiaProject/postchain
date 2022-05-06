@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>postchain</artifactId>
+        <groupId>net.postchain</groupId>
+        <version>3.4.2-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>postchain-gtv</artifactId>
+    <name>Postchain GTV</name>
+    <description>Defines a common data transfer format GTV which adheres to ASN.1 format</description>
+
+    <properties>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-common</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.beanit</groupId>
+            <artifactId>jasn1</artifactId>
+            <version>${jasn.version}</version>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-common</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JSON -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito.kotlin</groupId>
+            <artifactId>mockito-kotlin</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.willowtreeapps.assertk</groupId>
+            <artifactId>assertk</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jaxb2-maven-plugin</artifactId>
+                <version>2.5.0</version>
+                <executions>
+                    <execution>
+                        <id>xjc</id>
+                        <goals>
+                            <goal>xjc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <xjbExcludeFilters>
+                        <filter implementation="org.codehaus.mojo.jaxb2.shared.filters.pattern.PatternFileFilter">
+                            <patterns>
+                                <pattern>\.txt</pattern>
+                                <pattern>\.xsd</pattern>
+                            </patterns>
+                        </filter>
+                    </xjbExcludeFilters>
+                    <sources>
+                        <source>src/main/resources/gtxml/gtxml.xsd</source>
+                    </sources>
+                    <xjbSources>
+                        <xjbSource>src/main/resources/gtxml/bindings.xml</xjbSource>
+                    </xjbSources>
+                    <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
+                    <!-- The package of your generated sources -->
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.beanit</groupId>
+                        <artifactId>jasn1-compiler</artifactId>
+                        <version>${jasn.version}</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>generate-stuff</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <includePluginDependencies>true</includePluginDependencies>
+                            <mainClass>com.beanit.jasn1.compiler.Compiler</mainClass>
+                            <arguments>
+                                <argument>-f</argument>
+                                <!--argument>${project.basedir}/src/main/resources/asn/base_messages.asn</argument-->
+                                <argument>${project.basedir}/src/main/resources/asn/gtv_messages.asn</argument>
+                                <!--argument>${project.basedir}/src/main/resources/asn/gtx_messages.asn</argument-->
+                                <argument>-o</argument>
+                                <argument>${project.build.directory}/generated-sources/</argument>
+                                <argument>-p</argument>
+                                <argument>net.postchain.gtv</argument>
+                                <argument>-l</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

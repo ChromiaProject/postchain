@@ -5,13 +5,13 @@ import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.base.snapshot.SimpleDigestSystem
+import net.postchain.common.BlockchainRid
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.BlockchainRid
 import net.postchain.core.Transaction
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper

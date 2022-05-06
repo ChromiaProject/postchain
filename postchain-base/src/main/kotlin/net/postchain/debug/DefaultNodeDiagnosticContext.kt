@@ -4,7 +4,7 @@ package net.postchain.debug
 
 import java.util.Comparator.comparingInt
 
-class DefaultNodeDiagnosticContext : NodeDiagnosticContext {
+class DefaultNodeDiagnosticContext() : NodeDiagnosticContext {
 
     private val properties: MutableMap<DiagnosticProperty, () -> Any?> = mutableMapOf()
 
@@ -16,7 +16,7 @@ class DefaultNodeDiagnosticContext : NodeDiagnosticContext {
         properties[property] = lazyValue
     }
 
-    override fun getProperty(property: DiagnosticProperty): Any? {
+    override fun getProperty(property: DiagnosticProperty): (() -> Any?)? {
         return properties[property]
     }
 

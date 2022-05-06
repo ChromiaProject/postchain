@@ -8,9 +8,9 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
-import net.postchain.core.BlockchainRid
 import net.postchain.core.byteArrayKeyOf
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.util.peerInfoFromPublicKey

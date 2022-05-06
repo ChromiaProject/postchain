@@ -2,14 +2,14 @@
 
 package net.postchain.gtx
 
-import net.postchain.base.CryptoSystem
-import net.postchain.base.SigMaker
-import net.postchain.base.merkle.MerkleHashCalculator
 import net.postchain.common.data.Hash
-import net.postchain.core.BlockchainRid
+import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.common.BlockchainRid
 import net.postchain.core.ProgrammerMistake
-import net.postchain.core.Signature
+import net.postchain.crypto.Signature
 import net.postchain.core.UserMistake
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.*
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.factory.GtxTransactionDataFactory

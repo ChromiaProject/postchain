@@ -5,8 +5,8 @@ package net.postchain.base.data
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import net.postchain.base.BaseEContext
+import net.postchain.common.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.core.BlockchainRid
 import net.postchain.core.EContext
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.BeforeEach

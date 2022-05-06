@@ -17,17 +17,17 @@ class RunTestCommand : CliktCommand(
 ) {
 
     private val filename by option(
-            names = *arrayOf("--filename", "-f"),
+            "--filename", "-f",
             help = "Path to gtxml file"
     ).required()
 
     private val blockchainRID by option(
-            names = *arrayOf("--blockchain-rid", "-rid"),
+            "--blockchain-rid", "-rid",
             help = "BlockchainRID Hexadecimal string"
     ).required()
 
     private val testOutputFileName by option(
-            names = *arrayOf("--output"),
+            "--output",
             help = "Path to output file"
     )
 
@@ -37,8 +37,8 @@ class RunTestCommand : CliktCommand(
         val result = TestLauncher().runXMLGTXTests(
                 File(filename).readText(),
                 blockchainRID,
-                (context.parent?.command as? Cli)?.nodeConfig,
-                (context.parent?.command as? Cli)?.blockchainConfig
+                (currentContext.parent?.command as? Cli)?.nodeConfig,
+                (currentContext.parent?.command as? Cli)?.blockchainConfig
         )
 
         if (testOutputFileName != null) {

@@ -10,6 +10,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.core.*
 import net.postchain.core.framework.AbstractBlockchainProcess
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
@@ -47,12 +48,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
     private val fastSynchronizer = FastSynchronizer(
             workerContext, blockDatabase,
-            workerContext.nodeConfig.let { conf ->
-                FastSyncParameters(
-                    exitDelay = conf.fastSyncExitDelay,
-                    jobTimeout = conf.fastSyncJobTimeout
-                )
-            },
+            FastSyncParameters.fromAppConfig(workerContext.appConfig),
             ::isProcessRunning
     )
 

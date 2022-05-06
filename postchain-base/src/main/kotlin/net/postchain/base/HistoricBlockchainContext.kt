@@ -1,6 +1,6 @@
 package net.postchain.base
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.core.NodeRid
 

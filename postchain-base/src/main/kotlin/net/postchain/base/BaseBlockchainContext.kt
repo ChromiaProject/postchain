@@ -2,8 +2,8 @@
 
 package net.postchain.base
 
+import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockchainContext
-import net.postchain.core.BlockchainRid
 
 open class BaseBlockchainContext(
         override val blockchainRID: BlockchainRid,

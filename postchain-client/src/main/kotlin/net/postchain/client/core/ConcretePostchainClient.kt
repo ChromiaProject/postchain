@@ -4,19 +4,20 @@ package net.postchain.client.core
 
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
+import mu.KLogging
 import net.postchain.api.rest.json.JsonFactory
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.BlockchainRid
 import net.postchain.core.TransactionStatus.*
-import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXDataBuilder
 import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.deferred
+import nl.komponents.kovenant.task
 import org.apache.http.StatusLine
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.methods.HttpPost
@@ -25,11 +26,15 @@ import org.apache.http.impl.client.HttpClients
 import java.io.BufferedReader
 import java.io.InputStream
 
+private const val APPLICATION_JSON = "application/json"
+
 class ConcretePostchainClient(
         private val resolver: PostchainNodeResolver,
         private val blockchainRID: BlockchainRid,
         private val defaultSigner: DefaultSigner?
 ) : PostchainClient {
+
+    companion object : KLogging()
 
     private val gson = JsonFactory.makeJson()
     private val serverUrl = resolver.getNodeURL(blockchainRID)
@@ -47,13 +52,7 @@ class ConcretePostchainClient(
     }
 
     override fun postTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception> {
-        val def = deferred<TransactionResult, Exception>()
-        try {
-            def.resolve(doPostTransaction(txBuilder, confirmationLevel))
-        } catch (e: Exception) {
-            def.reject(e)
-        }
-        return def.promise
+        return task { doPostTransaction(txBuilder, confirmationLevel) }
     }
 
     override fun postTransactionSync(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
@@ -61,13 +60,7 @@ class ConcretePostchainClient(
     }
 
     override fun query(name: String, gtv: Gtv): Promise<Gtv, Exception> {
-        val def = deferred<Gtv, Exception>()
-        try {
-            def.resolve(doQuery(name, gtv))
-        } catch (e: Exception) {
-            def.reject(e)
-        }
-        return def.promise
+        return task { doQuery(name, gtv) }
     }
 
     override fun querySync(name: String, gtv: Gtv) = doQuery(name, gtv)
@@ -78,15 +71,23 @@ class ConcretePostchainClient(
         val jsonQuery = """{"queries" : ["${GtvEncoder.encodeGtv(gtxQuery).toHex()}"]}""".trimMargin()
         with(httpPost) {
             entity = StringEntity(jsonQuery)
-            setHeader("Accept", "application/json")
-            setHeader("Content-type", "application/json")
+            setHeader("Accept", APPLICATION_JSON)
+            setHeader("Content-type", APPLICATION_JSON)
         }
         httpClient.execute(httpPost).use { response ->
+            val contentType: String = response.entity.contentType.value
+            val responseBody = parseResponse(response.entity.content)
             if (response.statusLine.statusCode != 200) {
-                throw UserMistake("Can not make query_gtx api call ")
+                val errorMessage = if (contentType.equals(APPLICATION_JSON, ignoreCase = true)) {
+                    val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
+                    jsonObject.get("error")?.asString
+                } else {
+                    null
+                }
+                throw UserMistake(errorMessage ?: "Can not make query_gtx api call: ${response.statusLine.statusCode} ${response.statusLine.reasonPhrase}")
             }
             val type = object : TypeToken<List<String>>() {}.type
-            val gtxHexCode = gson.fromJson<List<String>>(parseResponse(response.entity.content), type)?.first()
+            val gtxHexCode = gson.fromJson<List<String>>(responseBody, type)?.first()
             return GtvFactory.decodeGtv(gtxHexCode!!.hexStringToByteArray())
         }
     }
@@ -98,7 +99,7 @@ class ConcretePostchainClient(
 
         fun submitTransaction(): StatusLine {
             val httpPost = HttpPost("$serverUrl/tx/$blockchainRIDHex")
-            httpPost.setHeader("Content-type", "application/json")
+            httpPost.setHeader("Content-type", APPLICATION_JSON)
             httpPost.entity = StringEntity(txJson)
             return httpClient.execute(httpPost).use { response -> response.statusLine }
         }
@@ -115,9 +116,12 @@ class ConcretePostchainClient(
             }
 
             ConfirmationLevel.UNVERIFIED -> {
-                submitTransaction()
+                val statusLine = submitTransaction()
+                if (statusLine.statusCode in 400..499) {
+                    return TransactionResultImpl(REJECTED)
+                }
                 val httpGet = HttpGet("$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
-                httpGet.setHeader("Content-type", "application/json")
+                httpGet.setHeader("Content-type", APPLICATION_JSON)
 
                 // keep polling till getting Confirmed or Rejected
                 (0 until retrieveTxStatusAttempts).forEach { _ ->
@@ -126,16 +130,22 @@ class ConcretePostchainClient(
                             response.entity?.let {
                                 val responseBody = parseResponse(it.content)
                                 val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                                val status = valueOf(jsonObject.get("status").asString.toUpperCase())
+                                val statusString = jsonObject.get("status")?.asString?.toUpperCase()
+                                if (statusString == null) {
+                                    logger.warn { "No status in response\n$responseBody" }
+                                } else {
+                                    val status = valueOf(statusString)
 
-                                if (status == CONFIRMED || status == REJECTED) {
-                                    return TransactionResultImpl(status)
+                                    if (status == CONFIRMED || status == REJECTED) {
+                                        return TransactionResultImpl(status)
+                                    }
                                 }
 
                                 Thread.sleep(retrieveTxStatusIntervalMs)
                             }
                         }
                     } catch (e: Exception) {
+                        logger.warn(e) { "Unable to poll for new block" }
                         Thread.sleep(retrieveTxStatusIntervalMs)
                     }
                 }

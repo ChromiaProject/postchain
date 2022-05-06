@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.base.*
 import net.postchain.common.data.Hash
 import net.postchain.core.*
+import net.postchain.common.BlockchainRid
 
 /**
  * Provides database access to the location where the blockchain with related metadata and transactions

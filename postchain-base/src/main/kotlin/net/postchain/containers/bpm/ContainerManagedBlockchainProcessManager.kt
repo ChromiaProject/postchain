@@ -4,6 +4,7 @@ import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import mu.KLogging
 import net.postchain.PostchainContext
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.Utils
@@ -13,19 +14,14 @@ import net.postchain.containers.bpm.ContainerState.STARTING
 import net.postchain.containers.bpm.DockerTools.checkContainerName
 import net.postchain.containers.bpm.DockerTools.containerName
 import net.postchain.containers.bpm.DockerTools.shortContainerId
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockQueries
-import net.postchain.core.BlockchainConfiguration
-import net.postchain.core.BlockchainEngine
-import net.postchain.core.BlockchainProcess
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.ebft.heartbeat.DefaultHeartbeatListener
-import net.postchain.ebft.heartbeat.DefaultHeartbeatManager
-import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
@@ -45,14 +41,13 @@ open class ContainerManagedBlockchainProcessManager(
     private val directoryDataSource: DirectoryDataSource by lazy { dataSource as DirectoryDataSource }
     private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
 
-    private val heartbeatManager = DefaultHeartbeatManager(nodeConfig)
-    private val heartbeatListeners = mutableMapOf<Long, HeartbeatListener>()
-
     /**
      * TODO: [POS-129]: Implement handling of DockerException
      */
-    private val fs = FileSystem(nodeConfig)
-    private val containerInitializer = DefaultContainerInitializer(nodeConfig)
+    private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
+    private val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
+    private val fs = FileSystem(appConfig, containerNodeConfig)
+    private val containerInitializer = DefaultContainerInitializer(appConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
@@ -62,10 +57,10 @@ open class ContainerManagedBlockchainProcessManager(
         stopRunningChainContainers()
     }
 
-    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, nodeConfig)
+    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, appConfig, containerNodeConfig)
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return { blockTrace: BlockTrace?, blockTimestamp: Long ->
+        return { blockTrace: BlockTrace?, _, blockTimestamp: Long ->
             try {
                 rTrace("Before", chainId, blockTrace)
                 if (chainId != CHAIN0) {
@@ -117,22 +112,6 @@ open class ContainerManagedBlockchainProcessManager(
                 restartBlockchainAsync(chainId, blockTrace)
                 true // let's hope restarting a blockchain fixes the problem
             }
-        }
-    }
-
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
-        if (chainId == 0L) return super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
-        val hbListener = DefaultHeartbeatListener(nodeConfig, chainId).also {
-            heartbeatManager.addListener(it)
-            heartbeatListeners[chainId] = it
-        }
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { hbListener.checkHeartbeat(it) }
-    }
-
-    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
-        super.stopAndUnregisterBlockchainProcess(chainId, restart)
-        heartbeatListeners.remove(chainId)?.run {
-            heartbeatManager.removeListener(this)
         }
     }
 
@@ -201,7 +180,7 @@ open class ContainerManagedBlockchainProcessManager(
             if (chainsToStart.isNotEmpty()) {
                 logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
                 val port = getRestApiHostPort(dockerContainer)
-                val newPsContainer = DefaultPostchainContainer(nodeConfig, directoryDataSource, containerName, port, STARTING)
+                val newPsContainer = DefaultPostchainContainer(directoryDataSource, containerName, port, STARTING)
                 val dir = containerInitializer.initContainerWorkingDir(fs, newPsContainer)
                 if (dir != null) {
                     postchainContainers.add(newPsContainer)
@@ -260,7 +239,7 @@ open class ContainerManagedBlockchainProcessManager(
                 logger.debug { msg("not found", null) }
 
                 if (!psContainer!!.isEmpty()) {
-                    val config = ContainerConfigFactory.createConfig(fs, nodeConfig, psContainer)
+                    val config = ContainerConfigFactory.createConfig(fs, restApiConfig, containerNodeConfig, psContainer)
 
                     psContainer.containerId = dockerClient.createContainer(config, containerName.toString()).id()!!
                     logger.debug { msg("created", psContainer) }
@@ -289,7 +268,7 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun executeDockerContainersHealthcheck() {
-        val period = nodeConfig.runningContainersCheckPeriod.toLong()
+        val period = containerNodeConfig.runningContainersCheckPeriod.toLong()
         if (period > 0 && postchainContainers.isNotEmpty()) {
             val height = withReadConnection(storage, CHAIN0) { ctx ->
                 DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
@@ -339,7 +318,7 @@ open class ContainerManagedBlockchainProcessManager(
     private fun createBlockchainProcess(chain: Chain, targetContainer: PostchainContainer): ContainerBlockchainProcess? {
         val dir = containerInitializer.initContainerChainWorkingDir(fs, chain)
         return if (dir != null) {
-            val processName = BlockchainProcessName(nodeConfig.pubKey, chain.brid)
+            val processName = BlockchainProcessName(appConfig.pubKey, chain.brid)
             val process = masterBlockchainInfra.makeMasterBlockchainProcess(
                     processName,
                     chain.chainId,
@@ -357,7 +336,7 @@ open class ContainerManagedBlockchainProcessManager(
             }
             process.transferConfigsToContainer()
             targetContainer.addProcess(process)
-            heartbeatManager.addListener(process)
+            heartbeatManager.addListener(chain.chainId, process)
             process
         } else {
             null
@@ -371,7 +350,7 @@ open class ContainerManagedBlockchainProcessManager(
         val process = container.findProcesses(chain.chainId)
         return if (process != null) {
             masterBlockchainInfra.exitMasterBlockchainProcess(process)
-            heartbeatManager.removeListener(process)
+            heartbeatManager.removeListener(chain.chainId)
             container.removeProcess(process)
             blockchainProcessesDiagnosticData.remove(chain.brid)
             chainIdToBrid.remove(chain.chainId)
@@ -415,18 +394,18 @@ open class ContainerManagedBlockchainProcessManager(
         return chains.computeIfAbsent(chainId) {
             val brid = getBridByChainId(chainId)
             val container = directoryDataSource.getContainerForBlockchain(brid)
-            val containerName = ContainerName.create(nodeConfig, container)
+            val containerName = ContainerName.create(appConfig, container)
             Chain(containerName, chainId, brid)
         }
     }
 
     private fun stopRunningChainContainers() {
-        if (nodeConfig.runningContainersAtStartRegexp.isNotEmpty()) {
+        if (containerNodeConfig.runningContainersAtStartRegexp.isNotEmpty()) {
             val toStop = dockerClient.listContainers().filter {
                 try {
-                    containerName(it).contains(Regex(nodeConfig.runningContainersAtStartRegexp))
+                    containerName(it).contains(Regex(containerNodeConfig.runningContainersAtStartRegexp))
                 } catch (e: Exception) {
-                    logger.error { "Regexp expression error: ${nodeConfig.runningContainersAtStartRegexp}" }
+                    logger.error { "Regexp expression error: ${containerNodeConfig.runningContainersAtStartRegexp}" }
                     false
                 }
             }
@@ -447,7 +426,7 @@ open class ContainerManagedBlockchainProcessManager(
     private fun getRestApiHostPort(dockerContainer: Container?): Int {
         return if (dockerContainer != null) {
             val info = dockerClient.inspectContainer(dockerContainer.id())
-            val port = ContainerConfigFactory.getHostPort(info, nodeConfig.subnodeRestApiPort)
+            val port = ContainerConfigFactory.getHostPort(info, containerNodeConfig.subnodeRestApiPort)
             port ?: Utils.findFreePort()
         } else {
             Utils.findFreePort()

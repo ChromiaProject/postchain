@@ -1,6 +1,6 @@
 package net.postchain.devtools.utils
 
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 
 /**
  * (broken out to here from Kalle's code, thought it could be re-used)

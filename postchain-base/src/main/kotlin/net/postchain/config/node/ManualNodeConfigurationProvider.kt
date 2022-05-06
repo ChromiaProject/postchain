@@ -7,8 +7,8 @@ import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.peerId
 import net.postchain.base.withReadConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BlockchainRid
 import net.postchain.core.NodeRid
 
 /**
@@ -26,7 +26,7 @@ open class ManualNodeConfigurationProvider(
             override val peerInfoMap = getPeerInfoCollection(appConfig)
                     .associateBy(PeerInfo::peerId)
             override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
-            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig, pubKey)
+            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig)
             override val mustSyncUntilHeight: Map<Long, Long> = getSyncUntilHeight(appConfig)
         }
     }
@@ -54,9 +54,9 @@ open class ManualNodeConfigurationProvider(
         }
     }
 
-    open fun getBlockchainsToReplicate(appConfig: AppConfig, nodePubKey: String): Set<BlockchainRid> {
+    open fun getBlockchainsToReplicate(appConfig: AppConfig): Set<BlockchainRid> {
         return storage.withReadConnection {
-            ctx -> DatabaseAccess.of(ctx).getBlockchainsToReplicate(ctx, nodePubKey)
+            ctx -> DatabaseAccess.of(ctx).getBlockchainsToReplicate(ctx, appConfig.pubKey)
         }
     }
 

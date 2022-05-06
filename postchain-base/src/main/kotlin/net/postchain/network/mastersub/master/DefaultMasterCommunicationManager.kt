@@ -2,8 +2,10 @@ package net.postchain.network.mastersub.master
 
 import mu.KLogging
 import net.postchain.common.toHex
+import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
-import net.postchain.core.BlockchainRid
+import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
@@ -23,7 +25,9 @@ import java.util.*
  * the messages ourselves we wrap them in [MsMessage] and pass them on to the correct sub-node.
  */
 open class DefaultMasterCommunicationManager(
+        val appConfig: AppConfig,
         val nodeConfig: NodeConfig,
+        private val containerNodeConfig: ContainerNodeConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         private val peersCommConfigFactory: PeersCommConfigFactory,
@@ -42,7 +46,7 @@ open class DefaultMasterCommunicationManager(
         masterConnectionManager.connectSubChain(processName, subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = scheduleTask(nodeConfig.containerSendConnectedPeersPeriod) {
+        sendConnectedPeersTask = scheduleTask(containerNodeConfig.containerSendConnectedPeersPeriod) {
             val peers = connectionManager.getConnectedNodes(chainId)
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.byteArray })
             masterConnectionManager.sendPacketToSub(msg)
@@ -123,7 +127,7 @@ open class DefaultMasterCommunicationManager(
     private fun connectChainPeers(peers: List<ByteArray>) {
         logger.info { "${process()}: Connecting chain peers" }
 
-        val peersCommConfig = peersCommConfigFactory.create(nodeConfig, blockchainRid, peers, null)
+        val peersCommConfig = peersCommConfigFactory.create(appConfig, nodeConfig, blockchainRid, peers, null)
 
         val packetHandler = object : PeerPacketHandler {
             override fun handle(data: ByteArray, nodeId: NodeRid) {
@@ -153,7 +157,7 @@ open class DefaultMasterCommunicationManager(
         val message = MsDataMessage(
                 blockchainRid.data,
                 nodeId.byteArray, // sender
-                nodeConfig.pubKeyByteArray, // Can be omitted?
+                appConfig.pubKeyByteArray, // Can be omitted?
                 packet
         )
 

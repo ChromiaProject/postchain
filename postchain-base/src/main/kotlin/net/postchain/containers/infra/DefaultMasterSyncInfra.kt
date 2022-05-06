@@ -6,7 +6,7 @@ import net.postchain.PostchainContext
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
-import net.postchain.core.BlockchainRid
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.DirectoryDataSource
@@ -18,7 +18,8 @@ import java.nio.file.Path
 
 open class DefaultMasterSyncInfra(
         postchainContext: PostchainContext,
-        protected val masterConnectionManager: MasterConnectionManager
+        protected val masterConnectionManager: MasterConnectionManager,
+        private val containerNodeConfig: ContainerNodeConfig
 ) : EBFTSynchronizationInfrastructure(postchainContext), MasterSyncInfra {
 
     /**
@@ -34,7 +35,9 @@ open class DefaultMasterSyncInfra(
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
+                postchainContext.appConfig,
                 nodeConfig,
+                containerNodeConfig,
                 chainId,
                 blockchainRid,
                 peersCommConfigFactory,

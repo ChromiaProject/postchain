@@ -21,7 +21,7 @@ interface HeartbeatListener {
     fun checkHeartbeat(timestamp: Long): Boolean
 }
 
-open class DefaultHeartbeatListener(val nodeConfig: NodeConfig, chainId: Long) : HeartbeatListener {
+open class DefaultHeartbeatListener(val heartbeatConfig: HeartbeatConfig, chainId: Long) : HeartbeatListener {
 
     companion object : KLogging()
 
@@ -37,15 +37,8 @@ open class DefaultHeartbeatListener(val nodeConfig: NodeConfig, chainId: Long) :
     override fun checkHeartbeat(timestamp: Long): Boolean {
         // First block check
         if (timestamp < 0) {
-            return resultLogger.log(0 to true, logger) {
-                "$pref Heartbeat check passed due to: timestamp = $timestamp < 0"
-            }
-        }
-
-        // If heartbeat check is disabled, consider it as always passed
-        if (!nodeConfig.heartbeatEnabled) {
             return resultLogger.log(1 to true, logger) {
-                "$pref Heartbeat check passed due to: nodeConfig.heartbeat.enabled = ${nodeConfig.heartbeatEnabled}"
+                "$pref Heartbeat check passed due to: timestamp = $timestamp < 0"
             }
         }
 
@@ -56,11 +49,11 @@ open class DefaultHeartbeatListener(val nodeConfig: NodeConfig, chainId: Long) :
             }
         }
 
-        val res = timestamp - heartbeat!!.timestamp < nodeConfig.heartbeatTimeout
+        val res = timestamp - heartbeat!!.timestamp < heartbeatConfig.timeout
         return resultLogger.log(3 to res, logger) {
             "$pref Heartbeat check result: $res (" +
                     "timestamp ($timestamp) - heartbeat.timestamp (${heartbeat!!.timestamp}) " +
-                    "< nodeConfig.heartbeatTimeout (${nodeConfig.heartbeatTimeout}))"
+                    "< nodeConfig.heartbeatTimeout (${heartbeatConfig.timeout}))"
         }
     }
 

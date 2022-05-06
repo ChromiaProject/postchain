@@ -2,7 +2,7 @@ package net.postchain.el2
 
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.base.BaseBlockchainConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.gtx.GTXBlockchainConfiguration
@@ -11,8 +11,8 @@ import java.math.BigInteger
 
 data class EIFConfig(val contract: String, val contractDeployBlock: BigInteger)
 
-fun BaseBlockchainConfigurationData.getEifConfigData(): EIFConfig {
-    val evmEif = this.data["evm_eif"] ?: throw UserMistake("No EIF config present")
+fun BlockchainConfigurationData.getEifConfigData(): EIFConfig {
+    val evmEif = this.rawConfig["evm_eif"] ?: throw UserMistake("No EIF config present")
     val eth = evmEif["eth"] ?: throw UserMistake("No ethereum config present")
     val contract = eth["contract"]?.asString() ?: throw UserMistake("No ethereum contract address config present")
     val contractDeployBlock =

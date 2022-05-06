@@ -2,19 +2,19 @@
 
 package net.postchain.gtx.gtxml
 
-import net.postchain.base.CryptoSystem
-import net.postchain.base.SigMaker
-import net.postchain.base.gtxml.OperationsType
-import net.postchain.base.gtxml.ParamType
-import net.postchain.base.gtxml.SignersType
-import net.postchain.base.gtxml.TransactionType
-import net.postchain.base.merkle.MerkleHashCalculator
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.BlockchainRid
+import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.common.BlockchainRid
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.byteArrayKeyOf
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.gtxml.OperationsType
+import net.postchain.gtv.gtxml.ParamType
+import net.postchain.gtv.gtxml.SignersType
+import net.postchain.gtv.gtxml.TransactionType
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXTransactionBodyData
 import net.postchain.gtx.GTXTransactionData
@@ -145,7 +145,7 @@ object GTXMLTransactionParser {
      * @param tx is the transaction to sign
      * @param signersMap is a map that tells us what [SigMaker] should be usd for each signer
      */
-    private fun signTransaction(tx: GTXTransactionData, signersMap: Map<ByteArrayKey, SigMaker>, calculator: MerkleHashCalculator<Gtv> ) {
+    private fun signTransaction(tx: GTXTransactionData, signersMap: Map<ByteArrayKey, SigMaker>, calculator: MerkleHashCalculator<Gtv>) {
         val txSigners = tx.transactionBodyData.signers
         val txBodyMerkleRoot = tx.transactionBodyData.calculateRID(calculator)
         for (i in 0 until txSigners.size) {

@@ -1,9 +1,9 @@
 package net.postchain.el2
 
-import net.postchain.base.CryptoSystem
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
-import net.postchain.core.BlockchainRid
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtx.*
 
 const val OP_ETH_EVENT = "__eth_event"

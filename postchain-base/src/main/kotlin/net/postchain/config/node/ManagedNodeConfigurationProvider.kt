@@ -2,11 +2,11 @@
 
 package net.postchain.config.node
 
+import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.Storage
 import net.postchain.base.peerId
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BlockchainRid
 import net.postchain.core.ByteArrayKey
 import net.postchain.core.NodeRid
 import java.time.Instant.EPOCH
@@ -32,7 +32,7 @@ class ManagedNodeConfigurationProvider(
             // nodeReplicas: for making a node a full clone of another node
             override val nodeReplicas = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
             override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
-            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig, pubKey)
+            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig)
             override val mustSyncUntilHeight = getSyncUntilHeight(appConfig)
         }
     }
@@ -111,7 +111,11 @@ class ManagedNodeConfigurationProvider(
         val c0Heights = mutableMapOf<Long, Long>()
         for (x in bridToHeightMap) {
             val chainIdKey = bridToChainID[x.key]
-            c0Heights.put(chainIdKey!!, x.value)
+            // We may be computing this when chain has been added to chain0 table but not yet to "blockchains" table
+            // this should not result in a NPE, ignore setting height until we have the chain in both tables
+            if (chainIdKey != null) {
+                c0Heights[chainIdKey] = x.value
+            }
         }
 
         // Primary source of height information is from local table, if not found there, use values from c0 tables.

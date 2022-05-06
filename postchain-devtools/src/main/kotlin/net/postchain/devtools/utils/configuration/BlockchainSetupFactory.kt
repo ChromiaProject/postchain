@@ -1,11 +1,11 @@
 package net.postchain.devtools.utils.configuration
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_DEPENDENCIES
-import net.postchain.base.BaseBlockchainConfigurationData.Companion.KEY_SIGNERS
+import net.postchain.base.configuration.KEY_DEPENDENCIES
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.BaseDependencyFactory
+import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
-import net.postchain.core.BlockchainRid
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvml.GtvMLParser

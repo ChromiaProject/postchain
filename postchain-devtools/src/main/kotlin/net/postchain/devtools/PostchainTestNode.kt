@@ -8,8 +8,9 @@ import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.config.app.AppConfig
 import net.postchain.core.*
+import net.postchain.common.BlockchainRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
@@ -25,17 +26,17 @@ import kotlin.properties.Delegates
  *
  */
 class PostchainTestNode(
-        nodeConfigProvider: NodeConfigurationProvider,
-        storage: Storage
-) : PostchainNode(nodeConfigProvider, storage) {
+        appConfig: AppConfig,
+        wipeDb: Boolean,
+        debug: Boolean = false
+) : PostchainNode(appConfig, wipeDb, debug) {
 
     val pubKey: String
     private var isInitialized by Delegates.notNull<Boolean>()
     private val blockchainRidMap = mutableMapOf<Long, BlockchainRid>() // Used to keep track of the BC RIDs of the chains
 
     init {
-        val nodeConfig = nodeConfigProvider.getConfiguration()
-        pubKey = nodeConfig.pubKey
+        pubKey = appConfig.pubKey
         isInitialized = true
 
         // We don't have specific test classes for Proc Man

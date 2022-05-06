@@ -3,13 +3,10 @@
 package net.postchain
 
 import mu.KLogging
-import net.postchain.base.Storage
-import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.BaseInfrastructureFactoryProvider
-import net.postchain.core.BlockchainInfrastructure
-import net.postchain.core.BlockchainProcessManager
-import net.postchain.core.BlockchainRid
-import net.postchain.core.Shutdownable
+import net.postchain.config.app.AppConfig
+import net.postchain.config.node.NodeConfigurationProviderFactory
+import net.postchain.core.*
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
@@ -20,11 +17,12 @@ import nl.komponents.kovenant.Kovenant
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
  */
-open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage: Storage) : Shutdownable {
+open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false) : Shutdownable {
 
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
     protected val postchainContext: PostchainContext
+    private val logPrefix: String
 
     companion object : KLogging()
 
@@ -35,21 +33,25 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage:
                 concurrentTasks = 5
             }
         }
+        val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
 
-        val infrastructureFactory = BaseInfrastructureFactoryProvider().createInfrastructureFactory(nodeConfigProvider)
+        val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
+        logPrefix = peerName(appConfig.pubKey)
+
         postchainContext = PostchainContext(
-                nodeConfigProvider,
+                appConfig,
+                NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
                 storage,
-                infrastructureFactory.makeConnectionManager(nodeConfigProvider),
-                DefaultNodeDiagnosticContext()
+                infrastructureFactory.makeConnectionManager(appConfig),
+                if (debug) DefaultNodeDiagnosticContext() else null
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
 
-        with(postchainContext.nodeDiagnosticContext) {
+        postchainContext.nodeDiagnosticContext?.apply {
             addProperty(DiagnosticProperty.VERSION, getVersion())
-            addProperty(DiagnosticProperty.PUB_KEY, nodeConfigProvider.getConfiguration().pubKey)
+            addProperty(DiagnosticProperty.PUB_KEY, appConfig.pubKey)
             addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
         }
     }
@@ -64,17 +66,13 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage:
 
     override fun shutdown() {
         // FYI: Order is important
-        logger.info("${name()}: shutdown() - begin")
+        logger.info("$logPrefix: shutdown() - begin")
         processManager.shutdown()
-        logger.debug("${name()}: shutdown() - Stopping BlockchainInfrastructure")
+        logger.debug("$logPrefix: shutdown() - Stopping BlockchainInfrastructure")
         blockchainInfrastructure.shutdown()
-        logger.debug("${name()}: shutdown() - Stopping PostchainContext")
+        logger.debug("$logPrefix: shutdown() - Stopping PostchainContext")
         postchainContext.shutDown()
-        logger.info("${name()}: shutdown() - end")
-    }
-
-    private fun name(): String {
-        return peerName(postchainContext.nodeDiagnosticContext.getProperty(DiagnosticProperty.PUB_KEY).toString())
+        logger.info("$logPrefix: shutdown() - end")
     }
 
     /**
@@ -95,10 +93,10 @@ open class PostchainNode(nodeConfigProvider: NodeConfigurationProvider, storage:
         return if (logger.isDebugEnabled) {
             val x = processManager.retrieveBlockchain(chainId)
             if (x == null) {
-                logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.nodeConfig.pubKey}?" }
+                logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.appConfig.pubKey}?" }
                 null
             } else {
-                val procName = BlockchainProcessName(postchainContext.nodeConfig.pubKey, x.blockchainEngine.getConfiguration().blockchainRid)
+                val procName = BlockchainProcessName(postchainContext.appConfig.pubKey, x.blockchainEngine.getConfiguration().blockchainRid)
                 BlockTrace.buildBeforeBlock(procName)
             }
         } else {

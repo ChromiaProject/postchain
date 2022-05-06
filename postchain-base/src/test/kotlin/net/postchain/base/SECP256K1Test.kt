@@ -3,6 +3,7 @@
 package net.postchain.base
 
 import net.postchain.common.hexStringToByteArray
+import net.postchain.crypto.*
 import net.postchain.devtools.KeyPairHelper.privKey
 import net.postchain.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator

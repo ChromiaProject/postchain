@@ -1,6 +1,5 @@
 package net.postchain.ebft.heartbeat
 
-import net.postchain.config.node.NodeConfig
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -12,22 +11,9 @@ class DefaultHeartbeatListenerTest {
     private val now = System.currentTimeMillis()
 
     @Test
-    fun testHeartbeatIsDisabled_then_checkPassed() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (false)
-        }
-        val sut = DefaultHeartbeatListener(nodeConfig, chainId)
-
-        // No Heartbeat event registered, but Heartbeat Check passed
-        assert(sut.checkHeartbeat(now))
-    }
-
-    @Test
     fun testNoHeartbeatEventRegistered_then_checkFailed() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
-        }
-        val sut = DefaultHeartbeatListener(nodeConfig, chainId)
+        val heartbeatConfig: HeartbeatConfig = mock()
+        val sut = DefaultHeartbeatListener(heartbeatConfig, chainId)
 
         // No Heartbeat event registered, then Heartbeat check failed
         assertFalse(sut.checkHeartbeat(now))
@@ -35,11 +21,10 @@ class DefaultHeartbeatListenerTest {
 
     @Test
     fun testHeartbeatCheckPassed() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
-            on { heartbeatTimeout } doReturn 20_000L
+        val heartbeatConfig: HeartbeatConfig = mock {
+            on { timeout } doReturn 20_000L
         }
-        val sut = DefaultHeartbeatListener(nodeConfig, chainId)
+        val sut = DefaultHeartbeatListener(heartbeatConfig, chainId)
 
         // Register the first Heartbeat event
         sut.onHeartbeat(HeartbeatEvent(now - 10_000L))
@@ -50,11 +35,10 @@ class DefaultHeartbeatListenerTest {
 
     @Test
     fun testNoHeartbeatEvent_and_timeout_occurs() {
-        val nodeConfig: NodeConfig = mock {
-            on { heartbeatEnabled } doReturn (true)
-            on { heartbeatTimeout } doReturn 20_000L
+        val heartbeatConfig: HeartbeatConfig = mock {
+            on { timeout } doReturn 20_000L
         }
-        val sut = DefaultHeartbeatListener(nodeConfig, chainId)
+        val sut = DefaultHeartbeatListener(heartbeatConfig, chainId)
 
         // Register Heartbeat event
         sut.onHeartbeat(HeartbeatEvent(now - 30_000L))

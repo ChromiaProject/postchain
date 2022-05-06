@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
+import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
@@ -32,7 +33,7 @@ open class BaseBlockchainProcessManager(
 
     override val synchronizer = Any()
 
-    val nodeConfig = postchainContext.nodeConfig
+    val appConfig = postchainContext.appConfig
     val connectionManager = postchainContext.connectionManager
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
     val storage get() = postchainContext.storage
@@ -95,22 +96,24 @@ open class BaseBlockchainProcessManager(
                     val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
                     if (configuration != null) {
                         blockchainInfrastructure.makeBlockchainConfiguration(
-                                configuration, eContext, NODE_ID_AUTO, chainId)
+                            configuration, eContext, NODE_ID_AUTO, chainId)
                     } else {
                         logger.error("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
                         null
                     }
                 } ?: return null
 
-                val processName = BlockchainProcessName(nodeConfig.pubKey, blockchainConfig.blockchainRid)
+                val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
                 startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
                 val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
                 val engine = blockchainInfrastructure.makeBlockchainEngine( processName, blockchainConfig, x)
                 startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
-                createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine) { true }
+                createAndRegisterBlockchainProcess(
+                    chainId, blockchainConfig, processName, engine, awaitPermissionToProcessMessages(blockchainConfig))
                 logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
+
 
                 startInfoDebug("Blockchain has been started", processName, chainId, blockchainConfig.blockchainRid, bTrace)
                 blockchainConfig.blockchainRid
@@ -118,16 +121,26 @@ open class BaseBlockchainProcessManager(
                 logger.error(e) { e.message }
                 null
             }
+
         }
     }
 
-    protected open fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, shouldProcessNewMessages: (Long) -> Boolean) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, shouldProcessNewMessages).also {
-            it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
-            extensions.forEach { ext -> ext.connectProcess(it) }
-            chainIdToBrid[chainId] = blockchainConfig.blockchainRid
-        }
+    protected open fun createAndRegisterBlockchainProcess(
+            chainId: Long,
+            blockchainConfig: BlockchainConfiguration,
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+    ) {
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
+                .also {
+                    it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
+                    extensions.forEach { ext -> ext.connectProcess(it) }
+                    chainIdToBrid[chainId] = blockchainConfig.blockchainRid
+                }
     }
+
+    protected open fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean = { _, _ -> true }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
         return blockchainProcesses[chainId]
@@ -196,7 +209,7 @@ open class BaseBlockchainProcessManager(
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
     protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return { bTrace, height ->
+        return { bTrace, height, _ ->
 
             for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, height)
             val doRestart = withReadConnection(storage, chainId) { eContext ->
@@ -213,7 +226,7 @@ open class BaseBlockchainProcessManager(
     }
 
     protected fun nodeName(): String {
-        return peerName(nodeConfig.pubKey)
+        return peerName(appConfig.pubKey)
     }
 
     // FYI: [et]: For integration testing. Will be removed or refactored later
@@ -243,7 +256,7 @@ open class BaseBlockchainProcessManager(
     }
 
     protected fun initiateChainDiagnosticData() {
-        nodeDiagnosticContext.addProperty(DiagnosticProperty.BLOCKCHAIN) {
+        nodeDiagnosticContext?.addProperty(DiagnosticProperty.BLOCKCHAIN) {
             val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
 
             connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->

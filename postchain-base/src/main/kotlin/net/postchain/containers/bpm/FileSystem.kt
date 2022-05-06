@@ -1,8 +1,9 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
-import net.postchain.config.node.NodeConfig
+import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.FileSystem.Type.ZFS
+import net.postchain.containers.infra.ContainerNodeConfig
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -43,7 +44,7 @@ import java.util.concurrent.TimeUnit
  *          /node-config.properties                 node config file
  *
  */
-class FileSystem(val nodeConfig: NodeConfig) {
+class FileSystem(private val appConfig: AppConfig, private val containerNodeConfig: ContainerNodeConfig) {
 
     // Filesystem type
     enum class Type {
@@ -65,7 +66,7 @@ class FileSystem(val nodeConfig: NodeConfig) {
      * Creates and returns root of container
      */
     fun createContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {
-        return if (nodeConfig.containerFilesystem == ZFS.name) {
+        return if (containerNodeConfig.containerFilesystem == ZFS.name) {
             createZfsContainerRoot(containerName, resourceLimits)
         } else { // LOCAL
             createLocalContainerRoot(containerName)
@@ -85,7 +86,7 @@ class FileSystem(val nodeConfig: NodeConfig) {
     fun containerPgdataPath() = CONTAINER_PGDATA_PATH
 
     private fun containerRoot(containerName: ContainerName): Path {
-        return if (nodeConfig.containerFilesystem == ZFS.name) {
+        return if (containerNodeConfig.containerFilesystem == ZFS.name) {
             zfsRootOf(containerName)
         } else { // LOCAL
             localRootOf(containerName)
@@ -93,11 +94,11 @@ class FileSystem(val nodeConfig: NodeConfig) {
     }
 
     private fun zfsRootOf(containerName: ContainerName): Path {
-        return Paths.get(File.separator, nodeConfig.containerZfsPool, containerName.name)
+        return Paths.get(File.separator, containerNodeConfig.containerZfsPool, containerName.name)
     }
 
     private fun localRootOf(containerName: ContainerName): Path {
-        return Paths.get(nodeConfig.appConfig.configDir, CONTAINERS_DIR, containerName.name)
+        return Paths.get(appConfig.configDir, CONTAINERS_DIR, containerName.name)
     }
 
     private fun createZfsContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {
@@ -107,12 +108,12 @@ class FileSystem(val nodeConfig: NodeConfig) {
             root
         } else {
             try {
-                val script = "./${nodeConfig.containerZfsPoolInitScript}"
+                val script = "./${containerNodeConfig.containerZfsPoolInitScript}"
                 if (!File(script).exists()) {
                     logger.error("Can't find zfs init script: $script")
                     null
                 } else {
-                    val fs = "${nodeConfig.containerZfsPool}/${containerName.name}"
+                    val fs = "${containerNodeConfig.containerZfsPool}/${containerName.name}"
                     val quota = resourceLimits.storage.toString()
                     val cmd = arrayOf(script, fs, quota)
                     Runtime.getRuntime().exec(cmd).waitFor(10, TimeUnit.SECONDS)

@@ -6,7 +6,6 @@ import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.base.BaseBlockQueries
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
@@ -14,22 +13,22 @@ import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 
 open class BaseApiInfrastructure(
-        val nodeConfigProvider: NodeConfigurationProvider,
-        val nodeDiagnosticContext: NodeDiagnosticContext
+        protected val restApiConfig: RestApiConfig,
+        val nodeDiagnosticContext: NodeDiagnosticContext?
 ) : ApiInfrastructure {
 
-    val restApi: RestApi? = with(nodeConfigProvider.getConfiguration()) {
-        if (restApiPort != -1) {
-            if (restApiSsl) {
+    val restApi: RestApi? = with(restApiConfig) {
+        if (port != -1) {
+            if (ssl) {
                 RestApi(
-                        restApiPort,
-                        restApiBasePath,
-                        restApiSslCertificate,
-                        restApiSslCertificatePassword)
+                        port,
+                        basePath,
+                        sslCertificate,
+                        sslCertificatePassword)
             } else {
                 RestApi(
-                        restApiPort,
-                        restApiBasePath)
+                        port,
+                        basePath)
             }
         } else {
             null

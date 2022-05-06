@@ -1,8 +1,8 @@
 package net.postchain.el2
 
-import net.postchain.base.decompressKey
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256
+import net.postchain.crypto.decompressKey
 import java.security.MessageDigest
 
 /**

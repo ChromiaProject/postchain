@@ -11,6 +11,7 @@ import net.postchain.core.ByteArrayKey
 import net.postchain.core.InitialBlockData
 import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.generateProof
