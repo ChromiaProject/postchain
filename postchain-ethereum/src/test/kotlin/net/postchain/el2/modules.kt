@@ -80,7 +80,7 @@ class L2TransferOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
                 |event_signature, contract_address, from_address, to_address, value) 
                 |VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""".trimMargin(),
             data.args[0].asInteger(), data.args[1].asString(), data.args[2].asString(), data.args[3].asInteger(),
-            data.args[4].asString(), data.args[5].asString(), data.args[6].asString(), data.args[7].asString(), data.args[8].asInteger())
+            data.args[4].asString(), data.args[5].asString(), data.args[6].asString(), data.args[7].asString(), data.args[8].asBigInteger())
         return true
     }
 }
