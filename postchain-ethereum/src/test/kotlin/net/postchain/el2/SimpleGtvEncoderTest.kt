@@ -4,10 +4,19 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.gtv.*
 import org.junit.jupiter.api.Test
+import org.spongycastle.jce.provider.BouncyCastleProvider
+import java.security.Security
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class SimpleGtvEncoderTest {
+
+    init {
+        // We add this provider so that we can get keccak-256 message digest instances
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(BouncyCastleProvider())
+        }
+    }
 
     @Test
     fun testSimpleEncodeGtvArrayAndKeccakDigest() {

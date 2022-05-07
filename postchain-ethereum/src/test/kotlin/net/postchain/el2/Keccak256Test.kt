@@ -2,9 +2,18 @@ package net.postchain.el2
 
 import net.postchain.common.hexStringToByteArray
 import org.junit.jupiter.api.Test
+import org.spongycastle.jce.provider.BouncyCastleProvider
+import java.security.Security
 import kotlin.test.assertTrue
 
 class Keccak256Test {
+
+    init {
+        // We add this provider so that we can get keccak-256 message digest instances
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(BouncyCastleProvider())
+        }
+    }
 
     @Test
     fun testGetEthereumAddress() {
