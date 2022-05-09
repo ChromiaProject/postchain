@@ -45,6 +45,7 @@ release:
     - git fetch --tags
     - LATEST_VERSION_TAG=$(git for-each-ref --sort=-version:refname --count=1 --format="%(refname:short)" refs/tags)
     - mvn -B gitflow:support-start -DskipTestProject=true -DtagName=$LATEST_VERSION_TAG
+    - git checkout $CI_COMMIT_REF_NAME
     - DIGIT="${VERSION_DIGIT_TO_INCREMENT:-1}"
     - mvn -B gitflow:release -DskipTestProject=true -DversionDigitToIncrement=$DIGIT
   only:
