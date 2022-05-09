@@ -3,6 +3,8 @@
 package net.postchain.base.data
 
 import mu.KLogging
+import net.postchain.common.tx.TransactionResult
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.core.*
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue

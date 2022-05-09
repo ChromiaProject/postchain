@@ -4,7 +4,7 @@ package net.postchain.api.rest.json
 
 import com.google.gson.Gson
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.core.TransactionStatus
+import net.postchain.common.tx.TransactionStatus
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.skyscreamer.jsonassert.JSONAssert

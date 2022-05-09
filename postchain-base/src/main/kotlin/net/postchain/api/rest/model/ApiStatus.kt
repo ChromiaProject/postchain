@@ -2,7 +2,7 @@
 
 package net.postchain.api.rest.model
 
-import net.postchain.core.TransactionStatus
+import net.postchain.common.tx.TransactionStatus
 
 class ApiStatus(txStatus: TransactionStatus, val rejectReason: String? = null) {
 

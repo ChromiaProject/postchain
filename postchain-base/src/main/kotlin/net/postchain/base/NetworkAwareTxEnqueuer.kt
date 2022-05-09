@@ -4,8 +4,8 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.common.toHex
+import net.postchain.common.tx.TransactionResult
 import net.postchain.core.TransactionQueue
-import net.postchain.core.TransactionResult
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.network.CommunicationManager
 
