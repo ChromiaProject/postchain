@@ -42,6 +42,7 @@ release:
   stage: release
   script:
     - *git_setup
+    - git fetch --tags
     - LATEST_VERSION_TAG=$(git for-each-ref --sort=-version:refname --count=1 --format="%(refname:short)" refs/tags)
     - mvn -B gitflow:support-start -DskipTestProject=true -DtagName=$LATEST_VERSION_TAG
     - DIGIT="${VERSION_DIGIT_TO_INCREMENT:-1}"
