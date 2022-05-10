@@ -89,6 +89,7 @@ open class EBFTSynchronizationInfrastructure(
                 }
                 val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, brid)
 
+                val histBlockMessageHandler = BlockMessageHandler(engine.getBlockQueries(), histCommManager)
                 WorkerContext(
                         processName,
                         blockchainConfig,
@@ -97,7 +98,7 @@ open class EBFTSynchronizationInfrastructure(
                         historicPeerCommConfiguration,
                         postchainContext.appConfig,
                         currentNodeConfig,
-                        blockMessageHandler,
+                        histBlockMessageHandler,
                         awaitPermissionToProcessMessages
                 )
 
