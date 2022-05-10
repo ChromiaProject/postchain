@@ -60,12 +60,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     var blockTrace: BlockTrace? = null // For logging only
     val myBRID = blockchainEngine.getConfiguration().blockchainRid
 
-    private val messageJob: Job
-
-    init {
-        messageJob = startFastSynchronizerMessageJob(fastSynchronizer, workerContext.communicationManager.messages)
-    }
-
     override fun action() {
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
 
@@ -108,7 +102,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             netDebug("Try network sync using own BRID")
             // using our own BRID
             workerContext.communicationManager.init()
+            val messageJob = startFastSynchronizerMessageJob(fastSynchronizer, workerContext.communicationManager.messages)
             fastSynchronizer.syncUntilResponsiveNodesDrained()
+            messageJob.cancel()
             workerContext.communicationManager.shutdown()
         } else {
             val localChainID = getLocalChainId(brid)
@@ -260,7 +256,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     override fun cleanup() {
         shutdownDebug("Historic worker shutting down")
-        messageJob.cancel()
         blockDatabase.stop()
         workerContext.shutdown()
         shutdownDebug("Shutdown finished")
