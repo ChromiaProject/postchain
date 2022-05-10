@@ -5,9 +5,9 @@ package net.postchain.gtx
 import net.postchain.common.data.Hash
 import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.common.BlockchainRid
-import net.postchain.core.ProgrammerMistake
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.Signature
-import net.postchain.core.UserMistake
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.*

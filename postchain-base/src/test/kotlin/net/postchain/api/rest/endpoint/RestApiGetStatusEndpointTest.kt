@@ -10,7 +10,7 @@ import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRID
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.TransactionStatus
+import net.postchain.common.tx.TransactionStatus
 import org.hamcrest.Matchers.equalToIgnoringCase
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

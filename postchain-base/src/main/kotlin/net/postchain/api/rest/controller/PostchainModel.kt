@@ -10,8 +10,9 @@ import net.postchain.base.BaseBlockQueries
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.TimeLog
 import net.postchain.common.toHex
+import net.postchain.common.tx.TransactionResult
+import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.core.*
-import net.postchain.core.TransactionStatus.*
 import net.postchain.gtv.Gtv
 
 open class PostchainModel(
