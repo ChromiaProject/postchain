@@ -544,7 +544,6 @@
                 <configuration>
                     <gitFlowConfig>
                         <developmentBranch>dev</developmentBranch>
-                        <releaseBranchPrefix>release-</releaseBranchPrefix>
                         <versionTagPrefix>ver-</versionTagPrefix>
                     </gitFlowConfig>
                 </configuration>
