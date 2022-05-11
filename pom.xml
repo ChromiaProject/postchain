@@ -63,6 +63,7 @@
         <spongycastle.core.version>1.56.0.0</spongycastle.core.version>
         <commons-dbutils.version>1.6</commons-dbutils.version>
         <commons-dbcp2.version>2.6.0</commons-dbcp2.version>
+        <commons-lang3.version>3.12.0</commons-lang3.version>
         <commons-configuration2.version>2.1.1</commons-configuration2.version>
         <commons-beanutils.version>1.9.3</commons-beanutils.version>
 
@@ -336,6 +337,11 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-dbcp2</artifactId>
                 <version>${commons-dbcp2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang3.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
