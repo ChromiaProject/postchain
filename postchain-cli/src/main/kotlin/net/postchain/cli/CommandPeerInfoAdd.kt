@@ -63,7 +63,7 @@ class CommandPeerInfoAdd : Command {
             val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
             // Make all pubkey strings in db upper case. It will then be consistent with package net.postchain.common.
             //with HEX_CHARS = "0123456789ABCDEF"
-            val added = CliExecution.peerinfoAdd(nodeConfigFile, host, port, pubKey.toUpperCase(), mode)
+            val added = CliExecution.peerinfoAdd(nodeConfigFile, host, port, pubKey.uppercase(), mode)
             when {
                 added -> Ok("Peerinfo has been added successfully")
                 else -> Ok("Peerinfo hasn't been added")
