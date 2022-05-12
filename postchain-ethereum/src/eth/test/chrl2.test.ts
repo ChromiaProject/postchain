@@ -199,13 +199,13 @@ describe("ChrL2", () => {
                 user.address.substring(2),
                 "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
                 tokenAddress.substring(2),
-                "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
+                "a6", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
                 hexZeroPad(toDeposit.toHexString(), 32).substring(2),
                 "a2", "84", "00000010", "0c", "84", "0000000a",
                 solidityPack(["string"], [name]).substring(2),
                 "a2", "84", "00000009", "0c", "84", "00000003",
                 solidityPack(["string"], [symbol]).substring(2),
-                "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
+                "a6", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
                 hexZeroPad("0x12", 32).substring(2), // Default decimals is 18
             )
             await tokenApproveInstance.approve(chrL2Address, toDeposit)

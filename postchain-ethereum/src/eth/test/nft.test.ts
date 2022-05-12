@@ -54,7 +54,7 @@ describe("Non Fungible Token", () => {
                 user.address.substring(2),
                 "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
                 nftAddress.substring(2),
-                "a3", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
+                "a6", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
                 hexZeroPad(tokenId.toHexString(), 32).substring(2),
                 "a2", "84", "00000011", "0c", "84", "0000000b", 
                 solidityPack(["string"], [name]).substring(2),
