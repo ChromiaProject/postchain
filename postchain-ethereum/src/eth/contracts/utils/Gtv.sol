@@ -6,7 +6,7 @@ library Gtv {
     // GTV BER tags
     uint8 constant GTV_BYTE_ARRAY_BER_TAG = 0xA1;
     uint8 constant GTV_STRING_BER_TAG = 0xA2;
-    uint8 constant GTV_INT_BER_TAG = 0xA3;
+    uint8 constant GTV_BIG_INT_BER_TAG = 0xA6;
     uint8 constant GTV_ARRAY_BER_TAG = 0xA5;
 
     // Universal BER tags
@@ -33,7 +33,7 @@ library Gtv {
 
     function encode(uint256 value) internal pure returns (bytes memory) {
         return abi.encodePacked(
-            GTV_INT_BER_TAG,
+            GTV_BIG_INT_BER_TAG,
             uint8(35),   // uint8 + uint8 + uint8 + uint256 = 35 bytes
             INT_BER_TAG,
             uint8(33),   // uint8 + uint256 = 33 bytes
