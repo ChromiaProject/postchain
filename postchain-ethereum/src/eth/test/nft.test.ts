@@ -28,8 +28,8 @@ describe("Non Fungible Token", () => {
         const tokenContract = await tokenFactory.deploy(name, symbol)
         nftAddress = tokenContract.address
 
-        const chrl2Factory = new ChrL2__factory(deployer)
-        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[directoryNodes.address], [appNodes.address]])
+        const chrl2Factory = new ChrL2__factory(directoryNodes)
+        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[appNodes.address]])
         chrL2Address = chrl2Instance.address
     });
 
@@ -111,7 +111,7 @@ describe("Non Fungible Token", () => {
                 let state = blockNumber.substring(2, blockNumber.length).concat(event)
                 let hashRootState = keccak256(DecodeHexStringToByteArray(state))
                 let el2Leaf = hashRootEvent.substring(2, hashRootEvent.length).concat(hashRootState.substring(2, hashRootState.length))
-
+                
                 let blockchainRid = "977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"
                 let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
                 let merkleRootHash = "96defe74f43fcf2d12a1844bcd7a3a7bcb0d4fa191776953dae3f1efb508d866"
@@ -120,7 +120,7 @@ describe("Non Fungible Token", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "F6134DA7669DF2398073CD8126989DD9E26BA78E7094D7E2EADEC582BC70D9BF"
+                let extraDataMerkleRoot = "9312117556194C11512E1E00112DC94A5832369ED29C9F367A13549F4C3C0848"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
@@ -176,7 +176,7 @@ describe("Non Fungible Token", () => {
 
                 await expect(chrL2Instance.withdrawRequestNFT(maliciousData, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid event')
 
                 // hash two times to make malicious data
@@ -190,7 +190,7 @@ describe("Non Fungible Token", () => {
                 }                
                 await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], invalidEl2Leaf)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], invalidEl2Leaf)
                 ).to.be.revertedWith('Postchain: invalid el2 extra data')
 
                 let invalidExtraDataRoot = {
@@ -202,7 +202,7 @@ describe("Non Fungible Token", () => {
                 }                
                 await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], invalidExtraDataRoot)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], invalidExtraDataRoot)
                 ).to.be.revertedWith('Postchain: invalid extra data root')
 
                 let maliciousBlockRid = postchainMerkleNodeHash([0x7, node1234, node1234])
@@ -215,7 +215,7 @@ describe("Non Fungible Token", () => {
                 )
                 await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(maliciousBlockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid block header')
 
                 let maliciousEl2Proof = {
@@ -230,7 +230,7 @@ describe("Non Fungible Token", () => {
                 }
                 await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], maliciousEl2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], maliciousEl2Proof)
                 ).to.be.revertedWith('Postchain: invalid el2 extra merkle proof')
 
                 let maliciousEventProof = {
@@ -240,23 +240,23 @@ describe("Non Fungible Token", () => {
                 }
                 await expect(chrL2Instance.withdrawRequestNFT(data, maliciousEventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
                 ).to.be.revertedWith('ChrL2: invalid merkle proof')
 
                 await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [], el2Proof)
+                    [], [], el2Proof)
                 ).to.be.revertedWith('ChrL2: block signature is invalid')
 
                 await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
                 ).to.emit(chrL2Instance, "WithdrawRequestNFT")
                 .withArgs(user.address, nftAddress, tokenId)
 
                 await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], el2Proof)
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
                 ).to.be.revertedWith('ChrL2: event hash was already used')
 
                 await expect(chrL2Instance.withdrawNFT(

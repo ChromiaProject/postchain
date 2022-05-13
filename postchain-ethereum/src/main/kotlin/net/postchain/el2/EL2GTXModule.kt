@@ -94,6 +94,7 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val snapshot = SnapshotPageStore(ctx, 2, SimpleDigestSystem(MessageDigest.getInstance(KECCAK256)), PREFIX)
     val proofs = snapshot.getMerkleProof(blockHeight, accountNumber)
     var gtvProofs: List<GtvByteArray> = listOf()
+    val el2MerkleProof = el2MerkleProof(db, ctx, blockHeight)
     for (proof in proofs) {
         gtvProofs = gtvProofs.plus(gtv(proof))
     }
@@ -101,7 +102,8 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
         "accountState" to accountState,
         "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
-        "merkleProofs" to GtvArray(gtvProofs.toTypedArray())
+        "stateProofs" to GtvArray(gtvProofs.toTypedArray()),
+        "el2MerkleProof" to el2MerkleProof
     )
 }
 
@@ -184,8 +186,8 @@ private fun blockWitnessData(
     val witness = BaseBlockWitness.fromBytes(db.getWitnessData(ctx, blockRid)) as MultiSigBlockWitness
     var sigs = listOf<Gtv>()
     val signatures = witness.getSignatures()
-        for (s in signatures) {
-            sigs = sigs.plus(gtv(
+    for (s in signatures) {
+        sigs = sigs.plus(gtv(
             "sig" to GtvByteArray(encodeSignatureWithV(blockRid, s.subjectID, s.data)),
             "pubkey" to GtvByteArray(getEthereumAddress(s.subjectID))
             )

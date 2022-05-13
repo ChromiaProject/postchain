@@ -179,37 +179,37 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
     } catch (error) { }
   }
 
-  const pending = async (serial: number, token: string, beneficiary: string, amount: number) => {
+  const pending = async (eventHash: string) => {
     const signer = library.getSigner();
-    const eventHash = "0x" + calculateEventLeafHash(serial, token, beneficiary, amount)
+    const zeroPaddedEventHash = "0x" + eventHash
     try {
       const chrl2 = new ethers.Contract(
         chrL2Address,
         ChrL2Artifacts.abi,
         library
       )
-      console.log("eventHash: " + eventHash)
-      let pendingWithdraw = chrl2.interface.encodeFunctionData("pendingWithdraw", [eventHash])
-      console.log("pendingWithdraw: " + pendingWithdraw)
-      let calldata = chrl2.interface.encodeFunctionData("submitTransaction", [chrL2Address, BigNumber.from(0), pendingWithdraw])
+      let calldata = chrl2.interface.encodeFunctionData("pendingWithdraw", [zeroPaddedEventHash])
       await sendTnx(signer, chrL2Address, calldata)
     } catch (e) { 
       console.log(e.Message)
     }
   }
 
-  const confirm =async () => {
+  const unpending = async (eventHash: string) => {
     const signer = library.getSigner();
+    const zeroPaddedEventHash = "0x" + eventHash
     try {
       const chrl2 = new ethers.Contract(
         chrL2Address,
         ChrL2Artifacts.abi,
         library
       )
-      let calldata = chrl2.interface.encodeFunctionData("confirmTransaction", [BigNumber.from(0)])
+      let calldata = chrl2.interface.encodeFunctionData("unpendingWithdraw", [zeroPaddedEventHash])
       await sendTnx(signer, chrL2Address, calldata)
-    } catch (error) { }    
-  }
+    } catch (e) { 
+      console.log(e.Message)
+    }
+  }  
 
   return (
     <div className="flex flex-col">
@@ -247,11 +247,11 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
                   <button type="button" className="btn btn-outline btn-accent" onClick={() => withdraw(eventHash)}>
                     Withdraw
                   </button>
-                  <button type="button" className="btn btn-outline btn-accent" onClick={() => pending(w?.serial, w?.token, w?.beneficiary, w?.value)}>
+                  <button type="button" className="btn btn-outline btn-accent" onClick={() => pending(eventHash)}>
                     Pending
                   </button>
-                  <button type="button" className="btn btn-outline btn-accent" onClick={() => confirm()}>
-                    Confirm
+                  <button type="button" className="btn btn-outline btn-accent" onClick={() => unpending(eventHash)}>
+                    Unpending
                   </button>
                 </td>
               </tr>)
@@ -270,7 +270,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
   const [amount, setAmount] = useState(0)
   const [withdrawAmount, setWithdrawAmount] = useState(0)
   const [unit, setUnit] = useState(18)
-  const tokenId = 65696
+  const tokenId = 65695
   var tokenType: string
   if (tokenAddress === "0x064e16771A4864561f767e4Ef4a6989fc4045aE7") {
     tokenType = "ERC721"

@@ -3,16 +3,14 @@ import { ChrL2, ChrL2__factory } from "../../src/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 task("deploy:ChrL2")
-  .addOptionalParam('directory', 'derectory node')
   .addOptionalParam('app', 'app node')
   .addFlag('verify', 'Verify contracts at Etherscan')
-  .setAction(async ({ verify, directory, app}, hre) => {
+  .setAction(async ({ verify, app}, hre) => {
     // deploy ChrL2 smart contract
     const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2")
-    const directoryNode = directory === undefined ? [] : getNodes(directory);
     const appNode = app === undefined ? [] : getNodes(app);
 
-    const chrL2: ChrL2 = <ChrL2>await hre.upgrades.deployProxy(chrL2Factory, [directoryNode, appNode]);
+    const chrL2: ChrL2 = <ChrL2>await hre.upgrades.deployProxy(chrL2Factory, [appNode]);
     await chrL2.deployed();
     console.log("ChrL2 deployed to: ", chrL2.address);
     const proxyAdmin = await hre.upgrades.erc1967.getAdminAddress(chrL2.address);
@@ -23,17 +21,25 @@ task("deploy:ChrL2")
     }
   });
 
+task("prepare:ChrL2")
+    .addParam('address', '')
+    .setAction(async ({ address, verify}, hre ) => {
+        const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2");
+        const upgrade = await hre.upgrades.prepareUpgrade(address, chrL2Factory);
+        console.log("New logic contract of ChrL2 has been prepared for upgrade at: ", upgrade);
+
+        if (verify) {
+            await verifyContract(hre, upgrade);
+        }
+    });
+
 task("upgrade:ChrL2")
     .addParam('address', '')
     .addFlag('verify', 'Verify contracts at Etherscan')
-    .setAction(async ({ address, verify }, hre) => {
+    .setAction(async ({ address }, hre) => {
         const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2");
         await hre.upgrades.upgradeProxy(address, chrL2Factory);
         console.log("ChrL2 has been upgraded");
-
-        if (verify) {
-            await verifyContract(hre, address);
-        }
     });
 
 async function verifyContract(hre: HardhatRuntimeEnvironment, proxyAddress: string) {
