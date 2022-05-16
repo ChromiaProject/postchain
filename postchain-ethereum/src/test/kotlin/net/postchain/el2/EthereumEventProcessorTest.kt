@@ -1,5 +1,7 @@
 package net.postchain.el2
 
+import assertk.assert
+import assertk.assertions.*
 import net.postchain.core.BlockQueries
 import net.postchain.core.BlockchainEngine
 import net.postchain.ethereum.contracts.ChrL2
@@ -26,8 +28,6 @@ import org.web3j.tx.gas.DefaultGasProvider
 import org.web3j.tx.response.PollingTransactionReceiptProcessor
 import org.web3j.utils.Numeric
 import java.math.BigInteger
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @Testcontainers(disabledWithoutDocker = true)
 class EthereumEventProcessorTest {
@@ -81,7 +81,6 @@ class EthereumEventProcessorTest {
         val initialMint = 50L
         // Deploy ChrL2 contract
         val chrL2 = ChrL2.deploy(web3j, transactionManager, gasProvider).send()
-        val web3c = Web3Connector(web3j, chrL2.contractAddress)
 
         // Mock query for last eth block in this test
         val blockQueriesMock: BlockQueries = mock {
@@ -95,13 +94,15 @@ class EthereumEventProcessorTest {
         val contractDeployBlockNumber = web3j.ethGetTransactionByHash(contractDeployTransactionHash)
             .send().result.blockNumber
         val ethereumEventProcessor =
-            EthereumEventProcessor(web3c, chrL2.contractAddress, BigInteger.ONE, contractDeployBlockNumber, engineMock)
-        ethereumEventProcessor.start()
+            EthereumEventProcessor(web3j, listOf(chrL2.contractAddress), BigInteger.ONE, contractDeployBlockNumber, engineMock).apply {
+                start()
+            }
 
         // Deploy a test token that we mint and then approve transfer of coins to chrL2 contract
-        val testToken = TestToken.deploy(web3j, transactionManager, gasProvider).send()
-        testToken.mint(Address(transactionManager.fromAddress), Uint256(BigInteger.valueOf(initialMint))).send()
-        testToken.approve(Address(chrL2.contractAddress), Uint256(BigInteger.valueOf(initialMint))).send()
+        val testToken = TestToken.deploy(web3j, transactionManager, gasProvider).send().apply {
+            mint(Address(transactionManager.fromAddress), Uint256(BigInteger.valueOf(initialMint))).send()
+            approve(Address(chrL2.contractAddress), Uint256(BigInteger.valueOf(initialMint))).send()
+        }
 
         // Deposit to postchain
         for (i in 1..5) {
@@ -111,7 +112,7 @@ class EthereumEventProcessorTest {
         Awaitility.await()
             .atMost(Duration.ONE_MINUTE)
             .untilAsserted {
-                assertTrue(ethereumEventProcessor.getEventData().second.size == 5)
+                assert(ethereumEventProcessor.getEventData().second.size == 5).isTrue()
             }
 
         // validate events
@@ -119,9 +120,9 @@ class EthereumEventProcessorTest {
         val eventsToValidate = eventData.second
             .map { OpData(OP_ETH_EVENT, it) }
             .toTypedArray()
-        assertTrue(ethereumEventProcessor.isValidEventData(eventsToValidate))
+        assert(ethereumEventProcessor.isValidEventData(eventsToValidate)).isTrue()
         // Test if NoOp version can also validate
-        assertTrue(NoOpEventProcessor().isValidEventData(eventsToValidate))
+        assert(NoOpEventProcessor().isValidEventData(eventsToValidate)).isTrue()
 
         // Mock that the block was validated and committed to DB
         val eventDataBlockNumber = eventData.first.first().asBigInteger()
@@ -129,36 +130,86 @@ class EthereumEventProcessorTest {
             .doReturn(getMockedBlockHeightResponse(eventDataBlockNumber))
 
         // Assert events before last committed block are not included now
-        assertTrue(ethereumEventProcessor.getEventData().second.isEmpty())
+        assert(ethereumEventProcessor.getEventData().second.isEmpty()).isTrue()
 
         // One more final transaction
         // Maxing out this transaction
         val max = BigInteger.TWO.pow(256) - BigInteger.valueOf(initialMint + 1)
-        testToken.mint(Address(transactionManager.fromAddress), Uint256(max)).send()
-        testToken.approve(Address(chrL2.contractAddress), Uint256(max)).send()
+        with (testToken) {
+            mint(Address(transactionManager.fromAddress), Uint256(max)).send()
+            approve(Address(chrL2.contractAddress), Uint256(max)).send()
+        }
         chrL2.deposit(Address(testToken.contractAddress), Uint256(max)).send()
 
         Awaitility.await()
             .atMost(Duration.ONE_MINUTE)
             .untilAsserted {
-                assertTrue(ethereumEventProcessor.getEventData().second.size == 1)
+                assert(ethereumEventProcessor.getEventData().second.size == 1).isTrue()
             }
 
         val lastEvent = ethereumEventProcessor.getEventData().second.first()
         val eventArgs = lastEvent[7].asArray()
         // Check that data in the event matches what we sent
-        assertTrue(
+        assert(
             Numeric.hexStringToByteArray(transactionManager.fromAddress).contentEquals(eventArgs[0].asByteArray())
-        ) // owner
-        assertTrue(
+        ).isTrue() // owner
+        assert(
             Numeric.hexStringToByteArray(testToken.contractAddress).contentEquals(eventArgs[1].asByteArray())
-        ) // token
-        assertEquals(max, eventArgs[2].asBigInteger()) // value
+        ).isTrue() // token
+        assert(max).isEqualTo(eventArgs[2].asBigInteger()) // value
 
         ethereumEventProcessor.shutdown()
     }
 
-    fun getMockedBlockHeightResponse(height: BigInteger?): Promise<Gtv, Exception> {
+    @Test
+    fun `Events can be received from multiple contracts`() {
+        val initialMint = 20L
+        // Deploy two ChrL2 contracts
+        val chrL2First = ChrL2.deploy(web3j, transactionManager, gasProvider).send()
+        val chrL2Second = ChrL2.deploy(web3j, transactionManager, gasProvider).send()
+
+        // Mock query for last eth block in this test
+        val blockQueriesMock: BlockQueries = mock {
+            on { query(eq("get_last_eth_block"), any()) } doReturn getMockedBlockHeightResponse(null)
+        }
+        val engineMock: BlockchainEngine = mock {
+            on { getBlockQueries() } doReturn blockQueriesMock
+        }
+
+        val contractDeployTransactionHash = chrL2First.transactionReceipt.get().transactionHash
+        val contractDeployBlockNumber = web3j.ethGetTransactionByHash(contractDeployTransactionHash)
+                .send().result.blockNumber
+        val contractAddresses = listOf(chrL2First.contractAddress, chrL2Second.contractAddress)
+        val ethereumEventProcessor =
+                EthereumEventProcessor(web3j, contractAddresses, BigInteger.ONE, contractDeployBlockNumber, engineMock).apply {
+                    start()
+                }
+
+        // Deploy a test token that we mint and then approve transfer of coins to chrL2 contracts
+        val testToken = TestToken.deploy(web3j, transactionManager, gasProvider).send().apply {
+            mint(Address(transactionManager.fromAddress), Uint256(BigInteger.valueOf(initialMint))).send()
+            approve(Address(chrL2First.contractAddress), Uint256(BigInteger.TEN)).send()
+            approve(Address(chrL2Second.contractAddress), Uint256(BigInteger.TEN)).send()
+        }
+
+        // Deposit to postchain
+        chrL2First.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
+        chrL2Second.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
+
+        // Verify we got both events from the different contracts
+        Awaitility.await()
+                .atMost(Duration.ONE_MINUTE)
+                .untilAsserted {
+                    val events = ethereumEventProcessor.getEventData().second
+                    assert(events.size == 2).isTrue()
+                    val eventContractAddresses = events.map { it[5].asString() }
+                    assert(eventContractAddresses).containsExactly(*contractAddresses.toTypedArray())
+                }
+
+        ethereumEventProcessor.shutdown()
+    }
+
+    private fun getMockedBlockHeightResponse(height: BigInteger?): Promise<Gtv, Exception> {
         return if (height == null) {
             Promise.ofSuccess<Gtv, Exception>(GtvNull)
         } else {

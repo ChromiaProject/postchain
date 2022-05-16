@@ -27,8 +27,8 @@ class EL2SynchronizationInfrastructureExtension(
             if (el2Ext is EL2SpecialTxExtension) {
                 val eifBlockchainConfig = cfg.configData.rawConfig["eif"]?.toObject<EifBlockchainConfig>()
                         ?: throw UserMistake("No EIF config present")
-                if (eifBlockchainConfig.contractDeployBlock == BigInteger.ZERO) {
-                    logger.warn("Contract deploy block config is set to 0. Consider changing it to real height to avoid redundant queries.")
+                if (eifBlockchainConfig.skipToHeight == BigInteger.ZERO) {
+                    logger.warn("Skip to height config is set to 0. Consider changing it to avoid redundant queries.")
                 }
 
                 val ethereumUrl = postchainContext.appConfig.getString("ethereum.url", "")
@@ -54,13 +54,12 @@ class EL2SynchronizationInfrastructureExtension(
             NoOpEventProcessor()
         } else {
             val web3j = Web3j.build(Web3jServiceFactory.buildService(ethereumUrl))
-            val web3c = Web3Connector(web3j, eifBlockchainConfig.contract)
 
             EthereumEventProcessor(
-                web3c,
-                eifBlockchainConfig.contract,
+                web3j,
+                eifBlockchainConfig.contracts,
                 BigInteger.valueOf(100),
-                eifBlockchainConfig.contractDeployBlock,
+                eifBlockchainConfig.skipToHeight,
                 engine
             ).apply { start() }
         }
