@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 library Postchain {
-    using EC for bytes32;
     using MerkleProof for bytes32[];
 
     struct Event {
@@ -37,31 +36,7 @@ library Postchain {
         bytes32 extraDataHashedLeaf;
     }
 
-    function isValidNodes(bytes32 hash, address[] memory nodes) internal pure returns (bool) {
-        uint len = _upperPowerOfTwo(nodes.length);
-        bytes32[] memory _nodes = new bytes32[](len);
-        for (uint i = 0; i < nodes.length; i++) {
-            _nodes[i] = keccak256(abi.encodePacked(nodes[i]));
-        }
-        for (uint i = nodes.length; i < len; i++) {
-            _nodes[i] = 0x0;
-        }
-        return _nodes.root() == hash;
-    }
 
-    function isValidSignatures(bytes32 hash, bytes[] memory signatures, address[] memory signers) internal pure returns (bool) {
-        uint _actualSignature = 0;
-        uint _requiredSignature = _calculateBFTRequiredNum(signers.length);
-        for (uint i = 0; i < signatures.length; i++) {
-            for (uint k = 0; k < signers.length; k++) {
-                if (_isValidSignature(hash, signatures[i], signers[k])) {
-                    _actualSignature++;
-                    break;
-                }
-            }
-        }
-        return (_actualSignature >= _requiredSignature);
-    }
 
     function verifyEvent(bytes32 _hash, bytes memory _event) internal pure returns (ERC20, address, uint256) {
         Event memory evt = abi.decode(_event, (Event));
@@ -137,23 +112,6 @@ library Postchain {
 
         if (blockRid != header.blockRid) revert("Postchain: invalid block header");
         return (blockRid, header.extraDataHashedLeaf);
-    }
-
-    function _calculateBFTRequiredNum(uint total) internal pure returns (uint) {
-        if (total == 0) return 0;
-        return (total - (total - 1) / 3);
-    }
-
-    function _isValidSignature(bytes32 hash, bytes memory signature, address signer) internal pure returns (bool) {
-        bytes memory prefix = "\x19Ethereum Signed Message:\n32";
-        bytes32 prefixedProof = keccak256(abi.encodePacked(prefix, hash));
-        return (prefixedProof.recover(signature) == signer || hash.recover(signature) == signer);
-    }
-
-   function _upperPowerOfTwo(uint x) internal pure returns (uint) {
-        uint p = 1;
-        while (p < x) p <<= 1;
-        return p;
     }
 
     function _bytesToBytes32(bytes memory b, uint offset) internal pure returns (bytes32) {

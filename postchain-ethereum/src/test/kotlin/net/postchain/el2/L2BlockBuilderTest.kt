@@ -276,7 +276,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
                 args
             ).get().asDict()
 
-            val merkleProofs = gtvProof["merkleProofs"]!!.asArray()
+            val merkleProofs = gtvProof["stateProofs"]!!.asArray()
             val proofs = merkleProofs.map { it.asByteArray() }
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
             assertEquals(stateRoot.toHex(), l2StateRoot.toHex())
@@ -330,7 +330,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
                 args
             ).get().asDict()
 
-            val merkleProofs = gtvProof["merkleProofs"]!!.asArray()
+            val merkleProofs = gtvProof["stateProofs"]!!.asArray()
             val proofs = merkleProofs.map { it.asByteArray() }
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
             assertEquals(stateRoot.toHex(), l2StateRoot2.toHex())
