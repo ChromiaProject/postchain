@@ -40,7 +40,7 @@ class BaseDirectoryDataSource(
         //val num = Integer.parseInt(brid.toHex().takeLast(1), 16) / 6 // 3 containers
         //return "ps$num"
 
-        val short = brid.toHex().toUpperCase().take(8)
+        val short = brid.toHex().uppercase().take(8)
         return containerNodeConfig.dappsContainers[short] ?: "cont0"
     }
 

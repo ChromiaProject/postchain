@@ -129,7 +129,7 @@ class ConcretePostchainClient(
                             response.entity?.let {
                                 val responseBody = parseResponse(it.content)
                                 val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                                val statusString = jsonObject.get("status")?.asString?.toUpperCase()
+                                val statusString = jsonObject.get("status")?.asString?.uppercase()
                                 if (statusString == null) {
                                     logger.warn { "No status in response\n$responseBody" }
                                 } else {
