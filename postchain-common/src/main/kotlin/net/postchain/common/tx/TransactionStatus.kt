@@ -6,3 +6,4 @@ enum class TransactionStatus(val status: String) {
     CONFIRMED("confirmed"),
     REJECTED("rejected")
 }
+

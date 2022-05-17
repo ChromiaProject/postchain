@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.api.rest.test
+package net.postchain.devtools
 
 import io.restassured.RestAssured.given
 import org.awaitility.Awaitility.await

@@ -6,8 +6,8 @@ import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.crypto.Signature
 import net.postchain.core.*
+import net.postchain.crypto.Signature
 import net.postchain.core.block.*
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.deferred
@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * We use only one thread, which means we know the previous task was completed before we begin the next.
  */
 class BaseBlockDatabase(
-    private val engine: BlockchainEngine,
-    private val blockQueries: BlockQueries,
-    val nodeIndex: Int
+        private val engine: BlockchainEngine,
+        private val blockQueries: BlockQueries,
+        val nodeIndex: Int
 ) : BlockDatabase {
 
     // The executor will only execute one thing at a time, in order
@@ -87,6 +87,7 @@ class BaseBlockDatabase(
         logger.trace{ "maybeRollback() node: $nodeIndex." }
         if (blockBuilder != null) {
             logger.debug{ "maybeRollback() node: $nodeIndex, blockBuilder is not null." }
+            engine.getTransactionQueue().retryAllTakenTransactions()
         }
         blockBuilder?.rollback()
         blockBuilder = null

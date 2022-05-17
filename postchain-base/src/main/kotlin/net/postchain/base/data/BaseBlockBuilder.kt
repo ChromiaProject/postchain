@@ -39,21 +39,22 @@ import java.util.*
  * @property maxBlockTransactions
  */
 open class BaseBlockBuilder(
-    blockchainRID: BlockchainRid,
-    val cryptoSystem: CryptoSystem,
-    eContext: EContext,
-    store: BlockStore,
-    txFactory: TransactionFactory,
-    val specialTxHandler: SpecialTransactionHandler,
-    val subjects: Array<ByteArray>,
-    val blockSigMaker: SigMaker,
-    override val blockWitnessProvider: BlockWitnessProvider,
-    val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
-    val extensions: List<BaseBlockBuilderExtension>,
-    val usingHistoricBRID: Boolean,
-    val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
-    val maxBlockTransactions: Long = 100
-): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory) {
+        blockchainRID: BlockchainRid,
+        val cryptoSystem: CryptoSystem,
+        eContext: EContext,
+        store: BlockStore,
+        txFactory: TransactionFactory,
+        val specialTxHandler: SpecialTransactionHandler,
+        val subjects: Array<ByteArray>,
+        val blockSigMaker: SigMaker,
+        override val blockWitnessProvider: BlockWitnessProvider,
+        val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
+        val extensions: List<BaseBlockBuilderExtension>,
+        val usingHistoricBRID: Boolean,
+        val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
+        val maxBlockTransactions: Long = 100,
+        maxTxExecutionTime: Long = 0
+): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
 
     companion object : KLogging()
 

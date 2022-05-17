@@ -41,8 +41,8 @@ class BlockchainRidTest {
         val ridByteArray = expected.hexStringToByteArray()
         val actual = BlockchainRid(ridByteArray)
 
-        assert(actual.toHex().toUpperCase())
-                .isEqualTo(expected.toUpperCase())
+        assert(actual.toHex())
+                .isEqualTo(expected, true)
     }
 
     @Test
@@ -51,8 +51,8 @@ class BlockchainRidTest {
         val ridByteArray = expected.hexStringToByteArray()
         val actual = BlockchainRid(ridByteArray)
 
-        assert(actual.toShortHex().toUpperCase())
-                .isEqualTo("78:7a3".toUpperCase())
+        assert(actual.toShortHex())
+                .isEqualTo("78:7a3", true)
     }
 
     @Test
@@ -61,8 +61,8 @@ class BlockchainRidTest {
         val ridByteArray = ridString.hexStringToByteArray()
         val blockchainRid = BlockchainRid(ridByteArray)
 
-        assert(blockchainRid.toString().toUpperCase())
-                .isEqualTo(ridString.toUpperCase())
+        assert(blockchainRid.toString())
+                .isEqualTo(ridString, true)
     }
 
     @Test

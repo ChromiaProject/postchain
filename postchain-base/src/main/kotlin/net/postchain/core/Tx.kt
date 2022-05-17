@@ -1,3 +1,5 @@
+// Copyright (c) 2020 ChromaWay AB. See README for license information.
+
 package net.postchain.core
 
 import net.postchain.common.data.ByteArrayKey
@@ -38,5 +40,6 @@ interface TransactionQueue {
     fun removeAll(transactionsToRemove: Collection<Transaction>)
     fun rejectTransaction(tx: Transaction, reason: Exception?)
     fun getRejectionReason(txRID: ByteArrayKey): Exception?
+    fun retryAllTakenTransactions()
 }
 

@@ -9,6 +9,7 @@ import net.postchain.common.TimeLog
 import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.block.*
@@ -26,12 +27,12 @@ const val LOG_STATS = true // Was this the reason this entire class was muted?
  * Usually we don't log single (successful) transactions, not even at trace level.
  */
 open class BaseBlockchainEngine(
-    private val processName: BlockchainProcessName,
-    private val blockchainConfiguration: BlockchainConfiguration,
-    val storage: Storage,
-    private val chainID: Long,
-    private val transactionQueue: TransactionQueue,
-    private val useParallelDecoding: Boolean = true
+        private val processName: BlockchainProcessName,
+        private val blockchainConfiguration: BlockchainConfiguration,
+        val storage: Storage,
+        private val chainID: Long,
+        private val transactionQueue: TransactionQueue,
+        private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
     companion object : KLogging()
@@ -117,7 +118,7 @@ open class BaseBlockchainEngine(
         }
 
         return if (tx.isCorrect()) tx
-        else throw UserMistake("Transaction is not correct")
+        else throw TransactionIncorrect("Transaction is not correct")
     }
 
     private fun sequentialLoadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
@@ -137,8 +138,8 @@ open class BaseBlockchainEngine(
     }
 
     private fun loadUnfinishedBlockImpl(
-        block: BlockData,
-        transactionsDecoder: (List<ByteArray>) -> List<Transaction>
+            block: BlockData,
+            transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
 
         val grossStart = System.nanoTime()
@@ -187,10 +188,6 @@ open class BaseBlockchainEngine(
             val abstractBlockBuilder = ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
             val netStart = System.nanoTime()
 
-            // TODO Potential problem: if the block fails for some reason,
-            // the transaction queue is gone. This could potentially happen
-            // during a revolt. We might need a "transactional" tx queue...
-
             TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendTransactions")
             var acceptedTxs = 0
             var rejectedTxs = 0
@@ -215,7 +212,7 @@ open class BaseBlockchainEngine(
                     if (txException != null) {
                         rejectedTxs++
                         transactionQueue.rejectTransaction(tx, txException)
-                        logger.warn { "Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}" }
+                        logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
                     } else {
                         acceptedTxs++
                         // tx is fine, consider stopping
@@ -263,11 +260,11 @@ open class BaseBlockchainEngine(
     // -----------------
 
     private fun prettyBlockHeader(
-        blockHeader: BlockHeader,
-        acceptedTxs: Int,
-        rejectedTxs: Int,
-        gross: Pair<Long, Long>,
-        net: Pair<Long, Long>
+            blockHeader: BlockHeader,
+            acceptedTxs: Int,
+            rejectedTxs: Int,
+            gross: Pair<Long, Long>,
+            net: Pair<Long, Long>
     ): String {
 
         val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first, 1)

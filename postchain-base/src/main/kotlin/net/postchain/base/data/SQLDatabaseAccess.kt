@@ -105,7 +105,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val schemas = connection.metaData.schemas
 
         while (schemas.next()) {
-            if (schemas.getString(1).toLowerCase() == schema.toLowerCase()) {
+            if (schemas.getString(1).equals(schema, true)) {
                 return true
             }
         }

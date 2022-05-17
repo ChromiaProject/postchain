@@ -26,7 +26,7 @@ enum class NodeConfigProviders(vararg val aliases: String) {
     companion object {
         @JvmStatic
         fun fromAlias(str: String): NodeConfigProviders? {
-            return values().firstOrNull { it.aliases.any { alias -> alias == str.toLowerCase() } }
+            return values().firstOrNull { it.aliases.any { alias -> alias == str.lowercase() } }
         }
     }
 }

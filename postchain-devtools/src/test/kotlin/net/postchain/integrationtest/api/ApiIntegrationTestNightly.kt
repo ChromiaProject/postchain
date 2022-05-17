@@ -5,7 +5,7 @@ package net.postchain.integrationtest.api
 import io.restassured.RestAssured.given
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.BlockchainRid
-import net.postchain.api.rest.test.RestTools
+import net.postchain.devtools.RestTools
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex

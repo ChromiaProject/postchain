@@ -10,12 +10,12 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXDataBuilder
-import net.postchain.common.tx.TransactionStatus
 import org.awaitility.Awaitility.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo
@@ -40,7 +40,7 @@ class PostChainClientTest : IntegrationTestSetup() {
     private val randomStr = "hello${Random().nextLong()}"
 
     private fun createTestNodes(nodesCount: Int, configFileName: String): Array<PostchainTestNode> {
-        val sysSetup =  SystemSetupFactory.buildSystemSetup(mapOf(1 to configFileName))
+        val sysSetup = SystemSetupFactory.buildSystemSetup(mapOf(1 to configFileName))
         sysSetup.needRestApi = true
         assertEquals(nodesCount, sysSetup.nodeMap.size)
         createNodesFromSystemSetup(sysSetup)
@@ -153,8 +153,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         }
     }
 
-    // TODO: [Olle] Hope Joar can help here
-    //@Test
+    @Test
     fun testQueryGtxClientApiPromise() {
         val nodes = createTestNodes(3, "/net/postchain/devtools/api/blockchain_config.xml")
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid

@@ -7,11 +7,23 @@ image: maven:3.8.4-jdk-11
       - "**/*.log"
     expire_in: 1 week
 
+.git_template: &git_setup |
+  git remote set-url --push origin "https://oauth2:${BUILD_USER_GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+  git config user.name "build-user core-dev"
+  git config user.email build_user@chromaway.com
+
+stages:
+  - build
+  - deploy
+  - release
+
 deploy:
   extends: .setup
   stage: deploy
   only:
     - dev
+    - master
+    - /^support\/.*$/
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci deploy
 
@@ -20,8 +32,47 @@ build:
   stage: build
   except:
     - dev
+    - master
+    - tags
+    - /^support\/.*$/
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+
+release:
+  stage: release
+  script:
+    - *git_setup
+    - git fetch --tags
+    - LATEST_VERSION_TAG=$(git for-each-ref --sort=-version:refname --count=1 --format="%(refname:short)" refs/tags)
+    - mvn -B gitflow:support-start -DskipTestProject=true -DtagName=$LATEST_VERSION_TAG
+    - git checkout $CI_COMMIT_REF_NAME
+    - DIGIT="${VERSION_DIGIT_TO_INCREMENT:-1}"
+    - mvn -B gitflow:release -DskipTestProject=true -DversionDigitToIncrement=$DIGIT
+  only:
+    - dev
+  when: manual
+
+patch-start:
+  stage: release
+  script:
+    - *git_setup
+    - git checkout $CI_COMMIT_REF_NAME
+    - mvn -B gitflow:hotfix-start -DfromBranch=$CI_COMMIT_REF_NAME
+    - git push origin HEAD
+  only:
+    - master
+    - /^support\/.*$/
+  when: manual
+
+patch-finish:
+  stage: release
+  script:
+    - *git_setup
+    - git checkout $CI_COMMIT_REF_NAME
+    - mvn -B gitflow:hotfix-finish -DskipTestProject=true -DhotfixBranch=$CI_COMMIT_REF_NAME -DversionDigitToIncrement=2
+  only:
+    - /^hotfix\/.*$/
+  when: manual
 
 variables:
   # This will suppress any download for dependencies and plugins or upload messages which would clutter the console log.

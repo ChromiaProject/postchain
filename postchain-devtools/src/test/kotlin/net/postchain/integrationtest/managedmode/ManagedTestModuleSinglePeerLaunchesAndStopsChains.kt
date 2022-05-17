@@ -77,7 +77,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
                         "blockchainRid: ${argBlockchainRid(args)}"
             }
 
-            val blockchainConfigFilename = when (argBlockchainRid(args).toUpperCase()) {
+            val blockchainConfigFilename = when (argBlockchainRid(args).uppercase()) {
                 BLOCKCHAIN_RIDS[0L] -> {
                     when (argHeight(args)) {
                         5L -> "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_0_height_5.xml"

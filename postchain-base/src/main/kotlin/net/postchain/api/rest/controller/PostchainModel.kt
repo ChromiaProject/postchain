@@ -13,20 +13,20 @@ import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionResult
-import net.postchain.common.tx.TransactionStatus
-import net.postchain.common.tx.TransactionStatus.UNKNOWN
+import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.*
 import net.postchain.gtv.Gtv
 
 open class PostchainModel(
-    override val chainIID: Long,
-    val txQueue: TransactionQueue,
-    private val transactionFactory: TransactionFactory,
-    val blockQueries: BaseBlockQueries,
-    private val debugInfoQuery: DebugInfoQuery
+        override val chainIID: Long,
+        val txQueue: TransactionQueue,
+        private val transactionFactory: TransactionFactory,
+        val blockQueries: BaseBlockQueries,
+        private val debugInfoQuery: DebugInfoQuery
 ) : Model {
 
     companion object : KLogging()
@@ -81,12 +81,12 @@ open class PostchainModel(
     override fun getStatus(txRID: TxRID): ApiStatus {
         var status = txQueue.getTransactionStatus(txRID.bytes)
 
-        if (status == TransactionStatus.UNKNOWN) {
+        if (status == UNKNOWN) {
             status = if (blockQueries.isTransactionConfirmed(txRID.bytes).get())
-                TransactionStatus.CONFIRMED else UNKNOWN
+                CONFIRMED else UNKNOWN
         }
 
-        return if (status == TransactionStatus.REJECTED) {
+        return if (status == REJECTED) {
             val exception = txQueue.getRejectionReason(txRID.bytes.byteArrayKeyOf())
             ApiStatus(status, exception?.message)
         } else {

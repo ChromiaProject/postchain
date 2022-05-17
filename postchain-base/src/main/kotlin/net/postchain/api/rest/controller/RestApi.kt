@@ -2,10 +2,7 @@
 
 package net.postchain.api.rest.controller
 
-import com.google.gson.JsonArray
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
+import com.google.gson.*
 import kong.unirest.Unirest
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
@@ -34,7 +31,7 @@ import spark.Service
 /**
  * Contains information on the rest API, such as network parameters and available queries
  */
-open class RestApi(
+class RestApi(
         private val listenPort: Int,
         private val basePath: String,
         private val sslCertificate: String? = null,
@@ -48,7 +45,7 @@ open class RestApi(
 
     companion object : KLogging()
 
-    protected val http = Service.ignite()!!
+    private val http = Service.ignite()!!
     private val gson = JsonFactory.makeJson()
     private val models = mutableMapOf<String, ChainModel>()
     private val bridByIID = mutableMapOf<Long, String>()
@@ -61,13 +58,13 @@ open class RestApi(
     }
 
     override fun attachModel(blockchainRid: String, chainModel: ChainModel) {
-        val brid = blockchainRid.toUpperCase()
+        val brid = blockchainRid.uppercase()
         models[brid] = chainModel
         bridByIID[chainModel.chainIID] = brid
     }
 
     override fun detachModel(blockchainRid: String) {
-        val brid = blockchainRid.toUpperCase()
+        val brid = blockchainRid.uppercase()
         val model = models.remove(brid)
         if (model != null) {
             bridByIID.remove(model.chainIID)
@@ -75,7 +72,7 @@ open class RestApi(
     }
 
     override fun retrieveModel(blockchainRid: String): ChainModel? {
-        return models[blockchainRid.toUpperCase()] as Model
+        return models[blockchainRid.uppercase()] as? Model
     }
 
     fun actualPort(): Int {
@@ -185,7 +182,7 @@ open class RestApi(
                 val model = model(request)
                 val paramsMap = request.queryMap()
                 val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_TXS_PER_REQUEST)
-                    ?: DEFAULT_ENTRY_RESULTS_REQUEST
+                        ?: DEFAULT_ENTRY_RESULTS_REQUEST
                 val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
                 val result = model.getTransactionsInfo(beforeTime, limit)
                 gson.toJson(result)
@@ -210,7 +207,7 @@ open class RestApi(
                 val paramsMap = request.queryMap()
                 val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
                 val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
-                    ?: DEFAULT_ENTRY_RESULTS_REQUEST
+                        ?: DEFAULT_ENTRY_RESULTS_REQUEST
                 val partialTxs = paramsMap.get("txs")?.value() != "true"
                 val result = model.getBlocks(beforeTime, limit, partialTxs)
                 gson.toJson(result)
@@ -294,6 +291,7 @@ open class RestApi(
 
     private fun toGTXQuery(json: String): GTXQuery {
         try {
+            val gson = Gson()
             return gson.fromJson<GTXQuery>(json, GTXQuery::class.java)
         } catch (e: Exception) {
             throw UserMistake("Could not parse json", e)
@@ -386,10 +384,10 @@ open class RestApi(
     private fun handleDebugQuery(request: Request): String {
         logger.debug("Request body: ${request.body()}")
         return models.values
-            .filterIsInstance(Model::class.java)
-            .firstOrNull()
-            ?.debugQuery(request.params(SUBQUERY))
-            ?: throw NotFoundError("There are no running chains")
+                .filterIsInstance(Model::class.java)
+                .firstOrNull()
+                ?.debugQuery(request.params(SUBQUERY))
+                ?: throw NotFoundError("There are no running chains")
     }
 
     private fun checkTxHashHex(request: Request): String {
@@ -437,7 +435,7 @@ open class RestApi(
 
     private fun chainModel(request: Request): ChainModel {
         val blockchainRID = checkBlockchainRID(request)
-        return models[blockchainRID.toUpperCase()]
+        return models[blockchainRID.uppercase()]
                 ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
     }
 

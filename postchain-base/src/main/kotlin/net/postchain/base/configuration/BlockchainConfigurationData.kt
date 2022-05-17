@@ -56,7 +56,10 @@ data class BlockchainConfigurationData(
         private val blockchainDependenciesRaw: Gtv?,
         @Name(KEY_GTX)
         @Nullable
-        val gtx: Gtv?
+        val gtx: Gtv?,
+        @Name(KEY_MAX_TX_EXECUTION_TIME)
+        @DefaultValue(defaultLong = 0)
+        val maxTxExecutionTime: Long
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()

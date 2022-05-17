@@ -3,6 +3,7 @@
 package net.postchain.devtools
 
 import mu.KLogging
+import net.postchain.base.AbstractBlockBuilder
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockQueries
@@ -13,9 +14,9 @@ import java.util.concurrent.LinkedBlockingQueue
 
 @Suppress("UNUSED_PARAMETER")
 class OnDemandBlockBuildingStrategy(
-    configData: BaseBlockBuildingStrategyConfigurationData,
-    val blockQueries: BlockQueries,
-    val txQueue: TransactionQueue
+        val configData: BaseBlockBuildingStrategyConfigurationData,
+        val blockQueries: BlockQueries,
+        val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
 
     companion object : KLogging()
@@ -62,6 +63,7 @@ class OnDemandBlockBuildingStrategy(
     }
 
     override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean {
-        return false
+        val abb = bb as AbstractBlockBuilder
+        return abb.transactions.size >= configData.maxBlockTransactions
     }
 }

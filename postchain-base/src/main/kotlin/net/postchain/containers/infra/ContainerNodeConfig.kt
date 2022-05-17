@@ -45,7 +45,7 @@ data class ContainerNodeConfig(
                     config.getLong("container.send-connected-peers-period", 60_000L),
                     config.getString("container.healthcheck.runningContainersAtStartRegexp", ""),
                     config.getInt("container.healthcheck.runningContainersCheckPeriod", 0),
-                    config.getString("container.filesystem", FileSystem.Type.LOCAL.name).toUpperCase(), // LOCAL | ZFS
+                    config.getString("container.filesystem", FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
                     config.getString("container.zfs.pool-name", FileSystem.ZFS_POOL_NAME),
                     config.getString("container.zfs.pool-init-script", CONTAINER_ZFS_INIT_SCRIPT),
                     config.getBoolean("container.bind-pgdata-volume", true),

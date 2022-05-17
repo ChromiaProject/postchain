@@ -6,10 +6,9 @@ import mu.KLogging
 import net.postchain.base.Storage
 import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.TransactionFailed
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
-import net.postchain.core.*
-import net.postchain.core.block.*
-import net.postchain.core.*
 import net.postchain.core.*
 import net.postchain.core.block.*
 
@@ -27,11 +26,11 @@ import net.postchain.core.block.*
  *
  */
 class BaseManagedBlockBuilder(
-    private val eContext: EContext,
-    val storage: Storage,
-    val blockBuilder: BlockBuilder,
-    val beforeCommit: (BlockBuilder) -> Unit,
-    val afterCommit: (BlockBuilder) -> Unit
+        private val eContext: EContext,
+        val storage: Storage,
+        val blockBuilder: BlockBuilder,
+        val beforeCommit: (BlockBuilder) -> Unit,
+        val afterCommit: (BlockBuilder) -> Unit
 ) : ManagedBlockBuilder {
     companion object : KLogging()
 
@@ -88,11 +87,22 @@ class BaseManagedBlockBuilder(
         val exception = if (storage.isSavepointSupported()) {
             storage.withSavepoint(eContext, action).also {
                 if (it != null) {
-                    logger.info("Failed to append transaction ${tx.getRID().toHex()}", it)
+                    when (it) {
+                        is TransactionIncorrect -> logger.debug {
+                            "Tx Incorrect ${tx.getRID().toHex()}."
+                        }   // Don't log stacktrace
+                        is TransactionFailed -> logger.debug {
+                            "Tx failed ${tx.getRID().toHex()}."
+                        } // Don't log stacktrace
+                        else -> logger.error(
+                            "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it
+                        ) // Should be unusual, so let's log everything
+                    }
                 }
             }
 
         } else {
+            logger.warn("Savepoint not supported! Unclear if Postchain will work under these conditions")
             action()
             null
         }
