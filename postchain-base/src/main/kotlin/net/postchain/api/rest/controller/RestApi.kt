@@ -58,13 +58,13 @@ class RestApi(
     }
 
     override fun attachModel(blockchainRid: String, chainModel: ChainModel) {
-        val brid = blockchainRid.toUpperCase()
+        val brid = blockchainRid.uppercase()
         models[brid] = chainModel
         bridByIID[chainModel.chainIID] = brid
     }
 
     override fun detachModel(blockchainRid: String) {
-        val brid = blockchainRid.toUpperCase()
+        val brid = blockchainRid.uppercase()
         val model = models.remove(brid)
         if (model != null) {
             bridByIID.remove(model.chainIID)
@@ -72,7 +72,7 @@ class RestApi(
     }
 
     override fun retrieveModel(blockchainRid: String): ChainModel? {
-        return models[blockchainRid.toUpperCase()] as? Model
+        return models[blockchainRid.uppercase()] as? Model
     }
 
     fun actualPort(): Int {
@@ -435,7 +435,7 @@ class RestApi(
 
     private fun chainModel(request: Request): ChainModel {
         val blockchainRID = checkBlockchainRID(request)
-        return models[blockchainRID.toUpperCase()]
+        return models[blockchainRID.uppercase()]
                 ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
     }
 

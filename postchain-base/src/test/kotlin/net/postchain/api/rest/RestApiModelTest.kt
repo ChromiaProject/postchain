@@ -79,10 +79,10 @@ class RestApiModelTest {
         whenever(model.getTransaction(TxRID(txRID.hexStringToByteArray())))
                 .thenReturn(ApiTx("1234"))
 
-        restApi.attachModel(blockchainRID1.toUpperCase(), model)
+        restApi.attachModel(blockchainRID1.uppercase(), model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/tx/${blockchainRID1.toLowerCase()}/$txRID")
+                .get("/tx/${blockchainRID1.lowercase()}/$txRID")
                 .then()
                 .statusCode(200)
     }

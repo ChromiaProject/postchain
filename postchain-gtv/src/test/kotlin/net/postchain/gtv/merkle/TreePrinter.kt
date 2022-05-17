@@ -273,7 +273,7 @@ class TreePrinter {
 
             printWhitespaces(betweenSpaces)
         }
-        buf.appendln("")
+        buf.appendLine("")
 
         for (i in 1..endgeLines) {
             for (j in 0..(nodes.size - 1)) {
@@ -307,7 +307,7 @@ class TreePrinter {
                 }
             }
 
-            buf.appendln("")
+            buf.appendLine("")
         }
 
         printNodeInternal(newNodes, (level + 1), maxLevel, 0)
