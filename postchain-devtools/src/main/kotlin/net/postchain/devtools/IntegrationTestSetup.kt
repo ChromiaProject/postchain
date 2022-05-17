@@ -15,18 +15,12 @@ import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import org.apache.commons.configuration2.MapConfiguration
-import org.apache.logging.log4j.core.impl.Log4jLogEvent
-import org.apache.logging.log4j.core.impl.LogEventFactory
-import org.apache.logging.log4j.message.Message
-import org.apache.logging.log4j.message.SimpleMessage
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
-import org.slf4j.LoggerFactory
-import java.util.logging.LogManager
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
