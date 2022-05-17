@@ -120,7 +120,7 @@ describe("Non Fungible Token", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "9312117556194C11512E1E00112DC94A5832369ED29C9F367A13549F4C3C0848"
+                let extraDataMerkleRoot = "3E1A07BE17191304303E3150D7C8291AC1519841A196099C2FA446EBAD516329"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))

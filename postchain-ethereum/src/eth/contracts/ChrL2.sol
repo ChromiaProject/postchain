@@ -51,8 +51,6 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         uint accountNumber;
     }
 
-    bool public isMassExit;
-    PostchainBlock public massExitBlock;
     mapping(IERC20 => uint256) public _balances;
     mapping(IERC721 => mapping(uint256 => address)) public _owners;
     mapping (bytes32 => Withdraw) public _withdraw;
@@ -102,13 +100,6 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
     event Withdrawal(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawalNFT(address indexed beneficiary, IERC721 indexed nft, uint256 tokenId);
-    event MassExit(uint indexed height, bytes32 indexed blockRid);
-    event WithdrawalBySnapshot(address indexed beneficiary);
-
-    modifier whenMassExit() {
-        require(isMassExit, "ChrL2: mass exit was not triggered yet");
-        _;
-    }
 
     function initialize(address[] memory _validators) public initializer {
         __Ownable_init();
@@ -159,20 +150,6 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         bytes memory
     ) public virtual override returns (bytes4) {
         return this.onERC721Received.selector;
-    }
-
-    function triggerMassExit(uint height, bytes32 blockRid) onlyOwner public {
-        require(!isMassExit, "ChrL2: mass exit already set");
-        isMassExit = true;
-        massExitBlock = PostchainBlock(height, blockRid);
-    }
-
-    function postponeMassExit() onlyOwner whenMassExit public {
-        isMassExit = false;
-    }
-
-    function updateMassExitBlock(uint height, bytes32 blockRid) onlyOwner whenMassExit public {
-        massExitBlock = PostchainBlock(height, blockRid);
     }
 
     function pendingWithdraw(bytes32 _hash) onlyOwner public {
@@ -368,50 +345,6 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         _owners[wd.nft][tokenId] = address(0);
         wd.nft.safeTransferFrom(address(this), beneficiary, tokenId);
         emit WithdrawalNFT(beneficiary, wd.nft, tokenId);
-    }
-
-    /// @dev withdraw all account assets in the postchain snapshot when mass exit was triggered
-    function withdrawBySnapshot(
-        AccountStateNumber memory account,
-        bytes calldata snapshot,
-        bytes32[] memory stateProofs,
-        bytes memory blockHeader,
-        bytes[] memory sigs,
-        address[] memory signers,
-        Data.EL2ProofData memory el2Proof
-    ) whenMassExit nonReentrant public  {
-        bytes32 stateHash = keccak256(abi.encodePacked(snapshot));
-        require(_snapshots[stateHash] == false, "ChrL2: snapshot already used");
-        (bytes32 blockRid, , bytes32 stateRoot) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
-        require(blockRid == massExitBlock.blockRid, "ChrL2: account state block rid should equal to mass exit block rid");
-        require(account.blockHeight <= massExitBlock.height, "ChrL2: account state number should less than or equal to mass exit block");
-        if (!isValidSignatures(blockRid, sigs, signers)) revert("ChrL2: block signature is invalid");
-        if (!MerkleProof.verify(stateProofs, stateHash, account.accountNumber, stateRoot)) revert("ChrL2: invalid merkle proof");
-
-        address beneficiary = abi.decode(snapshot[:32], (address));
-        uint offset = 32;
-        // Get byte size of all ERC20 balances
-        uint byteSize = abi.decode(snapshot[offset:offset + 32], (uint));
-        offset += 32;
-        for (uint i = offset; i < offset + byteSize; i += ERC20_ACCOUNT_STATE_BYTE_SIZE) {
-            ERC20AccountState memory accountState = abi.decode(snapshot[i:i + ERC20_ACCOUNT_STATE_BYTE_SIZE], (ERC20AccountState));
-            if (accountState.amount > 0) {
-                accountState.token.transfer(beneficiary, accountState.amount);
-            }
-        }
-        offset += byteSize;
-
-        // Get byte size of all ERC721 balances
-        byteSize = abi.decode(snapshot[offset:offset + 32], (uint));
-        offset += 32; // Byte size field (32)
-        // Decode each balance to find the one we are looking for
-        for (uint i = offset; i < offset + byteSize; i += ERC721_ACCOUNT_STATE_BYTE_SIZE) {
-            ERC721AccountState memory accountState = abi.decode(snapshot[i:i + ERC721_ACCOUNT_STATE_BYTE_SIZE], (ERC721AccountState));
-            accountState.token.safeTransferFrom(address(this), beneficiary, accountState.tokenId);
-        }
-
-        _snapshots[stateHash] = true;
-        emit WithdrawalBySnapshot(beneficiary);
     }
 
     function isValidSignatures(bytes32 hash, bytes[] memory signatures, address[] memory signers) internal view returns (bool) {
