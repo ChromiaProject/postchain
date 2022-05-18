@@ -140,9 +140,14 @@ class EthereumEventProcessor(
         } else {
             null
         }
+
+        // Ensure events are sorted on txIndex + logIndex, blocks sorted on block number
         val sortedLogs = logResponse.logs
                 .map { (it as EthLog.LogObject).get() }
                 .groupBy { EthereumBlock(it.blockNumber, it.blockHash) }
+                .mapValues { it.value.sortedWith(compareBy({ event -> event.transactionIndex }, { event -> event.logIndex })) }
+                .toList()
+                .sortedBy { it.first.number }
         processLogEventsAndUpdateOffsets(sortedLogs, to, newReadOffsetBlock)
 
         while (isQueueFull()) {
@@ -184,7 +189,7 @@ class EthereumEventProcessor(
                     logger.error("Received unexpected block $opBlockNumber with hash $opBlockHash. Expected block ${event.first.number} with hash ${event.first.hash}")
                     return false
                 }
-                if (event.second.size != opEvents.size || event.second.any { !hasMatchingEvent(opEvents, it) }) {
+                if (!hasMatchingEvents(opEvents, event.second)) {
                     logger.error("Events in received block $opBlockNumber do not match expected events")
                     return false
                 }
@@ -196,17 +201,25 @@ class EthereumEventProcessor(
         return true
     }
 
-    private fun hasMatchingEvent(opEvents: Array<out Gtv>, eventLog: Log): Boolean {
-        val eventWithMatchingHash = opEvents.find { it[0].asString() == eventLog.transactionHash && it[1].asBigInteger() == eventLog.logIndex }
-                ?: return false
+    private fun hasMatchingEvents(opEvents: Array<out Gtv>, eventLogs: List<Log>): Boolean {
+        if (opEvents.size != eventLogs.size) return false
 
-        val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, eventLog)
-        return eventWithMatchingHash[2].asString() == EventEncoder.encode(ChrL2.DEPOSITED_EVENT) &&
-                eventWithMatchingHash[3].asString() == eventLog.address &&
-                eventWithMatchingHash[4].asBigInteger() == eventParameters.indexedValues[0].value &&
-                eventWithMatchingHash[5].asArray().contentEquals(
-                        GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray).asArray()
-                )
+        for ((index, opEvent) in opEvents.withIndex()) {
+            val eventLog = eventLogs[index]
+            val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, eventLog)
+            if (opEvent[0].asString() != eventLog.transactionHash ||
+                    opEvent[1].asBigInteger() != eventLog.logIndex ||
+                    opEvent[2].asString() != EventEncoder.encode(ChrL2.DEPOSITED_EVENT) ||
+                    opEvent[3].asString() != eventLog.address ||
+                    opEvent[4].asBigInteger() != eventParameters.indexedValues[0].value ||
+                    !opEvent[5].asArray().contentEquals(
+                            GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray).asArray()
+                    )
+            ) {
+                return false
+            }
+        }
+        return true
     }
 
     @Synchronized
@@ -258,11 +271,11 @@ class EthereumEventProcessor(
 
     @Synchronized
     private fun processLogEventsAndUpdateOffsets(
-        logs: Map<EthereumBlock, List<Log>>,
-        newLastReadLogBlockHeight: BigInteger,
-        newReadOffsetBlock: EthBlock.Block?
+            logs: List<Pair<EthereumBlock, List<Log>>>,
+            newLastReadLogBlockHeight: BigInteger,
+            newReadOffsetBlock: EthBlock.Block?
     ) {
-        eventBlocks.addAll(logs.toList().sortedBy { it.first.number })
+        eventBlocks.addAll(logs)
         lastReadLogBlockHeight = newLastReadLogBlockHeight
         if (newReadOffsetBlock != null) {
             readOffsetBlock = newReadOffsetBlock
