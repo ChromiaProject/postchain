@@ -69,12 +69,12 @@ object withdraw_stats {
 }
 
 struct event_data {
-	tnx_hash: text;
-	log_index: integer;
-	signature: text;
-	contract_address: text;
-	asset_type: asset_type;
-	payload: gtv;
+    tnx_hash: text;
+    log_index: integer;
+    signature: text;
+    contract_address: text;
+    asset_type: asset_type;
+    payload: gtv;
 }
 
 struct state_data {
@@ -91,14 +91,14 @@ operation __eth_block(eth_block_height: integer, eth_block_hash: text, events: l
     );
 
     for (event in events) {
-	    val eth_event = create eth_event(
-	        eth_block,
-	        tnx_hash = event.tnx_hash,
-	        log_index = event.log_index,
-	        event_signature = event.signature,
-	        contract_address = event.contract_address,
-	        event_payload = event.payload.to_bytes()
-	    );
+        val eth_event = create eth_event(
+            eth_block,
+            tnx_hash = event.tnx_hash,
+            log_index = event.log_index,
+            event_signature = event.signature,
+            contract_address = event.contract_address,
+            event_payload = event.payload.to_bytes()
+        );
 
         val event_args = list<gtv>.from_gtv(event.payload);
         val beneficiary = to_zero_padded_hex(byte_array.from_gtv(event_args[0]));
