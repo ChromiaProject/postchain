@@ -56,6 +56,12 @@
             <artifactId>jaxb-impl</artifactId>
         </dependency>
 
+        <!-- JSON -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
+
         <!-- Other -->
         <dependency>
             <groupId>org.mockito</groupId>
