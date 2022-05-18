@@ -13,5 +13,8 @@ data class EifBlockchainConfig(
     val contracts: List<String>,
     @Name("skip_to_height")
     @DefaultValue(defaultBigInteger = "0")
-    val skipToHeight: BigInteger
+    val skipToHeight: BigInteger,
+    @Name("read_offset")
+    @DefaultValue(defaultLong = 100)
+    val readOffset: Long
 )

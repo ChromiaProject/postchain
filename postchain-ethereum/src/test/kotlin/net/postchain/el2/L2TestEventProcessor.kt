@@ -21,14 +21,14 @@ class L2TestEventProcessor : EventProcessor {
         return
     }
 
-    override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
+    override fun getEventData(): List<Array<Gtv>> {
         val out = mutableListOf<Array<Gtv>>()
         val start = lastBlock + 1
         for (i in start..start + 10) {
             lastBlock++
             out.add(generateData(i.toLong(), i))
         }
-        return Pair(arrayOf(), out)
+        return out
     }
 
     override fun isValidEventData(ops: Array<OpData>): Boolean {

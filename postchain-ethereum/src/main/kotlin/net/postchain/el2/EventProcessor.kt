@@ -26,7 +26,7 @@ import kotlin.streams.toList
 
 interface EventProcessor {
     fun shutdown()
-    fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>>
+    fun getEventData(): List<Array<Gtv>>
     fun isValidEventData(ops: Array<OpData>): Boolean
 }
 
@@ -40,46 +40,38 @@ class NoOpEventProcessor : EventProcessor {
 
     override fun shutdown() {}
 
-    override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> = Pair(emptyArray(), emptyList())
+    override fun getEventData(): List<Array<Gtv>> = emptyList()
 
     /**
      * We can at least validate structure
      */
     override fun isValidEventData(ops: Array<OpData>): Boolean {
         for (op in ops) {
-            when (op.opName) {
-                OP_ETH_BLOCK -> {
-                    if (!isValidEthereumBlockFormat(op.args)) {
-                        return false
-                    }
-                }
-                OP_ETH_EVENT -> {
-                    if (!isValidEthereumEventFormat(op.args)) {
-                        return false
-                    }
-                }
-                else -> {
-                    logger.error("Unknown operation: ${op.opName}")
+            if (op.opName == OP_ETH_BLOCK) {
+                if (!isValidEthereumBlockFormat(op.args)) {
+                    logger.error("Received malformed operation of type $OP_ETH_BLOCK")
                     return false
                 }
+            } else {
+                logger.error("Unknown operation: ${op.opName}")
+                return false
             }
         }
         return true
     }
 
-    private fun isValidEthereumEventFormat(opArgs: Array<Gtv>) = opArgs.size == 8 &&
+    private fun isValidEthereumEventFormat(opArgs: Array<out Gtv>) = opArgs.size == 6 &&
+            opArgs[0].asPrimitive() is String &&
+            opArgs[1].asPrimitive() is BigInteger &&
+            opArgs[2].asString() == EventEncoder.encode(ChrL2.DEPOSITED_EVENT) &&
+            opArgs[3].asPrimitive() is String &&
+            opArgs[4].asPrimitive() is BigInteger &&
+            opArgs[5].asPrimitive() is Array<*>
+
+    private fun isValidEthereumBlockFormat(opArgs: Array<Gtv>) = opArgs.size == 3 &&
             opArgs[0].asPrimitive() is BigInteger &&
             opArgs[1].asPrimitive() is String &&
-            opArgs[2].asPrimitive() is String &&
-            opArgs[3].asPrimitive() is BigInteger &&
-            opArgs[4].asString() == EventEncoder.encode(ChrL2.DEPOSITED_EVENT) &&
-            opArgs[5].asPrimitive() is String &&
-            opArgs[6].asPrimitive() is BigInteger &&
-            opArgs[7].asPrimitive() is Array<*>
-
-    private fun isValidEthereumBlockFormat(opArgs: Array<Gtv>) = opArgs.size == 2 &&
-            opArgs[0].asPrimitive() is BigInteger &&
-            opArgs[1].asPrimitive() is String
+            opArgs[2].asArray().all { isValidEthereumEventFormat(it.asArray()) }
 }
 
 /**
@@ -96,7 +88,9 @@ class EthereumEventProcessor(
         blockchainEngine: BlockchainEngine
 ) : EventProcessor, AbstractBlockchainProcess("ethereum-event-processor", blockchainEngine) {
 
-    private val events: Queue<Log> = LinkedList()
+    data class EthereumBlock(val number: BigInteger, val hash: String)
+
+    private val eventBlocks: Queue<Pair<EthereumBlock, List<Log>>> = LinkedList()
     private var lastReadLogBlockHeight = skipToHeight
     private lateinit var readOffsetBlock: EthBlock.Block
 
@@ -147,8 +141,8 @@ class EthereumEventProcessor(
             null
         }
         val sortedLogs = logResponse.logs
-            .map { (it as EthLog.LogObject).get() }
-            .sortedBy { it.blockNumber }
+                .map { (it as EthLog.LogObject).get() }
+                .groupBy { EthereumBlock(it.blockNumber, it.blockHash) }
         processLogEventsAndUpdateOffsets(sortedLogs, to, newReadOffsetBlock)
 
         while (isQueueFull()) {
@@ -169,66 +163,54 @@ class EthereumEventProcessor(
             pruneEvents(lastCommittedBlock)
         }
 
-        for (op in ops) {
-            when (op.opName) {
-                OP_ETH_BLOCK -> {
-                    // We don't store all blocks, so we need to go fetch it over network
-                    val blockNumber = op.args[0].asBigInteger()
-                    val lastEthBlock = sendWeb3jRequestWithRetry(
-                        web3j.ethGetBlockByNumber(
-                            DefaultBlockParameter.valueOf(blockNumber),
-                            false
-                        ), 3, 0
-                    )
+        // We are strict here, if we have not seen something we will not try to go and fetch it.
+        // We simply verify that the same blocks and events are coming in the same order that we have seen them
+        // If there are too many rejections, readOffset should be increased
+        if (ops.size > eventBlocks.size) {
+            // We don't have all these blocks
+            logger.error("Received unexpected blocks")
+            return false
+        }
+        for ((index, event) in eventBlocks.withIndex()) {
+            if (index >= ops.size) break
 
-                    if (lastEthBlock.hasError() || lastEthBlock.block.hash != op.args[1].asString()) {
-                        return false
-                    }
-                }
-                OP_ETH_EVENT -> {
-                    val eventBlockNumber = op.args[0].asBigInteger()
-                    val eventTransactionHash = op.args[2].asString()
-                    val eventLogIndex = op.args[3].asBigInteger()
+            val op = ops[index]
+            if (op.opName == OP_ETH_BLOCK) {
+                val opBlockNumber = op.args[0].asBigInteger()
+                val opBlockHash = op.args[1].asString()
 
-                    val eventLog = if (eventBlockNumber > lastReadLogBlockHeight) {
-                        // Checking over network if we are behind
-                        val eventTransaction =
-                            sendWeb3jRequestWithRetry(web3j.ethGetTransactionReceipt(eventTransactionHash), 3, 0)
-                        if (eventTransaction.hasError() || !eventTransaction.transactionReceipt.isPresent) {
-                            null
-                        } else {
-                            eventTransaction.transactionReceipt.get().logs.find { it.logIndex == eventLogIndex }
-                        }
-                    } else {
-                        // We have stored the event, so we can just check for it, no network call needed
-                        events.find { it.transactionHash == eventTransactionHash && it.logIndex == eventLogIndex }
-                    }
-
-                    if (eventLog == null || !isMatchingEvents(op.args, eventLog)) {
-                        return false
-                    }
-                }
-                else -> {
-                    logger.error("Unknown operation: ${op.opName}")
+                val opEvents = op.args[2].asArray()
+                if (opBlockNumber != event.first.number || opBlockHash != event.first.hash) {
+                    logger.error("Received unexpected block $opBlockNumber with hash $opBlockHash. Expected block ${event.first.number} with hash ${event.first.hash}")
                     return false
                 }
+                if (event.second.size != opEvents.size || event.second.any { !hasMatchingEvent(opEvents, it) }) {
+                    logger.error("Events in received block $opBlockNumber do not match expected events")
+                    return false
+                }
+            } else {
+                logger.error("Unknown operation: ${op.opName}")
+                return false
             }
         }
         return true
     }
 
-    private fun isMatchingEvents(eventArgs: Array<Gtv>, eventLog: Log): Boolean {
+    private fun hasMatchingEvent(opEvents: Array<out Gtv>, eventLog: Log): Boolean {
+        val eventWithMatchingHash = opEvents.find { it[0].asString() == eventLog.transactionHash && it[1].asBigInteger() == eventLog.logIndex }
+                ?: return false
+
         val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, eventLog)
-        return eventArgs[0].asBigInteger() == eventLog.blockNumber &&
-                eventArgs[1].asString() == eventLog.blockHash &&
-                eventArgs[6].asBigInteger() == eventParameters.indexedValues[0].value &&
-                eventArgs[7].asArray().contentEquals(
-                    GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray).asArray()
+        return eventWithMatchingHash[2].asString() == EventEncoder.encode(ChrL2.DEPOSITED_EVENT) &&
+                eventWithMatchingHash[3].asString() == eventLog.address &&
+                eventWithMatchingHash[4].asBigInteger() == eventParameters.indexedValues[0].value &&
+                eventWithMatchingHash[5].asArray().contentEquals(
+                        GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray).asArray()
                 )
     }
 
     @Synchronized
-    override fun getEventData(): Pair<Array<Gtv>, List<Array<Gtv>>> {
+    override fun getEventData(): List<Array<Gtv>> {
         val lastCommittedBlock = getLastCommittedEthereumBlockHeight()
         // If we have any old events in the queue we may prune them
         if (lastCommittedBlock != null) {
@@ -237,27 +219,29 @@ class EthereumEventProcessor(
 
         if (!::readOffsetBlock.isInitialized || (lastCommittedBlock != null && readOffsetBlock.number <= lastCommittedBlock)) {
             logger.debug("No events to process yet")
-            return Pair(emptyArray(), emptyList())
+            return emptyList()
         }
 
-        val out = events.stream()
-            .takeWhile { it.blockNumber <= readOffsetBlock.number }
+        return eventBlocks.stream()
+            .takeWhile { it.first.number <= readOffsetBlock.number }
             .map {
-                val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, it)
-                arrayOf(
-                    gtv(it.blockNumber),
-                    gtv(it.blockHash),
-                    gtv(it.transactionHash),
-                    gtv(it.logIndex),
-                    gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                    gtv(it.address),
-                    gtv(eventParameters.indexedValues[0].value as BigInteger),   // asset type
-                    GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray) // payload
+                val events = it.second.map { event ->
+                    val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, event)
+                    gtv(listOf(
+                            gtv(event.transactionHash),
+                            gtv(event.logIndex),
+                            gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
+                            gtv(event.address),
+                            gtv(eventParameters.indexedValues[0].value as BigInteger),   // asset type
+                            GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray) // payload
+                    ))
+                }
+                arrayOf<Gtv>(
+                    gtv(it.first.number),
+                    gtv(it.first.hash),
+                    gtv(events)
                 )
             }.toList()
-
-        val toBlock: Array<Gtv> = arrayOf(gtv(readOffsetBlock.number), gtv(readOffsetBlock.hash))
-        return Pair(toBlock, out)
     }
 
     private fun getLastCommittedEthereumBlockHeight(): BigInteger? {
@@ -274,11 +258,11 @@ class EthereumEventProcessor(
 
     @Synchronized
     private fun processLogEventsAndUpdateOffsets(
-        logs: List<Log>,
+        logs: Map<EthereumBlock, List<Log>>,
         newLastReadLogBlockHeight: BigInteger,
         newReadOffsetBlock: EthBlock.Block?
     ) {
-        events.addAll(logs)
+        eventBlocks.addAll(logs.toList().sortedBy { it.first.number })
         lastReadLogBlockHeight = newLastReadLogBlockHeight
         if (newReadOffsetBlock != null) {
             readOffsetBlock = newReadOffsetBlock
@@ -287,14 +271,14 @@ class EthereumEventProcessor(
 
     @Synchronized
     private fun isQueueFull(): Boolean {
-        return events.size > MAX_QUEUE_SIZE
+        return eventBlocks.size > MAX_QUEUE_SIZE
     }
 
     private fun pruneEvents(lastCommittedBlock: BigInteger) {
-        var nextLogEvent = events.peek()
-        while (nextLogEvent != null && nextLogEvent.blockNumber <= lastCommittedBlock) {
-            events.poll()
-            nextLogEvent = events.peek()
+        var nextLogEvent = eventBlocks.peek()
+        while (nextLogEvent != null && nextLogEvent.first.number <= lastCommittedBlock) {
+            eventBlocks.poll()
+            nextLogEvent = eventBlocks.peek()
         }
     }
 
