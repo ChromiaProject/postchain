@@ -2,7 +2,7 @@ package net.postchain.el2
 
 import mu.KLogging
 import net.postchain.core.BlockchainEngine
-import net.postchain.core.ProgrammerMistake
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtv.Gtv
@@ -11,6 +11,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.OpData
 import org.web3j.abi.EventEncoder
+import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.core.Request
 import org.web3j.protocol.core.Response
@@ -88,15 +89,15 @@ class NoOpEventProcessor : EventProcessor {
  * (so that slower nodes may have a chance to validate the events)
  */
 class EthereumEventProcessor(
-    private val web3c: Web3Connector,
-    private val contractAddress: String,
-    private val readOffset: BigInteger,
-    contractDeployBlock: BigInteger,
-    blockchainEngine: BlockchainEngine
+        private val web3j: Web3j,
+        private val contractAddresses: List<String>,
+        private val readOffset: BigInteger,
+        skipToHeight: BigInteger,
+        blockchainEngine: BlockchainEngine
 ) : EventProcessor, AbstractBlockchainProcess("ethereum-event-processor", blockchainEngine) {
 
     private val events: Queue<Log> = LinkedList()
-    private var lastReadLogBlockHeight = contractDeployBlock
+    private var lastReadLogBlockHeight = skipToHeight
     private lateinit var readOffsetBlock: EthBlock.Block
 
     companion object {
@@ -118,7 +119,7 @@ class EthereumEventProcessor(
             lastReadLogBlockHeight + BigInteger.ONE
         }
 
-        val currentBlockHeight = sendWeb3jRequestWithRetry(web3c.web3j.ethBlockNumber()).blockNumber
+        val currentBlockHeight = sendWeb3jRequestWithRetry(web3j.ethBlockNumber()).blockNumber
         // Pacing the reading of logs
         val to = minOf(currentBlockHeight, from + BigInteger.valueOf(MAX_READ_AHEAD))
 
@@ -132,15 +133,15 @@ class EthereumEventProcessor(
         val filter = EthFilter(
             DefaultBlockParameter.valueOf(from),
             DefaultBlockParameter.valueOf(to),
-            contractAddress
+            contractAddresses
         )
         filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
 
-        val logResponse = sendWeb3jRequestWithRetry(web3c.web3j.ethGetLogs(filter))
+        val logResponse = sendWeb3jRequestWithRetry(web3j.ethGetLogs(filter))
         // Fetch and store the block at read offset for the consumer thread (so it can emit it along with prior events)
         val newReadOffsetBlock = if (to - readOffset >= BigInteger.ZERO) {
             sendWeb3jRequestWithRetry(
-                web3c.web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(to - readOffset), false)
+                web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(to - readOffset), false)
             ).block
         } else {
             null
@@ -157,7 +158,7 @@ class EthereumEventProcessor(
     }
 
     override fun cleanup() {
-        web3c.shutdown()
+        web3j.shutdown()
     }
 
     @Synchronized
@@ -174,7 +175,7 @@ class EthereumEventProcessor(
                     // We don't store all blocks, so we need to go fetch it over network
                     val blockNumber = op.args[0].asBigInteger()
                     val lastEthBlock = sendWeb3jRequestWithRetry(
-                        web3c.web3j.ethGetBlockByNumber(
+                        web3j.ethGetBlockByNumber(
                             DefaultBlockParameter.valueOf(blockNumber),
                             false
                         ), 3, 0
@@ -192,7 +193,7 @@ class EthereumEventProcessor(
                     val eventLog = if (eventBlockNumber > lastReadLogBlockHeight) {
                         // Checking over network if we are behind
                         val eventTransaction =
-                            sendWeb3jRequestWithRetry(web3c.web3j.ethGetTransactionReceipt(eventTransactionHash), 3, 0)
+                            sendWeb3jRequestWithRetry(web3j.ethGetTransactionReceipt(eventTransactionHash), 3, 0)
                         if (eventTransaction.hasError() || !eventTransaction.transactionReceipt.isPresent) {
                             null
                         } else {
@@ -249,7 +250,7 @@ class EthereumEventProcessor(
                     gtv(it.transactionHash),
                     gtv(it.logIndex),
                     gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                    gtv(contractAddress),
+                    gtv(it.address),
                     gtv(eventParameters.indexedValues[0].value as BigInteger),   // asset type
                     GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray) // payload
                 )
