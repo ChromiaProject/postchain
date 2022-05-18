@@ -57,7 +57,7 @@ $ yarn coverage
 ### Deploy ChrL2 contract to a network (requires Mnemonic, infura API and Etherscan API key)
 
 ```sh
-$ yarn deploy --network rinkeby --verify --directory 0x659E4A3726275EDFD125F52338ECE0D54D15BD99,0x1A642F0E3C3AF545E7ACBD38B07251B3990914F1,0x75E20828B343D1FE37FAE469AB698E19C17F20B5 --app 0x659E4A3726275EDFD125F52338ECE0D54D15BD99,0x1A642F0E3C3AF545E7ACBD38B07251B3990914F1,0x75E20828B343D1FE37FAE469AB698E19C17F20B5
+$ yarn deploy --network rinkeby --verify --app 0x659E4A3726275EDFD125F52338ECE0D54D15BD99,0x1A642F0E3C3AF545E7ACBD38B07251B3990914F1,0x75E20828B343D1FE37FAE469AB698E19C17F20B5
 ```
 
 ### Run simple dapp on local
@@ -94,10 +94,16 @@ Find out more about deployment here:
 
 ## Upgrade ChrL2 contract
 
-You can upgrade a deployed instance of the ChrL2 contract.
+### Prepare
 
-Replace CONTRACT_ADDRESS with the address that the contract was deployed to
+Run below task to prepare upgrade ChrL2 smart contract
 
 ```sh
-$ yarn upgrade-contract --network rinkeby --verify --address CONTRACT_ADDRESS
+yarn prepare-upgrade --network rinkeby --verify --address PROXY_ADDRESS
+```
+
+### Upgrade
+
+```sh
+$ yarn upgrade-contract --network rinkeby --address PROXY_ADDRESS
 ```

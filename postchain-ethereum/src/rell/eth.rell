@@ -3,9 +3,16 @@ enum asset_type {
     ERC721
 }
 
+entity account_link {
+    state_n: integer;
+    eth_beneficiary: text;
+    key state_n, eth_beneficiary;
+}
+
 entity eth_block {
-    key eth_block_height: integer;
-    key eth_block_hash: text;
+    eth_block_height: integer;
+    eth_block_hash: text;
+    key eth_block_height, eth_block_hash;
 }
 
 entity eth_erc20 {
@@ -32,14 +39,16 @@ entity eth_event {
 }
 
 entity eth_erc20_balance {
-    key token: eth_erc20;
-    key beneficiary: text;
+    token: eth_erc20;
+    beneficiary: text;
     mutable amount: integer;
+    key token, beneficiary;
 }
 
 entity eth_erc721_balance {
-    key token: eth_erc721;
-    key beneficiary: text;
+    token: eth_erc721;
+    beneficiary: text;
+    key token, beneficiary;
 }
 
 entity eth_erc20_withdraw {
@@ -101,26 +110,32 @@ operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash:
     );
 
     val event_args = list<gtv>.from_gtv(payload);
+    val beneficiary = to_zero_padded_hex(byte_array.from_gtv(event_args[0]));
     when (token_type) {
         ERC20 -> {
-            val from_address = to_zero_padded_hex(byte_array.from_gtv(event_args[0]));
             val token_address = to_zero_padded_hex(byte_array.from_gtv(event_args[1]));
             val amount = integer.from_gtv(event_args[2]);
-              val name = text.from_gtv(event_args[3]);
+            val name = text.from_gtv(event_args[3]);
             val symbol = text.from_gtv(event_args[4]);
             val decimals = integer.from_gtv(event_args[5]);
-            deposit_ERC20(from_address, token_address, amount, name, symbol, decimals);
+            deposit_ERC20(beneficiary, token_address, amount, name, symbol, decimals);
         }
         ERC721 -> {
-            val from_address = to_zero_padded_hex(byte_array.from_gtv(event_args[0]));
             val token_address = to_zero_padded_hex(byte_array.from_gtv(event_args[1]));
             val token_id = integer.from_gtv(event_args[2]);
-              val name = text.from_gtv(event_args[3]);
+            val name = text.from_gtv(event_args[3]);
             val symbol = text.from_gtv(event_args[4]);
             val uri = text.from_gtv(event_args[5]);
-            deposit_ERC721(from_address, token_address, token_id, name, symbol, uri);
+            deposit_ERC721(beneficiary, token_address, token_id, name, symbol, uri);
         }
     }
+    val state_n = get_or_create_account_link(beneficiary);
+    val state = build_account_state(beneficiary);
+    val state_data = state_data(
+        state_n,
+        account = state
+    );
+    op_context.emit_event("el2_state", state_data.to_gtv());
 }
 
 operation withdraw_ERC20(token_address: text, beneficiary: text, amount: integer) {
@@ -150,7 +165,7 @@ operation withdraw_ERC20(token_address: text, beneficiary: text, amount: integer
     withdraw_info.add(byte_array.from_hex("000000000000000000000000" + token_address.sub(2)).to_gtv());
     withdraw_info.add(byte_array.from_hex("000000000000000000000000" + beneficiary.sub(2)).to_gtv());
     withdraw_info.add(amount.to_gtv());
-    emit_withdraw(next_serial, withdraw_info);
+    emit_withdraw(beneficiary, withdraw_info);
 }
 
 operation withdraw_ERC721(token_address: text, beneficiary: text, token_id: integer) {
@@ -177,7 +192,7 @@ operation withdraw_ERC721(token_address: text, beneficiary: text, token_id: inte
     withdraw_info.add(byte_array.from_hex("000000000000000000000000" + token_address.sub(2)).to_gtv());
     withdraw_info.add(byte_array.from_hex("000000000000000000000000" + beneficiary.sub(2)).to_gtv());
     withdraw_info.add(token_id.to_gtv());
-    emit_withdraw(next_serial, withdraw_info);
+    emit_withdraw(beneficiary, withdraw_info);
 }
 
 query get_erc20_withdrawal(token_address: text, beneficiary: text) {
@@ -219,6 +234,50 @@ query eth_has_erc721(token_address: text, token_id: integer, beneficiary: text):
     return not empty(b);
 }
 
+function get_or_create_account_link(beneficiary: text): integer {
+    val account = account_link @? { beneficiary };
+    if (empty(account)) {
+        val last_state_n = account_link @? {} (@sort_desc .state_n) limit 1;
+        var next_state_n = 0;
+        if (empty(last_state_n)) {
+            next_state_n = 1;
+        } else {
+            next_state_n = last_state_n + 1;
+        }
+        create account_link(
+            state_n = next_state_n,
+            beneficiary
+        );
+        return next_state_n;
+    }
+    return account.state_n;
+}
+
+function build_account_state(beneficiary: text) {
+	val state = list<gtv>();
+	state.add(byte_array.from_hex("000000000000000000000000" + beneficiary.sub(2)).to_gtv());
+	// In order of asset type
+	// 0: ERC20
+	val erc20_balances = eth_erc20_balance @* { beneficiary };
+	val erc20_byte_offset = erc20_balances.size() * 2 * 32; // 2 values per entry
+	state.add(erc20_byte_offset.to_gtv());
+	for (balance in erc20_balances) {
+		state.add(byte_array.from_hex("000000000000000000000000" + balance.token.address.sub(2)).to_gtv());
+		state.add(balance.amount.to_gtv());
+	}
+	// 1: ERC721
+	val erc721_balances = eth_erc721_balance @* { beneficiary };
+	val erc721_byte_offset = erc721_balances.size() * 2 * 32; // 2 values per entry
+	state.add(erc721_byte_offset.to_gtv());
+	for (balance in erc721_balances) {
+		state.add(byte_array.from_hex("000000000000000000000000" + balance.token.address.sub(2)).to_gtv());
+		state.add(balance.token.token_id.to_gtv());
+	}
+	// Add new asset types here
+	// ------------------------ //
+	return state;
+}
+
 function deposit_ERC20(beneficiary: text, token_address: text, amount: integer, name: text, symbol: text, decimals: integer) {
     var token = eth_erc20 @? { .address == token_address };
     if (empty(token)) {
@@ -242,7 +301,6 @@ function deposit_ERC20(beneficiary: text, token_address: text, amount: integer, 
     }
 }
 
-
 function deposit_ERC721(beneficiary: text, token_address: text, token_id: integer, name: text, symbol: text, uri: text) {
     var token = eth_erc721 @? { .address == token_address, token_id };
     if (empty(token)) {
@@ -253,7 +311,7 @@ function deposit_ERC721(beneficiary: text, token_address: text, token_id: intege
               symbol,
               uri
           );
-      }
+    }
 
     create eth_erc721_balance(
         token,
@@ -261,14 +319,16 @@ function deposit_ERC721(beneficiary: text, token_address: text, token_id: intege
     );
 }
 
-function emit_withdraw(serial: integer, eth_event_data: list<gtv>) {
+function emit_withdraw(beneficiary: text, eth_event_data: list<gtv>) {
+    val state_n = get_or_create_account_link(beneficiary);
+    val state = build_account_state(beneficiary);
     val state_data = state_data(
-        state_n = serial,
-        account = eth_event_data
+        state_n,
+        account = state
     );
 
-    op_context.emit_event("el2_event", eth_event_data.to_gtv());
     op_context.emit_event("el2_state", state_data.to_gtv());
+    op_context.emit_event("el2_event", eth_event_data.to_gtv());
 }
 
 function to_zero_padded_hex(array: byte_array) {
