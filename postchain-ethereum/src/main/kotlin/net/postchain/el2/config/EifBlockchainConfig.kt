@@ -9,9 +9,9 @@ import java.math.BigInteger
 data class EifBlockchainConfig(
     @RawGtv
     val rawGtv: Gtv,
-    @Name("contract")
-    val contract: String,
-    @Name("contract_deploy_block")
+    @Name("contracts")
+    val contracts: List<String>,
+    @Name("skip_to_height")
     @DefaultValue(defaultBigInteger = "0")
-    val contractDeployBlock: BigInteger
+    val skipToHeight: BigInteger
 )
