@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.gtv.common
+package net.postchain.base.gtv
 
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.Secp256K1CryptoSystem

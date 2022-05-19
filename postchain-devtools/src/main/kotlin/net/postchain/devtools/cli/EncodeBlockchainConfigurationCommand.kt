@@ -7,7 +7,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.common.GtvToBlockchainRidFactory
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import java.io.File
 
 class EncodeBlockchainConfigurationCommand : CliktCommand(

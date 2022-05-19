@@ -11,7 +11,6 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.common.GtvToBlockchainRidFactory.cryptoSystem
 
 class QueryCommand(private val clientProvider: PostchainClientProvider) : CliktCommand(name = "query", help = "Make a query towards a postchain node") {
     private val configFile by configFileOption()

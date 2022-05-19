@@ -2,7 +2,7 @@ package net.postchain.devtools.utils.configuration
 
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.common.GtvToBlockchainRidFactory
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 
 /**
  * This cache will save us some CPU and get us out of situations where we really should have gone to the DB to fetch the RID / IID.

@@ -9,7 +9,6 @@ import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
 import net.postchain.devtools.NameHelper.peerName
@@ -17,8 +16,7 @@ import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
 import net.postchain.managed.ManagedBlockchainProcessManager
-import net.postchain.gtv.common.GtvToBlockchainRidFactory
-import net.postchain.core.*
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockQueries
 import kotlin.properties.Delegates
@@ -120,12 +118,7 @@ class PostchainTestNode(
     }
 
     fun getBlockchainInstance(chainId: Long = DEFAULT_CHAIN_IID): BlockchainProcess {
-        val x = processManager.retrieveBlockchain(chainId)
-        if (x != null) {
-            return x as BlockchainProcess
-        } else {
-            throw ProgrammerMistake("Whut")
-        }
+        return processManager.retrieveBlockchain(chainId) as BlockchainProcess
     }
 
     fun retrieveBlockchain(chainId: Long = DEFAULT_CHAIN_IID): BlockchainProcess? {
