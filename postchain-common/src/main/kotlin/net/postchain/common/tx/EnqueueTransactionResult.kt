@@ -1,6 +1,6 @@
 package net.postchain.common.tx
 
-enum class TransactionResult(val code: Int) {
+enum class EnqueueTransactionResult(val code: Int) {
     OK(0),
     FULL(1),
     DUPLICATE(2),

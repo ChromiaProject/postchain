@@ -26,18 +26,18 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
         dataBuilder.addSignature(sigMaker.signDigest(dataBuilder.getDigestForSigning()))
     }
 
-    fun post(confirmationLevel: ConfirmationLevel): Promise<TransactionAck, Exception> {
+    fun post(confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception> {
         return client.postTransaction(dataBuilder, confirmationLevel)
     }
 
-    fun postSync(confirmationLevel: ConfirmationLevel): TransactionAck {
+    fun postSync(confirmationLevel: ConfirmationLevel): TransactionResult {
         return client.postTransactionSync(dataBuilder, confirmationLevel)
     }
 }
 /**
  * Holds the acknowledgement message from the Postchain Server
  */
-interface TransactionAck {
+interface TransactionResult {
     val status: TransactionStatus
 }
 
@@ -45,8 +45,8 @@ interface PostchainClient {
     fun makeTransaction(): GTXTransactionBuilder
     fun makeTransaction(signers: Array<ByteArray>): GTXTransactionBuilder
 
-    fun postTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): Promise<TransactionAck, Exception>
-    fun postTransactionSync(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionAck
+    fun postTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception>
+    fun postTransactionSync(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult
 
     fun query(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Promise<Gtv, Exception>
     fun querySync(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Gtv

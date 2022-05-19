@@ -5,7 +5,7 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.tx.TransactionResult
+import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.core.TransactionQueue
 import net.postchain.core.Transaction
@@ -68,14 +68,14 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
         return queue.size
     }
 
-    override fun enqueue(tx: Transaction): TransactionResult {
-        if (tx.isSpecial()) return TransactionResult.INVALID
+    override fun enqueue(tx: Transaction): EnqueueTransactionResult {
+        if (tx.isSpecial()) return EnqueueTransactionResult.INVALID
 
         val rid = ByteArrayKey(tx.getRID())
         synchronized(this) {
             if (queueMap.contains(rid)) {
                 logger.debug{ "Skipping $rid first test" }
-                return TransactionResult.DUPLICATE
+                return EnqueueTransactionResult.DUPLICATE
             }
         }
 
@@ -85,21 +85,21 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
                 synchronized(this) {
                     if (queueMap.contains(rid)) {
                         logger.debug{ "Skipping $rid second test" }
-                        return TransactionResult.DUPLICATE
+                        return EnqueueTransactionResult.DUPLICATE
                     }
                     if (queue.offer(comparableTx)) {
                         logger.debug{ "Enqueued tx $rid" }
                         queueMap.set(rid, comparableTx)
-                        return TransactionResult.OK
+                        return EnqueueTransactionResult.OK
                     } else {
                         logger.debug{ "Skipping tx $rid, overloaded. Queue contains ${queue.size} elements" }
-                        return TransactionResult.FULL
+                        return EnqueueTransactionResult.FULL
                     }
                 }
             } else {
                 logger.debug { "Tx $rid didn't pass the check" }
                 rejectTransaction(tx, null)
-                return TransactionResult.INVALID
+                return EnqueueTransactionResult.INVALID
             }
 
         } catch (e: UserMistake) {
@@ -107,7 +107,7 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
             rejectTransaction(tx, e)
         }
 
-        return TransactionResult.UNKNOWN
+        return EnqueueTransactionResult.UNKNOWN
     }
 
     @Synchronized

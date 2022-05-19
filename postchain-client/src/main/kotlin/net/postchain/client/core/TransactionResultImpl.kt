@@ -7,4 +7,4 @@ import net.postchain.common.tx.TransactionStatus
 /**
  * Acknowledge from the server. Holds the status of the TX.
  */
-class TransactionAckImpl(override val status: TransactionStatus) : TransactionAck
+class TransactionResultImpl(override val status: TransactionStatus) : TransactionResult

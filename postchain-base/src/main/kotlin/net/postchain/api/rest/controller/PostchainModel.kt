@@ -12,13 +12,12 @@ import net.postchain.common.TimeLog
 import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.common.tx.TransactionResult
+import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
-import net.postchain.core.*
 import net.postchain.gtv.Gtv
 
 open class PostchainModel(
@@ -43,11 +42,11 @@ open class PostchainModel(
         TimeLog.end("PostchainModel.postTransaction().isCorrect", nonce)
         nonce = TimeLog.startSumConc("PostchainModel.postTransaction().enqueue")
         when (txQueue.enqueue(decodedTransaction)) {
-            TransactionResult.FULL -> throw OverloadedException("Transaction queue is full")
-            TransactionResult.INVALID -> throw InvalidTnxException("Transaction is invalid")
-            TransactionResult.DUPLICATE -> throw DuplicateTnxException("Transaction already in queue")
-            TransactionResult.UNKNOWN -> throw UserMistake("Unknown error")
-            TransactionResult.OK -> {} // Do nothing
+            EnqueueTransactionResult.FULL -> throw OverloadedException("Transaction queue is full")
+            EnqueueTransactionResult.INVALID -> throw InvalidTnxException("Transaction is invalid")
+            EnqueueTransactionResult.DUPLICATE -> throw DuplicateTnxException("Transaction already in queue")
+            EnqueueTransactionResult.UNKNOWN -> throw UserMistake("Unknown error")
+            EnqueueTransactionResult.OK -> {} // Do nothing
         }
         TimeLog.end("PostchainModel.postTransaction().enqueue", nonce)
     }

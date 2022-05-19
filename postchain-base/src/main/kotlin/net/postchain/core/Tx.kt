@@ -3,7 +3,7 @@
 package net.postchain.core
 
 import net.postchain.common.data.ByteArrayKey
-import net.postchain.common.tx.TransactionResult
+import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus
 
 /**
@@ -33,7 +33,7 @@ interface TransactionFactory {
 
 interface TransactionQueue {
     fun takeTransaction(): Transaction?
-    fun enqueue(tx: Transaction): TransactionResult
+    fun enqueue(tx: Transaction): EnqueueTransactionResult
     fun findTransaction(txRID: ByteArrayKey): Transaction?
     fun getTransactionStatus(txHash: ByteArray): TransactionStatus
     fun getTransactionQueueSize(): Int
