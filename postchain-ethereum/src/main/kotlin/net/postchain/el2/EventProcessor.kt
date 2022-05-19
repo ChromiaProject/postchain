@@ -16,7 +16,6 @@ import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.core.Request
 import org.web3j.protocol.core.Response
 import org.web3j.protocol.core.methods.request.EthFilter
-import org.web3j.protocol.core.methods.response.EthBlock
 import org.web3j.protocol.core.methods.response.EthLog
 import org.web3j.protocol.core.methods.response.Log
 import java.lang.Thread.sleep
@@ -92,7 +91,6 @@ class EthereumEventProcessor(
 
     private val eventBlocks: Queue<Pair<EthereumBlock, List<Log>>> = LinkedList()
     private var lastReadLogBlockHeight = skipToHeight
-    private lateinit var readOffsetBlock: EthBlock.Block
 
     companion object {
         // The idea here is to avoid too big log queries and
@@ -132,14 +130,6 @@ class EthereumEventProcessor(
         filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
 
         val logResponse = sendWeb3jRequestWithRetry(web3j.ethGetLogs(filter))
-        // Fetch and store the block at read offset for the consumer thread (so it can emit it along with prior events)
-        val newReadOffsetBlock = if (to - readOffset >= BigInteger.ZERO) {
-            sendWeb3jRequestWithRetry(
-                web3j.ethGetBlockByNumber(DefaultBlockParameter.valueOf(to - readOffset), false)
-            ).block
-        } else {
-            null
-        }
 
         // Ensure events are sorted on txIndex + logIndex, blocks sorted on block number
         val sortedLogs = logResponse.logs
@@ -148,7 +138,7 @@ class EthereumEventProcessor(
                 .mapValues { it.value.sortedWith(compareBy({ event -> event.transactionIndex }, { event -> event.logIndex })) }
                 .toList()
                 .sortedBy { it.first.number }
-        processLogEventsAndUpdateOffsets(sortedLogs, to, newReadOffsetBlock)
+        processLogEventsAndUpdateOffsets(sortedLogs, to)
 
         while (isQueueFull()) {
             logger.debug("Wait for events to be consumed until we read more")
@@ -230,13 +220,8 @@ class EthereumEventProcessor(
             pruneEvents(lastCommittedBlock)
         }
 
-        if (!::readOffsetBlock.isInitialized || (lastCommittedBlock != null && readOffsetBlock.number <= lastCommittedBlock)) {
-            logger.debug("No events to process yet")
-            return emptyList()
-        }
-
         return eventBlocks.stream()
-            .takeWhile { it.first.number <= readOffsetBlock.number }
+            .takeWhile { it.first.number <= lastReadLogBlockHeight - readOffset }
             .map {
                 val events = it.second.map { event ->
                     val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, event)
@@ -272,19 +257,16 @@ class EthereumEventProcessor(
     @Synchronized
     private fun processLogEventsAndUpdateOffsets(
             logs: List<Pair<EthereumBlock, List<Log>>>,
-            newLastReadLogBlockHeight: BigInteger,
-            newReadOffsetBlock: EthBlock.Block?
+            newLastReadLogBlockHeight: BigInteger
     ) {
         eventBlocks.addAll(logs)
         lastReadLogBlockHeight = newLastReadLogBlockHeight
-        if (newReadOffsetBlock != null) {
-            readOffsetBlock = newReadOffsetBlock
-        }
     }
 
     @Synchronized
     private fun isQueueFull(): Boolean {
-        return eventBlocks.size > MAX_QUEUE_SIZE
+        // Just check against the events that we can actually consume
+        return eventBlocks.filter { it.first.number <= lastReadLogBlockHeight - readOffset }.size > MAX_QUEUE_SIZE
     }
 
     private fun pruneEvents(lastCommittedBlock: BigInteger) {
