@@ -9,7 +9,7 @@
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>
-        <module>postchain-gtxdata</module>
+        <module>postchain-gtx-data</module>
         <module>postchain-base</module>
         <module>postchain-devtools</module>
         <module>postchain-client</module>
@@ -147,7 +147,7 @@
             </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
-                <artifactId>postchain-gtxdata</artifactId>
+                <artifactId>postchain-gtx-data</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

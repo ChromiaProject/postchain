@@ -28,7 +28,7 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-gtxdata</artifactId>
+            <artifactId>postchain-gtx-data</artifactId>
         </dependency>
 
         <!-- Kotlin -->

@@ -9,10 +9,10 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import net.postchain.gtx.serializer.GtxTransactionDataSerializer
+import net.postchain.gtx.data.serializer.GtxTransactionDataSerializer
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionFactory
-import net.postchain.gtx.factory.GtxTransactionDataFactory
+import net.postchain.gtx.data.factory.GtxTransactionDataFactory
 
 /**
  * Idea is that we can build a [GTXTransaction] from different layers.

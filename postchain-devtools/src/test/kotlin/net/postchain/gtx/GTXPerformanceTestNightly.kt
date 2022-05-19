@@ -12,7 +12,7 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.factory.GtxTransactionDataFactory
+import net.postchain.gtx.data.factory.GtxTransactionDataFactory
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
