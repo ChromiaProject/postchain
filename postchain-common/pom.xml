@@ -41,8 +41,8 @@
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
             <artifactId>assertk</artifactId>
-            <scope>test</scope>
-        </dependency>
+2           <scope>test</scope>
+       </dependency>
 
         <dependency>
             <groupId>org.awaitility</groupId>
