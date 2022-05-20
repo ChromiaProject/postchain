@@ -68,6 +68,15 @@ object withdraw_stats {
     mutable withdraw_count: integer = 0;
 }
 
+struct event_data {
+    tnx_hash: text;
+    log_index: integer;
+    signature: text;
+    contract_address: text;
+    asset_type: asset_type;
+    payload: gtv;
+}
+
 struct state_data {
     state_n: integer;
     account: list<gtv>;
@@ -75,67 +84,50 @@ struct state_data {
 
 query get_last_eth_block() { return eth_block @? {} (@sort_desc .eth_block_height, .eth_block_hash) limit 1;}
 
-operation __eth_block(eth_block_height: integer, eth_block_hash: text) {
-
-    var eth_block = eth_block @? { eth_block_height, eth_block_hash };
-
-    if (empty(eth_block)) {
-        create eth_block(
-            eth_block_height,
-            eth_block_hash
-        );
-    }
-}
-
-operation __eth_event(eth_block_height: integer, eth_block_hash: text, tnx_hash: text, log_index: integer,
-                        event_signature: text, contract_address: text,
-                        token_type: asset_type, payload: gtv) {
-
-    var eth_block = eth_block @? { eth_block_height, eth_block_hash };
-
-    if (empty(eth_block)) {
-        eth_block = create eth_block(
-            eth_block_height,
-            eth_block_hash
-        );
-    }
-
-    val eth_event = create eth_event(
-        eth_block,
-        tnx_hash,
-        log_index,
-        event_signature,
-        contract_address,
-        payload.to_bytes()
+operation __eth_block(eth_block_height: integer, eth_block_hash: text, events: list<event_data>) {
+    val eth_block = create eth_block(
+        eth_block_height,
+        eth_block_hash
     );
 
-    val event_args = list<gtv>.from_gtv(payload);
-    val beneficiary = to_zero_padded_hex(byte_array.from_gtv(event_args[0]));
-    when (token_type) {
-        ERC20 -> {
-            val token_address = to_zero_padded_hex(byte_array.from_gtv(event_args[1]));
-            val amount = integer.from_gtv(event_args[2]);
-            val name = text.from_gtv(event_args[3]);
-            val symbol = text.from_gtv(event_args[4]);
-            val decimals = integer.from_gtv(event_args[5]);
-            deposit_ERC20(beneficiary, token_address, amount, name, symbol, decimals);
+    for (event in events) {
+        val eth_event = create eth_event(
+            eth_block,
+            tnx_hash = event.tnx_hash,
+            log_index = event.log_index,
+            event_signature = event.signature,
+            contract_address = event.contract_address,
+            event_payload = event.payload.to_bytes()
+        );
+
+        val event_args = list<gtv>.from_gtv(event.payload);
+        val beneficiary = to_zero_padded_hex(byte_array.from_gtv(event_args[0]));
+        when (event.asset_type) {
+            ERC20 -> {
+                val token_address = to_zero_padded_hex(byte_array.from_gtv(event_args[1]));
+                val amount = integer.from_gtv(event_args[2]);
+                val name = text.from_gtv(event_args[3]);
+                val symbol = text.from_gtv(event_args[4]);
+                val decimals = integer.from_gtv(event_args[5]);
+                deposit_ERC20(beneficiary, token_address, amount, name, symbol, decimals);
+            }
+            ERC721 -> {
+                val token_address = to_zero_padded_hex(byte_array.from_gtv(event_args[1]));
+                val token_id = integer.from_gtv(event_args[2]);
+                val name = text.from_gtv(event_args[3]);
+                val symbol = text.from_gtv(event_args[4]);
+                val uri = text.from_gtv(event_args[5]);
+                deposit_ERC721(beneficiary, token_address, token_id, name, symbol, uri);
+            }
         }
-        ERC721 -> {
-            val token_address = to_zero_padded_hex(byte_array.from_gtv(event_args[1]));
-            val token_id = integer.from_gtv(event_args[2]);
-            val name = text.from_gtv(event_args[3]);
-            val symbol = text.from_gtv(event_args[4]);
-            val uri = text.from_gtv(event_args[5]);
-            deposit_ERC721(beneficiary, token_address, token_id, name, symbol, uri);
-        }
+        val state_n = get_or_create_account_link(beneficiary);
+        val state = build_account_state(beneficiary);
+        val state_data = state_data(
+            state_n,
+            account = state
+        );
+        op_context.emit_event("el2_state", state_data.to_gtv());
     }
-    val state_n = get_or_create_account_link(beneficiary);
-    val state = build_account_state(beneficiary);
-    val state_data = state_data(
-        state_n,
-        account = state
-    );
-    op_context.emit_event("el2_state", state_data.to_gtv());
 }
 
 operation withdraw_ERC20(token_address: text, beneficiary: text, amount: integer) {

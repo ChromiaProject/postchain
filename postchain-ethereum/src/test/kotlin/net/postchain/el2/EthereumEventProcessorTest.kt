@@ -7,6 +7,7 @@ import net.postchain.core.BlockchainEngine
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.ethereum.contracts.TestToken
 import net.postchain.gtv.*
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.OpData
 import nl.komponents.kovenant.Promise
 import org.awaitility.Awaitility
@@ -112,25 +113,34 @@ class EthereumEventProcessorTest {
         Awaitility.await()
             .atMost(Duration.ONE_MINUTE)
             .untilAsserted {
-                assert(ethereumEventProcessor.getEventData().second.size == 5).isTrue()
+                val eventBlocks = ethereumEventProcessor.getEventData()
+                val events = eventBlocks.flatMap { it[2].asArray().asList() }
+                assert(events.size == 5).isTrue()
             }
 
         // validate events
         val eventData = ethereumEventProcessor.getEventData()
-        val eventsToValidate = eventData.second
-            .map { OpData(OP_ETH_EVENT, it) }
+        val eventBlocksToValidate = eventData
+            .map { OpData(OP_ETH_BLOCK, it) }
             .toTypedArray()
-        assert(ethereumEventProcessor.isValidEventData(eventsToValidate)).isTrue()
+        assert(ethereumEventProcessor.isValidEventData(eventBlocksToValidate)).isTrue()
         // Test if NoOp version can also validate
-        assert(NoOpEventProcessor().isValidEventData(eventsToValidate)).isTrue()
+        assert(NoOpEventProcessor().isValidEventData(eventBlocksToValidate)).isTrue()
+
+        // Verify that we can't skip any events by removing a block
+        assert(ethereumEventProcessor.isValidEventData(eventBlocksToValidate.sliceArray(1 until eventBlocksToValidate.size))).isFalse()
+
+        // Verify that we can't skip any events by removing them from a block
+        eventBlocksToValidate.first().args[2] = gtv(emptyList())
+        assert(ethereumEventProcessor.isValidEventData(eventBlocksToValidate)).isFalse()
 
         // Mock that the block was validated and committed to DB
-        val eventDataBlockNumber = eventData.first.first().asBigInteger()
+        val eventDataBlockNumber = eventData.last()[0].asBigInteger()
         whenever(blockQueriesMock.query(eq("get_last_eth_block"), any()))
             .doReturn(getMockedBlockHeightResponse(eventDataBlockNumber))
 
         // Assert events before last committed block are not included now
-        assert(ethereumEventProcessor.getEventData().second.isEmpty()).isTrue()
+        assert(ethereumEventProcessor.getEventData().isEmpty()).isTrue()
 
         // One more final transaction
         // Maxing out this transaction
@@ -144,11 +154,14 @@ class EthereumEventProcessorTest {
         Awaitility.await()
             .atMost(Duration.ONE_MINUTE)
             .untilAsserted {
-                assert(ethereumEventProcessor.getEventData().second.size == 1).isTrue()
+                val eventBlocks = ethereumEventProcessor.getEventData()
+                val events = eventBlocks.flatMap { it[2].asArray().asList() }
+                assert(events.size == 1).isTrue()
             }
 
-        val lastEvent = ethereumEventProcessor.getEventData().second.first()
-        val eventArgs = lastEvent[7].asArray()
+        val lastEventBlock = ethereumEventProcessor.getEventData().first()
+        val lastEvent = lastEventBlock[2].asArray().first()
+        val eventArgs = lastEvent[5].asArray()
         // Check that data in the event matches what we sent
         assert(
             Numeric.hexStringToByteArray(transactionManager.fromAddress).contentEquals(eventArgs[0].asByteArray())
@@ -200,9 +213,10 @@ class EthereumEventProcessorTest {
         Awaitility.await()
                 .atMost(Duration.ONE_MINUTE)
                 .untilAsserted {
-                    val events = ethereumEventProcessor.getEventData().second
+                    val eventBlocks = ethereumEventProcessor.getEventData()
+                    val events = eventBlocks.flatMap { it[2].asArray().asList() }
                     assert(events.size == 2).isTrue()
-                    val eventContractAddresses = events.map { it[5].asString() }
+                    val eventContractAddresses = events.map { it[3].asString() }
                     assert(eventContractAddresses).containsExactly(*contractAddresses.toTypedArray())
                 }
 

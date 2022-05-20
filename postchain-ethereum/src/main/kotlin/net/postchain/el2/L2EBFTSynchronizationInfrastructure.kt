@@ -58,7 +58,7 @@ class EL2SynchronizationInfrastructureExtension(
             EthereumEventProcessor(
                 web3j,
                 eifBlockchainConfig.contracts,
-                BigInteger.valueOf(100),
+                BigInteger.valueOf(eifBlockchainConfig.readOffset),
                 eifBlockchainConfig.skipToHeight,
                 engine
             ).apply { start() }
