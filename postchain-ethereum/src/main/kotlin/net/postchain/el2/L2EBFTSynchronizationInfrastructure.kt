@@ -6,6 +6,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.*
 import net.postchain.el2.config.EifBlockchainConfig
+import net.postchain.el2.config.EifConfig
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfiguration
 import org.web3j.protocol.Web3j
@@ -31,8 +32,8 @@ class EL2SynchronizationInfrastructureExtension(
                     logger.warn("Skip to height config is set to 0. Consider changing it to avoid redundant queries.")
                 }
 
-                val ethereumUrl = postchainContext.appConfig.getString("ethereum.url", "")
-                val eventProcessor = initializeEventProcessor(eifBlockchainConfig, engine, ethereumUrl)
+                val eifConfig = EifConfig.fromAppConfig(postchainContext.appConfig)
+                val eventProcessor = initializeEventProcessor(eifBlockchainConfig, engine, eifConfig)
                 el2Ext.useEventProcessor(eventProcessor)
                 eventProcessors[cfg.blockchainRid.toHex()] = eventProcessor
             }
@@ -48,12 +49,12 @@ class EL2SynchronizationInfrastructureExtension(
 
     override fun shutdown() {}
 
-    private fun initializeEventProcessor(eifBlockchainConfig: EifBlockchainConfig, engine: BlockchainEngine, ethereumUrl: String): EventProcessor {
-        return if ("ignore".equals(ethereumUrl, ignoreCase = true)) {
+    private fun initializeEventProcessor(eifBlockchainConfig: EifBlockchainConfig, engine: BlockchainEngine, eifConfig: EifConfig): EventProcessor {
+        return if ("ignore".equals(eifConfig.url, ignoreCase = true)) {
             logger.warn("EIF is running in disconnected mode. No events will be validated against ethereum.")
             NoOpEventProcessor()
         } else {
-            val web3j = Web3j.build(Web3jServiceFactory.buildService(ethereumUrl))
+            val web3j = Web3j.build(Web3jServiceFactory.buildService(eifConfig))
 
             EthereumEventProcessor(
                 web3j,
