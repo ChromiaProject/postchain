@@ -41,7 +41,7 @@
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
             <artifactId>assertk</artifactId>
-2           <scope>test</scope>
+            <scope>test</scope>
        </dependency>
 
         <dependency>
