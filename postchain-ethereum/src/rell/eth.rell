@@ -11,7 +11,7 @@ entity account_link {
 
 entity eth_block {
     eth_block_height: integer;
-    eth_block_hash: text;
+    eth_block_hash: byte_array;
     key eth_block_height, eth_block_hash;
 }
 
@@ -31,10 +31,10 @@ entity eth_erc721 {
 
 entity eth_event {
     index eth_block;
-    tnx_hash: text;
+    tnx_hash: byte_array;
     log_index: integer;
-    event_signature: text;
-    contract_address: text;
+    event_signature: byte_array;
+    contract_address: byte_array;
     event_payload: byte_array;
 }
 
@@ -69,10 +69,10 @@ object withdraw_stats {
 }
 
 struct event_data {
-    tnx_hash: text;
+    tnx_hash: byte_array;
     log_index: integer;
-    signature: text;
-    contract_address: text;
+    signature: byte_array;
+    contract_address: byte_array;
     asset_type: asset_type;
     payload: gtv;
 }
@@ -84,7 +84,7 @@ struct state_data {
 
 query get_last_eth_block() { return eth_block @? {} (@sort_desc .eth_block_height, .eth_block_hash) limit 1;}
 
-operation __eth_block(eth_block_height: integer, eth_block_hash: text, events: list<event_data>) {
+operation __eth_block(eth_block_height: integer, eth_block_hash: byte_array, events: list<event_data>) {
     val eth_block = create eth_block(
         eth_block_height,
         eth_block_hash
