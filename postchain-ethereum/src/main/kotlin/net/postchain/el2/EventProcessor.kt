@@ -3,6 +3,8 @@ package net.postchain.el2
 import mu.KLogging
 import net.postchain.core.BlockchainEngine
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.gtv.Gtv
@@ -34,6 +36,7 @@ interface EventProcessor {
  * No EIF special operations will be produced and no operations will be validated against ethereum.
  */
 class NoOpEventProcessor : EventProcessor {
+    private val encodedDepositEvent = EventEncoder.encode(ChrL2.DEPOSITED_EVENT)
 
     companion object : KLogging()
 
@@ -60,16 +63,16 @@ class NoOpEventProcessor : EventProcessor {
     }
 
     private fun isValidEthereumEventFormat(opArgs: Array<out Gtv>) = opArgs.size == 6 &&
-            opArgs[0].asPrimitive() is String &&
+            opArgs[0].asPrimitive() is ByteArray &&
             opArgs[1].asPrimitive() is BigInteger &&
-            opArgs[2].asString() == EventEncoder.encode(ChrL2.DEPOSITED_EVENT) &&
-            opArgs[3].asPrimitive() is String &&
+            "0x${opArgs[2].asByteArray().toHex()}".equals(encodedDepositEvent, true) &&
+            opArgs[3].asPrimitive() is ByteArray &&
             opArgs[4].asPrimitive() is BigInteger &&
             opArgs[5].asPrimitive() is Array<*>
 
     private fun isValidEthereumBlockFormat(opArgs: Array<Gtv>) = opArgs.size == 3 &&
             opArgs[0].asPrimitive() is BigInteger &&
-            opArgs[1].asPrimitive() is String &&
+            opArgs[1].asPrimitive() is ByteArray &&
             opArgs[2].asArray().all { isValidEthereumEventFormat(it.asArray()) }
 }
 
@@ -89,6 +92,7 @@ class EthereumEventProcessor(
 
     data class EthereumBlock(val number: BigInteger, val hash: String)
 
+    private val encodedDepositEvent = EventEncoder.encode(ChrL2.DEPOSITED_EVENT)
     private val eventBlocks: Queue<Pair<EthereumBlock, List<Log>>> = LinkedList()
     private var lastReadLogBlockHeight = skipToHeight
 
@@ -127,7 +131,7 @@ class EthereumEventProcessor(
             DefaultBlockParameter.valueOf(to),
             contractAddresses
         )
-        filter.addSingleTopic(EventEncoder.encode(ChrL2.DEPOSITED_EVENT))
+        filter.addSingleTopic(encodedDepositEvent)
 
         val logResponse = sendWeb3jRequestWithRetry(web3j.ethGetLogs(filter))
 
@@ -172,10 +176,10 @@ class EthereumEventProcessor(
             val op = ops[index]
             if (op.opName == OP_ETH_BLOCK) {
                 val opBlockNumber = op.args[0].asBigInteger()
-                val opBlockHash = op.args[1].asString()
+                val opBlockHash = "0x${op.args[1].asByteArray().toHex()}"
 
                 val opEvents = op.args[2].asArray()
-                if (opBlockNumber != event.first.number || opBlockHash != event.first.hash) {
+                if (opBlockNumber != event.first.number || !opBlockHash.equals(event.first.hash, true)) {
                     logger.error("Received unexpected block $opBlockNumber with hash $opBlockHash. Expected block ${event.first.number} with hash ${event.first.hash}")
                     return false
                 }
@@ -197,10 +201,10 @@ class EthereumEventProcessor(
         for ((index, opEvent) in opEvents.withIndex()) {
             val eventLog = eventLogs[index]
             val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, eventLog)
-            if (opEvent[0].asString() != eventLog.transactionHash ||
+            if (!"0x${opEvent[0].asByteArray().toHex()}".equals(eventLog.transactionHash, true) ||
                     opEvent[1].asBigInteger() != eventLog.logIndex ||
-                    opEvent[2].asString() != EventEncoder.encode(ChrL2.DEPOSITED_EVENT) ||
-                    opEvent[3].asString() != eventLog.address ||
+                    !"0x${opEvent[2].asByteArray().toHex()}".equals(encodedDepositEvent, true) ||
+                    !"0x${opEvent[3].asByteArray().toHex()}".equals(eventLog.address, true) ||
                     opEvent[4].asBigInteger() != eventParameters.indexedValues[0].value ||
                     !opEvent[5].asArray().contentEquals(
                             GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray).asArray()
@@ -226,17 +230,17 @@ class EthereumEventProcessor(
                 val events = it.second.map { event ->
                     val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, event)
                     gtv(listOf(
-                            gtv(event.transactionHash),
+                            gtv(event.transactionHash.substring(2).hexStringToByteArray()),
                             gtv(event.logIndex),
-                            gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
-                            gtv(event.address),
+                            gtv(encodedDepositEvent.substring(2).hexStringToByteArray()),
+                            gtv(event.address.substring(2).hexStringToByteArray()),
                             gtv(eventParameters.indexedValues[0].value as BigInteger),   // asset type
                             GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray) // payload
                     ))
                 }
                 arrayOf<Gtv>(
                     gtv(it.first.number),
-                    gtv(it.first.hash),
+                    gtv(it.first.hash.substring(2).hexStringToByteArray()),
                     gtv(events)
                 )
             }.toList()
