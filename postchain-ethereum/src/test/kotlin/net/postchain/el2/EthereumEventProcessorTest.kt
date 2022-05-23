@@ -2,6 +2,7 @@ package net.postchain.el2
 
 import assertk.assert
 import assertk.assertions.*
+import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
 import net.postchain.core.BlockchainEngine
 import net.postchain.ethereum.contracts.ChrL2
@@ -216,8 +217,8 @@ class EthereumEventProcessorTest {
                     val eventBlocks = ethereumEventProcessor.getEventData()
                     val events = eventBlocks.flatMap { it[2].asArray().asList() }
                     assert(events.size == 2).isTrue()
-                    val eventContractAddresses = events.map { it[3].asString() }
-                    assert(eventContractAddresses).containsExactly(*contractAddresses.toTypedArray())
+                    val eventContractAddresses = events.map { "0x${it[3].asByteArray().toHex()}".toLowerCase() }
+                    assert(eventContractAddresses).containsExactly(*contractAddresses.map(String::toLowerCase).toTypedArray())
                 }
 
         ethereumEventProcessor.shutdown()
