@@ -1,5 +1,6 @@
 package net.postchain.el2
 
+import net.postchain.el2.config.EifConfig
 import okhttp3.OkHttpClient
 import org.web3j.protocol.Web3jService
 import org.web3j.protocol.http.HttpService
@@ -8,30 +9,23 @@ import org.web3j.protocol.ipc.WindowsIpcService
 import java.util.concurrent.TimeUnit
 
 object Web3jServiceFactory {
-    fun buildService(clientAddress: String?): Web3jService {
-        val web3jService: Web3jService
-        if (clientAddress == null || clientAddress == "") {
-            web3jService = HttpService(createOkHttpClient())
-        } else if (clientAddress.startsWith("http")) {
-            web3jService = HttpService(clientAddress, createOkHttpClient(), false)
+    fun buildService(eifConfig: EifConfig): Web3jService {
+        return if (eifConfig.url == "") {
+            HttpService(createOkHttpClient(eifConfig))
+        } else if (eifConfig.url.startsWith("http")) {
+            HttpService(eifConfig.url, createOkHttpClient(eifConfig), false)
         } else if (System.getProperty("os.name").toLowerCase().startsWith("win")) {
-            web3jService = WindowsIpcService(clientAddress)
+            WindowsIpcService(eifConfig.url)
         } else {
-            web3jService = UnixIpcService(clientAddress)
+            UnixIpcService(eifConfig.url)
         }
-        return web3jService
     }
 
-    private fun createOkHttpClient(): OkHttpClient {
+    private fun createOkHttpClient(eifConfig: EifConfig): OkHttpClient {
         val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-        configureTimeouts(builder)
+        builder.connectTimeout(eifConfig.connectTimeout, TimeUnit.SECONDS)
+        builder.readTimeout(eifConfig.readTimeout, TimeUnit.SECONDS) // Sets the socket timeout too
+        builder.writeTimeout(eifConfig.writeTimeout, TimeUnit.SECONDS)
         return builder.build()
-    }
-
-    private fun configureTimeouts(builder: OkHttpClient.Builder) {
-        val tos = 300L
-        builder.connectTimeout(tos, TimeUnit.SECONDS)
-        builder.readTimeout(tos, TimeUnit.SECONDS) // Sets the socket timeout too
-        builder.writeTimeout(tos, TimeUnit.SECONDS)
     }
 }
