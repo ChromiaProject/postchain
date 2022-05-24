@@ -1,7 +1,6 @@
 package net.postchain.el2
 
 import net.postchain.base.BlockchainRidFactory
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.base.snapshot.SimpleDigestSystem
@@ -13,6 +12,7 @@ import net.postchain.common.data.KECCAK256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.Transaction
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
@@ -26,7 +26,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-val myCS = SECP256K1CryptoSystem()
+val myCS = Secp256K1CryptoSystem()
 
 class L2BlockBuilderTest : IntegrationTestSetup() {
 

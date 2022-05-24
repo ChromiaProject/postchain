@@ -9,6 +9,7 @@ import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.LeafStore
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
