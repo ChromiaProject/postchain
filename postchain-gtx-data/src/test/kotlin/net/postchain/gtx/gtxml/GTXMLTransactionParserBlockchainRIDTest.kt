@@ -4,8 +4,8 @@ package net.postchain.gtx.gtxml
 
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.devtools.MockCryptoSystem
-import net.postchain.gtx.GTXTransactionBodyData
-import net.postchain.gtx.GTXTransactionData
+import net.postchain.gtx.data.GTXTransactionBodyData
+import net.postchain.gtx.data.GTXTransactionData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

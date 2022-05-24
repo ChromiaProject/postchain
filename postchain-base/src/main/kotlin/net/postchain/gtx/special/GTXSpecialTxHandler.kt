@@ -11,6 +11,8 @@ import net.postchain.core.*
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.*
+import net.postchain.gtx.data.GTXDataBuilder
+import net.postchain.gtx.data.OpData
 
 /**
  * In this case "Handler" means we:

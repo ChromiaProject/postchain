@@ -1,12 +1,12 @@
 package net.postchain.devtools.specialtx
 
 import net.postchain.gtv.GtvNull
-import net.postchain.gtx.ExtOpData
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXAutoSpecialTxExtension
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
+import net.postchain.gtx.data.ExtOpData
 
 /**
  * Simplest possible module that uses the special operations in [GTXAutoSpecialTxExtension].

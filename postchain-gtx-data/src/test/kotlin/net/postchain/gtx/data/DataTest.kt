@@ -9,9 +9,6 @@ import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtx.GTXDataBuilder
-import net.postchain.gtx.GTXTransactionData
-import net.postchain.gtx.decodeGTXTransactionData
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 

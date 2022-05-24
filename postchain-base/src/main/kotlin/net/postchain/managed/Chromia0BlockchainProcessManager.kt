@@ -14,7 +14,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.core.block.BlockTrace
 
 /**

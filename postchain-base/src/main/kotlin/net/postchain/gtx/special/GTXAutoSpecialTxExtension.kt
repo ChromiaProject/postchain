@@ -5,7 +5,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 import net.postchain.gtx.GTXModule
-import net.postchain.gtx.OpData
+import net.postchain.gtx.data.OpData
 import net.postchain.core.BlockEContext
 import net.postchain.base.SpecialTransactionPosition
 

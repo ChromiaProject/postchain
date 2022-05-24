@@ -5,7 +5,7 @@ package net.postchain.devtools.testinfra.specialtx
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GTXTransactionFactory
 
 /**

@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.gtx
+package net.postchain.gtx.data
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash

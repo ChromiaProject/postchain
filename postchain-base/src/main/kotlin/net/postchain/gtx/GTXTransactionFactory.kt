@@ -12,6 +12,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.serializer.GtxTransactionDataSerializer
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionFactory
+import net.postchain.gtx.data.GTXTransactionData
 import net.postchain.gtx.data.factory.GtxTransactionDataFactory
 
 /**

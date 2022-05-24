@@ -5,7 +5,7 @@ package net.postchain.gtx.data.serializer
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.GTXTransactionBodyData
+import net.postchain.gtx.data.GTXTransactionBodyData
 
 object GtxTransactionBodyDataSerializer {
 

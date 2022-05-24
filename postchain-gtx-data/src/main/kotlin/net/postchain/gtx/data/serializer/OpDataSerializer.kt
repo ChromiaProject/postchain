@@ -5,7 +5,7 @@ package net.postchain.gtx.data.serializer
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.OpData
+import net.postchain.gtx.data.OpData
 
 object OpDataSerializer {
 

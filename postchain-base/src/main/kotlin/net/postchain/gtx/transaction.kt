@@ -12,6 +12,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtx.data.GTXTransactionData
 
 /**
  * A transaction based on the GTX format.
@@ -27,15 +28,15 @@ import net.postchain.gtv.GtvEncoder
  * @property cs is the [CryptoSystem] we use
  */
 class GTXTransaction (
-        val _rawData: ByteArray?,
-        val gtvData: Gtv,
-        val gtxData: GTXTransactionData,
-        val signers: Array<ByteArray>,
-        val signatures: Array<ByteArray>,
-        val ops: Array<Transactor>,
-        val myHash: Hash,
-        val myRID: ByteArray,
-        val cs: CryptoSystem
+    val _rawData: ByteArray?,
+    val gtvData: Gtv,
+    val gtxData: GTXTransactionData,
+    val signers: Array<ByteArray>,
+    val signatures: Array<ByteArray>,
+    val ops: Array<Transactor>,
+    val myHash: Hash,
+    val myRID: ByteArray,
+    val cs: CryptoSystem
 ): Transaction {
 
     var cachedRawData: ByteArray? = null // We are not sure we have the rawData, and if ever need to calculate it it will be cache here.

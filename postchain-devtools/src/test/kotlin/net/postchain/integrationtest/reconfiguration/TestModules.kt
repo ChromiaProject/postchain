@@ -5,12 +5,12 @@ package net.postchain.integrationtest.reconfiguration
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtx.ExtOpData
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.core.Transactor
+import net.postchain.gtx.data.ExtOpData
 
 open class AbstractDummyModule : GTXModule {
 

@@ -5,7 +5,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtx.GTXModule
-import net.postchain.gtx.OpData
+import net.postchain.gtx.data.OpData
 
 /**
  * Holds various info regarding special TXs used by an extension, when a Spec TX is needed and how to create Spec TX etc.

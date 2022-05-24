@@ -7,8 +7,8 @@ import net.postchain.gtv.gtxml.ObjectFactory
 import net.postchain.gtv.gtxml.OperationsType
 import net.postchain.gtv.gtxml.SignaturesType
 import net.postchain.gtv.gtxml.SignersType
-import net.postchain.gtx.GTXTransactionData
-import net.postchain.gtx.OpData
+import net.postchain.gtx.data.GTXTransactionData
+import net.postchain.gtx.data.OpData
 import java.io.StringWriter
 import javax.xml.bind.JAXB
 

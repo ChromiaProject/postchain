@@ -8,9 +8,9 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvString
-import net.postchain.gtx.GTXTransactionBodyData
-import net.postchain.gtx.GTXTransactionData
-import net.postchain.gtx.OpData
+import net.postchain.gtx.data.GTXTransactionBodyData
+import net.postchain.gtx.data.GTXTransactionData
+import net.postchain.gtx.data.OpData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

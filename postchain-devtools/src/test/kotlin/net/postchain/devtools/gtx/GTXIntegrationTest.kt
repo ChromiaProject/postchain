@@ -10,7 +10,7 @@ import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GtxNop
 import net.postchain.core.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals

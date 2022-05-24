@@ -5,8 +5,8 @@ package net.postchain.gtx.data.factory
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvString
-import net.postchain.gtx.GtxBase
-import net.postchain.gtx.OpData
+import net.postchain.gtx.data.GtxBase
+import net.postchain.gtx.data.OpData
 
 object OpDataFactory {
 

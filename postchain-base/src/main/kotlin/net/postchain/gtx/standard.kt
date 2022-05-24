@@ -9,6 +9,7 @@ import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXAutoSpecialTxExtension
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import org.apache.commons.dbutils.handlers.ScalarHandler

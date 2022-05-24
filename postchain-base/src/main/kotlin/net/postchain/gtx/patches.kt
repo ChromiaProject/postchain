@@ -1,8 +1,8 @@
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
-import net.postchain.gtx.ExtOpData
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.gtx.data.ExtOpData
 
 /**
  * nop operation that replaces GtxNop and doesn't impose any size or argument restrictions.

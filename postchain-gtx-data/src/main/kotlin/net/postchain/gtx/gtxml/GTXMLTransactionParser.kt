@@ -16,9 +16,9 @@ import net.postchain.gtv.gtxml.SignersType
 import net.postchain.gtv.gtxml.TransactionType
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.MerkleHashCalculator
-import net.postchain.gtx.GTXTransactionBodyData
-import net.postchain.gtx.GTXTransactionData
-import net.postchain.gtx.OpData
+import net.postchain.gtx.data.GTXTransactionBodyData
+import net.postchain.gtx.data.GTXTransactionData
+import net.postchain.gtx.data.OpData
 import java.io.StringReader
 import javax.xml.bind.JAXB
 import javax.xml.bind.JAXBElement
