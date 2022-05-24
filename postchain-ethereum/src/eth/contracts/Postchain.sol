@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
+// Interfaces
+import "@openzeppelin/contracts/interfaces/IERC721.sol";
+import "@openzeppelin/contracts/interfaces/IERC20.sol";
+
+// Internal libraries
 import "./utils/cryptography/Hash.sol";
 import "./utils/cryptography/ECDSA.sol";
 import "./utils/cryptography/MerkleProof.sol";
 import "./Data.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 library Postchain {
     using MerkleProof for bytes32[];
 
     struct Event {
         uint256 serialNumber;
-        ERC20 token;
+        IERC20 token;
         address beneficiary;
         uint256 amount;
     }
@@ -38,7 +41,7 @@ library Postchain {
 
 
 
-    function verifyEvent(bytes32 _hash, bytes memory _event) internal pure returns (ERC20, address, uint256) {
+    function verifyEvent(bytes32 _hash, bytes memory _event) internal pure returns (IERC20, address, uint256) {
         Event memory evt = abi.decode(_event, (Event));
         bytes32 hash = keccak256(_event);
         if (hash != _hash) {
