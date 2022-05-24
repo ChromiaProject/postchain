@@ -122,9 +122,12 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
 
       const blockHeader = "0x" + event.blockHeader
       const blockWitness = event.blockWitness
+      blockWitness.sort((a, b) => (a.pubkey > b.pubkey) ? 1 : ((a.pubkey < b.pubkey) ? -1 : 0))
       let sigs = new Array<string>(blockWitness.length)
+      let signers = new Array<string>(blockWitness.length)
       for (let i = 0; i < blockWitness.length; i++) {
         sigs[i] = "0x" + blockWitness[i].sig
+        signers[i] = "0x" + blockWitness[i].pubkey
       }
 
       const eventData = "0x" + event.eventData
@@ -152,12 +155,14 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
       }
       var calldata
       if (tokenType === "ERC20") {
-        calldata = chrl2.interface.encodeFunctionData("withdrawRequest", [eventData, evtProof, blockHeader, sigs, el2Proof])
+        calldata = chrl2.interface.encodeFunctionData("withdrawRequest", [eventData, evtProof, blockHeader, sigs, signers, el2Proof])
       } else {
-        calldata = chrl2.interface.encodeFunctionData("withdrawRequestNFT", [eventData, evtProof, blockHeader, sigs, el2Proof])
+        calldata = chrl2.interface.encodeFunctionData("withdrawRequestNFT", [eventData, evtProof, blockHeader, sigs, signers, el2Proof])
       }
       await sendTnx(signer, chrL2Address, calldata)
-    } catch (error) { }
+    } catch (error) { 
+      console.log(error)
+    }
   }
 
   const withdraw = async (eventHash: string) => {
@@ -176,7 +181,9 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
         calldata = chrl2.interface.encodeFunctionData("withdrawNFT", [zeroPaddedEventHash, account])
       }
       await sendTnx(signer, chrL2Address, calldata)
-    } catch (error) { }
+    } catch (error) { 
+      console.log(error)
+    }
   }
 
   const pending = async (eventHash: string) => {
