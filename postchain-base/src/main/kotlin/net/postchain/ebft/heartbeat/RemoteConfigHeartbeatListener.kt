@@ -6,8 +6,8 @@ import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
-import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.common.BlockchainRid
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.*
 import net.postchain.network.mastersub.subnode.SubConnectionManager
@@ -98,25 +98,28 @@ class RemoteConfigHeartbeatListener(
             }
 
             is MsNextBlockchainConfigMessage -> {
-                logger.debug {
-                    "$pref Remote BlockchainConfig received: " +
-                            "chainId: $chainId, " +
-                            "${BlockchainRid(message.blockchainRid).toShortHex()}, " +
-                            "height: ${message.nextHeight}, " +
-                            "remote config length: ${message.rawConfig?.size}"
-                }
+                val configHash = message.configHash?.let { BlockchainRid(it).toHex() }
+                val details = "brid: ${BlockchainRid(message.blockchainRid).toShortHex()}, " +
+                        "chainId: $chainId, " +
+                        "height: ${message.nextHeight}, " +
+                        "config length: ${message.rawConfig?.size}, " +
+                        "config hash: $configHash"
 
-                // TODO: [POS-164]: Validate rawConfig here
-                responseTimestamp = System.currentTimeMillis()
+                logger.debug { "$pref Remote BlockchainConfig received: $details" }
 
-                val details = "chainId: $chainId, nextHeight: ${message.nextHeight}, remote config length: ${message.rawConfig?.size}"
-                if (message.rawConfig != null) {
-                    logger.debug { "$pref Remote config is going to be stored: $details" }
-                    withWriteConnection(storage, chainId) { ctx ->
-                        BaseConfigurationDataStore.addConfigurationData(ctx, message.nextHeight!!, message.rawConfig)
-                        true
+                if (message.rawConfig != null && message.configHash != null) {
+                    val approved = RemoteConfigVerifier.verify(message.rawConfig, message.configHash)
+                    if (approved) {
+                        logger.debug { "$pref Remote config is going to be stored: $details" }
+                        withWriteConnection(storage, chainId) { ctx ->
+                            BaseConfigurationDataStore.addConfigurationData(ctx, message.nextHeight!!, message.rawConfig)
+                            true
+                        }
+                        responseTimestamp = System.currentTimeMillis()
+                        logger.debug { "$pref Remote config stored: $details" }
+                    } else {
+                        logger.debug { "$pref Remote config was corrupted and will not be stored: $details" }
                     }
-                    logger.debug { "$pref Remote config stored: $details" }
                 } else {
                     logger.debug { "$pref No new remote config: $details" }
                 }
