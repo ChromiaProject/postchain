@@ -98,6 +98,16 @@ class RestApi(
             response.body(toJson(error))
         }
 
+        http.exception(InvalidTnxException::class.java) { error, _, response ->
+            response.status(400)
+            response.body(toJson(error))
+        }
+
+        http.exception(DuplicateTnxException::class.java) { error, _, response ->
+            response.status(409) // Conflict
+            response.body(toJson(error))
+        }
+
         http.exception(OverloadedException::class.java) { error, _, response ->
             response.status(503) // Service unavailable
             response.body(toJson(error))
