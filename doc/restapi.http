@@ -1,0 +1,21 @@
+POST {{baseURL}}/tx/{{blockchainRid}}
+Content-Type: application/json
+
+{"tx": ""}
+
+###
+
+GET {{baseURL}}/tx/{{blockchainRid}}/{{txRid}}
+Accept: application/json
+
+###
+
+GET {{baseURL}}/transactions/{{blockchainRid}}/{{txRid}}
+Accept: application/json
+
+###
+
+GET {{baseURL}}/transactions/{{blockchainRid}}?limit={{limit}}&before-time={{beforeTime}}
+Accept: application/json
+
+###

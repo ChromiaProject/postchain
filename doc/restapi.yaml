@@ -1,0 +1,223 @@
+openapi: 3.0.3
+info:
+  title: Postchain REST API
+  description: Postchain REST API
+  version: 3.5.0
+paths:
+  /tx/{blockchainRid}:
+    post:
+      summary: Submit transaction
+      description: Submit a transaction to a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/tx"
+      responses:
+        200:
+          description: Transaction queued
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                incorrectTransaction:
+                  value:
+                    error: "Transaction <hex-string> is not correct"
+                invalidTxFormat:
+                  value:
+                    error: "Invalid tx format. Expected {\"tx\": <hex-string>}"
+                invalidTx:
+                  value:
+                    error: "Transaction is invalid"
+        409:
+          description: Transaction already in queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                transactionAlreadyInQueue:
+                  value:
+                    error: "Transaction already in queue"
+        503:
+          description: Transaction queue is full
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                queueFull:
+                  value:
+                    error: "Transaction queue is full"
+  /tx/{blockchainRid}/{txRid}:
+    get:
+      summary: Fetch transaction
+      description: Fetch a transaction from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/tx"
+        400:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                txNotFound:
+                  value:
+                    error: "Can't find tx with hash <hex-string>"
+  /transactions/{blockchainRid}/{txRid}:
+    get:
+      summary: Fetch transaction info
+      description: Fetch info about a transaction from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/txInfo"
+        400:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+                txNotFound:
+                  value:
+                    error: "Can't find tx with hash <hex-string>"
+  /transactions/{blockchainRid}:
+    get:
+      summary: Fetch transactions info
+      description: Fetch info about transactions from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: limit
+          description: Limit number of transactions returned
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 600
+            default: 25
+        - name: before-time
+          description: Return only transactions before this time
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/txInfo"
+        400:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+components:
+  parameters:
+    blockchainRid:
+      name: blockchainRid
+      description: Hex encoded blockchain RID
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "[0-9a-fA-F]{64}"
+      example: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
+    txRid:
+      name: txRid
+      description: Hex encoded transaction RID
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "[0-9a-fA-F]{64}"
+      example: "76306EE32E46DE5A4CD369CB6697EF53FB804D0E40E3BB97076D094EE2FA4BD3"
+  schemas:
+    tx:
+      type: object
+      required:
+        - tx
+      properties:
+        tx:
+          type: string
+          pattern: "[0-9a-fA-F]{2,}"
+          description: Hex encoded GTV transaction
+    txInfo:
+      type: object
+      required:
+        - blockRID
+        - blockHeight
+        - blockHeader
+        - witness
+        - timestamp
+        - txRID
+        - txRid
+      properties:
+        blockRID:
+          $ref: "#/components/schemas/byteArray"
+        blockHeight:
+          type: integer
+          format: int64
+        blockHeader:
+          $ref: "#/components/schemas/byteArray"
+        witness:
+          $ref: "#/components/schemas/byteArray"
+        timestamp:
+          type: integer
+          format: int64
+        txRID:
+          $ref: "#/components/schemas/byteArray"
+        txRid:
+          $ref: "#/components/schemas/byteArray"
+        txData:
+          $ref: "#/components/schemas/byteArray"
+    error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+    byteArray:
+      type: array
+      items:
+        type: integer
