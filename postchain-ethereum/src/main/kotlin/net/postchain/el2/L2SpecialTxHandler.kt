@@ -9,7 +9,7 @@ import net.postchain.gtx.*
 const val OP_ETH_BLOCK = "__eth_block"
 
 class EL2SpecialTxExtension : GTXSpecialTxExtension {
-    var needL2Tnx: Boolean = false
+    private var needL2Tnx: Boolean = false
     private val rops = setOf(OP_ETH_BLOCK)
     override fun getRelevantOps() = rops
 
@@ -20,9 +20,7 @@ class EL2SpecialTxExtension : GTXSpecialTxExtension {
     }
 
     override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) {
-        if (module.getOperations().contains(OP_ETH_BLOCK)) {
-            needL2Tnx = true
-        }
+        needL2Tnx = module.getOperations().contains(OP_ETH_BLOCK)
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
