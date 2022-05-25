@@ -124,11 +124,10 @@ class ConcretePostchainClient(
                 httpGet.setHeader("Content-type", APPLICATION_JSON)
 
                 // keep polling till getting Confirmed or Rejected
-                var lastKnownStatusCode: Int? = null
+                var lastKnownTxResult: TransactionResult? = null
                 (0 until retrieveTxStatusAttempts).forEach { _ ->
                     try {
                         httpClient.execute(httpGet).use { response ->
-                            lastKnownStatusCode = response.code
                             response.entity?.let {
                                 val responseBody = parseResponse(it.content)
                                 val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
@@ -137,9 +136,8 @@ class ConcretePostchainClient(
                                     logger.warn { "No status in response\n$responseBody" }
                                 } else {
                                     val status = TransactionStatus.valueOf(statusString)
-                                    if (status == CONFIRMED || status == REJECTED) {
-                                        return TransactionResultImpl(status, lastKnownStatusCode)
-                                    }
+                                    lastKnownTxResult = TransactionResultImpl(status, response.code)
+                                    if (status == CONFIRMED || status == REJECTED) return lastKnownTxResult!!
                                 }
 
                                 Thread.sleep(retrieveTxStatusIntervalMs)
@@ -151,12 +149,10 @@ class ConcretePostchainClient(
                     }
                 }
 
-                return TransactionResultImpl(REJECTED, lastKnownStatusCode)
+                return lastKnownTxResult ?: TransactionResultImpl(UNKNOWN, null)
             }
 
-            else -> {
-                return TransactionResultImpl(REJECTED, null)
-            }
+            else -> throw NotImplementedError("ConfirmationLevel $confirmationLevel is not yet implemented")
         }
     }
 
