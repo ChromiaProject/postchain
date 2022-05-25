@@ -10,6 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
@@ -108,16 +109,16 @@ class ConcretePostchainClient(
             ConfirmationLevel.NO_WAIT -> {
                 val statusCode = submitTransaction()
                 return if (statusCode == 200) {
-                    TransactionResultImpl(WAITING)
+                    TransactionResultImpl(WAITING, statusCode)
                 } else {
-                    TransactionResultImpl(REJECTED)
+                    TransactionResultImpl(REJECTED, statusCode)
                 }
             }
 
             ConfirmationLevel.UNVERIFIED -> {
                 val statusCode = submitTransaction()
                 if (statusCode in 400..499) {
-                    return TransactionResultImpl(REJECTED)
+                    return TransactionResultImpl(REJECTED, statusCode)
                 }
                 val httpGet = HttpGet("$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
                 httpGet.setHeader("Content-type", APPLICATION_JSON)
@@ -133,10 +134,9 @@ class ConcretePostchainClient(
                                 if (statusString == null) {
                                     logger.warn { "No status in response\n$responseBody" }
                                 } else {
-                                    val status = valueOf(statusString)
-
+                                    val status = TransactionStatus.valueOf(statusString)
                                     if (status == CONFIRMED || status == REJECTED) {
-                                        return TransactionResultImpl(status)
+                                        return TransactionResultImpl(status, response.code)
                                     }
                                 }
 
@@ -149,11 +149,11 @@ class ConcretePostchainClient(
                     }
                 }
 
-                return TransactionResultImpl(REJECTED)
+                return TransactionResultImpl(REJECTED, null)
             }
 
             else -> {
-                return TransactionResultImpl(REJECTED)
+                return TransactionResultImpl(REJECTED, null)
             }
         }
     }
