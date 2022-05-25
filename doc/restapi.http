@@ -19,3 +19,18 @@ GET {{baseURL}}/transactions/{{blockchainRid}}?limit={{limit}}&before-time={{bef
 Accept: application/json
 
 ###
+
+GET {{baseURL}}/tx/{{blockchainRid}}/{{txRid}}/status
+Accept: application/json
+
+###
+
+GET {{baseURL}}/blocks/{{blockchainRid}}?limit={{limit}}&before-time={{beforeTime}}&txs=true
+Accept: application/json
+
+###
+
+GET {{baseURL}}/blocks/{{blockchainRid}}/{{blockRid}}?txs=true
+Accept: application/json
+
+###

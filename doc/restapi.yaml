@@ -166,6 +166,110 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /tx/{blockchainRid}/{txRid}/status:
+    get:
+      summary: Fetch transaction status
+      description: Fetch the status of a transaction from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/txStatus"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /blocks/{blockchainRid}:
+    get:
+      summary: Fetch blocks info
+      description: Fetch info about blocks from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: limit
+          description: Limit number of blocks returned
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 25
+        - name: before-time
+          description: Return only blocks before this time
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: txs
+          description: Return full transaction data
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/blockInfo"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /blocks/{blockchainRid}/{blockRid}:
+    get:
+      summary: Fetch block info
+      description: Fetch info about a block from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/blockRid"
+        - name: txs
+          description: Return full transaction data
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/blockInfo"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+
 components:
   parameters:
     blockchainRid:
@@ -174,8 +278,7 @@ components:
       in: path
       required: true
       schema:
-        type: string
-        pattern: "[0-9a-fA-F]{64}"
+        $ref: "#/components/schemas/hash"
       example: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
     txRid:
       name: txRid
@@ -183,9 +286,16 @@ components:
       in: path
       required: true
       schema:
-        type: string
-        pattern: "[0-9a-fA-F]{64}"
+        $ref: "#/components/schemas/hash"
       example: "76306EE32E46DE5A4CD369CB6697EF53FB804D0E40E3BB97076D094EE2FA4BD3"
+    blockRid:
+      name: blockRid
+      description: Hex encoded block RID
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/hash"
+      example: "A41E83512DF6CF8BC559EC5792BF221817E5D7E48E978E907210D770C75AA32E"
   schemas:
     tx:
       type: object
@@ -225,6 +335,59 @@ components:
           $ref: "#/components/schemas/byteArray"
         txData:
           $ref: "#/components/schemas/byteArray"
+    txStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - "unknown"
+            - "waiting"
+            - "confirmed"
+            - "rejected"
+        rejectReason:
+          type: string
+    blockInfo:
+      type: object
+      required:
+        - rid
+        - prevBlockRID
+        - header
+        - height
+        - transactions
+        - witness
+        - timestamp
+      properties:
+        rid:
+          $ref: "#/components/schemas/byteArray"
+        prevBlockRID:
+          $ref: "#/components/schemas/byteArray"
+        header:
+          $ref: "#/components/schemas/byteArray"
+        height:
+          type: integer
+          format: int64
+        transactions:
+          type: array
+          items:
+            type: object
+            required:
+              - rid
+              - hash
+            properties:
+              rid:
+                $ref: "#/components/schemas/byteArray"
+              hash:
+                $ref: "#/components/schemas/byteArray"
+              data:
+                $ref: "#/components/schemas/byteArray"
+        witness:
+          $ref: "#/components/schemas/byteArray"
+        timestamp:
+          type: integer
+          format: int64
     error:
       type: object
       required:
@@ -233,6 +396,12 @@ components:
         error:
           type: string
           description: Error message
+    hash:
+      type: string
+      pattern: "[0-9a-fA-F]{64}"
+    hexString:
+      type: string
+      pattern: "[0-9a-fA-F]"
     byteArray:
       type: array
       items:
