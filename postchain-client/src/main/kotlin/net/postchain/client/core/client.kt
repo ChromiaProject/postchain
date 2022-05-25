@@ -2,10 +2,10 @@
 
 package net.postchain.client.core
 
-import net.postchain.common.BlockchainRid
 import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.crypto.SigMaker
+import net.postchain.common.BlockchainRid
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtx.GTXDataBuilder
@@ -37,6 +37,7 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
 
 interface TransactionResult {
     val status: TransactionStatus
+    val httpStatusCode: Int?
 }
 
 interface PostchainClient {
