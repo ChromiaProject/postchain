@@ -124,9 +124,11 @@ class ConcretePostchainClient(
                 httpGet.setHeader("Content-type", APPLICATION_JSON)
 
                 // keep polling till getting Confirmed or Rejected
+                var lastKnownStatusCode: Int? = null
                 (0 until retrieveTxStatusAttempts).forEach { _ ->
                     try {
                         httpClient.execute(httpGet).use { response ->
+                            lastKnownStatusCode = response.code
                             response.entity?.let {
                                 val responseBody = parseResponse(it.content)
                                 val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
@@ -136,7 +138,7 @@ class ConcretePostchainClient(
                                 } else {
                                     val status = TransactionStatus.valueOf(statusString)
                                     if (status == CONFIRMED || status == REJECTED) {
-                                        return TransactionResultImpl(status, response.code)
+                                        return TransactionResultImpl(status, lastKnownStatusCode)
                                     }
                                 }
 
@@ -149,7 +151,7 @@ class ConcretePostchainClient(
                     }
                 }
 
-                return TransactionResultImpl(REJECTED, null)
+                return TransactionResultImpl(REJECTED, lastKnownStatusCode)
             }
 
             else -> {
