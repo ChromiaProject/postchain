@@ -29,6 +29,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/error"
               examples:
+                couldNotParseJson:
+                  value:
+                    error: "Could not parse json"
                 incorrectTransaction:
                   value:
                     error: "Transaction <hex-string> is not correct"
@@ -38,6 +41,16 @@ paths:
                 invalidTx:
                   value:
                     error: "Transaction is invalid"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
         409:
           description: Transaction already in queue
           content:
@@ -72,13 +85,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/tx"
-        400:
+        404:
           description: Not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/error"
               examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
                 txNotFound:
                   value:
                     error: "Can't find tx with hash <hex-string>"
@@ -96,7 +112,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/txInfo"
-        400:
+        404:
           description: Not found
           content:
             application/json:
@@ -140,7 +156,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/txInfo"
-        400:
+        404:
           description: Not found
           content:
             application/json:
