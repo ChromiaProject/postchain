@@ -6,7 +6,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.ethereum.contracts.ChrL2
+import net.postchain.ethereum.contracts.TokenBridge
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -36,7 +36,7 @@ interface EventProcessor {
  * No EIF special operations will be produced and no operations will be validated against ethereum.
  */
 class NoOpEventProcessor : EventProcessor {
-    private val encodedDepositEvent = EventEncoder.encode(ChrL2.DEPOSITED_EVENT)
+    private val encodedDepositEvent = EventEncoder.encode(TokenBridge.DEPOSITED_EVENT)
 
     companion object : KLogging()
 
@@ -92,7 +92,7 @@ class EthereumEventProcessor(
 
     data class EthereumBlock(val number: BigInteger, val hash: String)
 
-    private val encodedDepositEvent = EventEncoder.encode(ChrL2.DEPOSITED_EVENT)
+    private val encodedDepositEvent = EventEncoder.encode(TokenBridge.DEPOSITED_EVENT)
     private val eventBlocks: Queue<Pair<EthereumBlock, List<Log>>> = LinkedList()
     private var lastReadLogBlockHeight = skipToHeight
 
@@ -200,7 +200,7 @@ class EthereumEventProcessor(
 
         for ((index, opEvent) in opEvents.withIndex()) {
             val eventLog = eventLogs[index]
-            val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, eventLog)
+            val eventParameters = TokenBridge.staticExtractEventParameters(TokenBridge.DEPOSITED_EVENT, eventLog)
             if (!"0x${opEvent[0].asByteArray().toHex()}".equals(eventLog.transactionHash, true) ||
                     opEvent[1].asBigInteger() != eventLog.logIndex ||
                     !"0x${opEvent[2].asByteArray().toHex()}".equals(encodedDepositEvent, true) ||
@@ -228,7 +228,7 @@ class EthereumEventProcessor(
             .takeWhile { it.first.number <= lastReadLogBlockHeight - readOffset }
             .map {
                 val events = it.second.map { event ->
-                    val eventParameters = ChrL2.staticExtractEventParameters(ChrL2.DEPOSITED_EVENT, event)
+                    val eventParameters = TokenBridge.staticExtractEventParameters(TokenBridge.DEPOSITED_EVENT, event)
                     gtv(listOf(
                             gtv(event.transactionHash.substring(2).hexStringToByteArray()),
                             gtv(event.logIndex),
