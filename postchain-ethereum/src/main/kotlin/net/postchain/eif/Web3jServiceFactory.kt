@@ -1,6 +1,6 @@
-package net.postchain.el2
+package net.postchain.eif
 
-import net.postchain.el2.config.EifConfig
+import net.postchain.eif.config.EifConfig
 import okhttp3.OkHttpClient
 import org.web3j.protocol.Web3jService
 import org.web3j.protocol.http.HttpService

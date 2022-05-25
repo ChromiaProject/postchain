@@ -1,4 +1,4 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
@@ -8,8 +8,8 @@ import net.postchain.gtx.*
 
 const val OP_ETH_BLOCK = "__eth_block"
 
-class EL2SpecialTxExtension : GTXSpecialTxExtension {
-    private var needL2Tnx: Boolean = false
+class EifSpecialTxExtension : GTXSpecialTxExtension {
+    private var needEifTnx: Boolean = false
     private val rops = setOf(OP_ETH_BLOCK)
     override fun getRelevantOps() = rops
 
@@ -20,12 +20,12 @@ class EL2SpecialTxExtension : GTXSpecialTxExtension {
     }
 
     override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) {
-        needL2Tnx = module.getOperations().contains(OP_ETH_BLOCK)
+        needEifTnx = module.getOperations().contains(OP_ETH_BLOCK)
     }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
         return when (position) {
-            SpecialTransactionPosition.Begin -> needL2Tnx
+            SpecialTransactionPosition.Begin -> needEifTnx
             SpecialTransactionPosition.End -> false
         }
     }

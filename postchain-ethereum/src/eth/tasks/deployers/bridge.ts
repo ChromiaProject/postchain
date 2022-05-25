@@ -1,45 +1,45 @@
 import { task } from "hardhat/config";
-import { ChrL2, ChrL2__factory } from "../../src/types";
+import { TokenBridge, TokenBridge__factory } from "../../src/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-task("deploy:ChrL2")
+task("deploy:bridge")
   .addOptionalParam('app', 'app node')
   .addFlag('verify', 'Verify contracts at Etherscan')
   .setAction(async ({ verify, app}, hre) => {
-    // deploy ChrL2 smart contract
-    const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2")
+    // deploy token bridge smart contract
+    const factory: TokenBridge__factory = await hre.ethers.getContractFactory("TokenBridge")
     const appNode = app === undefined ? [] : getNodes(app);
 
-    const chrL2: ChrL2 = <ChrL2>await hre.upgrades.deployProxy(chrL2Factory, [appNode]);
-    await chrL2.deployed();
-    console.log("ChrL2 deployed to: ", chrL2.address);
-    const proxyAdmin = await hre.upgrades.erc1967.getAdminAddress(chrL2.address);
+    const bridge: TokenBridge = <TokenBridge>await hre.upgrades.deployProxy(factory, [appNode]);
+    await bridge.deployed();
+    console.log("Token bridge deployed to: ", bridge.address);
+    const proxyAdmin = await hre.upgrades.erc1967.getAdminAddress(bridge.address);
     console.log("Proxy admin address is: ", proxyAdmin);
 
     if (verify) {
-        await verifyContract(hre, chrL2.address);
+        await verifyContract(hre, bridge.address);
     }
   });
 
-task("prepare:ChrL2")
+task("prepare:bridge")
     .addParam('address', '')
     .setAction(async ({ address, verify}, hre ) => {
-        const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2");
-        const upgrade = await hre.upgrades.prepareUpgrade(address, chrL2Factory);
-        console.log("New logic contract of ChrL2 has been prepared for upgrade at: ", upgrade);
+        const factory: TokenBridge__factory = await hre.ethers.getContractFactory("TokenBridge");
+        const upgrade = await hre.upgrades.prepareUpgrade(address, factory);
+        console.log("New logic contract of token bridge has been prepared for upgrade at: ", upgrade);
 
         if (verify) {
             await verifyContract(hre, upgrade);
         }
     });
 
-task("upgrade:ChrL2")
+task("upgrade:bridge")
     .addParam('address', '')
     .addFlag('verify', 'Verify contracts at Etherscan')
     .setAction(async ({ address }, hre) => {
-        const chrL2Factory: ChrL2__factory = await hre.ethers.getContractFactory("ChrL2");
-        await hre.upgrades.upgradeProxy(address, chrL2Factory);
-        console.log("ChrL2 has been upgraded");
+        const factory: TokenBridge__factory = await hre.ethers.getContractFactory("TokenBridge");
+        await hre.upgrades.upgradeProxy(address, factory);
+        console.log("Token bridge has been upgraded");
     });
 
 async function verifyContract(hre: HardhatRuntimeEnvironment, proxyAddress: string) {

@@ -1,4 +1,4 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import net.postchain.base.BlockchainRidFactory
 import net.postchain.base.gtv.BlockHeaderData
@@ -28,14 +28,14 @@ import kotlin.test.assertTrue
 
 val myCS = Secp256K1CryptoSystem()
 
-class L2BlockBuilderTest : IntegrationTestSetup() {
+class EifBlockBuilderTest : IntegrationTestSetup() {
 
     private lateinit var ds: SimpleDigestSystem
 
-    fun makeL2EventOp(bcRid: BlockchainRid, num: Long): ByteArray {
+    fun makeEifEventOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
         b.addOperation(
-            "el2_event",
+            "eif_event",
             arrayOf(
                 gtv(num),
                 gtv(ds.digest(BigInteger.valueOf(num).toByteArray()))
@@ -46,10 +46,10 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         return b.serialize()
     }
 
-    fun makeL2StateOp(bcRid: BlockchainRid, num: Long): ByteArray {
+    fun makeEifStateOp(bcRid: BlockchainRid, num: Long): ByteArray {
         val b = GTXDataBuilder(bcRid, arrayOf(KeyPairHelper.pubKey(0)), myCS)
         b.addOperation(
-            "el2_state",
+            "eif_state",
             arrayOf(
                 gtv(num),
                 gtv(num),
@@ -93,9 +93,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun testL2BuildBlock() {
+    fun testEifBuildBlock() {
         configOverrides.setProperty("infrastructure", "base/test")
-        val nodes = createNodes(1, "/net/postchain/el2/blockchain_config.xml")
+        val nodes = createNodes(1, "/net/postchain/eif/blockchain_config.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
         ds = SimpleDigestSystem(MessageDigest.getInstance(KECCAK256))
@@ -139,12 +139,12 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val x = makeNOPGTX(bcRid)
         enqueueTx(x)
 
-        // Tx: L2 Event Op
-        val validTx2 = enqueueTx(makeL2EventOp(bcRid, 1L))!!
+        // Tx: EIF Event Op
+        val validTx2 = enqueueTx(makeEifEventOp(bcRid, 1L))!!
         validTxs.add(validTx2)
 
-        // Tx: L2 Account State Op
-        val validTx3 = enqueueTx(makeL2StateOp(bcRid, 2L))!!
+        // Tx: EIF Account State Op
+        val validTx3 = enqueueTx(makeEifStateOp(bcRid, 2L))!!
         validTxs.add(validTx3)
 
         // -------------------------
@@ -154,17 +154,17 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
 
         val blockHeaderData = getBlockHeaderData(node, currentBlockHeight)
         val extraData = blockHeaderData.gtvExtra
-        val l2Data = extraData["el2"]?.asByteArray()
-        val l2RootEvent = l2Data?.sliceArray(0 until HASH_LENGTH)
-        val l2RootState = l2Data?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
+        val eifData = extraData[EIF]?.asByteArray()
+        val eifRootEvent = eifData?.sliceArray(0 until HASH_LENGTH)
+        val eifRootState = eifData?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
         val eventData =
             "00000000000000000000000000000000000000000000000000000000000000015fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2".hexStringToByteArray()
         val eventHash = ds.hash(ds.hash(ds.digest(eventData), EMPTY_HASH), EMPTY_HASH)
         val stateData =
             "0000000000000000000000000000000000000000000000000000000000000002f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2".hexStringToByteArray()
         val stateHash = ds.hash(ds.hash(ds.digest(stateData), EMPTY_HASH), EMPTY_HASH)
-        assertEquals(eventHash.toHex(), l2RootEvent!!.toHex())
-        assertEquals(stateHash.toHex(), l2RootState!!.toHex())
+        assertEquals(eventHash.toHex(), eifRootEvent!!.toHex())
+        assertEquals(stateHash.toHex(), eifRootState!!.toHex())
 
         // Tx 4: time, valid, no stop is ok
         val tx4Time = makeTimeBTx(0, null, bcRid)
@@ -194,9 +194,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun testL2UpdateSnapshot() {
+    fun testEifUpdateSnapshot() {
         configOverrides.setProperty("infrastructure", "base/test")
-        val nodes = createNodes(1, "/net/postchain/el2/blockchain_config_1.xml")
+        val nodes = createNodes(1, "/net/postchain/eif/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
         ds = SimpleDigestSystem(MessageDigest.getInstance(KECCAK256))
@@ -224,7 +224,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         // enqueue txs that emit accounts' state
         val leafHashes = mutableMapOf<Long, Hash>()
         for (i in 0..15) {
-            enqueueTx(makeL2StateOp(bcRid, i.toLong()))
+            enqueueTx(makeEifStateOp(bcRid, i.toLong()))
             val l = i.toLong()
             val state = SimpleGtvEncoder.encodeGtv(
                 gtv(
@@ -258,12 +258,12 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         // query state root from block header's extra data
         val blockHeaderData = getBlockHeaderData(node, currentBlockHeight)
         val extraData = blockHeaderData.gtvExtra
-        val l2Data = extraData["el2"]?.asByteArray()
-        val l2StateRoot = l2Data?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
+        val eifData = extraData[EIF]?.asByteArray()
+        val eifStateRoot = eifData?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
 
-        assertEquals(root.toHex(), l2StateRoot!!.toHex())
+        assertEquals(root.toHex(), eifStateRoot!!.toHex())
 
-        val eventAndStateData = GtvDictionary.build(mapOf("el2" to GtvByteArray(EMPTY_HASH + l2StateRoot)))
+        val eventAndStateData = GtvDictionary.build(mapOf(EIF to GtvByteArray(EMPTY_HASH + eifStateRoot)))
         val eventAndStateDataHash = eventAndStateData.merkleHash(GtvMerkleHashCalculator(BlockchainRidFactory.cryptoSystem))
         // Verify account state merkle proof
         for (pos in 0..15) {
@@ -279,7 +279,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             val merkleProofs = gtvProof["stateProofs"]!!.asArray()
             val proofs = merkleProofs.map { it.asByteArray() }
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
-            assertEquals(stateRoot.toHex(), l2StateRoot.toHex())
+            assertEquals(stateRoot.toHex(), eifStateRoot.toHex())
 
             val headerExtraData = gtvProof["blockHeader"]!!.asByteArray().slice(7 * HASH_LENGTH until 8 * HASH_LENGTH).toByteArray()
             assertEquals(eventAndStateDataHash.toHex(), headerExtraData.toHex())
@@ -293,7 +293,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         }
 
         val l = 16L
-        enqueueTx(makeL2StateOp(bcRid, l))
+        enqueueTx(makeEifStateOp(bcRid, l))
         val state = SimpleGtvEncoder.encodeGtv(
             gtv(
                 GtvInteger(l),
@@ -308,16 +308,16 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         // query state root from block header's extra data
         val blockHeaderData2 = getBlockHeaderData(node, currentBlockHeight)
         val extraData2 = blockHeaderData2.gtvExtra
-        val l2Data2 = extraData2["el2"]?.asByteArray()
-        val l2StateRoot2 = l2Data2?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
+        val eifData2 = extraData2[EIF]?.asByteArray()
+        val eifStateRoot2 = eifData2?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
 
         // calculate the new state root
         val p5 = ds.hash(ds.hash(leafHashes[l]!!, EMPTY_HASH), EMPTY_HASH)
         val p7 = ds.hash(ds.hash(p5, EMPTY_HASH), EMPTY_HASH)
         val root2 = ds.hash(ds.hash(root, p7), EMPTY_HASH)
-        assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
+        assertEquals(root2.toHex(), eifStateRoot2!!.toHex())
 
-        val eventAndStateData2 = GtvDictionary.build(mapOf("el2" to GtvByteArray(EMPTY_HASH + l2StateRoot2)))
+        val eventAndStateData2 = GtvDictionary.build(mapOf(EIF to GtvByteArray(EMPTY_HASH + eifStateRoot2)))
         val eventAndStateDataHash2 = eventAndStateData2.merkleHash(GtvMerkleHashCalculator(BlockchainRidFactory.cryptoSystem))
         // Verify account state merkle proof
         for (pos in 0..16) {
@@ -333,7 +333,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
             val merkleProofs = gtvProof["stateProofs"]!!.asArray()
             val proofs = merkleProofs.map { it.asByteArray() }
             val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
-            assertEquals(stateRoot.toHex(), l2StateRoot2.toHex())
+            assertEquals(stateRoot.toHex(), eifStateRoot2.toHex())
 
             val headerExtraData = gtvProof["blockHeader"]!!.asByteArray().slice(7 * HASH_LENGTH until 8 * HASH_LENGTH).toByteArray()
             assertEquals(eventAndStateDataHash2.toHex(), headerExtraData.toHex())
@@ -347,9 +347,9 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun testL2EventAndUpdateSnapshot() {
+    fun testEifEventAndUpdateSnapshot() {
         configOverrides.setProperty("infrastructure", "base/test")
-        val nodes = createNodes(1, "/net/postchain/el2/blockchain_config_1.xml")
+        val nodes = createNodes(1, "/net/postchain/eif/blockchain_config_1.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
         ds = SimpleDigestSystem(MessageDigest.getInstance(KECCAK256))
@@ -378,7 +378,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val leafs = mutableListOf<Hash>()
         for (i in 1..4) {
             val l = i.toLong()
-            enqueueTx(makeL2EventOp(bcRid, l))
+            enqueueTx(makeEifEventOp(bcRid, l))
             val event = SimpleGtvEncoder.encodeGtv(
                 gtv(
                     GtvInteger(l),
@@ -392,7 +392,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         val leafHashes = mutableMapOf<Long, Hash>()
         for (i in 0..15) {
             val l = i.toLong()
-            enqueueTx(makeL2StateOp(bcRid, l))
+            enqueueTx(makeEifStateOp(bcRid, l))
             val state = SimpleGtvEncoder.encodeGtv(
                 gtv(
                     GtvInteger(l),
@@ -430,14 +430,14 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         // query state root from block header's extra data
         val blockHeaderData = getBlockHeaderData(node, currentBlockHeight)
         val extraData = blockHeaderData.gtvExtra
-        val l2Data = extraData["el2"]?.asByteArray()
-        val l2RootEvent = l2Data?.sliceArray(0 until HASH_LENGTH)
-        val l2RootState = l2Data?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
+        val eifData = extraData[EIF]?.asByteArray()
+        val eifRootEvent = eifData?.sliceArray(0 until HASH_LENGTH)
+        val eifRootState = eifData?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
 
-        assertEquals(stateRootHash.toHex(), l2RootState!!.toHex())
-        assertEquals(eventRootHash.toHex(), l2RootEvent!!.toHex())
+        assertEquals(stateRootHash.toHex(), eifRootState!!.toHex())
+        assertEquals(eventRootHash.toHex(), eifRootEvent!!.toHex())
 
-        val eventAndStateData = GtvDictionary.build(mapOf("el2" to GtvByteArray(l2RootEvent + l2RootState)))
+        val eventAndStateData = GtvDictionary.build(mapOf(EIF to GtvByteArray(eifRootEvent + eifRootState)))
         val eventAndStateDataHash = eventAndStateData.merkleHash(GtvMerkleHashCalculator(BlockchainRidFactory.cryptoSystem))
         // Verify event merkle proof
         for (pos in 0..3) {
@@ -468,7 +468,7 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         }
 
         val l = 16L
-        enqueueTx(makeL2StateOp(bcRid, l))
+        enqueueTx(makeEifStateOp(bcRid, l))
         val state = SimpleGtvEncoder.encodeGtv(
             gtv(
                 GtvInteger(l),
@@ -483,14 +483,14 @@ class L2BlockBuilderTest : IntegrationTestSetup() {
         // query state root from block header's extra data
         val blockHeaderData2 = getBlockHeaderData(node, currentBlockHeight)
         val extraData2 = blockHeaderData2.gtvExtra
-        val l2Data2 = extraData2["el2"]?.asByteArray()
-        val l2StateRoot2 = l2Data2?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
+        val eifData2 = extraData2[EIF]?.asByteArray()
+        val eifStateRoot2 = eifData2?.sliceArray(HASH_LENGTH until 2 * HASH_LENGTH)
 
         // calculate state root in new block
         val p5 = ds.hash(ds.hash(leafHashes[l]!!, EMPTY_HASH), EMPTY_HASH)
         val p7 = ds.hash(ds.hash(p5, EMPTY_HASH), EMPTY_HASH)
         val root2 = ds.hash(ds.hash(stateRootHash, p7), EMPTY_HASH)
-        assertEquals(root2.toHex(), l2StateRoot2!!.toHex())
+        assertEquals(root2.toHex(), eifStateRoot2!!.toHex())
     }
 
     private fun getBlockHeaderData(node: PostchainTestNode, height: Long): BlockHeaderData {

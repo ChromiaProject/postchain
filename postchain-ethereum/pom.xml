@@ -149,7 +149,7 @@
                     <nativeJavaType>false</nativeJavaType>
                     <contract>
                         <includes>
-                            <include>ChrL2</include>
+                            <include>TokenBridge</include>
                             <include>TestToken</include>
                         </includes>
                     </contract>
@@ -159,7 +159,7 @@
                     <soliditySourceFiles>
                         <directory>${project.basedir}/src/eth/contracts</directory>
                         <includes>
-                            <include>ChrL2.sol</include>
+                            <include>TokenBridge.sol</include>
                             <include>token/TestToken.sol</include>
                         </includes>
                     </soliditySourceFiles>

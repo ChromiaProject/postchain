@@ -9,9 +9,9 @@
     "test": "npx hardhat test",
     "typechain": "cross-env TS_NODE_TRANSPILE_ONLY=true hardhat typechain",
     "coverage": "cross-env CODE_COVERAGE=true hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
-    "deploy": "npx hardhat deploy:ChrL2",
-    "prepare-upgrade": "npx hardhat prepare:ChrL2",
-    "upgrade-contract": "npx hardhat upgrade:ChrL2",
+    "deploy": "npx hardhat deploy:bridge",
+    "prepare-upgrade": "npx hardhat prepare:bridge",
+    "upgrade-contract": "npx hardhat upgrade:bridge",
     "deploy:token": "npx hardhat deploy:token",
     "start": "craco start",
     "build": "craco build"

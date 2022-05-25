@@ -1,4 +1,4 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
@@ -18,7 +18,6 @@ object SimpleGtvEncoder {
      * Return bytearray as concatenation of 32 bytes element each
      */
     fun encodeGtv(v: Gtv): ByteArray {
-        // TODO: temporarily strictly data validation for ease
         if (v !is GtvArray) throw IllegalArgumentException("input data should be an array")
         val a = v.asArray()
         var out = ByteArray(0){0}
@@ -40,7 +39,6 @@ object SimpleGtvEncoder {
                 }
                 is GtvInteger -> {
                     val num = it.asBigInteger().toString(16).padStart(64, '0').hexStringToByteArray()
-                    // TODO: temporarily strictly data validation for ease
                     if (num.size != 32) {
                         throw IllegalArgumentException("invalid byte array length")
                     }

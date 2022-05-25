@@ -25,7 +25,7 @@
         <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
     </entry>
     <entry key="sync_ext">
-        <array><string>net.postchain.el2.EL2TestSynchronizationInfrastructureExtension</string></array>
+        <array><string>net.postchain.eif.EifTestSynchronizationInfrastructureExtension</string></array>
     </entry>
     <entry key="signers">
         <array>
@@ -45,8 +45,8 @@
                 <array>
                     <string>net.postchain.configurations.GTXTestModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
-                    <string>net.postchain.el2.EL2GTXModule</string>
-                    <string>net.postchain.el2.EL2TransferTestModule</string>
+                    <string>net.postchain.eif.EifGTXModule</string>
+                    <string>net.postchain.eif.EifTransferTestModule</string>
                 </array>
             </entry>
         </dict>

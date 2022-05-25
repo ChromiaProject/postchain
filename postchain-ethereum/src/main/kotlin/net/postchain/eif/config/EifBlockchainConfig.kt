@@ -1,4 +1,4 @@
-package net.postchain.el2.config
+package net.postchain.eif.config
 
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.DefaultValue

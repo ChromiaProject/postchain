@@ -1,6 +1,6 @@
 // Copyright (c) 2021 ChromaWay AB. See README for license information.
 
-package net.postchain.el2
+package net.postchain.eif
 
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
@@ -28,10 +28,10 @@ import org.spongycastle.jce.provider.BouncyCastleProvider
 import java.security.MessageDigest
 import java.security.Security
 
-const val PREFIX: String = "sys.x.el2"
-const val EL2: String = "el2"
+const val PREFIX: String = "sys.x.eif"
+const val EIF: String = "eif"
 
-class EL2GTXModule : SimpleGTXModule<Unit>(
+class EifGTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf(
         "get_event_merkle_proof" to ::eventMerkleProofQuery,
         "get_account_state_merkle_proof" to ::accountStateMerkleProofQuery
@@ -55,11 +55,11 @@ class EL2GTXModule : SimpleGTXModule<Unit>(
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf(EthereumL2Implementation(SimpleDigestSystem(MessageDigest.getInstance(KECCAK256)), 2))
+        return listOf(EthereumEifImplementation(SimpleDigestSystem(MessageDigest.getInstance(KECCAK256)), 2))
     }
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
-        return listOf(EL2SpecialTxExtension())
+        return listOf(EifSpecialTxExtension())
     }
 
 }
@@ -74,13 +74,13 @@ fun eventMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val blockHeader = SimpleGtvEncoder.encodeGtv(bh)
     val blockWitness = blockWitnessData(db, ctx, blockHeight)
     val eventProof = eventProof(ctx, blockHeight, eventInfo)
-    val el2MerkleProof = el2MerkleProof(db, ctx, blockHeight)
+    val extraMerkleProof = extraMerkleProof(db, ctx, blockHeight)
     return gtv(
         "eventData" to gtv(eventInfo.data),
         "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
         "eventProof" to eventProof,
-        "el2MerkleProof" to el2MerkleProof
+        "extraMerkleProof" to extraMerkleProof
     )
 }
 
@@ -95,13 +95,13 @@ fun accountStateMerkleProofQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val snapshot = SnapshotPageStore(ctx, 2, SimpleDigestSystem(MessageDigest.getInstance(KECCAK256)), PREFIX)
     val proofs = snapshot.getMerkleProof(blockHeight, accountNumber)
     val gtvProofs = proofs.map(::gtv)
-    val el2MerkleProof = el2MerkleProof(db, ctx, blockHeight)
+    val extraMerkleProof = extraMerkleProof(db, ctx, blockHeight)
     return gtv(
         "accountState" to accountState,
         "blockHeader" to gtv(blockHeader),
         "blockWitness" to blockWitness,
         "stateProofs" to GtvArray(gtvProofs.toTypedArray()),
-        "el2MerkleProof" to el2MerkleProof
+        "extraMerkleProof" to extraMerkleProof
     )
 }
 
@@ -142,12 +142,12 @@ private fun blockHeaderData(
     )
 }
 
-private fun el2MerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Long): Gtv {
+private fun extraMerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Long): Gtv {
     val cryptoSystem = Secp256K1CryptoSystem()
     val blockRid = db.getBlockRID(ctx, blockHeight) ?: return GtvNull
     val bh = BaseBlockHeader(db.getBlockHeader(ctx, blockRid), cryptoSystem).blockHeaderRec
     val gtvExtra = bh.gtvExtra
-    val path: Array<Any> = arrayOf(EL2)
+    val path: Array<Any> = arrayOf(EIF)
     val gtvPath: GtvPath = GtvPathFactory.buildFromArrayOfPointers(path)
     val gtvPaths = GtvPathSet(setOf(gtvPath))
     val calculator = GtvMerkleHashCalculator(cryptoSystem)
@@ -156,15 +156,15 @@ private fun el2MerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Long)
     val printableBinaryTree = PrintableTreeFactory.buildPrintableTreeFromProofTree(extraProofTree)
     val merkleProofs = printer.getMerkleProof(printableBinaryTree)
     val proofs = merkleProofs.first
-    val el2Position = merkleProofs.second
+    val position = merkleProofs.second
     val gtvProofs = proofs.map(::gtv)
-    val el2Leaf = gtvExtra[EL2]!!
-    val el2HashedLeaf = MerkleBasics.hashingFun(
-        byteArrayOf(MerkleBasics.HASH_PREFIX_LEAF) + encodeGtv(el2Leaf), cryptoSystem)
+    val leaf = gtvExtra[EIF]!!
+    val hashedLeaf = MerkleBasics.hashingFun(
+        byteArrayOf(MerkleBasics.HASH_PREFIX_LEAF) + encodeGtv(leaf), cryptoSystem)
     return gtv(
-        "el2Leaf" to gtv(el2Leaf),
-        "el2HashedLeaf" to gtv(el2HashedLeaf),
-        "el2Position" to gtv(el2Position.toLong()),
+        "leaf" to gtv(leaf),
+        "hashedLeaf" to gtv(hashedLeaf),
+        "position" to gtv(position.toLong()),
         "extraRoot" to gtv(gtvExtra.merkleHash(calculator)),
         "extraMerkleProofs" to gtv(gtvProofs))
 }

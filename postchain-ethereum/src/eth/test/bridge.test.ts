@@ -1,7 +1,7 @@
 import { ethers, upgrades } from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { TestToken__factory, ChrL2__factory, TestDelegator__factory } from "../src/types";
+import { TestToken__factory, TokenBridge__factory, TestDelegator__factory } from "../src/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
 import { ContractReceipt, ContractTransaction } from "ethers";
@@ -11,9 +11,9 @@ import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, pos
 chai.use(solidity);
 const { expect } = chai;
 
-describe("ChrL2", () => {
+describe("Token Bridge Test", () => {
     let tokenAddress: string;
-    let chrL2Address: string;
+    let bridgeAddress: string;
     let testDelegatorAddress: string;
     let admin: SignerWithAddress;
     let validator1: SignerWithAddress;
@@ -31,9 +31,9 @@ describe("ChrL2", () => {
         const testDelegator = await testDelegatorFactory.deploy()
         testDelegatorAddress = testDelegator.address;
 
-        const chrl2Factory = new ChrL2__factory(admin)
-        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[validator1.address, validator2.address]])
-        chrL2Address = chrl2Instance.address
+        const bridgeFactory = new TokenBridge__factory(admin)
+        const bridge = await upgrades.deployProxy(bridgeFactory, [[validator1.address, validator2.address]])
+        bridgeAddress = bridge.address
     });
 
     describe("Utility", async () => {
@@ -141,18 +141,18 @@ describe("ChrL2", () => {
     describe("Nodes", async () => {
         it("Update app node(s) successfully", async () => {
             const [node1, node2, node3, other] = await ethers.getSigners()
-            const chrL2Instance = new ChrL2__factory(admin).attach(chrL2Address)
-            const otherChrL2Instance = new ChrL2__factory(other).attach(chrL2Address)
-            await expect(otherChrL2Instance.addValidator(node1.address)).to.be.revertedWith("Ownable: caller is not the owner")
+            const bridge = new TokenBridge__factory(admin).attach(bridgeAddress)
+            const otherbridge = new TokenBridge__factory(other).attach(bridgeAddress)
+            await expect(otherbridge.addValidator(node1.address)).to.be.revertedWith("Ownable: caller is not the owner")
             // Update App Nodes
-            await chrL2Instance.removeValidator(validator1.address)
-            await chrL2Instance.removeValidator(validator2.address)
-            await chrL2Instance.addValidator(node1.address)
-            await chrL2Instance.addValidator(node2.address)
-            await chrL2Instance.addValidator(node3.address)
-            expect(await chrL2Instance.validators(0)).to.eq(node1.address)
-            expect(await chrL2Instance.validators(1)).to.eq(node2.address)
-            expect(await chrL2Instance.validators(2)).to.eq(node3.address)
+            await bridge.removeValidator(validator1.address)
+            await bridge.removeValidator(validator2.address)
+            await bridge.addValidator(node1.address)
+            await bridge.addValidator(node2.address)
+            await bridge.addValidator(node3.address)
+            expect(await bridge.validators(0)).to.eq(node1.address)
+            expect(await bridge.validators(1)).to.eq(node2.address)
+            expect(await bridge.validators(2)).to.eq(node3.address)
         })
     })
 
@@ -166,7 +166,7 @@ describe("ChrL2", () => {
             expect(await tokenInstance.totalSupply()).to.eq(toMint)
             expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint)
 
-            const chrL2Instance = new ChrL2__factory(user).attach(chrL2Address)
+            const bridge = new TokenBridge__factory(user).attach(bridgeAddress)
             const toDeposit = ethers.utils.parseEther("100")
             const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
             const name = await tokenApproveInstance.name()
@@ -186,12 +186,12 @@ describe("ChrL2", () => {
                 "a6", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
                 hexZeroPad("0x12", 32).substring(2), // Default decimals is 18
             )
-            await tokenApproveInstance.approve(chrL2Address, toDeposit)
-            await expect(chrL2Instance.deposit(tokenAddress, toDeposit))
-                    .to.emit(chrL2Instance, "Deposited")
+            await tokenApproveInstance.approve(bridgeAddress, toDeposit)
+            await expect(bridge.deposit(tokenAddress, toDeposit))
+                    .to.emit(bridge, "Deposited")
                     .withArgs(0, expectedPayload.toLowerCase())
 
-            expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
+            expect(await bridge._balances(tokenAddress)).to.eq(toDeposit)
             expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
         })
     })
@@ -205,12 +205,12 @@ describe("ChrL2", () => {
             await tokenInstance.mint(user.address, toMint);
             expect(await tokenInstance.totalSupply()).to.eq(toMint)
 
-            const chrL2Instance = new ChrL2__factory(user).attach(chrL2Address)
+            const bridge = new TokenBridge__factory(user).attach(bridgeAddress)
             const toDeposit = ethers.utils.parseEther("100")
             const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
-            await tokenApproveInstance.approve(chrL2Address, toDeposit)
+            await tokenApproveInstance.approve(bridgeAddress, toDeposit)
 
-            let tx: ContractTransaction = await chrL2Instance.deposit(tokenAddress, toDeposit)
+            let tx: ContractTransaction = await bridge.deposit(tokenAddress, toDeposit)
             let receipt: ContractReceipt = await tx.wait()
             let logs = receipt.events?.filter((x) =>  {return x.event == 'Deposited'})
             if (logs !== undefined) {
@@ -240,7 +240,7 @@ describe("ChrL2", () => {
                 let hashRootEvent = keccak256(keccak256(hashEventLeaf))
                 let state = blockNumber.substring(2, blockNumber.length).concat(event)
                 let hashRootState = keccak256(DecodeHexStringToByteArray(state))
-                let el2Leaf = hashRootEvent.substring(2, hashRootEvent.length).concat(hashRootState.substring(2, hashRootState.length))
+                let eifLeaf = hashRootEvent.substring(2, hashRootEvent.length).concat(hashRootState.substring(2, hashRootState.length))
                 
                 let blockchainRid = "977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"
                 let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
@@ -299,57 +299,57 @@ describe("ChrL2", () => {
                     position: 0,
                     merkleProofs: merkleProof,
                 }
-                let el2HashedLeaf = hashGtvBytes64Leaf(DecodeHexStringToByteArray(el2Leaf))
-                let el2Proof = {
-                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
-                    el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
-                    el2Position: 1,
+                let hashedLeaf = hashGtvBytes64Leaf(DecodeHexStringToByteArray(eifLeaf))
+                let extraProof = {
+                    leaf: DecodeHexStringToByteArray(eifLeaf),
+                    hashedLeaf: DecodeHexStringToByteArray(hashedLeaf.substring(2, hashedLeaf.length)),
+                    position: 1,
                     extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
                     extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }
-                let invalidEl2Leaf = {
-                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
-                    el2HashedLeaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
-                    el2Position: 1,
+                let invalidExtraLeaf = {
+                    leaf: DecodeHexStringToByteArray(eifLeaf),
+                    hashedLeaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
+                    position: 1,
                     extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
                     extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }
                 let invalidExtraDataRoot = {
-                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
-                    el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
-                    el2Position: 1,
+                    leaf: DecodeHexStringToByteArray(eifLeaf),
+                    hashedLeaf: DecodeHexStringToByteArray(hashedLeaf.substring(2, hashedLeaf.length)),
+                    position: 1,
                     extraRoot: DecodeHexStringToByteArray("04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A2"),
                     extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }
                 let maliciousEl2Proof = {
-                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
-                    el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
-                    el2Position: 0,
+                    leaf: DecodeHexStringToByteArray(eifLeaf),
+                    hashedLeaf: DecodeHexStringToByteArray(hashedLeaf.substring(2, hashedLeaf.length)),
+                    position: 0,
                     extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
                     extraMerkleProofs: [
                         DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
                         DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")                        
                     ],
                 }
-                await expect(chrL2Instance.withdrawRequest(maliciousData, eventProof,
+                await expect(bridge.withdrawRequest(maliciousData, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
                     [validator1.address, validator2.address],
-                    el2Proof)
+                    extraProof)
                 ).to.be.revertedWith('Postchain: invalid event')
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
                     [validator1.address, validator2.address],
-                    invalidEl2Leaf)
-                ).to.be.revertedWith('Postchain: invalid el2 extra data')
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                    invalidExtraLeaf)
+                ).to.be.revertedWith('Postchain: invalid EIF extra data')
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
@@ -358,16 +358,16 @@ describe("ChrL2", () => {
                     [validator1.address, validator2.address],
                     invalidExtraDataRoot)
                 ).to.be.revertedWith('Postchain: invalid extra data root')
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(maliciousBlockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
                     [validator1.address, validator2.address],
-                    el2Proof)
+                    extraProof)
                 ).to.be.revertedWith('Postchain: invalid block header')
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
@@ -375,76 +375,76 @@ describe("ChrL2", () => {
                     ], 
                     [validator1.address, validator2.address],
                     maliciousEl2Proof)
-                ).to.be.revertedWith('Postchain: invalid el2 extra merkle proof')
-                await expect(chrL2Instance.withdrawRequest(data, maliciousEventProof,
+                ).to.be.revertedWith('Postchain: invalid EIF extra merkle proof')
+                await expect(bridge.withdrawRequest(data, maliciousEventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
                     [validator1.address, validator2.address],
-                    el2Proof)
-                ).to.be.revertedWith('ChrL2: invalid merkle proof')
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                    extraProof)
+                ).to.be.revertedWith('TokenBridge: invalid merkle proof')
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [], [], el2Proof)
-                ).to.be.revertedWith('ChrL2: block signature is invalid')
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                    [], [], extraProof)
+                ).to.be.revertedWith('TokenBridge: block signature is invalid')
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length))
                     ], 
                     [validator1.address, validator2.address],
-                    el2Proof)
-                ).to.be.revertedWith('ChrL2: duplicate signature or signers is out of order')
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                    extraProof)
+                ).to.be.revertedWith('TokenBridge: duplicate signature or signers is out of order')
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length)), 
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length))
                     ], 
                     [validator2.address, validator1.address],
-                    el2Proof)
-                ).to.be.revertedWith('ChrL2: duplicate signature or signers is out of order')
+                    extraProof)
+                ).to.be.revertedWith('TokenBridge: duplicate signature or signers is out of order')
                 let sig = await admin.signMessage(DecodeHexStringToByteArray(blockRid.substring(2, blockRid.length)))
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig.substring(2, sig.length)), 
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length))
                     ], 
                     [admin.address, validator1.address],
-                    el2Proof)
-                ).to.be.revertedWith('ChrL2: signer is not validator')
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                    extraProof)
+                ).to.be.revertedWith('TokenBridge: signer is not validator')
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
                     [validator1.address, validator2.address],
-                    el2Proof)
-                ).to.emit(chrL2Instance, "WithdrawRequest")
+                    extraProof)
+                ).to.emit(bridge, "WithdrawRequest")
                 .withArgs(user.address, tokenAddress, toDeposit)
 
-                await expect(chrL2Instance.withdrawRequest(data, eventProof,
+                await expect(bridge.withdrawRequest(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [
                         DecodeHexStringToByteArray(sig1.substring(2, sig1.length)), 
                         DecodeHexStringToByteArray(sig2.substring(2, sig2.length))
                     ], 
                     [validator1.address, validator2.address],
-                    el2Proof)
-                ).to.be.revertedWith('ChrL2: event hash was already used')
+                    extraProof)
+                ).to.be.revertedWith('TokenBridge: event hash was already used')
 
-                await expect(chrL2Instance.withdraw(
+                await expect(bridge.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
-                    deployer.address)).to.revertedWith("ChrL2: no fund for the beneficiary")
+                    deployer.address)).to.revertedWith("TokenBridge: no fund for the beneficiary")
 
-                await expect(chrL2Instance.withdraw(
+                await expect(bridge.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
-                    user.address)).to.revertedWith("ChrL2: not mature enough to withdraw the fund")
+                    user.address)).to.revertedWith("TokenBridge: not mature enough to withdraw the fund")
 
                 // force mining 98 blocks
                 for (let i = 0; i < 98; i++) {
@@ -454,34 +454,34 @@ describe("ChrL2", () => {
                 let hashEvent = DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length))
 
                 // directoryNode can update withdraw request status to pending (emergency case)
-                let directoryNode = new ChrL2__factory(admin).attach(chrL2Address)
+                let directoryNode = new TokenBridge__factory(admin).attach(bridgeAddress)
                 await directoryNode.pendingWithdraw(hashEvent)
 
                 // then user cannot withdraw the fund
-                await expect(chrL2Instance.withdraw(
+                await expect(bridge.withdraw(
                     hashEvent,
-                    user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
+                    user.address)).to.be.revertedWith('TokenBridge: fund is pending or was already claimed')
 
                 // directoryNode can set withdraw request status back to withdrawable
                 await directoryNode.unpendingWithdraw(hashEvent)
 
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
-                expect(await chrL2Instance._balances(tokenAddress)).to.eq(toDeposit)
-                await expect(chrL2Instance.withdraw(
+                expect(await bridge._balances(tokenAddress)).to.eq(toDeposit)
+                await expect(bridge.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
-                    deployer.address)).to.be.revertedWith('ChrL2: no fund for the beneficiary')
+                    deployer.address)).to.be.revertedWith('TokenBridge: no fund for the beneficiary')
 
                 // now user can withdraw the fund
-                await expect(chrL2Instance.withdraw(
+                await expect(bridge.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     user.address))
-                .to.emit(chrL2Instance, "Withdrawal")
+                .to.emit(bridge, "Withdrawal")
                 .withArgs(user.address, tokenAddress, toDeposit)
-                expect(await chrL2Instance._balances(tokenAddress)).to.eq(0)
+                expect(await bridge._balances(tokenAddress)).to.eq(0)
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint)
-                await expect(chrL2Instance.withdraw(
+                await expect(bridge.withdraw(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
-                    user.address)).to.be.revertedWith('ChrL2: fund is pending or was already claimed')
+                    user.address)).to.be.revertedWith('TokenBridge: fund is pending or was already claimed')
             }
         })
     })
