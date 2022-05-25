@@ -126,7 +126,7 @@ operation __eth_block(eth_block_height: integer, eth_block_hash: byte_array, eve
             state_n,
             account = state
         );
-        op_context.emit_event("el2_state", state_data.to_gtv());
+        op_context.emit_event("eif_state", state_data.to_gtv());
     }
 }
 
@@ -319,8 +319,8 @@ function emit_withdraw(beneficiary: text, eth_event_data: list<gtv>) {
         account = state
     );
 
-    op_context.emit_event("el2_state", state_data.to_gtv());
-    op_context.emit_event("el2_event", eth_event_data.to_gtv());
+    op_context.emit_event("eif_state", state_data.to_gtv());
+    op_context.emit_event("eif_event", eth_event_data.to_gtv());
 }
 
 function to_zero_padded_hex(array: byte_array) {
