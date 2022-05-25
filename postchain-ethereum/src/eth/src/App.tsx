@@ -4,10 +4,10 @@ import Connector, { getLibrary } from "./components/Connector";
 import { Toaster } from "react-hot-toast";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ReactQueryDevtools } from "react-query/devtools";
-import ChrL2Contract from "./ChrL2";
+import Bridge from "./Bridge";
 import "./App.css";
 
-const chrL2Address = process.env.REACT_APP_CHRL2_ADDRESS
+const bridgeAddress = process.env.REACT_APP_TOKEN_BRIDGE_ADDRESS
 
 const queryClient = new QueryClient();
 function App() {
@@ -31,7 +31,7 @@ function App() {
                     <option value="0x4da8d0795830f75be471f072a034d42c369b5d0a">LINK</option>
                     <option value="0x064e16771A4864561f767e4Ef4a6989fc4045aE7">ZKNFT</option>
                 </select>
-                {!!tokenAddress && !!chrL2Address && (<ChrL2Contract chrL2Address={chrL2Address} tokenAddress={tokenAddress} />)}
+                {!!tokenAddress && !!bridgeAddress && (<Bridge bridgeAddress={bridgeAddress} tokenAddress={tokenAddress} />)}
             </div>
             <ReactQueryDevtools initialIsOpen={false} />
             <Toaster position="top-right" />            

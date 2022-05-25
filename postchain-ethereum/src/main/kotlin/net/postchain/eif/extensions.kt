@@ -1,6 +1,6 @@
 // Copyright (c) 2021 ChromaWay AB. See README for license information.
 
-package net.postchain.el2
+package net.postchain.eif
 
 import net.postchain.base.*
 import net.postchain.base.data.BaseBlockBuilder
@@ -15,7 +15,10 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import java.util.*
 
-class EthereumL2Implementation(
+const val EIF_EVENT = "eif_event"
+const val EIF_STATE = "eif_state"
+
+class EthereumEifImplementation(
         private val ds: DigestSystem,
         private val levelsPerPage: Int): BaseBlockBuilderExtension, TxEventSink {
 
@@ -29,15 +32,15 @@ class EthereumL2Implementation(
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         when (type) {
-            "el2_event" -> emitL2Event(data)
-            "el2_state" -> emitL2State(data[0].asInteger(), data[1])
+            EIF_EVENT -> emitEifEvent(data)
+            EIF_STATE -> emitEifState(data[0].asInteger(), data[1])
             else -> throw ProgrammerMistake("Unrecognized event")
         }
     }
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
-        baseBB.installEventProcessor("el2_event", this)
-        baseBB.installEventProcessor("el2_state", this)
+        baseBB.installEventProcessor(EIF_EVENT, this)
+        baseBB.installEventProcessor(EIF_STATE, this)
         bctx = blockEContext
         store = LeafStore()
         snapshot = SnapshotPageStore(blockEContext, levelsPerPage, ds, PREFIX)
@@ -51,7 +54,7 @@ class EthereumL2Implementation(
         val extra = mutableMapOf<String, Gtv>()
         val stateRootHash = snapshot.updateSnapshot(bctx.height, states)
         val eventRootHash = event.writeEventTree(bctx.height, events)
-        extra["el2"] = GtvByteArray(eventRootHash + stateRootHash)
+        extra[EIF] = GtvByteArray(eventRootHash + stateRootHash)
         return extra
     }
 
@@ -59,7 +62,7 @@ class EthereumL2Implementation(
      * Serialize, write to leaf store, hash using keccak256.
      * Hashes are remembered and later combined into a Merkle tree
      */
-    private fun emitL2Event(evt: Gtv) {
+    private fun emitEifEvent(evt: Gtv) {
         val data = SimpleGtvEncoder.encodeGtv(evt)
         val hash = ds.digest(data)
         store.writeEvent(bctx, PREFIX, events.size.toLong(), hash, data)
@@ -71,7 +74,7 @@ class EthereumL2Implementation(
      * hash using keccak256. (state_n, hash) pairs are submitted to updateSnapshot
      * during finalization
      */
-    private fun emitL2State(state_n: Long, state: Gtv) {
+    private fun emitEifState(state_n: Long, state: Gtv) {
         val data = SimpleGtvEncoder.encodeGtv(state)
         val hash = ds.digest(data)
         states[state_n] = hash

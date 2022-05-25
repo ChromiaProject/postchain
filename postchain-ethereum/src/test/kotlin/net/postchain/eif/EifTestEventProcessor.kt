@@ -1,4 +1,4 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.KECCAK256
@@ -11,7 +11,7 @@ import org.web3j.abi.EventEncoder
 import java.math.BigInteger
 import java.security.MessageDigest
 
-class L2TestEventProcessor : EventProcessor {
+class EifTestEventProcessor : EventProcessor {
 
     private val ds = SimpleDigestSystem(MessageDigest.getInstance(KECCAK256))
 

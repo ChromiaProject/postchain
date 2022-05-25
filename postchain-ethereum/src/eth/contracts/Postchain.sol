@@ -61,15 +61,15 @@ library Postchain {
 
     function verifyBlockHeader(
         bytes memory blockHeader,
-        Data.EL2ProofData memory proof
+        Data.ExtraProofData memory proof
     ) internal pure returns (bytes32, bytes32, bytes32) {
-        require(Hash.hashGtvBytes64Leaf(proof.el2Leaf) == proof.el2HashedLeaf, "Postchain: invalid el2 extra data");
+        require(Hash.hashGtvBytes64Leaf(proof.leaf) == proof.hashedLeaf, "Postchain: invalid EIF extra data");
         (bytes32 blockRid, bytes32 extraDataHashedLeaf) = _decodeBlockHeader(blockHeader);
         require(proof.extraRoot == extraDataHashedLeaf, "Postchain: invalid extra data root");
-        if (!proof.extraMerkleProofs.verifySHA256(proof.el2HashedLeaf, proof.el2Position, proof.extraRoot)) {
-            revert("Postchain: invalid el2 extra merkle proof");
+        if (!proof.extraMerkleProofs.verifySHA256(proof.hashedLeaf, proof.position, proof.extraRoot)) {
+            revert("Postchain: invalid EIF extra merkle proof");
         }
-        return (blockRid, _bytesToBytes32(proof.el2Leaf, 0), _bytesToBytes32(proof.el2Leaf, 32));
+        return (blockRid, _bytesToBytes32(proof.leaf, 0), _bytesToBytes32(proof.leaf, 32));
     }
 
     function _decodeBlockHeader(

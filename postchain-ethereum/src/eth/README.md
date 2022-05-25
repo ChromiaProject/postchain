@@ -1,4 +1,4 @@
-# ChrL2 smart contract
+# Token bridge smart contract
 
 Uses
 
@@ -54,7 +54,7 @@ Run test with solidity coverage report
 $ yarn coverage
 ```
 
-### Deploy ChrL2 contract to a network (requires Mnemonic, infura API and Etherscan API key)
+### Deploy token bridge contract to a network (requires Mnemonic, infura API and Etherscan API key)
 
 ```sh
 $ yarn deploy --network rinkeby --verify --app 0x659E4A3726275EDFD125F52338ECE0D54D15BD99,0x1A642F0E3C3AF545E7ACBD38B07251B3990914F1,0x75E20828B343D1FE37FAE469AB698E19C17F20B5
@@ -67,7 +67,7 @@ Create `.env` file to config your dapp, then run below command to start the dapp
 ```
 $ yarn start
 ```
-Voila! Now you can access to `http://localhost:3000/` to use the dapp to interact with L2 smart contract
+Voila! Now you can access to `http://localhost:3000/` to use the dapp to interact with token bridge smart contract
 
 ### Build the DApp for production deployment
 
@@ -92,11 +92,11 @@ Find out more about deployment here:
 - Gas reporter [hardhat-gas-reporter](https://hardhat.org/plugins/hardhat-gas-reporter.html)
 - Etherscan [hardhat-etherscan](https://hardhat.org/plugins/nomiclabs-hardhat-etherscan.html)
 
-## Upgrade ChrL2 contract
+## Upgrade token bridge contract
 
 ### Prepare
 
-Run below task to prepare upgrade ChrL2 smart contract
+Run below task to prepare upgrade token bridge smart contract
 
 ```sh
 yarn prepare-upgrade --network rinkeby --verify --address PROXY_ADDRESS

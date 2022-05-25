@@ -1,4 +1,4 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import mu.KLogging
 import net.postchain.core.BlockchainEngine

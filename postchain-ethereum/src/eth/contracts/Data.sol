@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 library Data {
-    struct EL2ProofData {
-        bytes el2Leaf;
-        bytes32 el2HashedLeaf;
-        uint el2Position;
+    struct ExtraProofData {
+        bytes leaf;
+        bytes32 hashedLeaf;
+        uint position;
         bytes32 extraRoot;
         bytes32[] extraMerkleProofs;
     }

@@ -1,4 +1,4 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
@@ -24,7 +24,7 @@ private fun table_eth_event(ctx: EContext): String {
     return db.tableName(ctx, "eth_events")
 }
 
-class L2EventOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
+class EifEventOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     override fun isCorrect(): Boolean {
         if (data.args.size != 2) return false
@@ -33,7 +33,7 @@ class L2EventOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     override fun apply(ctx: TxEContext): Boolean {
         ctx.emitEvent(
-            "el2_event",
+            "eif_event",
             gtv(
                 GtvInteger(data.args[0].asInteger()),
                 GtvByteArray(data.args[1].asByteArray())
@@ -44,7 +44,7 @@ class L2EventOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
     }
 }
 
-class L2StateOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
+class EifStateOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     override fun isCorrect(): Boolean {
         if (data.args.size != 3) return false
@@ -53,7 +53,7 @@ class L2StateOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     override fun apply(ctx: TxEContext): Boolean {
         ctx.emitEvent(
-            "el2_state",
+            "eif_state",
             gtv(
                 gtv(data.args[0].asInteger()),
                 gtv(
@@ -67,7 +67,7 @@ class L2StateOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
     }
 }
 
-class L2TransferOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
+class EifTransferOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     override fun isCorrect(): Boolean {
         if (data.args.size != 9) return false
@@ -85,21 +85,21 @@ class L2TransferOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
     }
 }
 
-class EL2TestModule : SimpleGTXModule<Unit>(Unit,
+class EifTestModule : SimpleGTXModule<Unit>(Unit,
     mapOf(
-        "el2_event" to ::L2EventOp,
-        "el2_state" to ::L2StateOp
+        "eif_event" to ::EifEventOp,
+        "eif_state" to ::EifStateOp
     ),
     mapOf()
 ) {
     override fun initializeDB(ctx: EContext) {}
 }
 
-class EL2TransferTestModule : SimpleGTXModule<Unit>(Unit,
+class EifTransferTestModule : SimpleGTXModule<Unit>(Unit,
     mapOf(
-        "el2_event" to ::L2EventOp,
-        "el2_state" to ::L2StateOp,
-        "__eth_event" to ::L2TransferOp
+        "eif_event" to ::EifEventOp,
+        "eif_state" to ::EifStateOp,
+        "__eth_event" to ::EifTransferOp
     ),
     mapOf("get_last_eth_block" to { _, ctx, _ ->
         val sql = "SELECT LIMIT 1 block_number, block_hash FROM ${table_eth_event(ctx)} ORDER BY block_number DESC"

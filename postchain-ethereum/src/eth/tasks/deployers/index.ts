@@ -1,2 +1,2 @@
-import "./chrl2";
+import "./bridge";
 import "./token";
