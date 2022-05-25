@@ -254,13 +254,15 @@ paths:
             default: false
       responses:
         200:
-          description: Found
+          description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/blockInfo"
+                oneOf:
+                  - $ref: "#/components/schemas/blockInfo"
+                  - $ref: "#/components/schemas/nullValue"
         404:
-          description: Not found
+          description: Chain not found
           content:
             application/json:
               schema:
@@ -406,3 +408,5 @@ components:
       type: array
       items:
         type: integer
+    nullValue:
+      type: "null"
