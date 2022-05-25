@@ -1,4 +1,4 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import net.postchain.common.data.Hash
 import net.postchain.common.data.KECCAK256

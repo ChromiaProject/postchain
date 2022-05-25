@@ -1,7 +1,7 @@
 import {ethers, upgrades} from "hardhat";
 import chai from "chai";
 import { solidity } from "ethereum-waffle";
-import { ChrL2__factory, ERC721Mock__factory } from "../src/types";
+import { TokenBridge__factory, ERC721Mock__factory } from "../src/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
 import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
@@ -14,7 +14,7 @@ const { expect } = chai;
 
 describe("Non Fungible Token", () => {
     let nftAddress: string;
-    let chrL2Address: string;
+    let bridgeAddress: string;
     let directoryNodes: SignerWithAddress;
     let appNodes: SignerWithAddress;
     const name = "CRYPTOPUNKS";
@@ -28,9 +28,9 @@ describe("Non Fungible Token", () => {
         const tokenContract = await tokenFactory.deploy(name, symbol)
         nftAddress = tokenContract.address
 
-        const chrl2Factory = new ChrL2__factory(directoryNodes)
-        const chrl2Instance = await upgrades.deployProxy(chrl2Factory, [[appNodes.address]])
-        chrL2Address = chrl2Instance.address
+        const factory = new TokenBridge__factory(directoryNodes)
+        const bridge = await upgrades.deployProxy(factory, [[appNodes.address]])
+        bridgeAddress = bridge.address
     });
 
     describe("Deposit NFT", async () => {
@@ -43,9 +43,9 @@ describe("Non Fungible Token", () => {
             expect(await tokenInstance.balanceOf(user.address)).to.eq(1)
             expect(await tokenInstance.ownerOf(tokenId)).to.eq(user.address)
 
-            const chrL2Instance = new ChrL2__factory(user).attach(chrL2Address)
+            const bridge = new TokenBridge__factory(user).attach(bridgeAddress)
             const tokenApproveInstance = new ERC721Mock__factory(user).attach(nftAddress)
-            await tokenApproveInstance.setApprovalForAll(chrL2Address, true)
+            await tokenApproveInstance.setApprovalForAll(bridgeAddress, true)
             let tokenURI = await tokenApproveInstance.tokenURI(tokenId)
             expect(tokenURI).to.eq(baseURI+tokenId.toString())
             const expectedPayload = ''.concat(
@@ -63,12 +63,12 @@ describe("Non Fungible Token", () => {
                 "a2", "84", "0000005b", "0c", "84", "00000055", 
                 solidityPack(["string"], [tokenURI]).substring(2)
             )            
-            await expect(chrL2Instance.depositNFT(nftAddress, tokenId))
-                    .to.emit(chrL2Instance, "Deposited")
+            await expect(bridge.depositNFT(nftAddress, tokenId))
+                    .to.emit(bridge, "Deposited")
                     .withArgs(1, expectedPayload.toLowerCase())
 
-            expect(await tokenInstance.balanceOf(chrL2Address)).to.eq(1)
-            expect(await tokenInstance.ownerOf(tokenId)).to.eq(chrL2Address)
+            expect(await tokenInstance.balanceOf(bridgeAddress)).to.eq(1)
+            expect(await tokenInstance.ownerOf(tokenId)).to.eq(bridgeAddress)
         })
     })
 
@@ -82,10 +82,10 @@ describe("Non Fungible Token", () => {
             expect(await tokenInstance.balanceOf(user.address)).to.eq(1)
             expect(await tokenInstance.ownerOf(tokenId)).to.eq(user.address)
 
-            const chrL2Instance = new ChrL2__factory(user).attach(chrL2Address)
+            const bridge = new TokenBridge__factory(user).attach(bridgeAddress)
             const tokenApproveInstance = new ERC721Mock__factory(user).attach(nftAddress)
-            await tokenApproveInstance.setApprovalForAll(chrL2Address, true)
-            let tx: ContractTransaction = await chrL2Instance.depositNFT(nftAddress, tokenId)
+            await tokenApproveInstance.setApprovalForAll(bridgeAddress, true)
+            let tx: ContractTransaction = await bridge.depositNFT(nftAddress, tokenId)
             let receipt: ContractReceipt = await tx.wait()
             let logs = receipt.events?.filter((x) =>  {return x.event == 'Deposited'})
             if (logs !== undefined) {
@@ -110,7 +110,7 @@ describe("Non Fungible Token", () => {
                 let hashRootEvent = keccak256(keccak256(hashEventLeaf))
                 let state = blockNumber.substring(2, blockNumber.length).concat(event)
                 let hashRootState = keccak256(DecodeHexStringToByteArray(state))
-                let el2Leaf = hashRootEvent.substring(2, hashRootEvent.length).concat(hashRootState.substring(2, hashRootState.length))
+                let eifLeaf = hashRootEvent.substring(2, hashRootEvent.length).concat(hashRootState.substring(2, hashRootState.length))
                 
                 let blockchainRid = "977dd435e17d637c2c71ebb4dec4ff007a4523976dc689c7bcb9e6c514e4c795"
                 let previousBlockRid = "49e46bf022de1515cbb2bf0f69c62c071825a9b940e8f3892acb5d2021832ba0"
@@ -156,12 +156,12 @@ describe("Non Fungible Token", () => {
                     merkleProofs: merkleProof,
                 }
 
-                let el2HashedLeaf = hashGtvBytes64Leaf(DecodeHexStringToByteArray(el2Leaf))
+                let hashedLeaf = hashGtvBytes64Leaf(DecodeHexStringToByteArray(eifLeaf))
 
                 let el2Proof = {
-                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
-                    el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
-                    el2Position: 1,
+                    leaf: DecodeHexStringToByteArray(eifLeaf),
+                    hashedLeaf: DecodeHexStringToByteArray(hashedLeaf.substring(2, hashedLeaf.length)),
+                    position: 1,
                     extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
                     extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }
@@ -174,33 +174,33 @@ describe("Non Fungible Token", () => {
                 maliciousEvent = maliciousEvent.concat(tokenIdHex.substring(2, tokenIdHex.length))                
                 let maliciousData = DecodeHexStringToByteArray(maliciousEvent)
 
-                await expect(chrL2Instance.withdrawRequestNFT(maliciousData, eventProof,
+                await expect(bridge.withdrawRequestNFT(maliciousData, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid event')
 
                 // hash two times to make malicious data
                 let maliciousHashEventLeaf = keccak256(keccak256(data))
-                let invalidEl2Leaf = {
-                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
-                    el2HashedLeaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
-                    el2Position: 1,
+                let invalidExtraLeaf = {
+                    leaf: DecodeHexStringToByteArray(eifLeaf),
+                    hashedLeaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
+                    position: 1,
                     extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
                     extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }                
-                await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
+                await expect(bridge.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
-                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], invalidEl2Leaf)
-                ).to.be.revertedWith('Postchain: invalid el2 extra data')
+                    [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], invalidExtraLeaf)
+                ).to.be.revertedWith('Postchain: invalid EIF extra data')
 
                 let invalidExtraDataRoot = {
-                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
-                    el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
-                    el2Position: 1,
+                    leaf: DecodeHexStringToByteArray(eifLeaf),
+                    hashedLeaf: DecodeHexStringToByteArray(hashedLeaf.substring(2, hashedLeaf.length)),
+                    position: 1,
                     extraRoot: DecodeHexStringToByteArray("04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A2"),
                     extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
                 }                
-                await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
+                await expect(bridge.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], invalidExtraDataRoot)
                 ).to.be.revertedWith('Postchain: invalid extra data root')
@@ -213,80 +213,80 @@ describe("Non Fungible Token", () => {
                                     dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
                                     extraDataMerkleRoot
                 )
-                await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
+                await expect(bridge.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(maliciousBlockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
                 ).to.be.revertedWith('Postchain: invalid block header')
 
                 let maliciousEl2Proof = {
-                    el2Leaf: DecodeHexStringToByteArray(el2Leaf),
-                    el2HashedLeaf: DecodeHexStringToByteArray(el2HashedLeaf.substring(2, el2HashedLeaf.length)),
-                    el2Position: 0,
+                    leaf: DecodeHexStringToByteArray(eifLeaf),
+                    hashedLeaf: DecodeHexStringToByteArray(hashedLeaf.substring(2, hashedLeaf.length)),
+                    position: 0,
                     extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
                     extraMerkleProofs: [
                         DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000"), 
                         DecodeHexStringToByteArray("0000000000000000000000000000000000000000000000000000000000000000")                        
                     ],
                 }
-                await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
+                await expect(bridge.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], maliciousEl2Proof)
-                ).to.be.revertedWith('Postchain: invalid el2 extra merkle proof')
+                ).to.be.revertedWith('Postchain: invalid EIF extra merkle proof')
 
                 let maliciousEventProof = {
                     leaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
                     position: 0,
                     merkleProofs: merkleProof,
                 }
-                await expect(chrL2Instance.withdrawRequestNFT(data, maliciousEventProof,
+                await expect(bridge.withdrawRequestNFT(data, maliciousEventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
-                ).to.be.revertedWith('ChrL2: invalid merkle proof')
+                ).to.be.revertedWith('TokenBridge: invalid merkle proof')
 
-                await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
+                await expect(bridge.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [], [], el2Proof)
-                ).to.be.revertedWith('ChrL2: block signature is invalid')
+                ).to.be.revertedWith('TokenBridge: block signature is invalid')
 
-                await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
+                await expect(bridge.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
-                ).to.emit(chrL2Instance, "WithdrawRequestNFT")
+                ).to.emit(bridge, "WithdrawRequestNFT")
                 .withArgs(user.address, nftAddress, tokenId)
 
-                await expect(chrL2Instance.withdrawRequestNFT(data, eventProof,
+                await expect(bridge.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
                     [DecodeHexStringToByteArray(sig.substring(2, sig.length))], [appNodes.address], el2Proof)
-                ).to.be.revertedWith('ChrL2: event hash was already used')
+                ).to.be.revertedWith('TokenBridge: event hash was already used')
 
-                await expect(chrL2Instance.withdrawNFT(
+                await expect(bridge.withdrawNFT(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
-                    deployer.address)).to.revertedWith("ChrL2: no nft for the beneficiary")
+                    deployer.address)).to.revertedWith("TokenBridge: no nft for the beneficiary")
 
-                await expect(chrL2Instance.withdrawNFT(
+                await expect(bridge.withdrawNFT(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
-                    user.address)).to.revertedWith("ChrL2: not mature enough to withdraw the nft")
+                    user.address)).to.revertedWith("TokenBridge: not mature enough to withdraw the nft")
 
                 // force mining 100 blocks
                 for (let i = 0; i < 100; i++) {
                     await ethers.provider.send('evm_mine', [])
                 }
 
-                expect(await tokenInstance.balanceOf(chrL2Address)).to.eq(1)
-                expect(await tokenInstance.ownerOf(tokenId)).to.eq(chrL2Address)
+                expect(await tokenInstance.balanceOf(bridgeAddress)).to.eq(1)
+                expect(await tokenInstance.ownerOf(tokenId)).to.eq(bridgeAddress)
 
-                await expect(chrL2Instance.withdrawNFT(
+                await expect(bridge.withdrawNFT(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
                     user.address))
-                .to.emit(chrL2Instance, "WithdrawalNFT")
+                .to.emit(bridge, "WithdrawalNFT")
                 .withArgs(user.address, nftAddress, tokenId)
 
                 expect(await tokenInstance.balanceOf(user.address)).to.eq(1)
                 expect(await tokenInstance.ownerOf(tokenId)).to.eq(user.address)
 
-                await expect(chrL2Instance.withdrawNFT(
+                await expect(bridge.withdrawNFT(
                     DecodeHexStringToByteArray(hashEventLeaf.substring(2, hashEventLeaf.length)),
-                    user.address)).to.revertedWith("ChrL2: nft is pending or was already claimed")
+                    user.address)).to.revertedWith("TokenBridge: nft is pending or was already claimed")
             }
         })
     })

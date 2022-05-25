@@ -1,9 +1,9 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
-import net.postchain.ethereum.contracts.ChrL2
+import net.postchain.ethereum.contracts.TokenBridge
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.OpData
@@ -11,7 +11,7 @@ import org.web3j.abi.EventEncoder
 import java.math.BigInteger
 import java.security.MessageDigest
 
-class L2TestEventProcessor : EventProcessor {
+class EifTestEventProcessor : EventProcessor {
 
     private val ds = SimpleDigestSystem(MessageDigest.getInstance(KECCAK256))
 
@@ -43,7 +43,7 @@ class L2TestEventProcessor : EventProcessor {
         val to = ds.digest(BigInteger.valueOf(2L).toByteArray()).toHex()
         return arrayOf(
             gtv(height), gtv(blockHash), gtv(transactionHash),
-            gtv(i.toLong()), gtv(EventEncoder.encode(ChrL2.DEPOSITED_EVENT)),
+            gtv(i.toLong()), gtv(EventEncoder.encode(TokenBridge.DEPOSITED_EVENT)),
             gtv(contractAddress), gtv(from), gtv(to), gtv(BigInteger.valueOf(i.toLong()))
         )
     }

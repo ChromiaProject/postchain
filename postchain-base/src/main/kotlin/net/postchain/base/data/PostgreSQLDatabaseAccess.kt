@@ -40,7 +40,7 @@ import java.sql.Connection
 
     /**
      * @param ctx is the context
-     * @param prefix is what the events will be used for, for example "el2" or "icmf"
+     * @param prefix is what the events will be used for, for example "eif" or "icmf"
      */
     override fun cmdCreateTableEvent(ctx: EContext, prefix: String): String {
         return "CREATE TABLE IF NOT EXISTS ${tableEventLeafs(ctx, prefix)}" +
@@ -158,7 +158,7 @@ import java.sql.Connection
 
     /**
      * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "el2" or "icmf"
+     * @param prefix is what the state will be used for, for example "eif" or "icmf"
      */
     override fun cmdInsertEvent(ctx: EContext, prefix: String): String {
         return "INSERT INTO ${tableEventLeafs(ctx, prefix)} (block_height, position, hash, data) " + "VALUES (?, ?,  ?, ?)"
@@ -166,7 +166,7 @@ import java.sql.Connection
 
     /**
      * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "el2"
+     * @param prefix is what the state will be used for, for example "eif"
      */
     override fun cmdInsertState(ctx: EContext, prefix: String): String {
         return "INSERT INTO ${tableStateLeafs(ctx, prefix)} (block_height, state_n, data) " + "VALUES (?, ?, ?)"
@@ -176,7 +176,7 @@ import java.sql.Connection
      * Deletes data from the table where height is <= given minimum-height-to-keep
      *
      * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "el2" or "icmf"
+     * @param prefix is what the state will be used for, for example "eif" or "icmf"
      */
     override fun cmdPruneEvents(ctx: EContext, prefix: String): String {
         return "DELETE FROM ${tableEventLeafs(ctx, prefix)} WHERE height <= ?"
@@ -191,7 +191,7 @@ import java.sql.Connection
      * TODO: Haven't tried this, could be off by one in the between
      *
      * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "el2"
+     * @param prefix is what the state will be used for, for example "eif"
      */
     override fun cmdPruneStates(ctx: EContext, prefix: String): String {
         return "DELETE FROM ${tableStateLeafs(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND height <= ?"

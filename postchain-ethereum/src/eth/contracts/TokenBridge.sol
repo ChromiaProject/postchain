@@ -19,7 +19,7 @@ import "./Postchain.sol";
 // This contract is upgradeable. This imposes restrictions on how storage layout can be modified once it is deployed
 // Some instructions are also not allowed. Read more at: https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable
 // Note: To enhance the security & decentralization, we should call transferOwnership() to external multi-sig owner after deploy the smart contract
-contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, ReentrancyGuardUpgradeable {
+contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, ReentrancyGuardUpgradeable {
 
     uint8 constant ERC20_ACCOUNT_STATE_BYTE_SIZE = 64;
     uint8 constant ERC721_ACCOUNT_STATE_BYTE_SIZE = 64;
@@ -154,13 +154,13 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
 
     function pendingWithdraw(bytes32 _hash) onlyOwner public {
         Withdraw storage wd = _withdraw[_hash];
-        require(wd.status == Status.Withdrawable, "ChrL2: withdraw request status is not withdrawable");
+        require(wd.status == Status.Withdrawable, "TokenBridge: withdraw request status is not withdrawable");
         wd.status = Status.Pending;
     }
 
     function unpendingWithdraw(bytes32 _hash) onlyOwner public {
         Withdraw storage wd = _withdraw[_hash];
-        require(wd.status == Status.Pending, "ChrL2: withdraw request status is not pending");
+        require(wd.status == Status.Pending, "TokenBridge: withdraw request status is not pending");
         wd.status = Status.Withdrawable;
     }
 
@@ -218,11 +218,11 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
             bytes memory _symbol;
             bytes memory _tokenURI;
             (success, _name) = address(nft).staticcall(abi.encodeWithSignature("name()"));
-            require(success, "ChrL2: cannot get nft name");
+            require(success, "TokenBridge: cannot get nft name");
             (success, _symbol) = address(nft).staticcall(abi.encodeWithSignature("symbol()"));
-            require(success, "ChrL2: cannot get nft symbol");
+            require(success, "TokenBridge: cannot get nft symbol");
             (success, _tokenURI) = address(nft).staticcall(abi.encodeWithSignature("tokenURI(uint256)", tokenId));
-            require(success, "ChrL2: cannot get nft token URI");
+            require(success, "TokenBridge: cannot get nft token URI");
             name = abi.decode(_name, (string));
             symbol = abi.decode(_symbol, (string));
             tokenURI = abi.decode(_tokenURI, (string));
@@ -250,9 +250,9 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         bytes memory blockHeader,
         bytes[] memory sigs,
         address[] memory signers,
-        Data.EL2ProofData memory el2Proof
+        Data.ExtraProofData memory extraProof
     ) external nonReentrant {
-        _withdrawRequest(eventProof, blockHeader, sigs, signers, el2Proof);
+        _withdrawRequest(eventProof, blockHeader, sigs, signers, extraProof);
         _events[eventProof.leaf] = _updateWithdraw(eventProof.leaf, _event); // mark the event hash was already used.
     }
 
@@ -265,10 +265,10 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         bytes memory blockHeader,
         bytes[] memory sigs,
         address[] memory signers,
-        Data.EL2ProofData memory el2Proof
+        Data.ExtraProofData memory extraProof
     ) external nonReentrant {
 
-        _withdrawRequest(eventProof, blockHeader, sigs, signers, el2Proof);
+        _withdrawRequest(eventProof, blockHeader, sigs, signers, extraProof);
         _events[eventProof.leaf] = _updateWithdrawNFT(eventProof.leaf, _event); // mark the event hash was already used.
     }
 
@@ -277,13 +277,13 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         bytes memory blockHeader,
         bytes[] memory sigs,
         address[] memory signers,
-        Data.EL2ProofData memory el2Proof
+        Data.ExtraProofData memory extraProof
     ) internal view {
-        require(_events[eventProof.leaf] == false, "ChrL2: event hash was already used");
+        require(_events[eventProof.leaf] == false, "TokenBridge: event hash was already used");
         {
-            (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, el2Proof);
-            if (!isValidSignatures(blockRid, sigs, signers)) revert("ChrL2: block signature is invalid");
-            if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("ChrL2: invalid merkle proof");
+            (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, extraProof);
+            if (!isValidSignatures(blockRid, sigs, signers)) revert("TokenBridge: block signature is invalid");
+            if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("TokenBridge: invalid merkle proof");
         }
         return;
     }
@@ -292,7 +292,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         Withdraw storage wd = _withdraw[hash];
         {
             (IERC20 token, address beneficiary, uint256 amount) = hash.verifyEvent(_event);
-            require(amount > 0 && amount <= _balances[token], "ChrL2: invalid amount to make request withdraw");
+            require(amount > 0 && amount <= _balances[token], "TokenBridge: invalid amount to make request withdraw");
             wd.token = token;
             wd.beneficiary = beneficiary;
             wd.amount = amount;
@@ -308,7 +308,7 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         WithdrawNFT storage wd = _withdrawNFT[hash];
         {
             (IERC721 nft, address beneficiary, uint256 tokenId) = hash.verifyEventNFT(_event);
-            require(_owners[nft][tokenId] != address(0), "ChrL2: invalid token id to make request withdraw");
+            require(_owners[nft][tokenId] != address(0), "TokenBridge: invalid token id to make request withdraw");
             wd.nft = nft;
             wd.beneficiary = beneficiary;
             wd.tokenId = tokenId;
@@ -322,10 +322,10 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
 
     function withdraw(bytes32 _hash, address payable beneficiary) public nonReentrant {
         Withdraw storage wd = _withdraw[_hash];
-        require(wd.beneficiary == beneficiary, "ChrL2: no fund for the beneficiary");
-        require(wd.block_number <= block.number, "ChrL2: not mature enough to withdraw the fund");
-        require(wd.status == Status.Withdrawable, "ChrL2: fund is pending or was already claimed");
-        require(wd.amount > 0 && wd.amount <= _balances[wd.token], "ChrL2: not enough amount to withdraw");
+        require(wd.beneficiary == beneficiary, "TokenBridge: no fund for the beneficiary");
+        require(wd.block_number <= block.number, "TokenBridge: not mature enough to withdraw the fund");
+        require(wd.status == Status.Withdrawable, "TokenBridge: fund is pending or was already claimed");
+        require(wd.amount > 0 && wd.amount <= _balances[wd.token], "TokenBridge: not enough amount to withdraw");
         wd.status = Status.Withdrawn;
         uint value = wd.amount;
         wd.amount = 0;
@@ -337,10 +337,10 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
     function withdrawNFT(bytes32 _hash, address payable beneficiary) public nonReentrant {
         WithdrawNFT storage wd = _withdrawNFT[_hash];
         uint tokenId = wd.tokenId;
-        require(wd.beneficiary == beneficiary, "ChrL2: no nft for the beneficiary");
-        require(wd.block_number <= block.number, "ChrL2: not mature enough to withdraw the nft");
-        require(wd.status == Status.Withdrawable, "ChrL2: nft is pending or was already claimed");
-        require(_owners[wd.nft][tokenId] != address(0), "ChrL2: nft token id does not exist or was already claimed");
+        require(wd.beneficiary == beneficiary, "TokenBridge: no nft for the beneficiary");
+        require(wd.block_number <= block.number, "TokenBridge: not mature enough to withdraw the nft");
+        require(wd.status == Status.Withdrawable, "TokenBridge: nft is pending or was already claimed");
+        require(_owners[wd.nft][tokenId] != address(0), "TokenBridge: nft token id does not exist or was already claimed");
         wd.status = Status.Withdrawn;
         _owners[wd.nft][tokenId] = address(0);
         wd.nft.safeTransferFrom(address(this), beneficiary, tokenId);
@@ -353,10 +353,10 @@ contract ChrL2 is Initializable, OwnableUpgradeable, IERC721Receiver, Reentrancy
         address _lastSigner = address(0);
         for (uint i = 0; i < signatures.length; i++) {
             for (uint k = 0; k < signers.length; k++) {
-                require(isValidator(signers[k]), "ChrL2: signer is not validator");
+                require(isValidator(signers[k]), "TokenBridge: signer is not validator");
                 if (_isValidSignature(hash, signatures[i], signers[k])) {
                     _actualSignature++;
-                    require(signers[k] > _lastSigner, "ChrL2: duplicate signature or signers is out of order");
+                    require(signers[k] > _lastSigner, "TokenBridge: duplicate signature or signers is out of order");
                     _lastSigner = signers[k];
                     break;
                 }

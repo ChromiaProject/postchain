@@ -1,18 +1,18 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.*
-import net.postchain.el2.config.EifBlockchainConfig
-import net.postchain.el2.config.EifConfig
+import net.postchain.eif.config.EifBlockchainConfig
+import net.postchain.eif.config.EifConfig
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfiguration
 import org.web3j.protocol.Web3j
 import java.math.BigInteger
 
-class EL2SynchronizationInfrastructureExtension(
+class EifSynchronizationInfrastructureExtension(
     private val postchainContext: PostchainContext
 ) : SynchronizationInfrastructureExtension {
     private val eventProcessors = mutableMapOf<String, EventProcessor>()
@@ -24,8 +24,8 @@ class EL2SynchronizationInfrastructureExtension(
         val cfg = engine.getConfiguration()
         if (cfg is GTXBlockchainConfiguration) {
             val exs = cfg.module.getSpecialTxExtensions()
-            val el2Ext = exs.find { it is EL2SpecialTxExtension }
-            if (el2Ext is EL2SpecialTxExtension) {
+            val ext = exs.find { it is EifSpecialTxExtension }
+            if (ext is EifSpecialTxExtension) {
                 val eifBlockchainConfig = cfg.configData.rawConfig["eif"]?.toObject<EifBlockchainConfig>()
                         ?: throw UserMistake("No EIF config present")
                 if (eifBlockchainConfig.skipToHeight == BigInteger.ZERO) {
@@ -34,7 +34,7 @@ class EL2SynchronizationInfrastructureExtension(
 
                 val eifConfig = EifConfig.fromAppConfig(postchainContext.appConfig)
                 val eventProcessor = initializeEventProcessor(eifBlockchainConfig, engine, eifConfig)
-                el2Ext.useEventProcessor(eventProcessor)
+                ext.useEventProcessor(eventProcessor)
                 eventProcessors[cfg.blockchainRid.toHex()] = eventProcessor
             }
         }

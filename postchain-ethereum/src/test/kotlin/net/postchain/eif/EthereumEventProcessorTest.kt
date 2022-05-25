@@ -1,12 +1,12 @@
-package net.postchain.el2
+package net.postchain.eif
 
 import assertk.assert
 import assertk.assertions.*
 import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
 import net.postchain.core.BlockchainEngine
-import net.postchain.ethereum.contracts.ChrL2
 import net.postchain.ethereum.contracts.TestToken
+import net.postchain.ethereum.contracts.TokenBridge
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.OpData
@@ -81,8 +81,8 @@ class EthereumEventProcessorTest {
     @Test
     fun `Deposit events on ethereum should be parsed and private validated`() {
         val initialMint = 50L
-        // Deploy ChrL2 contract
-        val chrL2 = ChrL2.deploy(web3j, transactionManager, gasProvider).send()
+        // Deploy token bridge contract
+        val bridge = TokenBridge.deploy(web3j, transactionManager, gasProvider).send()
 
         // Mock query for last eth block in this test
         val blockQueriesMock: BlockQueries = mock {
@@ -92,23 +92,23 @@ class EthereumEventProcessorTest {
             on { getBlockQueries() } doReturn blockQueriesMock
         }
 
-        val contractDeployTransactionHash = chrL2.transactionReceipt.get().transactionHash
+        val contractDeployTransactionHash = bridge.transactionReceipt.get().transactionHash
         val contractDeployBlockNumber = web3j.ethGetTransactionByHash(contractDeployTransactionHash)
             .send().result.blockNumber
         val ethereumEventProcessor =
-            EthereumEventProcessor(web3j, listOf(chrL2.contractAddress), BigInteger.ONE, contractDeployBlockNumber, engineMock).apply {
+            EthereumEventProcessor(web3j, listOf(bridge.contractAddress), BigInteger.ONE, contractDeployBlockNumber, engineMock).apply {
                 start()
             }
 
         // Deploy a test token that we mint and then approve transfer of coins to chrL2 contract
         val testToken = TestToken.deploy(web3j, transactionManager, gasProvider).send().apply {
             mint(Address(transactionManager.fromAddress), Uint256(BigInteger.valueOf(initialMint))).send()
-            approve(Address(chrL2.contractAddress), Uint256(BigInteger.valueOf(initialMint))).send()
+            approve(Address(bridge.contractAddress), Uint256(BigInteger.valueOf(initialMint))).send()
         }
 
         // Deposit to postchain
         for (i in 1..5) {
-            chrL2.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
+            bridge.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
         }
 
         Awaitility.await()
@@ -148,9 +148,9 @@ class EthereumEventProcessorTest {
         val max = BigInteger.TWO.pow(256) - BigInteger.valueOf(initialMint + 1)
         with (testToken) {
             mint(Address(transactionManager.fromAddress), Uint256(max)).send()
-            approve(Address(chrL2.contractAddress), Uint256(max)).send()
+            approve(Address(bridge.contractAddress), Uint256(max)).send()
         }
-        chrL2.deposit(Address(testToken.contractAddress), Uint256(max)).send()
+        bridge.deposit(Address(testToken.contractAddress), Uint256(max)).send()
 
         Awaitility.await()
             .atMost(Duration.ONE_MINUTE)
@@ -178,9 +178,9 @@ class EthereumEventProcessorTest {
     @Test
     fun `Events can be received from multiple contracts`() {
         val initialMint = 20L
-        // Deploy two ChrL2 contracts
-        val chrL2First = ChrL2.deploy(web3j, transactionManager, gasProvider).send()
-        val chrL2Second = ChrL2.deploy(web3j, transactionManager, gasProvider).send()
+        // Deploy two token bridge contracts
+        val bridgeFirst = TokenBridge.deploy(web3j, transactionManager, gasProvider).send()
+        val bridgeSecond = TokenBridge.deploy(web3j, transactionManager, gasProvider).send()
 
         // Mock query for last eth block in this test
         val blockQueriesMock: BlockQueries = mock {
@@ -190,10 +190,10 @@ class EthereumEventProcessorTest {
             on { getBlockQueries() } doReturn blockQueriesMock
         }
 
-        val contractDeployTransactionHash = chrL2First.transactionReceipt.get().transactionHash
+        val contractDeployTransactionHash = bridgeFirst.transactionReceipt.get().transactionHash
         val contractDeployBlockNumber = web3j.ethGetTransactionByHash(contractDeployTransactionHash)
                 .send().result.blockNumber
-        val contractAddresses = listOf(chrL2First.contractAddress, chrL2Second.contractAddress)
+        val contractAddresses = listOf(bridgeFirst.contractAddress, bridgeSecond.contractAddress)
         val ethereumEventProcessor =
                 EthereumEventProcessor(web3j, contractAddresses, BigInteger.ONE, contractDeployBlockNumber, engineMock).apply {
                     start()
@@ -202,13 +202,13 @@ class EthereumEventProcessorTest {
         // Deploy a test token that we mint and then approve transfer of coins to chrL2 contracts
         val testToken = TestToken.deploy(web3j, transactionManager, gasProvider).send().apply {
             mint(Address(transactionManager.fromAddress), Uint256(BigInteger.valueOf(initialMint))).send()
-            approve(Address(chrL2First.contractAddress), Uint256(BigInteger.TEN)).send()
-            approve(Address(chrL2Second.contractAddress), Uint256(BigInteger.TEN)).send()
+            approve(Address(bridgeFirst.contractAddress), Uint256(BigInteger.TEN)).send()
+            approve(Address(bridgeSecond.contractAddress), Uint256(BigInteger.TEN)).send()
         }
 
         // Deposit to postchain
-        chrL2First.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
-        chrL2Second.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
+        bridgeFirst.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
+        bridgeSecond.deposit(Address(testToken.contractAddress), Uint256(BigInteger.TEN)).send()
 
         // Verify we got both events from the different contracts
         Awaitility.await()

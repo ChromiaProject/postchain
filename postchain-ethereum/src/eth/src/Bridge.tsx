@@ -7,7 +7,7 @@ import { useQuery } from "react-query";
 
 import ERC20TokenArtifacts from "./artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import ERC721TokenArtifacts from "./artifacts/@openzeppelin/contracts/token/ERC721/ERC721.sol/ERC721.json";
-import ChrL2Artifacts from "./artifacts/contracts/ChrL2.sol/ChrL2.json";
+import BridgeArtifacts from "./artifacts/contracts/TokenBridge.sol/TokenBridge.json";
 
 import { restClient, gtxClient, util } from "postchain-client"
 import { hexZeroPad, keccak256 } from "ethers/lib/utils";
@@ -23,7 +23,7 @@ const client = gtxClient.createClient(
 )
 
 interface Props {
-  chrL2Address: string;
+  bridgeAddress: string;
   tokenAddress: string;
 }
 
@@ -41,7 +41,7 @@ const sendTnx = async (signer, to, calldata) => {
   })
 }
 
-const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAddress: string, chrL2Address: string, tokenType: string, tokenId: number}) => {
+const TokenInfo = ({ tokenAddress, bridgeAddress, tokenType, tokenId }: { tokenAddress: string, bridgeAddress: string, tokenType: string, tokenId: number}) => {
   const { library, account } = useWeb3React();
   const fetchTokenInfo = async () => {
     var tokenContract;
@@ -114,9 +114,9 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
     try {
       let data = await client.query('get_event_merkle_proof', { "eventHash": eventHash })
       let event = JSON.parse(JSON.stringify(data))
-      const chrl2 = new ethers.Contract(
-        chrL2Address,
-        ChrL2Artifacts.abi,
+      const bridge = new ethers.Contract(
+        bridgeAddress,
+        BridgeArtifacts.abi,
         library
       )
 
@@ -141,25 +141,25 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
         position: eventProof.position,
         merkleProofs: merkleProofs,
       }
-      const el2MerkleProof = event.el2MerkleProof
-      let extraMerkleProofs = new Array<String>(el2MerkleProof.extraMerkleProofs.length)
-      for (let i = 0; i < el2MerkleProof.extraMerkleProofs.length; i++) {
-        extraMerkleProofs[i] = "0x" + el2MerkleProof.extraMerkleProofs[i]
+      const extraMerkleProof = event.extraMerkleProof
+      let extraMerkleProofs = new Array<String>(extraMerkleProof.extraMerkleProofs.length)
+      for (let i = 0; i < extraMerkleProof.extraMerkleProofs.length; i++) {
+        extraMerkleProofs[i] = "0x" + extraMerkleProof.extraMerkleProofs[i]
       }
-      const el2Proof = {
-        el2Leaf: "0x" + el2MerkleProof.el2Leaf,
-        el2HashedLeaf: "0x" + el2MerkleProof.el2HashedLeaf,
-        el2Position: el2MerkleProof.el2Position,
-        extraRoot: "0x" + el2MerkleProof.extraRoot,
+      const extraProof = {
+        leaf: "0x" + extraMerkleProof.leaf,
+        hashedLeaf: "0x" + extraMerkleProof.hashedLeaf,
+        position: extraMerkleProof.position,
+        extraRoot: "0x" + extraMerkleProof.extraRoot,
         extraMerkleProofs: extraMerkleProofs,
       }
       var calldata
       if (tokenType === "ERC20") {
-        calldata = chrl2.interface.encodeFunctionData("withdrawRequest", [eventData, evtProof, blockHeader, sigs, signers, el2Proof])
+        calldata = bridge.interface.encodeFunctionData("withdrawRequest", [eventData, evtProof, blockHeader, sigs, signers, extraProof])
       } else {
-        calldata = chrl2.interface.encodeFunctionData("withdrawRequestNFT", [eventData, evtProof, blockHeader, sigs, signers, el2Proof])
+        calldata = bridge.interface.encodeFunctionData("withdrawRequestNFT", [eventData, evtProof, blockHeader, sigs, signers, extraProof])
       }
-      await sendTnx(signer, chrL2Address, calldata)
+      await sendTnx(signer, bridgeAddress, calldata)
     } catch (error) { 
       console.log(error)
     }
@@ -169,18 +169,18 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
     const signer = library.getSigner();
     const zeroPaddedEventHash = "0x" + eventHash
     try {
-      const chrl2 = new ethers.Contract(
-        chrL2Address,
-        ChrL2Artifacts.abi,
+      const bridge = new ethers.Contract(
+        bridgeAddress,
+        BridgeArtifacts.abi,
         library
       )
       var calldata
       if (tokenType === "ERC20") {
-        calldata = chrl2.interface.encodeFunctionData("withdraw", [zeroPaddedEventHash, account])
+        calldata = bridge.interface.encodeFunctionData("withdraw", [zeroPaddedEventHash, account])
       } else {
-        calldata = chrl2.interface.encodeFunctionData("withdrawNFT", [zeroPaddedEventHash, account])
+        calldata = bridge.interface.encodeFunctionData("withdrawNFT", [zeroPaddedEventHash, account])
       }
-      await sendTnx(signer, chrL2Address, calldata)
+      await sendTnx(signer, bridgeAddress, calldata)
     } catch (error) { 
       console.log(error)
     }
@@ -190,13 +190,13 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
     const signer = library.getSigner();
     const zeroPaddedEventHash = "0x" + eventHash
     try {
-      const chrl2 = new ethers.Contract(
-        chrL2Address,
-        ChrL2Artifacts.abi,
+      const bridge = new ethers.Contract(
+        bridgeAddress,
+        BridgeArtifacts.abi,
         library
       )
-      let calldata = chrl2.interface.encodeFunctionData("pendingWithdraw", [zeroPaddedEventHash])
-      await sendTnx(signer, chrL2Address, calldata)
+      let calldata = bridge.interface.encodeFunctionData("pendingWithdraw", [zeroPaddedEventHash])
+      await sendTnx(signer, bridgeAddress, calldata)
     } catch (e) { 
       console.log(e.Message)
     }
@@ -206,13 +206,13 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
     const signer = library.getSigner();
     const zeroPaddedEventHash = "0x" + eventHash
     try {
-      const chrl2 = new ethers.Contract(
-        chrL2Address,
-        ChrL2Artifacts.abi,
+      const bridge = new ethers.Contract(
+        bridgeAddress,
+        BridgeArtifacts.abi,
         library
       )
-      let calldata = chrl2.interface.encodeFunctionData("unpendingWithdraw", [zeroPaddedEventHash])
-      await sendTnx(signer, chrL2Address, calldata)
+      let calldata = bridge.interface.encodeFunctionData("unpendingWithdraw", [zeroPaddedEventHash])
+      await sendTnx(signer, bridgeAddress, calldata)
     } catch (e) { 
       console.log(e.Message)
     }
@@ -270,7 +270,7 @@ const TokenInfo = ({ tokenAddress, chrL2Address, tokenType, tokenId }: { tokenAd
   )
 }
 
-const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
+const Bridge = ({ bridgeAddress, tokenAddress}: Props) => {
   const { library, chainId, account } = useWeb3React()
   const [balance, setBalance] = useState(BigNumber.from(0))
   const [deposite, setDeposit] = useState(BigNumber.from(0))
@@ -344,9 +344,9 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
 
   useEffect(() => {
     const fetchDepositedTokenInfo = () => {
-      const chrl2 = new ethers.Contract(
-        chrL2Address,
-        ChrL2Artifacts.abi,
+      const bridge = new ethers.Contract(
+        bridgeAddress,
+        BridgeArtifacts.abi,
         library
       )
 
@@ -359,7 +359,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
         )
         tokenContract.balanceOf(account).then(setBalance).catch()
         setUnit(0)
-        chrl2._owners(tokenAddress, tokenId).then((owner: string) => {
+        bridge._owners(tokenAddress, tokenId).then((owner: string) => {
           if (owner === account) {
             setDeposit(BigNumber.from(1))
           }
@@ -372,7 +372,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
         )
         tokenContract.balanceOf(account).then(setBalance).catch()
         tokenContract.decimals().then(setUnit).catch()
-        chrl2._balances(tokenAddress).then(setDeposit).catch()
+        bridge._balances(tokenAddress).then(setDeposit).catch()
       }
     };
     try {
@@ -384,14 +384,14 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
   const depositTokens = async () => {
     const signer = library.getSigner()
     try {
-      const chrl2 = new ethers.Contract(
-        chrL2Address,
-        ChrL2Artifacts.abi,
+      const bridge = new ethers.Contract(
+        bridgeAddress,
+        BridgeArtifacts.abi,
         library
       )
       const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from(10).pow(unit))
-      const calldata = chrl2.interface.encodeFunctionData("deposit", [tokenAddress, value])
-      await sendTnx(signer, chrL2Address, calldata)
+      const calldata = bridge.interface.encodeFunctionData("deposit", [tokenAddress, value])
+      await sendTnx(signer, bridgeAddress, calldata)
     } catch (error) {
     }
   };
@@ -399,14 +399,14 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
   const depositNFTokens = async () => {
     const signer = library.getSigner()
     try {
-      const chrl2 = new ethers.Contract(
-        chrL2Address,
-        ChrL2Artifacts.abi,
+      const bridge = new ethers.Contract(
+        bridgeAddress,
+        BridgeArtifacts.abi,
         library
       )
       const id = ethers.BigNumber.from(tokenId)
-      const calldata = chrl2.interface.encodeFunctionData("depositNFT", [tokenAddress, id])
-      await sendTnx(signer, chrL2Address, calldata)
+      const calldata = bridge.interface.encodeFunctionData("depositNFT", [tokenAddress, id])
+      await sendTnx(signer, bridgeAddress, calldata)
     } catch (error) {
     }
   };
@@ -416,7 +416,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
     try {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20TokenArtifacts.abi, library)
       const value = ethers.BigNumber.from(amount).mul(ethers.BigNumber.from(10).pow(unit))
-      const calldata = tokenContract.interface.encodeFunctionData("approve", [chrL2Address, value])
+      const calldata = tokenContract.interface.encodeFunctionData("approve", [bridgeAddress, value])
       await sendTnx(signer, tokenAddress, calldata)
     } catch (error) {
     }
@@ -426,7 +426,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
     const signer = library.getSigner();
     try {
       const tokenContract = new ethers.Contract(tokenAddress, ERC721TokenArtifacts.abi, library)
-      const calldata = tokenContract.interface.encodeFunctionData("setApprovalForAll", [chrL2Address, true])
+      const calldata = tokenContract.interface.encodeFunctionData("setApprovalForAll", [bridgeAddress, true])
       await sendTnx(signer, tokenAddress, calldata)
     } catch (error) {
     }
@@ -460,7 +460,7 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
       )}
 
       <div className="flex items-center w-full px-4 py-10 bg-cover card bg-base-200">
-        <TokenInfo tokenAddress={tokenAddress} chrL2Address={chrL2Address} tokenType={tokenType} tokenId={tokenId}/>
+        <TokenInfo tokenAddress={tokenAddress} bridgeAddress={bridgeAddress} tokenType={tokenType} tokenId={tokenId}/>
 
         <div className="text-center shadow-2xl card">
           <div className="card-body">
@@ -543,4 +543,4 @@ const ChrL2Contract = ({ chrL2Address, tokenAddress}: Props) => {
   );
 };
 
-export default ChrL2Contract;
+export default Bridge;
