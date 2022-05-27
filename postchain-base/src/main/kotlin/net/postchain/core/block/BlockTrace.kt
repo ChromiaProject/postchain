@@ -2,6 +2,7 @@ package net.postchain.core.block
 
 import mu.KLogging
 import net.postchain.common.toHex
+import net.postchain.debug.BlockchainProcessName
 
 /**
  * READ THIS BEFORE DELETING THIS CLASS!

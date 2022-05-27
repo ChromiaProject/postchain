@@ -53,7 +53,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     /**
      * Create a set of signers and replicas for the given chainID.
      */
-    @Deprecated("Should conform with Setup arch.", replaceWith= ReplaceWith("NodeSetup", "net.postchain.devtools.utils.configuration.NodeSetup"))
+    @Deprecated("Should conform with Setup arch. Use this: \"net.postchain.devtools.utils.configuration.NodeSetup\"")
     inner class NodeSet(val chain: Long, val signers: Set<Int>, val replicas: Set<Int>) {
         val size: Int = signers.size + replicas.size
         fun contains(i: Int) = signers.contains(i) || replicas.contains(i)

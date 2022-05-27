@@ -14,7 +14,7 @@ import net.postchain.network.CommunicationManager
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import net.postchain.network.common.ConnectionManager
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 
 class DefaultPeerCommunicationManager<PacketType>(
         val connectionManager: ConnectionManager,

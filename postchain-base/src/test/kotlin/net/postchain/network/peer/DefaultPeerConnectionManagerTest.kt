@@ -20,7 +20,7 @@ import net.postchain.network.common.LazyPacket
 import net.postchain.network.common.NodeConnector
 import net.postchain.network.netty2.NettyPeerConnection
 import net.postchain.network.util.peerInfoFromPublicKey
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

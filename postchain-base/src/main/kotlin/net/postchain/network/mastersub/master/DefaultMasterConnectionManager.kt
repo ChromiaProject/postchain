@@ -9,7 +9,7 @@ import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.master.netty.NettyMasterConnector
 import net.postchain.network.mastersub.protocol.MsCodec
 import net.postchain.network.mastersub.protocol.MsMessage
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 
 /**
  * Enables the master node to pass on messages to one sub-node.

@@ -8,7 +8,7 @@ import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.managed.DirectoryDataSource
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 import java.nio.file.Path
 
 interface MasterSyncInfra : SynchronizationInfrastructure {

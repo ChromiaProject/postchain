@@ -18,7 +18,7 @@ import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
 import net.postchain.network.common.*
 import net.postchain.network.peer.*
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(

@@ -15,7 +15,7 @@ import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 
 class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 

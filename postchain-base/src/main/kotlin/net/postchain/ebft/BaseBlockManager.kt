@@ -10,7 +10,7 @@ import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 import nl.komponents.kovenant.Promise
 
 /**

@@ -15,7 +15,7 @@ import net.postchain.network.mastersub.protocol.*
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 import java.util.*
 
 /**

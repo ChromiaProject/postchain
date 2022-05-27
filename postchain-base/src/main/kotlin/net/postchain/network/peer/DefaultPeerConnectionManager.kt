@@ -16,7 +16,7 @@ import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 import net.postchain.network.common.*
 import net.postchain.network.netty2.NettyPeerConnector
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 
 /**
  * Default implementation for "peer" based networks (which EBFT is).

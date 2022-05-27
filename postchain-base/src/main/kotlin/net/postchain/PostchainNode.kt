@@ -10,11 +10,11 @@ import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Shutdownable
-import net.postchain.debug.DefaultNodeDiagnosticContext
-import net.postchain.devtools.NameHelper.peerName
 import net.postchain.core.block.BlockTrace
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.devtools.NameHelper.peerName
 import nl.komponents.kovenant.Kovenant
 
 /**

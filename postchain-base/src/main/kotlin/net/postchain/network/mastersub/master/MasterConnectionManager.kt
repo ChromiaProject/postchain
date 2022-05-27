@@ -2,7 +2,7 @@ package net.postchain.network.mastersub.master
 
 import net.postchain.core.Shutdownable
 import net.postchain.network.mastersub.protocol.MsMessage
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 
 /**
  * [MasterConnectionManager] enables us work with a sub node.

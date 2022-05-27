@@ -16,7 +16,7 @@ import net.postchain.network.mastersub.protocol.MsDataMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.subnode.netty.NettySubConnector
 import net.postchain.network.peer.XChainPeersConfiguration
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule

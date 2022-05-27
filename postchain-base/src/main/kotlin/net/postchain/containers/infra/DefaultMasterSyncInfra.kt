@@ -12,7 +12,7 @@ import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 import java.nio.file.Path
 
 

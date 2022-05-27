@@ -14,8 +14,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.core.block.*
-import net.postchain.core.*
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 
 open class BaseBlockchainInfrastructure(
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,

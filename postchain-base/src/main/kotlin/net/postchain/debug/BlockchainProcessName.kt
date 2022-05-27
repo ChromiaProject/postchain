@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.core.block
+package net.postchain.debug
 
 import net.postchain.common.BlockchainRid
 

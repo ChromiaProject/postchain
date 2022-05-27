@@ -8,6 +8,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.*
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
 import java.util.*

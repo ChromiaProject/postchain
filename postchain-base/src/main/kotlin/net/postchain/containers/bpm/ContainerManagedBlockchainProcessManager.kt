@@ -23,7 +23,7 @@ import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.core.block.BlockTrace
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 
 open class ContainerManagedBlockchainProcessManager(

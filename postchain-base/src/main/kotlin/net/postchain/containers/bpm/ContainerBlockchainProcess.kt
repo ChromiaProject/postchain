@@ -7,7 +7,7 @@ import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.MasterCommunicationManager
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 import java.nio.file.Path
 
 interface ContainerBlockchainProcess : HeartbeatListener {

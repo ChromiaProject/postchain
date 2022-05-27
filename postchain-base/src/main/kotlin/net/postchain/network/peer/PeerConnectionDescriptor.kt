@@ -5,7 +5,7 @@ import net.postchain.core.NodeRid
 import net.postchain.network.IdentPacketInfo
 import net.postchain.network.common.ConnectionDescriptor
 import net.postchain.network.common.ConnectionDirection
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 
 /**
  * Describes a peer-2-peer connection

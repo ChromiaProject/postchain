@@ -7,7 +7,7 @@ import net.postchain.containers.api.MasterApiInfra
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.managed.DirectoryDataSource
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 import java.nio.file.Path
 
 open class DefaultMasterBlockchainInfra(

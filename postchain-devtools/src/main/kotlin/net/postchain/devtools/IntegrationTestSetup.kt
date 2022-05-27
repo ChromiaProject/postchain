@@ -214,8 +214,8 @@ open class IntegrationTestSetup : AbstractIntegration() {
     ) {
         sysSetup.nodeMap.values.forEach { nodeSetup ->
             nodeSetup.chainsToSign.forEach { chainIid ->
-                val x = testNodeMap[nodeSetup.sequenceNumber]
-                val process = x!!.getBlockchainInstance(chainIid.toLong())
+                val testNode = testNodeMap[nodeSetup.sequenceNumber]
+                val process = testNode!!.getBlockchainInstance(chainIid.toLong())
                 await.until {
                     if (process is ValidatorBlockchainProcess) {
                         !process.syncManager.isInFastSync()

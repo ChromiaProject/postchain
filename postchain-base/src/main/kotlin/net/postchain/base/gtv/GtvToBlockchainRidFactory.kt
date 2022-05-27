@@ -8,9 +8,6 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
-/**
- * TODO: [Olle] Not entierly clean to have this in here, since GTV should be ignorant about Postchain's
- */
 object GtvToBlockchainRidFactory {
 
     val cryptoSystem = Secp256K1CryptoSystem()

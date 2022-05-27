@@ -7,7 +7,7 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.network.CommunicationManager
-import net.postchain.core.block.BlockchainProcessName
+import net.postchain.debug.BlockchainProcessName
 
 /**
  * This is a transitional class to hide away clutter from EBFTSynchronizationInfrastructure. There's
