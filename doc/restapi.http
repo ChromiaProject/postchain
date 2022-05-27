@@ -90,3 +90,26 @@ Content-Type: application/json
 }
 
 ###
+
+GET {{baseURL}}/node/{{blockchainRid}}/height
+Accept: application/json
+
+###
+
+GET {{baseURL}}/node/{{blockchainRid}}/my_status
+Accept: application/json
+
+###
+
+GET {{baseURL}}/node/{{blockchainRid}}/statuses
+Accept: application/json
+
+###
+
+GET {{baseURL}}/_debug
+
+###
+
+GET {{baseURL}}/brid/iid_{{chainIid}}
+
+###

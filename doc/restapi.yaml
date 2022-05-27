@@ -514,6 +514,125 @@ paths:
                 unknownError:
                   value:
                     error: "Unknown error"
+  /node/{blockchainRid}/height:
+    get:
+      summary: Query current block height
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - blockHeight
+                properties:
+                  blockHeight:
+                    type: integer
+                    format: int64
+              example:
+                blockHeight: 4711
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /node/{blockchainRid}/my_status:
+    get:
+      summary: Query node status
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/nodeStatus"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /node/{blockchainRid}/statuses:
+    get:
+      summary: Query node status
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/nodeStatus"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /_debug:
+    get:
+      summary: Get node debug information
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/nodeDebug"
+                  - $ref: "#/components/schemas/noDebug"
+  /brid/iid_{chainIid}:
+    get:
+      summary: Get blockchain RID
+      parameters:
+        - name: chainIid
+          description: Chain Iid
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 100
+      responses:
+        200:
+          description: |
+            OK. The response is actually an unquoted string, and thus not valid JSON.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/hash"
+              example: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with chain Iid: <iid> in DB. Did you add this BC to the node?"
 
 components:
   parameters:
@@ -647,6 +766,86 @@ components:
         type: "my_query"
         arg1: 17,
         arg2: "foo"
+    nodeDebug:
+      type: object
+      required:
+        - version
+        - pub-key
+        - blockchain-infra
+        - blockchain
+      properties:
+        version:
+          type: string
+          example: "3.5.0"
+        pub-key:
+          $ref: "#/components/schemas/hexString"
+        blockchain-infra:
+          type: string
+          example: "BaseBlockchainInfrastructure"
+        blockchain:
+          type: array
+          items:
+            type: object
+            required:
+              - BLOCKCHAIN_RID
+              - BLOCKCHAIN_NODE_TYPE
+              - BLOCKCHAIN_CURRENT_HEIGHT
+              - BLOCKCHAIN_NODE_PEERS
+            properties:
+              BLOCKCHAIN_RID:
+                $ref: "#/components/schemas/hash"
+              BLOCKCHAIN_NODE_TYPE:
+                type: string
+                enum:
+                  - "Validator"
+                  - "Replica"
+                  - "Historic Replica"
+              BLOCKCHAIN_CURRENT_HEIGHT:
+                type: integer
+                format: int64
+              BLOCKCHAIN_NODE_PEERS:
+                type: object
+    noDebug:
+      type: object
+      required:
+        - Error
+      properties:
+        Error:
+          type: string
+      example:
+        Error: "Debug mode is not enabled. Use --debug cli option to enable it."
+    nodeStatus:
+      type: object
+      required:
+        - state
+        - height
+        - serial
+        - round
+        - revolting
+      properties:
+        state:
+          type: string
+          enum:
+            - WaitBlock // PBFT: before PRE-PREPARE
+            - HaveBlock // PBFT: after PRE-PREPARE, PREPARE message is sent
+            - Prepared  // PBFT: _prepared_ state, COMMIT message is sent
+        height:
+          type: integer
+          format: int64
+        serial:
+          type: integer
+          format: int64
+        round:
+          type: integer
+          format: int64
+        revolting:
+          type: boolean
+      example:
+        state: "WaitBlock"
+        height: 4711
+        serial: 135639938065
+        round: 0
+        revolting: false
     error:
       type: object
       required:
