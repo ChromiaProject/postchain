@@ -179,7 +179,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/txStatus"
+                oneOf:
+                  - $ref: "#/components/schemas/unknown"
+                  - $ref: "#/components/schemas/waiting"
+                  - $ref: "#/components/schemas/confirmed"
+                  - $ref: "#/components/schemas/rejected"
+                discriminator:
+                  propertyName: status
         404:
           description: Not found
           content:
@@ -651,7 +657,7 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/hash"
-      example: "76306EE32E46DE5A4CD369CB6697EF53FB804D0E40E3BB97076D094EE2FA4BD3"
+      example: "868F5C1BDF086BE6300233B820E1119484665A350CE4C05811D328EFECB6FE93"
     blockRid:
       name: blockRid
       description: Hex encoded block RID
@@ -669,7 +675,8 @@ components:
         tx:
           type: string
           pattern: "[0-9a-fA-F]{2,}"
-          description: Hex encoded GTV transaction
+          description: Hex encoded GTX transaction
+          example: "A581B83081B5A56B3069A12204200398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5A51A3018A5163014A20E0C0C6D795F6F7065726174696F6EA5023000A5273025A1230421032BF0FCF83A287FB5EC71E4DAEA5DE892804A5BBBED6130DBCDDB871015C34EA0A5463044A14204404B425779BF8BD5ED503837337BBE102B7013F791F3BCFB812726EA93E076A3267656EC773AA10617E1ABDB25E97AB1CF2992CDB3E059D668C90BDA6BB91FE836"
     txInfo:
       type: object
       required:
@@ -699,7 +706,7 @@ components:
           $ref: "#/components/schemas/byteArray"
         txData:
           $ref: "#/components/schemas/byteArray"
-    txStatus:
+    unknown:
       type: object
       required:
         - status
@@ -708,8 +715,33 @@ components:
           type: string
           enum:
             - "unknown"
+    waiting:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
             - "waiting"
+    confirmed:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
             - "confirmed"
+    rejected:
+      type: object
+      required:
+        - status
+        - rejectReason
+      properties:
+        status:
+          type: string
+          enum:
             - "rejected"
         rejectReason:
           type: string
