@@ -266,8 +266,10 @@ class RestApi(
                 handleDebugQuery(request)
             }
 
-            http.get("/brid/$PARAM_BLOCKCHAIN_RID") { request, _ ->
-                checkBlockchainRID(request)
+            http.get("/brid/$PARAM_BLOCKCHAIN_RID") { request, response ->
+                val brid = checkBlockchainRID(request)
+                response.type("text/plain")
+                brid
             }
         }
 
