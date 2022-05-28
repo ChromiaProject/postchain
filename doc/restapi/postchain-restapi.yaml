@@ -3,9 +3,6 @@ info:
   title: Postchain REST API
   description: Postchain REST API
   version: 3.5.0
-servers:
-  - url: http://localhost:7740
-    description: Postchain node running locally on default port
 paths:
   /tx/{blockchainRid}:
     post:
@@ -478,8 +475,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /query_gtx/{blockchainRid}:
     post:
-      summary: Make GTX queries
-      description: Make GTX queries to a chain
+      summary: Make GTV encoded queries
+      description: Make GTV encoded queries to a chain
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -493,7 +490,7 @@ paths:
                 queries:
                   type: array
                   items:
-                    $ref: "#/components/schemas/hexString"
+                    $ref: "#/components/schemas/gtv"
               example:
                 queries:
                   - "A52E302CA20A0C086D795F7175657279A41E301C300B0C0461726731A303020111300D0C0461726732A2050C03666F6F"
@@ -506,10 +503,10 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/hexString"
+                  $ref: "#/components/schemas/gtv"
               example:
-                - "1234ABCD"
-                - "5678CDEF"
+                - "A5023000"
+                - "A5025060"
         400:
           description: Invalid query
           content:
@@ -816,7 +813,7 @@ components:
       additionalProperties: true
       example:
         type: "my_query"
-        arg1: 17,
+        arg1: 17
         arg2: "foo"
     nodeDebug:
       type: object
@@ -829,7 +826,9 @@ components:
         version:
           type: string
         pub-key:
-          $ref: "#/components/schemas/hexString"
+          type: string
+          pattern: "[0-9a-fA-F]"
+          description: "Hex encoded public key"
         blockchain-infra:
           type: string
         blockchain:
@@ -920,9 +919,10 @@ components:
     hash:
       type: string
       pattern: "[0-9a-fA-F]{64}"
-    hexString:
+    gtv:
       type: string
-      pattern: "[0-9a-fA-F]"
+      pattern: "[0-9a-fA-F]{2,}"
+      description: Hex encoded GTV data
     byteArray:
       type: array
       items:
