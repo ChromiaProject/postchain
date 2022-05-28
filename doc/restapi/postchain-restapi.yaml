@@ -3,6 +3,9 @@ info:
   title: Postchain REST API
   description: Postchain REST API
   version: 3.5.0
+servers:
+  - url: http://localhost:7740
+    description: Postchain node running locally on default port
 paths:
   /tx/{blockchainRid}:
     post:
@@ -186,6 +189,20 @@ paths:
                   - $ref: "#/components/schemas/rejected"
                 discriminator:
                   propertyName: status
+              examples:
+                unknown:
+                  value:
+                    status: unknown
+                waiting:
+                  value:
+                    status: waiting
+                confirmed:
+                  value:
+                    status: confirmed
+                rejected:
+                  value:
+                    status: rejected
+                    rejectReason: "[module:operation(dapp/module/module.rell:17)] Operation 'module:operation' failed: Requirement error"
         404:
           description: Not found
           content:
@@ -490,6 +507,9 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/hexString"
+              example:
+                - "1234ABCD"
+                - "5678CDEF"
         400:
           description: Invalid query
           content:
@@ -574,7 +594,7 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /node/{blockchainRid}/statuses:
     get:
-      summary: Query node status
+      summary: Query nodes status
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -808,12 +828,10 @@ components:
       properties:
         version:
           type: string
-          example: "3.5.0"
         pub-key:
           $ref: "#/components/schemas/hexString"
         blockchain-infra:
           type: string
-          example: "BaseBlockchainInfrastructure"
         blockchain:
           type: array
           items:
@@ -837,6 +855,15 @@ components:
                 format: int64
               BLOCKCHAIN_NODE_PEERS:
                 type: object
+      example:
+        version: "3.5.0"
+        pub-key: "0288BDC8ED1FDE8A5E58179E7B1F60EE0700557435E5D3DA89CFA9EE62B5640DD2"
+        blockchain-infra: "BaseBlockchainInfrastructure"
+        blockchain:
+          - BLOCKCHAIN_RID: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
+            BLOCKCHAIN_NODE_TYPE: "Validator"
+            BLOCKCHAIN_CURRENT_HEIGHT: 17
+            BLOCKCHAIN_NODE_PEERS: { }
     noDebug:
       type: object
       required:
@@ -858,9 +885,13 @@ components:
         state:
           type: string
           enum:
-            - WaitBlock // PBFT: before PRE-PREPARE
-            - HaveBlock // PBFT: after PRE-PREPARE, PREPARE message is sent
-            - Prepared  // PBFT: _prepared_ state, COMMIT message is sent
+            - "WaitBlock"
+            - "HaveBlock"
+            - "Prepared"
+          description: |
+            * WaitBlock - before PRE-PREPARE
+            * HaveBlock - after PRE-PREPARE, PREPARE message is sent
+            * Prepared - _prepared_ state, COMMIT message is sent
         height:
           type: integer
           format: int64
