@@ -89,7 +89,7 @@ class RemoteConfigHeartbeatListener(
             is MsHeartbeatMessage -> {
                 onHeartbeat(HeartbeatEvent(message.timestamp))
 
-                // Reply with subnode status message. For tests only.
+                // Reply with subnode status message.
                 val height = withReadConnection(storage, chainId) { ctx ->
                     DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
                 }
