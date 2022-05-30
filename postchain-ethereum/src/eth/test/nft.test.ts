@@ -5,7 +5,7 @@ import { TokenBridge__factory, ERC721Mock__factory } from "../src/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
 import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
-import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash } from "./utils"
+import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, hashGtvIntegerLeaf, postchainMerkleNodeHash } from "./utils"
 import { intToHex } from "ethjs-util";
 
 
@@ -122,13 +122,15 @@ describe("Non Fungible Token", () => {
                 // This merkle root is calculated in the postchain code
                 let extraDataMerkleRoot = "3E1A07BE17191304303E3150D7C8291AC1519841A196099C2FA446EBAD516329"
 
+                let timestamp = 1629878444220
+                let height = 46
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
                 let node12 = postchainMerkleNodeHash([0x00, node1, node2])
                 let node3 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
-                let node4 = keccak256(DecodeHexStringToByteArray("1629878444220"))
+                let node4 = hashGtvIntegerLeaf(timestamp)
                 let node34 = postchainMerkleNodeHash([0x00, node3, node4])
-                let node5 = keccak256(DecodeHexStringToByteArray("46"))
+                let node5 = hashGtvIntegerLeaf(height)
                 let node6 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
                 let node56 = postchainMerkleNodeHash([0x00, node5, node6])
                 let node1234 = postchainMerkleNodeHash([0x00, node12, node34])
@@ -136,9 +138,11 @@ describe("Non Fungible Token", () => {
 
                 let blockRid = postchainMerkleNodeHash([0x7, node1234, node5678])
                 let blockHeader: BytesLike = ''
+                let ts = hexZeroPad(intToHex(timestamp), 32)
+                let h = hexZeroPad(intToHex(height), 32)
                 blockHeader = blockHeader.concat(blockchainRid, blockRid.substring(2, blockRid.length), previousBlockRid,
                                     merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
-                                    node4.substring(2, node4.length), node5.substring(2, node5.length),
+                                    ts.substring(2, ts.length), h.substring(2, h.length),
                                     dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
                                     extraDataMerkleRoot
                 )
@@ -209,7 +213,7 @@ describe("Non Fungible Token", () => {
                 let maliciousBlockHeader: BytesLike = ''
                 maliciousBlockHeader = maliciousBlockHeader.concat(blockchainRid, maliciousBlockRid.substring(2, maliciousBlockRid.length), previousBlockRid, 
                                     merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
-                                    node4.substring(2, node4.length), node5.substring(2, node5.length),
+                                    ts.substring(2, ts.length), h.substring(2, h.length),
                                     dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
                                     extraDataMerkleRoot
                 )

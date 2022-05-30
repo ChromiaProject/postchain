@@ -51,12 +51,13 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
         uint accountNumber;
     }
 
-    mapping(IERC20 => uint256) public _balances;
-    mapping(IERC721 => mapping(uint256 => address)) public _owners;
+    mapping (IERC20 => uint256) public _balances;
+    mapping (IERC721 => mapping(uint256 => address)) public _owners;
     mapping (bytes32 => Withdraw) public _withdraw;
     mapping (bytes32 => WithdrawNFT) public _withdrawNFT;
-    mapping(address => bool) validatorMap;
-    address[] public validators;
+    mapping (uint => mapping(address => bool)) validatorMap;
+    mapping (uint => address[]) public validators; // postchain block height => validators
+    uint[] public validatorHeights;
 
     // Each postchain event will be used to claim only one time.
     mapping (bytes32 => bool) private _events;
@@ -93,8 +94,8 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
         Status status;
     }
 
-    event ValidatorAdded(address indexed _validator);
-    event ValidatorRemoved(address indexed _validator);
+    event ValidatorAdded(uint height, address indexed _validator);
+    event ValidatorRemoved(uint height, address indexed _validator);
     event Deposited(AssetType indexed asset, bytes payload);
     event WithdrawRequest(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
@@ -103,41 +104,70 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
 
     function initialize(address[] memory _validators) public initializer {
         __Ownable_init();
-        validators = _validators;
+        validators[0] = _validators;
 
-        for (uint i = 0; i < validators.length; i++) {
-            validatorMap[validators[i]] = true;
+        for (uint i = 0; i < validators[0].length; i++) {
+            validatorMap[0][validators[0][i]] = true;
         }
+        validatorHeights.push(0);
     }
     
-    function isValidator(address _addr) public view returns (bool) {
-        return validatorMap[_addr];
+    function isValidator(uint _height, address _addr) public view returns (bool) {
+        return validatorMap[_height][_addr];
     }
     
-    function addValidator(address _validator) external onlyOwner {
-        require(!validatorMap[_validator]);
-        validators.push(_validator);
-        validatorMap[_validator] = true;
-        emit ValidatorAdded(_validator);
+    function addValidator(uint _height, address _validator) external onlyOwner {
+        if (_height < validatorHeights[validatorHeights.length-1]) {
+            revert("TokenBridge: cannot update previous heights' validator");
+        } else if (_height > validatorHeights[validatorHeights.length-1]) {
+            validatorHeights.push(_height);
+        }
+        require(!validatorMap[_height][_validator]);
+        validators[_height].push(_validator);
+        validatorMap[_height][_validator] = true;
+        emit ValidatorAdded(_height, _validator);
     }
 
-    function removeValidator(address _validator) external onlyOwner {
-        require(isValidator(_validator));
+    function removeValidator(uint _height, address _validator) external onlyOwner {
+        if (_height < validatorHeights[validatorHeights.length-1]) {
+            revert("TokenBridge: cannot update previous heights' validator");
+        }
+        require(isValidator(_height, _validator));
         uint index;
-        uint validatorCount = validators.length;
+        uint validatorCount = validators[_height].length;
         for (uint i = 0; i < validatorCount; i++) {
-            if (validators[i] == _validator) {
+            if (validators[_height][i] == _validator) {
                 index = i;
                 break;
             }
         }
 
-        validatorMap[_validator] = false;
-        validators[index] = validators[validatorCount - 1];
-        validators.pop();
+        validatorMap[_height][_validator] = false;
+        validators[_height][index] = validators[_height][validatorCount - 1];
+        validators[_height].pop();
 
-        emit ValidatorRemoved(_validator);
-  }
+        emit ValidatorRemoved(_height, _validator);
+    }
+
+    function getValidatorHeight(uint _height) external view returns (uint) {
+        return _getValidatorHeight(_height);
+    }
+
+    function _getValidatorHeight(uint _height) internal view returns (uint) {
+        uint lastIndex = validatorHeights.length-1;
+        uint lastHeight = validatorHeights[lastIndex];
+        if (_height >= lastHeight) {
+            return lastHeight;
+        } else {
+            for (uint i = lastIndex; i > 0; i--) {
+                if (_height < validatorHeights[i] && _height >= validatorHeights[i-1]) {
+                    return validatorHeights[i-1];
+                }
+            }
+            return 0;
+        }
+    }
+
     /**
      * @dev See {IERC721Receiver-onERC721Received}.
      *
@@ -281,8 +311,8 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
     ) internal view {
         require(_events[eventProof.leaf] == false, "TokenBridge: event hash was already used");
         {
-            (bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, extraProof);
-            if (!isValidSignatures(blockRid, sigs, signers)) revert("TokenBridge: block signature is invalid");
+            (uint height, bytes32 blockRid, bytes32 eventRoot, ) = Postchain.verifyBlockHeader(blockHeader, extraProof);
+            if (!isValidSignatures(_getValidatorHeight(height), blockRid, sigs, signers)) revert("TokenBridge: block signature is invalid");
             if (!MerkleProof.verify(eventProof.merkleProofs, eventProof.leaf, eventProof.position, eventRoot)) revert("TokenBridge: invalid merkle proof");
         }
         return;
@@ -347,13 +377,13 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
         emit WithdrawalNFT(beneficiary, wd.nft, tokenId);
     }
 
-    function isValidSignatures(bytes32 hash, bytes[] memory signatures, address[] memory signers) internal view returns (bool) {
+    function isValidSignatures(uint height, bytes32 hash, bytes[] memory signatures, address[] memory signers) internal view returns (bool) {
         uint _actualSignature = 0;
-        uint _requiredSignature = _calculateBFTRequiredNum(validators.length);
+        uint _requiredSignature = _calculateBFTRequiredNum(validators[height].length);
         address _lastSigner = address(0);
         for (uint i = 0; i < signatures.length; i++) {
             for (uint k = 0; k < signers.length; k++) {
-                require(isValidator(signers[k]), "TokenBridge: signer is not validator");
+                require(isValidator(height, signers[k]), "TokenBridge: signer is not validator");
                 if (_isValidSignature(hash, signatures[i], signers[k])) {
                     _actualSignature++;
                     require(signers[k] > _lastSigner, "TokenBridge: duplicate signature or signers is out of order");

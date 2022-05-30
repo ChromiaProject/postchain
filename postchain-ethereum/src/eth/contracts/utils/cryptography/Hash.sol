@@ -36,4 +36,30 @@ library Hash {
                 value
         ));
     }
+
+    function hashGtvIntegerLeaf(uint value) internal pure returns (bytes32) {
+        uint8 nbytes = 1;
+        uint remainingValue = value >> 8; // minimal length is 1 so we skip the first byte
+        while (remainingValue > 0) {
+            nbytes += 1;
+            remainingValue = remainingValue >> 8;
+        }
+        bytes memory b = new bytes(nbytes);
+        remainingValue = value;
+        for (uint8 i = 1; i <= nbytes; i++) {
+            uint8 v = uint8(remainingValue & 0xFF);
+            b[nbytes - i] = bytes1(v);
+            remainingValue = remainingValue >> 8;
+        }
+
+        return sha256(abi.encodePacked(
+                uint8(0x1),  // Gtv merkle tree leaf prefix
+                uint8(0xA3), // GtvInteger tag: CONTEXT_CLASS, CONSTRUCTED, 3
+                uint8(nbytes + 2),
+                uint8(0x2), // DER integer tag
+                nbytes,
+                b
+            ));
+    }
+
 }
