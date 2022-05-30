@@ -198,6 +198,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
+            // undocumented
             http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/confirmationProof", redirectGet { request, _ ->
                 val result = runTxActionOnModel(request) { model, txRID ->
                     model.getConfirmationProof(txRID)
