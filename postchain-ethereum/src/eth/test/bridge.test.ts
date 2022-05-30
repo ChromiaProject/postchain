@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
 import { ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
-import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, postchainMerkleNodeHash} from "./utils"
+import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, hashGtvIntegerLeaf, postchainMerkleNodeHash} from "./utils"
 
 chai.use(solidity);
 const { expect } = chai;
@@ -143,16 +143,16 @@ describe("Token Bridge Test", () => {
             const [node1, node2, node3, other] = await ethers.getSigners()
             const bridge = new TokenBridge__factory(admin).attach(bridgeAddress)
             const otherbridge = new TokenBridge__factory(other).attach(bridgeAddress)
-            await expect(otherbridge.addValidator(node1.address)).to.be.revertedWith("Ownable: caller is not the owner")
+            await expect(otherbridge.addValidator(0, node1.address)).to.be.revertedWith("Ownable: caller is not the owner")
             // Update App Nodes
-            await bridge.removeValidator(validator1.address)
-            await bridge.removeValidator(validator2.address)
-            await bridge.addValidator(node1.address)
-            await bridge.addValidator(node2.address)
-            await bridge.addValidator(node3.address)
-            expect(await bridge.validators(0)).to.eq(node1.address)
-            expect(await bridge.validators(1)).to.eq(node2.address)
-            expect(await bridge.validators(2)).to.eq(node3.address)
+            await bridge.removeValidator(0, validator1.address)
+            await bridge.removeValidator(0, validator2.address)
+            await bridge.addValidator(0, node1.address)
+            await bridge.addValidator(0, node2.address)
+            await bridge.addValidator(0, node3.address)
+            expect(await bridge.validators(0, 0)).to.eq(node1.address)
+            expect(await bridge.validators(0, 1)).to.eq(node2.address)
+            expect(await bridge.validators(0, 2)).to.eq(node3.address)
         })
     })
 
@@ -256,9 +256,11 @@ describe("Token Bridge Test", () => {
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))
                 let node12 = postchainMerkleNodeHash([0x00, node1, node2])
                 let node3 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(merkleRootHash))
-                let node4 = keccak256(DecodeHexStringToByteArray("1629878444220"))
+                let timestamp = 1629878444220
+                let height = 46
+                let node4 = hashGtvIntegerLeaf(timestamp)
                 let node34 = postchainMerkleNodeHash([0x00, node3, node4])
-                let node5 = keccak256(DecodeHexStringToByteArray("46"))
+                let node5 = hashGtvIntegerLeaf(height)
                 let node6 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
                 let node56 = postchainMerkleNodeHash([0x00, node5, node6])
                 let node1234 = postchainMerkleNodeHash([0x00, node12, node34])
@@ -268,16 +270,18 @@ describe("Token Bridge Test", () => {
                 let maliciousBlockRid = postchainMerkleNodeHash([0x7, node1234, node1234])
                 let blockHeader: BytesLike = ''
                 let maliciousBlockHeader: BytesLike = ''
+                let ts = hexZeroPad(intToHex(timestamp), 32)
+                let h = hexZeroPad(intToHex(height), 32)
                 blockHeader = blockHeader.concat(blockchainRid, blockRid.substring(2, blockRid.length), previousBlockRid,
                                     merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
-                                    node4.substring(2, node4.length), node5.substring(2, node5.length),
+                                    ts.substring(2, ts.length), h.substring(2, h.length),
                                     dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
                                     extraDataMerkleRoot
                 )
 
                 maliciousBlockHeader = maliciousBlockHeader.concat(blockchainRid, maliciousBlockRid.substring(2, maliciousBlockRid.length), previousBlockRid, 
                                     merkleRootHashHashedLeaf.substring(2, merkleRootHashHashedLeaf.length),
-                                    node4.substring(2, node4.length), node5.substring(2, node5.length),
+                                    ts.substring(2, ts.length), h.substring(2, h.length),
                                     dependenciesHashedLeaf.substring(2, dependenciesHashedLeaf.length),
                                     extraDataMerkleRoot
                 )

@@ -33,8 +33,8 @@ library Postchain {
         bytes32 blockRid;
         bytes32 previousBlockRid;
         bytes32 merkleRootHashHashedLeaf;
-        bytes32 timestampHashedLeaf;
-        bytes32 heightHashedLeaf;
+        uint timestamp;
+        uint height;
         bytes32 dependenciesHashedLeaf;
         bytes32 extraDataHashedLeaf;
     }
@@ -62,19 +62,19 @@ library Postchain {
     function verifyBlockHeader(
         bytes memory blockHeader,
         Data.ExtraProofData memory proof
-    ) internal pure returns (bytes32, bytes32, bytes32) {
+    ) internal pure returns (uint, bytes32, bytes32, bytes32) {
         require(Hash.hashGtvBytes64Leaf(proof.leaf) == proof.hashedLeaf, "Postchain: invalid EIF extra data");
-        (bytes32 blockRid, bytes32 extraDataHashedLeaf) = _decodeBlockHeader(blockHeader);
+        (uint height, bytes32 blockRid, bytes32 extraDataHashedLeaf) = _decodeBlockHeader(blockHeader);
         require(proof.extraRoot == extraDataHashedLeaf, "Postchain: invalid extra data root");
         if (!proof.extraMerkleProofs.verifySHA256(proof.hashedLeaf, proof.position, proof.extraRoot)) {
             revert("Postchain: invalid EIF extra merkle proof");
         }
-        return (blockRid, _bytesToBytes32(proof.leaf, 0), _bytesToBytes32(proof.leaf, 32));
+        return (height, blockRid, _bytesToBytes32(proof.leaf, 0), _bytesToBytes32(proof.leaf, 32));
     }
 
     function _decodeBlockHeader(
         bytes memory blockHeader
-    ) internal pure returns (bytes32, bytes32) {
+    ) internal pure returns (uint, bytes32, bytes32) {
         BlockHeaderData memory header = abi.decode(blockHeader, (BlockHeaderData));
 
         bytes32 node12 = sha256(abi.encodePacked(
@@ -86,12 +86,12 @@ library Postchain {
         bytes32 node34 = sha256(abi.encodePacked(
                 uint8(0x00),
                 header.merkleRootHashHashedLeaf,
-                header.timestampHashedLeaf
+                Hash.hashGtvIntegerLeaf(header.timestamp)
             ));
 
         bytes32 node56 = sha256(abi.encodePacked(
                 uint8(0x00),
-                header.heightHashedLeaf,
+                Hash.hashGtvIntegerLeaf(header.height),
                 header.dependenciesHashedLeaf
             ));
 
@@ -114,7 +114,7 @@ library Postchain {
             ));
 
         if (blockRid != header.blockRid) revert("Postchain: invalid block header");
-        return (blockRid, header.extraDataHashedLeaf);
+        return (header.height, blockRid, header.extraDataHashedLeaf);
     }
 
     function _bytesToBytes32(bytes memory b, uint offset) internal pure returns (bytes32) {
