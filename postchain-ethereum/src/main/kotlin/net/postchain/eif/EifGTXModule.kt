@@ -30,6 +30,7 @@ import net.postchain.gtx.SimpleGTXModule
 import org.spongycastle.jce.provider.BouncyCastleProvider
 import java.security.MessageDigest
 import java.security.Security
+import java.util.*
 
 const val PREFIX: String = "sys.x.eif"
 const val EIF: String = "eif"
@@ -189,7 +190,7 @@ private fun blockWitnessData(
 }
 
 private fun getProofListAndPosition(tree: MerkleProofElement): Pair<List<ByteArray>, Long> {
-    val proofs = mutableListOf<ByteArray>()
+    val proofs = LinkedList<ByteArray>()
     var position = 0L
     var currentNode = tree
 
@@ -202,11 +203,11 @@ private fun getProofListAndPosition(tree: MerkleProofElement): Pair<List<ByteArr
         val left = node.left
         val right = node.right
         if (right is ProofHashedLeaf) {
-            proofs.add(0, right.merkleHash)
+            proofs.addFirst(right.merkleHash)
             position *= 2
             currentNode = left
         } else if (left is ProofHashedLeaf) {
-            proofs.add(0, left.merkleHash)
+            proofs.addFirst(left.merkleHash)
             position = 2 * position + 1
             currentNode = right
         } else {
