@@ -7,6 +7,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.*
@@ -98,12 +99,11 @@ class RemoteConfigHeartbeatListener(
             }
 
             is MsNextBlockchainConfigMessage -> {
-                val configHash = message.configHash?.let { BlockchainRid(it).toHex() }
                 val details = "brid: ${BlockchainRid(message.blockchainRid).toShortHex()}, " +
                         "chainId: $chainId, " +
                         "height: ${message.nextHeight}, " +
                         "config length: ${message.rawConfig?.size}, " +
-                        "config hash: $configHash"
+                        "config hash: ${message.configHash?.toHex()}"
 
                 logger.debug { "$pref Remote BlockchainConfig received: $details" }
 
