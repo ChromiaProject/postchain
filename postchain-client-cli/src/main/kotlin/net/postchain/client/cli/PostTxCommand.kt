@@ -26,7 +26,7 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
     ))
             .multiple()
             .transformAll { args ->
-                args.flatMap { it.split(" ").map { arg -> encodeArg(arg) } }
+                args.map{ encodeArg(it) }
             }
 
     private val configFile by configFileOption()
