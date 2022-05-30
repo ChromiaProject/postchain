@@ -640,9 +640,9 @@ paths:
       responses:
         200:
           description: |
-            OK. The response is actually an unquoted string, and thus not valid JSON.
+            OK. The response is an unquoted string in plain/text format.
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: "#/components/schemas/hash"
               example: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
