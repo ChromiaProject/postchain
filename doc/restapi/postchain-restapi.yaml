@@ -1,7 +1,29 @@
 openapi: 3.0.3
 info:
   title: Postchain REST API
-  description: Postchain REST API
+  description: |
+    ## GTV
+    GTV (Generic Transfer Value) is DER encoded ASN.1 with this schema:
+    ```
+      Messages DEFINITIONS ::= BEGIN
+    
+        DictPair ::= SEQUENCE {
+          name UTF8String,
+          value RawGtv
+        }
+    
+        RawGtv ::= CHOICE {
+          null [0] NULL,
+          byteArray [1] OCTET STRING,
+          string [2] UTF8String,
+          integer [3] INTEGER,
+          dict [4] SEQUENCE OF DictPair,
+          array [5] SEQUENCE OF RawGtv,
+          bigInteger [6] INTEGER
+        }
+    
+      END
+    ```
   version: 3.5.0
 paths:
   /tx/{blockchainRid}:
@@ -490,7 +512,9 @@ paths:
                 queries:
                   type: array
                   items:
-                    $ref: "#/components/schemas/gtv"
+                    type: string
+                    pattern: "[0-9a-fA-F]{2,}"
+                    description: Hex encoded two element GTV array with the query name as first element (string) and the named parameters as second element (dict)
               example:
                 queries:
                   - "A52E302CA20A0C086D795F7175657279A41E301C300B0C0461726731A303020111300D0C0461726732A2050C03666F6F"
@@ -503,7 +527,9 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/gtv"
+                  type: string
+                  pattern: "[0-9a-fA-F]{2,}"
+                  description: Query result as hex encoded GTV value
               example:
                 - "A5023000"
                 - "A5025060"
@@ -919,10 +945,6 @@ components:
     hash:
       type: string
       pattern: "[0-9a-fA-F]{64}"
-    gtv:
-      type: string
-      pattern: "[0-9a-fA-F]{2,}"
-      description: Hex encoded GTV data
     byteArray:
       type: array
       items:
