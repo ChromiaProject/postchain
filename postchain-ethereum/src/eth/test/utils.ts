@@ -25,3 +25,22 @@ export function hashGtvBytes64Leaf (data: BytesLike): string {
     result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA1, 64+2, 0x4, 64, data])
     return result
 }
+
+export var hashGtvIntegerLeaf = function (num: number): string {
+    var result: string = ''
+    let nbytes = 1
+    let remainingValue = Math.trunc(num / 256)
+    while (remainingValue > 0) {
+        nbytes += + 1
+        remainingValue = Math.trunc(remainingValue / 256)
+    }
+    let b = new Uint8Array(nbytes)
+    remainingValue = num
+    for (let i = 1; i <= nbytes; i++) {
+        let v = remainingValue & 0xFF
+        b[nbytes - i] = v
+        remainingValue = Math.trunc(remainingValue / 256)
+    }    
+    result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA3, nbytes+2, 0x2, nbytes, b])
+    return result
+}
