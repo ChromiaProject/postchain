@@ -8,6 +8,7 @@ import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.common.data.KECCAK256
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -17,11 +18,13 @@ import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.MerkleBasics
-import net.postchain.gtv.merkle.PrintableTreeFactory
-import net.postchain.gtv.merkle.TreePrinter
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet
+import net.postchain.gtv.merkle.proof.MerkleProofElement
+import net.postchain.gtv.merkle.proof.ProofHashedLeaf
+import net.postchain.gtv.merkle.proof.ProofNode
+import net.postchain.gtv.merkle.proof.ProofValueLeaf
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 import org.spongycastle.jce.provider.BouncyCastleProvider
@@ -152,9 +155,7 @@ private fun extraMerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Lon
     val gtvPaths = GtvPathSet(setOf(gtvPath))
     val calculator = GtvMerkleHashCalculator(cryptoSystem)
     val extraProofTree = gtvExtra.generateProof(gtvPaths, calculator)
-    val printer = TreePrinter()
-    val printableBinaryTree = PrintableTreeFactory.buildPrintableTreeFromProofTree(extraProofTree)
-    val merkleProofs = printer.getMerkleProof(printableBinaryTree)
+    val merkleProofs = getProofListAndPosition(extraProofTree.root)
     val proofs = merkleProofs.first
     val position = merkleProofs.second
     val gtvProofs = proofs.map(::gtv)
@@ -164,7 +165,7 @@ private fun extraMerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Lon
     return gtv(
         "leaf" to gtv(leaf),
         "hashedLeaf" to gtv(hashedLeaf),
-        "position" to gtv(position.toLong()),
+        "position" to gtv(position),
         "extraRoot" to gtv(gtvExtra.merkleHash(calculator)),
         "extraMerkleProofs" to gtv(gtvProofs))
 }
@@ -185,4 +186,34 @@ private fun blockWitnessData(
             )
         }
     )
+}
+
+private fun getProofListAndPosition(tree: MerkleProofElement): Pair<List<ByteArray>, Long> {
+    val proofs = mutableListOf<ByteArray>()
+    var position = 0L
+    var currentNode = tree
+
+    while (true) {
+        if (currentNode is ProofValueLeaf<*>) {
+            break
+        }
+
+        val node = currentNode as ProofNode
+        val left = node.left
+        val right = node.right
+        if (right is ProofHashedLeaf) {
+            proofs.add(0, right.merkleHash)
+            position *= 2
+            currentNode = left
+        } else if (left is ProofHashedLeaf) {
+            proofs.add(0, left.merkleHash)
+            position = 2 * position + 1
+            currentNode = right
+        } else {
+            throw ProgrammerMistake("Expected one side to be ${ProofHashedLeaf::class.simpleName}" +
+                    " but was left: ${left::class.simpleName} and right: ${right::class.simpleName}")
+        }
+    }
+
+    return proofs to position
 }
