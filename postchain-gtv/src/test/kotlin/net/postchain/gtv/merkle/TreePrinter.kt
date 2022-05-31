@@ -2,13 +2,8 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.data.Hash
-import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.*
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
-import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
-import net.postchain.gtv.merkle.proof.ProofNodeGtvDictHead
 import net.postchain.gtv.merkle.proof.*
 import kotlin.math.pow
 
@@ -199,8 +194,6 @@ object PrintableTreeFactory {
 class TreePrinter {
 
     var buf: StringBuffer = StringBuffer()
-    var proof: List<String> = mutableListOf()
-    var pos: Int = 0
 
     fun printNode(treePrintable: PrintableBinaryTree): String {
         //println("begin -----------------")
@@ -212,45 +205,6 @@ class TreePrinter {
         printNodeInternal(tmpList, 1, maxLevel, 0)
         //println("end -----------------")
         return buf.toString()
-    }
-
-    fun getMerkleProof(treePrintable: PrintableBinaryTree): Pair<List<Hash>, Int> {
-        proof = mutableListOf()
-        val root = treePrintable.root
-        val maxLevel: Int = maxLevel(root)
-
-        val tmpList = arrayListOf(root)
-        printNodeInternal(tmpList, 1, maxLevel, 0)
-        proof = proof.dropLast(1).reversed()
-        return Pair(proof.map {
-                              it.hexStringToByteArray()
-        }, pos-1)
-    }
-
-    fun verifyMerkleProof(proofs: List<Hash>, pos: Int, leaf: Gtv): Hash {
-        val hashedLeaf = MerkleBasics.hashingFun(
-            byteArrayOf(MerkleBasics.HASH_PREFIX_LEAF) + GtvEncoder.encodeGtv(leaf),
-            SECP256K1CryptoSystem()
-        )
-        var r = hashedLeaf
-        val last = proofs.size - 1
-        for (i: Int in 0 until last) {
-            r = if (((pos shr i) and 1) != 0) {
-                val byteArraySum = byteArrayOf(MerkleBasics.HASH_PREFIX_NODE) + proofs[i] + r
-                MerkleBasics.hashingFun(byteArraySum, SECP256K1CryptoSystem())
-            } else {
-                val byteArraySum = byteArrayOf(MerkleBasics.HASH_PREFIX_NODE) + r + proofs[i]
-                MerkleBasics.hashingFun(byteArraySum, SECP256K1CryptoSystem())
-            }
-        }
-        r = if (((pos shr last) and 1) != 0) {
-            val byteArraySum = byteArrayOf(GtvMerkleBasics.HASH_PREFIX_NODE_GTV_DICT) + proofs[last] + r
-            MerkleBasics.hashingFun(byteArraySum, SECP256K1CryptoSystem())
-        } else {
-            val byteArraySum = byteArrayOf(GtvMerkleBasics.HASH_PREFIX_NODE_GTV_DICT) + r + proofs[last]
-            MerkleBasics.hashingFun(byteArraySum, SECP256K1CryptoSystem())
-        }
-        return r
     }
 
     private fun printNodeInternal(nodes: ArrayList<PTreeElement>, level: Int, maxLevel: Int, compensateFirstSpaces: Int) {
@@ -293,7 +247,6 @@ class TreePrinter {
                     } else {
                         buf.append(node.content)
                     }
-                    proof = proof.plus(node.content)
                     newNodes.add(node.left)
                     newNodes.add(node.right)
                     compensateForEmptyNodes += leafCount * (betweenSpaces + 1)
@@ -307,12 +260,10 @@ class TreePrinter {
                 is PLeaf -> {
                     leafCount++
                     if (node.pathLeaf) {
-                        pos = leafCount
                         buf.append("*" + node.content)
                     } else {
                         buf.append(node.content)
                     }
-                    proof = proof.plus(node.content)
                 }
                 is PEmptyLeaf -> {
                     leafCount++

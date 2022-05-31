@@ -272,18 +272,15 @@ open class BaseBlockBuilder(
             }
             haveSpecialEndTransaction = true
         }
-        // TODO: this validation is not properly in general
-//        else {
-//            if (expectBeginTx) {
-//                throw BlockValidationMistake("First transaction must be special transaction")
-//            }
-//        }
+        else if (expectBeginTx) {
+            throw BlockValidationMistake("First transaction must be special transaction")
+        }
     }
 
     override fun appendTransaction(tx: Transaction) {
-        if (blockSize + tx.getRawData().size >= maxBlockSize) {
+        if (blockSize + tx.getRawData().size > maxBlockSize) {
             throw BlockValidationMistake("block size exceeds max block size $maxBlockSize bytes")
-        } else if (transactions.size >= maxBlockTransactions) {
+        } else if (transactions.size > maxBlockTransactions) {
             throw BlockValidationMistake("Number of transactions exceeds max $maxBlockTransactions transactions in block")
         }
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves

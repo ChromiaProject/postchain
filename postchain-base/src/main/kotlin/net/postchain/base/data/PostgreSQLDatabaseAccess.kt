@@ -7,7 +7,7 @@ import net.postchain.core.EContext
 import net.postchain.core.Transaction
 import java.sql.Connection
 
- class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
+class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun isSavepointSupported(): Boolean = true
 

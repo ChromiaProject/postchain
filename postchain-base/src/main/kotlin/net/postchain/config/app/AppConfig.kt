@@ -18,7 +18,7 @@ import java.io.PrintWriter
  * Wrapper to the generic [Configuration]
  * Adding some convenience fields, for example regarding database connection.
  */
-class AppConfig(val config: Configuration) {
+class AppConfig(private val config: Configuration) {
 
     companion object {
 

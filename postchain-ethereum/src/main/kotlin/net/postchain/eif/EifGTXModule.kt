@@ -12,13 +12,12 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.encodeSignatureWithV
+import net.postchain.eif.merkle.ProofTreeParser.getProofListAndPosition
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.MerkleBasics
-import net.postchain.gtv.merkle.PrintableTreeFactory
-import net.postchain.gtv.merkle.TreePrinter
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet
@@ -152,9 +151,7 @@ private fun extraMerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Lon
     val gtvPaths = GtvPathSet(setOf(gtvPath))
     val calculator = GtvMerkleHashCalculator(cryptoSystem)
     val extraProofTree = gtvExtra.generateProof(gtvPaths, calculator)
-    val printer = TreePrinter()
-    val printableBinaryTree = PrintableTreeFactory.buildPrintableTreeFromProofTree(extraProofTree)
-    val merkleProofs = printer.getMerkleProof(printableBinaryTree)
+    val merkleProofs = getProofListAndPosition(extraProofTree.root)
     val proofs = merkleProofs.first
     val position = merkleProofs.second
     val gtvProofs = proofs.map(::gtv)
