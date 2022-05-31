@@ -1,12 +1,12 @@
 package net.postchain.integrationtest.sync
 
 import mu.KLogging
-import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
-import net.postchain.core.AppContext
 import net.postchain.devtools.AbstractSyncTest
+import net.postchain.core.AppContext
 import org.awaitility.Awaitility
 import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.Test

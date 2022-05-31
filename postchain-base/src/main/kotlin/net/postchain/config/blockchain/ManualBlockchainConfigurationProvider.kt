@@ -6,7 +6,6 @@ import mu.KLogging
 import net.postchain.base.BaseConfigurationDataStore
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
-import net.postchain.core.ProgrammerMistake
 
 class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 

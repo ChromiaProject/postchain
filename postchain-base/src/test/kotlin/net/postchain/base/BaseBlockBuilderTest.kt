@@ -3,22 +3,18 @@
 package net.postchain.base
 
 import net.postchain.base.data.*
-import org.mockito.kotlin.mock
-import net.postchain.base.data.BaseBlockBuilder
-import net.postchain.base.data.BaseBlockStore
-import net.postchain.base.data.BaseTransactionFactory
-import net.postchain.base.data.DatabaseAccess
-import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
-import net.postchain.core.InitialBlockData
+import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TxEContext
+import net.postchain.core.block.InitialBlockData
 import net.postchain.core.ValidationResult.Result.INVALID_TIMESTAMP
 import net.postchain.core.ValidationResult.Result.OK
-import net.postchain.devtools.KeyPairHelper.privKey
-import net.postchain.devtools.KeyPairHelper.pubKey
-import net.postchain.devtools.MockCryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper.privKey
+import net.postchain.crypto.devtools.KeyPairHelper.pubKey
+import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.Gtv
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.mock
 import kotlin.test.assertEquals
 
 class BaseBlockBuilderTest {

@@ -6,14 +6,14 @@ import assertk.assertions.*
 import net.postchain.api.rest.model.TxRID
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.Transaction
-import net.postchain.core.TxDetail
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.enqueueTxsAndAwaitBuiltBlock
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
+import net.postchain.core.Transaction
+import net.postchain.core.TxDetail
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.BeforeEach

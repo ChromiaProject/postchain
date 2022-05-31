@@ -3,15 +3,15 @@
 package net.postchain.devtools
 
 import net.postchain.common.BlockchainRid
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import org.junit.jupiter.api.Test
 import kotlin.test.assertTrue
 
 class TxCacheTest {
-    val cryptoSystem = SECP256K1CryptoSystem()
+    val cryptoSystem = Secp256K1CryptoSystem()
     protected val blockchainRids = mapOf(
             1L to BlockchainRid.buildFromHex( "AABBAABBAABBAABBAABBAABBAABBAABBAABBAABBAABBAABBAABBAABBAABBAABB"),
             2L to BlockchainRid.buildFromHex("1001100110011001100110011001100110011001100110011001100110011001")

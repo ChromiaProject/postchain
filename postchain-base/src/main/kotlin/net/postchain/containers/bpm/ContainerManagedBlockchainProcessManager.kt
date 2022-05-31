@@ -7,6 +7,7 @@ import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.common.Utils
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
@@ -17,14 +18,13 @@ import net.postchain.containers.bpm.DockerTools.shortContainerId
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
-import net.postchain.core.BlockQueries
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
-import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticProperty
+import net.postchain.core.block.BlockQueries
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.core.block.BlockTrace
+import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.DiagnosticProperty
 
 open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,

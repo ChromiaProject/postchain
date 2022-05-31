@@ -2,10 +2,10 @@
 
 package net.postchain.ebft
 
-import net.postchain.core.BlockData
-import net.postchain.core.BlockDataWithWitness
 import net.postchain.crypto.Signature
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockTrace
 import nl.komponents.kovenant.Promise
 import java.util.*
 

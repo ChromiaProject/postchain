@@ -9,13 +9,13 @@ import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.devtools.IntegrationTestSetup
-import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import org.awaitility.Awaitility.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo

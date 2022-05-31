@@ -5,8 +5,9 @@ package net.postchain.core
 import net.postchain.PostchainContext
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ConnectionManager
+import net.postchain.core.*
+import net.postchain.debug.BlockchainProcessName
 
 /**
  * Responsible blockchain process lifecycle, i.e. creating, exiting and restarting blockchain processes.
@@ -17,9 +18,9 @@ interface SynchronizationInfrastructure : Shutdownable {
      * This is how a blockchain process get created.
      */
     fun makeBlockchainProcess(
-            processName: BlockchainProcessName,
-            engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean = { _, _ -> true }
+        processName: BlockchainProcessName,
+        engine: BlockchainEngine,
+        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean = { _, _ -> true }
     ): BlockchainProcess
 
     /**
@@ -49,9 +50,9 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(
-            processName: BlockchainProcessName,
-            configuration: BlockchainConfiguration,
-            afterCommitHandler: AfterCommitHandler
+        processName: BlockchainProcessName,
+        configuration: BlockchainConfiguration,
+        afterCommitHandler: AfterCommitHandler
     ): BlockchainEngine
 
 }

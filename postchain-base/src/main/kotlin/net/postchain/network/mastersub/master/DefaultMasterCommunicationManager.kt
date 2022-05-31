@@ -7,7 +7,6 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.RemoteConfigVerifier
 import net.postchain.managed.DirectoryDataSource
@@ -17,6 +16,7 @@ import net.postchain.network.mastersub.protocol.*
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
+import net.postchain.debug.BlockchainProcessName
 import java.util.*
 
 /**

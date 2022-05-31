@@ -5,15 +5,14 @@ package net.postchain.network.netty2
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
-import org.mockito.kotlin.*
-import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
-import net.postchain.core.byteArrayKeyOf
+import net.postchain.common.BlockchainRid
+import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.network.common.ConnectionDirection
-import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerConnectionDescriptor
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.FIVE_SECONDS
 import org.awaitility.Duration.TEN_SECONDS
@@ -21,6 +20,7 @@ import org.awaitility.kotlin.withPollDelay
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.*
 
 /**
  * Based on [IntNettyConnector3PeersCommunicationIT]

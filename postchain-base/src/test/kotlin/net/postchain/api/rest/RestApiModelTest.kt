@@ -3,9 +3,6 @@
 package net.postchain.api.rest
 
 import com.google.gson.JsonParser
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.Model
@@ -16,15 +13,18 @@ import net.postchain.api.rest.model.TxRID
 import net.postchain.base.cryptoSystem
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.BlockDetail
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
+import net.postchain.core.block.BlockDetail
 import net.postchain.ebft.NodeState
 import net.postchain.ebft.rest.contract.EBFTstateNodeStatusContract
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 class RestApiModelTest {
 

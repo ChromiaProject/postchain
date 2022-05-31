@@ -1,15 +1,15 @@
 package net.postchain.network.mastersub.master
 
 import mu.KLogging
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ChainsWithOneConnection
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.master.netty.NettyMasterConnector
 import net.postchain.network.mastersub.protocol.MsCodec
 import net.postchain.network.mastersub.protocol.MsMessage
+import net.postchain.debug.BlockchainProcessName
 
 /**
  * Enables the master node to pass on messages to one sub-node.

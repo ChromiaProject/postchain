@@ -1,9 +1,9 @@
 package net.postchain.devtools.utils.configuration
 
 import net.postchain.base.PeerInfo
+import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.ByteArrayKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.utils.configuration.pre.SystemPreSetup

@@ -1,19 +1,17 @@
 package net.postchain.integrationtest.sync
 
-import net.postchain.devtools.KeyPairHelper
+import net.postchain.core.NodeRid
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.currentHeight
-import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.ChainUtil
-
-import net.postchain.core.NodeRid
+import net.postchain.devtools.utils.configuration.NodeSetup
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.lang.Thread.sleep
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class ForkTestNightly : ManagedModeTest() {
 

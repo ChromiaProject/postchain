@@ -3,10 +3,10 @@
 package net.postchain.ebft.syncmanager.validator
 
 import mu.KLogging
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
 import net.postchain.core.NodeStateTracker
-import net.postchain.core.ProgrammerMistake
 import net.postchain.crypto.Signature
 import net.postchain.ebft.*
 import net.postchain.ebft.message.*

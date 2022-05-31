@@ -4,17 +4,18 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.base.data.GenericBlockHeaderValidator
-import net.postchain.common.TimeLog
-import net.postchain.common.toHex
-import net.postchain.core.*
-import net.postchain.core.ValidationResult.Result.OK
-import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
 import net.postchain.common.BlockchainRid
+import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
-import net.postchain.debug.BlockTrace
+import net.postchain.common.toHex
+import net.postchain.core.*
+import net.postchain.core.ValidationResult.Result.OK
+import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
+import net.postchain.core.TransactionFactory
+import net.postchain.core.block.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit

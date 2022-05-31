@@ -18,10 +18,10 @@ import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.GTXQuery
 import net.postchain.api.rest.model.TxRID
 import net.postchain.common.TimeLog
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.ProgrammerMistake
-import net.postchain.core.UserMistake
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import spark.Request
