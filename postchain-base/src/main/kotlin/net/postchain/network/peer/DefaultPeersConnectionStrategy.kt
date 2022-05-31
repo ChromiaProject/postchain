@@ -4,8 +4,8 @@ package net.postchain.network.peer
 
 import mu.KLogging
 import net.postchain.common.ExponentialDelay
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.NodeRid
-import net.postchain.core.ProgrammerMistake
 import net.postchain.devtools.NameHelper.peerName
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit

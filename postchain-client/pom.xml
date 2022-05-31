@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.4.2-SNAPSHOT</version>
+        <version>3.4.3-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -26,12 +26,17 @@
         <!-- Postchain -->
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>postchain-gtv</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-common</artifactId>
+            <artifactId>postchain-gtx-data</artifactId>
         </dependency>
+
 
         <!-- Tools -->
         <dependency>

@@ -1,18 +1,19 @@
 package net.postchain.devtools
 
 import net.postchain.StorageBuilder
-import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.base.runStorageCommand
-import net.postchain.common.toHex
-import net.postchain.core.AppContext
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.core.NodeRid
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
+import net.postchain.core.AppContext
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 
 open class AbstractSyncTest : IntegrationTestSetup() {
@@ -187,11 +188,11 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     }
 
     open protected fun addPeerInfo(
-            dbAccess: DatabaseAccess,
-            ctx: AppContext,
-            peerInfo: PeerInfo,
-            brid: BlockchainRid,
-            isPeerSigner: Boolean
+        dbAccess: DatabaseAccess,
+        ctx: AppContext,
+        peerInfo: PeerInfo,
+        brid: BlockchainRid,
+        isPeerSigner: Boolean
     ) {
         dbAccess.addPeerInfo(ctx, peerInfo)
         if (!isPeerSigner) {

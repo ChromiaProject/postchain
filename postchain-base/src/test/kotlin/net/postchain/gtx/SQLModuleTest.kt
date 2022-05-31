@@ -3,8 +3,8 @@
 package net.postchain.gtx
 
 import net.postchain.StorageBuilder
-import net.postchain.common.BlockchainRid
 import net.postchain.base.withWriteConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFactory.gtv
 import org.apache.commons.configuration2.Configuration

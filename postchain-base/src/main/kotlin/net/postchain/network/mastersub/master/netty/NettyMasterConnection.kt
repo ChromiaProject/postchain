@@ -5,7 +5,7 @@ package net.postchain.network.mastersub.master.netty
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
-import net.postchain.core.ProgrammerMistake
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.master.MasterConnection

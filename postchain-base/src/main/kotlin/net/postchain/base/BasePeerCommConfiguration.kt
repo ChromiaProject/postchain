@@ -2,7 +2,7 @@
 
 package net.postchain.base
 
-import net.postchain.core.ByteArrayKey
+import net.postchain.common.data.ByteArrayKey
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Verifier

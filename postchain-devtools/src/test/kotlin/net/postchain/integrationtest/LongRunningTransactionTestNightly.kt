@@ -3,9 +3,9 @@ package net.postchain.integrationtest
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
+import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.core.byteArrayKeyOf
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.testinfra.DelayedTransaction
 import net.postchain.devtools.testinfra.TestTransaction

@@ -1,13 +1,13 @@
 package net.postchain.config.node
 
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.AppContext
 import net.postchain.core.ExecutionContext
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 
 object MockStorage {
 

@@ -4,9 +4,9 @@ package net.postchain.cli
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.common.toHex
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.secp256k1_derivePubKey
 import org.bitcoinj.crypto.MnemonicCode
 
 @Parameters(commandDescription = "Generates public/private key pair")
@@ -28,7 +28,7 @@ class CommandKeygen : Command {
      * Cryptographic key generator. Will generate a pair of public and private keys and print to stdout.
      */
     private fun keygen(): String {
-        val cs = SECP256K1CryptoSystem()
+        val cs = Secp256K1CryptoSystem()
         var privKey = cs.getRandomBytes(32)
         val mnemonicInstance = MnemonicCode.INSTANCE
         var mnemonic = mnemonicInstance.toMnemonic(privKey).joinToString(" ")

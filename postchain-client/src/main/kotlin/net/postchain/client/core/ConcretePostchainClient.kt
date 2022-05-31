@@ -16,7 +16,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
 import org.apache.hc.client5.http.classic.methods.HttpGet
@@ -36,7 +36,8 @@ class ConcretePostchainClient(
 
     companion object : KLogging()
 
-    private val gson = GsonBuilder().create()!! // We don't use any adapters b/c this is very simple
+    // We don't use any adapters b/c this is very simple
+    private val gson = GsonBuilder().create()!!
     private val serverUrl = resolver.getNodeURL(blockchainRID)
     private val httpClient = HttpClients.createDefault()
     private val blockchainRIDHex = blockchainRID.toHex()

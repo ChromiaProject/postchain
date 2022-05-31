@@ -5,6 +5,7 @@ package net.postchain.base
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
 
+
 /**
  * Handles back-end database connection and storage
  */

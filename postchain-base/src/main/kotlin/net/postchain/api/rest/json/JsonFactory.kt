@@ -17,13 +17,13 @@ object JsonFactory {
 
     private fun buildGson(pretty: Boolean): Gson {
         return GsonBuilder()
-                .registerTypeAdapter(ConfirmationProof::class.java, ConfirmationProofSerializer())
-                .registerTypeAdapter(ApiTx::class.java, TransactionDeserializer())
-                .registerTypeAdapter(ApiStatus::class.java, ApiStatusSerializer())
-                .registerTypeAdapter(GTXQuery::class.java, GTXQueryDeserializer())
-                .apply {
-                    if (pretty) setPrettyPrinting()
-                }
-                .create()!!
+            .registerTypeAdapter(ConfirmationProof::class.java, ConfirmationProofSerializer())
+            .registerTypeAdapter(ApiTx::class.java, TransactionDeserializer())
+            .registerTypeAdapter(ApiStatus::class.java, ApiStatusSerializer())
+            .registerTypeAdapter(GTXQuery::class.java, GTXQueryDeserializer())
+            .apply {
+                if (pretty) setPrettyPrinting()
+            }
+            .create()!!
     }
 }

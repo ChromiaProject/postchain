@@ -4,6 +4,9 @@ package net.postchain.client.core
 
 import net.postchain.common.tx.TransactionStatus
 
+/**
+ * Acknowledge from the server. Holds the status of the TX.
+ */
 class TransactionResultImpl(
         override val status: TransactionStatus,
         override val httpStatusCode: Int?

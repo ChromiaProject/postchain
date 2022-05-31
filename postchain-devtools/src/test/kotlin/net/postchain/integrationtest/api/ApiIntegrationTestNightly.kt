@@ -5,14 +5,14 @@ package net.postchain.integrationtest.api
 import io.restassured.RestAssured.given
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.BlockchainRid
+import net.postchain.devtools.RestTools
 import net.postchain.common.data.Hash
-import net.postchain.common.RestTools
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
 import net.postchain.crypto.Signature
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
-import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
@@ -21,7 +21,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
 import net.postchain.gtv.merkle.proof.merkleHash
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap

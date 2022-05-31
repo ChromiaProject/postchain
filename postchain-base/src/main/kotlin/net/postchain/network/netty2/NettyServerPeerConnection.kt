@@ -5,7 +5,7 @@ package net.postchain.network.netty2
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import mu.KLogging
-import net.postchain.core.ProgrammerMistake
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnection
