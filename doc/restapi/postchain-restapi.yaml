@@ -1,11 +1,35 @@
 openapi: 3.0.3
 info:
   title: Postchain REST API
-  description: Postchain REST API
+  description: |
+    ## GTV
+    GTV (Generic Transfer Value) is DER encoded ASN.1 with this schema:
+    ```
+      Messages DEFINITIONS ::= BEGIN
+    
+        DictPair ::= SEQUENCE {
+          name UTF8String,
+          value RawGtv
+        }
+    
+        RawGtv ::= CHOICE {
+          null [0] NULL,
+          byteArray [1] OCTET STRING,
+          string [2] UTF8String,
+          integer [3] INTEGER,
+          dict [4] SEQUENCE OF DictPair,
+          array [5] SEQUENCE OF RawGtv,
+          bigInteger [6] INTEGER
+        }
+    
+      END
+    ```
   version: 3.5.0
 paths:
   /tx/{blockchainRid}:
     post:
+      tags:
+        - transaction
       summary: Submit transaction
       description: Submit a transaction to a chain
       parameters:
@@ -73,6 +97,8 @@ paths:
                     error: "Transaction queue is full"
   /tx/{blockchainRid}/{txRid}:
     get:
+      tags:
+        - transaction
       summary: Fetch transaction
       description: Fetch a transaction from a chain
       parameters:
@@ -100,6 +126,8 @@ paths:
                     error: "Can't find tx with hash <hex-string>"
   /transactions/{blockchainRid}/{txRid}:
     get:
+      tags:
+        - transaction
       summary: Fetch transaction info
       description: Fetch info about a transaction from a chain
       parameters:
@@ -127,6 +155,8 @@ paths:
                     error: "Can't find tx with hash <hex-string>"
   /transactions/{blockchainRid}:
     get:
+      tags:
+        - transaction
       summary: Fetch transactions info
       description: Fetch info about transactions from a chain
       parameters:
@@ -168,6 +198,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /tx/{blockchainRid}/{txRid}/status:
     get:
+      tags:
+        - transaction
       summary: Fetch transaction status
       description: Fetch the status of a transaction from a chain
       parameters:
@@ -212,6 +244,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /blocks/{blockchainRid}:
     get:
+      tags:
+        - block
       summary: Fetch blocks info
       description: Fetch info about blocks from a chain
       parameters:
@@ -260,6 +294,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /blocks/{blockchainRid}/{blockRid}:
     get:
+      tags:
+        - block
       summary: Fetch block info
       description: Fetch info about a block from a chain
       parameters:
@@ -293,6 +329,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /query/{blockchainRid}:
     get:
+      tags:
+        - query
       summary: Make query
       description: Make a query to a chain. Named arguments to query as additional query parameters.
       parameters:
@@ -335,6 +373,8 @@ paths:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
     post:
+      tags:
+        - query
       summary: Make query
       description: Make a query to a chain
       parameters:
@@ -376,6 +416,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /batch_query/{blockchainRid}:
     post:
+      tags:
+        - query
       summary: Make queries
       description: Make multiple queries to a chain
       parameters:
@@ -434,6 +476,8 @@ paths:
                     error: "Unknown error"
   /dquery/{blockchainRid}:
     get:
+      tags:
+        - query
       summary: Make direct query
       description: |
         Make a direct query to a chain. Named arguments to query as additional query parameters.
@@ -475,6 +519,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /query_gtx/{blockchainRid}:
     post:
+      tags:
+        - query
       summary: Make GTV encoded queries
       description: Make GTV encoded queries to a chain
       parameters:
@@ -490,7 +536,9 @@ paths:
                 queries:
                   type: array
                   items:
-                    $ref: "#/components/schemas/gtv"
+                    type: string
+                    pattern: "[0-9a-fA-F]{2,}"
+                    description: Hex encoded two element GTV array with the query name as first element (string) and the named parameters as second element (dict)
               example:
                 queries:
                   - "A52E302CA20A0C086D795F7175657279A41E301C300B0C0461726731A303020111300D0C0461726732A2050C03666F6F"
@@ -503,7 +551,9 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/gtv"
+                  type: string
+                  pattern: "[0-9a-fA-F]{2,}"
+                  description: Query result as hex encoded GTV value
               example:
                 - "A5023000"
                 - "A5025060"
@@ -539,6 +589,8 @@ paths:
                     error: "Unknown error"
   /node/{blockchainRid}/height:
     get:
+      tags:
+        - node
       summary: Query current block height
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -569,6 +621,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /node/{blockchainRid}/my_status:
     get:
+      tags:
+        - node
       summary: Query node status
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -591,6 +645,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /node/{blockchainRid}/statuses:
     get:
+      tags:
+        - node
       summary: Query nodes status
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -615,6 +671,8 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /_debug:
     get:
+      tags:
+        - node
       summary: Get node debug information
       responses:
         200:
@@ -627,6 +685,8 @@ paths:
                   - $ref: "#/components/schemas/noDebug"
   /brid/iid_{chainIid}:
     get:
+      tags:
+        - node
       summary: Get blockchain RID
       parameters:
         - name: chainIid
@@ -919,10 +979,6 @@ components:
     hash:
       type: string
       pattern: "[0-9a-fA-F]{64}"
-    gtv:
-      type: string
-      pattern: "[0-9a-fA-F]{2,}"
-      description: Hex encoded GTV data
     byteArray:
       type: array
       items:
