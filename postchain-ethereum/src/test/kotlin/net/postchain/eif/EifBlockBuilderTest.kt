@@ -16,6 +16,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
+import net.postchain.eif.merkle.MerkleTestUtil.getMerkleProof
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -278,7 +279,7 @@ class EifBlockBuilderTest : IntegrationTestSetup() {
 
             val merkleProofs = gtvProof["stateProofs"]!!.asArray()
             val proofs = merkleProofs.map { it.asByteArray() }
-            val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
+            val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!, ds::hash)
             assertEquals(stateRoot.toHex(), eifStateRoot.toHex())
 
             val headerExtraData = gtvProof["blockHeader"]!!.asByteArray().slice(7 * HASH_LENGTH until 8 * HASH_LENGTH).toByteArray()
@@ -332,7 +333,7 @@ class EifBlockBuilderTest : IntegrationTestSetup() {
 
             val merkleProofs = gtvProof["stateProofs"]!!.asArray()
             val proofs = merkleProofs.map { it.asByteArray() }
-            val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!)
+            val stateRoot = getMerkleProof(proofs, pos, leafHashes[pos.toLong()]!!, ds::hash)
             assertEquals(stateRoot.toHex(), eifStateRoot2.toHex())
 
             val headerExtraData = gtvProof["blockHeader"]!!.asByteArray().slice(7 * HASH_LENGTH until 8 * HASH_LENGTH).toByteArray()
@@ -452,7 +453,7 @@ class EifBlockBuilderTest : IntegrationTestSetup() {
 
             val merkleProofs = gtvProof["eventProof"]!!.asDict()["merkleProofs"]!!.asArray()
             val proofs = merkleProofs.map { it.asByteArray() }
-            val eventRoot = getMerkleProof(proofs, pos, leafs[pos])
+            val eventRoot = getMerkleProof(proofs, pos, leafs[pos], ds::hash)
             assertEquals(eventRoot.toHex(), eventRootHash.toHex())
 
             val headerExtraData = gtvProof["blockHeader"]!!.asByteArray().slice(7 * HASH_LENGTH until 8 * HASH_LENGTH).toByteArray()
@@ -498,17 +499,5 @@ class EifBlockBuilderTest : IntegrationTestSetup() {
         val blockRid = blockQueries.getBlockRid(height).get()
         val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
         return BlockHeaderDataFactory.buildFromBinary(blockHeader.rawData)
-    }
-
-    private fun getMerkleProof(proofs: List<Hash>, pos: Int, leaf: Hash): Hash {
-        var r = leaf
-        proofs.forEachIndexed { i, h ->
-            r = if (((pos shr i) and 1) != 0) {
-                ds.hash(h, r)
-            } else {
-                ds.hash(r, h)
-            }
-        }
-        return r
     }
 }
