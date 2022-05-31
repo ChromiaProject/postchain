@@ -1,13 +1,13 @@
 package net.postchain.managed
 
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
-import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.CPU_KEY
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.RAM_KEY
 import net.postchain.containers.bpm.ContainerResourceLimits.Companion.STORAGE_KEY
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockQueries
-import net.postchain.common.BlockchainRid
 import net.postchain.gtv.GtvFactory
 
 class BaseDirectoryDataSource(
@@ -35,13 +35,20 @@ class BaseDirectoryDataSource(
         return res.asArray().map { BlockchainRid(it.asByteArray()) }
     }
 
-    // TODO: [et]: Test implementation. Fix it.
     override fun getContainerForBlockchain(brid: BlockchainRid): String {
-        //val num = Integer.parseInt(brid.toHex().takeLast(1), 16) / 6 // 3 containers
-        //return "ps$num"
-
-        val short = brid.toHex().uppercase().take(8)
-        return containerNodeConfig.dappsContainers[short] ?: "cont0"
+        return if (containerNodeConfig.containersTestmode) {
+            val short = brid.toHex().uppercase().take(8)
+            containerNodeConfig.testmodeDappsContainers[short] ?: "cont0"
+        } else {
+            if (nmApiVersion >= 3) {
+                queries.query(
+                        "nm_get_container_for_blockchain",
+                        buildArgs("blockchain_rid" to GtvFactory.gtv(brid.data))
+                ).get().asString()
+            } else {
+                throw Exception("Directory1 v.{$nmApiVersion} doesn't support 'nm_get_container_for_blockchain' query")
+            }
+        }
     }
 
     // TODO: [et]: directory vs containerId?

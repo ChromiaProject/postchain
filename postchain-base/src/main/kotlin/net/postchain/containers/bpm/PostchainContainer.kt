@@ -1,7 +1,6 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
-import net.postchain.config.node.NodeConfig
 import net.postchain.managed.DirectoryDataSource
 
 enum class ContainerState {
@@ -38,7 +37,7 @@ class DefaultPostchainContainer(
     private val processes = mutableSetOf<ContainerBlockchainProcess>()
 
     // NB: Resources are per directoryContainerName, not nodeContainerName
-    override val resourceLimits = dataSource.getResourceLimitForContainer(containerName.directory)
+    override val resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
 
     override fun shortContainerId(): String? {
         return DockerTools.shortContainerId(containerId)

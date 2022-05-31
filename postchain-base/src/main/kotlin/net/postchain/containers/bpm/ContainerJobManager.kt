@@ -26,7 +26,7 @@ internal class DefaultContainerJobManager(
     private val lockJobs = ReentrantLock()
 
     companion object : KLogging() {
-        private const val HEALTHCHECK_JOB_TAG = "healthcheck"
+        private const val JOB_TAG_HEALTHCHECK = "healthcheck"
     }
 
     init {
@@ -58,7 +58,7 @@ internal class DefaultContainerJobManager(
     }
 
     override fun executeHealthcheck() {
-        jobOf(ContainerName.createGroupName(HEALTHCHECK_JOB_TAG))
+        jobOf(ContainerName(JOB_TAG_HEALTHCHECK, ""))
     }
 
     private fun startThread(): Thread {
@@ -77,7 +77,7 @@ internal class DefaultContainerJobManager(
                 // Process the job
                 if (currentJob != null) {
                     try {
-                        if (currentJob!!.containerName.isGroup(HEALTHCHECK_JOB_TAG)) {
+                        if (currentJob!!.containerName.name == JOB_TAG_HEALTHCHECK) {
                             healthcheckJobHandler()
                         } else {
                             jobHandler(currentJob!!.containerName, currentJob!!.toStop, currentJob!!.toStart)

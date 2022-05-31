@@ -1,5 +1,6 @@
 package net.postchain.network.mastersub.protocol
 
+import net.postchain.common.data.Hash
 import net.postchain.gtv.*
 import net.postchain.network.mastersub.protocol.MsMessageType.*
 
@@ -135,21 +136,23 @@ class MsFindNextBlockchainConfigMessage(
 class MsNextBlockchainConfigMessage(
         override val blockchainRid: ByteArray,
         val nextHeight: Long?,
-        val rawConfig: ByteArray?
+        val rawConfig: ByteArray?,
+        val configHash: Hash?
 ) : MsMessage {
     override val type = NextBlockchainConfig.ordinal
 
     constructor(blockchainRid: ByteArray, payload: Gtv) : this(
             blockchainRid,
             gtvToNullableLong(payload[0]),
-            gtvToNullableByteArray(payload[1])
+            gtvToNullableByteArray(payload[1]),
+            gtvToNullableByteArray(payload[2])
     )
 
     override fun getPayload(): Gtv {
         return GtvFactory.gtv(
                 nullableLongToGtv(nextHeight),
-                nullableByteArrayToGtv(rawConfig)
-        )
+                nullableByteArrayToGtv(rawConfig),
+                nullableByteArrayToGtv(configHash))
     }
 }
 
@@ -176,9 +179,9 @@ class MsSubnodeStatusMessage(
  * A list of connected peers for the given chain
  */
 class MsConnectedPeersMessage(
-    override val blockchainRid: ByteArray,
-    val connectedPeers: List<ByteArray>
-): MsMessage {
+        override val blockchainRid: ByteArray,
+        val connectedPeers: List<ByteArray>
+) : MsMessage {
     override val type = ConnectedPeers.ordinal
 
     constructor(blockchainRid: ByteArray, payload: Gtv) :
@@ -199,5 +202,5 @@ fun encodePeers(singers: List<ByteArray>): ByteArray {
 }
 
 fun decodePeers(bytes: ByteArray): List<ByteArray> =
-    GtvDecoder.decodeGtv(bytes).asArray().map { it.asByteArray() }
+        GtvDecoder.decodeGtv(bytes).asArray().map { it.asByteArray() }
 

@@ -14,7 +14,6 @@ import net.postchain.config.app.AppConfig
  */
 data class HeartbeatConfig(
         val enabled: Boolean,
-        val testmode: Boolean,
         val timeout: Long,
         val sleepTimeout: Long,
         val remoteConfigEnabled: Boolean,
@@ -26,7 +25,6 @@ data class HeartbeatConfig(
         fun fromAppConfig(config: AppConfig): HeartbeatConfig {
             return HeartbeatConfig(
                     config.getBoolean("heartbeat.enabled", false),
-                    config.getBoolean("heartbeat.testmode", false),
                     config.getLong("heartbeat.timeout", 60_000L),
                     config.getLong("heartbeat.sleep_timeout", 5_000L),
                     config.getBoolean("remote_config.enabled", true),
