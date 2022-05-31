@@ -33,7 +33,7 @@ private fun encodeByteArray(arg: String): Gtv {
 private fun encodeArray(arg: String) = GtvFactory.gtv(arg.split(",").map { encodeArg(it) })
 
 private fun encodeDict(arg: String): Gtv {
-    val pairs = arg.split(",").map { it.split("=", limit = 2) }
+    val pairs = arg.split(",").map { it.split("->", limit = 2) }
     if (pairs.any { it.size < 2 }) throw IllegalArgumentException("Wrong format. Expected dict $arg to contain key=value pairs")
     return GtvFactory.gtv(pairs.associateBy({ it[0] }, { encodeArg(it[1]) }))
 }
