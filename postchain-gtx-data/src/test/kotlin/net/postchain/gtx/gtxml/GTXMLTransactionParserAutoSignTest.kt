@@ -81,7 +81,7 @@ class GTXMLTransactionParserAutoSignTest {
             MockCryptoSystem()
         )
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -139,7 +139,7 @@ class GTXMLTransactionParserAutoSignTest {
             MockCryptoSystem()
         )
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -193,7 +193,7 @@ class GTXMLTransactionParserAutoSignTest {
             MockCryptoSystem()
         )
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     private fun readResourceFile(filename: String): String {

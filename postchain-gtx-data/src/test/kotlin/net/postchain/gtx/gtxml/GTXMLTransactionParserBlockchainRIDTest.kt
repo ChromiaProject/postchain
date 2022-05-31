@@ -34,7 +34,7 @@ class GTXMLTransactionParserBlockchainRIDTest {
             MockCryptoSystem()
         )
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -57,7 +57,7 @@ class GTXMLTransactionParserBlockchainRIDTest {
             MockCryptoSystem()
         )
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -80,7 +80,7 @@ class GTXMLTransactionParserBlockchainRIDTest {
             MockCryptoSystem()
         )
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -103,7 +103,7 @@ class GTXMLTransactionParserBlockchainRIDTest {
             MockCryptoSystem()
         )
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test

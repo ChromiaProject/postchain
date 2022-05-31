@@ -51,6 +51,6 @@ class GtxDataSerializerTest {
         // ---------- Convert it ------------------------------
         val tx = GtxTransactionDataSerializer.serializeToGtv(txData)
 
-       assertEquals(tx, expectedGtvTxStruct)
+       assertEquals(expectedGtvTxStruct, tx)
     }
 }

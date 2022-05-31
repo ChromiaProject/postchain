@@ -50,6 +50,6 @@ class GtxDataFactoryTest {
         // ---------- Convert it ------------------------------
         val txData: GTXTransactionData = GtxTransactionDataFactory.deserializeFromGtv(tx)
 
-       assertEquals(txData, expectedTx)
+       assertEquals(expectedTx, txData)
     }
 }

@@ -50,7 +50,7 @@ class GTXMLTransactionEncodeTest {
                 .replace("\r\n", "\n").trim()
         val actual = GTXMLTransactionEncoder.encodeXMLGTXTransaction(gtxTx)
 
-        assertEquals(actual.trim(), expected)
+        assertEquals(expected, actual.trim())
     }
 
     @Test
@@ -67,7 +67,7 @@ class GTXMLTransactionEncodeTest {
                 .replace("\r\n", "\n").trim()
         val actual = GTXMLTransactionEncoder.encodeXMLGTXTransaction(gtxTx)
 
-        assertEquals(actual.trim(), expected)
+        assertEquals(expected , actual.trim())
     }
 
     @Test
@@ -98,7 +98,7 @@ class GTXMLTransactionEncodeTest {
                 .replace("\r\n", "\n").trim()
         val actual = GTXMLTransactionEncoder.encodeXMLGTXTransaction(gtxTx)
 
-        assertEquals(actual.trim(), expected)
+        assertEquals(expected, actual.trim())
     }
 
     @Test
@@ -123,7 +123,7 @@ class GTXMLTransactionEncodeTest {
                 .replace("\r\n", "\n").trim()
         val actual = GTXMLTransactionEncoder.encodeXMLGTXTransaction(gtxTx)
 
-        assertEquals(actual.trim(), expected)
+        assertEquals(expected, actual.trim())
     }
 
     @Test
@@ -151,7 +151,7 @@ class GTXMLTransactionEncodeTest {
                 .replace("\r\n", "\n").trim()
         val actual = GTXMLTransactionEncoder.encodeXMLGTXTransaction(gtxTx)
 
-        assertEquals(actual.trim(), expected)
+        assertEquals(expected, actual.trim())
     }
 
     @Test
@@ -195,6 +195,7 @@ class GTXMLTransactionEncodeTest {
                 .replace("\r\n", "\n").trim()
         val actual = GTXMLTransactionEncoder.encodeXMLGTXTransaction(gtxTxData)
 
-        assertEquals(actual.trim(), expected)
+        assertEquals(expected, actual.trim())
     }
+
 }

@@ -53,7 +53,7 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
 
-        Assertions.assertEquals(actual, expectedTx)
+        Assertions.assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -71,7 +71,7 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
 
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -102,7 +102,7 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -126,7 +126,7 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -151,7 +151,7 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -197,7 +197,7 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(xml, context, MockCryptoSystem())
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -296,7 +296,7 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(xml, context, MockCryptoSystem())
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 
     @Test
@@ -347,6 +347,6 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
 
-        assertEquals(actual, expectedTx)
+        assertEquals(expectedTx, actual)
     }
 }
