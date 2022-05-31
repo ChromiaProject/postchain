@@ -35,8 +35,8 @@ internal class ClientUtilsTest {
                 arrayOf("x\"byte\"", gtv("byte".toByteArray())),
                 arrayOf("x\"EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F\"", gtv("EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F".hexStringToByteArray())),
                 arrayOf("[a,123]", gtv(listOf(gtv("a"), gtv(123)))),
-                arrayOf("{a=b,b=123}", gtv(mapOf("a" to gtv("b"), "b" to gtv(123)))),
-                arrayOf("{a=b}", gtv(mapOf("a" to gtv("b")))),
+                arrayOf("{a->b,b->123}", gtv(mapOf("a" to gtv("b"), "b" to gtv(123)))),
+                arrayOf("{a->b}", gtv(mapOf("a" to gtv("b")))),
         )
 
         @JvmStatic
