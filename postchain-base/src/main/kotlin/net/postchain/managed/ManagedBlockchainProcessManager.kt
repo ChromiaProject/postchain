@@ -63,8 +63,7 @@ open class ManagedBlockchainProcessManager(
     protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
     protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
-    protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
-    protected var loggedChains: Array<Set<Long>> = emptyArray()
+    protected val heartbeatManager = DefaultHeartbeatManager()
 
     companion object : KLogging()
 

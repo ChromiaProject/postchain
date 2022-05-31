@@ -3,12 +3,12 @@
 package net.postchain.client.core
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtx.data.GTXDataBuilder
-import net.postchain.common.tx.TransactionStatus
 import nl.komponents.kovenant.Promise
 
 class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: BlockchainRid, signers: Array<ByteArray>) {
@@ -39,6 +39,7 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
  */
 interface TransactionResult {
     val status: TransactionStatus
+    val httpStatusCode: Int?
 }
 
 interface PostchainClient {
