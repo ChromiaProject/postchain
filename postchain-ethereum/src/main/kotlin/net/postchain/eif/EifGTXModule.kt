@@ -8,11 +8,11 @@ import net.postchain.base.snapshot.EventPageStore
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.common.data.KECCAK256
-import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.encodeSignatureWithV
+import net.postchain.eif.merkle.ProofTreeParser.getProofListAndPosition
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -21,16 +21,11 @@ import net.postchain.gtv.merkle.MerkleBasics
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet
-import net.postchain.gtv.merkle.proof.MerkleProofElement
-import net.postchain.gtv.merkle.proof.ProofHashedLeaf
-import net.postchain.gtv.merkle.proof.ProofNode
-import net.postchain.gtv.merkle.proof.ProofValueLeaf
 import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
 import org.spongycastle.jce.provider.BouncyCastleProvider
 import java.security.MessageDigest
 import java.security.Security
-import java.util.*
 
 const val PREFIX: String = "sys.x.eif"
 const val EIF: String = "eif"
@@ -166,7 +161,7 @@ private fun extraMerkleProof(db: DatabaseAccess, ctx: EContext, blockHeight: Lon
     return gtv(
         "leaf" to gtv(leaf),
         "hashedLeaf" to gtv(hashedLeaf),
-        "position" to gtv(position),
+        "position" to gtv(position.toLong()),
         "extraRoot" to gtv(gtvExtra.merkleHash(calculator)),
         "extraMerkleProofs" to gtv(gtvProofs))
 }
@@ -187,34 +182,4 @@ private fun blockWitnessData(
             )
         }
     )
-}
-
-private fun getProofListAndPosition(tree: MerkleProofElement): Pair<List<ByteArray>, Long> {
-    val proofs = LinkedList<ByteArray>()
-    var position = 0L
-    var currentNode = tree
-
-    while (true) {
-        if (currentNode is ProofValueLeaf<*>) {
-            break
-        }
-
-        val node = currentNode as ProofNode
-        val left = node.left
-        val right = node.right
-        if (right is ProofHashedLeaf) {
-            proofs.addFirst(right.merkleHash)
-            position *= 2
-            currentNode = left
-        } else if (left is ProofHashedLeaf) {
-            proofs.addFirst(left.merkleHash)
-            position = 2 * position + 1
-            currentNode = right
-        } else {
-            throw ProgrammerMistake("Expected one side to be ${ProofHashedLeaf::class.simpleName}" +
-                    " but was left: ${left::class.simpleName} and right: ${right::class.simpleName}")
-        }
-    }
-
-    return proofs to position
 }
