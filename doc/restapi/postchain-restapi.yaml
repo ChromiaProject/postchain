@@ -763,26 +763,26 @@ components:
         - witness
         - timestamp
         - txRID
-        - txRid
+        - txHash
       properties:
         blockRID:
-          $ref: "#/components/schemas/byteArray"
+          $ref: "#/components/schemas/hash"
         blockHeight:
           type: integer
           format: int64
         blockHeader:
-          $ref: "#/components/schemas/byteArray"
+          $ref: "#/components/schemas/hex"
         witness:
-          $ref: "#/components/schemas/byteArray"
+          $ref: "#/components/schemas/hex"
         timestamp:
           type: integer
           format: int64
         txRID:
-          $ref: "#/components/schemas/byteArray"
-        txRid:
-          $ref: "#/components/schemas/byteArray"
+          $ref: "#/components/schemas/hash"
+        txHash:
+          $ref: "#/components/schemas/hash"
         txData:
-          $ref: "#/components/schemas/byteArray"
+          $ref: "#/components/schemas/hex"
     unknown:
       type: object
       required:
@@ -834,11 +834,11 @@ components:
         - timestamp
       properties:
         rid:
-          $ref: "#/components/schemas/byteArray"
+          $ref: "#/components/schemas/hash"
         prevBlockRID:
-          $ref: "#/components/schemas/byteArray"
+          $ref: "#/components/schemas/hash"
         header:
-          $ref: "#/components/schemas/byteArray"
+          $ref: "#/components/schemas/hex"
         height:
           type: integer
           format: int64
@@ -851,13 +851,13 @@ components:
               - hash
             properties:
               rid:
-                $ref: "#/components/schemas/byteArray"
+                $ref: "#/components/schemas/hash"
               hash:
-                $ref: "#/components/schemas/byteArray"
+                $ref: "#/components/schemas/hash"
               data:
-                $ref: "#/components/schemas/byteArray"
+                $ref: "#/components/schemas/hex"
         witness:
-          $ref: "#/components/schemas/byteArray"
+          $ref: "#/components/schemas/hex"
         timestamp:
           type: integer
           format: int64
@@ -979,9 +979,10 @@ components:
     hash:
       type: string
       pattern: "[0-9a-fA-F]{64}"
-    byteArray:
-      type: array
-      items:
-        type: integer
+      description: Hex encoded hash
+    hex:
+      type: string
+      pattern: "[0-9a-fA-F]"
+      description: Hex encoded data
     nullValue:
       type: "null"
