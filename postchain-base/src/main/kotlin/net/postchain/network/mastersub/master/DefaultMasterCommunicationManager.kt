@@ -7,6 +7,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.RemoteConfigVerifier
 import net.postchain.managed.DirectoryDataSource
@@ -16,7 +17,6 @@ import net.postchain.network.mastersub.protocol.*
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
-import net.postchain.debug.BlockchainProcessName
 import java.util.*
 
 /**
@@ -100,14 +100,12 @@ open class DefaultMasterCommunicationManager(
                             }
                         }
                         val hash = config?.let { RemoteConfigVerifier.calculateHash(it) }
-                        val hashStr = hash?.let { BlockchainRid(it).toHex() }
-
                         val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config, hash)
                         masterConnectionManager.sendPacketToSub(response)
                         logger.debug {
                             "${process()}: BlockchainConfig sent to subnode: blockchainRid: " +
                                     "${blockchainRid.toShortHex()}, nextHeight: $nextHeight, config size: " +
-                                    "${config?.size}, config hash: $hashStr"
+                                    "${config?.size}, config hash: ${hash?.toHex()}"
                         }
                     }
 
