@@ -22,4 +22,7 @@ contract TestDelegator {
         return MerkleProof.verifySHA256(proofs, leaf, position, rootHash);
     }
 
+    function hashGtvIntegerLeaf(uint value) external pure returns (bytes32) {
+        return Hash.hashGtvIntegerLeaf(value);
+    }
 }
