@@ -120,7 +120,7 @@ describe("Non Fungible Token", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "3E1A07BE17191304303E3150D7C8291AC1519841A196099C2FA446EBAD516329"
+                let extraDataMerkleRoot = "7261F4A349F6E21FBC4F5E5AFDB1E04DE6ED5ADBCF46FF4AE8B74C0B2229A26F"
 
                 let timestamp = 1629878444220
                 let height = 46
@@ -167,7 +167,7 @@ describe("Non Fungible Token", () => {
                     hashedLeaf: DecodeHexStringToByteArray(hashedLeaf.substring(2, hashedLeaf.length)),
                     position: 1,
                     extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
-                    extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
+                    extraMerkleProofs: [DecodeHexStringToByteArray("1E816A557ACB74AEBECC8B0598B81DFCDBCA912CA8BA030740F5BEAEF3FF0797")],
                 }
 
                 // swap toAddress and contractAddress position to make maliciousEvent
@@ -190,7 +190,7 @@ describe("Non Fungible Token", () => {
                     hashedLeaf: DecodeHexStringToByteArray(maliciousHashEventLeaf.substring(2, maliciousHashEventLeaf.length)),
                     position: 1,
                     extraRoot: DecodeHexStringToByteArray(extraDataMerkleRoot),
-                    extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
+                    extraMerkleProofs: [DecodeHexStringToByteArray("1E816A557ACB74AEBECC8B0598B81DFCDBCA912CA8BA030740F5BEAEF3FF0797")],
                 }                
                 await expect(bridge.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
@@ -202,7 +202,7 @@ describe("Non Fungible Token", () => {
                     hashedLeaf: DecodeHexStringToByteArray(hashedLeaf.substring(2, hashedLeaf.length)),
                     position: 1,
                     extraRoot: DecodeHexStringToByteArray("04D17CC3DD96E88DF05A943EC79DD436F220E84BA9E5F35CACF627CA225424A2"),
-                    extraMerkleProofs: [DecodeHexStringToByteArray("36F5BC29C2E9593F50B0E017700DC775F7F899FEA2FE8CEE8EEA5DDBCD483F0C")],
+                    extraMerkleProofs: [DecodeHexStringToByteArray("1E816A557ACB74AEBECC8B0598B81DFCDBCA912CA8BA030740F5BEAEF3FF0797")],
                 }                
                 await expect(bridge.withdrawRequestNFT(data, eventProof,
                     DecodeHexStringToByteArray(blockHeader),
