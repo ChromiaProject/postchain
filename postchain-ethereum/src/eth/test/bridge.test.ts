@@ -96,8 +96,16 @@ describe("Token Bridge Test", () => {
                 expect(await testDelegatorInstance.hashGtvIntegerLeaf(256)).to.eq("0xCA5F98D59E2E5FE04936A6CCF67F6BF8B5ABDF925BD0FE647A8718CBCE94BD9A".toLowerCase());
             })
 
-            it("hash gtv integer leaf 1256", async () => {
-                expect(await testDelegatorInstance.hashGtvIntegerLeaf(1256)).to.eq("0x0A336A98550BBC8182BE8DBA0517E0A6D0E49E2A598468A4B6FBF3AD53AC7BEA".toLowerCase());
+            it("hash gtv integer leaf 1023", async () => {
+                expect(await testDelegatorInstance.hashGtvIntegerLeaf(1023)).to.eq("0x57854DF20A828791922960583A1CE0328FE502DD7D9256852D864D492B3900A5".toLowerCase());
+            })
+
+            it("hash gtv integer leaf 1024", async () => {
+                expect(await testDelegatorInstance.hashGtvIntegerLeaf(1024)).to.eq("0x4765E67F40EFD44127131C1347F389DFB3993D6AC211DDB04E2074E8C1639BD3".toLowerCase());
+            })
+
+            it("hash gtv integer leaf 32769", async () => {
+                expect(await testDelegatorInstance.hashGtvIntegerLeaf(32769)).to.eq("0x66892F0A7CF93E2FF0E8FE5BD475D933CE3B3E46195A36C959888F2F59AEB389".toLowerCase());
             })
 
             it("hash gtv integer leaf 1234567890", async () => {
@@ -284,7 +292,7 @@ describe("Token Bridge Test", () => {
                 let dependenciesHashedLeaf = hashGtvBytes32Leaf(DecodeHexStringToByteArray(dependencies))
 
                 // This merkle root is calculated in the postchain code
-                let extraDataMerkleRoot = "FCB5E0B2223B4EADD2674EDFDD9B6042F440F533E33A3DDAE1A3EDEF869597C6"
+                let extraDataMerkleRoot = "71012CB81447F8545C89CB19AC4AFB678EBF94C5D93C50A52B74AB7C147C9A3F"
 
                 let node1 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(blockchainRid))
                 let node2 = hashGtvBytes32Leaf(DecodeHexStringToByteArray(previousBlockRid))

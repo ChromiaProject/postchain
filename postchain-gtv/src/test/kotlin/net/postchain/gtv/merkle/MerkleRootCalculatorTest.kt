@@ -120,8 +120,20 @@ class MerkleRootCalculatorTest {
         expected = "CA5F98D59E2E5FE04936A6CCF67F6BF8B5ABDF925BD0FE647A8718CBCE94BD9A"
         assertEquals(expected, actual.toHex())
 
+        actual = GtvInteger(1023L).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
+        expected = "57854DF20A828791922960583A1CE0328FE502DD7D9256852D864D492B3900A5"
+        assertEquals(expected, actual.toHex())
+
+        actual = GtvInteger(1024L).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
+        expected = "4765E67F40EFD44127131C1347F389DFB3993D6AC211DDB04E2074E8C1639BD3"
+        assertEquals(expected, actual.toHex())
+
         actual = GtvInteger(1256L).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
         expected = "0A336A98550BBC8182BE8DBA0517E0A6D0E49E2A598468A4B6FBF3AD53AC7BEA"
+        assertEquals(expected, actual.toHex())
+
+        actual = GtvInteger(32769L).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
+        expected = "66892F0A7CF93E2FF0E8FE5BD475D933CE3B3E46195A36C959888F2F59AEB389"
         assertEquals(expected, actual.toHex())
 
         actual = GtvInteger(1234567890L).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
