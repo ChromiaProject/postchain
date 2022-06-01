@@ -100,7 +100,7 @@ open class DefaultMasterCommunicationManager(
                             }
                         }
                         val hash = config?.let { RemoteConfigVerifier.calculateHash(it) }
-                        val hashStr = config?.let { BlockchainRid(it).toHex() }
+                        val hashStr = hash?.let { BlockchainRid(it).toHex() }
 
                         val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config, hash)
                         masterConnectionManager.sendPacketToSub(response)
