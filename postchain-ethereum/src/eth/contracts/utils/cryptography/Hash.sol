@@ -52,6 +52,18 @@ library Hash {
             remainingValue = remainingValue >> 8;
         }
 
+        if (uint8(b[0]) & 0x80 > 0) {
+            return sha256(abi.encodePacked(
+                uint8(0x1),  // Gtv merkle tree leaf prefix
+                uint8(0xA3), // GtvInteger tag: CONTEXT_CLASS, CONSTRUCTED, 3
+                uint8(nbytes + 3),
+                uint8(0x2), // DER integer tag
+                nbytes+1,
+                uint8(0),
+                b
+            ));
+        } 
+
         return sha256(abi.encodePacked(
                 uint8(0x1),  // Gtv merkle tree leaf prefix
                 uint8(0xA3), // GtvInteger tag: CONTEXT_CLASS, CONSTRUCTED, 3
