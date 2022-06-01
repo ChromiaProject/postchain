@@ -31,7 +31,7 @@ export var hashGtvIntegerLeaf = function (num: number): string {
     let nbytes = 1
     let remainingValue = Math.trunc(num / 256)
     while (remainingValue > 0) {
-        nbytes += + 1
+        nbytes += 1
         remainingValue = Math.trunc(remainingValue / 256)
     }
     let b = new Uint8Array(nbytes)
@@ -40,7 +40,12 @@ export var hashGtvIntegerLeaf = function (num: number): string {
         let v = remainingValue & 0xFF
         b[nbytes - i] = v
         remainingValue = Math.trunc(remainingValue / 256)
-    }    
-    result = ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA3, nbytes+2, 0x2, nbytes, b])
-    return result
+    }
+    if ((b[0] & 0x80) > 0) {
+        nbytes += 1
+        let a = new Uint8Array(1)
+        a[0] = 0
+        return ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA3, nbytes+2, 0x2, nbytes, new Uint8Array([...a, ...b])])
+    }
+    return ethers.utils.soliditySha256(['uint8', 'uint8', 'uint8', 'uint8', 'uint8', 'bytes'], [0x1, 0xA3, nbytes+2, 0x2, nbytes, b])
 }
