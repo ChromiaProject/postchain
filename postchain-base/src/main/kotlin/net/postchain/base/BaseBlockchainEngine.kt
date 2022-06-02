@@ -72,6 +72,12 @@ open class BaseBlockchainEngine(
         .tag("result", "REJECTED")
         .register(Metrics.globalRegistry)
 
+    private val blocks: Timer = Timer.builder("blocks")
+        .description("Built blocks")
+        .tag("chainIID", blockchainConfiguration.chainID.toString())
+        .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
+        .register(Metrics.globalRegistry)
+
     override fun isRunning() = !closed
 
     override fun initialize() {
@@ -212,6 +218,8 @@ open class BaseBlockchainEngine(
         var exception: Exception? = null
 
         try {
+            val blockSample = Timer.start(Metrics.globalRegistry)
+
             blockBuilder.begin(null)
             val abstractBlockBuilder = ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
             val netStart = System.nanoTime()
@@ -229,7 +237,7 @@ open class BaseBlockchainEngine(
                 TimeLog.end("BaseBlockchainEngine.buildBlock().takeTransaction")
                 if (tx != null) {
                     logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
-                    val sample = Timer.start(Metrics.globalRegistry)
+                    val transactionSample = Timer.start(Metrics.globalRegistry)
                     TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
                     if (tx.isSpecial()) {
                         rejectedTxs++
@@ -240,12 +248,12 @@ open class BaseBlockchainEngine(
                     TimeLog.end("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
                     if (txException != null) {
                         rejectedTxs++
-                        sample.stop(rejectedTransactions)
+                        transactionSample.stop(rejectedTransactions)
                         transactionQueue.rejectTransaction(tx, txException)
                         logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
                     } else {
                         acceptedTxs++
-                        sample.stop(acceptedTransactions)
+                        transactionSample.stop(acceptedTransactions)
                         // tx is fine, consider stopping
                         if (strategy.shouldStopBuildingBlock(abstractBlockBuilder)) {
                             buildDebug("Block size limit is reached")
@@ -278,6 +286,7 @@ open class BaseBlockchainEngine(
                 buildLog("End", blockBuilder.getBTrace())
             }
 
+            blockSample.stop(blocks)
         } catch (e: Exception) {
             exception = e
         }
