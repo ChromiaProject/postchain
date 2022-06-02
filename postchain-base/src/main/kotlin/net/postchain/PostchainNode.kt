@@ -2,6 +2,19 @@
 
 package net.postchain
 
+import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.Tag
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics
+import io.micrometer.core.instrument.binder.system.UptimeMetrics
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import io.micrometer.prometheus.PrometheusConfig
+import io.micrometer.prometheus.PrometheusMeterRegistry
+import io.prometheus.client.exporter.HTTPServer
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
@@ -16,6 +29,8 @@ import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
 import nl.komponents.kovenant.Kovenant
+import java.net.InetSocketAddress
+
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
@@ -30,6 +45,8 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
     companion object : KLogging()
 
     init {
+        initMetrics(appConfig)
+
         Kovenant.context {
             workerContext.dispatcher {
                 name = "main"
@@ -57,6 +74,32 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
             addProperty(DiagnosticProperty.PUB_KEY, appConfig.pubKey)
             addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
         }
+    }
+
+    private fun initMetrics(appConfig: AppConfig) {
+        val registry = Metrics.globalRegistry
+        registry.config().commonTags(listOf(Tag.of("node.pubkey", appConfig.pubKey)))
+
+        ClassLoaderMetrics().bindTo(registry)
+        JvmMemoryMetrics().bindTo(registry)
+        JvmGcMetrics().bindTo(registry)
+        JvmThreadMetrics().bindTo(registry)
+        ProcessorMetrics().bindTo(registry)
+        UptimeMetrics().bindTo(registry)
+
+        val prometheusPort = appConfig.getInt("metrics.prometheus.port", -1)
+        if (prometheusPort > 0) {
+            initPrometheus(registry, prometheusPort)
+        } else {
+            registry.add(SimpleMeterRegistry())
+        }
+    }
+
+    private fun initPrometheus(registry: CompositeMeterRegistry, port: Int) {
+        val prometheusRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+        registry.add(prometheusRegistry)
+        HTTPServer(InetSocketAddress(port), prometheusRegistry.prometheusRegistry, true)
+        logger.info("Exposing Prometheus metrics on port $port")
     }
 
     fun startBlockchain(chainId: Long): BlockchainRid? {
