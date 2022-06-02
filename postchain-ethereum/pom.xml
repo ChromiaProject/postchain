@@ -56,6 +56,12 @@
             <artifactId>log4j-slf4j-impl</artifactId>
         </dependency>
 
+        <!-- CLI -->
+        <dependency>
+            <groupId>com.github.ajalt.clikt</groupId>
+            <artifactId>clikt-jvm</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -103,7 +109,6 @@
                         <configuration>
                             <sourceDirs>
                                 <sourceDir>src/main/kotlin</sourceDir>
-                                <sourceDir>target/generated-sources</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
@@ -115,6 +120,7 @@
                         <configuration>
                             <sourceDirs>
                                 <sourceDir>src/test/kotlin</sourceDir>
+                                <sourceDir>target/generated-test-sources</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
@@ -127,14 +133,31 @@
                 <version>3.0.0</version>
                 <executions>
                     <execution>
-                        <phase>generate-sources</phase>
+                        <id>add-test-source</id>
+                        <phase>generate-test-sources</phase>
                         <goals>
-                            <goal>add-source</goal>
+                            <goal>add-test-source</goal>
                         </goals>
                         <configuration>
                             <sources>
-                                <source>target/generated-sources</source>
+                                <source>target/generated-test-sources</source>
                             </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-test-resource</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>add-test-resource</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>
+                                        target/generated-test-resources
+                                    </directory>
+                                </resource>
+                            </resources>
                         </configuration>
                     </execution>
                 </executions>
@@ -145,7 +168,7 @@
                 <artifactId>web3j-maven-plugin</artifactId>
                 <version>4.8.10</version>
                 <configuration>
-                    <packageName>net.postchain.ethereum.contracts</packageName>
+                    <packageName>net.postchain.eif.contracts</packageName>
                     <nativeJavaType>false</nativeJavaType>
                     <contract>
                         <includes>
@@ -163,10 +186,15 @@
                             <include>token/TestToken.sol</include>
                         </includes>
                     </soliditySourceFiles>
-                    <sourceDestination>${project.basedir}/target/generated-sources</sourceDestination>
+                    <outputDirectory>
+                        <abi>${project.basedir}/target/generated-test-resources</abi>
+                        <java>${project.basedir}/target/generated-test-sources</java>
+                    </outputDirectory>
+                    <outputFormat>java,abi</outputFormat>
                 </configuration>
                 <executions>
                     <execution>
+                        <phase>generate-test-sources</phase>
                         <goals>
                             <goal>generate-sources</goal>
                         </goals>

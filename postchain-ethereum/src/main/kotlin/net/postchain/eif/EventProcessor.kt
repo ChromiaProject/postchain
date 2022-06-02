@@ -4,15 +4,12 @@ import mu.KLogging
 import net.postchain.core.BlockchainEngine
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
 import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.ethereum.contracts.TokenBridge
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
 import net.postchain.gtx.OpData
 import org.web3j.abi.EventEncoder
+import org.web3j.abi.datatypes.Event
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.protocol.core.Request
@@ -20,6 +17,7 @@ import org.web3j.protocol.core.Response
 import org.web3j.protocol.core.methods.request.EthFilter
 import org.web3j.protocol.core.methods.response.EthLog
 import org.web3j.protocol.core.methods.response.Log
+import org.web3j.tx.Contract
 import java.lang.Thread.sleep
 import java.math.BigInteger
 import java.util.*
@@ -36,8 +34,6 @@ interface EventProcessor {
  * No EIF special operations will be produced and no operations will be validated against ethereum.
  */
 class NoOpEventProcessor : EventProcessor {
-    private val encodedDepositEvent = EventEncoder.encode(TokenBridge.DEPOSITED_EVENT)
-
     companion object : KLogging()
 
     override fun shutdown() {}
@@ -62,13 +58,14 @@ class NoOpEventProcessor : EventProcessor {
         return true
     }
 
-    private fun isValidEthereumEventFormat(opArgs: Array<out Gtv>) = opArgs.size == 6 &&
+    private fun isValidEthereumEventFormat(opArgs: Array<out Gtv>) = opArgs.size == 7 &&
             opArgs[0].asPrimitive() is ByteArray &&
             opArgs[1].asPrimitive() is BigInteger &&
-            "0x${opArgs[2].asByteArray().toHex()}".equals(encodedDepositEvent, true) &&
+            opArgs[2].asPrimitive() is ByteArray &&
             opArgs[3].asPrimitive() is ByteArray &&
-            opArgs[4].asPrimitive() is BigInteger &&
-            opArgs[5].asPrimitive() is Array<*>
+            opArgs[4].asPrimitive() is String &&
+            opArgs[5].asPrimitive() is Array<*> &&
+            opArgs[6].asPrimitive() is Array<*>
 
     private fun isValidEthereumBlockFormat(opArgs: Array<Gtv>) = opArgs.size == 3 &&
             opArgs[0].asPrimitive() is BigInteger &&
@@ -77,7 +74,7 @@ class NoOpEventProcessor : EventProcessor {
 }
 
 /**
- * Reads DEPOSIT events from ethereum.
+ * Reads events from ethereum.
  *
  * @param readOffset Will return events with this specified offset from the last event we have seen from ethereum
  * (so that slower nodes may have a chance to validate the events)
@@ -85,6 +82,7 @@ class NoOpEventProcessor : EventProcessor {
 class EthereumEventProcessor(
         private val web3j: Web3j,
         private val contractAddresses: List<String>,
+        events: List<Event>,
         private val readOffset: BigInteger,
         skipToHeight: BigInteger,
         blockchainEngine: BlockchainEngine
@@ -92,9 +90,11 @@ class EthereumEventProcessor(
 
     data class EthereumBlock(val number: BigInteger, val hash: String)
 
-    private val encodedDepositEvent = EventEncoder.encode(TokenBridge.DEPOSITED_EVENT)
-    private val eventBlocks: Queue<Pair<EthereumBlock, List<Log>>> = LinkedList()
+    private val eventBlocks: Queue<Array<Gtv>> = LinkedList()
     private var lastReadLogBlockHeight = skipToHeight
+
+    private val eventMap = events.associateBy(EventEncoder::encode)
+    private val eventSignatures = eventMap.keys.toTypedArray()
 
     companion object {
         // The idea here is to avoid too big log queries and
@@ -131,18 +131,19 @@ class EthereumEventProcessor(
             DefaultBlockParameter.valueOf(to),
             contractAddresses
         )
-        filter.addSingleTopic(encodedDepositEvent)
+        filter.addOptionalTopics(*eventSignatures)
 
         val logResponse = sendWeb3jRequestWithRetry(web3j.ethGetLogs(filter))
 
         // Ensure events are sorted on txIndex + logIndex, blocks sorted on block number
-        val sortedLogs = logResponse.logs
+        val sortedEncodedLogs = logResponse.logs
                 .map { (it as EthLog.LogObject).get() }
                 .groupBy { EthereumBlock(it.blockNumber, it.blockHash) }
                 .mapValues { it.value.sortedWith(compareBy({ event -> event.transactionIndex }, { event -> event.logIndex })) }
                 .toList()
                 .sortedBy { it.first.number }
-        processLogEventsAndUpdateOffsets(sortedLogs, to)
+                .map(::eventBlockToGtv)
+        processLogEventsAndUpdateOffsets(sortedEncodedLogs, to)
 
         while (isQueueFull()) {
             logger.debug("Wait for events to be consumed until we read more")
@@ -170,20 +171,22 @@ class EthereumEventProcessor(
             logger.error("Received unexpected blocks")
             return false
         }
-        for ((index, event) in eventBlocks.withIndex()) {
+        for ((index, eventBlock) in eventBlocks.withIndex()) {
             if (index >= ops.size) break
 
             val op = ops[index]
             if (op.opName == OP_ETH_BLOCK) {
                 val opBlockNumber = op.args[0].asBigInteger()
-                val opBlockHash = "0x${op.args[1].asByteArray().toHex()}"
+                val opBlockHash = op.args[1].asByteArray()
 
-                val opEvents = op.args[2].asArray()
-                if (opBlockNumber != event.first.number || !opBlockHash.equals(event.first.hash, true)) {
-                    logger.error("Received unexpected block $opBlockNumber with hash $opBlockHash. Expected block ${event.first.number} with hash ${event.first.hash}")
+                if (opBlockNumber != eventBlock[0].asBigInteger() || !opBlockHash.contentEquals(eventBlock[1].asByteArray())) {
+                    logger.error("Received unexpected block $opBlockNumber with hash $opBlockHash." +
+                            " Expected block ${eventBlock[0].asBigInteger()} with hash ${eventBlock[1].asByteArray()}")
                     return false
                 }
-                if (!hasMatchingEvents(opEvents, event.second)) {
+
+                val opEvents = op.args[2].asArray()
+                if (!hasMatchingEvents(opEvents, eventBlock[2].asArray())) {
                     logger.error("Events in received block $opBlockNumber do not match expected events")
                     return false
                 }
@@ -195,22 +198,47 @@ class EthereumEventProcessor(
         return true
     }
 
-    private fun hasMatchingEvents(opEvents: Array<out Gtv>, eventLogs: List<Log>): Boolean {
+    private fun hasMatchingEvents(opEvents: Array<out Gtv>, eventLogs: Array<out Gtv>): Boolean {
         if (opEvents.size != eventLogs.size) return false
 
         for ((index, opEvent) in opEvents.withIndex()) {
             val eventLog = eventLogs[index]
-            val eventParameters = TokenBridge.staticExtractEventParameters(TokenBridge.DEPOSITED_EVENT, eventLog)
-            if (!"0x${opEvent[0].asByteArray().toHex()}".equals(eventLog.transactionHash, true) ||
-                    opEvent[1].asBigInteger() != eventLog.logIndex ||
-                    !"0x${opEvent[2].asByteArray().toHex()}".equals(encodedDepositEvent, true) ||
-                    !"0x${opEvent[3].asByteArray().toHex()}".equals(eventLog.address, true) ||
-                    opEvent[4].asBigInteger() != eventParameters.indexedValues[0].value ||
-                    !opEvent[5].asArray().contentEquals(
-                            GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray).asArray()
-                    )
+            if (!opEvent[0].asByteArray().contentEquals(eventLog[0].asByteArray()) ||
+                    opEvent[1].asBigInteger() != eventLog[1].asBigInteger() ||
+                    !opEvent[2].asByteArray().contentEquals(eventLog[2].asByteArray()) ||
+                    !opEvent[3].asByteArray().contentEquals(eventLog[3].asByteArray()) ||
+                    opEvent[4].asString() != eventLog[4].asString() ||
+                    !hasMatchingValues(opEvent[5].asArray(), eventLog[5].asArray()) ||
+                    !hasMatchingValues(opEvent[6].asArray(), eventLog[6].asArray())
             ) {
                 return false
+            }
+        }
+        return true
+    }
+
+    private fun hasMatchingValues(opValues: Array<out Gtv>, eventLogValues: Array<out Gtv>): Boolean {
+        if (opValues.size != eventLogValues.size) return false
+
+        for ((index, opValue) in opValues.withIndex()) {
+            val eventLogValue = eventLogValues[index]
+            when (opValue) {
+                is GtvByteArray -> {
+                    if (eventLogValue !is GtvByteArray || !opValue.asByteArray().contentEquals(eventLogValue.asByteArray())) {
+                        return false
+                    }
+                }
+                is GtvBigInteger, is GtvInteger, is GtvString -> {
+                    if (opValue.asPrimitive() != eventLogValue.asPrimitive()) {
+                        return false
+                    }
+                }
+                is GtvArray -> {
+                    if (eventLogValue !is GtvArray || !hasMatchingValues(opValue.asArray(), eventLogValue.asArray())) {
+                        return false
+                    }
+                }
+                else -> throw ProgrammerMistake("Unexpected value gtv type: ${opValue::class}")
             }
         }
         return true
@@ -225,25 +253,29 @@ class EthereumEventProcessor(
         }
 
         return eventBlocks.stream()
-            .takeWhile { it.first.number <= lastReadLogBlockHeight - readOffset }
-            .map {
-                val events = it.second.map { event ->
-                    val eventParameters = TokenBridge.staticExtractEventParameters(TokenBridge.DEPOSITED_EVENT, event)
-                    gtv(listOf(
-                            gtv(event.transactionHash.substring(2).hexStringToByteArray()),
-                            gtv(event.logIndex),
-                            gtv(encodedDepositEvent.substring(2).hexStringToByteArray()),
-                            gtv(event.address.substring(2).hexStringToByteArray()),
-                            gtv(eventParameters.indexedValues[0].value as BigInteger),   // asset type
-                            GtvDecoder.decodeGtv(eventParameters.nonIndexedValues[0].value as ByteArray) // payload
-                    ))
-                }
-                arrayOf<Gtv>(
-                    gtv(it.first.number),
-                    gtv(it.first.hash.substring(2).hexStringToByteArray()),
-                    gtv(events)
-                )
-            }.toList()
+            .takeWhile { it[0].asBigInteger() <= lastReadLogBlockHeight - readOffset }
+            .toList()
+    }
+
+    private fun eventBlockToGtv(eventBlock: Pair<EthereumBlock, List<Log>>): Array<Gtv> {
+        val events = eventBlock.second.map { event ->
+            val matchingEvent = eventMap[event.topics[0]] ?: throw ProgrammerMistake("No matching event")
+            val parameters = Contract.staticExtractEventParameters(matchingEvent, event)
+            gtv(listOf(
+                gtv(event.transactionHash.substring(2).hexStringToByteArray()),
+                gtv(event.logIndex),
+                gtv(event.topics[0].substring(2).hexStringToByteArray()),
+                gtv(event.address.substring(2).hexStringToByteArray()),
+                gtv(matchingEvent.name),
+                gtv(parameters.indexedValues.map(TypeToGtvMapper::map)),
+                gtv(parameters.nonIndexedValues.map(TypeToGtvMapper::map))
+            ))
+        }
+        return arrayOf(
+            gtv(eventBlock.first.number),
+            gtv(eventBlock.first.hash.substring(2).hexStringToByteArray()),
+            gtv(events)
+        )
     }
 
     private fun getLastCommittedEthereumBlockHeight(): BigInteger? {
@@ -260,7 +292,7 @@ class EthereumEventProcessor(
 
     @Synchronized
     private fun processLogEventsAndUpdateOffsets(
-            logs: List<Pair<EthereumBlock, List<Log>>>,
+            logs: List<Array<Gtv>>,
             newLastReadLogBlockHeight: BigInteger
     ) {
         eventBlocks.addAll(logs)
@@ -270,12 +302,12 @@ class EthereumEventProcessor(
     @Synchronized
     private fun isQueueFull(): Boolean {
         // Just check against the events that we can actually consume
-        return eventBlocks.filter { it.first.number <= lastReadLogBlockHeight - readOffset }.size > MAX_QUEUE_SIZE
+        return eventBlocks.filter { it[0].asBigInteger() <= lastReadLogBlockHeight - readOffset }.size > MAX_QUEUE_SIZE
     }
 
     private fun pruneEvents(lastCommittedBlock: BigInteger) {
         var nextLogEvent = eventBlocks.peek()
-        while (nextLogEvent != null && nextLogEvent.first.number <= lastCommittedBlock) {
+        while (nextLogEvent != null && nextLogEvent[0].asBigInteger() <= lastCommittedBlock) {
             eventBlocks.poll()
             nextLogEvent = eventBlocks.peek()
         }

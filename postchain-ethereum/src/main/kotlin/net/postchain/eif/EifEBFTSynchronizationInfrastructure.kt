@@ -56,9 +56,11 @@ class EifSynchronizationInfrastructureExtension(
         } else {
             val web3j = Web3j.build(Web3jServiceFactory.buildService(eifConfig))
 
+            val events = eifBlockchainConfig.events.asArray().map(GtvToEventMapper::map)
             EthereumEventProcessor(
                 web3j,
                 eifBlockchainConfig.contracts,
+                events,
                 BigInteger.valueOf(eifBlockchainConfig.readOffset),
                 eifBlockchainConfig.skipToHeight,
                 engine
