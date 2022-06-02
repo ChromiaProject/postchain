@@ -2,14 +2,13 @@ package net.postchain.server.rpc
 
 import io.grpc.Server
 import io.grpc.ServerBuilder
-import io.restassured.RestAssured.port
 import net.postchain.PostchainNode
 import net.postchain.config.app.AppConfig
 
-class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false) {
+class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false, private val port: Int = 50051) {
 
     private val posthcainNode = PostchainNode(appConfig, wipeDb, debug)
-    private val server: Server = ServerBuilder.forPort(50051)
+    private val server: Server = ServerBuilder.forPort(port)
         .addService(PostchainService(posthcainNode))
         .build()
 

@@ -25,6 +25,12 @@ class CommandRunServer : Command {
     )
     private var debug = false
 
+    @Parameter(
+        names = ["--port"],
+        description = "Enables diagnostic info on the /_debug REST endpoint",
+    )
+    private var port = 50051
+
     private val NODE_CONFIG_FILE = "node-config.properties"
     private val BLOCKCHAIN_DIR = "blockchains"
 
@@ -37,7 +43,7 @@ class CommandRunServer : Command {
                 ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
 
 
-        val server = PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug)
+        val server = PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug, port)
         server.start()
         server.blockUntilShutdown()
         return Ok()

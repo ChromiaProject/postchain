@@ -23,6 +23,7 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
             replyBuilder.message = "Could not start chain"
         }
         responseObserver?.onNext(replyBuilder.build())
+        responseObserver?.onCompleted()
     }
 
     override fun stopBlockchain(
@@ -35,6 +36,7 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
                 message = "Blockchain has been stopped"
                 build()
             })
+        responseObserver?.onCompleted()
     }
 
     override fun  addConfiguration(
@@ -62,6 +64,7 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
             )
             true
         }
+        responseObserver?.onCompleted()
     }
 
     override fun initializeBlockchain(
@@ -92,5 +95,6 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
 
             true
         }
+        responseObserver?.onCompleted()
     }
 }
