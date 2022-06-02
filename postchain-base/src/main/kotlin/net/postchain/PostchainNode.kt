@@ -2,6 +2,7 @@
 
 package net.postchain
 
+import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
@@ -11,6 +12,8 @@ import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics
 import io.micrometer.core.instrument.binder.system.UptimeMetrics
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry
+import io.micrometer.core.instrument.config.MeterFilter
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micrometer.prometheus.PrometheusConfig
 import io.micrometer.prometheus.PrometheusMeterRegistry
@@ -96,6 +99,14 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
     }
 
     private fun initPrometheus(registry: CompositeMeterRegistry, port: Int) {
+        registry.config().meterFilter(object : MeterFilter {
+            override fun configure(id: Meter.Id, config: DistributionStatisticConfig): DistributionStatisticConfig {
+                return DistributionStatisticConfig.builder()
+                    .percentiles(0.9, 0.95, 0.99)
+                    .build()
+                    .merge(config)
+            }
+        })
         val prometheusRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
         registry.add(prometheusRegistry)
         HTTPServer(InetSocketAddress(port), prometheusRegistry.prometheusRegistry, true)
