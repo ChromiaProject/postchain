@@ -48,8 +48,8 @@ open class BaseBlockchainEngine(
 
     init {
         Gauge.builder("transaction.queue.size", transactionQueue) { transactionQueue.getTransactionQueueSize().toDouble() }
-            .description("Postchain transaction queue size")
-            .tag("chainID", blockchainConfiguration.chainID.toString())
+            .description("Transaction queue size")
+            .tag("chainIID", blockchainConfiguration.chainID.toString())
             .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
             .register(Metrics.globalRegistry)
     }
