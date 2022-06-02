@@ -4,6 +4,7 @@ package net.postchain.base
 
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
@@ -21,6 +22,9 @@ import nl.komponents.kovenant.task
 import java.lang.Long.max
 
 const val LOG_STATS = true // Was this the reason this entire class was muted?
+
+private const val PROCESSED_METRIC_NAME = "processed.transactions"
+private const val PROCESSED_METRIC_DESCRIPTION = "Transactions processed"
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -53,6 +57,20 @@ open class BaseBlockchainEngine(
             .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
             .register(Metrics.globalRegistry)
     }
+
+    private val acceptedTransactions: Timer = Timer.builder(PROCESSED_METRIC_NAME)
+        .description(PROCESSED_METRIC_DESCRIPTION)
+        .tag("chainIID", blockchainConfiguration.chainID.toString())
+        .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
+        .tag("result", "ACCEPTED")
+        .register(Metrics.globalRegistry)
+
+    private val rejectedTransactions: Timer = Timer.builder(PROCESSED_METRIC_NAME)
+        .description(PROCESSED_METRIC_DESCRIPTION)
+        .tag("chainIID", blockchainConfiguration.chainID.toString())
+        .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
+        .tag("result", "REJECTED")
+        .register(Metrics.globalRegistry)
 
     override fun isRunning() = !closed
 
@@ -211,6 +229,7 @@ open class BaseBlockchainEngine(
                 TimeLog.end("BaseBlockchainEngine.buildBlock().takeTransaction")
                 if (tx != null) {
                     logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
+                    val sample = Timer.start(Metrics.globalRegistry)
                     TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
                     if (tx.isSpecial()) {
                         rejectedTxs++
@@ -221,10 +240,12 @@ open class BaseBlockchainEngine(
                     TimeLog.end("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
                     if (txException != null) {
                         rejectedTxs++
+                        sample.stop(rejectedTransactions)
                         transactionQueue.rejectTransaction(tx, txException)
                         logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
                     } else {
                         acceptedTxs++
+                        sample.stop(acceptedTransactions)
                         // tx is fine, consider stopping
                         if (strategy.shouldStopBuildingBlock(abstractBlockBuilder)) {
                             buildDebug("Block size limit is reached")
