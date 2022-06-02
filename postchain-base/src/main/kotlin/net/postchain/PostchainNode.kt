@@ -24,7 +24,7 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
 
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
-    protected val postchainContext: PostchainContext
+    val postchainContext: PostchainContext
     private val logPrefix: String
 
     companion object : KLogging()
