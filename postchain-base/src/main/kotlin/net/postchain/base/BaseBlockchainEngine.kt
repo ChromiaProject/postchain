@@ -2,6 +2,8 @@
 
 package net.postchain.base
 
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.Metrics
 import mu.KLogging
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
@@ -43,6 +45,14 @@ open class BaseBlockchainEngine(
     private var closed = false
     private var afterCommitHandlerInternal: AfterCommitHandler = { _, _, _ -> false }
     private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
+
+    init {
+        Gauge.builder("transaction.queue.size", transactionQueue) { transactionQueue.getTransactionQueueSize().toDouble() }
+            .description("Postchain transaction queue size")
+            .tag("chainID", blockchainConfiguration.chainID.toString())
+            .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
+            .register(Metrics.globalRegistry)
+    }
 
     override fun isRunning() = !closed
 
