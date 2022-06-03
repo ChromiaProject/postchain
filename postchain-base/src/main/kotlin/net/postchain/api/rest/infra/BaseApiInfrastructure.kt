@@ -47,7 +47,8 @@ open class BaseApiInfrastructure(
                         process.networkAwareTxQueue,
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
-                        DefaultDebugInfoQuery(nodeDiagnosticContext)
+                        DefaultDebugInfoQuery(nodeDiagnosticContext),
+                        engine.getConfiguration().blockchainRid
                 )
             } else {
                 apiModel = PostchainModel(
@@ -55,7 +56,8 @@ open class BaseApiInfrastructure(
                         engine.getTransactionQueue(),
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries,
-                        DefaultDebugInfoQuery(nodeDiagnosticContext)
+                        DefaultDebugInfoQuery(nodeDiagnosticContext),
+                        engine.getConfiguration().blockchainRid
                 )
             }
 
