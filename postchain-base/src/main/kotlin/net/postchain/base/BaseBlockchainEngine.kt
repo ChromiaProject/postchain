@@ -2,6 +2,8 @@
 
 package net.postchain.base
 
+import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
@@ -15,6 +17,7 @@ import net.postchain.core.block.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
+import net.postchain.metrics.BaseBlockchainEngineMetrics
 import nl.komponents.kovenant.task
 import java.lang.Long.max
 
@@ -43,6 +46,7 @@ open class BaseBlockchainEngine(
     private var closed = false
     private var afterCommitHandlerInternal: AfterCommitHandler = { _, _, _ -> false }
     private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
+    private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
 
     override fun isRunning() = !closed
 
@@ -184,6 +188,8 @@ open class BaseBlockchainEngine(
         var exception: Exception? = null
 
         try {
+            val blockSample = Timer.start(Metrics.globalRegistry)
+
             blockBuilder.begin(null)
             val abstractBlockBuilder = ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
             val netStart = System.nanoTime()
@@ -201,6 +207,7 @@ open class BaseBlockchainEngine(
                 TimeLog.end("BaseBlockchainEngine.buildBlock().takeTransaction")
                 if (tx != null) {
                     logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
+                    val transactionSample = Timer.start(Metrics.globalRegistry)
                     TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
                     if (tx.isSpecial()) {
                         rejectedTxs++
@@ -211,10 +218,12 @@ open class BaseBlockchainEngine(
                     TimeLog.end("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
                     if (txException != null) {
                         rejectedTxs++
+                        transactionSample.stop(metrics.rejectedTransactions)
                         transactionQueue.rejectTransaction(tx, txException)
                         logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
                     } else {
                         acceptedTxs++
+                        transactionSample.stop(metrics.acceptedTransactions)
                         // tx is fine, consider stopping
                         if (strategy.shouldStopBuildingBlock(abstractBlockBuilder)) {
                             buildDebug("Block size limit is reached")
@@ -247,6 +256,7 @@ open class BaseBlockchainEngine(
                 buildLog("End", blockBuilder.getBTrace())
             }
 
+            blockSample.stop(metrics.blocks)
         } catch (e: Exception) {
             exception = e
         }
