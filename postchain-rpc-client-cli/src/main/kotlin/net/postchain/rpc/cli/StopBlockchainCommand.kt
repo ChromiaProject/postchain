@@ -4,17 +4,23 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.types.long
 import io.grpc.StatusRuntimeException
-import net.postchain.rpc.cli.util.clientArgument
+import net.postchain.rpc.cli.util.blockingChannelArgument
+import net.postchain.server.rpc.StopBlockchainRequest
 
 class StopBlockchainCommand: CliktCommand(help = "Stop blockchain with id") {
 
-    private val client by clientArgument()
+    private val channel by blockingChannelArgument()
 
     private val chainId by argument(help = "Chain ID to stop").long()
 
     override fun run() {
         try {
-            client.stopBlockchain(chainId)
+            val request = StopBlockchainRequest.newBuilder()
+                .setChainId(chainId)
+                .build()
+
+            val reply = channel.stopBlockchain(request)
+            println(reply.message)
         } catch (e: StatusRuntimeException) {
             println("Failed with: ${e.message}")
         }
