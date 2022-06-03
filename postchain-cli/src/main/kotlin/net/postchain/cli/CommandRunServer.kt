@@ -27,16 +27,11 @@ class CommandRunServer : Command {
 
     @Parameter(
         names = ["--port"],
-        description = "Enables diagnostic info on the /_debug REST endpoint",
+        description = "Port for the server",
     )
     private var port = 50051
 
-    private val NODE_CONFIG_FILE = "node-config.properties"
-    private val BLOCKCHAIN_DIR = "blockchains"
-
     override fun key(): String = "run-server"
-
-    private val lastHeights = mutableMapOf<Long, Long>() // { chainId -> height }
 
     override fun execute(): CliResult {
         println("run-auto-node will be executed with options: " +
