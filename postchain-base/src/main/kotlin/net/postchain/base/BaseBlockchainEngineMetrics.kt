@@ -3,6 +3,9 @@ package net.postchain.base
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
+import net.postchain.BLOCKCHAIN_RID_TAG
+import net.postchain.CHAIN_IID_TAG
+import net.postchain.RESULT_TAG
 import net.postchain.common.BlockchainRid
 import net.postchain.core.TransactionQueue
 
@@ -13,28 +16,28 @@ class BaseBlockchainEngineMetrics(chainIID: Long, blockchainRid: BlockchainRid, 
     init {
         Gauge.builder("transaction.queue.size", transactionQueue) { transactionQueue.getTransactionQueueSize().toDouble() }
             .description("Transaction queue size")
-            .tag("chainIID", chainIID.toString())
-            .tag("blockchainRID", blockchainRid.toHex())
+            .tag(CHAIN_IID_TAG, chainIID.toString())
+            .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
             .register(Metrics.globalRegistry)
     }
 
     val acceptedTransactions: Timer = Timer.builder(PROCESSED_METRIC_NAME)
         .description(PROCESSED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", "ACCEPTED")
+        .tag(CHAIN_IID_TAG, chainIID.toString())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(RESULT_TAG, "ACCEPTED")
         .register(Metrics.globalRegistry)
 
     val rejectedTransactions: Timer = Timer.builder(PROCESSED_METRIC_NAME)
         .description(PROCESSED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", "REJECTED")
+        .tag(CHAIN_IID_TAG, chainIID.toString())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(RESULT_TAG, "REJECTED")
         .register(Metrics.globalRegistry)
 
     val blocks: Timer = Timer.builder("blocks")
         .description("Built blocks")
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
+        .tag(CHAIN_IID_TAG, chainIID.toString())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
         .register(Metrics.globalRegistry)
 }

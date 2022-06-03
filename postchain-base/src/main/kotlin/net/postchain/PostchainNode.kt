@@ -34,6 +34,11 @@ import net.postchain.devtools.NameHelper.peerName
 import nl.komponents.kovenant.Kovenant
 import java.net.InetSocketAddress
 
+// Metric tags
+const val NODE_PUBKEY_TAG = "node.pubkey"
+const val CHAIN_IID_TAG = "chainIID"
+const val BLOCKCHAIN_RID_TAG = "blockchainRID"
+const val RESULT_TAG = "result"
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
@@ -81,7 +86,7 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
 
     private fun initMetrics(appConfig: AppConfig) {
         val registry = Metrics.globalRegistry
-        registry.config().commonTags(listOf(Tag.of("node.pubkey", appConfig.pubKey)))
+        registry.config().commonTags(listOf(Tag.of(NODE_PUBKEY_TAG, appConfig.pubKey)))
 
         ClassLoaderMetrics().bindTo(registry)
         JvmMemoryMetrics().bindTo(registry)

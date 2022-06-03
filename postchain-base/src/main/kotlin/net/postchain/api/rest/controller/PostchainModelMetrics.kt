@@ -2,6 +2,9 @@ package net.postchain.api.rest.controller
 
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
+import net.postchain.BLOCKCHAIN_RID_TAG
+import net.postchain.CHAIN_IID_TAG
+import net.postchain.RESULT_TAG
 import net.postchain.common.BlockchainRid
 import net.postchain.common.tx.EnqueueTransactionResult
 
@@ -11,36 +14,36 @@ private const val SUBMITTED_METRIC_DESCRIPTION = "Transactions submitted/enqueue
 class PostchainModelMetrics(chainIID: Long, blockchainRid: BlockchainRid) {
      val fullTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
         .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.FULL.name)
+        .tag(CHAIN_IID_TAG, chainIID.toString())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(RESULT_TAG, EnqueueTransactionResult.FULL.name)
         .register(Metrics.globalRegistry)
 
      val invalidTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
         .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.INVALID.name)
+        .tag(CHAIN_IID_TAG, chainIID.toString())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(RESULT_TAG, EnqueueTransactionResult.INVALID.name)
         .register(Metrics.globalRegistry)
 
      val duplicateTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
         .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.DUPLICATE.name)
+        .tag(CHAIN_IID_TAG, chainIID.toString())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(RESULT_TAG, EnqueueTransactionResult.DUPLICATE.name)
         .register(Metrics.globalRegistry)
 
      val unknownTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
         .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.UNKNOWN.name)
+        .tag(CHAIN_IID_TAG, chainIID.toString())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(RESULT_TAG, EnqueueTransactionResult.UNKNOWN.name)
         .register(Metrics.globalRegistry)
 
      val okTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
         .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.OK.name)
+        .tag(CHAIN_IID_TAG, chainIID.toString())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(RESULT_TAG, EnqueueTransactionResult.OK.name)
         .register(Metrics.globalRegistry)
 }
