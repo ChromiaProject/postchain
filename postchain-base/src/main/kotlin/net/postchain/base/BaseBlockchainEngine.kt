@@ -2,7 +2,6 @@
 
 package net.postchain.base
 
-import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
 import mu.KLogging
@@ -22,9 +21,6 @@ import nl.komponents.kovenant.task
 import java.lang.Long.max
 
 const val LOG_STATS = true // Was this the reason this entire class was muted?
-
-private const val PROCESSED_METRIC_NAME = "processed.transactions"
-private const val PROCESSED_METRIC_DESCRIPTION = "Transactions processed"
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -49,34 +45,7 @@ open class BaseBlockchainEngine(
     private var closed = false
     private var afterCommitHandlerInternal: AfterCommitHandler = { _, _, _ -> false }
     private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
-
-    init {
-        Gauge.builder("transaction.queue.size", transactionQueue) { transactionQueue.getTransactionQueueSize().toDouble() }
-            .description("Transaction queue size")
-            .tag("chainIID", blockchainConfiguration.chainID.toString())
-            .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
-            .register(Metrics.globalRegistry)
-    }
-
-    private val acceptedTransactions: Timer = Timer.builder(PROCESSED_METRIC_NAME)
-        .description(PROCESSED_METRIC_DESCRIPTION)
-        .tag("chainIID", blockchainConfiguration.chainID.toString())
-        .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
-        .tag("result", "ACCEPTED")
-        .register(Metrics.globalRegistry)
-
-    private val rejectedTransactions: Timer = Timer.builder(PROCESSED_METRIC_NAME)
-        .description(PROCESSED_METRIC_DESCRIPTION)
-        .tag("chainIID", blockchainConfiguration.chainID.toString())
-        .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
-        .tag("result", "REJECTED")
-        .register(Metrics.globalRegistry)
-
-    private val blocks: Timer = Timer.builder("blocks")
-        .description("Built blocks")
-        .tag("chainIID", blockchainConfiguration.chainID.toString())
-        .tag("blockchainRID", blockchainConfiguration.blockchainRid.toHex())
-        .register(Metrics.globalRegistry)
+    private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
 
     override fun isRunning() = !closed
 
@@ -248,12 +217,12 @@ open class BaseBlockchainEngine(
                     TimeLog.end("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
                     if (txException != null) {
                         rejectedTxs++
-                        transactionSample.stop(rejectedTransactions)
+                        transactionSample.stop(metrics.rejectedTransactions)
                         transactionQueue.rejectTransaction(tx, txException)
                         logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
                     } else {
                         acceptedTxs++
-                        transactionSample.stop(acceptedTransactions)
+                        transactionSample.stop(metrics.acceptedTransactions)
                         // tx is fine, consider stopping
                         if (strategy.shouldStopBuildingBlock(abstractBlockBuilder)) {
                             buildDebug("Block size limit is reached")
@@ -286,7 +255,7 @@ open class BaseBlockchainEngine(
                 buildLog("End", blockBuilder.getBTrace())
             }
 
-            blockSample.stop(blocks)
+            blockSample.stop(metrics.blocks)
         } catch (e: Exception) {
             exception = e
         }

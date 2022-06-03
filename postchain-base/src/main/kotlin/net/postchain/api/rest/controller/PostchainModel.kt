@@ -23,9 +23,6 @@ import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
 
-private const val SUBMITTED_METRIC_NAME = "submitted.transactions"
-private const val SUBMITTED_METRIC_DESCRIPTION = "Transactions submitted/enqueued"
-
 open class PostchainModel(
     final override val chainIID: Long,
     val txQueue: TransactionQueue,
@@ -37,40 +34,7 @@ open class PostchainModel(
 
     companion object : KLogging()
 
-    private val fullTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
-        .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.FULL.name)
-        .register(Metrics.globalRegistry)
-
-    private val invalidTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
-        .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.INVALID.name)
-        .register(Metrics.globalRegistry)
-
-    private val duplicateTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
-        .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.DUPLICATE.name)
-        .register(Metrics.globalRegistry)
-
-    private val unknownTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
-        .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.UNKNOWN.name)
-        .register(Metrics.globalRegistry)
-
-    private val okTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
-        .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag("chainIID", chainIID.toString())
-        .tag("blockchainRID", blockchainRid.toHex())
-        .tag("result", EnqueueTransactionResult.OK.name)
-        .register(Metrics.globalRegistry)
+    private val metrics = PostchainModelMetrics(chainIID, blockchainRid)
 
     override fun postTransaction(tx: ApiTx) {
         val sample = Timer.start(Metrics.globalRegistry)
@@ -87,23 +51,23 @@ open class PostchainModel(
         nonce = TimeLog.startSumConc("PostchainModel.postTransaction().enqueue")
         when (txQueue.enqueue(decodedTransaction)) {
             EnqueueTransactionResult.FULL -> {
-                sample.stop(fullTransactions)
+                sample.stop(metrics.fullTransactions)
                 throw OverloadedException("Transaction queue is full")
             }
             EnqueueTransactionResult.INVALID -> {
-                sample.stop(invalidTransactions)
+                sample.stop(metrics.invalidTransactions)
                 throw InvalidTnxException("Transaction is invalid")
             }
             EnqueueTransactionResult.DUPLICATE -> {
-                sample.stop(duplicateTransactions)
+                sample.stop(metrics.duplicateTransactions)
                 throw DuplicateTnxException("Transaction already in queue")
             }
             EnqueueTransactionResult.UNKNOWN -> {
-                sample.stop(unknownTransactions)
+                sample.stop(metrics.unknownTransactions)
                 throw UserMistake("Unknown error")
             }
             EnqueueTransactionResult.OK -> {
-                sample.stop(okTransactions)
+                sample.stop(metrics.okTransactions)
             }
         }
         TimeLog.end("PostchainModel.postTransaction().enqueue", nonce)
