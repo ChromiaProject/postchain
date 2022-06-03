@@ -15,6 +15,7 @@
         <module>postchain-client</module>
         <module>postchain-client-cli</module>
         <module>postchain-cli</module>
+        <module>postchain-rpc-client-cli</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -159,6 +160,11 @@
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-cli</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-rpc-client-cli</artifactId>
+                <version>3.4.3-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
