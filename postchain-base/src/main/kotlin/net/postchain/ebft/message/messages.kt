@@ -123,5 +123,45 @@ class BlockHeader(val header: ByteArray, val witness: ByteArray, val requestedHe
     }
 }
 
+/**
+ * Requests that the peer replies with a BlockRange beginning at "height"
+ *
+ * @property startAtHeight is the height of the first block we want to get (and then we also want any
+ * existing blocks after this)
+ */
+class GetBlockRange(val startAtHeight: Long) : EbftMessage(MessageTopic.GETBLOCKRANGE) {
 
+    override fun toGtv(): Gtv {
+        return gtv(topic.toGtv(), gtv(startAtHeight))
+    }
+
+}
+
+/**
+ * Holds a number of blocks from "height" and onwards
+ *
+ * @property startAtHeight is the height of the first block in the range
+ * @property blocks is a list of [CompleteBlock]
+ */
+class BlockRange(val startAtHeight: Long, val blocks: List<CompleteBlock>) : EbftMessage(MessageTopic.BLOCKRANGE) {
+
+    override fun toGtv(): Gtv {
+        val gtvBlockList = mutableListOf<Gtv>()
+        for (block in blocks) {
+            val gtvBlock = gtv(completeBlockToGtv(block.data, block.height, block.witness))
+            gtvBlockList.add(gtvBlock)
+        }
+        return gtv(topic.toGtv(), gtv(startAtHeight), gtv(gtvBlockList))
+    }
+
+}
+
+fun completeBlockToGtv(data: BlockData, height: Long, witness: ByteArray): List<Gtv> {
+    return listOf(
+        gtv(data.header),
+        gtv(data.transactions.map { gtv(it) }),
+        gtv(height),
+        gtv(witness)
+    )
+}
 

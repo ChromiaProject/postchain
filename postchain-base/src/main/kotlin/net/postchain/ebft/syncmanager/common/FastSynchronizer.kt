@@ -6,7 +6,6 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
-import net.postchain.core.BlockHeader
 import net.postchain.debug.BlockTrace
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
@@ -106,15 +105,14 @@ data class FastSyncParameters(
  * or so upon first start. But in tests, this can be really annoying. So tests that only runs a single node
  * should set [params.exitDelay] to 0.
  */
-class FastSynchronizer(private val workerContext: WorkerContext,
-                       val blockDatabase: BlockDatabase,
-                       val params: FastSyncParameters,
-                       val isProcessRunning: () -> Boolean
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
-    private val blockchainConfiguration = workerContext.engine.getConfiguration()
-    private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
+class FastSynchronizer(
+    private val wrkrCntxt: WorkerContext,
+    val blockDatabase: BlockDatabase,
+    private val prms: FastSyncParameters,
+    val isProcessRunning: () -> Boolean
+) : AbstractSynchronizer(wrkrCntxt, prms) {
+
     private val jobs = TreeMap<Long, Job>()
-    private val peerStatuses = PeerStatuses(params)
     private var lastJob: Job? = null
     private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
 
@@ -126,8 +124,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
 
     companion object : KLogging()
 
-    var blockHeight: Long = blockQueries.getBestHeight().get()
-        private set
 
     inner class Job(val height: Long, var peerId: NodeRid) {
         var header: BlockHeader? = null
