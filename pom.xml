@@ -5,7 +5,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.4.3-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT-rpc</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>
@@ -164,7 +164,7 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-rpc-client-cli</artifactId>
-                <version>3.4.3-SNAPSHOT</version>
+                <version>3.5.0-SNAPSHOT-rpc</version>
             </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
