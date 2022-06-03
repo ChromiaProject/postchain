@@ -15,7 +15,9 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.metrics.initMetrics
 import nl.komponents.kovenant.Kovenant
+
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
@@ -30,6 +32,8 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
     companion object : KLogging()
 
     init {
+        initMetrics(appConfig)
+
         Kovenant.context {
             workerContext.dispatcher {
                 name = "main"
