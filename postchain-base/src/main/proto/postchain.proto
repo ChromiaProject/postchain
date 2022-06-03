@@ -12,6 +12,7 @@ service PostchainService {
   rpc StopBlockchain (StopBlockchainRequest) returns (StopBlockchainReply) {} // Stop blockchain with ID
   rpc InitializeBlockchain (InitializeBlockchainRequest) returns (InitializeBlockchainReply) {} // Adds and starts blockchain
   rpc AddConfiguration (AddConfigurationRequest) returns (AddConfigurationReply) {} // Add configuration at height
+  rpc AddPeer (AddPeerRequest) returns (AddPeerReply) {}
 }
 
 message InitializeBlockchainRequest {
@@ -51,5 +52,16 @@ message StopBlockchainRequest {
 }
 
 message StopBlockchainReply {
+  string message = 1;
+}
+
+message AddPeerRequest {
+  string host = 1;
+  int32 port = 2;
+  string pubkey = 3;
+  optional bool override = 4;
+}
+
+message AddPeerReply {
   string message = 1;
 }

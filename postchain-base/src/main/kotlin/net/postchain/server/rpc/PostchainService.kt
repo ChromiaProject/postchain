@@ -1,11 +1,13 @@
 package net.postchain.server.rpc
 
+import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import net.postchain.PostchainNode
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.withWriteConnection
+import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -95,5 +97,35 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
             build()
         })
         responseObserver?.onCompleted()
+    }
+
+    override fun addPeer(request: AddPeerRequest?, responseObserver: StreamObserver<AddPeerReply>?) {
+        val pubkey = request!!.pubkey
+        if (pubkey.length != 66) {
+            return responseObserver?.onError(Status.INVALID_ARGUMENT.withDescription("Public key $pubkey must be of length 66, but was ${pubkey.length}").asRuntimeException())!!
+        }
+        try {
+            pubkey.hexStringToByteArray()
+        } catch (e: java.lang.Exception) {
+            return responseObserver?.onError(Status.INVALID_ARGUMENT.withDescription("Public key $pubkey must be a valid hex string").asRuntimeException())!!
+        }
+        postchainNode.postchainContext.storage.withWriteConnection { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            val targetHost = db.findPeerInfo(ctx, request.host, request.port, null)
+            if (targetHost.isNotEmpty()) {
+                return@withWriteConnection responseObserver?.onError(Status.ALREADY_EXISTS.withDescription("Peer already exists on current host").asRuntimeException())
+            }
+            val targetKey = db.findPeerInfo(ctx, null, null, pubkey)
+            if (targetKey.isNotEmpty() && !request.override) {
+                return@withWriteConnection responseObserver?.onError(Status.ALREADY_EXISTS.withDescription("public key already added for a host, use override to add anyway").asRuntimeException())
+            }
+            db.addPeerInfo(ctx, request.host, request.port, pubkey)
+            responseObserver?.onNext(
+                AddPeerReply.newBuilder()
+                    .setMessage("Peer was added successfully")
+                    .build()
+            )
+            responseObserver?.onCompleted()
+        }
     }
 }
