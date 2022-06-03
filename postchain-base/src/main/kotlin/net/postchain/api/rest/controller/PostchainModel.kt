@@ -22,6 +22,7 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
+import net.postchain.metrics.PostchainModelMetrics
 
 open class PostchainModel(
     final override val chainIID: Long,

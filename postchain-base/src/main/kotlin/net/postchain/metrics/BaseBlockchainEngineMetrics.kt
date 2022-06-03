@@ -1,11 +1,8 @@
-package net.postchain.base
+package net.postchain.metrics
 
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
-import net.postchain.BLOCKCHAIN_RID_TAG
-import net.postchain.CHAIN_IID_TAG
-import net.postchain.RESULT_TAG
 import net.postchain.common.BlockchainRid
 import net.postchain.core.TransactionQueue
 
