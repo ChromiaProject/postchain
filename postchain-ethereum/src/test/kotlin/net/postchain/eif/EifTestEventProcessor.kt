@@ -3,7 +3,7 @@ package net.postchain.eif
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
-import net.postchain.ethereum.contracts.TokenBridge
+import net.postchain.ethereum.TokenBridge
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.OpData

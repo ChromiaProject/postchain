@@ -5,8 +5,8 @@ import assertk.assertions.*
 import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
 import net.postchain.core.BlockchainEngine
-import net.postchain.ethereum.contracts.TestToken
-import net.postchain.ethereum.contracts.TokenBridge
+import net.postchain.ethereum.TestToken
+import net.postchain.ethereum.TokenBridge
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.OpData

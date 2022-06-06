@@ -6,7 +6,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.ethereum.contracts.TokenBridge
+import net.postchain.ethereum.TokenBridge
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
