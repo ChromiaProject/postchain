@@ -23,6 +23,22 @@ import java.math.BigInteger
 import java.util.*
 import kotlin.streams.toList
 
+enum class EncodedBlock(val index: Int) {
+    NUMBER(0),
+    HASH(1),
+    EVENTS(2)
+}
+
+enum class EncodedEvent(val index: Int) {
+    TX_HASH(0),
+    LOG_INDEX(1),
+    SIGNATURE(2),
+    CONTRACT(3),
+    NAME(4),
+    INDEXED_VALUES(5),
+    NON_INDEXED_VALUES(6)
+}
+
 interface EventProcessor {
     fun shutdown()
     fun getEventData(): List<Array<Gtv>>
@@ -59,18 +75,18 @@ class NoOpEventProcessor : EventProcessor {
     }
 
     private fun isValidEthereumEventFormat(opArgs: Array<out Gtv>) = opArgs.size == 7 &&
-            opArgs[0].asPrimitive() is ByteArray &&
-            opArgs[1].asPrimitive() is BigInteger &&
-            opArgs[2].asPrimitive() is ByteArray &&
-            opArgs[3].asPrimitive() is ByteArray &&
-            opArgs[4].asPrimitive() is String &&
-            opArgs[5].asPrimitive() is Array<*> &&
-            opArgs[6].asPrimitive() is Array<*>
+            opArgs[EncodedEvent.TX_HASH.index].asPrimitive() is ByteArray &&
+            opArgs[EncodedEvent.LOG_INDEX.index].asPrimitive() is BigInteger &&
+            opArgs[EncodedEvent.SIGNATURE.index].asPrimitive() is ByteArray &&
+            opArgs[EncodedEvent.CONTRACT.index].asPrimitive() is ByteArray &&
+            opArgs[EncodedEvent.NAME.index].asPrimitive() is String &&
+            opArgs[EncodedEvent.INDEXED_VALUES.index].asPrimitive() is Array<*> &&
+            opArgs[EncodedEvent.NON_INDEXED_VALUES.index].asPrimitive() is Array<*>
 
     private fun isValidEthereumBlockFormat(opArgs: Array<Gtv>) = opArgs.size == 3 &&
-            opArgs[0].asPrimitive() is BigInteger &&
-            opArgs[1].asPrimitive() is ByteArray &&
-            opArgs[2].asArray().all { isValidEthereumEventFormat(it.asArray()) }
+            opArgs[EncodedBlock.NUMBER.index].asPrimitive() is BigInteger &&
+            opArgs[EncodedBlock.HASH.index].asPrimitive() is ByteArray &&
+            opArgs[EncodedBlock.EVENTS.index].asArray().all { isValidEthereumEventFormat(it.asArray()) }
 }
 
 /**
@@ -176,17 +192,21 @@ class EthereumEventProcessor(
 
             val op = ops[index]
             if (op.opName == OP_ETH_BLOCK) {
-                val opBlockNumber = op.args[0].asBigInteger()
-                val opBlockHash = op.args[1].asByteArray()
+                val opBlockNumber = op.args[EncodedBlock.NUMBER.index].asBigInteger()
+                val opBlockHash = op.args[EncodedBlock.HASH.index].asByteArray()
 
-                if (opBlockNumber != eventBlock[0].asBigInteger() || !opBlockHash.contentEquals(eventBlock[1].asByteArray())) {
-                    logger.error("Received unexpected block $opBlockNumber with hash $opBlockHash." +
-                            " Expected block ${eventBlock[0].asBigInteger()} with hash ${eventBlock[1].asByteArray()}")
+                if (opBlockNumber != eventBlock[EncodedBlock.NUMBER.index].asBigInteger()
+                    || !opBlockHash.contentEquals(eventBlock[EncodedBlock.HASH.index].asByteArray())
+                ) {
+                    logger.error(
+                        "Received unexpected block $opBlockNumber with hash $opBlockHash." +
+                                " Expected block ${eventBlock[0].asBigInteger()} with hash ${eventBlock[1].asByteArray()}"
+                    )
                     return false
                 }
 
-                val opEvents = op.args[2].asArray()
-                if (!hasMatchingEvents(opEvents, eventBlock[2].asArray())) {
+                val opEvents = op.args[EncodedBlock.EVENTS.index].asArray()
+                if (!hasMatchingEvents(opEvents, eventBlock[EncodedBlock.EVENTS.index].asArray())) {
                     logger.error("Events in received block $opBlockNumber do not match expected events")
                     return false
                 }
@@ -203,13 +223,13 @@ class EthereumEventProcessor(
 
         for ((index, opEvent) in opEvents.withIndex()) {
             val eventLog = eventLogs[index]
-            if (!opEvent[0].asByteArray().contentEquals(eventLog[0].asByteArray()) ||
-                    opEvent[1].asBigInteger() != eventLog[1].asBigInteger() ||
-                    !opEvent[2].asByteArray().contentEquals(eventLog[2].asByteArray()) ||
-                    !opEvent[3].asByteArray().contentEquals(eventLog[3].asByteArray()) ||
-                    opEvent[4].asString() != eventLog[4].asString() ||
-                    !hasMatchingValues(opEvent[5].asArray(), eventLog[5].asArray()) ||
-                    !hasMatchingValues(opEvent[6].asArray(), eventLog[6].asArray())
+            if (!opEvent[EncodedEvent.TX_HASH.index].asByteArray().contentEquals(eventLog[EncodedEvent.TX_HASH.index].asByteArray()) ||
+                opEvent[EncodedEvent.LOG_INDEX.index].asBigInteger() != eventLog[EncodedEvent.LOG_INDEX.index].asBigInteger() ||
+                !opEvent[EncodedEvent.SIGNATURE.index].asByteArray().contentEquals(eventLog[EncodedEvent.SIGNATURE.index].asByteArray()) ||
+                !opEvent[EncodedEvent.CONTRACT.index].asByteArray().contentEquals(eventLog[EncodedEvent.CONTRACT.index].asByteArray()) ||
+                opEvent[EncodedEvent.NAME.index].asString() != eventLog[EncodedEvent.NAME.index].asString() ||
+                !hasMatchingValues(opEvent[EncodedEvent.INDEXED_VALUES.index].asArray(), eventLog[EncodedEvent.INDEXED_VALUES.index].asArray()) ||
+                !hasMatchingValues(opEvent[EncodedEvent.NON_INDEXED_VALUES.index].asArray(), eventLog[EncodedEvent.NON_INDEXED_VALUES.index].asArray())
             ) {
                 return false
             }
@@ -302,12 +322,14 @@ class EthereumEventProcessor(
     @Synchronized
     private fun isQueueFull(): Boolean {
         // Just check against the events that we can actually consume
-        return eventBlocks.filter { it[0].asBigInteger() <= lastReadLogBlockHeight - readOffset }.size > MAX_QUEUE_SIZE
+        return eventBlocks.filter {
+            it[EncodedBlock.NUMBER.index].asBigInteger() <= lastReadLogBlockHeight - readOffset
+        }.size > MAX_QUEUE_SIZE
     }
 
     private fun pruneEvents(lastCommittedBlock: BigInteger) {
         var nextLogEvent = eventBlocks.peek()
-        while (nextLogEvent != null && nextLogEvent[0].asBigInteger() <= lastCommittedBlock) {
+        while (nextLogEvent != null && nextLogEvent[EncodedBlock.NUMBER.index].asBigInteger() <= lastCommittedBlock) {
             eventBlocks.poll()
             nextLogEvent = eventBlocks.peek()
         }

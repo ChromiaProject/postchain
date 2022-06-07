@@ -115,7 +115,7 @@ class EthereumEventProcessorTest {
             .atMost(Duration.ONE_MINUTE)
             .untilAsserted {
                 val eventBlocks = ethereumEventProcessor.getEventData()
-                val events = eventBlocks.flatMap { it[2].asArray().asList() }
+                val events = eventBlocks.flatMap { it[EncodedBlock.EVENTS.index].asArray().asList() }
                 assert(events.size == 5).isTrue()
             }
 
@@ -135,8 +135,8 @@ class EthereumEventProcessorTest {
         val eventBlocksWithoutEvents = eventBlocksToValidate.mapIndexed { i, eventBlock ->
             if (i == 0) {
                 OpData(OP_ETH_BLOCK, arrayOf(
-                    eventBlock.args[0],
-                    eventBlock.args[1],
+                    eventBlock.args[EncodedBlock.NUMBER.index],
+                    eventBlock.args[EncodedBlock.HASH.index],
                     gtv(emptyList())
                 ))
             } else {
@@ -146,7 +146,7 @@ class EthereumEventProcessorTest {
         assert(ethereumEventProcessor.isValidEventData(eventBlocksWithoutEvents)).isFalse()
 
         // Mock that the block was validated and committed to DB
-        val eventDataBlockNumber = eventData.last()[0].asBigInteger()
+        val eventDataBlockNumber = eventData.last()[EncodedBlock.NUMBER.index].asBigInteger()
         whenever(blockQueriesMock.query(eq("get_last_eth_block"), any()))
             .doReturn(getMockedBlockHeightResponse(eventDataBlockNumber))
 
@@ -166,14 +166,14 @@ class EthereumEventProcessorTest {
             .atMost(Duration.ONE_MINUTE)
             .untilAsserted {
                 val eventBlocks = ethereumEventProcessor.getEventData()
-                val events = eventBlocks.flatMap { it[2].asArray().asList() }
+                val events = eventBlocks.flatMap { it[EncodedBlock.EVENTS.index].asArray().asList() }
                 assert(events.size == 1).isTrue()
             }
 
         val lastEventBlock = ethereumEventProcessor.getEventData().first()
-        val lastEvent = lastEventBlock[2].asArray().first()
-        val indexedValues = lastEvent[5].asArray()
-        val nonIndexedValues = lastEvent[6].asArray()
+        val lastEvent = lastEventBlock[EncodedBlock.EVENTS.index].asArray().first()
+        val indexedValues = lastEvent[EncodedEvent.INDEXED_VALUES.index].asArray()
+        val nonIndexedValues = lastEvent[EncodedEvent.NON_INDEXED_VALUES.index].asArray()
 
         // Check that data in the event matches what we sent
         assert("0x${indexedValues[0].asByteArray().toHex()}").isEqualTo(transactionManager.fromAddress, true) // owner
@@ -224,9 +224,9 @@ class EthereumEventProcessorTest {
                 .atMost(Duration.ONE_MINUTE)
                 .untilAsserted {
                     val eventBlocks = ethereumEventProcessor.getEventData()
-                    val events = eventBlocks.flatMap { it[2].asArray().asList() }
+                    val events = eventBlocks.flatMap { it[EncodedBlock.EVENTS.index].asArray().asList() }
                     assert(events.size == 2).isTrue()
-                    val eventContractAddresses = events.map { "0x${it[3].asByteArray().toHex()}".toLowerCase() }
+                    val eventContractAddresses = events.map { "0x${it[EncodedEvent.CONTRACT.index].asByteArray().toHex()}".toLowerCase() }
                     assert(eventContractAddresses).containsExactly(*contractAddresses.map(String::toLowerCase).toTypedArray())
                 }
 
