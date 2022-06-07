@@ -43,13 +43,6 @@ class TypeToGtvMapperTest {
         assert(arrayGtv[0].asBigInteger()).isEqualTo(BigInteger.ONE)
         assert(arrayGtv[1].asBigInteger()).isEqualTo(BigInteger.TWO)
 
-        val arrayOfArray = DynamicArray(DynamicArray::class.java, array, array)
-        val arrayOfArrayGtv = TypeToGtvMapper.map(arrayOfArray)
-        for (subArray in arrayOfArrayGtv.asArray()) {
-            assert(subArray.asArray()[0].asBigInteger()).isEqualTo(BigInteger.ONE)
-            assert(subArray.asArray()[1].asBigInteger()).isEqualTo(BigInteger.TWO)
-        }
-
         val bytes = ByteArray(64)
         val bytesGtv = TypeToGtvMapper.map(DynamicBytes(bytes))
         assert(bytes.contentEquals(bytesGtv.asByteArray()))
