@@ -7,7 +7,7 @@ import java.io.File
 
 class AbiJsonToGtvXmlCommand : CliktCommand(name = "generate-gtv-xml") {
 
-    private val abiFile by option("-s", "--source", help = "Names of the relevant events")
+    private val abiSource by option("-s", "--source", help = "Path to a JSON ABI file or a directory of JSON ABI files")
         .file(true)
         .required()
 
@@ -20,7 +20,13 @@ class AbiJsonToGtvXmlCommand : CliktCommand(name = "generate-gtv-xml") {
         .default(File("events.xml"))
 
     override fun run() {
-        val abiJson = abiFile.readText()
+        val abiJson = if (abiSource.isDirectory) {
+            abiSource.listFiles().joinToString(",", "[", "]") {
+                it.readText().trim('[', ']')
+            }
+        } else {
+            abiSource.readText()
+        }
 
         val gtvXml = AbiJsonToGtvXml.abiJsonToXml(abiJson, eventNames)
 
