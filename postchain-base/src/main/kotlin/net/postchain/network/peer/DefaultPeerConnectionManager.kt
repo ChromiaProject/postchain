@@ -227,6 +227,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         }
     }
 
+    @Synchronized
     override fun getConnectedNodes(chainId: Long): List<NodeRid> {
         val chain = chainsWithConnections.get(chainId)
         return chain?.getAllNodes() ?: emptyList()
