@@ -38,7 +38,7 @@ class CommandRunServer : Command {
     override fun execute(): CliResult {
         println("Server is started with: " + ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
 
-        PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug, port).apply {
+        PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug || System.getenv("POSTCHAIN_DEBUG").toBoolean(), port).apply {
             start()
             blockUntilShutdown()
         }
