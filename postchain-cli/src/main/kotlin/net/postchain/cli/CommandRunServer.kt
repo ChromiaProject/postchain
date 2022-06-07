@@ -14,14 +14,16 @@ import org.apache.commons.lang3.builder.ToStringStyle
 class CommandRunServer : Command {
 
     companion object : KLogging()
+
     @Parameter(
         names = ["-nc", "--node-config"],
-        description = "Configuration file of node (.properties file)")
+        description = "Configuration file of node (.properties file)"
+    )
     private var nodeConfigFile = ""
 
     @Parameter(
-            names = ["--debug"],
-            description = "Enables diagnostic info on the /_debug REST endpoint",
+        names = ["--debug"],
+        description = "Enables diagnostic info on the /_debug REST endpoint",
     )
     private var debug = false
 
@@ -34,13 +36,12 @@ class CommandRunServer : Command {
     override fun key(): String = "run-server"
 
     override fun execute(): CliResult {
-        println("run-auto-node will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        println("Server is started with: " + ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
 
-
-        val server = PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug, port)
-        server.start()
-        server.blockUntilShutdown()
+        PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug, port).apply {
+            start()
+            blockUntilShutdown()
+        }
         return Ok()
     }
 

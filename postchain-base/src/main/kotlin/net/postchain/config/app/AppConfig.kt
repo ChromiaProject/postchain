@@ -24,12 +24,12 @@ class AppConfig(private val config: Configuration) {
 
         fun fromPropertiesFile(configFile: String): AppConfig {
             val params = Parameters().properties()
-                    .setFileName(configFile)
-                    .setListDelimiterHandler(DefaultListDelimiterHandler(','))
+                .setFileName(configFile)
+                .setListDelimiterHandler(DefaultListDelimiterHandler(','))
 
             val configuration = FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
-                    .configure(params)
-                    .configuration
+                .configure(params)
+                .configuration
 
             configuration.setProperty("configDir", File(configFile).absoluteFile.parent)
 
@@ -62,19 +62,19 @@ class AppConfig(private val config: Configuration) {
 
     val databaseUrl: String
         get() = System.getenv("POSTCHAIN_DB_URL")
-                ?: config.getString("database.url", "")
+            ?: config.getString("database.url", "")
 
     val databaseSchema: String
         get() = System.getenv("POSTCHAIN_DB_SCHEMA")
-                ?: config.getString("database.schema", "public")
+            ?: config.getString("database.schema", "public")
 
     val databaseUsername: String
         get() = System.getenv("POSTCHAIN_DB_USERNAME")
-                ?: config.getString("database.username", "")
+            ?: config.getString("database.username", "")
 
     val databasePassword: String
         get() = System.getenv("POSTCHAIN_DB_PASSWORD")
-                ?: config.getString("database.password", "")
+            ?: config.getString("database.password", "")
 
     val databaseReadConcurrency: Int
         get() = config.getInt("database.readConcurrency", 10)
@@ -87,13 +87,15 @@ class AppConfig(private val config: Configuration) {
      * Pub/Priv keys
      */
     val privKey: String
-        get() = config.getString("messaging.privkey", "")
+        get() = System.getenv("POSTCHAIN_PRIVKEY")
+            ?: config.getString("messaging.privkey", "")
 
     val privKeyByteArray: ByteArray
         get() = privKey.hexStringToByteArray()
 
     val pubKey: String
-        get() = config.getString("messaging.pubkey", "")
+        get() = System.getenv("POSTCHAIN_PUBKEY")
+            ?: config.getString("messaging.pubkey", "")
 
     val pubKeyByteArray: ByteArray
         get() = pubKey.hexStringToByteArray()
