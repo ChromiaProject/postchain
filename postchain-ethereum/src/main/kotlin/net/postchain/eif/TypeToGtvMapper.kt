@@ -6,13 +6,22 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import org.web3j.abi.datatypes.Address
 import org.web3j.abi.datatypes.Type
+import org.web3j.abi.datatypes.Uint
 import java.math.BigInteger
 
 object TypeToGtvMapper {
 
     fun map(type: Type<*>): Gtv {
         return when (val rawValue = type.value) {
-            is BigInteger -> gtv(rawValue)
+            is BigInteger -> {
+                if (type is Uint && type.bitSize < 64) {
+                    gtv(rawValue.longValueExact())
+                } else if (type is org.web3j.abi.datatypes.Int && type.bitSize <= 64) {
+                    gtv(rawValue.longValueExact())
+                } else {
+                    gtv(rawValue)
+                }
+            }
             is Boolean -> gtv(rawValue)
             is ByteArray -> gtv(rawValue)
             is String -> {

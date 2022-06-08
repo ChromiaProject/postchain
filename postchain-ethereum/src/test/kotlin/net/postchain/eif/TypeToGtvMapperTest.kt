@@ -4,10 +4,13 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import net.postchain.common.hexStringToByteArray
+import net.postchain.gtv.GtvBigInteger
+import net.postchain.gtv.GtvInteger
 import org.junit.jupiter.api.Test
 import org.web3j.abi.datatypes.*
-import org.web3j.abi.datatypes.generated.Bytes32
+import org.web3j.abi.datatypes.generated.*
 import java.math.BigInteger
+import kotlin.math.pow
 
 class TypeToGtvMapperTest {
 
@@ -46,5 +49,27 @@ class TypeToGtvMapperTest {
         val bytes = ByteArray(64)
         val bytesGtv = TypeToGtvMapper.map(DynamicBytes(bytes))
         assert(bytes.contentEquals(bytesGtv.asByteArray()))
+    }
+
+    @Test
+    fun `Test integer conversion`() {
+        val uint56Max = 2.0.pow(56.0).toLong() - 1
+        val uint56Gtv = TypeToGtvMapper.map(Uint56(uint56Max))
+        assert(uint56Gtv is GtvInteger).isTrue()
+        assert(uint56Gtv.asInteger()).isEqualTo(uint56Max)
+
+        val int64Gtv = TypeToGtvMapper.map(Int64(Long.MAX_VALUE))
+        assert(int64Gtv is GtvInteger).isTrue()
+        assert(int64Gtv.asInteger()).isEqualTo(Long.MAX_VALUE)
+
+        val uint64Max = BigInteger.TWO.pow(64) - BigInteger.ONE
+        val uint64tv = TypeToGtvMapper.map(Uint64(uint64Max))
+        assert(uint64tv is GtvBigInteger).isTrue()
+        assert(uint64tv.asBigInteger()).isEqualTo(uint64Max)
+
+        val int72Max = BigInteger.TWO.pow(72) - BigInteger.ONE
+        val int72Gtv = TypeToGtvMapper.map(Int72(int72Max))
+        assert(int72Gtv is GtvBigInteger).isTrue()
+        assert(int72Gtv.asBigInteger()).isEqualTo(int72Max)
     }
 }
