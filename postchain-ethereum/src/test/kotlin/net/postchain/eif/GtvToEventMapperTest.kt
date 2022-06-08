@@ -34,6 +34,14 @@ class GtvToEventMapperTest {
     }
 
     @Test
+    fun `Prevent anonymous events`() {
+        val anonymousEvent = eventWithInputType("uint", true)
+        assertThrows<UserMistake>("Anonymous events are not supported") {
+            GtvToEventMapper.map(anonymousEvent)
+        }
+    }
+
+    @Test
     fun `All basic types can be matched`() {
         assertTypeNameIsSupported("address", Address::class.java)
         assertTypeNameIsSupported("bool", Bool::class.java)
@@ -90,8 +98,9 @@ class GtvToEventMapperTest {
         assert(mappedEvent.indexedParameters[0].classType).isEqualTo(expectedClass)
     }
 
-    private fun eventWithInputType(typeName: String): Gtv {
+    private fun eventWithInputType(typeName: String, anonymous: Boolean = false): Gtv {
         return gtv(
+            "anonymous" to gtv(anonymous),
             "inputs" to gtv(
                 listOf(
                     gtv(

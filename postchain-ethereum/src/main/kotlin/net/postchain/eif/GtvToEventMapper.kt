@@ -18,6 +18,11 @@ object GtvToEventMapper {
 
     fun map(gtv: Gtv): Event {
         val eventDict = gtv.asDict()
+        val isAnonymous = eventDict["anonymous"]?.asBoolean() ?: false
+        if (isAnonymous) {
+            throw UserMistake("Anonymous events are not supported")
+        }
+
         val eventName = eventDict["name"]!!.asString()
 
         val eventTypes = eventDict["inputs"]!!.asArray().map {
