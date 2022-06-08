@@ -22,7 +22,7 @@ class AbiJsonToGtvXmlCommand : CliktCommand(name = "generate-gtv-xml") {
     override fun run() {
         val abiJson = if (abiSource.isDirectory) {
             abiSource.listFiles().joinToString(",", "[", "]") {
-                it.readText().trim('[', ']')
+                it.readText().trim().trim('[', ']')
             }
         } else {
             abiSource.readText()
