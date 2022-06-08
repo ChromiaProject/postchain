@@ -193,14 +193,14 @@ class EthereumEventProcessor(
             val op = ops[index]
             if (op.opName == OP_ETH_BLOCK) {
                 val opBlockNumber = op.args[EncodedBlock.NUMBER.index].asBigInteger()
+                val eventBlockNumber = eventBlock[EncodedBlock.NUMBER.index].asBigInteger()
                 val opBlockHash = op.args[EncodedBlock.HASH.index].asByteArray()
+                val eventBlockHash = eventBlock[EncodedBlock.HASH.index].asByteArray()
 
-                if (opBlockNumber != eventBlock[EncodedBlock.NUMBER.index].asBigInteger()
-                    || !opBlockHash.contentEquals(eventBlock[EncodedBlock.HASH.index].asByteArray())
-                ) {
+                if (opBlockNumber != eventBlockNumber || !opBlockHash.contentEquals(eventBlockHash)) {
                     logger.error(
                         "Received unexpected block $opBlockNumber with hash $opBlockHash." +
-                                " Expected block ${eventBlock[0].asBigInteger()} with hash ${eventBlock[1].asByteArray()}"
+                                " Expected block $eventBlockNumber with hash $eventBlockHash"
                     )
                     return false
                 }
@@ -273,7 +273,7 @@ class EthereumEventProcessor(
         }
 
         return eventBlocks.stream()
-            .takeWhile { it[0].asBigInteger() <= lastReadLogBlockHeight - readOffset }
+            .takeWhile { it[EncodedBlock.NUMBER.index].asBigInteger() <= lastReadLogBlockHeight - readOffset }
             .toList()
     }
 
