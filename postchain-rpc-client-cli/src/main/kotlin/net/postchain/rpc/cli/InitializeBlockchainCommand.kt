@@ -8,21 +8,21 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.long
 import com.google.protobuf.ByteString
 import io.grpc.StatusRuntimeException
-import net.postchain.rpc.cli.util.blockingChannelArgument
+import net.postchain.rpc.cli.util.blockingChannelOption
 import net.postchain.server.rpc.InitializeBlockchainRequest
 import java.io.File
 import kotlin.io.path.extension
 
 class InitializeBlockchainCommand : CliktCommand(help = "Add and start blockchain from configuration") {
 
-    private val channel by blockingChannelArgument()
+    private val channel by blockingChannelOption()
 
-    private val chainId by argument(help = "Chain ID to stop").long()
+    private val chainId by argument(help = "Chain ID to start").long()
 
     private val config by argument(help = "Path to config file (xml or gtv format)")
         .convert { File(it) }
 
-    private val override by option("-f", "--override", help = "Overrides existing configuration if it exists").flag()
+    private val override by option("-f", "--override", envvar = "POSTCHAIN_OVERRIDE",  help = "Overrides existing configuration if it exists").flag()
 
     override fun run() {
         try {

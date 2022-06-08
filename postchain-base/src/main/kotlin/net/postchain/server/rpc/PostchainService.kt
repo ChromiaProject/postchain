@@ -45,13 +45,13 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
         responseObserver: StreamObserver<AddConfigurationReply>?
     ) {
         if (!request!!.hasGtv() && !request.hasXml()) {
-            return responseObserver?.onError(io.grpc.Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException())!!
+            return responseObserver?.onError(Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException())!!
         }
         withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             val hasConfig = db.getConfigurationData(ctx, request.height) != null
             if (hasConfig && !request.override) {
-                responseObserver?.onError(io.grpc.Status.ALREADY_EXISTS.withDescription("Configuration already exists for height ${request.height} on chain ${request.chainId}").asRuntimeException())
+                responseObserver?.onError(Status.ALREADY_EXISTS.withDescription("Configuration already exists for height ${request.height} on chain ${request.chainId}").asRuntimeException())
                 return@withWriteConnection false
             }
 
@@ -73,12 +73,12 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
         responseObserver: StreamObserver<InitializeBlockchainReply>?
     ) {
         if (!request!!.hasGtv() && !request.hasXml()) {
-            return responseObserver?.onError(io.grpc.Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException())!!
+            return responseObserver?.onError(Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException())!!
         }
         withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             if (db.getBlockchainRid(ctx) != null && !request.override) {
-                responseObserver?.onError(io.grpc.Status.ALREADY_EXISTS.withDescription("Blockchain already exists").asRuntimeException())
+                responseObserver?.onError(Status.ALREADY_EXISTS.withDescription("Blockchain already exists").asRuntimeException())
                 return@withWriteConnection false
             }
 
