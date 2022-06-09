@@ -88,14 +88,14 @@ class AppConfig(private val config: Configuration) {
      */
     val privKey: String
         get() = System.getenv("POSTCHAIN_PRIVKEY")
-            ?: config.getString("messaging.privkey", "")
+            ?: config.getString("messaging.privkey")
 
     val privKeyByteArray: ByteArray
         get() = privKey.hexStringToByteArray()
 
     val pubKey: String
         get() = System.getenv("POSTCHAIN_PUBKEY")
-            ?: config.getString("messaging.pubkey", "")
+            ?: config.getString("messaging.pubkey")
 
     val pubKeyByteArray: ByteArray
         get() = pubKey.hexStringToByteArray()
