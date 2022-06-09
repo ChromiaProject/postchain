@@ -9,6 +9,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.web3j.abi.datatypes.*
+import org.web3j.abi.datatypes.generated.StaticArray2
 import org.web3j.abi.datatypes.generated.Uint256
 
 class GtvToEventMapperTest {
@@ -71,6 +72,8 @@ class GtvToEventMapperTest {
 
     @Test
     fun `Allow single dimension arrays`() {
+        assertTypeNameIsSupported("address[2]", StaticArray2::class.java)
+        assertTypeNameIsSupported("uint256[2]", StaticArray2::class.java)
         assertTypeNameIsSupported("address[]", DynamicArray::class.java)
         assertTypeNameIsSupported("uint256[]", DynamicArray::class.java)
     }
@@ -90,6 +93,11 @@ class GtvToEventMapperTest {
         assertTypeNameIsUnsupported("address1")
         assertTypeNameIsUnsupported("bytes33")
         assertTypeNameIsUnsupported("uint33")
+    }
+
+    @Test
+    fun `Prevent illegal static array sizes`() {
+        assertTypeNameIsUnsupported("address[33]")
     }
 
     private fun assertTypeNameIsSupported(typeName: String, expectedClass: Class<out Type<*>>) {

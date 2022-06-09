@@ -37,6 +37,11 @@ class TypeToGtvMapperTest {
 
         val stringToGtv = TypeToGtvMapper.map(Utf8String("TEST"))
         assert(stringToGtv.asString()).isEqualTo("TEST")
+
+        val array = StaticArray2(Uint::class.java, Uint(BigInteger.ONE), Uint(BigInteger.TWO))
+        val arrayGtv = TypeToGtvMapper.map(array).asArray()
+        assert(arrayGtv[0].asBigInteger()).isEqualTo(BigInteger.ONE)
+        assert(arrayGtv[1].asBigInteger()).isEqualTo(BigInteger.TWO)
     }
 
     @Test
