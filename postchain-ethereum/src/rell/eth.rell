@@ -1,8 +1,3 @@
-enum asset_type {
-    ERC20,
-    ERC721
-}
-
 entity account_link {
     state_n: integer;
     eth_beneficiary: text;
@@ -35,7 +30,8 @@ entity eth_event {
     log_index: integer;
     event_signature: byte_array;
     contract_address: byte_array;
-    event_payload: byte_array;
+    indexed_values: byte_array;
+    non_indexed_values: byte_array;
 }
 
 entity eth_erc20_balance {
@@ -73,8 +69,9 @@ struct event_data {
     log_index: integer;
     signature: byte_array;
     contract_address: byte_array;
-    asset_type: asset_type;
-    payload: gtv;
+    name: text;
+    indexed_values: list<gtv>;
+    non_indexed_values: list<gtv>;
 }
 
 struct state_data {
@@ -91,32 +88,41 @@ operation __eth_block(eth_block_height: integer, eth_block_hash: byte_array, eve
     );
 
     for (event in events) {
+        var indexed_values_bytes = x"";
+        for (value in event.indexed_values) {
+            indexed_values_bytes += value.to_bytes();
+        }
+        var non_indexed_values_bytes = x"";
+        for (value in event.non_indexed_values) {
+            non_indexed_values_bytes += value.to_bytes();
+        }
+
         val eth_event = create eth_event(
             eth_block,
             tnx_hash = event.tnx_hash,
             log_index = event.log_index,
             event_signature = event.signature,
             contract_address = event.contract_address,
-            event_payload = event.payload.to_bytes()
+            indexed_values = indexed_values_bytes,
+            non_indexed_values = non_indexed_values_bytes
         );
 
-        val event_args = list<gtv>.from_gtv(event.payload);
-        val beneficiary = to_zero_padded_hex(byte_array.from_gtv(event_args[0]));
-        when (event.asset_type) {
-            ERC20 -> {
-                val token_address = to_zero_padded_hex(byte_array.from_gtv(event_args[1]));
-                val amount = integer.from_gtv(event_args[2]);
-                val name = text.from_gtv(event_args[3]);
-                val symbol = text.from_gtv(event_args[4]);
-                val decimals = integer.from_gtv(event_args[5]);
+        val beneficiary = to_zero_padded_hex(byte_array.from_gtv(event.indexed_values[0]));
+        when (event.name) {
+            "DepositedERC20" -> {
+                val token_address = to_zero_padded_hex(byte_array.from_gtv(event.indexed_values[1]));
+                val amount = integer.from_gtv(event.non_indexed_values[0]);
+                val name = text.from_gtv(event.non_indexed_values[1]);
+                val symbol = text.from_gtv(event.non_indexed_values[2]);
+                val decimals = integer.from_gtv(event.non_indexed_values[3]);
                 deposit_ERC20(beneficiary, token_address, amount, name, symbol, decimals);
             }
-            ERC721 -> {
-                val token_address = to_zero_padded_hex(byte_array.from_gtv(event_args[1]));
-                val token_id = integer.from_gtv(event_args[2]);
-                val name = text.from_gtv(event_args[3]);
-                val symbol = text.from_gtv(event_args[4]);
-                val uri = text.from_gtv(event_args[5]);
+            "DepositedERC721" -> {
+                val token_address = to_zero_padded_hex(byte_array.from_gtv(event.indexed_values[1]));
+                val token_id = integer.from_gtv(event.non_indexed_values[0]);
+                val name = text.from_gtv(event.non_indexed_values[1]);
+                val symbol = text.from_gtv(event.non_indexed_values[2]);
+                val uri = text.from_gtv(event.non_indexed_values[3]);
                 deposit_ERC721(beneficiary, token_address, token_id, name, symbol, uri);
             }
         }

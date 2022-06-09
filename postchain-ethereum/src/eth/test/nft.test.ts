@@ -4,7 +4,7 @@ import { solidity } from "ethereum-waffle";
 import { TokenBridge__factory, ERC721Mock__factory } from "../src/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, ContractReceipt, ContractTransaction } from "ethers";
-import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
+import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
 import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, hashGtvIntegerLeaf, postchainMerkleNodeHash } from "./utils"
 import { intToHex } from "ethjs-util";
 
@@ -48,24 +48,16 @@ describe("Non Fungible Token", () => {
             await tokenApproveInstance.setApprovalForAll(bridgeAddress, true)
             let tokenURI = await tokenApproveInstance.tokenURI(tokenId)
             expect(tokenURI).to.eq(baseURI+tokenId.toString())
-            const expectedPayload = ''.concat(
-                "0xa5", "84", "000000e1", "30", "84", "000000db", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
-                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value length
-                user.address.substring(2),
-                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
-                nftAddress.substring(2),
-                "a6", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
-                hexZeroPad(tokenId.toHexString(), 32).substring(2),
-                "a2", "84", "00000011", "0c", "84", "0000000b", 
-                solidityPack(["string"], [name]).substring(2),
-                "a2", "84", "00000008", "0c", "84", "00000002", 
-                solidityPack(["string"], [symbol]).substring(2),
-                "a2", "84", "0000005b", "0c", "84", "00000055", 
-                solidityPack(["string"], [tokenURI]).substring(2)
-            )            
             await expect(bridge.depositNFT(nftAddress, tokenId))
-                    .to.emit(bridge, "Deposited")
-                    .withArgs(1, expectedPayload.toLowerCase())
+                    .to.emit(bridge, "DepositedERC721")
+                    .withArgs(
+                        user.address,
+                        nftAddress,
+                        tokenId,
+                        name,
+                        symbol,
+                        tokenURI
+                    )
 
             expect(await tokenInstance.balanceOf(bridgeAddress)).to.eq(1)
             expect(await tokenInstance.ownerOf(tokenId)).to.eq(bridgeAddress)
@@ -87,7 +79,7 @@ describe("Non Fungible Token", () => {
             await tokenApproveInstance.setApprovalForAll(bridgeAddress, true)
             let tx: ContractTransaction = await bridge.depositNFT(nftAddress, tokenId)
             let receipt: ContractReceipt = await tx.wait()
-            let logs = receipt.events?.filter((x) =>  {return x.event == 'Deposited'})
+            let logs = receipt.events?.filter((x) =>  {return x.event == 'DepositedERC721'})
             if (logs !== undefined) {
                 let log = logs[0]
 

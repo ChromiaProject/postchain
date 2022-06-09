@@ -13,7 +13,6 @@ import "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 // Internal libraries
-import "./utils/Gtv.sol";
 import "./Postchain.sol";
 
 // This contract is upgradeable. This imposes restrictions on how storage layout can be modified once it is deployed
@@ -26,10 +25,6 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
     using EC for bytes32;
     using Postchain for bytes32;
     using MerkleProof for bytes32[];
-    enum AssetType {
-        ERC20,
-        ERC721
-    }
 
     struct PostchainBlock {
         uint height;
@@ -96,7 +91,8 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
 
     event ValidatorAdded(uint height, address indexed _validator);
     event ValidatorRemoved(uint height, address indexed _validator);
-    event Deposited(AssetType indexed asset, bytes payload);
+    event DepositedERC20(address indexed sender, IERC20 indexed token, uint amount, string name, string symbol, uint8 decimals);
+    event DepositedERC721(address indexed sender, IERC721 indexed nft, uint tokenId, string name, string symbol, string tokenURI);
     event WithdrawRequest(address indexed beneficiary, IERC20 indexed token, uint256 value);
     event WithdrawRequestNFT(address indexed beneficiary, IERC721 indexed token, uint256 tokenId);
     event Withdrawal(address indexed beneficiary, IERC20 indexed token, uint256 value);
@@ -217,21 +213,10 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
             decimals = abi.decode(_decimals, (uint8));
         }
 
-        // Encode arguments
-        bytes memory args = abi.encodePacked(
-            Gtv.encode(msg.sender),
-            Gtv.encode(address(token)),
-            Gtv.encode(amount),
-            Gtv.encode(name),
-            Gtv.encode(symbol),
-            Gtv.encode(decimals)
-        );
-        bytes memory argArray = Gtv.encodeArray(args);
-
         // Do transfer
         token.transferFrom(msg.sender, address(this), amount);
         _balances[token] += amount;
-        emit Deposited(AssetType.ERC20, argArray);
+        emit DepositedERC20(msg.sender, token, amount, name, symbol, decimals);
         return true;
     }
 
@@ -241,7 +226,6 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
         string memory name = "";
         string memory symbol= "";
         string memory tokenURI = "";
-        bytes memory args;
         if (nft.supportsInterface(type(IERC721Metadata).interfaceId)) {
             bool success;
             bytes memory _name;
@@ -258,16 +242,7 @@ contract TokenBridge is Initializable, OwnableUpgradeable, IERC721Receiver, Reen
             tokenURI = abi.decode(_tokenURI, (string));
         }
 
-        // Encode arguments
-        args = abi.encodePacked(
-            Gtv.encode(msg.sender),
-            Gtv.encode(address(nft)),
-            Gtv.encode(tokenId),
-            Gtv.encode(name),
-            Gtv.encode(symbol),
-            Gtv.encode(tokenURI)
-        );
-        emit Deposited(AssetType.ERC721, Gtv.encodeArray(args));
+        emit DepositedERC721(msg.sender, nft, tokenId, name, symbol, tokenURI);
         return true;
     }
 
