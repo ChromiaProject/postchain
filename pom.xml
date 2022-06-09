@@ -46,8 +46,8 @@
         <awaitility.version>3.1.2</awaitility.version>
 
         <!-- Logging -->
-        <kotlin-logging.version>1.12.5</kotlin-logging.version>
-        <slf4j.version>1.7.32</slf4j.version>
+        <kotlin-logging.version>2.1.23</kotlin-logging.version>
+        <slf4j.version>1.7.36</slf4j.version>
         <log4j2.version>2.17.1</log4j2.version>
         <jackson.version>2.13.1</jackson.version>
 
@@ -120,7 +120,7 @@
         </dependency>
         <dependency>
             <groupId>io.github.microutils</groupId>
-            <artifactId>kotlin-logging</artifactId>
+            <artifactId>kotlin-logging-jvm</artifactId>
         </dependency>
     </dependencies>
 
@@ -264,7 +264,7 @@
             </dependency>
             <dependency>
                 <groupId>io.github.microutils</groupId>
-                <artifactId>kotlin-logging</artifactId>
+                <artifactId>kotlin-logging-jvm</artifactId>
                 <version>${kotlin-logging.version}</version>
             </dependency>
 
