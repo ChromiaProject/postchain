@@ -3,7 +3,7 @@ import chai from "chai";
 import { solidity } from "ethereum-waffle";
 import { TestToken__factory, TokenBridge__factory, TestDelegator__factory, TestDelegator } from "../src/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BytesLike, hexZeroPad, keccak256, solidityPack} from "ethers/lib/utils";
+import { BytesLike, hexZeroPad, keccak256 } from "ethers/lib/utils";
 import { ContractReceipt, ContractTransaction } from "ethers";
 import { intToHex } from "ethjs-util";
 import { DecodeHexStringToByteArray, hashGtvBytes32Leaf, hashGtvBytes64Leaf, hashGtvIntegerLeaf, postchainMerkleNodeHash} from "./utils"
@@ -213,25 +213,17 @@ describe("Token Bridge Test", () => {
             const tokenApproveInstance = new TestToken__factory(user).attach(tokenAddress)
             const name = await tokenApproveInstance.name()
             const symbol = await tokenApproveInstance.symbol()
-            const expectedPayload = ''.concat(
-                "0xa5", "84", "000000a5", "30", "84", "0000009f", // Gtv tag, Ber length, Length, Ber tag, Ber length, Value length
-                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value length
-                user.address.substring(2),
-                "a1", "16", "04", "14", // Gtv tag, Length, Ber tag, Value Length
-                tokenAddress.substring(2),
-                "a6", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
-                hexZeroPad(toDeposit.toHexString(), 32).substring(2),
-                "a2", "84", "00000010", "0c", "84", "0000000a",
-                solidityPack(["string"], [name]).substring(2),
-                "a2", "84", "00000009", "0c", "84", "00000003",
-                solidityPack(["string"], [symbol]).substring(2),
-                "a6", "23", "02", "21", "00", // Gtv tag, Length, Ber tag, Value Length, Zero padding for signed bit
-                hexZeroPad("0x12", 32).substring(2), // Default decimals is 18
-            )
             await tokenApproveInstance.approve(bridgeAddress, toDeposit)
             await expect(bridge.deposit(tokenAddress, toDeposit))
-                    .to.emit(bridge, "Deposited")
-                    .withArgs(0, expectedPayload.toLowerCase())
+                    .to.emit(bridge, "DepositedERC20")
+                    .withArgs(
+                        user.address,
+                        tokenAddress,
+                        toDeposit,
+                        name,
+                        symbol,
+                        18 // Default decimals is 18
+                    )
 
             expect(await bridge._balances(tokenAddress)).to.eq(toDeposit)
             expect(await tokenInstance.balanceOf(user.address)).to.eq(toMint.sub(toDeposit))
@@ -254,7 +246,7 @@ describe("Token Bridge Test", () => {
 
             let tx: ContractTransaction = await bridge.deposit(tokenAddress, toDeposit)
             let receipt: ContractReceipt = await tx.wait()
-            let logs = receipt.events?.filter((x) =>  {return x.event == 'Deposited'})
+            let logs = receipt.events?.filter((x) =>  {return x.event == 'DepositedERC20'})
             if (logs !== undefined) {
                 let log = logs[0]
                 const blockNumber = hexZeroPad(intToHex(log.blockNumber), 32)

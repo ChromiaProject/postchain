@@ -11,6 +11,8 @@ data class EifBlockchainConfig(
     val rawGtv: Gtv,
     @Name("contracts")
     val contracts: List<String>,
+    @Name("events")
+    val events: Gtv,
     @Name("skip_to_height")
     @DefaultValue(defaultBigInteger = "0")
     val skipToHeight: BigInteger,
