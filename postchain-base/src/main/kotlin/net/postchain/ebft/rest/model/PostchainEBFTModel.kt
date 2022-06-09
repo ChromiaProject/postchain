@@ -9,6 +9,7 @@ import net.postchain.api.rest.controller.NotSupported
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.base.BaseBlockQueries
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeStateTracker
 import net.postchain.core.TransactionQueue
 import net.postchain.core.TransactionFactory
@@ -19,8 +20,9 @@ class PostchainEBFTModel(
     txQueue: TransactionQueue,
     transactionFactory: TransactionFactory,
     blockQueries: BaseBlockQueries,
-    debugInfoQuery: DebugInfoQuery
-) : PostchainModel(chainIID, txQueue, transactionFactory, blockQueries, debugInfoQuery) {
+    debugInfoQuery: DebugInfoQuery,
+    blockchainRid: BlockchainRid
+) : PostchainModel(chainIID, txQueue, transactionFactory, blockQueries, debugInfoQuery, blockchainRid) {
 
     override fun nodeQuery(subQuery: String): String {
         val json = JsonFactory.makeJson()
