@@ -8,8 +8,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.web3j.abi.EventEncoder
 import org.web3j.abi.datatypes.*
-import org.web3j.abi.datatypes.generated.StaticArray2
 import org.web3j.abi.datatypes.generated.Uint256
 
 class GtvToEventMapperTest {
@@ -72,8 +72,6 @@ class GtvToEventMapperTest {
 
     @Test
     fun `Allow single dimension arrays`() {
-        assertTypeNameIsSupported("address[2]", StaticArray2::class.java)
-        assertTypeNameIsSupported("uint256[2]", StaticArray2::class.java)
         assertTypeNameIsSupported("address[]", DynamicArray::class.java)
         assertTypeNameIsSupported("uint256[]", DynamicArray::class.java)
     }
@@ -103,6 +101,7 @@ class GtvToEventMapperTest {
     private fun assertTypeNameIsSupported(typeName: String, expectedClass: Class<out Type<*>>) {
         val event = eventWithInputType(typeName)
         val mappedEvent = GtvToEventMapper.map(event)
+        EventEncoder.encode(mappedEvent) // Ensure that we can encode event without exceptions
         assert(mappedEvent.indexedParameters[0].classType).isEqualTo(expectedClass)
     }
 

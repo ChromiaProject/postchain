@@ -7,13 +7,13 @@ import org.web3j.abi.datatypes.Event
 
 /**
  * Maps gtv representations of JSON ABI specifications to web3j [Event] objects.
- * Does not support structs or multi dimension arrays
+ * Does not support structs, statically sized arrays or multi dimension arrays due to limitations in [org.web3j.abi.EventEncoder]
  */
 object GtvToEventMapper {
 
     private val supportedTypes = listOf("address", "bool", "bytes", "int", "string", "uint")
     private val supportedTypesExpression = supportedTypes
-        .joinToString("|", "^(", ")([0-9]{1,3})?(\\[[0-9]{0,2}\\])?\$")
+        .joinToString("|", "^(", ")([0-9]{1,3})?(\\[\\])?\$")
         .toRegex()
 
     fun map(gtv: Gtv): Event {
@@ -32,7 +32,7 @@ object GtvToEventMapper {
             if (matchResult == null) {
                 throwTypeError(typeName)
             } else {
-                validateSizeAndArrayDefinitions(matchResult, typeName)
+                validateSize(matchResult, typeName)
             }
 
             val indexed = inputDict["indexed"]!!.asBoolean()
@@ -43,19 +43,11 @@ object GtvToEventMapper {
         return Event(eventName, eventTypes)
     }
 
-    private fun validateSizeAndArrayDefinitions(matchResult: MatchResult, typeName: String) {
+    private fun validateSize(matchResult: MatchResult, typeName: String) {
         val numberMatchGroup = matchResult.groups[2]
         if (numberMatchGroup != null) {
             val numberMatch = matchResult.groups[2]!!.value.toInt()
             if (!validRange(matchResult.groups[1]!!.value, numberMatch)) {
-                throwTypeError(typeName)
-            }
-        }
-
-        val arrayGroup = matchResult.groups[3]
-        if (arrayGroup != null && arrayGroup.value.length > 2) {
-            val staticArraySize = arrayGroup.value.trim('[', ']').toInt()
-            if (staticArraySize !in 1..32) {
                 throwTypeError(typeName)
             }
         }
