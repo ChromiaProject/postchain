@@ -181,7 +181,8 @@ open class BaseBlockchainProcessManager(
         synchronized(synchronizer) {
             withLoggingContext(
                 NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to chainId.toString()
+                CHAIN_IID_TAG to chainId.toString(),
+                BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toShortHex()
             ) {
                 stopInfoDebug("Stopping of blockchain", chainId, bTrace)
                 stopAndUnregisterBlockchainProcess(chainId, restart)
