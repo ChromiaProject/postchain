@@ -14,27 +14,27 @@ class BaseBlockchainEngineMetrics(chainIID: Long, blockchainRid: BlockchainRid, 
         Gauge.builder("transaction.queue.size", transactionQueue) { transactionQueue.getTransactionQueueSize().toDouble() }
             .description("Transaction queue size")
             .tag(CHAIN_IID_TAG, chainIID.toString())
-            .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+            .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
             .register(Metrics.globalRegistry)
     }
 
     val acceptedTransactions: Timer = Timer.builder(PROCESSED_METRIC_NAME)
         .description(PROCESSED_METRIC_DESCRIPTION)
         .tag(CHAIN_IID_TAG, chainIID.toString())
-        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
         .tag(RESULT_TAG, "ACCEPTED")
         .register(Metrics.globalRegistry)
 
     val rejectedTransactions: Timer = Timer.builder(PROCESSED_METRIC_NAME)
         .description(PROCESSED_METRIC_DESCRIPTION)
         .tag(CHAIN_IID_TAG, chainIID.toString())
-        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
         .tag(RESULT_TAG, "REJECTED")
         .register(Metrics.globalRegistry)
 
     val blocks: Timer = Timer.builder("blocks")
         .description("Built blocks")
         .tag(CHAIN_IID_TAG, chainIID.toString())
-        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toShortHex())
+        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
         .register(Metrics.globalRegistry)
 }

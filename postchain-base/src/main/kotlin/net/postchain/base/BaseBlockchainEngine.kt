@@ -54,7 +54,7 @@ open class BaseBlockchainEngine(
     private val loggingContext = mapOf(
         NODE_PUBKEY_TAG to processName.pubKey,
         CHAIN_IID_TAG to chainID.toString(),
-        BLOCKCHAIN_RID_TAG to processName.blockchainRid.toShortHex()
+        BLOCKCHAIN_RID_TAG to processName.blockchainRid.toHex()
     )
 
     override fun isRunning() = !closed

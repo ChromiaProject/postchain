@@ -76,7 +76,7 @@ class PostchainTestNode(
             withLoggingContext(
                 NODE_PUBKEY_TAG to appConfig.pubKey,
                 CHAIN_IID_TAG to chainId.toString(),
-                BLOCKCHAIN_RID_TAG to brid.toShortHex()
+                BLOCKCHAIN_RID_TAG to brid.toHex()
             ) {
                 logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
                 DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
@@ -94,7 +94,7 @@ class PostchainTestNode(
             withLoggingContext(
                 NODE_PUBKEY_TAG to appConfig.pubKey,
                 CHAIN_IID_TAG to chainId.toString(),
-                BLOCKCHAIN_RID_TAG to brid.toShortHex()
+                BLOCKCHAIN_RID_TAG to brid.toHex()
             ) {
                 logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
                 BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
@@ -110,7 +110,7 @@ class PostchainTestNode(
             withLoggingContext(
                 NODE_PUBKEY_TAG to appConfig.pubKey,
                 CHAIN_IID_TAG to chainId.toString(),
-                BLOCKCHAIN_RID_TAG to brid.toShortHex()
+                BLOCKCHAIN_RID_TAG to brid.toHex()
             ) {
                 logger.debug("Set must_sync_until for chain: $brid, height: $height")
                 BaseConfigurationDataStore.setMustSyncUntil(eContext, brid, height)
