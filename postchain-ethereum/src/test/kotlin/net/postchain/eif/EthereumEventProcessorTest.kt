@@ -5,8 +5,8 @@ import assertk.assertions.*
 import net.postchain.common.toHex
 import net.postchain.core.BlockQueries
 import net.postchain.core.BlockchainEngine
-import net.postchain.ethereum.TestToken
-import net.postchain.ethereum.TokenBridge
+import net.postchain.eif.contracts.TestToken
+import net.postchain.eif.contracts.TokenBridge
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.OpData
@@ -28,7 +28,6 @@ import org.web3j.tx.FastRawTransactionManager
 import org.web3j.tx.TransactionManager
 import org.web3j.tx.gas.DefaultGasProvider
 import org.web3j.tx.response.PollingTransactionReceiptProcessor
-import org.web3j.utils.Numeric
 import java.math.BigInteger
 
 @Testcontainers(disabledWithoutDocker = true)
@@ -95,8 +94,9 @@ class EthereumEventProcessorTest {
         val contractDeployTransactionHash = bridge.transactionReceipt.get().transactionHash
         val contractDeployBlockNumber = web3j.ethGetTransactionByHash(contractDeployTransactionHash)
             .send().result.blockNumber
+        val eventsToRead = listOf(TokenBridge.DEPOSITEDERC20_EVENT)
         val ethereumEventProcessor =
-            EthereumEventProcessor(web3j, listOf(bridge.contractAddress), BigInteger.ONE, contractDeployBlockNumber, engineMock).apply {
+            EthereumEventProcessor(web3j, listOf(bridge.contractAddress), eventsToRead, BigInteger.ONE, contractDeployBlockNumber, engineMock).apply {
                 start()
             }
 
@@ -115,7 +115,7 @@ class EthereumEventProcessorTest {
             .atMost(Duration.ONE_MINUTE)
             .untilAsserted {
                 val eventBlocks = ethereumEventProcessor.getEventData()
-                val events = eventBlocks.flatMap { it[2].asArray().asList() }
+                val events = eventBlocks.flatMap { it[EncodedBlock.EVENTS.index].asArray().asList() }
                 assert(events.size == 5).isTrue()
             }
 
@@ -131,12 +131,22 @@ class EthereumEventProcessorTest {
         // Verify that we can't skip any events by removing a block
         assert(ethereumEventProcessor.isValidEventData(eventBlocksToValidate.sliceArray(1 until eventBlocksToValidate.size))).isFalse()
 
-        // Verify that we can't skip any events by removing them from a block
-        eventBlocksToValidate.first().args[2] = gtv(emptyList())
-        assert(ethereumEventProcessor.isValidEventData(eventBlocksToValidate)).isFalse()
+        // Verify that we can't skip any events by removing them from the first block in the list
+        val eventBlocksWithoutEvents = eventBlocksToValidate.mapIndexed { i, eventBlock ->
+            if (i == 0) {
+                OpData(OP_ETH_BLOCK, arrayOf(
+                    eventBlock.args[EncodedBlock.NUMBER.index],
+                    eventBlock.args[EncodedBlock.HASH.index],
+                    gtv(emptyList())
+                ))
+            } else {
+                eventBlock
+            }
+        }.toTypedArray()
+        assert(ethereumEventProcessor.isValidEventData(eventBlocksWithoutEvents)).isFalse()
 
         // Mock that the block was validated and committed to DB
-        val eventDataBlockNumber = eventData.last()[0].asBigInteger()
+        val eventDataBlockNumber = eventData.last()[EncodedBlock.NUMBER.index].asBigInteger()
         whenever(blockQueriesMock.query(eq("get_last_eth_block"), any()))
             .doReturn(getMockedBlockHeightResponse(eventDataBlockNumber))
 
@@ -156,21 +166,19 @@ class EthereumEventProcessorTest {
             .atMost(Duration.ONE_MINUTE)
             .untilAsserted {
                 val eventBlocks = ethereumEventProcessor.getEventData()
-                val events = eventBlocks.flatMap { it[2].asArray().asList() }
+                val events = eventBlocks.flatMap { it[EncodedBlock.EVENTS.index].asArray().asList() }
                 assert(events.size == 1).isTrue()
             }
 
         val lastEventBlock = ethereumEventProcessor.getEventData().first()
-        val lastEvent = lastEventBlock[2].asArray().first()
-        val eventArgs = lastEvent[5].asArray()
+        val lastEvent = lastEventBlock[EncodedBlock.EVENTS.index].asArray().first()
+        val indexedValues = lastEvent[EncodedEvent.INDEXED_VALUES.index].asArray()
+        val nonIndexedValues = lastEvent[EncodedEvent.NON_INDEXED_VALUES.index].asArray()
+
         // Check that data in the event matches what we sent
-        assert(
-            Numeric.hexStringToByteArray(transactionManager.fromAddress).contentEquals(eventArgs[0].asByteArray())
-        ).isTrue() // owner
-        assert(
-            Numeric.hexStringToByteArray(testToken.contractAddress).contentEquals(eventArgs[1].asByteArray())
-        ).isTrue() // token
-        assert(max).isEqualTo(eventArgs[2].asBigInteger()) // value
+        assert("0x${indexedValues[0].asByteArray().toHex()}").isEqualTo(transactionManager.fromAddress, true) // owner
+        assert("0x${indexedValues[1].asByteArray().toHex()}").isEqualTo(testToken.contractAddress, true) // token
+        assert(nonIndexedValues[0].asBigInteger()).isEqualTo(max) // value
 
         ethereumEventProcessor.shutdown()
     }
@@ -194,8 +202,9 @@ class EthereumEventProcessorTest {
         val contractDeployBlockNumber = web3j.ethGetTransactionByHash(contractDeployTransactionHash)
                 .send().result.blockNumber
         val contractAddresses = listOf(bridgeFirst.contractAddress, bridgeSecond.contractAddress)
+        val eventsToRead = listOf(TokenBridge.DEPOSITEDERC20_EVENT)
         val ethereumEventProcessor =
-                EthereumEventProcessor(web3j, contractAddresses, BigInteger.ONE, contractDeployBlockNumber, engineMock).apply {
+                EthereumEventProcessor(web3j, contractAddresses, eventsToRead, BigInteger.ONE, contractDeployBlockNumber, engineMock).apply {
                     start()
                 }
 
@@ -215,9 +224,9 @@ class EthereumEventProcessorTest {
                 .atMost(Duration.ONE_MINUTE)
                 .untilAsserted {
                     val eventBlocks = ethereumEventProcessor.getEventData()
-                    val events = eventBlocks.flatMap { it[2].asArray().asList() }
+                    val events = eventBlocks.flatMap { it[EncodedBlock.EVENTS.index].asArray().asList() }
                     assert(events.size == 2).isTrue()
-                    val eventContractAddresses = events.map { "0x${it[3].asByteArray().toHex()}".toLowerCase() }
+                    val eventContractAddresses = events.map { "0x${it[EncodedEvent.CONTRACT.index].asByteArray().toHex()}".toLowerCase() }
                     assert(eventContractAddresses).containsExactly(*contractAddresses.map(String::toLowerCase).toTypedArray())
                 }
 

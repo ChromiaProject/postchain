@@ -1,4 +1,4 @@
-package net.postchain.ethereum;
+package net.postchain.eif.contracts;
 
 import io.reactivex.Flowable;
 import io.reactivex.functions.Function;

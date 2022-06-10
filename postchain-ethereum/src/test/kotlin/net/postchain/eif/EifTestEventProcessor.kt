@@ -3,7 +3,7 @@ package net.postchain.eif
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.common.data.KECCAK256
 import net.postchain.common.toHex
-import net.postchain.ethereum.TokenBridge
+import net.postchain.eif.contracts.TokenBridge
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.OpData
@@ -43,7 +43,7 @@ class EifTestEventProcessor : EventProcessor {
         val to = ds.digest(BigInteger.valueOf(2L).toByteArray()).toHex()
         return arrayOf(
             gtv(height), gtv(blockHash), gtv(transactionHash),
-            gtv(i.toLong()), gtv(EventEncoder.encode(TokenBridge.DEPOSITED_EVENT)),
+            gtv(i.toLong()), gtv(EventEncoder.encode(TokenBridge.DEPOSITEDERC20_EVENT)),
             gtv(contractAddress), gtv(from), gtv(to), gtv(BigInteger.valueOf(i.toLong()))
         )
     }
