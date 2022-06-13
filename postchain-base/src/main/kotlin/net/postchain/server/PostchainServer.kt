@@ -1,15 +1,20 @@
-package net.postchain.server.rpc
+package net.postchain.server
 
 import io.grpc.Server
 import io.grpc.ServerBuilder
 import net.postchain.PostchainNode
 import net.postchain.config.app.AppConfig
+import net.postchain.server.service.DebugService
+import net.postchain.server.service.PeerService
+import net.postchain.server.service.PostchainService
 
 class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false, private val port: Int = 50051) {
 
-    private val posthcainNode = PostchainNode(appConfig, wipeDb, debug)
+    private val postchainNode = PostchainNode(appConfig, wipeDb, debug)
     private val server: Server = ServerBuilder.forPort(port)
-        .addService(PostchainService(posthcainNode))
+        .addService(PostchainService(postchainNode))
+        .addService(PeerService(postchainNode.postchainContext))
+        .addService(DebugService(postchainNode.postchainContext.nodeDiagnosticContext))
         .build()
 
     fun start() {

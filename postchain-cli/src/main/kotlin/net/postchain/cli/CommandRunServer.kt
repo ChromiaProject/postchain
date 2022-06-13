@@ -6,7 +6,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import mu.KLogging
 import net.postchain.config.app.AppConfig
-import net.postchain.server.rpc.PostchainServer
+import net.postchain.server.PostchainServer
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 

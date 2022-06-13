@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "net.postchain.server.rpc";
+option java_package = "net.postchain.server.service";
 option java_outer_classname = "PostchainProto";
 
 package postchain.rpc;
@@ -12,7 +12,16 @@ service PostchainService {
   rpc StopBlockchain (StopBlockchainRequest) returns (StopBlockchainReply) {} // Stop blockchain with ID
   rpc InitializeBlockchain (InitializeBlockchainRequest) returns (InitializeBlockchainReply) {} // Adds and starts blockchain
   rpc AddConfiguration (AddConfigurationRequest) returns (AddConfigurationReply) {} // Add configuration at height
+}
+
+service PeerService {
   rpc AddPeer (AddPeerRequest) returns (AddPeerReply) {}
+  rpc ListPeers (ListPeersRequest) returns (ListPeersReply) {}
+  rpc RemovePeer (RemovePeerRequest) returns (RemovePeerReply) {}
+}
+
+service DebugService {
+  rpc DebugService (DebugRequest) returns (DebugReply) {}
 }
 
 message InitializeBlockchainRequest {
@@ -63,5 +72,25 @@ message AddPeerRequest {
 }
 
 message AddPeerReply {
+  string message = 1;
+}
+
+message RemovePeerRequest {
+  string pubkey = 1;
+}
+
+message RemovePeerReply {
+  string message = 1;
+}
+
+message ListPeersRequest {}
+
+message ListPeersReply {
+  string message = 1;
+}
+
+message DebugRequest {}
+
+message DebugReply {
   string message = 1;
 }

@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>postchain-rpc-client-cli</artifactId>
+    <artifactId>postchain-admin-client-cli</artifactId>
 
     <properties>
     </properties>
@@ -17,7 +17,7 @@
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
+            <artifactId>postchain-admin-service</artifactId>
         </dependency>
 
         <!-- CLI -->
