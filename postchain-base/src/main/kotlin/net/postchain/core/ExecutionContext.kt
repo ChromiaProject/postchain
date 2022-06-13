@@ -9,7 +9,7 @@ import java.sql.Connection
  * Concept of a "context" is an object that knows a bit about the current state of things.
  * A "context" might know more or less things. This list starts from "stupid" and goes to "smart":
  * 1. [AppContext] - we don't know much only how to get to the DB (this is the most vague context),
- *                   Most common reason to use this context is b/c we are not be working with a specific chain
+ *                   Most common reason to use this context is b/c we are not working with a specific chain
  *                   at the moment.
  * 2. [ExecutionContext] - we know what blockchain we are working on (there is a similar interface called
  *                         [BlockchainContext] that also know the BC RID),
@@ -22,10 +22,6 @@ interface AppContext {
     fun <T> getInterface(c: Class<T>): T? {
         return null
     }
-}
-
-inline fun <reified T> AppContext.queryInterface(): T? {
-    return this.getInterface(T::class.java)
 }
 
 interface ExecutionContext : AppContext {
