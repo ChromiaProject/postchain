@@ -5,6 +5,7 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -427,7 +428,6 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      * at highest block height that less than or equal to specific height
      */
     override fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
-        val hashLength = 32
         val sql = """
             SELECT child_hashes FROM ${tablePages(ctx, name)} 
             WHERE block_height = (SELECT MAX(block_height) FROM ${tablePages(ctx, name)} 
@@ -435,12 +435,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             AND level = ? AND left_index = ?"""
         val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left, level, left)
         // if data size is not contain correct length then it regards to error
-        if (data == null || data.size % hashLength != 0) return null
-        val length = data.size / hashLength
-        val childHashes = Array(length){ByteArray(hashLength)}
+        if (data == null || data.size % HASH_LENGTH != 0) return null
+        val length = data.size / HASH_LENGTH
+        val childHashes = Array(length){ByteArray(HASH_LENGTH)}
         for (i in 0 until length) {
-            val start = i * hashLength
-            val end = start + hashLength - 1
+            val start = i * HASH_LENGTH
+            val end = start + HASH_LENGTH - 1
             childHashes[i] = data.sliceArray(start..end)
         }
         return Page(height, level, left, childHashes)
