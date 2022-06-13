@@ -3,30 +3,23 @@
 package net.postchain.devtools
 
 import mu.KLogging
-import mu.Marker
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.Transaction
-import net.postchain.devtools.KeyPairHelper.pubKey
+import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
+import net.postchain.core.Transaction
 import org.apache.commons.configuration2.MapConfiguration
-import org.apache.logging.log4j.core.impl.Log4jLogEvent
-import org.apache.logging.log4j.core.impl.LogEventFactory
-import org.apache.logging.log4j.message.Message
-import org.apache.logging.log4j.message.SimpleMessage
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
-import org.slf4j.LoggerFactory
-import java.util.logging.LogManager
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
@@ -221,7 +214,8 @@ open class IntegrationTestSetup : AbstractIntegration() {
     ) {
         sysSetup.nodeMap.values.forEach { nodeSetup ->
             nodeSetup.chainsToSign.forEach { chainIid ->
-                val process = testNodeMap[nodeSetup.sequenceNumber]!!.getBlockchainInstance(chainIid.toLong())
+                val testNode = testNodeMap[nodeSetup.sequenceNumber]
+                val process = testNode!!.getBlockchainInstance(chainIid.toLong())
                 await.until {
                     if (process is ValidatorBlockchainProcess) {
                         !process.syncManager.isInFastSync()

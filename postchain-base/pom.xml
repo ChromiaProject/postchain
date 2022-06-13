@@ -6,7 +6,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.4.2-SNAPSHOT</version>
+        <version>3.6.0-SNAPSHOT</version>
     </parent>
     <artifactId>postchain-base</artifactId>
     <packaging>jar</packaging>
@@ -25,6 +25,10 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-gtv</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-gtx-data</artifactId>
         </dependency>
 
         <!-- Kotlin -->
@@ -60,6 +64,10 @@
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
             <artifactId>commons-configuration2</artifactId>
         </dependency>
         <dependency>
@@ -67,12 +75,12 @@
             <artifactId>commons-beanutils</artifactId>
         </dependency>
 
-        <!-- Spark -->
+        <!-- REST -->
         <dependency>
             <groupId>com.sparkjava</groupId>
             <artifactId>spark-core</artifactId>
         </dependency>
-        <!-- Unirest -->
+
         <dependency>
             <groupId>com.konghq</groupId>
             <artifactId>unirest-java</artifactId>
@@ -125,7 +133,28 @@
             <version>2.2.10</version>
         </dependency>
 
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient_httpserver</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-common</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${project.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit5</artifactId>
@@ -147,10 +176,17 @@
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility-kotlin</artifactId>
+        </dependency>
+
+        <!-- REST test -->
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
         </dependency>
         <dependency>
             <groupId>org.skyscreamer</groupId>

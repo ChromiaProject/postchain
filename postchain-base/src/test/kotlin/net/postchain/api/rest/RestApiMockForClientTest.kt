@@ -12,10 +12,14 @@ import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.cryptoSystem
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.core.*
+import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TxDetail
+import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test

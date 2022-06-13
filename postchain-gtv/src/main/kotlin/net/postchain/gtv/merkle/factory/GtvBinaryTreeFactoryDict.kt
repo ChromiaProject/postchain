@@ -33,7 +33,7 @@ object GtvBinaryTreeFactoryDict {
 
         // 1. Build first (leaf) layer
         val leafArray = buildLeafElementFromDict(keys, gtvDictionary, gtvPaths)
-        val sumNrOfBytes = leafArray.sumBy { it.getNrOfBytes() }
+        val sumNrOfBytes = leafArray.sumOf { it.getNrOfBytes() }
 
         // 2. Build all higher layers
         val result = mainFactory.buildHigherLayer(1, leafArray)

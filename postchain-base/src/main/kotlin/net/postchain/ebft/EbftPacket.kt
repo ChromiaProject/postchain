@@ -3,18 +3,14 @@
 package net.postchain.ebft
 
 import net.postchain.base.PeerCommConfiguration
-import net.postchain.common.toHex
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.core.NodeRid
-import net.postchain.core.UserMistake
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.Identification
 import net.postchain.ebft.message.SignedMessage
-import net.postchain.network.IdentPacketInfo
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketDecoderFactory
-import net.postchain.network.XPacketEncoder
-import net.postchain.network.XPacketEncoderFactory
+import net.postchain.network.*
 
 class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketEncoder<EbftMessage> {
 

@@ -4,9 +4,18 @@ package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
 import net.postchain.base.snapshot.Page
-import net.postchain.core.*
 import net.postchain.common.data.Hash
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.core.NodeRid
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.AppContext
+import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TxDetail
 import java.sql.Connection
 import java.time.Instant
 

@@ -1,7 +1,7 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
-import net.postchain.core.BlockQueries
+import net.postchain.core.block.BlockQueries
 import net.postchain.ebft.message.*
 import net.postchain.network.CommunicationManager
 import net.postchain.core.NodeRid

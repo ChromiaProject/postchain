@@ -3,17 +3,18 @@
 package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
-import net.postchain.devtools.KeyPairHelper.privKey
-import net.postchain.devtools.KeyPairHelper.pubKey
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper.privKey
+import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.data.GTXDataBuilder
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse
 
-val myCS = SECP256K1CryptoSystem()
+val myCS = Secp256K1CryptoSystem()
 
 fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
     val b = GTXDataBuilder(bcRid, arrayOf(pubKey(0)), myCS)

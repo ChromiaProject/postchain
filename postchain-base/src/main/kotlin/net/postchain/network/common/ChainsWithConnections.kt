@@ -1,8 +1,8 @@
 package net.postchain.network.common
 
 
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.NodeRid
-import net.postchain.core.ProgrammerMistake
 
 /**
  * A collection of multiple [ChainWithConnections] objects, sorted by the Chain IID.

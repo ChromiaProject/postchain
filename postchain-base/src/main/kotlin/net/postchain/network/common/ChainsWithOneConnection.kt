@@ -1,7 +1,7 @@
 package net.postchain.network.common
 
 import net.postchain.common.BlockchainRid
-import net.postchain.core.ProgrammerMistake
+import net.postchain.common.exception.ProgrammerMistake
 
 /**
  * This is a collection of mappings from Chain to NodeConnection

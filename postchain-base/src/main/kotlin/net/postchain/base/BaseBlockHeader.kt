@@ -4,20 +4,20 @@ package net.postchain.base
 
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.core.BlockHeader
-import net.postchain.core.ByteArrayKey
-import net.postchain.core.InitialBlockData
-import net.postchain.core.UserMistake
-import net.postchain.gtv.Gtv
+import net.postchain.core.block.InitialBlockData
 import net.postchain.crypto.CryptoSystem
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.generateProof
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkleHash
+import net.postchain.core.block.BlockHeader
 
 /**
  * BaseBlockHeader implements elements and functionality that are necessary to describe and operate on a block header

@@ -10,8 +10,10 @@ import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.common.reflection.constructorOf
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.*
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.secp256k1_derivePubKey
+import net.postchain.core.block.*
 import net.postchain.debug.BlockchainProcessName
 
 open class BaseBlockchainInfrastructure(
@@ -20,7 +22,7 @@ open class BaseBlockchainInfrastructure(
         private val postchainContext: PostchainContext
 ) : BlockchainInfrastructure {
 
-    val cryptoSystem = SECP256K1CryptoSystem()
+    val cryptoSystem = Secp256K1CryptoSystem()
     val blockSigMaker: SigMaker
     val subjectID: ByteArray
 
@@ -69,9 +71,9 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainEngine(
-            processName: BlockchainProcessName,
-            configuration: BlockchainConfiguration,
-            afterCommitHandler: AfterCommitHandler
+        processName: BlockchainProcessName,
+        configuration: BlockchainConfiguration,
+        afterCommitHandler: AfterCommitHandler
     ): BaseBlockchainEngine {
 
         // We create a new storage instance to open new db connections for each engine
@@ -89,9 +91,9 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainProcess(
-            processName: BlockchainProcessName,
-            engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+        processName: BlockchainProcessName,
+        engine: BlockchainEngine,
+        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)

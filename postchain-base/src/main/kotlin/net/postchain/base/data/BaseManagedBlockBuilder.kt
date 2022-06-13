@@ -5,11 +5,12 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.Storage
 import net.postchain.common.TimeLog
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.*
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,

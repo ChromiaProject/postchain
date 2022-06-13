@@ -2,9 +2,10 @@
 
 package net.postchain.gtx
 
-import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
+import net.postchain.core.Transactor
+import net.postchain.gtx.data.ExtOpData
 
 class GTXOpMistake(message: String, opData: ExtOpData, argPos: Int? = null, cause: Exception? = null)
     : UserMistake(message +

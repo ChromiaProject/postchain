@@ -45,7 +45,7 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         val config = appConfig.cloneConfiguration()
 
         // Setting up params for container node
-        config.setProperty("configuration.provider.node", NodeConfigProviders.Manual.name.toLowerCase())
+        config.setProperty("configuration.provider.node", NodeConfigProviders.Manual.name.lowercase())
         config.setProperty("infrastructure", Infrastructure.EbftContainerSub.get())
 
         // DB

@@ -3,10 +3,10 @@
 package net.postchain.devtools.testinfra
 
 import mu.KLogging
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionFactory
-import net.postchain.core.UserMistake
 import java.io.DataInputStream
 
 class TestTransactionFactory : TransactionFactory {

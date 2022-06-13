@@ -1,9 +1,9 @@
 package net.postchain.integrationtest.api
 
-import net.postchain.core.EContext
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.core.EContext
 
 class TestGetQueryModule : SimpleGTXModule<Unit>(Unit,
         mapOf(),

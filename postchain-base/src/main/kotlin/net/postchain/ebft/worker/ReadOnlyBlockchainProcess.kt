@@ -3,13 +3,13 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
-import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
+import net.postchain.core.NODE_ID_READ_ONLY
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpNodeType
 
 class ReadOnlyBlockchainProcess(val workerContext: WorkerContext) : AbstractBlockchainProcess("replica-${workerContext.processName}", workerContext.engine) {
 

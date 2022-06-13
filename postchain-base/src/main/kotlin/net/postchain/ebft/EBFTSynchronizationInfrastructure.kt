@@ -5,10 +5,11 @@ package net.postchain.ebft
 import net.postchain.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.common.BlockchainRid
+import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockchainProcessName
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
@@ -17,6 +18,7 @@ import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
 import net.postchain.network.common.*
 import net.postchain.network.peer.*
+import net.postchain.debug.BlockchainProcessName
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
@@ -181,10 +183,10 @@ open class EBFTSynchronizationInfrastructure(
         }
 
         return BasePeerCommConfiguration.build(
-            relevantPeerMap.values,
-            SECP256K1CryptoSystem(),
-            postchainContext.appConfig.privKeyByteArray,
-            postchainContext.appConfig.pubKeyByteArray
+                relevantPeerMap.values,
+                Secp256K1CryptoSystem(),
+                postchainContext.appConfig.privKeyByteArray,
+                postchainContext.appConfig.pubKeyByteArray
         )
     }
 
@@ -220,10 +222,10 @@ open class EBFTSynchronizationInfrastructure(
         }
 
         return BasePeerCommConfiguration.build(
-            relevantPeerMap.values,
-            SECP256K1CryptoSystem(),
-            postchainContext.appConfig.privKeyByteArray,
-            postchainContext.appConfig.pubKeyByteArray
+                relevantPeerMap.values,
+                Secp256K1CryptoSystem(),
+                postchainContext.appConfig.privKeyByteArray,
+                postchainContext.appConfig.pubKeyByteArray
         )
     }
 

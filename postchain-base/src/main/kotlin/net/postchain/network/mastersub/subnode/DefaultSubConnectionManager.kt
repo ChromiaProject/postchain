@@ -2,11 +2,10 @@ package net.postchain.network.mastersub.subnode
 
 import mu.KLogging
 import net.postchain.base.PeerInfo
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
-import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ChainsWithOneConnection
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.common.LazyPacket
@@ -17,6 +16,7 @@ import net.postchain.network.mastersub.protocol.MsDataMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.subnode.netty.NettySubConnector
 import net.postchain.network.peer.XChainPeersConfiguration
+import net.postchain.debug.BlockchainProcessName
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule

@@ -2,21 +2,14 @@ package net.postchain.devtools.utils.configuration.pre
 
 
 import mu.KLogging
-import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
-import net.postchain.base.configuration.KEY_BLOCKSTRATEGY_NAME
-import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
-import net.postchain.base.configuration.KEY_SIGNERS
-import net.postchain.base.configuration.KEY_GTX
-import net.postchain.base.configuration.KEY_GTX_MODULES
-import net.postchain.base.configuration.KEY_DEPENDENCIES
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.configuration.*
 import net.postchain.common.hexStringToByteArray
-import net.postchain.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import java.lang.IllegalArgumentException
 
 
 /**
@@ -41,8 +34,10 @@ data class BlockchainPreSetup(
     companion object : KLogging() {
 
         const val DEFAULT_BLOCKSTRATEGY = "net.postchain.devtools.OnDemandBlockBuildingStrategy"
-        const val DEFAULT_CONFIGURATIONFACTORY = "net.postchain.gtx.GTXBlockchainConfigurationFactory" // We use real GTX as default
-                                // another option: net.postchain.devtools.testinfra.TestBlockchainConfigurationFactory
+        const val DEFAULT_CONFIGURATIONFACTORY =
+            "net.postchain.gtx.GTXBlockchainConfigurationFactory" // We use real GTX as default
+
+        // another option: net.postchain.devtools.testinfra.TestBlockchainConfigurationFactory
         const val DEFAULT_MODULE_TEST = "net.postchain.configurations.GTXTestModule"
         const val DEFAULT_MODULE_STD_GTX_OPS = "net.postchain.gtx.StandardOpsGTXModule"
 

@@ -3,11 +3,11 @@
 package net.postchain.devtools.testinfra
 
 import mu.KLogging
-import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.gtx.GTXModule
 import net.postchain.core.EContext
 import net.postchain.core.TransactionFactory
-import net.postchain.gtx.GTXModule
 
 open class TestBlockchainConfiguration(
         configData: BlockchainConfigurationData,

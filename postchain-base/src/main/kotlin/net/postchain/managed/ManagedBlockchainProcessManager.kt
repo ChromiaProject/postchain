@@ -7,12 +7,14 @@ import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.BlockQueries
 import net.postchain.ebft.heartbeat.*
+import net.postchain.core.block.BlockTrace
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -61,8 +63,7 @@ open class ManagedBlockchainProcessManager(
     protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
     protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
-    protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
-    protected var loggedChains: Array<Set<Long>> = emptyArray()
+    protected val heartbeatManager = DefaultHeartbeatManager()
 
     companion object : KLogging()
 

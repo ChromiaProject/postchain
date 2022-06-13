@@ -4,20 +4,24 @@ package net.postchain.cli
 
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
-import net.postchain.base.*
+import net.postchain.base.BaseConfigurationDataStore
+import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
+import net.postchain.base.runStorageCommand
+import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
-import net.postchain.common.BlockchainRid
-import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFileReader
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.core.EContext
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
 import java.sql.Connection
@@ -54,7 +58,7 @@ object CliExecution {
             val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
             val keyString = "brid.chainid." + chainId.toString()
             val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
-                BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+                GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
             return brid
         }
 

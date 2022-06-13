@@ -1,8 +1,11 @@
 package net.postchain.base.data
 
 import net.postchain.base.BaseBlockHeader
-import net.postchain.core.*
 import net.postchain.common.BlockchainRid
+import net.postchain.core.BlockRid
+import net.postchain.core.block.InitialBlockData
+import net.postchain.core.ValidationResult
+import net.postchain.core.block.BlockHeader
 import java.util.*
 
 /**

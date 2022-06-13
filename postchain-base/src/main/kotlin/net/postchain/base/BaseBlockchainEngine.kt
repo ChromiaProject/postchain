@@ -2,18 +2,26 @@
 
 package net.postchain.base
 
+import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.Timer
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
-import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
+import net.postchain.metrics.BLOCKCHAIN_RID_TAG
+import net.postchain.metrics.BaseBlockchainEngineMetrics
+import net.postchain.metrics.CHAIN_IID_TAG
+import net.postchain.metrics.NODE_PUBKEY_TAG
 import nl.komponents.kovenant.task
 import java.lang.Long.max
 
@@ -42,6 +50,12 @@ open class BaseBlockchainEngine(
     private var closed = false
     private var afterCommitHandlerInternal: AfterCommitHandler = { _, _, _ -> false }
     private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
+    private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
+    private val loggingContext = mapOf(
+        NODE_PUBKEY_TAG to processName.pubKey,
+        CHAIN_IID_TAG to chainID.toString(),
+        BLOCKCHAIN_RID_TAG to processName.blockchainRid.toHex()
+    )
 
     override fun isRunning() = !closed
 
@@ -140,123 +154,133 @@ open class BaseBlockchainEngine(
         block: BlockData,
         transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
+        withLoggingContext(loggingContext) {
+            val grossStart = System.nanoTime()
+            val blockBuilder = makeBlockBuilder()
+            var exception: Exception? = null
 
-        val grossStart = System.nanoTime()
-        val blockBuilder = makeBlockBuilder()
-        var exception: Exception? = null
+            try {
+                loadLog("Start", blockBuilder.getBTrace())
+                if (logger.isTraceEnabled) {
+                    blockBuilder.setBTrace(getBlockTrace(block.header))
+                }
+                blockBuilder.begin(block.header)
 
-        try {
-            loadLog("Start", blockBuilder.getBTrace())
-            if (logger.isTraceEnabled) {
-                blockBuilder.setBTrace(getBlockTrace(block.header))
+                val netStart = System.nanoTime()
+                val decodedTxs = transactionsDecoder(block.transactions)
+                decodedTxs.forEach(blockBuilder::appendTransaction)
+                val netEnd = System.nanoTime()
+
+                blockBuilder.finalizeAndValidate(block.header)
+                val grossEnd = System.nanoTime()
+
+                if (LOG_STATS) {
+                    val prettyBlockHeader = prettyBlockHeader(
+                        block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd
+                    )
+                    logger.info("$processName: Loaded block: $prettyBlockHeader")
+                }
+
+                loadLog("End", blockBuilder.getBTrace())
+            } catch (e: Exception) {
+                exception = e
             }
-            blockBuilder.begin(block.header)
 
-            val netStart = System.nanoTime()
-            val decodedTxs = transactionsDecoder(block.transactions)
-            decodedTxs.forEach(blockBuilder::appendTransaction)
-            val netEnd = System.nanoTime()
-
-            blockBuilder.finalizeAndValidate(block.header)
-            val grossEnd = System.nanoTime()
-
-            if (LOG_STATS) {
-                val prettyBlockHeader = prettyBlockHeader(
-                    block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd
-                )
-                logger.info("$processName: Loaded block: $prettyBlockHeader")
-            }
-
-            loadLog("End", blockBuilder.getBTrace())
-        } catch (e: Exception) {
-            exception = e
+            return blockBuilder to exception
         }
-
-        return blockBuilder to exception
     }
 
     override fun buildBlock(): Pair<ManagedBlockBuilder, Exception?> {
-        TimeLog.startSum("BaseBlockchainEngine.buildBlock().buildBlock")
-        buildLog("Begin")
-        val grossStart = System.nanoTime()
+        withLoggingContext(loggingContext) {
+            TimeLog.startSum("BaseBlockchainEngine.buildBlock().buildBlock")
+            buildLog("Begin")
+            val grossStart = System.nanoTime()
 
-        val blockBuilder = makeBlockBuilder()
-        var exception: Exception? = null
+            val blockBuilder = makeBlockBuilder()
+            var exception: Exception? = null
 
-        try {
-            blockBuilder.begin(null)
-            val abstractBlockBuilder = ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
-            val netStart = System.nanoTime()
+            try {
+                val blockSample = Timer.start(Metrics.globalRegistry)
 
-            TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendTransactions")
-            var acceptedTxs = 0
-            var rejectedTxs = 0
+                blockBuilder.begin(null)
+                val abstractBlockBuilder =
+                    ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
+                val netStart = System.nanoTime()
 
-            while (true) {
-                if (logger.isTraceEnabled) {
-                    logger.trace("$processName: Checking transaction queue")
-                }
-                TimeLog.startSum("BaseBlockchainEngine.buildBlock().takeTransaction")
-                val tx = transactionQueue.takeTransaction()
-                TimeLog.end("BaseBlockchainEngine.buildBlock().takeTransaction")
-                if (tx != null) {
-                    logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
-                    TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
-                    if (tx.isSpecial()) {
-                        rejectedTxs++
-                        transactionQueue.rejectTransaction(
-                            tx,
-                            ProgrammerMistake("special transactions can't enter queue")
-                        )
-                        continue
+                TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendTransactions")
+                var acceptedTxs = 0
+                var rejectedTxs = 0
+
+                while (true) {
+                    if (logger.isTraceEnabled) {
+                        logger.trace("$processName: Checking transaction queue")
                     }
-                    val txException = blockBuilder.maybeAppendTransaction(tx)
-                    TimeLog.end("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
-                    if (txException != null) {
-                        rejectedTxs++
-                        transactionQueue.rejectTransaction(tx, txException)
-                        logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
-                    } else {
-                        acceptedTxs++
-                        // tx is fine, consider stopping
-                        if (strategy.shouldStopBuildingBlock(abstractBlockBuilder)) {
-                            buildDebug("Block size limit is reached")
-                            break
+                    TimeLog.startSum("BaseBlockchainEngine.buildBlock().takeTransaction")
+                    val tx = transactionQueue.takeTransaction()
+                    TimeLog.end("BaseBlockchainEngine.buildBlock().takeTransaction")
+                    if (tx != null) {
+                        logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
+                        val transactionSample = Timer.start(Metrics.globalRegistry)
+                        TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
+                        if (tx.isSpecial()) {
+                            rejectedTxs++
+                            transactionQueue.rejectTransaction(
+                                tx,
+                                ProgrammerMistake("special transactions can't enter queue")
+                            )
+                            continue
                         }
+                        val txException = blockBuilder.maybeAppendTransaction(tx)
+                        TimeLog.end("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
+                        if (txException != null) {
+                            rejectedTxs++
+                            transactionSample.stop(metrics.rejectedTransactions)
+                            transactionQueue.rejectTransaction(tx, txException)
+                            logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
+                        } else {
+                            acceptedTxs++
+                            transactionSample.stop(metrics.acceptedTransactions)
+                            // tx is fine, consider stopping
+                            if (strategy.shouldStopBuildingBlock(abstractBlockBuilder)) {
+                                buildDebug("Block size limit is reached")
+                                break
+                            }
+                        }
+                    } else { // tx == null
+                        break
                     }
-                } else { // tx == null
-                    break
                 }
+
+                TimeLog.end("BaseBlockchainEngine.buildBlock().appendTransactions")
+
+                val netEnd = System.nanoTime()
+                val blockHeader = blockBuilder.finalizeBlock()
+                val grossEnd = System.nanoTime()
+
+                TimeLog.end("BaseBlockchainEngine.buildBlock().buildBlock")
+
+                if (LOG_STATS) {
+                    val prettyBlockHeader = prettyBlockHeader(
+                        blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
+                    )
+                    logger.info("$processName: Block is finalized: $prettyBlockHeader")
+                } else {
+                    logger.info("$processName: Block is finalized")
+                }
+
+                if (logger.isTraceEnabled) {
+                    blockBuilder.setBTrace(getBlockTrace(blockHeader))
+                    buildLog("End", blockBuilder.getBTrace())
+                }
+
+                blockSample.stop(metrics.blocks)
+            } catch (e: Exception) {
+                exception = e
             }
+            buildLog("End")
 
-            TimeLog.end("BaseBlockchainEngine.buildBlock().appendTransactions")
-
-            val netEnd = System.nanoTime()
-            val blockHeader = blockBuilder.finalizeBlock()
-            val grossEnd = System.nanoTime()
-
-            TimeLog.end("BaseBlockchainEngine.buildBlock().buildBlock")
-
-            if (LOG_STATS) {
-                val prettyBlockHeader = prettyBlockHeader(
-                    blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
-                )
-                logger.info("$processName: Block is finalized: $prettyBlockHeader")
-            } else {
-                logger.info("$processName: Block is finalized")
-            }
-
-            if (logger.isTraceEnabled) {
-                blockBuilder.setBTrace(getBlockTrace(blockHeader))
-                buildLog("End", blockBuilder.getBTrace())
-            }
-
-        } catch (e: Exception) {
-            exception = e
+            return blockBuilder to exception
         }
-        buildLog("End")
-
-        return blockBuilder to exception
     }
 
     // -----------------

@@ -2,8 +2,8 @@
 
 package net.postchain.devtools.testinfra
 
-import net.postchain.core.Transaction
 import net.postchain.core.TxEContext
+import net.postchain.core.Transaction
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 

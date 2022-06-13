@@ -27,7 +27,7 @@ object GtvBinaryTreeFactoryArray {
         }
 
         val leafArray = mainFactory.buildLeafElements(leafList, gtvPaths)
-        val sumNrOfBytes = leafArray.sumBy { it.getNrOfBytes() }
+        val sumNrOfBytes = leafArray.sumOf { it.getNrOfBytes() }
 
         // 2. Build all higher layers
         val result = mainFactory.buildHigherLayer(1, leafArray)

@@ -3,21 +3,29 @@
 package net.postchain
 
 import mu.KLogging
+import mu.withLoggingContext
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.core.*
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
+import net.postchain.core.BaseInfrastructureFactoryProvider
+import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.Shutdownable
+import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.metrics.CHAIN_IID_TAG
+import net.postchain.metrics.NODE_PUBKEY_TAG
+import net.postchain.metrics.initMetrics
 import nl.komponents.kovenant.Kovenant
+
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
  */
-open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false) : Shutdownable {
+open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false) : Shutdownable {
 
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
@@ -27,6 +35,8 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
     companion object : KLogging()
 
     init {
+        initMetrics(appConfig)
+
         Kovenant.context {
             workerContext.dispatcher {
                 name = "main"
@@ -65,14 +75,16 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
     }
 
     override fun shutdown() {
-        // FYI: Order is important
-        logger.info("$logPrefix: shutdown() - begin")
-        processManager.shutdown()
-        logger.debug("$logPrefix: shutdown() - Stopping BlockchainInfrastructure")
-        blockchainInfrastructure.shutdown()
-        logger.debug("$logPrefix: shutdown() - Stopping PostchainContext")
-        postchainContext.shutDown()
-        logger.info("$logPrefix: shutdown() - end")
+        withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
+            // FYI: Order is important
+            logger.info("$logPrefix: shutdown() - begin")
+            processManager.shutdown()
+            logger.debug("$logPrefix: shutdown() - Stopping BlockchainInfrastructure")
+            blockchainInfrastructure.shutdown()
+            logger.debug("$logPrefix: shutdown() - Stopping PostchainContext")
+            postchainContext.shutDown()
+            logger.info("$logPrefix: shutdown() - end")
+        }
     }
 
     /**
@@ -91,13 +103,21 @@ open class PostchainNode(appConfig: AppConfig, wipeDb: Boolean = false, debug: B
      */
     private fun buildBbDebug(chainId: Long): BlockTrace? {
         return if (logger.isDebugEnabled) {
-            val x = processManager.retrieveBlockchain(chainId)
-            if (x == null) {
-                logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.appConfig.pubKey}?" }
-                null
-            } else {
-                val procName = BlockchainProcessName(postchainContext.appConfig.pubKey, x.blockchainEngine.getConfiguration().blockchainRid)
-                BlockTrace.buildBeforeBlock(procName)
+            withLoggingContext(
+                NODE_PUBKEY_TAG to appConfig.pubKey,
+                CHAIN_IID_TAG to chainId.toString()
+            ) {
+                val x = processManager.retrieveBlockchain(chainId)
+                if (x == null) {
+                    logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.appConfig.pubKey}?" }
+                    null
+                } else {
+                    val procName = BlockchainProcessName(
+                        postchainContext.appConfig.pubKey,
+                        x.blockchainEngine.getConfiguration().blockchainRid
+                    )
+                    BlockTrace.buildBeforeBlock(procName)
+                }
             }
         } else {
             null

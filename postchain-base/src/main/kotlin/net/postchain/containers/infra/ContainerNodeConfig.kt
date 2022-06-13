@@ -28,7 +28,7 @@ data class ContainerNodeConfig(
         val containersTestmodeResourceLimitsRAM: Long,
         val containersTestmodeResourceLimitsCPU: Long,
         val containersTestmodeResourceLimitsSTORAGE: Long,
-        val dappsContainers: Map<String, String>
+        val testmodeDappsContainers: Map<String, String>
 ) {
     companion object {
         const val DEFAULT_PORT: Int = 9870
@@ -45,17 +45,19 @@ data class ContainerNodeConfig(
                     config.getLong("container.send-connected-peers-period", 60_000L),
                     config.getString("container.healthcheck.runningContainersAtStartRegexp", ""),
                     config.getInt("container.healthcheck.runningContainersCheckPeriod", 0),
-                    config.getString("container.filesystem", FileSystem.Type.LOCAL.name).toUpperCase(), // LOCAL | ZFS
+                    config.getString("container.filesystem", FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
                     config.getString("container.zfs.pool-name", FileSystem.ZFS_POOL_NAME),
                     config.getString("container.zfs.pool-init-script", CONTAINER_ZFS_INIT_SCRIPT),
                     config.getBoolean("container.bind-pgdata-volume", true),
-                    config.getBoolean("container.testmode", false),
+                    config.getTestmode(),
                     config.getLong("container.testmode.resource-limits-ram", -1),
                     config.getLong("container.testmode.resource-limits-cpu", -1),
                     config.getLong("container.testmode.resource-limits-storage", -1),
-                    initDappsContainers(config)
+                    initTestmodeDappsContainers(config)
             )
         }
+
+        private fun AppConfig.getTestmode() = getBoolean("container.testmode", false)
 
         /*
             Example:
@@ -64,17 +66,14 @@ data class ContainerNodeConfig(
                 cont2=EB7387FD,94F29578
                 cont3=0B942264
         */
-        private fun initDappsContainers(config: AppConfig): Map<String, String> {
+        private fun initTestmodeDappsContainers(config: AppConfig): Map<String, String> {
             val res = mutableMapOf<String, String>()
 
-            val processCont: (String) -> Unit = { cont ->
-                config.getStringArray(cont).forEach { res[it] = cont }
+            if (config.getTestmode()) {
+                listOf("cont0", "cont1", "cont2", "cont3").forEach { cont ->
+                    config.getStringArray(cont).forEach { res[it] = cont }
+                }
             }
-
-            processCont("cont0")
-            processCont("cont1")
-            processCont("cont2")
-            processCont("cont3")
 
             return res
         }

@@ -2,7 +2,6 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -86,7 +85,7 @@ class MerkleRootCalculatorTest {
         ))
         val blockRID = blockHeaderRec.toGtv().merkleHash(  GtvMerkleHashCalculator(Secp256K1CryptoSystem()) )
         println(GtvNull.merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem())).toHex())
-        println(GtvByteArray("E384EA79AD1CA544ADEE13C6B1CCD33497A00BBF6A1E2F6DC4C61E264E0C08B3".hexStringToByteArray()).merkleHash(GtvMerkleHashCalculator(SECP256K1CryptoSystem())).toHex())
+        println(GtvByteArray("E384EA79AD1CA544ADEE13C6B1CCD33497A00BBF6A1E2F6DC4C61E264E0C08B3".hexStringToByteArray()).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem())).toHex())
         print(blockRID.toHex())
     }
 

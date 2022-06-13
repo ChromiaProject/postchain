@@ -22,7 +22,7 @@ interface HeartbeatManager {
 }
 
 
-class DefaultHeartbeatManager(val heartbeatConfig: HeartbeatConfig) : HeartbeatManager {
+class DefaultHeartbeatManager : HeartbeatManager {
 
     companion object : KLogging()
 
@@ -36,17 +36,7 @@ class DefaultHeartbeatManager(val heartbeatConfig: HeartbeatConfig) : HeartbeatM
         listeners.remove(chainId)
     }
 
-    private var heartbeatTestmodeCounter = 0
-
     override fun beat(timestamp: Long) {
-        // TODO: [POS-164]: For manual test only. Delete this later
-        if (heartbeatConfig.testmode) {
-            if ((heartbeatTestmodeCounter++ / 25) % 2 == 0) {
-                logger.debug { "Heartbeat event received and skipped: timestamp $timestamp" }
-                return
-            }
-        }
-
         val event = HeartbeatEvent(timestamp)
         logger.debug { "Heartbeat event received: timestamp $timestamp" }
         listeners.values.forEach {

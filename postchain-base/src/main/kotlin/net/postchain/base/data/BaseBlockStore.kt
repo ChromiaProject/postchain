@@ -4,15 +4,18 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.common.data.Hash
-import net.postchain.core.*
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.data.Hash
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
+import net.postchain.core.*
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.core.block.*
 
 /**
  * Provides database access to the location where the blockchain with related metadata and transactions
  * are stored
- *
- * @property db Object used to access the DBMS
  */
 class BaseBlockStore : BlockStore {
 
@@ -102,7 +105,7 @@ class BaseBlockStore : BlockStore {
         val blockInfo = db.getBlock(ctx, blockRID) ?: return null
         val txDetails = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
         // TODO can I do this on the node or is it too computational expensive
-        val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, SECP256K1CryptoSystem())
+        val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, Secp256K1CryptoSystem())
         return BlockDetail(
                 blockInfo.blockRid,
                 blockHeaderDecoded.prevBlockRID,
@@ -120,7 +123,7 @@ class BaseBlockStore : BlockStore {
             val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
 
             // Decode block header
-            val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, SECP256K1CryptoSystem())
+            val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, Secp256K1CryptoSystem())
 
             BlockDetail(
                     blockInfo.blockRid,

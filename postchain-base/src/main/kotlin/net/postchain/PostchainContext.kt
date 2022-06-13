@@ -3,8 +3,8 @@ package net.postchain
 import net.postchain.base.Storage
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.network.common.ConnectionManager
+import net.postchain.debug.NodeDiagnosticContext
 
 data class PostchainContext(
         val appConfig: AppConfig,
