@@ -36,7 +36,7 @@ build:
     - tags
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS -DskipTests deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
 release:
   stage: release
