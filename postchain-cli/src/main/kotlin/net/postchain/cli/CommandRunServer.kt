@@ -49,5 +49,4 @@ class CommandRunServer : Command {
         }
         return Ok()
     }
-
 }

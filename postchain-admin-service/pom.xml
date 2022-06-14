@@ -10,6 +10,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>postchain-admin-service</artifactId>
+    <name>Postchain Admin Service</name>
+    <description>Definition of rpc messages that can be used to manage postchain when running in server mode.</description>
 
     <dependencies>
         <dependency>

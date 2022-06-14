@@ -9,18 +9,27 @@ import com.github.ajalt.clikt.parameters.types.long
 import com.google.protobuf.ByteString
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
+import net.postchain.admin.cli.util.chainIdOption
 import net.postchain.server.service.AddConfigurationRequest
 import kotlin.io.path.extension
 
-class AddConfigurationCommand: CliktCommand(help = "Add and start blockchain from configuration") {
+class AddConfigurationCommand : CliktCommand(help = "Add and start blockchain from configuration") {
 
     private val channel by blockingPostchainServiceChannelOption()
 
-    private val chainId by option("--chain-id", "-cid", envvar = "POSTCHAIN_CHAIN_ID", help = "ID of blockchain").long().required()
+    private val chainId by chainIdOption()
 
-    private val height by option("--height", "-h", envvar = "POSTCHAIN_HEIGHT", help = "Height to add the configuration at").long().required()
+    private val height by option(
+        "--height", "-h", envvar = "POSTCHAIN_HEIGHT", help = "Height to add the configuration at"
+    )
+        .long().required()
 
-    private val config by option("--blockchain-config", "-bc", envvar = "POSTCHAIN_BLOCKCHAIN_CONFIG", help = "Path to config file (xml or gtv format)")
+    private val config by option(
+        "--blockchain-config",
+        "-bc",
+        envvar = "POSTCHAIN_BLOCKCHAIN_CONFIG",
+        help = "Path to config file (xml or gtv format)"
+    )
         .file()
         .required()
 

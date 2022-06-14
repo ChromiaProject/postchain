@@ -1,6 +1,7 @@
 package net.postchain.server.service
 
 import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import io.grpc.stub.StreamObserver
 import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
@@ -11,20 +12,7 @@ class PeerService(private val postchainContext: PostchainContext) : PeerServiceG
 
     override fun addPeer(request: AddPeerRequest?, responseObserver: StreamObserver<AddPeerReply>?) {
         val pubkey = request!!.pubkey
-        if (pubkey.length != 66) {
-            return responseObserver?.onError(
-                Status.INVALID_ARGUMENT.withDescription("Public key $pubkey must be of length 66, but was ${pubkey.length}")
-                    .asRuntimeException()
-            )!!
-        }
-        try {
-            pubkey.hexStringToByteArray()
-        } catch (e: java.lang.Exception) {
-            return responseObserver?.onError(
-                Status.INVALID_ARGUMENT.withDescription("Public key $pubkey must be a valid hex string")
-                    .asRuntimeException()
-            )!!
-        }
+        verifyPubKey(pubkey)?.let { return responseObserver?.onError(it)!! }
         postchainContext.storage.withWriteConnection { ctx ->
             val db = DatabaseAccess.of(ctx)
             val targetHost = db.findPeerInfo(ctx, request.host, request.port, null)
@@ -50,8 +38,26 @@ class PeerService(private val postchainContext: PostchainContext) : PeerServiceG
         }
     }
 
+    private fun verifyPubKey(
+        pubkey: String,
+    ): StatusRuntimeException? {
+        if (pubkey.length != 66) {
+            return Status.INVALID_ARGUMENT.withDescription("Public key $pubkey must be of length 66, but was ${pubkey.length}")
+                    .asRuntimeException()
+
+        }
+        try {
+            pubkey.hexStringToByteArray()
+        } catch (e: Exception) {
+            return Status.INVALID_ARGUMENT.withDescription("Public key $pubkey must be a valid hex string")
+                    .asRuntimeException()
+        }
+        return null
+    }
+
     override fun removePeer(request: RemovePeerRequest?, responseObserver: StreamObserver<RemovePeerReply>?) {
         val pubkey = request!!.pubkey
+        verifyPubKey(pubkey)?.let { return }
         val removedPeer = postchainContext.storage.withWriteConnection { ctx ->
             DatabaseAccess.of(ctx).removePeerInfo(ctx, pubkey)
         }
