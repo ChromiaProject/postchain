@@ -7,17 +7,18 @@ import java.util.*
 import kotlin.math.log
 import kotlin.math.pow
 
-class RevoltTracker(private val revoltTimeout: Int, private val statusManager: StatusManager) {
-    var deadLine = newDeadLine(0)
-    var prevHeight = statusManager.myStatus.height
-    var prevRound = statusManager.myStatus.round
+class RevoltTracker(private val statusManager: StatusManager, private val config: RevoltConfigurationData) {
+    private val initialHeight = statusManager.myStatus.height
+    private val maxDelayRound = log(
+        ((config.exponentialDelayMax + config.exponentialDelayBase) / config.exponentialDelayBase).toDouble(),
+        DELAY_POWER_BASE
+    ).toLong()
+    private var deadLine = newDeadLine(0)
+    private var prevHeight = initialHeight
+    private var prevRound = statusManager.myStatus.round
 
     companion object {
-        const val BASE_DELAY = 1_000
         const val DELAY_POWER_BASE = 1.2
-        const val MAX_DELAY = 600_000L // 10 minutes
-
-        private val MAX_DELAY_ROUND = log(((MAX_DELAY + BASE_DELAY) / BASE_DELAY).toDouble(), DELAY_POWER_BASE).toLong()
     }
 
     /**
@@ -26,11 +27,11 @@ class RevoltTracker(private val revoltTimeout: Int, private val statusManager: S
      * @return the time at which the deadline is passed
      */
     private fun newDeadLine(round: Long): Long {
-        val baseTimeout = Date().time + revoltTimeout
-        return if (round >= MAX_DELAY_ROUND) {
-            baseTimeout + MAX_DELAY
+        val baseTimeout = Date().time + config.timeout
+        return if (round >= maxDelayRound) {
+            baseTimeout + config.exponentialDelayMax
         } else {
-            baseTimeout + (BASE_DELAY * (DELAY_POWER_BASE.pow(round.toDouble()))).toLong() - BASE_DELAY
+            baseTimeout + (config.exponentialDelayBase * (DELAY_POWER_BASE.pow(round.toDouble()))).toLong() - config.exponentialDelayBase
         }
     }
 
@@ -44,8 +45,19 @@ class RevoltTracker(private val revoltTimeout: Int, private val statusManager: S
             prevHeight = current.height
             prevRound = current.round
             deadLine = newDeadLine(current.round)
-        } else if (Date().time > deadLine && !current.revolting) {
+        } else if ((Date().time > deadLine || shouldDoFastRevolt()) && !current.revolting) {
             this.statusManager.onStartRevolting()
         }
+    }
+
+    private fun shouldDoFastRevolt(): Boolean {
+        // Check if fast revolt is enabled
+        if (config.fastRevoltStatusTimeout < 0) return false
+
+        val current = statusManager.myStatus
+        if (current.height == initialHeight || statusManager.isMyNodePrimary()) return false
+
+        val lastUpdateFromPrimary = statusManager.getLatestStatusTimestamp(statusManager.primaryIndex())
+        return System.currentTimeMillis() - lastUpdateFromPrimary > config.fastRevoltStatusTimeout
     }
 }
