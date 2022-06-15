@@ -2,16 +2,17 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
 import mu.KLogging
+import net.postchain.cli.util.debugOption
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 import java.io.File
 import java.nio.file.Paths
 
-@Parameters(commandDescription = "Run Node Auto")
-class CommandRunNodeAuto : Command {
+class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node Auto") {
 
     companion object : KLogging()
 
@@ -32,40 +33,26 @@ class CommandRunNodeAuto : Command {
      *          2/
      *              ...
      */
-    @Parameter(
-            names = ["-d", "--directory"],
-            description = "Configuration directory")
-    private var configDirectory = "."
+    private val configDirectory by option("-d", "--directory", help = "Configuration directory").default(".")
 
-    @Parameter(
-            names = ["--debug"],
-            description = "Enables diagnostic info on the /_debug REST endpoint",
-    )
-    private var debug = false
+    private val debug by debugOption()
 
     private val NODE_CONFIG_FILE = "node-config.properties"
     private val BLOCKCHAIN_DIR = "blockchains"
 
-    override fun key(): String = "run-node-auto"
-
     private val lastHeights = mutableMapOf<Long, Long>() // { chainId -> height }
 
-    override fun execute(): CliResult {
+    override fun run() {
         println("run-auto-node will be executed with options: " +
                 ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
 
         val chainsDir = Paths.get(configDirectory, BLOCKCHAIN_DIR).toFile()
         val nodeConfigFile = Paths.get(configDirectory, NODE_CONFIG_FILE).toString()
 
-        return try {
-            CliExecution.waitDb(50, 1000, nodeConfigFile)
-            val chainIds = loadChainsConfigs(chainsDir, nodeConfigFile)
-            CliExecution.runNode(nodeConfigFile, chainIds.sorted(), debug)
-            Ok("Postchain node is running", isLongRunning = true)
-
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+        CliExecution.waitDb(50, 1000, nodeConfigFile)
+        val chainIds = loadChainsConfigs(chainsDir, nodeConfigFile)
+        CliExecution.runNode(nodeConfigFile, chainIds.sorted(), debug)
+        println("Postchain node is running")
     }
 
     /**

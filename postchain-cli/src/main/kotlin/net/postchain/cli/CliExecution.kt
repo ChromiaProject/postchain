@@ -10,6 +10,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
@@ -17,15 +18,15 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFileReader
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
-import net.postchain.core.EContext
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
 import java.sql.Connection
 import java.sql.SQLException
+import java.util.concurrent.TimeoutException
 
 object CliExecution {
 
@@ -266,11 +267,11 @@ object CliExecution {
     }
 
 
-    fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: String): CliResult {
-        return tryCreateBasicDataSource(nodeConfigFile)?.let { Ok() } ?: if (retryTimes > 0) {
+    fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: String) {
+        tryCreateBasicDataSource(nodeConfigFile)?.let { return } ?: if (retryTimes > 0) {
             Thread.sleep(retryInterval)
             waitDb(retryTimes - 1, retryInterval, nodeConfigFile)
-        } else CliError.DatabaseOffline()
+        } else throw TimeoutException("Unable to connect to database")
     }
 
     private fun tryCreateBasicDataSource(nodeConfigFile: String): Connection? {

@@ -2,54 +2,36 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.help
+import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.blockchainConfigOption
+import net.postchain.cli.util.chainIdOption
+import net.postchain.cli.util.forceOption
+import net.postchain.cli.util.nodeConfigOption
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 
-@Parameters(commandDescription = "Adds blockchain")
-class CommandAddBlockchain : Command {
+class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add blockchain") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    @Parameter(
-            names = ["-nc", "--node-config"],
-            description = "Configuration file of node (.properties file)")
-    private var nodeConfigFile = ""
+    private val nodeConfigFile by nodeConfigOption()
 
-    @Parameter(
-            names = ["-i", "--infrastructure"],
-            description = "The type of blockchain infrastructure.")
-    private var infrastructureType = "base/ebft"
+    private val chainId by chainIdOption().required()
 
-    @Parameter(
-            names = ["-cid", "--chain-id"],
-            description = "Local number id of blockchain",
-            required = true)
-    private var chainId = 0L
+    private val blockchainConfigFile by blockchainConfigOption()
 
-    @Parameter(
-            names = ["-bc", "--blockchain-config"],
-            description = "Configuration file of blockchain (GtvML (*.xml) or Gtv (*.gtv))",
-            required = true)
-    private var blockchainConfigFile = ""
+    private val force by forceOption().help("Force the addition of already existed blockchain-rid (by chain-id)")
 
-    @Parameter(
-            names = ["-f", "--force"],
-            description = "Force the addition of already existed blockchain-rid (by chain-id)")
-    private var force = false
 
-    override fun key(): String = "add-blockchain"
+    override fun run() {
+        println(
+            "add-blockchain will be executed with options: " +
+                    ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE)
+        )
 
-    override fun execute(): CliResult {
-        println("add-blockchain will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
-
-        return try {
-            val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
-            CliExecution.addBlockchain(nodeConfigFile, chainId, blockchainConfigFile, mode)
-            Ok("Configuration has been added successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+        val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
+        CliExecution.addBlockchain(nodeConfigFile, chainId, blockchainConfigFile, mode)
+        println("Configuration has been added successfully")
     }
 }

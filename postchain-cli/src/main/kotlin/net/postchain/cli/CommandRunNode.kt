@@ -2,46 +2,27 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.multiple
+import net.postchain.cli.util.chainIdOption
+import net.postchain.cli.util.debugOption
+import net.postchain.cli.util.nodeConfigOption
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 
-@Parameters(commandDescription = "Runs node")
-class CommandRunNode : Command {
+class CommandRunNode : CliktCommand(name = "run-node", help = "Runs node") {
 
-    @Parameter(
-            names = ["-nc", "--node-config"],
-            description = "Configuration file of node (.properties file)")
-    private var nodeConfigFile = ""
+    private val nodeConfigFile by nodeConfigOption()
 
-    @Parameter(
-            names = ["-i", "--node-index"],
-            description = "Node index")
-    private var nodeIndex = 0
+    private val chainIDs by chainIdOption().multiple(required = true)
 
-    @Parameter(
-            names = ["-cid", "--chain-ids"],
-            description = "IDs of chains to launch",
-            required = true)
-    private var chainIDs = listOf<Long>()
+    private val debug by debugOption()
 
-    @Parameter(
-            names = ["--debug"],
-            description = "Enables diagnostic info on the /_debug REST endpoint"
-    )
-    private var debug = false
-
-    override fun key(): String = "run-node"
-
-    override fun execute(): CliResult {
+    override fun run() {
         println("run-node will be executed with options: " +
                 ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
 
-        nodeConfigFile = nodeConfigFile.takeIf { it != "" }
-                ?: "config/config.$nodeIndex.properties"
-
         CliExecution.runNode(nodeConfigFile, chainIDs, debug)
-        return Ok("Postchain node is running", isLongRunning = true)
+        println("Postchain node is running")
     }
 }
