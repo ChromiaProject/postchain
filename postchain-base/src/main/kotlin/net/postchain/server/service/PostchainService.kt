@@ -43,8 +43,10 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
         request: AddConfigurationRequest?,
         responseObserver: StreamObserver<AddConfigurationReply>?
     ) {
-        if (!request!!.hasGtv() && !request.hasXml()) {
-            return responseObserver?.onError(Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException())!!
+        val config = when (request!!.configCase) {
+            AddConfigurationRequest.ConfigCase.XML -> GtvMLParser.parseGtvML(request.xml)
+            AddConfigurationRequest.ConfigCase.GTV -> GtvDecoder.decodeGtv(request.gtv.toByteArray())
+            else -> return responseObserver?.onError(Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException())!!
         }
         withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
@@ -54,8 +56,7 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
                 return@withWriteConnection false
             }
 
-            val gtvConfiguration = if (request.hasXml()) GtvMLParser.parseGtvML(request.xml) else GtvDecoder.decodeGtv(request.gtv.toByteArray()) // Verify that gtv-format works
-            db.addConfigurationData(ctx, request.height, GtvEncoder.encodeGtv(gtvConfiguration))
+            db.addConfigurationData(ctx, request.height, GtvEncoder.encodeGtv(config))
             true
         }
         responseObserver?.onNext(
@@ -71,8 +72,10 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
         request: InitializeBlockchainRequest?,
         responseObserver: StreamObserver<InitializeBlockchainReply>?
     ) {
-        if (!request!!.hasGtv() && !request.hasXml()) {
-            return responseObserver?.onError(Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException())!!
+        val config = when (request!!.configCase) {
+            InitializeBlockchainRequest.ConfigCase.XML -> GtvMLParser.parseGtvML(request.xml)
+            InitializeBlockchainRequest.ConfigCase.GTV -> GtvDecoder.decodeGtv(request.gtv.toByteArray())
+            else -> return responseObserver?.onError(Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException())!!
         }
         withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
@@ -81,13 +84,11 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
                 return@withWriteConnection false
             }
 
-
-            val gtvConfiguration = if (request.hasXml()) GtvMLParser.parseGtvML(request.xml) else GtvDecoder.decodeGtv(request.gtv.toByteArray()) // Verify that gtv-format works
-            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(gtvConfiguration)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(config)
             db.initializeBlockchain(ctx, brid)
             DependenciesValidator.validateBlockchainRids(ctx, listOf())
             // TODO: Blockchain dependencies [DependenciesValidator#validateBlockchainRids]
-            db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(gtvConfiguration))
+            db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
             true
         }
         postchainNode.startBlockchain(request.chainId)
