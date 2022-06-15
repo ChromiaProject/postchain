@@ -18,10 +18,10 @@ import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.GTXQuery
 import net.postchain.api.rest.model.TxRID
 import net.postchain.common.TimeLog
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.ProgrammerMistake
-import net.postchain.core.UserMistake
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import spark.Request
@@ -95,6 +95,16 @@ class RestApi(
         http.exception(UserMistake::class.java) { error, _, response ->
             logger.error("UserMistake:", error)
             response.status(400)
+            response.body(toJson(error))
+        }
+
+        http.exception(InvalidTnxException::class.java) { error, _, response ->
+            response.status(400)
+            response.body(toJson(error))
+        }
+
+        http.exception(DuplicateTnxException::class.java) { error, _, response ->
+            response.status(409) // Conflict
             response.body(toJson(error))
         }
 
@@ -188,6 +198,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
+            // undocumented
             http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/confirmationProof", redirectGet { request, _ ->
                 val result = runTxActionOnModel(request) { model, txRID ->
                     model.getConfirmationProof(txRID)
@@ -255,8 +266,10 @@ class RestApi(
                 handleDebugQuery(request)
             }
 
-            http.get("/brid/$PARAM_BLOCKCHAIN_RID") { request, _ ->
-                checkBlockchainRID(request)
+            http.get("/brid/$PARAM_BLOCKCHAIN_RID") { request, response ->
+                val brid = checkBlockchainRID(request)
+                response.type("text/plain")
+                brid
             }
         }
 

@@ -1,8 +1,8 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
-import net.postchain.config.node.NodeConfig
 import net.postchain.common.BlockchainRid
+import net.postchain.config.node.NodeConfig
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.HeartbeatListener
@@ -22,14 +22,14 @@ interface ContainerBlockchainProcess : HeartbeatListener {
 }
 
 class DefaultContainerBlockchainProcess(
-        val nodeConfig: NodeConfig,
-        override val processName: BlockchainProcessName,
-        override val chainId: Long,
-        override val blockchainRid: BlockchainRid,
-        override val restApiPort: Int,
-        private val communicationManager: MasterCommunicationManager,
-        private val dataSource: DirectoryDataSource, // TODO [POS-164]: (!)
-        private val containerChainDir: Path
+    val nodeConfig: NodeConfig,
+    override val processName: BlockchainProcessName,
+    override val chainId: Long,
+    override val blockchainRid: BlockchainRid,
+    override val restApiPort: Int,
+    private val communicationManager: MasterCommunicationManager,
+    private val dataSource: DirectoryDataSource, // TODO [POS-164]: (!)
+    private val containerChainDir: Path
 ) : ContainerBlockchainProcess {
 
     companion object : KLogging()

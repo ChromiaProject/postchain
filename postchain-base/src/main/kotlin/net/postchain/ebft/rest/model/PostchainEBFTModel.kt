@@ -10,12 +10,12 @@ import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
 
 class PostchainEBFTModel(
-        chainIID: Long,
-        private val nodeStateTracker: NodeStateTracker,
-        txQueue: TransactionQueue,
-        transactionFactory: TransactionFactory,
-        blockQueries: BaseBlockQueries,
-        debugInfoQuery: DebugInfoQuery
+    chainIID: Long,
+    private val nodeStateTracker: NodeStateTracker,
+    txQueue: TransactionQueue,
+    transactionFactory: TransactionFactory,
+    blockQueries: BaseBlockQueries,
+    debugInfoQuery: DebugInfoQuery
 ) : PostchainModel(chainIID, txQueue, transactionFactory, blockQueries, debugInfoQuery) {
 
     override fun nodeQuery(subQuery: String): String {

@@ -6,11 +6,12 @@ import mu.KLogging
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
-import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
@@ -26,12 +27,12 @@ const val LOG_STATS = true // Was this the reason this entire class was muted?
  * Usually we don't log single (successful) transactions, not even at trace level.
  */
 open class BaseBlockchainEngine(
-        private val processName: BlockchainProcessName,
-        private val blockchainConfiguration: BlockchainConfiguration,
-        val storage: Storage,
-        private val chainID: Long,
-        private val transactionQueue: TransactionQueue,
-        private val useParallelDecoding: Boolean = true
+    private val processName: BlockchainProcessName,
+    private val blockchainConfiguration: BlockchainConfiguration,
+    val storage: Storage,
+    private val chainID: Long,
+    private val transactionQueue: TransactionQueue,
+    private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
     companion object : KLogging()

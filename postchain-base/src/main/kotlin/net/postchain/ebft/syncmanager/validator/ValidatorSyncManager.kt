@@ -3,10 +3,10 @@
 package net.postchain.ebft.syncmanager.validator
 
 import mu.KLogging
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
 import net.postchain.core.NodeStateTracker
-import net.postchain.core.ProgrammerMistake
 import net.postchain.crypto.Signature
 import net.postchain.ebft.*
 import net.postchain.ebft.message.*
@@ -14,10 +14,7 @@ import net.postchain.ebft.rest.contract.serialize
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
 import net.postchain.ebft.syncmanager.StatusLogInterval
-import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
-import net.postchain.ebft.syncmanager.common.FastSyncParameters
-import net.postchain.ebft.syncmanager.common.FastSynchronizer
-import net.postchain.ebft.syncmanager.common.Messaging
+import net.postchain.ebft.syncmanager.common.*
 import net.postchain.ebft.worker.WorkerContext
 import nl.komponents.kovenant.task
 import java.util.*

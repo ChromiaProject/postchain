@@ -2,19 +2,19 @@
 
 package net.postchain.base.data
 
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import net.postchain.base.BaseEContext
 import net.postchain.common.BlockchainRid
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.core.EContext
+import net.postchain.crypto.Secp256K1CryptoSystem
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 class BaseBlockStoreTest {
 
-    val cryptoSystem = SECP256K1CryptoSystem()
+    val cryptoSystem = Secp256K1CryptoSystem()
     val blockchainRID = BlockchainRid(cryptoSystem.digest("Test BlockchainRID".toByteArray()))
     lateinit var sut: BaseBlockStore
     lateinit var db: DatabaseAccess

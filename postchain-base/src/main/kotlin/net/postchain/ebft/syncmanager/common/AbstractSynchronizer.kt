@@ -1,8 +1,5 @@
 package net.postchain.ebft.syncmanager.common
 
-import net.postchain.core.NodeRid
-import net.postchain.ebft.message.BlockData
-import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.worker.WorkerContext
 
@@ -16,14 +13,13 @@ abstract class AbstractSynchronizer(
 
     protected val peerStatuses = PeerStatuses(params)
 
-    protected var blockHeight: Long = blockQueries.getBestHeight().get()
+    var blockHeight: Long = blockQueries.getBestHeight().get()
 
     /**
      * Send message to node including the block at [height]. This is a response to the [GetBlockAtHeight] request.
      *
      * @param peerId NodeRid of receiving node
      * @param height requested block height
-     */
     fun sendBlockAtHeight(peerId: NodeRid, height: Long) {
         val blockData = blockQueries.getBlockAtHeight(height).get()
         if (blockData == null) {
@@ -37,4 +33,5 @@ abstract class AbstractSynchronizer(
         )
         communicationManager.sendPacket(packet, peerId)
     }
+     */
 }

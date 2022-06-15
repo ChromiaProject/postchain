@@ -2,8 +2,6 @@
 
 package net.postchain.api.rest.endpoint
 
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
@@ -15,6 +13,8 @@ import org.hamcrest.Matchers.equalToIgnoringCase
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 
 /**
  * [GetStatus] and [GetTx] endpoints have common part,

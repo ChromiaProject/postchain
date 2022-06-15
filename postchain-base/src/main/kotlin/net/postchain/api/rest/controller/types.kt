@@ -6,8 +6,8 @@ import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.ConfirmationProof
-import net.postchain.core.BlockDetail
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
 
 interface ChainModel {
@@ -44,3 +44,4 @@ class BadFormatError(message: String) : Exception(message)
 class OverloadedException(message: String) : Exception(message)
 class InvalidTnxException(message: String) : Exception(message)
 class DuplicateTnxException(message: String) : Exception(message)
+

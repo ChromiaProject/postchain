@@ -3,14 +3,14 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
-import net.postchain.core.BlockQueries
-import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
+import net.postchain.core.NODE_ID_READ_ONLY
+import net.postchain.core.block.BlockQueries
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpNodeType
 import net.postchain.ebft.syncmanager.common.PeerStatuses
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
 
@@ -36,7 +36,12 @@ class ReadOnlyBlockchainProcess(
         ::isProcessRunning
     )
 
-    private val slowSynchronizer = SlowSynchronizer()
+    private val slowSynchronizer = SlowSynchronizer(
+        workerContext,
+        blockDatabase,
+        params,
+        ::isProcessRunning
+    )
 
     private val peerStatuses = PeerStatuses(params)
 
@@ -70,7 +75,7 @@ class ReadOnlyBlockchainProcess(
         }
 
         // Move to slow sync and proceed until shutdown
-        slowSynchronizer.syncUntil { !isProcessRunning() }
+        slowSynchronizer.syncUntil()
     }
 
     override fun cleanup() {

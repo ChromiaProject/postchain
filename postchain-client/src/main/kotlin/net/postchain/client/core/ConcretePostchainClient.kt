@@ -10,12 +10,13 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
 import org.apache.hc.client5.http.classic.methods.HttpGet
@@ -35,7 +36,8 @@ class ConcretePostchainClient(
 
     companion object : KLogging()
 
-    private val gson = GsonBuilder().create()!! // We don't use any adapters b/c this is very simple
+    // We don't use any adapters b/c this is very simple
+    private val gson = GsonBuilder().create()!!
     private val serverUrl = resolver.getNodeURL(blockchainRID)
     private val httpClient = HttpClients.createDefault()
     private val blockchainRIDHex = blockchainRID.toHex()
@@ -108,21 +110,22 @@ class ConcretePostchainClient(
             ConfirmationLevel.NO_WAIT -> {
                 val statusCode = submitTransaction()
                 return if (statusCode == 200) {
-                    TransactionResultImpl(WAITING)
+                    TransactionResultImpl(WAITING, statusCode)
                 } else {
-                    TransactionResultImpl(REJECTED)
+                    TransactionResultImpl(REJECTED, statusCode)
                 }
             }
 
             ConfirmationLevel.UNVERIFIED -> {
                 val statusCode = submitTransaction()
                 if (statusCode in 400..499) {
-                    return TransactionResultImpl(REJECTED)
+                    return TransactionResultImpl(REJECTED, statusCode)
                 }
                 val httpGet = HttpGet("$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
                 httpGet.setHeader("Content-type", APPLICATION_JSON)
 
                 // keep polling till getting Confirmed or Rejected
+                var lastKnownTxResult: TransactionResult? = null
                 (0 until retrieveTxStatusAttempts).forEach { _ ->
                     try {
                         httpClient.execute(httpGet).use { response ->
@@ -133,11 +136,9 @@ class ConcretePostchainClient(
                                 if (statusString == null) {
                                     logger.warn { "No status in response\n$responseBody" }
                                 } else {
-                                    val status = valueOf(statusString)
-
-                                    if (status == CONFIRMED || status == REJECTED) {
-                                        return TransactionResultImpl(status)
-                                    }
+                                    val status = TransactionStatus.valueOf(statusString)
+                                    lastKnownTxResult = TransactionResultImpl(status, response.code)
+                                    if (status == CONFIRMED || status == REJECTED) return lastKnownTxResult!!
                                 }
 
                                 Thread.sleep(retrieveTxStatusIntervalMs)
@@ -149,12 +150,10 @@ class ConcretePostchainClient(
                     }
                 }
 
-                return TransactionResultImpl(REJECTED)
+                return lastKnownTxResult ?: TransactionResultImpl(UNKNOWN, null)
             }
 
-            else -> {
-                return TransactionResultImpl(REJECTED)
-            }
+            else -> throw NotImplementedError("ConfirmationLevel $confirmationLevel is not yet implemented")
         }
     }
 

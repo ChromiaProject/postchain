@@ -2,10 +2,10 @@ package net.postchain.containers.infra
 
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainInfrastructure
+import net.postchain.common.BlockchainRid
 import net.postchain.containers.api.MasterApiInfra
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
-import net.postchain.common.BlockchainRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
 import java.nio.file.Path
@@ -21,12 +21,12 @@ open class DefaultMasterBlockchainInfra(
 ), MasterBlockchainInfra {
 
     override fun makeMasterBlockchainProcess(
-            processName: BlockchainProcessName,
-            chainId: Long,
-            blockchainRid: BlockchainRid,
-            dataSource: DirectoryDataSource,
-            targetContainer: PostchainContainer,
-            containerChainDir: Path
+        processName: BlockchainProcessName,
+        chainId: Long,
+        blockchainRid: BlockchainRid,
+        dataSource: DirectoryDataSource,
+        targetContainer: PostchainContainer,
+        containerChainDir: Path
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(
                 processName, chainId, blockchainRid, dataSource, targetContainer, containerChainDir

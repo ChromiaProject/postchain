@@ -2,7 +2,8 @@ package net.postchain.base.data
 
 import net.postchain.base.BaseBlockWitnessBuilder
 import net.postchain.base.BlockWitnessProvider
-import net.postchain.core.*
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.core.block.*
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.getBFTRequiredSignatureCount

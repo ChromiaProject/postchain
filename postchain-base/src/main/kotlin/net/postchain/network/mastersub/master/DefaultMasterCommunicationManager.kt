@@ -1,14 +1,15 @@
 package net.postchain.network.mastersub.master
 
 import mu.KLogging
+import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
-import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
+import net.postchain.ebft.heartbeat.RemoteConfigVerifier
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
@@ -98,13 +99,15 @@ open class DefaultMasterCommunicationManager(
                                 null // message.nextHeight != null && nextHeight == message.nextHeight
                             }
                         }
+                        val hash = config?.let { RemoteConfigVerifier.calculateHash(it) }
+                        val hashStr = hash?.let { BlockchainRid(it).toHex() }
 
-                        val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config)
+                        val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config, hash)
                         masterConnectionManager.sendPacketToSub(response)
                         logger.debug {
                             "${process()}: BlockchainConfig sent to subnode: blockchainRid: " +
                                     "${blockchainRid.toShortHex()}, nextHeight: $nextHeight, config size: " +
-                                    "${config?.size}"
+                                    "${config?.size}, config hash: $hashStr"
                         }
                     }
 

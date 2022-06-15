@@ -1,11 +1,9 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
-import net.postchain.core.BlockQueries
 import net.postchain.core.NodeRid
-import net.postchain.ebft.message.BlockHeader
-import net.postchain.ebft.message.EbftMessage
-import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.core.block.BlockQueries
+import net.postchain.ebft.message.*
 import net.postchain.network.CommunicationManager
 
 abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<EbftMessage>) {
@@ -25,6 +23,21 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
     private var tipHeight: Long = -1
     private var tipHeader: BlockHeader = BlockHeader(byteArrayOf(), byteArrayOf(), 0)
 
+    /**
+     * Send message to node including the block at [height]. This is a response to the [GetBlockAtHeight] request.
+     *
+     * @param peerId NodeRid of receiving node
+     * @param height requested block height
+     */
+    fun sendBlockAtHeight(peerId: NodeRid, height: Long) {
+        val blockData = blockQueries.getBlockAtHeight(height).get()
+        if (blockData == null) {
+            logger.debug{ "No block at height $height, as requested by $peerId" }
+            return
+        }
+        val packet = CompleteBlock(BlockData(blockData.header.rawData, blockData.transactions), height, blockData.witness.getRawData())
+        communicationManager.sendPacket(packet, peerId)
+    }
 
     fun sendBlockHeaderAndBlock(peerID: NodeRid, requestedHeight: Long, myHeight: Long) {
         logger.trace{ "GetBlockHeaderAndBlock from peer $peerID for height $requestedHeight, myHeight is $myHeight" }

@@ -5,6 +5,7 @@ import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.NodeNameWithBlockchains
 import net.postchain.devtools.utils.configuration.UniversalFileLocationStrategy

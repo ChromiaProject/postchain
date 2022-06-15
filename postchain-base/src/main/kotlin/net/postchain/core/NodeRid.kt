@@ -1,5 +1,7 @@
 package net.postchain.core
 
+import net.postchain.common.data.ByteArrayKey
+
 /**
  * This is the public key of the node.
  *

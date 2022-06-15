@@ -2,9 +2,9 @@ package net.postchain.base
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import net.postchain.core.BlockData
-import net.postchain.core.BlockQueries
 import net.postchain.core.TransactionQueue
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject

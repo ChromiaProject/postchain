@@ -3,17 +3,17 @@
 package net.postchain.client.core
 
 import net.postchain.common.BlockchainRid
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.crypto.SigMaker
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import nl.komponents.kovenant.Promise
 
 class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: BlockchainRid, signers: Array<ByteArray>) {
 
-    private val dataBuilder = GTXDataBuilder(blockchainRID, signers, SECP256K1CryptoSystem())
+    private val dataBuilder = GTXDataBuilder(blockchainRID, signers, Secp256K1CryptoSystem())
 
     fun addOperation(opName: String, vararg args: Gtv) {
         dataBuilder.addOperation(opName, arrayOf(*args))
@@ -34,9 +34,12 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
         return client.postTransactionSync(dataBuilder, confirmationLevel)
     }
 }
-
+/**
+ * Holds the acknowledgement message from the Postchain Server
+ */
 interface TransactionResult {
     val status: TransactionStatus
+    val httpStatusCode: Int?
 }
 
 interface PostchainClient {

@@ -1,10 +1,10 @@
 package net.postchain.integrationtest.api
 
-import net.postchain.core.EContext
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.core.EContext
 
 class TestDQueryModule : SimpleGTXModule<Unit>(Unit,
         mapOf(),

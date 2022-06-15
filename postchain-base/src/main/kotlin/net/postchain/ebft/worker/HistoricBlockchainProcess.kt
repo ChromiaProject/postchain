@@ -8,10 +8,14 @@ import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
-import net.postchain.core.*
-import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
+import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataType
+import net.postchain.core.EContext
+import net.postchain.core.NODE_ID_READ_ONLY
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase

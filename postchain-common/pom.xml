@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.4.2-SNAPSHOT</version>
+        <version>3.4.3-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>postchain-common</artifactId>
@@ -21,12 +21,6 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-jdk8</artifactId>
         </dependency>
-
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>com.madgag.spongycastle</groupId>
             <artifactId>core</artifactId>
@@ -48,13 +42,7 @@
             <groupId>com.willowtreeapps.assertk</groupId>
             <artifactId>assertk</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.rest-assured</groupId>
-            <artifactId>rest-assured</artifactId>
-            <scope>test</scope>
-        </dependency>
+       </dependency>
 
         <dependency>
             <groupId>org.awaitility</groupId>

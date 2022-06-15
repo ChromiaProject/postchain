@@ -6,7 +6,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.4.2-SNAPSHOT</version>
+        <version>3.4.3-SNAPSHOT</version>
     </parent>
     <artifactId>postchain-base</artifactId>
     <packaging>jar</packaging>
@@ -25,6 +25,10 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-gtv</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-gtx-data</artifactId>
         </dependency>
 
         <!-- Kotlin -->
@@ -71,12 +75,12 @@
             <artifactId>commons-beanutils</artifactId>
         </dependency>
 
-        <!-- Spark -->
+        <!-- REST -->
         <dependency>
             <groupId>com.sparkjava</groupId>
             <artifactId>spark-core</artifactId>
         </dependency>
-        <!-- Unirest -->
+
         <dependency>
             <groupId>com.konghq</groupId>
             <artifactId>unirest-java</artifactId>
@@ -131,6 +135,14 @@
 
         <!-- Test dependencies -->
         <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-common</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit5</artifactId>
         </dependency>
@@ -156,6 +168,12 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility-kotlin</artifactId>
+        </dependency>
+
+        <!-- REST test -->
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
         </dependency>
         <dependency>
             <groupId>org.skyscreamer</groupId>

@@ -3,16 +3,17 @@
 package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionFactory
-import net.postchain.core.UserMistake
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import net.postchain.gtx.factory.GtxTransactionDataFactory
-import net.postchain.gtx.serializer.GtxTransactionDataSerializer
+import net.postchain.gtx.data.GTXTransactionData
+import net.postchain.gtx.data.factory.GtxTransactionDataFactory
+import net.postchain.gtx.data.serializer.GtxTransactionDataSerializer
 
 /**
  * Idea is that we can build a [GTXTransaction] from different layers.
@@ -71,7 +72,7 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
         val signatures = gtxData.signatures
         val ops = body.getExtOpData().map({ module.makeTransactor(it) }).toTypedArray()
 
-        return GTXTransaction(rawData, gtvData, gtxData, signers, signatures, ops, myHash, myRID, module, cs)
+        return GTXTransaction(rawData, gtvData, gtxData, signers, signatures, ops, myHash, myRID, cs)
     }
 
 }

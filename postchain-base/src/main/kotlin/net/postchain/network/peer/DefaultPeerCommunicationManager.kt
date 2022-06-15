@@ -4,10 +4,10 @@ package net.postchain.network.peer
 
 import mu.KLogging
 import net.postchain.base.PeerCommConfiguration
+import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
-import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper.peerName

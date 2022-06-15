@@ -27,14 +27,14 @@ class SlowSyncSleepCalculatorTest {
     @Test
     fun wayTooSlowTest() {
         val sleepResult = sssc.calculateSleep(0, 100, 2.0, 100)
-        assertTrue(sleepResult < 60)
-        assertTrue(sleepResult > 40)
+        assertTrue(sleepResult < 80)
+        assertTrue(sleepResult > 50) // Note: If we reduce to 50 we'll get oscillation.
     }
 
     @Test
     fun wayTooFastTest() {
         val sleepResult = sssc.calculateSleep(50, 50, 1.01, 100)
-        assertTrue(sleepResult > 170)
-        assertTrue(sleepResult < 230)
+        assertTrue(sleepResult > 130)
+        assertTrue(sleepResult < 200) // Note: If we increase to 200 we'll get oscillation.
     }
 }

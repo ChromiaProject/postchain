@@ -5,7 +5,7 @@ package net.postchain.api.rest.json
 import com.google.gson.*
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.toHex
-import net.postchain.core.MultiSigBlockWitness
+import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.make_gtv_gson
 import java.lang.reflect.Type

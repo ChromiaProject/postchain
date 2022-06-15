@@ -3,7 +3,10 @@
 package net.postchain.base
 
 import mu.KLogging
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.*
+import net.postchain.core.block.*
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
@@ -32,11 +35,11 @@ class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witnes
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
 open class BaseBlockQueries(
-        private val blockchainConfiguration: BlockchainConfiguration,
-        private val storage: Storage,
-        private val blockStore: BlockStore,
-        private val chainId: Long,
-        private val mySubjectId: ByteArray
+    private val blockchainConfiguration: BlockchainConfiguration,
+    private val storage: Storage,
+    private val blockStore: BlockStore,
+    private val chainId: Long,
+    private val mySubjectId: ByteArray
 ) : BlockQueries {
 
     companion object : KLogging()

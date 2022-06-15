@@ -10,18 +10,18 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.path.ArrayGtvPathElement
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
 import net.postchain.gtv.merkle.proof.ProofValueGtvLeaf
-import net.postchain.gtv.merkle.path.ArrayGtvPathElement
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import org.hamcrest.Matchers.isEmptyString
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 /**
  * [GetConfirmation] and [GetTx] endpoints have common part,

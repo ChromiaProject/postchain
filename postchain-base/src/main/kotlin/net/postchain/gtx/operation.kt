@@ -2,9 +2,10 @@
 
 package net.postchain.gtx
 
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
-import net.postchain.core.UserMistake
+import net.postchain.gtx.data.ExtOpData
 
 class GTXOpMistake(message: String, opData: ExtOpData, argPos: Int? = null, cause: Exception? = null)
     : UserMistake(message +
@@ -32,13 +33,13 @@ class SimpleGTXOperation(data: ExtOpData,
 }
 
 fun gtxOP(applyF: (TxEContext) -> Boolean): (Unit, ExtOpData) -> Transactor {
-    return { unit, data ->
+    return { _, data ->
         SimpleGTXOperation(data, applyF, { true })
     }
 }
 
 fun gtxOP(applyF: (TxEContext) -> Boolean, isCorrectF: () -> Boolean): (Unit, ExtOpData) -> Transactor {
-    return { unit, data ->
+    return { _, data ->
         SimpleGTXOperation(data, applyF, isCorrectF)
     }
 }

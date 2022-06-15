@@ -5,7 +5,11 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.AbstractBlockBuilder
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
-import net.postchain.core.*
+import net.postchain.core.TransactionQueue
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockQueries
 import java.util.concurrent.LinkedBlockingQueue
 
 @Suppress("UNUSED_PARAMETER")

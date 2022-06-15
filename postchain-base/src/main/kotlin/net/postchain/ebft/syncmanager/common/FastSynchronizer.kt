@@ -4,9 +4,13 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.BlockWitness
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
