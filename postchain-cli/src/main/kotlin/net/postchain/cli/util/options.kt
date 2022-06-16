@@ -22,14 +22,11 @@ fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Local nu
 
 fun CliktCommand.debugOption() = option("--debug", help = "Enables debug functionalities", envvar = "POSTCHAIN_DEBUG").flag()
 
-fun CliktCommand.forceOption() = option("-f", "--force", envvar = "POSTCHAIN_OVERRIDE").flag()
+fun CliktCommand.forceOption() = option("-f", "--force").flag()
 
 fun CliktCommand.heightOption() = option("-h", "--height", envvar = "POSTCHAIN_HEIGHT").long()
 
 fun CliktCommand.hostOption() = option("-h", "--host", help = "Host", envvar = "POSTCHAIN_HOST")
-
-fun CliktCommand.infrastructureOption() =
-    option("-i", "--infrastructure", help = "The type of blockchain infrastructure.").default("base/ebft")
 
 fun CliktCommand.nodeConfigOption() =
     option("-nc", "--node-config", help = "Configuration file of node (.properties file)", envvar = "POSTCHAIN_CONFIG").required()
