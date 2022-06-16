@@ -1,16 +1,12 @@
-// Copyright (c) 2020 ChromaWay AB. See README for license information.
-
-package net.postchain.devtools.cli
+package net.postchain.cli
 
 import net.postchain.StorageBuilder
 import net.postchain.base.Storage
-import net.postchain.cli.AlreadyExistMode
-import net.postchain.cli.CliExecution
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
-import net.postchain.common.BlockchainRid
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
@@ -28,7 +24,7 @@ class CliIntegrationTest {
     private lateinit var storage: Storage
 
     private fun fullPath(name: String): String {
-        return Paths.get(javaClass.getResource("/net/postchain/devtools/cli/${name}").toURI()).toString()
+        return Paths.get(javaClass.getResource("/net/postchain/cli/${name}").toURI()).toString()
     }
 
     @BeforeEach
@@ -43,8 +39,10 @@ class CliIntegrationTest {
     @Test
     fun testSetMustSyncUntil() {
         val height = 20L
-        var success = CliExecution.setMustSyncUntil(nodeConfigPath, BlockchainRid(expectedBlockchainRID.hexStringToByteArray()),
-                height)
+        var success = CliExecution.setMustSyncUntil(
+            nodeConfigPath, BlockchainRid(expectedBlockchainRID.hexStringToByteArray()),
+            height
+        )
         assertTrue(success)
         var actual = CliExecution.getMustSyncUntilHeight(nodeConfigPath)
         val expected: Map<Long, Long> = mapOf(chainId to height)
@@ -52,8 +50,10 @@ class CliIntegrationTest {
 
         //Test that height can be overwritten
         val height2 = 30L
-        success = CliExecution.setMustSyncUntil(nodeConfigPath, BlockchainRid(expectedBlockchainRID.hexStringToByteArray()),
-                height2)
+        success = CliExecution.setMustSyncUntil(
+            nodeConfigPath, BlockchainRid(expectedBlockchainRID.hexStringToByteArray()),
+            height2
+        )
         assertTrue(success)
         actual = CliExecution.getMustSyncUntilHeight(nodeConfigPath)
         val expected2: Map<Long, Long> = mapOf(chainId to height2)
@@ -64,10 +64,12 @@ class CliIntegrationTest {
     fun testAddConfigurationMissingPeerinfo() {
         try {
             // change configuration with 4 signer at height 10
-            CliExecution.addConfiguration(nodeConfigPath, secondBlockChainConfig, chainId, heightSecondConfig, AlreadyExistMode.FORCE,
-                    false)
+            CliExecution.addConfiguration(
+                nodeConfigPath, secondBlockChainConfig, chainId, heightSecondConfig, AlreadyExistMode.FORCE,
+                false
+            )
             fail()
-        } catch (e: net.postchain.cli.CliError.Companion.CliException) {
+        } catch (e: CliException) {
             // assert config added
             val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
             assertNull(configData)
@@ -77,8 +79,10 @@ class CliIntegrationTest {
     @Test
     fun testAddConfigurationAllowUnknownSigners() {
         // change configuration with 4 signer at height 10
-        CliExecution.addConfiguration(nodeConfigPath, secondBlockChainConfig, chainId, heightSecondConfig, AlreadyExistMode.FORCE,
-                true)
+        CliExecution.addConfiguration(
+            nodeConfigPath, secondBlockChainConfig, chainId, heightSecondConfig, AlreadyExistMode.FORCE,
+            true
+        )
         // assert bc added
         CliExecution.checkBlockchain(nodeConfigPath, chainId, expectedBlockchainRID)
         // assert config added
@@ -92,13 +96,17 @@ class CliIntegrationTest {
         val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
         val peerinfos = nodeConfigProvider.getConfiguration().peerInfoMap
         for ((_, value) in peerinfos) {
-            CliExecution.peerinfoAdd(nodeConfigPath, value.host, value.port, value.pubKey.toHex(),
-                    AlreadyExistMode.FORCE)
+            CliExecution.peerinfoAdd(
+                nodeConfigPath, value.host, value.port, value.pubKey.toHex(),
+                AlreadyExistMode.FORCE
+            )
         }
         // change configuration with 4 signer and height is 10
         val secondBlockChainConfig = fullPath("blockchain_config_4_signers.xml")
-        CliExecution.addConfiguration(nodeConfigPath, secondBlockChainConfig, chainId, heightSecondConfig, AlreadyExistMode.FORCE,
-                false)
+        CliExecution.addConfiguration(
+            nodeConfigPath, secondBlockChainConfig, chainId, heightSecondConfig, AlreadyExistMode.FORCE,
+            false
+        )
         // assert config added
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
         assertNotNull(configData)

@@ -24,10 +24,6 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-cli</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
         </dependency>
         <dependency>
