@@ -120,7 +120,7 @@ class CliIntegrationIT {
                 "-nc", nodeConfigPath,
                 "--host", value.host,
                 "--port", value.port.toString(),
-                "--pubkey", value.pubKey.toHex(),
+                "--pub-key", value.pubKey.toHex(),
                 "--force"
             ))
         }

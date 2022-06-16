@@ -33,10 +33,10 @@ fun CliktCommand.nodeConfigOption() =
 
 fun CliktCommand.portOption() = option("-p", "--port", help = "Port", envvar = "POSTCHAIN_PORT").int()
 
-fun CliktCommand.pubkeyOption() = option("-pk", "--pubkey", help = "Public key", envvar = "POSTCHAIN_PUBKEY").validate { validatePubkey(it) }
+fun CliktCommand.pubkeyOption() = option("-pk", "--pub-key", help = "Public key", envvar = "POSTCHAIN_PUBKEY").validate { validatePubkey(it) }
 
 fun CliktCommand.requiredPubkeyOption() =
-    option("-pk", "--pubkey", help = "Public key", envvar = "POSTCHAIN_PUBKEY").required().validate { validatePubkey(it) }
+    option("-pk", "--pub-key", help = "Public key", envvar = "POSTCHAIN_PUBKEY").required().validate { validatePubkey(it) }
 
 private fun validatePubkey(it: String) {
     require(it.length == 66) { "Public key must have length 66" }
