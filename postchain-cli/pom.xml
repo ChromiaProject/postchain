@@ -51,6 +51,10 @@
             <artifactId>postchain-devtools</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.willowtreeapps.assertk</groupId>
+            <artifactId>assertk</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -78,6 +82,25 @@
                 <version>3.0.0</version>
                 <configuration>
                     <mainClass>net.postchain.AppKt</mainClass>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.0.0-M7</version>
+                <executions>
+                    <execution>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <includes>
+                        <include>**/*IT</include>
+                    </includes>
                 </configuration>
             </plugin>
         </plugins>
