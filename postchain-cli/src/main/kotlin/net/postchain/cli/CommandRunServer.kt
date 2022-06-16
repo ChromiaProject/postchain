@@ -2,51 +2,36 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.help
 import mu.KLogging
+import net.postchain.cli.util.debugOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.portOption
 import net.postchain.config.app.AppConfig
 import net.postchain.server.PostchainServer
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 
-@Parameters(commandDescription = "Start postchain server")
-class CommandRunServer : Command {
+class CommandRunServer : CliktCommand(name = "run-server", help = "Start postchain server") {
 
     companion object : KLogging()
 
-    @Parameter(
-        names = ["-nc", "--node-config"],
-        description = "Configuration file of node (.properties file)"
-    )
-    private var nodeConfigFile = ""
+    private val nodeConfigFile by nodeConfigOption()
 
-    @Parameter(
-        names = ["--debug"],
-        description = "Enables diagnostic info on the /_debug REST endpoint",
-    )
-    private var debug = false
+    private val debug by debugOption()
 
-    @Parameter(
-        names = ["--port"],
-        description = "Port for the server",
-    )
-    private var port = 50051
+    private val port by portOption().help("Port for the server").default(50051)
 
-    override fun key(): String = "run-server"
 
-    override fun execute(): CliResult {
+    override fun run() {
         println("Server is started with: " + ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
 
-        PostchainServer(
-            AppConfig.fromPropertiesFile(nodeConfigFile),
-            System.getenv("POSTCHAIN_WIPE").toBoolean(),
-            debug || System.getenv("POSTCHAIN_DEBUG").toBoolean(),
-            port
-        ).apply {
-            start()
-            blockUntilShutdown()
-        }
-        return Ok()
+        PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug, port)
+            .apply {
+                start()
+                blockUntilShutdown()
+            }
     }
 }

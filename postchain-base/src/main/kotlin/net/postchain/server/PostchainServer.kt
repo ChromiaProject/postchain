@@ -22,9 +22,9 @@ class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Bool
         println("Server started, listening on $port")
         Runtime.getRuntime().addShutdownHook(
             Thread {
-                println("*** shutting down gRPC server since JVM is shutting down")
+                println("*** shutting down gRPC server since JVM is shutting down ***")
                 this@PostchainServer.stop()
-                println("*** server shut down")
+                println("*** server shut down ***")
             }
         )
     }
