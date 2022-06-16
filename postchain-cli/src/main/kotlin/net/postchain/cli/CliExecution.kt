@@ -79,8 +79,9 @@ object CliExecution {
                     if (db.getBlockchainRid(ctx) == null) {
                         init()
                     } else {
-                        throw CliError.Companion.CliException(
-                                "Blockchain with chainId $chainId already exists. Use -f flag to force addition.")
+                        throw CliException(
+                            "Blockchain with chainId $chainId already exists. Use -f flag to force addition."
+                        )
                     }
                 }
 
@@ -125,9 +126,9 @@ object CliExecution {
                 addFutureSignersAsReplicas(ctx, height, blockchainConfig, allowUnknownSigners)
             } catch (e: BadDataMistake) {
                 if (e.type == BadDataType.MISSING_PEERINFO) {
-                    throw CliError.Companion.CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")
+                    throw CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")
                 } else {
-                    throw CliError.Companion.CliException("Bad configuration format.")
+                    throw CliException("Bad configuration format.")
                 }
             }
 
@@ -136,8 +137,10 @@ object CliExecution {
                     if (configStore.getConfigurationData(ctx, height) == null) {
                         init()
                     } else {
-                        throw CliError.Companion.CliException("Blockchain configuration of chainId $chainId at " +
-                                "height $height already exists. Use -f flag to force addition.")
+                        throw CliException(
+                            "Blockchain configuration of chainId $chainId at " +
+                                    "height $height already exists. Use -f flag to force addition."
+                        )
                     }
                 }
 
@@ -201,7 +204,7 @@ object CliExecution {
 
             val found: Array<PeerInfo> = db.findPeerInfo(ctx, host, port, null)
             if (found.isNotEmpty()) {
-                throw CliError.Companion.CliException("Peerinfo with port, host already exists.")
+                throw CliException("Peerinfo with port, host already exists.")
             }
 
             val found2 = db.findPeerInfo(ctx, null, null, pubKey)
@@ -209,7 +212,7 @@ object CliExecution {
                 when (mode) {
                     // mode tells us how to react upon an error caused if pubkey already exist (throw error or force write).
                     AlreadyExistMode.ERROR -> {
-                        throw CliError.Companion.CliException("Peerinfo with pubkey already exists. Using -f to force update")
+                        throw CliException("Peerinfo with pubkey already exists. Using -f to force update")
                     }
                     AlreadyExistMode.FORCE -> {
                         db.updatePeerInfo(ctx, host, port, pubKey)
@@ -241,17 +244,19 @@ object CliExecution {
             val currentBrid = DatabaseAccess.of(ctx).getBlockchainRid(ctx)
             when {
                 currentBrid == null -> {
-                    throw CliError.Companion.CliException("Unknown chain-id: $chainId")
+                    throw CliException("Unknown chain-id: $chainId")
                 }
                 !blockchainRID.equals(currentBrid.toHex(), true) -> {
-                    throw CliError.Companion.CliException("""
+                    throw CliException(
+                        """
                         BlockchainRids are not equal:
                             expected: $blockchainRID
                             actual: ${currentBrid.toHex()}
-                    """.trimIndent())
+                    """.trimIndent()
+                    )
                 }
                 BaseConfigurationDataStore.findConfigurationHeightForBlock(ctx, 0) == null -> {
-                    throw CliError.Companion.CliException("No configuration found")
+                    throw CliException("No configuration found")
                 }
                 else -> {
                 }
@@ -293,7 +298,7 @@ object CliExecution {
         } catch (e: SQLException) {
             null
         } catch (e: ConfigurationException) {
-            throw CliError.Companion.CliException("Failed to read configuration")
+            throw CliException("Failed to read configuration")
         }
     }
 

@@ -37,7 +37,7 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add"
             // Node must be in PeerInfo, or else it is not allowed as blockchain replica.
             val foundInPeerInfo = db.findPeerInfo(ctx, null, null, pubKey)
             if (foundInPeerInfo.isEmpty()) {
-                throw CliError.Companion.CliException("Given pubkey is not a peer. First add it as a peer.")
+                throw CliException("Given pubkey is not a peer. First add it as a peer.")
             }
 
             db.addBlockchainReplica(ctx, brid, pubKey)

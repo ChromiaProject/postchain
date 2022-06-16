@@ -5,6 +5,7 @@ package net.postchain.devtools.cli
 import net.postchain.StorageBuilder
 import net.postchain.base.Storage
 import net.postchain.cli.AlreadyExistMode
+import net.postchain.cli.CliException
 import net.postchain.cli.CliExecution
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -67,7 +68,7 @@ class CliIntegrationTest {
             CliExecution.addConfiguration(nodeConfigPath, secondBlockChainConfig, chainId, heightSecondConfig, AlreadyExistMode.FORCE,
                     false)
             fail()
-        } catch (e: net.postchain.cli.CliError.Companion.CliException) {
+        } catch (e: CliException) {
             // assert config added
             val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
             assertNull(configData)
