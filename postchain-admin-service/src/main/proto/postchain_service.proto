@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "net.postchain.server.service";
+option java_outer_classname = "PostchainProto";
+
+package postchain.rpc;
+
+
+service PostchainService {
+  rpc StartBlockchain (StartBlockchainRequest) returns (StartBlockchainReply) {} // Start blockchain with ID
+  rpc StopBlockchain (StopBlockchainRequest) returns (StopBlockchainReply) {} // Stop blockchain with ID
+  rpc InitializeBlockchain (InitializeBlockchainRequest) returns (InitializeBlockchainReply) {} // Adds and starts blockchain
+  rpc AddConfiguration (AddConfigurationRequest) returns (AddConfigurationReply) {} // Add configuration at height
+}
+
+message InitializeBlockchainRequest {
+  int64 chainId = 1;
+  bool override = 2;
+  oneof config {
+    string xml = 3;
+    bytes gtv = 4;
+  }
+}
+
+message InitializeBlockchainReply {
+  bool success = 1;
+  string message = 2;
+}
+
+message AddConfigurationRequest {
+  int64 chainId = 1;
+  int64 height = 2;
+  bool override = 3;
+  oneof config {
+    string xml = 4;
+    bytes gtv = 5;
+  }
+}
+
+message AddConfigurationReply {
+  string message = 1;
+}
+
+message StartBlockchainRequest {
+  int64 chainId = 1;
+}
+
+message StartBlockchainReply {
+  string message = 1;
+}
+
+message StopBlockchainRequest {
+  int64 chainId = 1;
+}
+
+message StopBlockchainReply {
+  string message = 1;
+}
