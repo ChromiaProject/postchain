@@ -5,7 +5,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.4.3-SNAPSHOT</version>
+    <version>3.6.0-SNAPSHOT</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>
@@ -46,8 +46,8 @@
         <awaitility.version>3.1.2</awaitility.version>
 
         <!-- Logging -->
-        <kotlin-logging.version>1.12.5</kotlin-logging.version>
-        <slf4j.version>1.7.32</slf4j.version>
+        <kotlin-logging.version>2.1.23</kotlin-logging.version>
+        <slf4j.version>1.7.36</slf4j.version>
         <log4j2.version>2.17.1</log4j2.version>
         <jackson.version>2.13.1</jackson.version>
 
@@ -66,6 +66,7 @@
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <commons-configuration2.version>2.1.1</commons-configuration2.version>
         <commons-beanutils.version>1.9.3</commons-beanutils.version>
+        <micrometer.version>1.9.0</micrometer.version>
 
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
@@ -119,7 +120,7 @@
         </dependency>
         <dependency>
             <groupId>io.github.microutils</groupId>
-            <artifactId>kotlin-logging</artifactId>
+            <artifactId>kotlin-logging-jvm</artifactId>
         </dependency>
     </dependencies>
 
@@ -263,8 +264,15 @@
             </dependency>
             <dependency>
                 <groupId>io.github.microutils</groupId>
-                <artifactId>kotlin-logging</artifactId>
+                <artifactId>kotlin-logging-jvm</artifactId>
                 <version>${kotlin-logging.version}</version>
+            </dependency>
+
+            <!-- Needed for Rell, remove when Rell has upgraded to kotlin-logging 2.x -->
+            <dependency>
+                <groupId>io.github.microutils</groupId>
+                <artifactId>kotlin-logging</artifactId>
+                <version>1.12.5</version>
             </dependency>
 
             <!-- 3rd party -->
@@ -409,6 +417,22 @@
                 <groupId>org.openmuc</groupId>
                 <artifactId>jasn1-compiler</artifactId>
                 <version>1.10.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-core</artifactId>
+                <version>${micrometer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-registry-prometheus</artifactId>
+                <version>${micrometer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>simpleclient_httpserver</artifactId>
+                <version>0.15.0</version>
             </dependency>
 
         </dependencies>
