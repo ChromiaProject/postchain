@@ -2,32 +2,30 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.common.toHex
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
 import org.bitcoinj.crypto.MnemonicCode
 
-@Parameters(commandDescription = "Generates public/private key pair")
-class CommandKeygen : Command {
 
-    @Parameter(
-            names = ["-m", "--mnemonic"],
-            description = "Mnemonic word list, words separated by space, e.g: \"lift employ roast rotate liar holiday sun fever output magnet...\"")
-    private var wordList = ""
+class CommandKeygen : CliktCommand(name = "keygen", help = "Generates public/private key pair") {
 
-    override fun key(): String = "keygen"
-
-    override fun execute(): CliResult {
-        val keys = keygen()
-        return Ok(keys)
-    }
+    private val wordList by option(
+        "-m", "--mnemonic",
+        help = """
+            Mnemonic word list, words separated by space, e.g:
+                "lift employ roast rotate liar holiday sun fever output magnet...""
+        """.trimIndent()
+    )
+        .default("")
 
     /**
      * Cryptographic key generator. Will generate a pair of public and private keys and print to stdout.
      */
-    private fun keygen(): String {
+    override fun run() {
         val cs = Secp256K1CryptoSystem()
         var privKey = cs.getRandomBytes(32)
         val mnemonicInstance = MnemonicCode.INSTANCE
@@ -40,10 +38,14 @@ class CommandKeygen : Command {
         }
 
         val pubKey = secp256k1_derivePubKey(privKey)
-        return """
+        println(
+            """
             |privkey:   ${privKey.toHex()}
             |pubkey:    ${pubKey.toHex()}
-            |mnemonic:  ${mnemonic} 
+            |mnemonic:  $mnemonic 
         """.trimMargin()
+        )
     }
+
+
 }

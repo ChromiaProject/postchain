@@ -2,51 +2,28 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.blockchainRidOption
+import net.postchain.cli.util.chainIdOption
+import net.postchain.cli.util.nodeConfigOption
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 
-@Parameters(commandDescription = "Checks blockchain")
-class CommandCheckBlockchain : Command {
+class CommandCheckBlockchain : CliktCommand(name = "check-blockchain", help = "Checks Blockchain") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    @Parameter(
-            names = ["-nc", "--node-config"],
-            description = "Configuration file of node (.properties file)",
-            required = true)
-    private var nodeConfigFile = ""
+    private val nodeConfigFile by nodeConfigOption()
 
-    /*
-    @Parameter(
-            names = ["-i", "--infrastructure"],
-            description = "The type of blockchain infrastructure. (Not currently used.)")
-    private var infrastructureType = "base/ebft"
-    */
+    private val chainId by chainIdOption().required()
 
-    @Parameter(
-            names = ["-cid", "--chain-id"],
-            description = "Local number id of blockchain",
-            required = true)
-    private var chainId = 0L
+    private val blockchainRID by blockchainRidOption()
 
-    @Parameter(
-            names = ["-brid", "--blockchain-rid"],
-            description = "Blockchain global ID",
-            required = true)
-    private var blockchainRID = ""
-
-    override fun key(): String = "check-blockchain"
-
-    override fun execute(): CliResult {
+    override fun run() {
         println("check-blockchain will be executed with options: " +
                 ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
 
-        return try {
-            CliExecution.checkBlockchain(nodeConfigFile, chainId, blockchainRID)
-            Ok("Okay")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CheckBlockChain(message = e.message)
-        }
+        CliExecution.checkBlockchain(nodeConfigFile, chainId, blockchainRID.toHex())
+        println("Okay")
     }
 }
