@@ -31,6 +31,7 @@ fun main(args: Array<String>) {
             CommandPeerInfoRemove(),
             CommandRunNode(),
             CommandRunNodeAuto(),
+            CommandRunServer(),
             CommandWaitDb(),
             CommandWipeDb(),
         )
