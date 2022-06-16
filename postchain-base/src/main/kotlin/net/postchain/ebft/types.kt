@@ -165,6 +165,7 @@ interface StatusManager {
 
     fun getBlockIntent(): BlockIntent
     fun getCommitSignature(): Signature?
+    fun getLatestStatusTimestamp(nodeIndex: Int): Long
 }
 
 class BDBAbortException(val block: BlockDataWithWitness, val prev: CompletionPromise) :

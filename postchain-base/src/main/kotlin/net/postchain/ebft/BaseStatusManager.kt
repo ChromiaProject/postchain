@@ -22,6 +22,7 @@ class BaseStatusManager(
     override val myStatus: NodeStatus
     var intent: BlockIntent = DoNothingIntent
     private val quorum = getBFTRequiredSignatureCount(nodeCount)
+    private val nodeStatusesTimestamps = Array(nodeCount) { 0L }
 
     companion object : KLogging()
 
@@ -68,6 +69,7 @@ class BaseStatusManager(
      */
     @Synchronized
     override fun onStatusUpdate(nodeIndex: Int, status: NodeStatus) {
+        nodeStatusesTimestamps[nodeIndex] = System.currentTimeMillis()
         val existingStatus = nodeStatuses[nodeIndex]
         if (
         // A restarted peer will have its serial reset, but
@@ -284,6 +286,13 @@ class BaseStatusManager(
      */
     override fun getCommitSignature(): Signature? {
         return this.commitSignatures[myIndex]
+    }
+
+    /**
+     * Retrieve the time of the latest received status update for a node
+     */
+    override fun getLatestStatusTimestamp(nodeIndex: Int): Long {
+        return nodeStatusesTimestamps[nodeIndex]
     }
 
     /**
