@@ -11,34 +11,35 @@ import net.postchain.common.hexStringToByteArray
 fun CliktCommand.blockchainConfigOption() = option(
     "-bc",
     "--blockchain-config",
-    help = "Configuration file of blockchain (GtvML (*.xml) or Gtv (*.gtv))"
+    help = "Configuration file of blockchain (GtvML (*.xml) or Gtv (*.gtv))",
+    envvar = "POSTCHAIN_BLOCKCHAIN_CONFIG"
 ).required()
 
 fun CliktCommand.blockchainRidOption() =
-    option("-brid", "--blockchain-rid", help = "Blockchain RID").convert { BlockchainRid.buildFromHex(it) }.required()
+    option("-brid", "--blockchain-rid", help = "Blockchain RID", envvar = "POSTCHAIN_BRID").convert { BlockchainRid.buildFromHex(it) }.required()
 
-fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Local number id of blockchain").long()
+fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Local number id of blockchain", envvar = "POSTCHAIN_CHAIN_ID").long()
 
-fun CliktCommand.debugOption() = option("--debug", "Enables debug functionalities").flag()
+fun CliktCommand.debugOption() = option("--debug", help = "Enables debug functionalities", envvar = "POSTCHAIN_DEBUG").flag()
 
-fun CliktCommand.forceOption() = option("-f", "--force").flag()
+fun CliktCommand.forceOption() = option("-f", "--force", envvar = "POSTCHAIN_OVERRIDE").flag()
 
-fun CliktCommand.heightOption() = option("-h", "--height").long()
+fun CliktCommand.heightOption() = option("-h", "--height", envvar = "POSTCHAIN_HEIGHT").long()
 
-fun CliktCommand.hostOption() = option("-h", "--host", help = "Host")
+fun CliktCommand.hostOption() = option("-h", "--host", help = "Host", envvar = "POSTCHAIN_HOST")
 
 fun CliktCommand.infrastructureOption() =
     option("-i", "--infrastructure", help = "The type of blockchain infrastructure.").default("base/ebft")
 
 fun CliktCommand.nodeConfigOption() =
-    option("-nc", "--node-config", help = "Configuration file of node (.properties file)").required()
+    option("-nc", "--node-config", help = "Configuration file of node (.properties file)", envvar = "POSTCHAIN_CONFIG").required()
 
-fun CliktCommand.portOption() = option("-p", "--port", help = "Port").int()
+fun CliktCommand.portOption() = option("-p", "--port", help = "Port", envvar = "POSTCHAIN_PORT").int()
 
-fun CliktCommand.pubkeyOption() = option("-pk", "--pubkey", help = "Public key").validate { validatePubkey(it) }
+fun CliktCommand.pubkeyOption() = option("-pk", "--pubkey", help = "Public key", envvar = "POSTCHAIN_PUBKEY").validate { validatePubkey(it) }
 
 fun CliktCommand.requiredPubkeyOption() =
-    option("-pk", "--pubkey", help = "Public key").required().validate { validatePubkey(it) }
+    option("-pk", "--pubkey", help = "Public key", envvar = "POSTCHAIN_PUBKEY").required().validate { validatePubkey(it) }
 
 private fun validatePubkey(it: String) {
     require(it.length == 66) { "Public key must have length 66" }
