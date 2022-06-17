@@ -106,11 +106,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Logging -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
         <!-- For Log4j2/YAML configuration -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
