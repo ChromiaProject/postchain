@@ -22,7 +22,7 @@ class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Bool
 
     fun start() {
         server.start()
-        println("Server started, listening on ${config.port}")
+        println("Postchain server started, listening on ${config.port}")
         Runtime.getRuntime().addShutdownHook(
             Thread {
                 println("*** shutting down gRPC server since JVM is shutting down ***")

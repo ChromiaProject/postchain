@@ -17,9 +17,9 @@ class SslOptions : OptionGroup(help = "SSL/TLS configuration options") {
 
     val privateKeyFile by option(
         "-pkf",
-        "--private-key-file",
+        "--privkey-file",
         help = "Private key file",
-        envvar = "POSTCHAIN_SERVER_PRIVATE_KEY"
+        envvar = "POSTCHAIN_SERVER_PRIVKEY"
     )
         .file(mustExist = true, canBeDir = false, mustBeReadable = true)
         .required()
