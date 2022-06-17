@@ -4,13 +4,32 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import io.grpc.ManagedChannelBuilder
+import io.grpc.ChannelCredentials
+import io.grpc.Grpc
+import io.grpc.InsecureChannelCredentials
+import io.grpc.TlsChannelCredentials
 import net.postchain.server.service.DebugServiceGrpc
 import net.postchain.server.service.PeerServiceGrpc
 import net.postchain.server.service.PostchainServiceGrpc
 
 fun CliktCommand.channelOption() = option("-t", "--target", envvar = "POSTCHAIN_TARGET", help = "Target path for command. On the form host:port")
-    .convert { ManagedChannelBuilder.forTarget(it).usePlaintext().build() }
+    .convert {
+        val sslOptions = currentContext.findObject<SslConfig>()
+        val channelCredentials = if (sslOptions != null && sslOptions.enabled) {
+            buildTlsCredentials(sslOptions)
+        } else {
+            InsecureChannelCredentials.create()
+        }
+        Grpc.newChannelBuilder(it, channelCredentials).build()
+    }
+
+fun buildTlsCredentials(sslOptions: SslConfig): ChannelCredentials {
+    return if (sslOptions.certificateFile != null) {
+        TlsChannelCredentials.newBuilder().trustManager(sslOptions.certificateFile).build()
+    } else {
+        TlsChannelCredentials.create()
+    }
+}
 
 fun CliktCommand.blockingPostchainServiceChannelOption() = channelOption()
     .convert { PostchainServiceGrpc.newBlockingStub(it) }
