@@ -9,6 +9,8 @@ import net.postchain.common.toHex
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
 import org.bitcoinj.crypto.MnemonicCode
+import java.io.FileOutputStream
+import java.util.*
 
 
 class CommandKeygen : CliktCommand(name = "keygen", help = "Generates public/private key pair") {
@@ -21,6 +23,8 @@ class CommandKeygen : CliktCommand(name = "keygen", help = "Generates public/pri
         """.trimIndent()
     )
         .default("")
+
+    private val file by option("-s", "--save", help = "File to save the generated keypair in")
 
     /**
      * Cryptographic key generator. Will generate a pair of public and private keys and print to stdout.
@@ -38,6 +42,17 @@ class CommandKeygen : CliktCommand(name = "keygen", help = "Generates public/pri
         }
 
         val pubKey = secp256k1_derivePubKey(privKey)
+
+        file?.let { fileName ->
+            val properties = Properties()
+            properties["privkey"] = privKey.toHex()
+            properties["pubkey"] = pubKey.toHex()
+
+            FileOutputStream(fileName).use { fs ->
+                properties.store(fs, "Keypair generated using secp256k1")
+                fs.flush()
+            }
+        }
         println(
             """
             |privkey:   ${privKey.toHex()}
