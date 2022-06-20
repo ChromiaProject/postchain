@@ -91,9 +91,10 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
             db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
             true
         }
-        postchainNode.startBlockchain(request.chainId)
+        val blockchainRid = postchainNode.startBlockchain(request.chainId)
         responseObserver?.onNext(InitializeBlockchainReply.newBuilder().run {
-            message = "Blockchain has been initialized"
+            message = "Blockchain has been initialized with blockchain RID: $blockchainRid"
+            brid = blockchainRid?.toHex() ?: ""
             build()
         })
         responseObserver?.onCompleted()
