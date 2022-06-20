@@ -12,6 +12,7 @@ service PostchainService {
   rpc StopBlockchain (StopBlockchainRequest) returns (StopBlockchainReply) {} // Stop blockchain with ID
   rpc InitializeBlockchain (InitializeBlockchainRequest) returns (InitializeBlockchainReply) {} // Adds and starts blockchain
   rpc AddConfiguration (AddConfigurationRequest) returns (AddConfigurationReply) {} // Add configuration at height
+  rpc FindBlockchain (FindBlockchainRequest) returns (FindBlockchainReply) {} // Find blockchain rid
 }
 
 message InitializeBlockchainRequest {
@@ -26,6 +27,7 @@ message InitializeBlockchainRequest {
 message InitializeBlockchainReply {
   bool success = 1;
   string message = 2;
+  string brid = 3;
 }
 
 message AddConfigurationRequest {
@@ -56,4 +58,12 @@ message StopBlockchainRequest {
 
 message StopBlockchainReply {
   string message = 1;
+}
+
+message FindBlockchainRequest {
+  int64 chainId = 1;
+}
+
+message FindBlockchainReply {
+  string brid = 1;
 }
