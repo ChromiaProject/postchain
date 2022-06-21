@@ -102,7 +102,22 @@ class ConcretePostchainClient(
             val httpPost = HttpPost("$serverUrl/tx/$blockchainRIDHex")
             httpPost.setHeader("Content-type", APPLICATION_JSON)
             httpPost.entity = StringEntity(txJson)
-            return httpClient.execute(httpPost).use { response -> response.code }
+            val statusCode = httpClient.execute(httpPost).use { response ->
+                if (response.code >= 400) {
+                    response.entity?.let {
+                        val responseBody = parseResponse(it.content)
+                        val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
+                        val errorString = jsonObject.get("error")?.asString?.uppercase()
+                        if (errorString != null) {
+                            logger.info { "Transaction rejected: $errorString" }
+                        } else {
+                            logger.warn { "No error in response\n$responseBody" }
+                        }
+                    }
+                }
+                response.code
+            }
+            return statusCode
         }
 
         when (confirmationLevel) {
