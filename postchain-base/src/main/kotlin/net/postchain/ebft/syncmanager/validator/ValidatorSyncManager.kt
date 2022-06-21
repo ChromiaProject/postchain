@@ -88,10 +88,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 when (message) {
                     // same case for replica and validator node
                     is GetBlockAtHeight -> sendBlockAtHeight(xPeerId, message.height)
-                    is GetBlockHeaderAndBlock -> {
-                        sendBlockHeaderAndBlock(xPeerId, message.height,
-                                this.statusManager.myStatus.height - 1)
-                    }
+                    is GetBlockRange -> sendBlockRangeFromHeight(xPeerId, message.startAtHeight,
+                        this.statusManager.myStatus.height - 1)
+                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
+                        this.statusManager.myStatus.height - 1)
                     else -> {
                         if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
                             // validator consensus logic
@@ -139,6 +139,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                                     BlockData(message.header, message.transactions),
                                                     blockchainConfiguration)
                                     )
+                                }
+                                is BlockRange -> {
+                                    // Only replicas should receive BlockRanges (via SlowSync)
+                                    logger.warn("Why did we get a block range from peer: ${xPeerId}? (Starting " +
+                                            "height: ${message.startAtHeight}, blocks: ${message.blocks.size}) ")
                                 }
                                 is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
                                 is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)

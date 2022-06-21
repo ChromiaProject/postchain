@@ -35,9 +35,38 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
             logger.debug{ "No block at height $height, as requested by $peerId" }
             return
         }
-        val packet = CompleteBlock(BlockData(blockData.header.rawData, blockData.transactions), height, blockData.witness.getRawData())
+        val packet = CompleteBlock.buildFromBlockDataWithWitness(height, blockData)
         communicationManager.sendPacket(packet, peerId)
     }
+
+    /**
+     * Send message to node including the block at [startAtHeight] and onwards (max 10). This is a response to the [GetBlockRange] request.
+     *
+     * Even if we don't find any block we still send a package back
+     *
+     * @param peerId NodeRid of receiving node
+     * @param startAtHeight requested block height to start from
+     */
+    fun sendBlockRangeFromHeight(peerId: NodeRid, startAtHeight: Long, myHeight: Long) {
+        logger.trace{ "GetBlockRange from peer $peerId , start at height $startAtHeight, myHeight is $myHeight" }
+
+        val blocks = mutableListOf<CompleteBlock>()
+        var height = startAtHeight
+        var goOn = true
+        while (goOn) {
+            val blockData = blockQueries.getBlockAtHeight(height).get()
+            if (blockData == null) {
+                goOn = false
+            } else {
+                val completeBlock = CompleteBlock.buildFromBlockDataWithWitness(height, blockData)
+                blocks.add(completeBlock)
+            }
+        }
+
+        val packet = BlockRange(startAtHeight, blocks.toList())
+        communicationManager.sendPacket(packet, peerId)
+    }
+
 
     fun sendBlockHeaderAndBlock(peerID: NodeRid, requestedHeight: Long, myHeight: Long) {
         logger.trace{ "GetBlockHeaderAndBlock from peer $peerID for height $requestedHeight, myHeight is $myHeight" }

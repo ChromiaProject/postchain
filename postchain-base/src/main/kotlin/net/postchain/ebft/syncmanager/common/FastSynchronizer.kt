@@ -13,7 +13,6 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
-import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.message.*
 import net.postchain.ebft.worker.WorkerContext
 import java.lang.Thread.sleep
@@ -119,9 +118,6 @@ class FastSynchronizer(
     private val jobs = TreeMap<Long, Job>()
     private var lastJob: Job? = null
     private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
-
-    // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
-    private var addBlockCompletionPromise: CompletionPromise? = null
 
     // This is the communication mechanism from the async commitBlock callback to main loop
     private val finishedJobs = LinkedBlockingQueue<Job>()
@@ -478,19 +474,18 @@ class FastSynchronizer(
             return false
         }
 
-        if (header.size == 0) {
-            if (witness.size == 0) {
+        if (header.isEmpty()) {
+            if (witness.isEmpty()) {
                 // The peer says it has no blocks, try another peer
                 headerDebug("Peer for job $j drained (sent empty header)")
                 val now = System.currentTimeMillis()
                 peerStatuses.drained(peerId, -1, now)
                 restartJob(j)
-                return false
             } else {
                 var dbg = debugJobString(j, requestedHeight, peerId)
                 peerStatuses.maybeBlacklist(peerId, "Synch: Why we get a witness without a header? $dbg")
-                return false
             }
+            return false
         }
 
         val h = blockchainConfiguration.decodeBlockHeader(header)
@@ -529,23 +524,6 @@ class FastSynchronizer(
             peerStatuses.maybeBlacklist(peerId, "Synch: Invalid header received. $dbg")
             return false
         }
-    }
-
-    private fun getHeight(header: BlockHeader): Long {
-        // A bit ugly hack. Figure out something better. We shouldn't rely on specific
-        // implementation here.
-        // Our current implementation, BaseBlockHeader, includes the height, which
-        // means that we can trust the height in the header because it's been
-        // signed by a quorum of signers.
-        // If another BlockHeader implementation is used, that doesn't include
-        // the height, we'd have to rely on something else, for example
-        // sending the height explicitly, but then we trust only that single
-        // sender node to tell the truth.
-        // For now we rely on the height being part of the header.
-        if (header !is BaseBlockHeader) {
-            throw ProgrammerMistake("Expected BaseBlockHeader")
-        }
-        return header.blockHeaderRec.getHeight()
     }
 
     private fun handleUnfinishedBlock(peerId: NodeRid, header: ByteArray, txs: List<ByteArray>) {
@@ -630,21 +608,15 @@ class FastSynchronizer(
     }
 
     /**
-     * Requirements:
-     * 1. Must commit in order of height.
-     * 2. If one block fails to commit, we should not commit of blocks coming after it.
-     *
-     * Therefore:
-     * we cannot start all commits in parallel, since that might cause us to commit a block even though
-     * previous block failed to commit. Instead we start next commit only after the previous commit was
-     * successfully finished.
+     * NOTE:
+     * If one block fails to commit, don't worry about the blocks coming after. This is handled in the BBD.addBlock().
      */
     private fun commitBlock(job: Job, bTrace: BlockTrace?) {
         // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
         job.blockCommitting = true
 
         if (addBlockCompletionPromise?.isDone() == true) {
-            addBlockCompletionPromise = null
+            addBlockCompletionPromise = null // We want to do cleanup, since the old promise is used in "addBlock()" below.
         }
 
         // We are free to commit this Job, go on and add it to DB
@@ -682,12 +654,13 @@ class FastSynchronizer(
             try {
                 when (message) {
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
+                    is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight) // A replica might ask us
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight)
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
                     is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
                     is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
-                    else -> logger.trace { "Unhandled type ${message} from peer $peerId" }
+                    else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
                 }
             } catch (e: Exception) {
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
@@ -711,11 +684,6 @@ class FastSynchronizer(
     // addJob()
     private fun addTrace(message: String, e: Exception? = null) {
         logger.trace(e) { "addJob() -- $message" }
-    }
-
-    // handleUnfinishedBlock()
-    private fun unfinishedTrace(message: String, e: Exception? = null) {
-        logger.trace(e) { "handleUnfinishedBlock() -- $message" }
     }
 
     private fun headerDebug(message: String, e: Exception? = null) {

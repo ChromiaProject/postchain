@@ -1,6 +1,9 @@
 package net.postchain.ebft.syncmanager.common
 
-import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.base.BaseBlockHeader
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.core.block.BlockHeader
+import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.worker.WorkerContext
 
 abstract class AbstractSynchronizer(
@@ -11,27 +14,38 @@ abstract class AbstractSynchronizer(
     protected val blockchainConfiguration = workerContext.engine.getConfiguration()
     protected val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
 
-    protected val peerStatuses = PeerStatuses(params)
+    // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
+    protected var addBlockCompletionPromise: CompletionPromise? = null
+
+    protected val peerStatuses = FastSyncPeerStatuses(params)
 
     var blockHeight: Long = blockQueries.getBestHeight().get()
 
-    /**
-     * Send message to node including the block at [height]. This is a response to the [GetBlockAtHeight] request.
-     *
-     * @param peerId NodeRid of receiving node
-     * @param height requested block height
-    fun sendBlockAtHeight(peerId: NodeRid, height: Long) {
-        val blockData = blockQueries.getBlockAtHeight(height).get()
-        if (blockData == null) {
-            logger.debug { "No block at height $height, as requested by $peerId" }
-            return
+
+    protected fun getHeight(header: BlockHeader): Long {
+        // A bit ugly hack. Figure out something better. We shouldn't rely on specific
+        // implementation here.
+        // Our current implementation, BaseBlockHeader, includes the height, which
+        // means that we can trust the height in the header because it's been
+        // signed by a quorum of signers.
+        // If another BlockHeader implementation is used, that doesn't include
+        // the height, we'd have to rely on something else, for example
+        // sending the height explicitly, but then we trust only that single
+        // sender node to tell the truth.
+        // For now we rely on the height being part of the header.
+        if (header !is BaseBlockHeader) {
+            throw ProgrammerMistake("Expected BaseBlockHeader")
         }
-        val packet = CompleteBlock(
-            BlockData(blockData.header.rawData, blockData.transactions),
-            height,
-            blockData.witness.getRawData()
-        )
-        communicationManager.sendPacket(packet, peerId)
+        return header.blockHeaderRec.getHeight()
     }
-     */
+
+
+    // -------------
+    // Only logging below
+    // -------------
+
+    // handleUnfinishedBlock()
+    protected fun unfinishedTrace(message: String, e: Exception? = null) {
+        logger.trace(e) { "handleUnfinishedBlock() -- $message" }
+    }
 }

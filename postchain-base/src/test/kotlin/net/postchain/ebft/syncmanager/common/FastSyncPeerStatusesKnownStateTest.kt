@@ -4,13 +4,13 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class PeerStatusesKnownStateTest {
+class FastSyncPeerStatusesKnownStateTest {
 
 
     @Test
     fun test_drained() {
         val params = FastSyncParameters()
-        val state = PeerStatuses.KnownState(params)
+        val state = FastSyncKnownState(params)
 
         // Initial state
         assertTrue(state.isSyncable(1))
@@ -32,7 +32,7 @@ class PeerStatusesKnownStateTest {
     @Test
     fun test_resurrect_after_unresponsive() {
         val params = FastSyncParameters()
-        val state = PeerStatuses.KnownState(params)
+        val state = FastSyncKnownState(params)
 
         // Initial state
         assertTrue(state.isSyncable(1))
@@ -58,7 +58,7 @@ class PeerStatusesKnownStateTest {
     @Test
     fun test_blacklist_and_timeout() {
         val params = FastSyncParameters()
-        val state = PeerStatuses.KnownState(params)
+        val state = FastSyncKnownState(params)
 
         // Initial state
         assertTrue(state.isSyncable(1))
@@ -87,7 +87,7 @@ class PeerStatusesKnownStateTest {
 
     }
 
-    private fun makePeerBlacklisted(state: PeerStatuses.KnownState, startTime: Long = 0L): Long {
+    private fun makePeerBlacklisted(state: FastSyncKnownState, startTime: Long = 0L): Long {
         // Work up until blacklist
         var timeIter: Long = 1 + startTime
         while (timeIter < (10 + startTime)) {

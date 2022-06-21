@@ -3,6 +3,7 @@
 package net.postchain.ebft.message
 
 import net.postchain.common.BlockchainRid
+import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvFactory.gtv
@@ -46,6 +47,28 @@ class BlockData(val header: ByteArray, val transactions: List<ByteArray>): EbftM
 }
 
 class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArray): EbftMessage(MessageTopic.COMPLETEBLOCK) {
+
+    companion object {
+
+        fun buildFromBlockDataWithWitness(height: Long, blockData: BlockDataWithWitness): CompleteBlock {
+            return CompleteBlock(
+                BlockData(blockData.header.rawData, blockData.transactions),
+                height,
+                blockData.witness.getRawData()
+            )
+        }
+
+        fun buildFromGtv(data: GtvArray, arrOffset: Int): CompleteBlock {
+
+            return CompleteBlock(
+                BlockData(data[0 + arrOffset].asByteArray(),
+                    data[1 + arrOffset].asArray().map { it.asByteArray() }
+                ),
+                data[2 + arrOffset].asInteger(),
+                data[3 + arrOffset].asByteArray()
+            )
+        }
+    }
 
     override fun toGtv(): Gtv {
         return gtv(topic.toGtv(),
@@ -144,6 +167,26 @@ class GetBlockRange(val startAtHeight: Long) : EbftMessage(MessageTopic.GETBLOCK
  * @property blocks is a list of [CompleteBlock]
  */
 class BlockRange(val startAtHeight: Long, val blocks: List<CompleteBlock>) : EbftMessage(MessageTopic.BLOCKRANGE) {
+
+    companion object {
+
+        /**
+         * Consumes the raw GTV incoming data
+         */
+        fun buildFromGtv(data: GtvArray): BlockRange {
+            val startAtHeight = data[1].asInteger()
+            val blocks = mutableListOf<CompleteBlock>()
+
+            var i = 2 // Already taken 0 and 1.
+            while ( i < data.getSize()) {
+                var blockGtv = data[i] as GtvArray
+                blocks.add(CompleteBlock.buildFromGtv(blockGtv, 0))
+                i++
+            }
+
+            return BlockRange(startAtHeight, blocks)
+        }
+    }
 
     override fun toGtv(): Gtv {
         val gtvBlockList = mutableListOf<Gtv>()

@@ -11,7 +11,7 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.block.BlockQueries
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
-import net.postchain.ebft.syncmanager.common.PeerStatuses
+import net.postchain.ebft.syncmanager.common.FastSyncPeerStatuses
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
 
 class ReadOnlyBlockchainProcess(
@@ -43,7 +43,7 @@ class ReadOnlyBlockchainProcess(
         ::isProcessRunning
     )
 
-    private val peerStatuses = PeerStatuses(params)
+    private val peerStatuses = FastSyncPeerStatuses(params)
 
     var blockHeight: Long = blockQueries.getBestHeight().get()
         private set
