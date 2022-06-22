@@ -7,8 +7,7 @@ import com.github.ajalt.clikt.parameters.options.multiple
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.debugOption
 import net.postchain.cli.util.nodeConfigOption
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
+import net.postchain.cli.util.printCommandInfo
 
 class CommandRunNode : CliktCommand(name = "run-node", help = "Runs node") {
 
@@ -19,8 +18,7 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Runs node") {
     private val debug by debugOption()
 
     override fun run() {
-        println("run-node will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        printCommandInfo()
 
         CliExecution.runNode(nodeConfigFile, chainIDs, debug)
         println("Postchain node is running")

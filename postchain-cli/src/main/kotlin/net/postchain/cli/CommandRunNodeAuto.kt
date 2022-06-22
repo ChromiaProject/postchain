@@ -7,8 +7,7 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import mu.KLogging
 import net.postchain.cli.util.debugOption
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
+import net.postchain.cli.util.printCommandInfo
 import java.io.File
 import java.nio.file.Paths
 
@@ -43,8 +42,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
     private val lastHeights = mutableMapOf<Long, Long>() // { chainId -> height }
 
     override fun run() {
-        println("run-auto-node will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        printCommandInfo()
 
         val chainsDir = Paths.get(configDirectory, BLOCKCHAIN_DIR).toFile()
         val nodeConfigFile = Paths.get(configDirectory, NODE_CONFIG_FILE).toString()
