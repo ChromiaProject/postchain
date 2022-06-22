@@ -13,13 +13,12 @@ class Page(
     val blockHeight: Long, val level: Int, val left: Long,
     val childHashes: Array<Hash>
 ) {
-    fun getHashes(relLevel: Int, treeHasher: TreeHasher): Array<Hash> {
-        return if (relLevel == 0) childHashes
+    fun getChildHash(relLevel: Int, treeHasher: TreeHasher, childIndex: Int): Hash {
+        return if (relLevel == 0) childHashes[childIndex]
         else {
-            val priorHashes = getHashes(relLevel - 1, treeHasher)
-            Array(priorHashes.size / 2) {
-                treeHasher(priorHashes[it * 2], priorHashes[it * 2 + 1])
-            }
+            val leftHash = getChildHash(relLevel - 1, treeHasher, 2 * childIndex)
+            val rightHash = getChildHash(relLevel - 1, treeHasher, 2 * childIndex + 1)
+            treeHasher(leftHash, rightHash)
         }
     }
 }
@@ -67,8 +66,8 @@ open class BasePageStore(
             var relPos = ((leafPos - left) shr level).toInt() // relative position of entry on a level
             for (relLevel in 0 until levelsPerPage) {
                 val another = relPos xor 0x1 // flip the lowest bit to find the other child of same node
-                val hashes = page.getHashes(relLevel, ds::hash) // TODO: this is inefficient
-                path.add(hashes[another])
+                val hash = page.getChildHash(relLevel, ds::hash, another)
+                path.add(hash)
                 relPos = relPos shr 1
             }
         }
@@ -97,7 +96,7 @@ open class EventPageStore(
                     entryHashes.getOrElse(it + left) { EMPTY_HASH }
                 }
                 val page = Page(blockHeight, level, left.toLong(), pageChildren)
-                val pageHash = page.getHashes(levelsPerPage, ds::hash)[0]
+                val pageHash = page.getChildHash(levelsPerPage, ds::hash, 0)
                 upperEntry.add(pageHash)
                 writePage(page)
                 current = left + entriesPerPage
@@ -147,7 +146,7 @@ open class SnapshotPageStore(
                         for (i in 0 until entriesPerPage) {
                             val childPage = readPage(blockHeight, lowerLevel, mostLeft+i)
                             if (childPage != null && pageElts[i] == null)
-                                pageElts[i] = childPage.getHashes(lowerLevel, ds::hash)[0]
+                                pageElts[i] = childPage.getChildHash(lowerLevel, ds::hash, 0)
                         }
                     } else {
                         for (i in 0 until entriesPerPage) {
@@ -158,7 +157,7 @@ open class SnapshotPageStore(
                 }
                 val pageChildren = pageElts.map { it ?: EMPTY_HASH }.toTypedArray()
                 val page = Page(blockHeight, level, left, pageChildren)
-                val pageHash = page.getHashes(levelsPerPage, ds::hash)[0]
+                val pageHash = page.getChildHash(levelsPerPage, ds::hash, 0)
                 upperEntryMap[left / entriesPerPage] = pageHash
                 writePage(page)
                 current = left + entriesPerPage
