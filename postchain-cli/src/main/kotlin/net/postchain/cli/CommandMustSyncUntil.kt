@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.blockchainRidOption
+import net.postchain.cli.util.formatOptions
 import net.postchain.cli.util.heightOption
 import net.postchain.cli.util.nodeConfigOption
 
@@ -20,7 +21,7 @@ class CommandMustSyncUntil : CliktCommand(name = "must-sync-until", help = "Set 
 
 
     override fun run() {
-        println("$commandName will be executed with node config: $nodeConfigFile, brid: $blockchainRid, height: $height")
+        println("$commandName will be executed with: ${formatOptions()}")
 
         val added = CliExecution.setMustSyncUntil(nodeConfigFile, blockchainRid,
                 height)

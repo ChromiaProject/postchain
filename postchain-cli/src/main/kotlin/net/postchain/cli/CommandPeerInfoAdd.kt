@@ -6,8 +6,6 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
 
 class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer information to database") {
 
@@ -21,8 +19,7 @@ class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer 
     private val force by forceOption().help("Force the addition of peerinfo which already exists with the same host:port")
 
     override fun run() {
-        println("peerinfo-add will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        println("$commandName will be executed with: ${formatOptions()}")
 
         val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
         // Make all pubkey strings in db upper case. It will then be consistent with package net.postchain.common.

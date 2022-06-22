@@ -5,12 +5,7 @@ package net.postchain.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.cli.util.blockchainConfigOption
-import net.postchain.cli.util.chainIdOption
-import net.postchain.cli.util.forceOption
-import net.postchain.cli.util.nodeConfigOption
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
+import net.postchain.cli.util.*
 
 class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add blockchain") {
 
@@ -25,10 +20,7 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
 
 
     override fun run() {
-        println(
-            "add-blockchain will be executed with options: " +
-                    ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE)
-        )
+        println("$commandName will be executed with: ${formatOptions()}")
 
         val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
         CliExecution.addBlockchain(nodeConfigFile, chainId, blockchainConfigFile, mode)
