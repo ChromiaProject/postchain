@@ -6,12 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import net.postchain.cli.util.hostOption
-import net.postchain.cli.util.nodeConfigOption
-import net.postchain.cli.util.portOption
-import net.postchain.cli.util.pubkeyOption
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
+import net.postchain.cli.util.*
 
 class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find peerinfo") {
 
@@ -25,8 +20,7 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
     private val pubKey by pubkeyOption()
 
     override fun run() {
-        println("peerinfo-find will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        printCommandInfo()
 
         val peerInfos = peerinfoFind(nodeConfigFile, host, port, pubKey)
 
