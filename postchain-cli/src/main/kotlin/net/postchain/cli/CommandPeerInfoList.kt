@@ -6,8 +6,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import net.postchain.cli.util.formatOptions
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 
 class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List peer information") {
 
@@ -15,7 +15,7 @@ class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List pe
     private val nodeConfigFile by nodeConfigOption()
 
     override fun run() {
-        println("$commandName will be executed with: ${formatOptions()}")
+        printCommandInfo()
 
         val peerInfos = peerinfoList(nodeConfigFile)
 

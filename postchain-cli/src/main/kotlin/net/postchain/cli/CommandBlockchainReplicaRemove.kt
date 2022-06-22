@@ -4,8 +4,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainRidOption
-import net.postchain.cli.util.formatOptions
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.BlockchainRid
 
@@ -23,7 +23,7 @@ class CommandBlockchainReplicaRemove : CliktCommand(
 
 
     override fun run() {
-        println("$commandName will be executed with: ${formatOptions()}")
+        printCommandInfo()
 
         val removed = blockchainReplicaRemove(blockchainRID.toHex(), pubKey)
 

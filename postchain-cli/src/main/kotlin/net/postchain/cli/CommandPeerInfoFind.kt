@@ -20,7 +20,7 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
     private val pubKey by pubkeyOption()
 
     override fun run() {
-        println("$commandName will be executed with: ${formatOptions()}")
+        printCommandInfo()
 
         val peerInfos = peerinfoFind(nodeConfigFile, host, port, pubKey)
 

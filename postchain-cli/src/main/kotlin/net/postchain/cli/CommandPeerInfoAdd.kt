@@ -19,7 +19,7 @@ class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer 
     private val force by forceOption().help("Force the addition of peerinfo which already exists with the same host:port")
 
     override fun run() {
-        println("$commandName will be executed with: ${formatOptions()}")
+        printCommandInfo()
 
         val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
         // Make all pubkey strings in db upper case. It will then be consistent with package net.postchain.common.

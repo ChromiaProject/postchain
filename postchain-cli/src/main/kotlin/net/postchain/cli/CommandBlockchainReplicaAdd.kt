@@ -6,8 +6,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainRidOption
-import net.postchain.cli.util.formatOptions
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 import net.postchain.cli.util.requiredPubkeyOption
 
 class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add", help = "Add info to system about blockchain replicas. To be used to sync this node.") {
@@ -19,7 +19,7 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add"
     private val blockchainRID by blockchainRidOption()
 
     override fun run() {
-        println("$commandName will be executed with: ${formatOptions()}")
+        printCommandInfo()
 
         val added = addReplica(blockchainRID.toHex(), pubKey)
         return when {

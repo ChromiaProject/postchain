@@ -20,7 +20,7 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
 
 
     override fun run() {
-        println("$commandName will be executed with: ${formatOptions()}")
+        printCommandInfo()
 
         val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
         CliExecution.addBlockchain(nodeConfigFile, chainId, blockchainConfigFile, mode)

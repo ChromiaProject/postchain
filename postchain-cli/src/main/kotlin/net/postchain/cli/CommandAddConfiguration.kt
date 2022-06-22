@@ -29,7 +29,7 @@ class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = 
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
     override fun run() {
-        println("$commandName will be executed with: ${formatOptions()}")
+        printCommandInfo()
 
         if (height != 0L && futureHeight != 0L) {
             throw IllegalArgumentException("Cannot use --height and --future at the same time")

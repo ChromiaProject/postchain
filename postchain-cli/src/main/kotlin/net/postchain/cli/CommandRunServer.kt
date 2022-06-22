@@ -25,7 +25,7 @@ class CommandRunServer : CliktCommand(name = "run-server", help = "Start postcha
     private val sslOptions by SslOptions().cooccurring()
 
     override fun run() {
-        println("$commandName will be executed with: ${formatOptions()}")
+        printCommandInfo()
 
         val serverConfig = sslOptions?.let {
             PostchainServerConfig(port, SslConfig(it.certChainFile, it.privateKeyFile))

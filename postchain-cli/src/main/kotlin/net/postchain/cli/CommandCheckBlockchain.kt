@@ -6,8 +6,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.chainIdOption
-import net.postchain.cli.util.formatOptions
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 
 class CommandCheckBlockchain : CliktCommand(name = "check-blockchain", help = "Checks Blockchain") {
 
@@ -19,7 +19,7 @@ class CommandCheckBlockchain : CliktCommand(name = "check-blockchain", help = "C
     private val blockchainRID by blockchainRidOption()
 
     override fun run() {
-        println("$commandName will be executed with: ${formatOptions()}")
+        printCommandInfo()
 
         CliExecution.checkBlockchain(nodeConfigFile, chainId, blockchainRID.toHex())
         println("Okay")
