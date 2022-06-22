@@ -28,7 +28,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
                             "$activeHeight, should still use conf at: $configHeight "
                 )
             }
-        } else {
+        } else if (configHeight > activeHeight) {
             logger.error("activeBlockNeedsNewConfig() - Why did we find a next config height: " +
                     "$configHeight higher than our active block's height: $activeHeight (chain: $chainId)? " +
                     " Most likely a bug")
