@@ -7,7 +7,8 @@ data class RestApiConfig(
         val port: Int,
         val ssl: Boolean,
         val sslCertificate: String,
-        val sslCertificatePassword: String
+        val sslCertificatePassword: String,
+        val debug: Boolean = false
 ) {
     companion object {
         @JvmStatic
@@ -17,7 +18,8 @@ data class RestApiConfig(
                     config.getInt("api.port", 7740),
                     config.getBoolean("api.enable_ssl", false),
                     config.getString("api.ssl_certificate", ""),
-                    config.getString("api.ssl_certificate.password", "")
+                    config.getString("api.ssl_certificate.password", ""),
+                    config.debug
             )
         }
     }

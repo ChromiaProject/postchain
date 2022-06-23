@@ -54,7 +54,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
         private val packetDecoderFactory: XPacketDecoderFactory<PacketType>,
         cryptoSystem: CryptoSystem
-) : NetworkTopology, // Only "Peer" neworks need this
+) : NetworkTopology, // Only "Peer" networks need this
         PeerConnectionManager,  // Methods specific to the "X" connection part
         NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 

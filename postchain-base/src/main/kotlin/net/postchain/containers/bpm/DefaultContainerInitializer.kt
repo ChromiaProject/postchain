@@ -49,10 +49,8 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         config.setProperty("infrastructure", Infrastructure.EbftContainerSub.get())
 
         // DB
-        if (config.containsKey("subnode.database.url")) {
-            config.setProperty("database.url", config.getProperty("subnode.database.url"))
-            config.clearProperty("subnode.database.url")
-            //        config.setProperty("database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
+        if (config.containsKey("container.subnode.database.url")) {
+            config.setProperty("database.url", config.getProperty("container.subnode.database.url"))
         }
         val scheme = databaseSchema(container.containerName)
         config.setProperty("database.schema", scheme)
@@ -96,7 +94,7 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
     }
 
     private fun getContainerChainDir(fs: FileSystem, chain: Chain): Path {
-        return fs.hostRootOf(chain.containerName)
+        return fs.rootOf(chain.containerName)
                 .resolve(BLOCKCHAINS_DIR)
                 .resolve(chain.chainId.toString())
     }

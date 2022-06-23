@@ -19,12 +19,12 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.block.BlockQueries
-import net.postchain.managed.BaseDirectoryDataSource
-import net.postchain.managed.DirectoryDataSource
-import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.managed.BaseDirectoryDataSource
+import net.postchain.managed.DirectoryDataSource
+import net.postchain.managed.ManagedBlockchainProcessManager
 
 open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -206,7 +206,7 @@ open class ContainerManagedBlockchainProcessManager(
                     }
                 }
             }
-        } else {
+        } else { // psContainer != null
             chainsToStop.forEach { chain ->
                 val (process, res) = terminateBlockchainProcess(psContainer, chain)
                 if (res) {

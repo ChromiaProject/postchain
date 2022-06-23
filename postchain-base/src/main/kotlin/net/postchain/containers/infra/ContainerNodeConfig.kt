@@ -16,6 +16,7 @@ data class ContainerNodeConfig(
         val masterHost: String,
         val masterPort: Int,
         val slaveHost: String,
+        val mountDir: String,
         val containerSendConnectedPeersPeriod: Long,
         val runningContainersAtStartRegexp: String,
         val runningContainersCheckPeriod: Int,
@@ -37,11 +38,12 @@ data class ContainerNodeConfig(
         @JvmStatic
         fun fromAppConfig(config: AppConfig): ContainerNodeConfig {
             return ContainerNodeConfig(
-                    config.getString("containerChains.dockerImage", "chromaway/postchain-subnode:latest"),
-                    config.getInt("containerChains.api.port", 7740),
-                    config.getString("containerChains.masterHost", "localhost"),
-                    config.getInt("containerChains.masterPort", 9860),
-                    config.getString("containerChains.slaveHost", "localhost"),
+                    config.getString("container.dockerImage", "chromaway/postchain-subnode:latest"),
+                    config.getInt("container.api.port", 7740),
+                    config.getString("container.masterHost", "localhost"),
+                    config.getInt("container.masterPort", 9860),
+                    config.getString("container.slaveHost", "localhost"),
+                    config.getString("container.mount-dir"),
                     config.getLong("container.send-connected-peers-period", 60_000L),
                     config.getString("container.healthcheck.runningContainersAtStartRegexp", ""),
                     config.getInt("container.healthcheck.runningContainersCheckPeriod", 0),

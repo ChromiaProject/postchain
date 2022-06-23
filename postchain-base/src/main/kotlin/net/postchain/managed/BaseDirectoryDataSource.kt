@@ -62,7 +62,7 @@ class BaseDirectoryDataSource(
         } else {
             val queryReply = queries.query(
                     "nm_get_container_limits",
-                    buildArgs("container_id" to GtvFactory.gtv(containerId))
+                    buildArgs("name" to GtvFactory.gtv(containerId))
             ).get().asDict()
 
             ContainerResourceLimits(

@@ -10,38 +10,38 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 /**
- * Directory structure:
- *      ./target
- *          /blockchains
- *              /0                                  chainId
- *                  0.gtv                           config0
- *                  0.xml                           config0
- *                  1.gtv                           config1
- *                  1.xml                           config1
- *                  brid.txt
- *              /1                                  chainId
- *                  /...
- *              /...
- *          /containers
- *              /n020CCD8A_cont0                    container name
- *                  /blockchains                    blockchains of this container
- *                      /100
- *                          /0.gtv                  config0
- *                          /0.xml                  config0
- *                          /brid.txt
- *                      /101
- *                          /...
- *                      /...
- *                  /logs                           logs
- *                  /env-peers.sh                   this node host, port, pub-key
- *                  /node-config.properties         node config file
- *              /n020CCD8A_cont1                    container name
- *                  /...
- *              /...
- *          /.initialized
- *          /env-peers.sh                           this node host, port, pub-key
- *          /keys.properties                        node priv/pub key
- *          /node-config.properties                 node config file
+ * File system structure:
+ * .
+ * └── target/
+ *     ├── blockchains/
+ *     │   ├── 0/                              chainId
+ *     │   │   ├── 0.gtv                       config0 / gtv
+ *     │   │   ├── 0.xml                       config0 / xml
+ *     │   │   ├── 10.gtv                      config10 / gtv
+ *     │   │   ├── 10.xml                      config10 / gtv
+ *     │   │   └── brid.txt                    brid
+ *     │   ├── 1/                              chainId
+ *     │   │   └── ...
+ *     │   └── ...
+ *     ├── containers/
+ *     │   ├── n020CCD8A_cont0/                container
+ *     │   │   ├── blockchains/                blockchains of the container
+ *     │   │   │   ├── 100/                    chainId
+ *     │   │   │   │   ├── 0.gtv               config0 / gtv
+ *     │   │   │   │   ├── 0.xml               config0 / xml
+ *     │   │   │   │   └── brid.txt            brid
+ *     │   │   │   └── 101/
+ *     │   │   │       └── ...
+ *     │   │   ├── logs                        logs
+ *     │   │   ├── env-peers.sh                this node host, port, pubkey
+ *     │   │   └── node-config.properties      node config file
+ *     │   ├── n020CCD8A_cont1/                container
+ *     │   │   └── ...
+ *     │   └── ...
+ *     ├── .initialized
+ *     ├── env-peers.sh                        this node host, port, pubkey
+ *     ├── keys.properties                     node priv/pub key
+ *     └── node-config.properties              node config file
  *
  */
 class FileSystem(private val appConfig: AppConfig, private val containerNodeConfig: ContainerNodeConfig) {
@@ -74,22 +74,22 @@ class FileSystem(private val appConfig: AppConfig, private val containerNodeConf
     }
 
     fun hostRootOf(containerName: ContainerName): Path {
-        return containerRoot(containerName)
-    }
-
-    fun hostPgdataOf(containerName: ContainerName): Path {
-        return containerRoot(containerName).resolve(PGDATA_DIR)
-    }
-
-    fun containerTargetPath() = CONTAINER_TARGET_PATH
-
-    fun containerPgdataPath() = CONTAINER_PGDATA_PATH
-
-    private fun containerRoot(containerName: ContainerName): Path {
         return if (containerNodeConfig.containerFilesystem == ZFS.name) {
             zfsRootOf(containerName)
         } else { // LOCAL
-            localRootOf(containerName)
+            Paths.get(containerNodeConfig.mountDir, containerName.name)
+        }
+    }
+
+    fun hostPgdataOf(containerName: ContainerName): Path {
+        return hostRootOf(containerName).resolve(PGDATA_DIR)
+    }
+
+    fun rootOf(containerName: ContainerName): Path {
+        return if (containerNodeConfig.containerFilesystem == ZFS.name) {
+            zfsRootOf(containerName)
+        } else { // LOCAL
+            Paths.get(CONTAINERS_DIR, containerName.name)
         }
     }
 
@@ -97,12 +97,8 @@ class FileSystem(private val appConfig: AppConfig, private val containerNodeConf
         return Paths.get(File.separator, containerNodeConfig.containerZfsPool, containerName.name)
     }
 
-    private fun localRootOf(containerName: ContainerName): Path {
-        return Paths.get(appConfig.configDir, CONTAINERS_DIR, containerName.name)
-    }
-
     private fun createZfsContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {
-        val root = zfsRootOf(containerName)
+        val root = rootOf(containerName)
         return if (root.toFile().exists()) {
             logger.info("Container dir exists: $root")
             root
@@ -133,7 +129,7 @@ class FileSystem(private val appConfig: AppConfig, private val containerNodeConf
     }
 
     private fun createLocalContainerRoot(containerName: ContainerName): Path? {
-        val root = localRootOf(containerName)
+        val root = rootOf(containerName)
         return if (root.toFile().exists()) {
             logger.info("Container dir exists: $root")
             root
