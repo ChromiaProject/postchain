@@ -140,7 +140,7 @@ object GenericBlockHeaderValidator {
      * @param initialBlockData is the initial block data we can use to compare with the header
      * @param expectedMerkleRootHash calculates the expected the merkle root of the block
      * @param blockRidFromHeight can find the block RID in the DB from what height we have
-     * @param currentBlockTimestamp is the timestamp of the the block we possess
+     * @param currentBlockTimestamp is the timestamp of the block we possess
      * @param nrOfDependencies is how many dependencies we should have (we cannot test the actual dependencies b/c some might be null still)
      * @return a [ValidationResult] containing success or info about what went wrong
      */
