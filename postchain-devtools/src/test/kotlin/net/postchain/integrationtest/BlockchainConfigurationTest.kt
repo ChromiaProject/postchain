@@ -2,6 +2,8 @@
 
 package net.postchain.integrationtest
 
+import assertk.assertions.isEqualTo
+import assertk.isContentEqualTo
 import net.postchain.common.BlockchainRid
 import net.postchain.configurations.GTXTestModule
 import net.postchain.crypto.devtools.KeyPairHelper
@@ -47,25 +49,25 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
 
     @Test
     fun testMaxTransactionSize() {
-        val blockchainRid = BlockchainRid.buildFromHex("63E5DE3CBE247D4A57DE19EF751F7840431D680DEC1EC9023B8986E7ECC35412")
-        configOverrides.setProperty("infrastructure", "base/test")
-        val nodes = createNodes(1, "/net/postchain/devtools/blocks/blockchain_config_max_transaction_size.xml")
-        val node = nodes[0]
-        val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
+        val blockchainRid = BlockchainRid.buildFromHex("C988399D8295F8AD8CA92EFB8C926308356961980D5E717FE5978CC8AC8C1B20")
+        val nodes = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_max_transaction_size.xml")
 
         // over 2mb
-        txQueue.enqueue(buildTransaction(blockchainRid, "${RandomStringUtils.randomAlphanumeric(1024 * 1024 * 2)}-test"))
-        try {
-            buildBlockAndCommit(node)
-        } catch (e: Exception) {
-        }
-
-        assertEquals(-1, getBestHeight(node))
+        val largeTx = buildTransaction(blockchainRid, "${RandomStringUtils.randomAlphanumeric(1024 * 1024 * 2)}-test")
+        buildBlockNoWait(listOf(nodes[0]), 1L, 0, largeTx)
 
         // less than 2mb
-        txQueue.enqueue(buildTransaction(blockchainRid, "${RandomStringUtils.randomAlphanumeric(1024 * 1024)}"))
-        buildBlockAndCommit(node)
-        assertEquals(0, getBestHeight(node))
+        val okTx = buildTransaction(blockchainRid, RandomStringUtils.randomAlphanumeric(1024 * 1024))
+        buildBlockNoWait(listOf(nodes[1]), 1L, 0, okTx)
+        awaitHeight(1L, 0)
+
+        // node0 will try to build block but node1 will reject it due to tx being too big
+        // node1 will instead build first block with the OK tx
+        nodes.forEach {
+            val txsInBlock = getTxRidsAtHeight(it, 0)
+            assertk.assert(txsInBlock.size).isEqualTo(1)
+            assertk.assert(txsInBlock[0]).isContentEqualTo(okTx.getRID())
+        }
     }
 
     private fun buildTransaction(blockchainRid: BlockchainRid, value: String): GTXTransaction {
