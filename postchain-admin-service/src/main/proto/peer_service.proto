@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "net.postchain.server.service";
+option java_outer_classname = "PeerProto";
+
+package postchain.rpc;
+
+
+service PeerService {
+  rpc AddPeer (AddPeerRequest) returns (AddPeerReply) {}
+  rpc ListPeers (ListPeersRequest) returns (ListPeersReply) {}
+  rpc RemovePeer (RemovePeerRequest) returns (RemovePeerReply) {}
+}
+
+message AddPeerRequest {
+  string host = 1;
+  int32 port = 2;
+  string pubkey = 3;
+  optional bool override = 4;
+}
+
+message AddPeerReply {
+  string message = 1;
+}
+
+message RemovePeerRequest {
+  string pubkey = 1;
+}
+
+message RemovePeerReply {
+  string message = 1;
+}
+
+message ListPeersRequest {}
+
+message ListPeersReply {
+  string message = 1;
+}
