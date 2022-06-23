@@ -71,11 +71,9 @@ open class BaseBlockBuilder(
      * @return The Merkle tree root hash
      */
     override fun computeMerkleRootHash(): ByteArray {
-        val digests = rawTransactions.map { txFactory.decodeTransaction(it).getHash() }
+        val digestsGtv = gtv(transactions.map { gtv(it.getHash()) })
 
-        val gtvArr = gtv(digests.map { gtv(it) })
-
-        return gtvArr.merkleHash(calc)
+        return digestsGtv.merkleHash(calc)
     }
 
     /**
@@ -175,7 +173,7 @@ open class BaseBlockBuilder(
                 for (bcInfo in blockchainRelatedInfoDependencyList) {
                     val blockRid = givenDependencies[i]
                     val dep = if (blockRid != null) {
-                        val dbHeight = store.getBlockHeightFromAnyBlockchain(bctx, blockRid, bcInfo.chainId!!)
+                        val dbHeight = store.getBlockHeightFromAnyBlockchain(ectx, blockRid, bcInfo.chainId!!)
                         if (dbHeight != null) {
                             BlockchainDependency(bcInfo, HeightDependency(blockRid, dbHeight))
                         } else {

@@ -7,9 +7,8 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 import net.postchain.cli.util.requiredPubkeyOption
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
 
 class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Remove peer information") {
 
@@ -19,8 +18,7 @@ class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Rem
     private val pubKey by requiredPubkeyOption()
 
     override fun run() {
-        println("peerinfo-remove will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        printCommandInfo()
 
         val removed = peerinfoRemove(nodeConfigFile, pubKey)
 

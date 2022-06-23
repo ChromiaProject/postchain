@@ -7,12 +7,7 @@ import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import net.postchain.cli.util.blockchainConfigOption
-import net.postchain.cli.util.chainIdOption
-import net.postchain.cli.util.forceOption
-import net.postchain.cli.util.nodeConfigOption
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
+import net.postchain.cli.util.*
 
 class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = "Adds a blockchain configuration. All signers in the new configuration must " +
         "exist in the list of added peerInfos. Else flag --allow-unknown-signers must be set.") {
@@ -34,8 +29,7 @@ class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = 
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
     override fun run() {
-        println("add-configuration will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        printCommandInfo()
 
         if (height != 0L && futureHeight != 0L) {
             throw IllegalArgumentException("Cannot use --height and --future at the same time")
