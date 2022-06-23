@@ -173,7 +173,7 @@ open class BaseBlockBuilder(
                 for (bcInfo in blockchainRelatedInfoDependencyList) {
                     val blockRid = givenDependencies[i]
                     val dep = if (blockRid != null) {
-                        val dbHeight = store.getBlockHeightFromAnyBlockchain(bctx, blockRid, bcInfo.chainId!!)
+                        val dbHeight = store.getBlockHeightFromAnyBlockchain(ectx, blockRid, bcInfo.chainId!!)
                         if (dbHeight != null) {
                             BlockchainDependency(bcInfo, HeightDependency(blockRid, dbHeight))
                         } else {
