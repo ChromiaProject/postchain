@@ -1,7 +1,6 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
-import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.FileSystem.Type.ZFS
 import net.postchain.containers.infra.ContainerNodeConfig
 import java.io.File
@@ -44,7 +43,7 @@ import java.util.concurrent.TimeUnit
  *     └── node-config.properties              node config file
  *
  */
-class FileSystem(private val appConfig: AppConfig, private val containerNodeConfig: ContainerNodeConfig) {
+class FileSystem(private val containerNodeConfig: ContainerNodeConfig) {
 
     // Filesystem type
     enum class Type {

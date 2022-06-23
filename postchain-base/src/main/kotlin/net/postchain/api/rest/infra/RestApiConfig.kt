@@ -1,6 +1,7 @@
 package net.postchain.api.rest.infra
 
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.Config
 
 data class RestApiConfig(
         val basePath: String,
@@ -9,7 +10,7 @@ data class RestApiConfig(
         val sslCertificate: String,
         val sslCertificatePassword: String,
         val debug: Boolean = false
-) {
+) : Config {
     companion object {
         @JvmStatic
         fun fromAppConfig(config: AppConfig): RestApiConfig {

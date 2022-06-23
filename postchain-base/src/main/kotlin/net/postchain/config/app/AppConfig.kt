@@ -14,10 +14,15 @@ import java.io.FileWriter
 import java.io.PrintWriter
 
 /**
+ * Marker interface for all kinds of configs
+ */
+interface Config
+
+/**
  * Wrapper to the generic [Configuration]
  * Adding some convenience fields, for example regarding database connection.
  */
-class AppConfig(private val config: Configuration, val debug: Boolean = false) {
+class AppConfig(private val config: Configuration, val debug: Boolean = false) : Config {
 
     companion object {
 

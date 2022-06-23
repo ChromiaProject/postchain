@@ -1,6 +1,7 @@
 package net.postchain.containers.infra
 
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.Config
 import net.postchain.containers.bpm.FileSystem
 
 /**
@@ -30,7 +31,7 @@ data class ContainerNodeConfig(
         val containersTestmodeResourceLimitsCPU: Long,
         val containersTestmodeResourceLimitsSTORAGE: Long,
         val testmodeDappsContainers: Map<String, String>
-) {
+) : Config {
     companion object {
         const val DEFAULT_PORT: Int = 9870
         const val CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"

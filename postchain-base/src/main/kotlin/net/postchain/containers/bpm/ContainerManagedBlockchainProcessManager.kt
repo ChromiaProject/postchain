@@ -46,7 +46,7 @@ open class ContainerManagedBlockchainProcessManager(
      */
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
     private val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-    private val fs = FileSystem(appConfig, containerNodeConfig)
+    private val fs = FileSystem(containerNodeConfig)
     private val containerInitializer = DefaultContainerInitializer(appConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
