@@ -2,22 +2,14 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.core.NodeRid
+import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockQueries
 import net.postchain.ebft.message.*
 import net.postchain.network.CommunicationManager
 import net.postchain.network.MAX_PAYLOAD_SIZE
 
 abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<EbftMessage>) {
-    companion object: KLogging() {
-
-        /**
-         * We don't want to consume the maximum package size with content, so we reduce the maximum package size with
-         * a few megabytes to make certain we'll be ok.
-         * NOTE: The default max blocksize is 26M, and the default package size is 30M, so we'll make sure we save
-         * as much space for "extra things" like we would for a maximum block.
-         */
-        val MAX_PACKAGE_CONTENT_BYTES = MAX_PAYLOAD_SIZE - 4_000_000
-    }
+    companion object: KLogging()
 
     /**
      * We're going to get a lot of requests from peers in fastsync mode. We should cache our tip
@@ -64,41 +56,21 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
         logger.trace{ "GetBlockRange from peer $peerId , start at height $startAtHeight, myHeight is $myHeight" }
 
         val blocks = mutableListOf<CompleteBlock>()
-        var height = -1L
-        var goOn = true
-        var isFull = false
-        var totByteSize = 0
-        var blocksAdded = 0
-
-        while (goOn && !isFull && blocksAdded < 10) {
-            height = startAtHeight + blocksAdded
-            logger.debug { "GetBlockRange from peer $peerId , height $height, myHeight is $myHeight" }
-            val blockData = blockQueries.getBlockAtHeight(height).get()
-            if (blockData == null) {
-                logger.trace { "GetBlockRange no more blocks in DB."}
-                goOn = false
-            } else {
-                val completeBlock = CompleteBlock.buildFromBlockDataWithWitness(height, blockData)
-
-                // We are not allowed to send packages above the size limit
-                totByteSize += completeBlock.encoded.size
-
-                if (totByteSize < MAX_PACKAGE_CONTENT_BYTES) {
-                    logger.trace { "GetBlockRange block found in DB."}
-                    blocks.add(completeBlock)
-                    blocksAdded++
-                } else {
-                    isFull = true
-                    // Should be an unusual message, b/c blocks are usually small
-                    logger.debug { "GetBlockRange block found in DB but could not fit more than ${blocks.size} blocks into this BlockRange message." }
-                }
-            }
-        }
-
-        val packet = BlockRange(startAtHeight, isFull, blocks.toList())
+        val allBlocksFit = BlockPacker.packBlockRange(
+            peerId,
+            startAtHeight,
+            myHeight,
+            ::simpleGetBlockAtHeight,
+            CompleteBlock::buildFromBlockDataWithWitness,
+            blocks)
+        val packet = BlockRange(startAtHeight, !allBlocksFit, blocks.toList())
         communicationManager.sendPacket(packet, peerId)
     }
 
+    // Just a wrapper
+    private fun simpleGetBlockAtHeight(height: Long): BlockDataWithWitness? {
+        return blockQueries.getBlockAtHeight(height).get()
+    }
 
     fun sendBlockHeaderAndBlock(peerID: NodeRid, requestedHeight: Long, myHeight: Long) {
         logger.trace{ "GetBlockHeaderAndBlock from peer $peerID for height $requestedHeight, myHeight is $myHeight" }
