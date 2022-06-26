@@ -2,6 +2,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.NodeRid
@@ -13,7 +14,6 @@ import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.*
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.MAX_PEER_WAIT_TIME_MS
 
 /**
  * Used by replicas only!
@@ -36,13 +36,7 @@ class SlowSynchronizer(
 
     private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
 
-    // Slow Sync special stuff
-    private var waitForPeerId: NodeRid? = null // Are we waiting for a block range?
-    private var waitForHeight: Long? = null // The height we are waiting for
-    private var waitTime: Long? = null // When did we last ask for a BlockRange
-    private var lastUncommittedBlockHeight = 0L
-    @Volatile
-    private var lastCommittedBlockHeight = 0L // Only update this after the actual commit
+    private var stateMachine = SlowSyncStateMachine(blockchainConfiguration.chainID.toInt())
 
     companion object : KLogging()
 
@@ -59,13 +53,15 @@ class SlowSynchronizer(
             var sleepData = SlowSyncSleepData()
 
             while (isProcessRunning()) {
-                if (lastUncommittedBlockHeight == lastCommittedBlockHeight) {
-                    processMessages(sleepData)
-                    maybeSendGetBlockRange()
+                if (stateMachine.state == SlowSyncStates.WAIT_FOR_COMMIT) {
+                    // We shouldn't need to handle failed commits here, since we have the callback
+                    logger.warn("Why didn't we manage to commit all blocks after the sleep? " +
+                            "Expected height: ${stateMachine.lastUncommittedBlockHeight} but " +
+                            "actual height: ${stateMachine.lastCommittedBlockHeight}")
                 } else {
-                    logger.warn("Why didn't we manage to commit all blocks after the sleep? Expected " +
-                            "height: $lastUncommittedBlockHeight but actual height: $lastCommittedBlockHeight")
-                    // We have to assume
+                    processMessages(sleepData)
+                    val now = System.currentTimeMillis()
+                    stateMachine.maybeGetBlockRange(now, ::sendRequest) // It's up to the state machine if we should send a new request
                 }
                 Thread.sleep(sleepData.currentSleepMs)
             }
@@ -81,25 +77,8 @@ class SlowSynchronizer(
         }
     }
 
-    /**
-     * If we are not waiting for a BlockRange we should ask someone for it.
-     */
-    private fun maybeSendGetBlockRange() {
-        val now = System.currentTimeMillis()
-        if (waitForHeight == null) {
-            val startingAtHeight =  lastCommittedBlockHeight + 1
-            sendRequest(startingAtHeight, null) // We don't mind asking the old peer
-        } else if (waitTime != null &&
-            now > (waitTime!! + MAX_PEER_WAIT_TIME_MS)) {
-            // We waited too long, let's ask someone else
-            sendRequest(waitForHeight!!, waitForPeerId)
-        } else {
-            // Still waiting for last request, go back to sleep
-        }
-    }
-
-    private fun sendRequest(startAtHeight: Long, lastPeer: NodeRid? = null) {
-        val now = System.currentTimeMillis()
+    private fun sendRequest(now: Long, slowSyncStateMachine: SlowSyncStateMachine, lastPeer: NodeRid? = null) {
+        val startAtHeight = slowSyncStateMachine.getStartHeight()
         val excludedPeers = peerStatuses.exclNonSyncable(startAtHeight, now)
         val peers = configuredPeers.minus(excludedPeers)
         if (peers.isEmpty()) return
@@ -113,9 +92,7 @@ class SlowSynchronizer(
         val pickedPeerId = communicationManager.sendToRandomPeer(GetBlockRange(startAtHeight), usePeers)
 
         if (pickedPeerId != null) {
-            this.waitTime = now
-            this.waitForHeight = startAtHeight
-            this.waitForPeerId = pickedPeerId
+            slowSyncStateMachine.updateToWaitForReply(pickedPeerId, startAtHeight, now)
         } else {
             logger.warn("No nodes to request blocks from. Cannot proceed. Current height: ${startAtHeight - 1}")
         }
@@ -154,11 +131,11 @@ class SlowSynchronizer(
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {
-                        val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight).toInt()
+                        val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
                         sleepData.updateData(processedBlocks)
                     }
                     is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
-                    else -> logger.debug { "Unhandled type ${message} from peer $peerId" }
+                    else -> logger.debug { "Unhandled type $message from peer $peerId" }
                 }
             } catch (e: Exception) {
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
@@ -172,22 +149,24 @@ class SlowSynchronizer(
      *
      * @return number of processed blocks
      */
-    private fun handleBlockRange(peerId: NodeRid, blocks: List<CompleteBlock>, startingAtHeight: Long): Long {
+    private fun handleBlockRange(peerId: NodeRid, blocks: List<CompleteBlock>, startingAtHeight: Long): Int {
 
-        if (waitForHeight == null) {
-            peerStatuses.maybeBlacklist(peerId, "Slow Sync: We are not waiting for a block range, why does $peerId send us this? (startingAtHeight = $startingAtHeight )? ")
+        if (stateMachine.state != SlowSyncStates.WAIT_FOR_REPLY) {
+            peerStatuses.maybeBlacklist(peerId, "Slow Sync: We are not waiting for a block range. " +
+                    " Why does $peerId send us this? $stateMachine ")
             return 0
         }
 
-        if (waitForHeight != startingAtHeight) {
-            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Peer: ${waitForPeerId} is sending us a block range (startingAtHeight = $startingAtHeight) while we expected start at height: $waitForHeight")
+        if (stateMachine.isHeightWeWaitingFor(startingAtHeight)) {
+            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Peer: ${stateMachine.waitForNodeId} is sending us a block range " +
+                    "(startingAtHeight = $startingAtHeight) while we expected start at height: ${stateMachine.waitForHeight}.")
             return 0
         }
 
-        if (peerId != waitForPeerId) {
+        if (stateMachine.isPeerWeAreWaitingFor(peerId)) {
             // Perhaps this is due to our initial request timed out, we are indeed waiting for this block range, so let's use it
             logger.debug("Slow Synch: We didn't expect $peerId to send us a block range (startingAtHeight = $startingAtHeight) " +
-                    "(We wanted $waitForPeerId to do it).")
+                    "(We wanted ${stateMachine.waitForNodeId} to do it).")
         }
 
         logger.info("Got ${blocks.size} from peer $peerId (starting at height $startingAtHeight).")
@@ -195,11 +174,17 @@ class SlowSynchronizer(
         for (block in blocks) {
             val blockData = block.data
             val headerWitnessPair = handleBlockHeader(peerId, blockData.header, block.witness, expectedHeight)
-                ?: return expectedHeight - startingAtHeight // Header failed for some reason. Just give up
+                ?: return (expectedHeight - startingAtHeight).toInt() // Header failed for some reason. Just give up
             handleUnfinishedBlock(peerId, headerWitnessPair.first, headerWitnessPair.second, expectedHeight, blockData.transactions)
             expectedHeight++ // We expect blocks to be in the correct order in the list
         }
-        return expectedHeight - startingAtHeight // Processed blocks
+        val processedBlocks = (expectedHeight - startingAtHeight).toInt()
+        if (processedBlocks != blocks.size) {
+            throw ProgrammerMistake("processedBlocks != blocks.size")
+        }
+
+        stateMachine.updateToWaitForCommit(processedBlocks, System.currentTimeMillis())
+        return processedBlocks
     }
 
     /**
@@ -279,13 +264,13 @@ class SlowSynchronizer(
         if (addBlockCompletionPromise?.isDone() == true) {
             addBlockCompletionPromise = null // If it's done we don't need the promise
         }
-        lastUncommittedBlockHeight = height
 
         // (this is usually slow and is therefore handled via a promise).
         addBlockCompletionPromise = blockDatabase
             .addBlock(block, addBlockCompletionPromise, bTrace)
             .success {
-                lastCommittedBlockHeight = height
+                logger.debug { "commitBlock() - Block height: $height committed successfully." }
+                stateMachine.updateAfterSuccessfulCommit(height, System.currentTimeMillis())
             }
             .fail {
                 // peer and try another peer
@@ -294,6 +279,7 @@ class SlowSynchronizer(
                 } else {
                     logger.warn(it) { "Exception committing block height $height from peer $peerId:" }
                 }
+                stateMachine.updateAfterFailedCommit(height, System.currentTimeMillis())
             }
     }
 

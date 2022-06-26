@@ -64,14 +64,18 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
         logger.trace{ "GetBlockRange from peer $peerId , start at height $startAtHeight, myHeight is $myHeight" }
 
         val blocks = mutableListOf<CompleteBlock>()
-        var height = startAtHeight
+        var height = -1L
         var goOn = true
         var isFull = false
         var totByteSize = 0
-        var counter = 0
-        while (goOn && !isFull && counter < 10) {
+        var blocksAdded = 0
+
+        while (goOn && !isFull && blocksAdded < 10) {
+            height = startAtHeight + blocksAdded
+            logger.debug { "GetBlockRange from peer $peerId , height $height, myHeight is $myHeight" }
             val blockData = blockQueries.getBlockAtHeight(height).get()
             if (blockData == null) {
+                logger.trace { "GetBlockRange no more blocks in DB."}
                 goOn = false
             } else {
                 val completeBlock = CompleteBlock.buildFromBlockDataWithWitness(height, blockData)
@@ -80,12 +84,13 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
                 totByteSize += completeBlock.encoded.size
 
                 if (totByteSize < MAX_PACKAGE_CONTENT_BYTES) {
+                    logger.trace { "GetBlockRange block found in DB."}
                     blocks.add(completeBlock)
-                    counter++
+                    blocksAdded++
                 } else {
                     isFull = true
                     // Should be an unusual message, b/c blocks are usually small
-                    logger.debug { "Could only fit ${blocks.size} blocks into this BlockRange message." }
+                    logger.debug { "GetBlockRange block found in DB but could not fit more than ${blocks.size} blocks into this BlockRange message." }
                 }
             }
         }
