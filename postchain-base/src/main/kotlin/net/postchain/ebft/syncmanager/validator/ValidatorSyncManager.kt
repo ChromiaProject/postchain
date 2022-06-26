@@ -3,6 +3,7 @@
 package net.postchain.ebft.syncmanager.validator
 
 import mu.KLogging
+import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
@@ -16,6 +17,7 @@ import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitnes
 import net.postchain.ebft.syncmanager.StatusLogInterval
 import net.postchain.ebft.syncmanager.common.*
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.gtv.mapper.toObject
 import nl.komponents.kovenant.task
 import java.util.*
 
@@ -31,7 +33,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            startInFastSync: Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
-    private val revoltTracker = RevoltTracker(10000, statusManager)
+    private val revoltTracker = RevoltTracker(statusManager, getRevoltConfiguration())
     private val statusSender = StatusSender(1000, statusManager, workerContext.communicationManager)
     private val defaultTimeout = 1000
     private var currentTimeout: Int
@@ -439,5 +441,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
     fun isInFastSync(): Boolean {
         return useFastSyncAlgorithm
+    }
+
+    private fun getRevoltConfiguration(): RevoltConfigurationData {
+        return if (blockchainConfiguration is BaseBlockchainConfiguration) {
+            blockchainConfiguration.configData.revoltConfigData?.toObject()
+                ?: RevoltConfigurationData.default
+        } else {
+            RevoltConfigurationData.default
+        }
     }
 }
