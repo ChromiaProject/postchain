@@ -147,9 +147,12 @@ class SlowSynchronizer(
             }
             try {
                 when (message) {
+                    // We will answer any get call
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight)
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight) // A replica might ask us
+
+                    // But we only expect ranges and status to be sent to us
                     is BlockRange -> {
                         val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight).toInt()
                         sleepData.updateData(processedBlocks)

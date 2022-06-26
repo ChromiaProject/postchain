@@ -51,7 +51,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 BlockchainPreSetup.simpleBuild(chainId, (0 until signerNodeCount).map { NodeSeqNumber(it) })
         val blockchainSetup = BlockchainSetup.buildFromGtv(chainId, blockchainPreSetup.toGtvConfig(mapOf()))
         val strategyClassName = blockchainSetup.bcGtv[KEY_BLOCKSTRATEGY]?.asDict()?.get("name")?.asString()
-        println("++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: $strategyClassName")
+        logger.debug {"++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: $strategyClassName"}
 
         // 2. Get NodeSetup
         var i = 0
@@ -167,9 +167,9 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         val appConfig = nodeSetup.configurationProvider!!.getConfiguration().appConfig
 
         if (wipeDb) {
-            System.out.println("++ Wiping DB for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}")
+            logger.debug {"++ Wiping DB for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}"}
         } else {
-            System.out.println("++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}")
+            logger.debug {"++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}"}
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDb).close()
@@ -181,7 +181,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 val dbAccess = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
                 peerInfos.forEachIndexed { index, peerInfo ->
                     val isPeerSigner = index < signerCount
-                    addPeerInfo(dbAccess, ctx, peerInfo, brid, isPeerSigner)
+                    addPeerInfo(dbAccess, ctx, peerInfo, brid, isPeerSigner) // Overridden is subclass, using the
                 }
             }
         }
@@ -240,37 +240,37 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         val nodeSetups = runNodes(signerCount, replicaCount) // This gives us SystemSetup
 
         val blockchainRid = nodes[0].getBlockchainRid(0)!!
-        logger.debug { "++ All nodes started" }
+        logger.debug { "++ 1.a) All nodes started" }
         buildBlock(0, blocksToSync - 1L)
-        logger.debug { "++ All nodes have block ${blocksToSync - 1}" }
+        logger.debug { "++ 1.b) All nodes have block ${blocksToSync - 1}" }
 
         val expectedBlockRid = nodes[0].blockQueries(0).getBlockRid(blocksToSync - 1L).get()
         val peerInfos = nodeSetups[0].configurationProvider!!.getConfiguration().peerInfoMap
         stopIndex.forEach {
-            logger.debug { "++ Shutting down ${n(it)}" }
+            logger.debug { "++ 2.a) Shutting down ${n(it)}" }
             nodes[it].shutdown()
-            logger.debug { "++ Shutting down ${n(it)} done" }
+            logger.debug { "++ 2.b) Shutting down ${n(it)} done" }
         }
         syncIndex.forEach {
-            logger.debug { "++ Restarting clean ${n(it)}" }
+            logger.debug { "++ 3.a) Restarting clean ${n(it)}" }
             restartNodeClean(it, blockchainRid)
-            logger.debug { "++ Restarting clean ${n(it)} done" }
+            logger.debug { "++ 3.b) Restarting clean ${n(it)} done" }
         }
 
         syncIndex.forEach {
-            logger.debug { "++ Awaiting height ${blocksToSync - 1L} on ${n(it)}" }
+            logger.debug { "++ 4.a) Awaiting height ${blocksToSync - 1L} on ${n(it)}" }
             nodes[it].awaitHeight(0, blocksToSync - 1L)
             val actualBlockRid = nodes[it].blockQueries(0).getBlockRid(blocksToSync - 1L).get()
             assertArrayEquals(expectedBlockRid, actualBlockRid)
-            logger.debug { "++ Awaiting height ${blocksToSync - 1L} on ${n(it)} done" }
+            logger.debug { "++ 4.b) Awaiting height ${blocksToSync - 1L} on ${n(it)} done" }
         }
 
         stopIndex.forEach {
-            logger.debug { "++ Start ${n(it)} again" }
+            logger.debug { "++ 5. Start ${n(it)} again" }
             startOldNode(it, peerInfos, blockchainRid)
         }
         awaitHeight(0, blocksToSync - 1L)
         buildBlock(0, blocksToSync.toLong())
-        logger.debug { "++ All nodes have block $blocksToSync" }
+        logger.debug { "++ 6. All nodes have block $blocksToSync" }
     }
 }

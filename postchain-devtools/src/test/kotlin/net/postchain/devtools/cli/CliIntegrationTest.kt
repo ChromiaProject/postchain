@@ -11,6 +11,7 @@ import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.common.BlockchainRid
+import net.postchain.cli.CliError.Companion.CliException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
@@ -67,7 +68,7 @@ class CliIntegrationTest {
             CliExecution.addConfiguration(nodeConfigPath, secondBlockChainConfig, chainId, heightSecondConfig, AlreadyExistMode.FORCE,
                     false)
             fail()
-        } catch (e: net.postchain.cli.CliError.Companion.CliException) {
+        } catch (e: CliException) {
             // assert config added
             val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
             assertNull(configData)

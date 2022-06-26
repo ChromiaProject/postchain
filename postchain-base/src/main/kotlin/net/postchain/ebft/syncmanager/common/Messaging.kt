@@ -5,9 +5,19 @@ import net.postchain.core.NodeRid
 import net.postchain.core.block.BlockQueries
 import net.postchain.ebft.message.*
 import net.postchain.network.CommunicationManager
+import net.postchain.network.MAX_PAYLOAD_SIZE
 
 abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<EbftMessage>) {
-    companion object: KLogging()
+    companion object: KLogging() {
+
+        /**
+         * We don't want to consume the maximum package size with content, so we reduce the maximum package size with
+         * a few megabytes to make certain we'll be ok.
+         * NOTE: The default max blocksize is 26M, and the default package size is 30M, so we'll make sure we save
+         * as much space for "extra things" like we would for a maximum block.
+         */
+        val MAX_PACKAGE_CONTENT_BYTES = MAX_PAYLOAD_SIZE - 4_000_000
+    }
 
     /**
      * We're going to get a lot of requests from peers in fastsync mode. We should cache our tip
@@ -42,7 +52,10 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
     /**
      * Send message to node including the block at [startAtHeight] and onwards (max 10). This is a response to the [GetBlockRange] request.
      *
-     * Even if we don't find any block we still send a package back
+     * Rules:
+     * - Even if we don't find any block we still send a package back
+     * - If we have more blocks but reach the size limit, we don't add more blocks but set the "isFull" flag.
+     * - We never send more than 10 blocks
      *
      * @param peerId NodeRid of receiving node
      * @param startAtHeight requested block height to start from
@@ -53,17 +66,31 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
         val blocks = mutableListOf<CompleteBlock>()
         var height = startAtHeight
         var goOn = true
-        while (goOn) {
+        var isFull = false
+        var totByteSize = 0
+        var counter = 0
+        while (goOn && !isFull && counter < 10) {
             val blockData = blockQueries.getBlockAtHeight(height).get()
             if (blockData == null) {
                 goOn = false
             } else {
                 val completeBlock = CompleteBlock.buildFromBlockDataWithWitness(height, blockData)
-                blocks.add(completeBlock)
+
+                // We are not allowed to send packages above the size limit
+                totByteSize += completeBlock.encoded.size
+
+                if (totByteSize < MAX_PACKAGE_CONTENT_BYTES) {
+                    blocks.add(completeBlock)
+                    counter++
+                } else {
+                    isFull = true
+                    // Should be an unusual message, b/c blocks are usually small
+                    logger.debug { "Could only fit ${blocks.size} blocks into this BlockRange message." }
+                }
             }
         }
 
-        val packet = BlockRange(startAtHeight, blocks.toList())
+        val packet = BlockRange(startAtHeight, isFull, blocks.toList())
         communicationManager.sendPacket(packet, peerId)
     }
 

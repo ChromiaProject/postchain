@@ -164,9 +164,10 @@ class GetBlockRange(val startAtHeight: Long) : EbftMessage(MessageTopic.GETBLOCK
  * Holds a number of blocks from "height" and onwards
  *
  * @property startAtHeight is the height of the first block in the range
+ * @property isFull "true" means that we have more blocks but couldn't fit them in the package
  * @property blocks is a list of [CompleteBlock]
  */
-class BlockRange(val startAtHeight: Long, val blocks: List<CompleteBlock>) : EbftMessage(MessageTopic.BLOCKRANGE) {
+class BlockRange(val startAtHeight: Long, val isFull: Boolean, val blocks: List<CompleteBlock>) : EbftMessage(MessageTopic.BLOCKRANGE) {
 
     companion object {
 
@@ -175,16 +176,16 @@ class BlockRange(val startAtHeight: Long, val blocks: List<CompleteBlock>) : Ebf
          */
         fun buildFromGtv(data: GtvArray): BlockRange {
             val startAtHeight = data[1].asInteger()
+            val isFull = data[2].asBoolean()
             val blocks = mutableListOf<CompleteBlock>()
 
-            var i = 2 // Already taken 0 and 1.
-            while ( i < data.getSize()) {
-                var blockGtv = data[i] as GtvArray
+            val gtvBlockArr = data[3]
+            for (gtvThing in gtvBlockArr.asArray()) {
+                var blockGtv = gtvThing as GtvArray
                 blocks.add(CompleteBlock.buildFromGtv(blockGtv, 0))
-                i++
             }
 
-            return BlockRange(startAtHeight, blocks)
+            return BlockRange(startAtHeight, isFull, blocks)
         }
     }
 
@@ -194,7 +195,7 @@ class BlockRange(val startAtHeight: Long, val blocks: List<CompleteBlock>) : Ebf
             val gtvBlock = gtv(completeBlockToGtv(block.data, block.height, block.witness))
             gtvBlockList.add(gtvBlock)
         }
-        return gtv(topic.toGtv(), gtv(startAtHeight), gtv(gtvBlockList))
+        return gtv(topic.toGtv(), gtv(startAtHeight), gtv(isFull), gtv(gtvBlockList))
     }
 
 }
