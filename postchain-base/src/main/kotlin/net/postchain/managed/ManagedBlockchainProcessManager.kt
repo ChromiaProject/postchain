@@ -13,8 +13,8 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockQueries
-import net.postchain.ebft.heartbeat.*
 import net.postchain.core.block.BlockTrace
+import net.postchain.ebft.heartbeat.*
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -130,9 +130,9 @@ open class ManagedBlockchainProcessManager(
         }
     }
 
-    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
+    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
         heartbeatManager.removeListener(chainId)
-        super.stopAndUnregisterBlockchainProcess(chainId, restart)
+        super.stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
     }
 
     /**
