@@ -1,6 +1,9 @@
 package net.postchain.server
 
-import io.grpc.*
+import io.grpc.Grpc
+import io.grpc.InsecureServerCredentials
+import io.grpc.Server
+import io.grpc.TlsServerCredentials
 import net.postchain.PostchainNode
 import net.postchain.config.app.AppConfig
 import net.postchain.server.config.PostchainServerConfig
@@ -10,7 +13,7 @@ import net.postchain.server.service.PostchainService
 
 class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false, private val config: PostchainServerConfig) {
 
-    private val postchainNode = PostchainNode(appConfig, wipeDb, debug)
+    val postchainNode = PostchainNode(appConfig, wipeDb, debug)
     private val credentials = config.sslConfig?.let {
         TlsServerCredentials.create(it.certChainFile, it.privateKeyFile)
     } ?: InsecureServerCredentials.create()
