@@ -27,11 +27,11 @@ data class ContainerNodeConfig(
      * A dir in host filesystem where container volume will be created.
      * [net.postchain.containers.bpm.ContainerConfigFactory] uses it to create a docker volume for subnode container.
      *
-     * If master node is launched natively or by means of Testcontainers Lib or CI/CD,
-     * [hostMountDir] has to be equal to [masterMountDir]
+     * If master node is launched natively or by means of fabric8 maven plugin or Testcontainers Lib or CI/CD,
+     * [masterMountDir] has to be equal to [hostMountDir] ([masterMountDir] can be omitted in config)
      *
      * If master node is launched inside a container, i.e. in case of DinD,
-     * [hostMountDir] might not be equal to [masterMountDir]
+     * [masterMountDir] might not be equal to [hostMountDir] (see subnode Dockerfile for details)
      */
     val hostMountDir: String,
 
@@ -40,11 +40,11 @@ data class ContainerNodeConfig(
      * [net.postchain.containers.bpm.ContainerInitializer] uses it to create container node config file,
      * blockchains dir, etc.
      *
-     * If master node is launched natively or by means of Testcontainers Lib or CI/CD,
-     * [hostMountDir] has to be equal to [masterMountDir]
+     * If master node is launched natively or by means of fabric8 maven plugin or Testcontainers Lib or CI/CD,
+     * [masterMountDir] has to be equal to [hostMountDir] ([masterMountDir] can be omitted in config)
      *
      * If master node is launched inside a container, i.e. in case of DinD,
-     * [hostMountDir] might not be equal to [masterMountDir]
+     * [masterMountDir] might not be equal to [hostMountDir] (see subnode Dockerfile for details)
      */
     val masterMountDir: String,
     val containerZfsPool: String,
