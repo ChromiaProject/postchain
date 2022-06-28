@@ -243,10 +243,17 @@ open class BaseBlockBuilder(
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
         if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End) && !haveSpecialEndTransaction)
             throw BadDataMistake(BadDataType.BAD_BLOCK,"End special transaction is missing")
-        super.finalizeAndValidate(blockHeader)
-
-        // TODO: validate returned values!
-        finalizeExtensions()
+        val extraData = finalizeExtensions()
+        val validationResult = validateBlockHeader(blockHeader, extraData)
+        when (validationResult.result) {
+            OK -> {
+                store.finalizeBlock(bctx, blockHeader)
+                _blockData = BlockData(blockHeader, rawTransactions)
+                finalized = true
+            }
+            PREV_BLOCK_MISMATCH -> throw BadDataMistake(BadDataType.PREV_BLOCK_MISMATCH, validationResult.message)
+            else -> throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
+        }
     }
 
     private fun checkSpecialTransaction(tx: Transaction) {
@@ -285,6 +292,27 @@ open class BaseBlockBuilder(
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
         super.appendTransaction(tx)
         blockSize += tx.getRawData().size
+    }
+
+    /**
+     * @return the block RID at a certain height
+     */
+    private fun getBlockRidAtHeight(height: Long) = store.getBlockRID(ectx, height)
+
+    /**
+     * (Note: don't call this. We only keep this as a public function for legacy tests to work)
+     */
+    internal fun validateBlockHeader(blockHeader: BlockHeader, extraData: Map<String, Gtv?> = mapOf()): ValidationResult {
+        val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
+        return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
+            blockHeader,
+            initialBlockData,
+            ::computeMerkleRootHash,
+            ::getBlockRidAtHeight,
+            bctx.timestamp,
+            nrOfDependencies,
+            extraData
+        )
     }
 
 }

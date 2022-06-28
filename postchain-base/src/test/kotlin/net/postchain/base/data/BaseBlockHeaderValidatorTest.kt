@@ -34,7 +34,7 @@ class BaseBlockHeaderValidatorTest {
         val myBlockData = InitialBlockData(myBlockchainRid,myBlockId, myChainIid, myPrevBlockRid, myHeight.toLong(), myTimestamp, arrayOf())
         val header = BaseBlockHeader.make(cryptoSystem, myBlockData, myMerkleRootHash, myTimestamp, mapOf())
 
-        val valid = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(header, myBlockData, ::expectedMerkleHash, ::getBlockRid, myTimestamp - 1, 0)
+        val valid = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(header, myBlockData, ::expectedMerkleHash, ::getBlockRid, myTimestamp - 1, 0, mapOf())
         assert(valid.result).isEqualTo(ValidationResult.Result.OK)
     }
 

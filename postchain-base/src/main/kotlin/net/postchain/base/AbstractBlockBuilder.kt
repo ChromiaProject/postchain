@@ -3,7 +3,6 @@
 package net.postchain.base
 
 import mu.KLogging
-import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
@@ -12,8 +11,6 @@ import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.core.ValidationResult.Result.OK
-import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
 import net.postchain.core.TransactionFactory
 import net.postchain.core.block.*
 import java.util.concurrent.CompletableFuture
@@ -156,46 +153,6 @@ abstract class AbstractBlockBuilder(
     }
 
     /**
-     * Apart from finalizing the block, validate the header
-     *
-     * @param blockHeader Block header to finalize and validate
-     * @throws UserMistake Happens if validation of the block header fails
-     */
-    override fun finalizeAndValidate(blockHeader: BlockHeader) {
-        val validationResult = validateBlockHeader(blockHeader)
-        when (validationResult.result) {
-            OK -> {
-                store.finalizeBlock(bctx, blockHeader)
-                _blockData = BlockData(blockHeader, rawTransactions)
-                finalized = true
-            }
-            PREV_BLOCK_MISMATCH -> throw BadDataMistake(BadDataType.PREV_BLOCK_MISMATCH, validationResult.message)
-            else -> throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
-        }
-    }
-
-    /**
-     * (Note: don't call this. We only keep this as a public function for legacy tests to work)
-     */
-    internal fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
-        val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
-        return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
-            blockHeader,
-            initialBlockData,
-            ::computeMerkleRootHash,
-            ::getBlockRidAtHeight,
-            bctx.timestamp,
-            nrOfDependencies
-        )
-    }
-
-
-    /**
-     * @return the block RID at a certain height
-     */
-    private fun getBlockRidAtHeight(height: Long) = store.getBlockRID(ectx, height)
-
-    /**
      * Return block data if block is finalized.
      *
      * @throws ProgrammerMistake When block is not finalized
@@ -232,12 +189,12 @@ abstract class AbstractBlockBuilder(
     }
 
     // Only used for logging
-    override fun setBTrace(newBlockTrace: BlockTrace) {
+    override fun setBTrace(bTrace: BlockTrace) {
         if (blockTrace == null) {
-            blockTrace = newBlockTrace
+            blockTrace = bTrace
         } else {
             // Update existing object with missing info
-            blockTrace!!.addDataIfMissing(newBlockTrace)
+            blockTrace!!.addDataIfMissing(bTrace)
         }
     }
 

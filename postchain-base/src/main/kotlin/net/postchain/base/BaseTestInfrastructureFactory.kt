@@ -61,8 +61,7 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
     override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {
         return DefaultPeerConnectionManager(
                 EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory(),
-                Secp256K1CryptoSystem()
+                EbftPacketDecoderFactory()
         )
     }
 

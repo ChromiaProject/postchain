@@ -76,11 +76,11 @@ data class BlockHeaderData(
 
     }
 
-    fun getExtra(): Map<String, String> {
-        val retMap = HashMap<String, String>()
+    fun getExtra(): Map<String, Gtv?> {
+        val retMap = HashMap<String, Gtv?>()
         for (key in this.gtvExtra.dict.keys) {
-            val gtvValue = gtvExtra[key] as GtvString
-            retMap[key] = gtvValue.string
+            val gtvValue = gtvExtra[key]
+            retMap[key] = gtvValue
         }
         return retMap
     }

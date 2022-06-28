@@ -52,9 +52,8 @@ import net.postchain.debug.BlockchainProcessName
  */
 open class DefaultPeerConnectionManager<PacketType>(
         private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
-        private val packetDecoderFactory: XPacketDecoderFactory<PacketType>,
-        cryptoSystem: CryptoSystem
-) : NetworkTopology, // Only "Peer" neworks need this
+        private val packetDecoderFactory: XPacketDecoderFactory<PacketType>
+) : NetworkTopology, // Only "Peer" networks need this
         PeerConnectionManager,  // Methods specific to the "X" connection part
         NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 
@@ -506,14 +505,6 @@ open class DefaultPeerConnectionManager<PacketType>(
                                 "${logger(descriptor)}: getChainIdOnDisconnected() - How can we never have seen " +
                                         "chain: from peer: ${NameHelper.peerName(descriptor.nodeId)} , direction: " +
                                         "${descriptor.dir}, blockchainRID = ${descriptor.blockchainRid}) . "
-                        )
-                        null
-                    }
-                    null -> {
-                        logger.warn(
-                                "${logger(descriptor)}: getChainIdOnDisconnected() - Chain ID not found by " +
-                                        " blockchainRID = ${descriptor.blockchainRid}" +
-                                        " (and we don't know the direction)"
                         )
                         null
                     }

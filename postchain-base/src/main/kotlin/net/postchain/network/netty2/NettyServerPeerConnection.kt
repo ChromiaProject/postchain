@@ -70,7 +70,7 @@ class NettyServerPeerConnection<PacketType>(
                     peerPacketHandler?.handle(message, peerConnectionDescriptor!!.nodeId!!)
                 }
             }
-            (msg as ByteBuf).release()
+            msg.release()
         }
     }
 
