@@ -36,7 +36,7 @@ object ContainerConfigFactory {
         volumes.add(targetVol)
 
         // pgdata volume
-        if (containerNodeConfig.containerBindPgdataVolume) {
+        if (containerNodeConfig.bindPgdataVolume) {
             val pgdataVol = HostConfig.Bind
                     .from(fs.hostPgdataOf(container.containerName).toString())
                     .to(FileSystem.CONTAINER_PGDATA_PATH)
@@ -80,7 +80,7 @@ object ContainerConfigFactory {
                 .hostConfig(hostConfig)
                 .exposedPorts(dockerPort)
                 .apply {
-                    if (restApiConfig.debug) env("DEBUG=true")
+                    if (restApiConfig.debug) env("POSTCHAIN_DEBUG=true")
                 }
                 .build()
     }

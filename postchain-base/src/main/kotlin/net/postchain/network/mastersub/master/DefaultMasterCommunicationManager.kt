@@ -47,7 +47,7 @@ open class DefaultMasterCommunicationManager(
         masterConnectionManager.initSubChainConnection(processName, subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = scheduleTask(containerNodeConfig.containerSendConnectedPeersPeriod) {
+        sendConnectedPeersTask = scheduleTask(containerNodeConfig.sendMasterConnectedPeersPeriod) {
             val peers = connectionManager.getConnectedNodes(chainId)
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.byteArray })
             masterConnectionManager.sendPacketToSub(msg)

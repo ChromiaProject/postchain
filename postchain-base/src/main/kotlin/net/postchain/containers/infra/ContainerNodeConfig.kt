@@ -3,23 +3,24 @@ package net.postchain.containers.infra
 import net.postchain.config.app.AppConfig
 import net.postchain.config.app.Config
 import net.postchain.containers.bpm.FileSystem
+import org.apache.commons.configuration2.Configuration
 
 /**
  * Container chains configuration
  *
  * @param masterHost Used by subnode to connect to master for inter-node communication
- * @param slaveHost Used by master for restAPI communication with subnode
- * @param runningContainersCheckPeriod In number of blocks of chain0, set 0 to disable a check
+ * @param subnodeHost Used by master for restAPI communication with subnode
+ * @param healthcheckRunningContainersCheckPeriod In number of blocks of chain0, set 0 to disable a check
  */
 data class ContainerNodeConfig(
     val containerImage: String,
-    val subnodeRestApiPort: Int,
     val masterHost: String,
     val masterPort: Int,
-    val slaveHost: String,
-    val containerSendConnectedPeersPeriod: Long,
-    val runningContainersAtStartRegexp: String,
-    val runningContainersCheckPeriod: Int,
+    val subnodeHost: String,
+    val subnodeRestApiPort: Int,
+    val sendMasterConnectedPeersPeriod: Long,
+    val healthcheckRunningContainersAtStartRegexp: String,
+    val healthcheckRunningContainersCheckPeriod: Int,
     // Container FileSystem
     val containerFilesystem: String,
 
@@ -47,68 +48,89 @@ data class ContainerNodeConfig(
      * [masterMountDir] might not be equal to [hostMountDir] (see subnode Dockerfile for details)
      */
     val masterMountDir: String,
-    val containerZfsPool: String,
-    val containerZfsPoolInitScript: String,
-    val containerBindPgdataVolume: Boolean,
-    val containersTestmode: Boolean,
-    val containersTestmodeResourceLimitsRAM: Long,
-    val containersTestmodeResourceLimitsCPU: Long,
-    val containersTestmodeResourceLimitsSTORAGE: Long,
+    val zfsPoolName: String,
+    val zfsPoolInitScript: String,
+    val bindPgdataVolume: Boolean,
+    val testmode: Boolean,
+    val testmodeResourceLimitsRAM: Long,
+    val testmodeResourceLimitsCPU: Long,
+    val testmodeResourceLimitsSTORAGE: Long,
     val testmodeDappsContainers: Map<String, String>
 ) : Config {
     companion object {
         const val DEFAULT_PORT: Int = 9870
-        const val CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
+        const val DEFAULT_CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
+
+        const val KEY_PREFIX = "container"
+        const val KEY_DOCKER_IMAGE = "docker-image"
+        const val KEY_SUBNODE_API_PORT = "api-port"
+        const val KEY_MASTER_HOST = "master-host"
+        const val KEY_MASTER_PORT = "master-port"
+        const val KEY_SUBNODE_HOST = "subnode-host"
+        const val KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD = "send-master-connected-peers-period"
+        const val KEY_HEALTHCHECK_RUNNING_CONTAINERS_AT_START_REGEXP = "healthcheck.running-containers-at-start-regexp"
+        const val KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD = "healthcheck.running-containers-check-period"
+        const val KEY_SUBNODE_DATABASE_URL = "subnode-database-url"
+        const val KEY_SUBNODE_FILESYSTEM = "filesystem"
+        const val KEY_HOST_MOUNT_DIR = "host-mount-dir"
+        const val KEY_MASTER_MOUNT_DIR = "master-mount-dir"
+        const val KEY_ZFS_POOL_NAME = "zfs.pool-name"
+        const val KEY_ZFS_POOL_INIT_SCRIPT = "zfs.pool-init-script"
+        const val KEY_BIND_PGDATA_VOLUME = "bind-pgdata-volume"
+        const val KEY_TESTMODE_RESOURCE_LIMITS_RAM = "testmode.resource-limits-ram"
+        const val KEY_TESTMODE_RESOURCE_LIMITS_CPU = "testmode.resource-limits-cpu"
+        const val KEY_TESTMODE_RESOURCE_LIMITS_STORAGE = "testmode.resource-limits-storage"
+
+        fun fullKey(subKey: String) = "$KEY_PREFIX.${subKey}"
 
         @JvmStatic
         fun fromAppConfig(config: AppConfig): ContainerNodeConfig {
-            return ContainerNodeConfig(
-                config.getString("container.dockerImage", "chromaway/postchain-subnode:latest"),
-                config.getInt("container.api.port", 7740),
-                config.getString("container.masterHost", "localhost"),
-                config.getInt("container.masterPort", 9860),
-                config.getString("container.slaveHost", "localhost"),
-                config.getLong("container.send-connected-peers-period", 60_000L),
-                config.getString("container.healthcheck.runningContainersAtStartRegexp", ""),
-                config.getInt("container.healthcheck.runningContainersCheckPeriod", 0),
-                config.getString("container.filesystem", FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
-                config.getString("container.host-mount-dir"),
-                config.getMasterMountDir(),
-                config.getString("container.zfs.pool-name", FileSystem.ZFS_POOL_NAME),
-                config.getString("container.zfs.pool-init-script", CONTAINER_ZFS_INIT_SCRIPT),
-                config.getBoolean("container.bind-pgdata-volume", true),
-                config.getTestmode(),
-                config.getLong("container.testmode.resource-limits-ram", -1),
-                config.getLong("container.testmode.resource-limits-cpu", -1),
-                config.getLong("container.testmode.resource-limits-storage", -1),
-                initTestmodeDappsContainers(config)
-            )
+            return with(config.subset("container")) {
+                ContainerNodeConfig(
+                    getString(KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
+                    getString(KEY_MASTER_HOST, "localhost"),
+                    getInt(KEY_MASTER_PORT, 9860),
+                    getString(KEY_SUBNODE_HOST, "localhost"),
+                    getInt(KEY_SUBNODE_API_PORT, 7740),
+                    getLong(KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
+                    getString(KEY_HEALTHCHECK_RUNNING_CONTAINERS_AT_START_REGEXP, ""),
+                    getInt(KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 0),
+                    getString(KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
+                    getString(KEY_HOST_MOUNT_DIR),
+                    getMasterMountDir(),
+                    getString(KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
+                    getString(KEY_ZFS_POOL_INIT_SCRIPT, DEFAULT_CONTAINER_ZFS_INIT_SCRIPT),
+                    getBoolean(KEY_BIND_PGDATA_VOLUME, true),
+                    getTestmode(),
+                    getLong(KEY_TESTMODE_RESOURCE_LIMITS_RAM, -1),
+                    getLong(KEY_TESTMODE_RESOURCE_LIMITS_CPU, -1),
+                    getLong(KEY_TESTMODE_RESOURCE_LIMITS_STORAGE, -1),
+                    initTestmodeDappsContainers()
+                )
+            }
         }
 
-        private fun AppConfig.getTestmode() = getBoolean("container.testmode", false)
+        private fun Configuration.getTestmode() = getBoolean("testmode", false)
 
-        private fun AppConfig.getMasterMountDir(): String {
-            val default = getString("container.host-mount-dir")
-            return getString("container.master-mount-dir", default) // See kdoc
+        private fun Configuration.getMasterMountDir(): String {
+            return getString(KEY_MASTER_MOUNT_DIR, getString(KEY_HOST_MOUNT_DIR)) // See kdoc
         }
 
         /*
             Example:
-                cont0=331A9436,B99F6E8B,BB73F0CA
-                cont1=323ECC01,A9599992,86E2043D
-                cont2=EB7387FD,94F29578
-                cont3=0B942264
+                container.cont0=331A9436,B99F6E8B,BB73F0CA
+                container.cont1=323ECC01,A9599992,86E2043D
+                container.cont2=EB7387FD,94F29578
+                container.cont3=0B942264
         */
-        private fun initTestmodeDappsContainers(config: AppConfig): Map<String, String> {
-            val res = mutableMapOf<String, String>()
-
-            if (config.getTestmode()) {
-                listOf("cont0", "cont1", "cont2", "cont3").forEach { cont ->
-                    config.getStringArray(cont).forEach { res[it] = cont }
-                }
+        private fun Configuration.initTestmodeDappsContainers(): Map<String, String> {
+            return if (getTestmode()) {
+                listOf("cont0", "cont1", "cont2", "cont3")
+                    .flatMap { cont -> getStringArray(cont).map { brid -> brid to cont } }
+                    .toMap()
+            } else {
+                mapOf()
             }
-
-            return res
         }
     }
 }

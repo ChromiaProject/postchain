@@ -18,12 +18,12 @@ class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
             root
         } else {
             try {
-                val script = "./${config.containerZfsPoolInitScript}"
+                val script = "./${config.zfsPoolInitScript}"
                 if (!File(script).exists()) {
                     logger.error("Can't find zfs init script: $script")
                     null
                 } else {
-                    val fs = "${config.containerZfsPool}/${containerName.name}"
+                    val fs = "${config.zfsPoolName}/${containerName.name}"
                     val quota = resourceLimits.storage.toString()
                     val cmd = arrayOf(script, fs, quota)
                     Runtime.getRuntime().exec(cmd).waitFor(10, TimeUnit.SECONDS)
@@ -47,6 +47,6 @@ class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
     }
 
     override fun hostRootOf(containerName: ContainerName): Path {
-        return Paths.get(File.separator, config.containerZfsPool, containerName.name)
+        return Paths.get(File.separator, config.zfsPoolName, containerName.name)
     }
 }
