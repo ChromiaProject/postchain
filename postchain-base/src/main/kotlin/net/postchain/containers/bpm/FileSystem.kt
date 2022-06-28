@@ -3,10 +3,7 @@ package net.postchain.containers.bpm
 import mu.KLogging
 import net.postchain.containers.bpm.FileSystem.Type.ZFS
 import net.postchain.containers.infra.ContainerNodeConfig
-import java.io.File
 import java.nio.file.Path
-import java.nio.file.Paths
-import java.util.concurrent.TimeUnit
 
 /**
  * File system structure:
@@ -43,7 +40,7 @@ import java.util.concurrent.TimeUnit
  *     └── node-config.properties              node config file
  *
  */
-class FileSystem(private val containerNodeConfig: ContainerNodeConfig) {
+interface FileSystem {
 
     // Filesystem type
     enum class Type {
@@ -51,91 +48,42 @@ class FileSystem(private val containerNodeConfig: ContainerNodeConfig) {
     }
 
     companion object : KLogging() {
+
         const val ZFS_POOL_NAME = "psvol"
         const val CONTAINER_TARGET_PATH = "/opt/chromaway/postchain/target"
         const val CONTAINER_PGDATA_PATH = "/var/lib/postgresql/data/"
         const val PGDATA_DIR = "pgdata"
-        const val CONTAINERS_DIR = "containers"
         const val BLOCKCHAINS_DIR = "blockchains"
         const val NODE_CONFIG_FILE = "node-config.properties"
         const val PEERS_FILE = "env-peers.sh"
+
+        fun create(containerConfig: ContainerNodeConfig): FileSystem {
+            return when (containerConfig.containerFilesystem) {
+                ZFS.name -> ZfsFileSystem(containerConfig)
+                else -> LocalFileSystem(containerConfig)
+            }
+        }
     }
 
     /**
      * Creates and returns root of container
      */
-    fun createContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {
-        return if (containerNodeConfig.containerFilesystem == ZFS.name) {
-            createZfsContainerRoot(containerName, resourceLimits)
-        } else { // LOCAL
-            createLocalContainerRoot(containerName)
-        }
-    }
+    fun createContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path?
 
-    fun hostRootOf(containerName: ContainerName): Path {
-        return if (containerNodeConfig.containerFilesystem == ZFS.name) {
-            zfsRootOf(containerName)
-        } else { // LOCAL
-            Paths.get(containerNodeConfig.mountDir, containerName.name)
-        }
-    }
+    /**
+     * Returns root of container in the master (container) filesystem
+     */
+    fun rootOf(containerName: ContainerName): Path
 
+    /**
+     * Returns root of container in the host filesystem
+     */
+    fun hostRootOf(containerName: ContainerName): Path
+
+    /**
+     * Returns pgdata of container in the host filesystem
+     */
     fun hostPgdataOf(containerName: ContainerName): Path {
         return hostRootOf(containerName).resolve(PGDATA_DIR)
-    }
-
-    fun rootOf(containerName: ContainerName): Path {
-        return if (containerNodeConfig.containerFilesystem == ZFS.name) {
-            zfsRootOf(containerName)
-        } else { // LOCAL
-            Paths.get(CONTAINERS_DIR, containerName.name)
-        }
-    }
-
-    private fun zfsRootOf(containerName: ContainerName): Path {
-        return Paths.get(File.separator, containerNodeConfig.containerZfsPool, containerName.name)
-    }
-
-    private fun createZfsContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {
-        val root = rootOf(containerName)
-        return if (root.toFile().exists()) {
-            logger.info("Container dir exists: $root")
-            root
-        } else {
-            try {
-                val script = "./${containerNodeConfig.containerZfsPoolInitScript}"
-                if (!File(script).exists()) {
-                    logger.error("Can't find zfs init script: $script")
-                    null
-                } else {
-                    val fs = "${containerNodeConfig.containerZfsPool}/${containerName.name}"
-                    val quota = resourceLimits.storage.toString()
-                    val cmd = arrayOf(script, fs, quota)
-                    Runtime.getRuntime().exec(cmd).waitFor(10, TimeUnit.SECONDS)
-                    if (root.toFile().exists()) {
-                        logger.info("Container dir has been created: $root")
-                        root
-                    } else {
-                        logger.error("Container dir hasn't been created: $root")
-                        null
-                    }
-                }
-            } catch (e: Exception) {
-                logger.error("Can't create container dir: $root", e)
-                null
-            }
-        }
-    }
-
-    private fun createLocalContainerRoot(containerName: ContainerName): Path? {
-        val root = rootOf(containerName)
-        return if (root.toFile().exists()) {
-            logger.info("Container dir exists: $root")
-            root
-        } else {
-            val created = root.toFile().mkdirs()
-            logger.info("Container dir ${if (created) "has" else "hasn't"} been created: $root")
-            if (created) root else null
-        }
     }
 }
