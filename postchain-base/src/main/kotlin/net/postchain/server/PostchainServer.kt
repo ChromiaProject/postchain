@@ -13,7 +13,7 @@ import net.postchain.server.service.PostchainService
 
 class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false, private val config: PostchainServerConfig) {
 
-    val postchainNode = PostchainNode(appConfig, wipeDb, debug)
+    private val postchainNode = PostchainNode(appConfig, wipeDb, debug)
     private val credentials = config.sslConfig?.let {
         TlsServerCredentials.create(it.certChainFile, it.privateKeyFile)
     } ?: InsecureServerCredentials.create()
@@ -23,8 +23,9 @@ class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Bool
         .addService(DebugService(postchainNode.postchainContext.nodeDiagnosticContext))
         .build()
 
-    fun start() {
+    fun start(initialChainIds: List<Long>? = null) {
         server.start()
+        initialChainIds?.forEach { postchainNode.startBlockchain(it) }
         println("Postchain server started, listening on ${config.port}")
         Runtime.getRuntime().addShutdownHook(
             Thread {
