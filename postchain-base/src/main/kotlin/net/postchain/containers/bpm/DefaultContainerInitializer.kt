@@ -7,6 +7,8 @@ import net.postchain.containers.bpm.FileSystem.Companion.BLOCKCHAINS_DIR
 import net.postchain.containers.bpm.FileSystem.Companion.NODE_CONFIG_FILE
 import net.postchain.containers.bpm.FileSystem.Companion.PEERS_FILE
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_DATABASE_URL
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
 import net.postchain.core.Infrastructure
 import java.io.File
 import java.nio.file.Path
@@ -49,8 +51,8 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         config.setProperty("infrastructure", Infrastructure.EbftContainerSub.get())
 
         // DB
-        if (config.containsKey("container.subnode.database.url")) {
-            config.setProperty("database.url", config.getProperty("container.subnode.database.url"))
+        if (config.containsKey(fullKey(KEY_SUBNODE_DATABASE_URL))) {
+            config.setProperty("database.url", config.getProperty(fullKey(KEY_SUBNODE_DATABASE_URL)))
         }
         val scheme = databaseSchema(container.containerName)
         config.setProperty("database.schema", scheme)
