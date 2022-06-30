@@ -8,8 +8,14 @@ import net.postchain.core.NodeRid
 /**
  * Slow sync can only be in one state at a time. The allowed state changes are:
  *
+ * 1.
  * WAIT_FOR_ACTION -> WAIT_FOR_REPLY
- * WAIT_FOR_REPLY -> WAIT_FOR_COMMIT
+ *
+ * 2.
+ * WAIT_FOR_REPLY -> WAIT_FOR_COMMIT, or
+ * WAIT_FOR_REPLY -> WAIT_FOR_ACTION (if nothing to commit)
+ *
+ * 3.
  * WAIT_FOR_COMMIT -> WAIT_FOR_ACTION
  */
 class SlowSyncStateMachine(
@@ -22,7 +28,14 @@ class SlowSyncStateMachine(
     var lastCommittedBlockHeight: Long = -1L // Only update this after the actual commit
 ) {
 
-    companion object: KLogging()
+    companion object: KLogging() {
+
+        fun buildWithExistingHeight(chainIid: Int, height: Long): SlowSyncStateMachine {
+            val slowSyncStateMachine = SlowSyncStateMachine(chainIid)
+            slowSyncStateMachine.lastCommittedBlockHeight = height
+            return slowSyncStateMachine
+        }
+    }
 
     override fun toString(): String {
         return "(chainIid: $chainIid, state: $state, waitForPeer: $waitForNodeId, waitForHeight: $waitForHeight, " +
@@ -59,6 +72,7 @@ class SlowSyncStateMachine(
                         "maybeGetBlockRange() - ChainIid: $chainIid waited too long, for anything, try again with height: $waitForHeight " +
                                 "and above (but don't ask ${waitForNodeId!!.shortString()})."
                     }
+                    state = SlowSyncStates.WAIT_FOR_ACTION // Reset
                     sendRequest(waitForHeight!!, this, waitForNodeId!!)
                 } else {
                     logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid still waiting for height: $waitForHeight, go back to sleep." }
@@ -90,8 +104,12 @@ class SlowSyncStateMachine(
         if (state != SlowSyncStates.WAIT_FOR_REPLY) {
             throw ProgrammerMistake("updateToWaitForCommit(): Incorrect state: $state")
         }
-        state = SlowSyncStates.WAIT_FOR_COMMIT
-        lastUncommittedBlockHeight = (waitForHeight!! + processedBlocks - 1)
+        if (processedBlocks > 0) {
+            state = SlowSyncStates.WAIT_FOR_COMMIT
+            lastUncommittedBlockHeight = (waitForHeight!! + processedBlocks - 1)
+        } else {
+            state = SlowSyncStates.WAIT_FOR_ACTION
+        }
         waitTime = nowMs
     }
 

@@ -200,6 +200,9 @@ class BlockRange(val startAtHeight: Long, val isFull: Boolean, val blocks: List<
 
 }
 
+/**
+ * We do it this way since we don't want to store the "topic" of the [CompleteBlock] message
+ */
 fun completeBlockToGtv(data: BlockData, height: Long, witness: ByteArray): List<Gtv> {
     return listOf(
         gtv(data.header),

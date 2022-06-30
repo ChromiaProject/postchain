@@ -36,7 +36,7 @@ class SlowSynchronizer(
 
     private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
 
-    private var stateMachine = SlowSyncStateMachine(blockchainConfiguration.chainID.toInt())
+    private var stateMachine = SlowSyncStateMachine.buildWithExistingHeight(blockchainConfiguration.chainID.toInt(), blockHeight)
 
     companion object : KLogging()
 
@@ -157,13 +157,13 @@ class SlowSynchronizer(
             return 0
         }
 
-        if (stateMachine.isHeightWeWaitingFor(startingAtHeight)) {
+        if (!stateMachine.isHeightWeWaitingFor(startingAtHeight)) {
             peerStatuses.maybeBlacklist(peerId, "Slow Sync: Peer: ${stateMachine.waitForNodeId} is sending us a block range " +
                     "(startingAtHeight = $startingAtHeight) while we expected start at height: ${stateMachine.waitForHeight}.")
             return 0
         }
 
-        if (stateMachine.isPeerWeAreWaitingFor(peerId)) {
+        if (!stateMachine.isPeerWeAreWaitingFor(peerId)) {
             // Perhaps this is due to our initial request timed out, we are indeed waiting for this block range, so let's use it
             logger.debug("Slow Synch: We didn't expect $peerId to send us a block range (startingAtHeight = $startingAtHeight) " +
                     "(We wanted ${stateMachine.waitForNodeId} to do it).")
@@ -183,6 +183,7 @@ class SlowSynchronizer(
             throw ProgrammerMistake("processedBlocks != blocks.size")
         }
 
+        blockHeight = expectedHeight - 1
         stateMachine.updateToWaitForCommit(processedBlocks, System.currentTimeMillis())
         return processedBlocks
     }
