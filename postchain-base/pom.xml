@@ -6,7 +6,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.5.0</version>
+        <version>3.6.0</version>
     </parent>
     <artifactId>postchain-base</artifactId>
     <packaging>jar</packaging>
@@ -29,6 +29,10 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-gtx-data</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-admin-service</artifactId>
         </dependency>
 
         <!-- Kotlin -->

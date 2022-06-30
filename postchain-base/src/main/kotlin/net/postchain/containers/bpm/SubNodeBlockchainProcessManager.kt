@@ -5,6 +5,7 @@ import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
@@ -36,9 +37,9 @@ open class SubNodeBlockchainProcessManager(
         }
     }
 
-    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
+    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
         heartbeatManager.removeListener(chainId)
-        super.stopAndUnregisterBlockchainProcess(chainId, restart)
+        super.stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
     }
 
 }
