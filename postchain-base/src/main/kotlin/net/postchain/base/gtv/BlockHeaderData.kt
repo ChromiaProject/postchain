@@ -77,7 +77,7 @@ data class BlockHeaderData(
     }
 
     fun getExtra(): Map<String, Gtv> {
-        return HashMap(gtvExtra.dict)
+        return gtvExtra.asDict()
     }
 
     fun toGtv(): GtvArray {
