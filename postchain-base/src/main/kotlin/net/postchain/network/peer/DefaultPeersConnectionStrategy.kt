@@ -79,7 +79,7 @@ class DefaultPeersConnectionStrategy(val connectionManager: PeerConnectionManage
 
         logger.info { "${peerName(me)}/${chainID}: Reconnecting in ${delay.delayCounterMillis} ms to peer = ${peerName(peerId)}" }
         timerQueue.schedule({
-            logger.info { "${peerName(me)}/${chainID}: Reconnecting to peer: peer = ${peerName(peerId)}" }
+            logger.info { "${peerName(me)}/${chainID}: Reconnecting to peer = ${peerName(peerId)}" }
             try {
                 connectionManager.connectChainPeer(chainID, peerId)
             } catch (e: ProgrammerMistake) {

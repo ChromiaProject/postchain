@@ -23,6 +23,6 @@ class CommandGenerateContainerZfsInitScript : CliktCommand(name = "generate-cont
             fi
             
         """.trimIndent()
-        File(ContainerNodeConfig.CONTAINER_ZFS_INIT_SCRIPT).writeText(body)
+        File(ContainerNodeConfig.DEFAULT_CONTAINER_ZFS_INIT_SCRIPT).writeText(body)
     }
 }
