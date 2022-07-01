@@ -9,8 +9,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
-import net.postchain.crypto.CryptoSystem
-import net.postchain.devtools.NameHelper
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
@@ -52,8 +50,7 @@ import net.postchain.debug.BlockchainProcessName
  */
 open class DefaultPeerConnectionManager<PacketType>(
         private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
-        private val packetDecoderFactory: XPacketDecoderFactory<PacketType>,
-        cryptoSystem: CryptoSystem
+        private val packetDecoderFactory: XPacketDecoderFactory<PacketType>
 ) : NetworkTopology, // Only "Peer" networks need this
         PeerConnectionManager,  // Methods specific to the "X" connection part
         NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
@@ -283,7 +280,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         logger.info(
                 "${logger(descriptor)}: onPeerConnected() - New ${descriptor.dir} connection: peer = " +
                         "${peerName(descriptor.nodeId)}, blockchainRID: ${descriptor.blockchainRid}, " +
-                        "${chainsWithConnections.getStats()}"
+                        chainsWithConnections.getStats()
         )
 
         // Find the connected Chain IID (Will report any error it finds)
@@ -356,7 +353,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         val descriptor = connection.descriptor()
 
         // Find the disconnected Chain IID
-        var chainID: Long? = getChainIdOnDisconnected(descriptor)
+        val chainID: Long? = getChainIdOnDisconnected(descriptor)
         if (chainID == null) {
             connection.close()
             return
@@ -434,15 +431,6 @@ open class DefaultPeerConnectionManager<PacketType>(
                         connection.close()
                         return null
                     }
-                    null -> {
-                        logger.warn(
-                                "${logger(descriptor)}: getChainIdOnConnected() - Chain ID not found by " +
-                                        " blockchainRID = ${descriptor.blockchainRid} and we don't know the connection's" +
-                                        " direction."
-                        )
-                        connection.close()
-                        return null
-                    }
                 }
     }
 
@@ -504,16 +492,8 @@ open class DefaultPeerConnectionManager<PacketType>(
                         // Should never happen
                         logger.error(
                                 "${logger(descriptor)}: getChainIdOnDisconnected() - How can we never have seen " +
-                                        "chain: from peer: ${NameHelper.peerName(descriptor.nodeId)} , direction: " +
+                                        "chain: from peer: ${peerName(descriptor.nodeId)} , direction: " +
                                         "${descriptor.dir}, blockchainRID = ${descriptor.blockchainRid}) . "
-                        )
-                        null
-                    }
-                    null -> {
-                        logger.warn(
-                                "${logger(descriptor)}: getChainIdOnDisconnected() - Chain ID not found by " +
-                                        " blockchainRID = ${descriptor.blockchainRid}" +
-                                        " (and we don't know the direction)"
                         )
                         null
                     }
@@ -539,10 +519,6 @@ open class DefaultPeerConnectionManager<PacketType>(
     private fun loggingPrefix(blockchainRid: BlockchainRid): String = BlockchainProcessName(
             myPeerInfo.peerId().toString(), blockchainRid
     ).toString()
-
-    private fun loggingPrefix(descriptor: PeerConnectionDescriptor): String {
-        return "${myPeerInfo.peerId()} ${descriptor.loggingPrefix()}"
-    }
 
     private fun logger(descriptor: PeerConnectionDescriptor): String =
             "${myPeerInfo.peerId()}, ${descriptor.loggingPrefix()}"
