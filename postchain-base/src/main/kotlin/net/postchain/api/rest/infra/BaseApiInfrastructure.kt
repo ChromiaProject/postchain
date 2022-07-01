@@ -19,12 +19,12 @@ open class BaseApiInfrastructure(
 
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
-            if (ssl) {
+            if (tls) {
                 RestApi(
                     port,
                     basePath,
-                    sslCertificate,
-                    sslCertificatePassword)
+                    tlsCertificate,
+                    tlsCertificatePassword)
             } else {
                 RestApi(
                     port,

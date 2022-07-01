@@ -4,10 +4,10 @@ import java.io.File
 
 data class PostchainServerConfig(
     val port: Int = 50051,
-    val sslConfig: SslConfig? = null
+    val tlsConfig: TlsConfig? = null
 )
 
-data class SslConfig(
+data class TlsConfig(
     val certChainFile: File,
     val privateKeyFile: File
 )
