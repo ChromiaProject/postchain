@@ -1,6 +1,7 @@
 package net.postchain.ebft.heartbeat
 
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.Config
 
 /**
  * Heartbeat and RemoteConfig
@@ -19,7 +20,7 @@ data class HeartbeatConfig(
         val remoteConfigEnabled: Boolean,
         val remoteConfigRequestInterval: Long,
         val remoteConfigTimeout: Long
-) {
+) : Config {
     companion object {
         @JvmStatic
         fun fromAppConfig(config: AppConfig): HeartbeatConfig {

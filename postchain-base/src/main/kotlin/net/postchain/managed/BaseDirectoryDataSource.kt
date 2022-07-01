@@ -36,7 +36,7 @@ class BaseDirectoryDataSource(
     }
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String {
-        return if (containerNodeConfig.containersTestmode) {
+        return if (containerNodeConfig.testmode) {
             val short = brid.toHex().uppercase().take(8)
             containerNodeConfig.testmodeDappsContainers[short] ?: "cont0"
         } else {
@@ -53,16 +53,16 @@ class BaseDirectoryDataSource(
 
     // TODO: [et]: directory vs containerId?
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
-        return if (containerNodeConfig.containersTestmode) {
+        return if (containerNodeConfig.testmode) {
             ContainerResourceLimits(
-                    containerNodeConfig.containersTestmodeResourceLimitsRAM,
-                    containerNodeConfig.containersTestmodeResourceLimitsCPU,
-                    containerNodeConfig.containersTestmodeResourceLimitsSTORAGE
+                    containerNodeConfig.testmodeResourceLimitsRAM,
+                    containerNodeConfig.testmodeResourceLimitsCPU,
+                    containerNodeConfig.testmodeResourceLimitsSTORAGE
             )
         } else {
             val queryReply = queries.query(
                     "nm_get_container_limits",
-                    buildArgs("container_id" to GtvFactory.gtv(containerId))
+                    buildArgs("name" to GtvFactory.gtv(containerId))
             ).get().asDict()
 
             ContainerResourceLimits(

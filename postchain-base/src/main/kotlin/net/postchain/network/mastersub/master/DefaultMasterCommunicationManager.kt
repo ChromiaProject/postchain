@@ -44,10 +44,10 @@ open class DefaultMasterCommunicationManager(
 
     override fun init() {
         val subnodeChainConfig = SubChainConfig(chainId, blockchainRid, subnodePacketConsumer())
-        masterConnectionManager.connectSubChain(processName, subnodeChainConfig)
+        masterConnectionManager.initSubChainConnection(processName, subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = scheduleTask(containerNodeConfig.containerSendConnectedPeersPeriod) {
+        sendConnectedPeersTask = scheduleTask(containerNodeConfig.sendMasterConnectedPeersPeriod) {
             val peers = connectionManager.getConnectedNodes(chainId)
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.byteArray })
             masterConnectionManager.sendPacketToSub(msg)

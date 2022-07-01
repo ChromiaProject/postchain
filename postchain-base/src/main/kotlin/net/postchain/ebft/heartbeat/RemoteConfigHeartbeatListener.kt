@@ -121,6 +121,7 @@ class RemoteConfigHeartbeatListener(
                         logger.debug { "$pref Remote config was corrupted and will not be stored: $details" }
                     }
                 } else {
+                    responseTimestamp = System.currentTimeMillis()
                     logger.debug { "$pref No new remote config: $details" }
                 }
             }
