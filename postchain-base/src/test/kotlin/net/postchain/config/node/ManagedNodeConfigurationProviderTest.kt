@@ -4,12 +4,12 @@ package net.postchain.config.node
 
 import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import java.time.Instant
 import kotlin.test.assertEquals
 
@@ -181,7 +181,7 @@ class ManagedNodeConfigurationProviderTest {
         val a = listOf(p(1), p(2))
         val b = listOf(p(3), p(2))
         val expectedMerged = setOf(p(1), p(2), p(3))
-        val provider = ManagedNodeConfigurationProvider(mock()) { mock() }
+        val provider = ManagedNodeConfigurationProvider(mock()) { MockStorage.mockAppContext() }
         val result = provider.merge(a, b)
         assertEquals(expectedMerged.size, result.size)
         assertEquals(expectedMerged, result.toSet())

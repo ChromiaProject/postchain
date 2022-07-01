@@ -7,6 +7,7 @@ import net.postchain.core.AppContext
 import net.postchain.core.ExecutionContext
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 
 object MockStorage {
@@ -14,6 +15,8 @@ object MockStorage {
     fun mockAppContext(peerInfos: Array<PeerInfo> = emptyArray()): Storage {
         val mockDb: DatabaseAccess = mock {
             on { getPeerInfoCollection(any()) } doReturn peerInfos
+            on { findPeerInfo(any(), eq(null), eq(null), any()) } doReturn arrayOf()
+            on { findPeerInfo(any(), eq(null), eq(null), eq(null)) } doReturn arrayOf()
         }
 
         val mockContext: AppContext = mock {

@@ -3,13 +3,12 @@
 package net.postchain.config.node
 
 import assertk.assertions.containsExactly
-import assertk.assertions.isEqualTo
-import assertk.assertions.isSameAs
-import org.mockito.kotlin.mock
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import java.time.Instant
 
 class ManualNodeConfigurationProviderTest {
@@ -27,7 +26,10 @@ class ManualNodeConfigurationProviderTest {
         val mockStorage = MockStorage.mockAppContext(expected)
 
         // SUT
-        val provider = ManualNodeConfigurationProvider(mock()) { mockStorage }
+        val appConfig = mock<AppConfig>() {
+            on { pubKey } doReturn ""
+        }
+        val provider = ManualNodeConfigurationProvider(appConfig) { mockStorage }
 
         // Assert
         val peerInfos = provider.getPeerInfoCollection(mock())
