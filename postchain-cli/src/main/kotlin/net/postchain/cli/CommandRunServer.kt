@@ -11,14 +11,14 @@ import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import mu.KLogging
-import net.postchain.cli.util.SslOptions
+import net.postchain.cli.util.TlsOptions
 import net.postchain.cli.util.debugOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.printCommandInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.server.PostchainServer
 import net.postchain.server.config.PostchainServerConfig
-import net.postchain.server.config.SslConfig
+import net.postchain.server.config.TlsConfig
 
 class CommandRunServer : CliktCommand(name = "run-server", help = "Start postchain server") {
 
@@ -35,13 +35,13 @@ class CommandRunServer : CliktCommand(name = "run-server", help = "Start postcha
         .help("Chain IDs that will be started directly")
         .long().split(",")
 
-    private val sslOptions by SslOptions().cooccurring()
+    private val tlsOptions by TlsOptions().cooccurring()
 
     override fun run() {
         printCommandInfo()
 
-        val serverConfig = sslOptions?.let {
-            PostchainServerConfig(port, SslConfig(it.certChainFile, it.privateKeyFile))
+        val serverConfig = tlsOptions?.let {
+            PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
         } ?: PostchainServerConfig(port)
         PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug, serverConfig)
             .apply {

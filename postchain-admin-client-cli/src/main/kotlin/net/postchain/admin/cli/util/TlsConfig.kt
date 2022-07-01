@@ -2,7 +2,7 @@ package net.postchain.admin.cli.util
 
 import java.io.File
 
-data class SslConfig(
+data class TlsConfig(
     val enabled: Boolean,
     val certificateFile: File?
 )
