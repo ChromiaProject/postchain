@@ -12,7 +12,9 @@ import org.mockito.kotlin.mock
 
 object MockStorage {
 
-    fun mockAppContext(peerInfos: Array<PeerInfo> = emptyArray()): Storage {
+    class Mock(val db: DatabaseAccess, val context: AppContext, val storage: Storage)
+
+    fun mockAppContext(peerInfos: Array<PeerInfo> = emptyArray()): Mock {
         val mockDb: DatabaseAccess = mock {
             on { getPeerInfoCollection(any()) } doReturn peerInfos
             on { findPeerInfo(any(), eq(null), eq(null), any()) } doReturn arrayOf()
@@ -23,10 +25,13 @@ object MockStorage {
             on { getInterface(DatabaseAccess::class.java) } doReturn mockDb
         }
 
-        return mock {
+        return Mock(
+            mockDb,
+            mockContext,
+            mock {
             on { openReadConnection() } doReturn mockContext
             on { openWriteConnection() } doReturn mockContext
-        }
+        })
     }
 
     fun mockEContext(chainId: Long): Storage {

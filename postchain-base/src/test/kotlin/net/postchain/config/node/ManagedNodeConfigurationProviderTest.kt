@@ -38,7 +38,7 @@ class ManagedNodeConfigurationProviderTest {
         }
 
         // SUT
-        val provider = ManagedNodeConfigurationProvider(mock()) { mockStorage }
+        val provider = ManagedNodeConfigurationProvider(mock()) { mockStorage.storage }
         provider.apply {
             setPeerInfoDataSource(mockManagedPeerInfos)
         }
@@ -91,7 +91,7 @@ class ManagedNodeConfigurationProviderTest {
         }
 
         // SUT
-        val provider = ManagedNodeConfigurationProvider(mock()) { mockStorage }
+        val provider = ManagedNodeConfigurationProvider(mock()) { mockStorage.storage }
 
         // Assert
         // 1. managedPeerInfoDataSource field is set
@@ -181,7 +181,7 @@ class ManagedNodeConfigurationProviderTest {
         val a = listOf(p(1), p(2))
         val b = listOf(p(3), p(2))
         val expectedMerged = setOf(p(1), p(2), p(3))
-        val provider = ManagedNodeConfigurationProvider(mock()) { MockStorage.mockAppContext() }
+        val provider = ManagedNodeConfigurationProvider(mock()) { MockStorage.mockAppContext().storage }
         val result = provider.merge(a, b)
         assertEquals(expectedMerged.size, result.size)
         assertEquals(expectedMerged, result.toSet())
