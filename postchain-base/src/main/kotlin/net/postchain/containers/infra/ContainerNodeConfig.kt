@@ -13,49 +13,49 @@ import org.apache.commons.configuration2.Configuration
  * @param healthcheckRunningContainersCheckPeriod In number of blocks of chain0, set 0 to disable a check
  */
 data class ContainerNodeConfig(
-    val containerImage: String,
-    val masterHost: String,
-    val masterPort: Int,
-    val subnodeHost: String,
-    val subnodeRestApiPort: Int,
-    val sendMasterConnectedPeersPeriod: Long,
-    val healthcheckRunningContainersAtStartRegexp: String,
-    val healthcheckRunningContainersCheckPeriod: Int,
-    // Container FileSystem
-    val containerFilesystem: String,
+        val containerImage: String,
+        val masterHost: String,
+        val masterPort: Int,
+        val subnodeHost: String,
+        val subnodeRestApiPort: Int,
+        val sendMasterConnectedPeersPeriod: Long,
+        val healthcheckRunningContainersAtStartRegexp: String,
+        val healthcheckRunningContainersCheckPeriod: Int,
+        // Container FileSystem
+        val containerFilesystem: String,
 
-    /**
-     * A dir in host filesystem where container volume will be created.
-     * [net.postchain.containers.bpm.ContainerConfigFactory] uses it to create a docker volume for subnode container.
-     *
-     * If master node is launched natively or by means of fabric8 maven plugin or Testcontainers Lib or CI/CD,
-     * [masterMountDir] has to be equal to [hostMountDir] ([masterMountDir] can be omitted in config)
-     *
-     * If master node is launched inside a container, i.e. in case of DinD,
-     * [masterMountDir] might not be equal to [hostMountDir] (see subnode Dockerfile for details)
-     */
-    val hostMountDir: String,
+        /**
+         * A dir in host filesystem where container volume will be created.
+         * [net.postchain.containers.bpm.ContainerConfigFactory] uses it to create a docker volume for subnode container.
+         *
+         * If master node is launched natively or by means of fabric8 maven plugin or Testcontainers Lib or CI/CD,
+         * [masterMountDir] has to be equal to [hostMountDir] ([masterMountDir] can be omitted in config)
+         *
+         * If master node is launched inside a container, i.e. in case of DinD,
+         * [masterMountDir] might not be equal to [hostMountDir] (see subnode Dockerfile for details)
+         */
+        val hostMountDir: String,
 
-    /**
-     * A path to dir where container volume is placed in the master (container) filesystem.
-     * [net.postchain.containers.bpm.ContainerInitializer] uses it to create container node config file,
-     * blockchains dir, etc.
-     *
-     * If master node is launched natively or by means of fabric8 maven plugin or Testcontainers Lib or CI/CD,
-     * [masterMountDir] has to be equal to [hostMountDir] ([masterMountDir] can be omitted in config)
-     *
-     * If master node is launched inside a container, i.e. in case of DinD,
-     * [masterMountDir] might not be equal to [hostMountDir] (see subnode Dockerfile for details)
-     */
-    val masterMountDir: String,
-    val zfsPoolName: String,
-    val zfsPoolInitScript: String,
-    val bindPgdataVolume: Boolean,
-    val testmode: Boolean,
-    val testmodeResourceLimitsRAM: Long,
-    val testmodeResourceLimitsCPU: Long,
-    val testmodeResourceLimitsSTORAGE: Long,
-    val testmodeDappsContainers: Map<String, String>
+        /**
+         * A path to dir where container volume is placed in the master (container) filesystem.
+         * [net.postchain.containers.bpm.ContainerInitializer] uses it to create container node config file,
+         * blockchains dir, etc.
+         *
+         * If master node is launched natively or by means of fabric8 maven plugin or Testcontainers Lib or CI/CD,
+         * [masterMountDir] has to be equal to [hostMountDir] ([masterMountDir] can be omitted in config)
+         *
+         * If master node is launched inside a container, i.e. in case of DinD,
+         * [masterMountDir] might not be equal to [hostMountDir] (see subnode Dockerfile for details)
+         */
+        val masterMountDir: String,
+        val zfsPoolName: String,
+        val zfsPoolInitScript: String,
+        val bindPgdataVolume: Boolean,
+        val testmode: Boolean,
+        val testmodeResourceLimitsRAM: Long,
+        val testmodeResourceLimitsCPU: Long,
+        val testmodeResourceLimitsSTORAGE: Long,
+        val testmodeDappsContainers: Map<String, String>
 ) : Config {
     companion object {
         const val DEFAULT_PORT: Int = 9870
@@ -85,27 +85,27 @@ data class ContainerNodeConfig(
 
         @JvmStatic
         fun fromAppConfig(config: AppConfig): ContainerNodeConfig {
-            return with(config.subset("container")) {
+            return with(config.subset(KEY_PREFIX)) {
                 ContainerNodeConfig(
-                    getString(KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
-                    getString(KEY_MASTER_HOST, "localhost"),
-                    getInt(KEY_MASTER_PORT, 9860),
-                    getString(KEY_SUBNODE_HOST, "localhost"),
-                    getInt(KEY_SUBNODE_API_PORT, 7740),
-                    getLong(KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
-                    getString(KEY_HEALTHCHECK_RUNNING_CONTAINERS_AT_START_REGEXP, ""),
-                    getInt(KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 0),
-                    getString(KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
-                    getString(KEY_HOST_MOUNT_DIR),
-                    getMasterMountDir(),
-                    getString(KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
-                    getString(KEY_ZFS_POOL_INIT_SCRIPT, DEFAULT_CONTAINER_ZFS_INIT_SCRIPT),
-                    getBoolean(KEY_BIND_PGDATA_VOLUME, true),
-                    getTestmode(),
-                    getLong(KEY_TESTMODE_RESOURCE_LIMITS_RAM, -1),
-                    getLong(KEY_TESTMODE_RESOURCE_LIMITS_CPU, -1),
-                    getLong(KEY_TESTMODE_RESOURCE_LIMITS_STORAGE, -1),
-                    initTestmodeDappsContainers()
+                        getString(KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
+                        getString(KEY_MASTER_HOST, "localhost"),
+                        getInt(KEY_MASTER_PORT, 9860),
+                        getString(KEY_SUBNODE_HOST, "localhost"),
+                        getInt(KEY_SUBNODE_API_PORT, 7740),
+                        getLong(KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
+                        getString(KEY_HEALTHCHECK_RUNNING_CONTAINERS_AT_START_REGEXP, ""),
+                        getInt(KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 0),
+                        getString(KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
+                        getString(KEY_HOST_MOUNT_DIR),
+                        getMasterMountDir(),
+                        getString(KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
+                        getString(KEY_ZFS_POOL_INIT_SCRIPT, DEFAULT_CONTAINER_ZFS_INIT_SCRIPT),
+                        getBoolean(KEY_BIND_PGDATA_VOLUME, true),
+                        getTestmode(),
+                        getLong(KEY_TESTMODE_RESOURCE_LIMITS_RAM, -1),
+                        getLong(KEY_TESTMODE_RESOURCE_LIMITS_CPU, -1),
+                        getLong(KEY_TESTMODE_RESOURCE_LIMITS_STORAGE, -1),
+                        initTestmodeDappsContainers()
                 )
             }
         }
@@ -126,8 +126,8 @@ data class ContainerNodeConfig(
         private fun Configuration.initTestmodeDappsContainers(): Map<String, String> {
             return if (getTestmode()) {
                 listOf("cont0", "cont1", "cont2", "cont3")
-                    .flatMap { cont -> getStringArray(cont).map { brid -> brid to cont } }
-                    .toMap()
+                        .flatMap { cont -> getStringArray(cont).map { brid -> brid to cont } }
+                        .toMap()
             } else {
                 mapOf()
             }

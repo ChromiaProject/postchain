@@ -79,9 +79,7 @@ object ContainerConfigFactory {
                 .image(containerNodeConfig.containerImage)
                 .hostConfig(hostConfig)
                 .exposedPorts(dockerPort)
-                .apply {
-                    if (restApiConfig.debug) env("POSTCHAIN_DEBUG=true")
-                }
+                .env("POSTCHAIN_DEBUG=${restApiConfig.debug}")
                 .build()
     }
 
