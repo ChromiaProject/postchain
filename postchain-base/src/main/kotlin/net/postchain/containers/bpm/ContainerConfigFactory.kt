@@ -31,15 +31,15 @@ object ContainerConfigFactory {
         // target volume
         val targetVol = HostConfig.Bind
                 .from(fs.hostRootOf(container.containerName).toString())
-                .to(fs.containerTargetPath())
+                .to(FileSystem.CONTAINER_TARGET_PATH)
                 .build()
         volumes.add(targetVol)
 
         // pgdata volume
-        if (containerNodeConfig.containerBindPgdataVolume) {
+        if (containerNodeConfig.bindPgdataVolume) {
             val pgdataVol = HostConfig.Bind
                     .from(fs.hostPgdataOf(container.containerName).toString())
-                    .to(fs.containerPgdataPath())
+                    .to(FileSystem.CONTAINER_PGDATA_PATH)
                     .build()
             volumes.add(pgdataVol)
         }
@@ -79,6 +79,7 @@ object ContainerConfigFactory {
                 .image(containerNodeConfig.containerImage)
                 .hostConfig(hostConfig)
                 .exposedPorts(dockerPort)
+                .env("POSTCHAIN_DEBUG=${restApiConfig.debug}")
                 .build()
     }
 
