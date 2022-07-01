@@ -26,6 +26,7 @@ class ManualNodeConfigurationProviderTest {
 
         // SUT
         val appConfig = mock<AppConfig>() {
+            on { host } doReturn "localhost"
             on { pubKey } doReturn "CCCC"
             on { port } doReturn 9870
         }

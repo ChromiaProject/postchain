@@ -97,6 +97,10 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
         get() = System.getenv("POSTCHAIN_PORT")?.toInt()
             ?: config.getInt("messaging.port", 9870)
 
+    val host: String
+        get() = System.getenv("POSTCHAIN_HOST")
+            ?: config.getString("messaging.host", "localhost")
+
     val pubKeyByteArray: ByteArray
         get() = pubKey.hexStringToByteArray()
 

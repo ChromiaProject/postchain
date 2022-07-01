@@ -24,7 +24,7 @@ open class ManualNodeConfigurationProvider(
         }
         if (!hasOwnPeer) {
             storage.withWriteConnection {
-                DatabaseAccess.of(it).addPeerInfo(it, "localhost", appConfig.port, appConfig.pubKey)
+                DatabaseAccess.of(it).addPeerInfo(it, appConfig.host, appConfig.port, appConfig.pubKey)
             }
         }
     }

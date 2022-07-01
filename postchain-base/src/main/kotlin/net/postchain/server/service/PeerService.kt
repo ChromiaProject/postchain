@@ -22,13 +22,18 @@ class PeerService(private val postchainContext: PostchainContext) : PeerServiceG
                 )
             }
             val targetKey = db.findPeerInfo(ctx, null, null, pubkey)
-            if (targetKey.isNotEmpty() && !request.override) {
-                return@withWriteConnection responseObserver?.onError(
-                    Status.ALREADY_EXISTS.withDescription("public key already added for a host, use override to add anyway")
-                        .asRuntimeException()
-                )
+            if (targetKey.isNotEmpty()) {
+                if (request.override) {
+                    db.updatePeerInfo(ctx, request.host, request.port, pubkey)
+                } else {
+                    return@withWriteConnection responseObserver?.onError(
+                        Status.ALREADY_EXISTS.withDescription("public key already added for a host, use override to add anyway")
+                            .asRuntimeException()
+                    )
+                }
+            } else {
+                db.addPeerInfo(ctx, request.host, request.port, pubkey)
             }
-            db.addPeerInfo(ctx, request.host, request.port, pubkey)
             responseObserver?.onNext(
                 AddPeerReply.newBuilder()
                     .setMessage("Peer was added successfully")
@@ -43,14 +48,14 @@ class PeerService(private val postchainContext: PostchainContext) : PeerServiceG
     ): StatusRuntimeException? {
         if (pubkey.length != 66) {
             return Status.INVALID_ARGUMENT.withDescription("Public key $pubkey must be of length 66, but was ${pubkey.length}")
-                    .asRuntimeException()
+                .asRuntimeException()
 
         }
         try {
             pubkey.hexStringToByteArray()
         } catch (e: Exception) {
             return Status.INVALID_ARGUMENT.withDescription("Public key $pubkey must be a valid hex string")
-                    .asRuntimeException()
+                .asRuntimeException()
         }
         return null
     }
