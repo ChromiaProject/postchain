@@ -152,7 +152,7 @@ object GenericBlockHeaderValidator {
         blockRidFromHeight: (height: Long) -> ByteArray?, // We will probably need to go to DB to find this, so don't call this in vain
         currentBlockTimestamp: Long,
         nrOfDependencies: Int,
-        extraData: Map<String, Gtv?>
+        extraData: Map<String, Gtv>
     ): ValidationResult {
         val header = blockHeader as BaseBlockHeader
 

@@ -302,7 +302,7 @@ open class BaseBlockBuilder(
     /**
      * (Note: don't call this. We only keep this as a public function for legacy tests to work)
      */
-    internal fun validateBlockHeader(blockHeader: BlockHeader, extraData: Map<String, Gtv?> = mapOf()): ValidationResult {
+    internal fun validateBlockHeader(blockHeader: BlockHeader, extraData: Map<String, Gtv> = mapOf()): ValidationResult {
         val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
         return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
             blockHeader,
