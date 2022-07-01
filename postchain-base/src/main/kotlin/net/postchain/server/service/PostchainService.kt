@@ -54,7 +54,7 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
                 Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException()
             )!!
         }
-        withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
+        val success = withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             val hasConfig = db.getConfigurationData(ctx, request.height) != null
             if (hasConfig && !request.override) {
@@ -68,6 +68,7 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
             db.addConfigurationData(ctx, request.height, GtvEncoder.encodeGtv(config))
             true
         }
+        if (!success) return
         responseObserver?.onNext(
             AddConfigurationReply.newBuilder().run {
                 message = "Configuration height ${request.height} on chain ${request.chainId} has been added"
@@ -88,7 +89,7 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
                 Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException()
             )!!
         }
-        withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
+        val success = withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             if (db.getBlockchainRid(ctx) != null && !request.override) {
                 responseObserver?.onError(
@@ -104,6 +105,7 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
             db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
             true
         }
+        if (!success) return
         val blockchainRid = postchainNode.startBlockchain(request.chainId)
         responseObserver?.onNext(InitializeBlockchainReply.newBuilder().run {
             message = "Blockchain has been initialized with blockchain RID: $blockchainRid"
