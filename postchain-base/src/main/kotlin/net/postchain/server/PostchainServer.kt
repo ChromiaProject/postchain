@@ -14,7 +14,7 @@ import net.postchain.server.service.PostchainService
 class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false, private val config: PostchainServerConfig) {
 
     private val postchainNode = PostchainNode(appConfig, wipeDb, debug)
-    private val credentials = config.sslConfig?.let {
+    private val credentials = config.tlsConfig?.let {
         TlsServerCredentials.create(it.certChainFile, it.privateKeyFile)
     } ?: InsecureServerCredentials.create()
     private val server: Server = Grpc.newServerBuilderForPort(config.port, credentials)

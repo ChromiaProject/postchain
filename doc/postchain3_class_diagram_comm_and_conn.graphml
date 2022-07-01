@@ -1347,8 +1347,8 @@ restApi: RestApi?
           <y:UML clipContent="true" constraint="" hasDetailsColor="false" omitDetails="false" stereotype="" use3DEffect="true">
             <y:AttributeLabel xml:space="preserve">-listenPort: Int
 -basePath: String
--sslCertificate: String?
--sslCertificatePassword: String?
+-tlsCertificate: String?
+-tlsCertificatePassword: String?
 -http: Service
 -gson: Gson
 -models: Map&lt;String, Model&gt;</y:AttributeLabel>
@@ -2498,9 +2498,9 @@ ALL blockchains.<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelMo
     val pubKeyByteArray: ByteArray
     val restApiBasePath: String
     val restApiPort: Int
-    val restApiSsl: Boolean
-    val restApiSslCertificate: String
-    val restApiSslCertificatePassword: String
+    val restApiTls: Boolean
+    val restApiTlsCertificate: String
+    val restApiTlsCertificatePassword: String
     open val peerInfos: Array&lt;PeerInfo&gt; 
     val activeChainIds: Array&lt;String&gt;
 </y:AttributeLabel>
