@@ -6,9 +6,10 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.common.BlockchainRid
+import net.postchain.config.app.Config
 import net.postchain.core.NodeRid
 
-open class NodeConfig(val appConfig: AppConfig) {
+open class NodeConfig(val appConfig: AppConfig) : Config {
 
     /**
      * Peers

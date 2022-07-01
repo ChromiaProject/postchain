@@ -10,42 +10,38 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
-import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
+
+/**
+ * Marker interface for all kinds of configs
+ */
+interface Config
 
 /**
  * Wrapper to the generic [Configuration]
  * Adding some convenience fields, for example regarding database connection.
  */
-class AppConfig(private val config: Configuration) {
+class AppConfig(private val config: Configuration, val debug: Boolean = false) : Config {
 
     companion object {
 
-        fun fromPropertiesFile(configFile: String): AppConfig {
+        fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig {
             val params = Parameters().properties()
-                .setFileName(configFile)
-                .setListDelimiterHandler(DefaultListDelimiterHandler(','))
+                    .setFileName(configFile)
+                    .setListDelimiterHandler(DefaultListDelimiterHandler(','))
 
             val configuration = FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
-                .configure(params)
-                .configuration
+                    .configure(params)
+                    .configuration
 
-            configuration.setProperty("configDir", File(configFile).absoluteFile.parent)
-
-            return AppConfig(configuration)
+            return AppConfig(configuration, debug)
         }
 
         fun toPropertiesFile(config: Configuration, configFile: String) {
             ConfigurationUtils.dump(config, PrintWriter(FileWriter(configFile)))
         }
     }
-
-    /**
-     * This config dir
-     */
-    val configDir: String
-        get() = config.getString("configDir")
 
     /**
      * Configuration provider
@@ -62,19 +58,19 @@ class AppConfig(private val config: Configuration) {
 
     val databaseUrl: String
         get() = System.getenv("POSTCHAIN_DB_URL")
-            ?: config.getString("database.url", "")
+                ?: config.getString("database.url", "")
 
     val databaseSchema: String
         get() = System.getenv("POSTCHAIN_DB_SCHEMA")
-            ?: config.getString("database.schema", "public")
+                ?: config.getString("database.schema", "public")
 
     val databaseUsername: String
         get() = System.getenv("POSTCHAIN_DB_USERNAME")
-            ?: config.getString("database.username", "")
+                ?: config.getString("database.username", "")
 
     val databasePassword: String
         get() = System.getenv("POSTCHAIN_DB_PASSWORD")
-            ?: config.getString("database.password", "")
+                ?: config.getString("database.password", "")
 
     val databaseReadConcurrency: Int
         get() = config.getInt("database.readConcurrency", 10)
@@ -88,14 +84,18 @@ class AppConfig(private val config: Configuration) {
      */
     val privKey: String
         get() = System.getenv("POSTCHAIN_PRIVKEY")
-            ?: config.getString("messaging.privkey", "")
+                ?: config.getString("messaging.privkey", "")
 
     val privKeyByteArray: ByteArray
         get() = privKey.hexStringToByteArray()
 
     val pubKey: String
         get() = System.getenv("POSTCHAIN_PUBKEY")
-            ?: config.getString("messaging.pubkey", "")
+                ?: config.getString("messaging.pubkey", "")
+
+    val port: Int
+        get() = System.getenv("POSTCHAIN_PORT")?.toInt()
+            ?: config.getInt("messaging.port", 9870)
 
     val pubKeyByteArray: ByteArray
         get() = pubKey.hexStringToByteArray()

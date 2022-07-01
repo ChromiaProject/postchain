@@ -4,9 +4,17 @@ package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.groups.cooccurring
-import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.help
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.split
+import com.github.ajalt.clikt.parameters.types.int
+import com.github.ajalt.clikt.parameters.types.long
 import mu.KLogging
-import net.postchain.cli.util.*
+import net.postchain.cli.util.SslOptions
+import net.postchain.cli.util.debugOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.server.PostchainServer
 import net.postchain.server.config.PostchainServerConfig
@@ -20,7 +28,12 @@ class CommandRunServer : CliktCommand(name = "run-server", help = "Start postcha
 
     private val debug by debugOption()
 
-    private val port by portOption().help("Port for the server").default(50051)
+    private val port by option("-p", "--port", envvar = "POSTCHAIN_SERVER_PORT", help = "Port for the server")
+        .int().default(50051)
+
+    private val activeChains by option("--initial-chain-ids", "-c", envvar = "POSTCHAIN_INITIAL_CHAIN_IDS")
+        .help("Chain IDs that will be started directly")
+        .long().split(",")
 
     private val sslOptions by SslOptions().cooccurring()
 
@@ -32,7 +45,7 @@ class CommandRunServer : CliktCommand(name = "run-server", help = "Start postcha
         } ?: PostchainServerConfig(port)
         PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug, serverConfig)
             .apply {
-                start()
+                start(activeChains)
                 blockUntilShutdown()
             }
     }

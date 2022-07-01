@@ -19,7 +19,18 @@ open class ManualNodeConfigurationProvider(
         createStorage: (AppConfig) -> Storage
 ) : NodeConfigurationProvider {
 
-    private val storage = createStorage(appConfig)
+    private val storage = createStorage(appConfig).also { setupMyself(it) }
+
+    private fun setupMyself(storage: Storage) {
+        val hasOwnPeer = storage.withReadConnection {
+            DatabaseAccess.of(it).findPeerInfo(it, null, null, appConfig.pubKey).isNotEmpty()
+        }
+        if (!hasOwnPeer) {
+            storage.withWriteConnection {
+                DatabaseAccess.of(it).addPeerInfo(it, "localhost", appConfig.port, appConfig.pubKey)
+            }
+        }
+    }
 
     override fun getConfiguration(): NodeConfig {
         return object : NodeConfig(appConfig) {

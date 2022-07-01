@@ -6,16 +6,17 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.Config
 import net.postchain.core.*
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.BlockWitness
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.message.*
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.core.block.BlockDataWithWitness
-import net.postchain.core.block.BlockHeader
-import net.postchain.core.block.BlockTrace
-import net.postchain.core.block.BlockWitness
 import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -75,7 +76,7 @@ data class FastSyncParameters(
         /**
          * 10 minutes in milliseconds
          */
-        var blacklistingTimeoutMs: Long = 10 * 60 * 1000) {
+        var blacklistingTimeoutMs: Long = 10 * 60 * 1000) : Config {
     companion object {
         @JvmStatic
         fun fromAppConfig(config: AppConfig, init: (FastSyncParameters) -> Unit = {}): FastSyncParameters {

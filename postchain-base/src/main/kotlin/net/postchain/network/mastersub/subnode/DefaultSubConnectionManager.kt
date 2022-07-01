@@ -6,6 +6,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ChainsWithOneConnection
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.common.LazyPacket
@@ -16,7 +17,6 @@ import net.postchain.network.mastersub.protocol.MsDataMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.subnode.netty.NettySubConnector
 import net.postchain.network.peer.XChainPeersConfiguration
-import net.postchain.debug.BlockchainProcessName
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
@@ -98,8 +98,6 @@ class DefaultSubConnectionManager(
 
 
     private fun connectToMaster(chain: ChainWithOneMasterConnection) {
-        logger.info { "${logger(chain)}: Connecting to master node: ${chain.log()}" }
-
         val masterNode = PeerInfo(
                 containerNodeConfig.masterHost,
                 containerNodeConfig.masterPort,
@@ -107,8 +105,9 @@ class DefaultSubConnectionManager(
         )
 
         val connectionDescriptor = SubConnectionDescriptor(chain.config.blockchainRid, chain.peers)
+
+        logger.info { "${logger(chain)}: Connecting to master node ${masterNode.host}:${masterNode.port}, chanId: ${chain.log()}" }
         subConnector.connectMaster(masterNode, connectionDescriptor)
-        logger.info { "${logger(chain)}: Connected to master node: ${chain.log()}" }
     }
 
     /**

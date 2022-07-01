@@ -4,6 +4,8 @@ package net.postchain
 
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
@@ -67,7 +69,17 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
     }
 
     fun startBlockchain(chainId: Long): BlockchainRid? {
+        if (!chainExists(chainId)) {
+            logger.error { "Cannot start chain $chainId, not found in db." }
+            return null
+        }
         return processManager.startBlockchain(chainId, buildBbDebug(chainId))
+    }
+
+    private fun chainExists(chainId: Long): Boolean {
+        return withReadConnection(postchainContext.storage, chainId) {
+            return@withReadConnection DatabaseAccess.of(it).getChainIds(it).containsValue(chainId)
+        }
     }
 
     fun stopBlockchain(chainId: Long) {

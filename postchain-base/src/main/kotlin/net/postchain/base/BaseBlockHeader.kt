@@ -31,6 +31,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
     override val prevBlockRID: ByteArray
     override val blockRID: ByteArray
     val blockHeightDependencyArray: Array<Hash?>
+    val extraData: Map<String, Gtv>
     val timestamp: Long get() = blockHeaderRec.getTimestamp()
     val blockHeaderRec: BlockHeaderData = BlockHeaderDataFactory.buildFromBinary(rawData)
 
@@ -38,6 +39,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
         prevBlockRID = blockHeaderRec.getPreviousBlockRid()
         blockRID = blockHeaderRec.toGtv().merkleHash(  GtvMerkleHashCalculator(cryptoSystem) )
         blockHeightDependencyArray = blockHeaderRec.getBlockHeightDependencyArray()
+        extraData = blockHeaderRec.getExtra()
     }
 
     /**
@@ -47,6 +49,10 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
      */
     fun checkCorrectNumberOfDependencies(depsRequired: Int): Boolean {
         return depsRequired == blockHeightDependencyArray.size
+    }
+
+    fun checkExtraData(expectedExtraData: Map<String, Gtv>): Boolean {
+        return extraData == expectedExtraData
     }
 
     companion object Factory {

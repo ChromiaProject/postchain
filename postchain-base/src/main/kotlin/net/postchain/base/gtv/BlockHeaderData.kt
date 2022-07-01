@@ -43,11 +43,11 @@ data class BlockHeaderData(
     }
 
     fun getTimestamp(): Long {
-        return gtvTimestamp.integer.toLong()
+        return gtvTimestamp.integer
     }
 
     fun getHeight(): Long {
-        return gtvHeight.integer.toLong()
+        return gtvHeight.integer
     }
 
     /**
@@ -76,13 +76,8 @@ data class BlockHeaderData(
 
     }
 
-    fun getExtra(): Map<String, String> {
-        val retMap = HashMap<String, String>()
-        for (key in this.gtvExtra.dict.keys) {
-            val gtvValue = gtvExtra[key] as GtvString
-            retMap[key] = gtvValue.string
-        }
-        return retMap
+    fun getExtra(): Map<String, Gtv> {
+        return gtvExtra.asDict()
     }
 
     fun toGtv(): GtvArray {

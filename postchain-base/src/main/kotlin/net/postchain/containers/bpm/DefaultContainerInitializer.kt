@@ -7,6 +7,8 @@ import net.postchain.containers.bpm.FileSystem.Companion.BLOCKCHAINS_DIR
 import net.postchain.containers.bpm.FileSystem.Companion.NODE_CONFIG_FILE
 import net.postchain.containers.bpm.FileSystem.Companion.PEERS_FILE
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_DATABASE_URL
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
 import net.postchain.core.Infrastructure
 import java.io.File
 import java.nio.file.Path
@@ -49,10 +51,8 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         config.setProperty("infrastructure", Infrastructure.EbftContainerSub.get())
 
         // DB
-        if (config.containsKey("subnode.database.url")) {
-            config.setProperty("database.url", config.getProperty("subnode.database.url"))
-            config.clearProperty("subnode.database.url")
-            //        config.setProperty("database.url", "jdbc:postgresql://172.17.0.1:5432/postchain")
+        if (config.containsKey(fullKey(KEY_SUBNODE_DATABASE_URL))) {
+            config.setProperty("database.url", config.getProperty(fullKey(KEY_SUBNODE_DATABASE_URL)))
         }
         val scheme = databaseSchema(container.containerName)
         config.setProperty("database.schema", scheme)
@@ -62,7 +62,9 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
          * control here and know that it is always free.
          * If -1, no API communication => subnodeRestApiPort=-1
          */
-        if (config.getInt("api.port", 7740) > -1) config.setProperty("api.port", containerConfig.subnodeRestApiPort)
+        if (config.getInt("api.port", 7740) > -1) {
+            config.setProperty("api.port", containerConfig.subnodeRestApiPort)
+        }
 
         // Creating a nodeConfig file
         val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()
@@ -96,9 +98,9 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
     }
 
     private fun getContainerChainDir(fs: FileSystem, chain: Chain): Path {
-        return fs.hostRootOf(chain.containerName)
-                .resolve(BLOCKCHAINS_DIR)
-                .resolve(chain.chainId.toString())
+        return fs.rootOf(chain.containerName)
+            .resolve(BLOCKCHAINS_DIR)
+            .resolve(chain.chainId.toString())
     }
 
     private fun databaseSchema(containerName: ContainerName): String {

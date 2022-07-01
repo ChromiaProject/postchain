@@ -184,9 +184,7 @@ open class BaseBlockchainProcessManager(
                 CHAIN_IID_TAG to chainId.toString(),
                 BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toHex()
             ) {
-                stopInfoDebug("Stopping of blockchain", chainId, bTrace)
-                stopAndUnregisterBlockchainProcess(chainId, restart)
-                stopInfoDebug("Stopping blockchain, shutdown complete", chainId, bTrace)
+                stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
 
                 blockchainProcessesLoggers.remove(chainId)?.also {
                     it.cancel()
@@ -197,9 +195,10 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
+    protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
         blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
         blockchainProcesses.remove(chainId)?.also {
+            stopInfoDebug("Stopping of blockchain", chainId, bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
             if (restart) {
                 blockchainInfrastructure.restartBlockchainProcess(it)
@@ -207,6 +206,7 @@ open class BaseBlockchainProcessManager(
                 blockchainInfrastructure.exitBlockchainProcess(it)
             }
             it.shutdown()
+            stopInfoDebug("Stopping blockchain, shutdown complete", chainId, bTrace)
         }
     }
 

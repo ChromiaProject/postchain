@@ -19,12 +19,12 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.block.BlockQueries
-import net.postchain.managed.BaseDirectoryDataSource
-import net.postchain.managed.DirectoryDataSource
-import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.managed.BaseDirectoryDataSource
+import net.postchain.managed.DirectoryDataSource
+import net.postchain.managed.ManagedBlockchainProcessManager
 
 open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -46,7 +46,7 @@ open class ContainerManagedBlockchainProcessManager(
      */
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
     private val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-    private val fs = FileSystem(appConfig, containerNodeConfig)
+    private val fs = FileSystem.create(containerNodeConfig)
     private val containerInitializer = DefaultContainerInitializer(appConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableSetOf<PostchainContainer>()
@@ -206,7 +206,7 @@ open class ContainerManagedBlockchainProcessManager(
                     }
                 }
             }
-        } else {
+        } else { // psContainer != null
             chainsToStop.forEach { chain ->
                 val (process, res) = terminateBlockchainProcess(psContainer, chain)
                 if (res) {
@@ -268,7 +268,7 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun executeDockerContainersHealthcheck() {
-        val period = containerNodeConfig.runningContainersCheckPeriod.toLong()
+        val period = containerNodeConfig.healthcheckRunningContainersCheckPeriod.toLong()
         if (period > 0 && postchainContainers.isNotEmpty()) {
             val height = withReadConnection(storage, CHAIN0) { ctx ->
                 DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
@@ -400,12 +400,12 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun stopRunningChainContainers() {
-        if (containerNodeConfig.runningContainersAtStartRegexp.isNotEmpty()) {
+        if (containerNodeConfig.healthcheckRunningContainersAtStartRegexp.isNotEmpty()) {
             val toStop = dockerClient.listContainers().filter {
                 try {
-                    containerName(it).contains(Regex(containerNodeConfig.runningContainersAtStartRegexp))
+                    containerName(it).contains(Regex(containerNodeConfig.healthcheckRunningContainersAtStartRegexp))
                 } catch (e: Exception) {
-                    logger.error { "Regexp expression error: ${containerNodeConfig.runningContainersAtStartRegexp}" }
+                    logger.error { "Regexp expression error: ${containerNodeConfig.healthcheckRunningContainersAtStartRegexp}" }
                     false
                 }
             }
