@@ -44,11 +44,7 @@ open class BaseBlockchainProcessManager(
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
-
-    // FYI: [et]: For integration testing. Will be removed or refactored later
-    private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
-
     protected val extensions: List<BlockchainProcessManagerExtension> = makeExtensions()
 
     // For DEBUG only
@@ -92,8 +88,8 @@ open class BaseBlockchainProcessManager(
     override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
         return synchronized(synchronizer) {
             withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to chainId.toString()
+                    NODE_PUBKEY_TAG to appConfig.pubKey,
+                    CHAIN_IID_TAG to chainId.toString()
             ) {
                 try {
                     startDebug("Begin by stopping blockchain", chainId, bTrace)
@@ -105,34 +101,34 @@ open class BaseBlockchainProcessManager(
                         if (configuration != null) {
 
                             val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                                configuration, eContext, NODE_ID_AUTO, chainId
+                                    configuration, eContext, NODE_ID_AUTO, chainId
                             )
 
                             withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
                                 val processName =
-                                    BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
+                                        BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
                                 startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
                                 val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
                                 val engine =
-                                    blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
+                                        blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
                                 startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
                                 createAndRegisterBlockchainProcess(
-                                    chainId,
-                                    blockchainConfig,
-                                    processName,
-                                    engine,
-                                    awaitPermissionToProcessMessages(blockchainConfig)
+                                        chainId,
+                                        blockchainConfig,
+                                        processName,
+                                        engine,
+                                        awaitPermissionToProcessMessages(blockchainConfig)
                                 )
                                 logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
                                 startInfoDebug(
-                                    "Blockchain has been started",
-                                    processName,
-                                    chainId,
-                                    blockchainConfig.blockchainRid,
-                                    bTrace
+                                        "Blockchain has been started",
+                                        processName,
+                                        chainId,
+                                        blockchainConfig.blockchainRid,
+                                        bTrace
                                 )
                             }
                             blockchainConfig.blockchainRid
@@ -152,11 +148,11 @@ open class BaseBlockchainProcessManager(
     }
 
     protected open fun createAndRegisterBlockchainProcess(
-        chainId: Long,
-        blockchainConfig: BlockchainConfiguration,
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+            chainId: Long,
+            blockchainConfig: BlockchainConfiguration,
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ) {
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
                 .also {
@@ -180,16 +176,11 @@ open class BaseBlockchainProcessManager(
     override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
         synchronized(synchronizer) {
             withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to chainId.toString(),
-                BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toHex()
+                    NODE_PUBKEY_TAG to appConfig.pubKey,
+                    CHAIN_IID_TAG to chainId.toString(),
+                    BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toHex()
             ) {
                 stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
-
-                blockchainProcessesLoggers.remove(chainId)?.also {
-                    it.cancel()
-                    it.purge()
-                }
                 stopDebug("Blockchain process has been purged", chainId, bTrace)
             }
         }
@@ -223,11 +214,6 @@ open class BaseBlockchainProcessManager(
         blockchainProcesses.clear()
         blockchainProcessesDiagnosticData.clear()
         chainIdToBrid.clear()
-
-        blockchainProcessesLoggers.forEach { (_, t) ->
-            t.cancel()
-            t.purge()
-        }
         logger.debug("[${nodeName()}]: Stopped BlockchainProcessManager")
     }
 

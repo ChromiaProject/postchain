@@ -11,7 +11,7 @@ internal interface ContainerJobManager {
     fun stopChain(chain: Chain)
     fun startChain(chain: Chain)
     fun restartChain(chain: Chain)
-    fun executeHealthcheck()
+    fun doHealthcheck()
 }
 
 internal class DefaultContainerJobManager(
@@ -57,7 +57,7 @@ internal class DefaultContainerJobManager(
         jobOf(chain.containerName).restartChain(chain)
     }
 
-    override fun executeHealthcheck() {
+    override fun doHealthcheck() {
         jobOf(ContainerName(JOB_TAG_HEALTHCHECK, ""))
     }
 

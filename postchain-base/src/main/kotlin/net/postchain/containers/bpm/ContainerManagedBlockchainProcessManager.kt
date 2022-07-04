@@ -49,12 +49,12 @@ open class ContainerManagedBlockchainProcessManager(
     private val fs = FileSystem.create(containerNodeConfig)
     private val containerInitializer = DefaultContainerInitializer(appConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
-    private val postchainContainers = mutableSetOf<PostchainContainer>()
+    private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
 
     override fun initManagedEnvironment() {
         super.initManagedEnvironment()
-        stopRunningChainContainers()
+        stopRunningContainersIfExist()
     }
 
     override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, appConfig, containerNodeConfig)
@@ -98,7 +98,7 @@ open class ContainerManagedBlockchainProcessManager(
                             }
 
                             // Docker containers healthcheck
-                            executeDockerContainersHealthcheck()
+                            fireDockerContainersHealthcheck()
                             res2
                         }
 
@@ -121,7 +121,7 @@ open class ContainerManagedBlockchainProcessManager(
     private fun reloadAllBlockchains() {
         restartBlockchainAsync(CHAIN0, null)
 
-        postchainContainers.forEach { cont ->
+        postchainContainers.values.forEach { cont ->
             cont.getChains().forEach {
                 logger.debug("[${nodeName()}]: ContainerJob -- restart chain: ${getChain(it)}")
                 containerJobManager.restartChain(getChain(it))
@@ -152,6 +152,20 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
+    private fun fireDockerContainersHealthcheck() {
+        val period = containerNodeConfig.healthcheckRunningContainersCheckPeriod.toLong()
+        if (period > 0 && postchainContainers.isNotEmpty()) {
+            val height = withReadConnection(storage, CHAIN0) { ctx ->
+                DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
+            }
+
+            if (height % period == 0L) {
+                logger.debug("[${nodeName()}]: ContainerJob -- Healthcheck job created")
+                containerJobManager.doHealthcheck()
+            }
+        }
+    }
+
     private fun containerJobHandler(containerName: ContainerName, chainsToStop: Set<Chain>, chainsToStart: Set<Chain>) {
         val start = System.currentTimeMillis()
         val scope = "ContainerJobHandler"
@@ -166,7 +180,7 @@ open class ContainerManagedBlockchainProcessManager(
          * Step 1: Postchain Container
          */
         var restartDockerContainer = false
-        var psContainer = findPostchainContainer(containerName.name)
+        var psContainer = postchainContainers[containerName]
         val dockerContainer = findDockerContainer(containerName.name)
 
         if (psContainer == null) {
@@ -183,7 +197,7 @@ open class ContainerManagedBlockchainProcessManager(
                 val newPsContainer = DefaultPostchainContainer(directoryDataSource, containerName, port, STARTING)
                 val dir = containerInitializer.initContainerWorkingDir(fs, newPsContainer)
                 if (dir != null) {
-                    postchainContainers.add(newPsContainer)
+                    postchainContainers[newPsContainer.containerName] = newPsContainer
                     logger.debug {
                         "[${nodeName()}]: $scope -- Container dir inited, container: $containerName, dir: $dir"
                     }
@@ -208,7 +222,7 @@ open class ContainerManagedBlockchainProcessManager(
             }
         } else { // psContainer != null
             chainsToStop.forEach { chain ->
-                val (process, res) = terminateBlockchainProcess(psContainer, chain)
+                val (process, res) = terminateBlockchainProcess(chain, psContainer)
                 if (res) {
                     logger.debug { "[${nodeName()}]: $scope -- ContainerBlockchainProcess terminated: $process" }
                     restartDockerContainer = true
@@ -253,7 +267,7 @@ open class ContainerManagedBlockchainProcessManager(
                 logger.debug { msg("found", psContainer) }
                 if (psContainer.isEmpty()) {
                     psContainer.stop()
-                    postchainContainers.remove(psContainer)
+                    postchainContainers.remove(psContainer.containerName)
                     dockerClient.stopContainer(dockerContainer.id(), 10)
                     logger.debug { msg("stopped", psContainer) }
                 } else {
@@ -267,31 +281,17 @@ open class ContainerManagedBlockchainProcessManager(
         logger.debug { "[${nodeName()}]: $scope -- End ($elapsed ms)" }
     }
 
-    private fun executeDockerContainersHealthcheck() {
-        val period = containerNodeConfig.healthcheckRunningContainersCheckPeriod.toLong()
-        if (period > 0 && postchainContainers.isNotEmpty()) {
-            val height = withReadConnection(storage, CHAIN0) { ctx ->
-                DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
-            }
-
-            if (height % period == 0L) {
-                logger.debug("[${nodeName()}]: ContainerJob -- Healthcheck job created")
-                containerJobManager.executeHealthcheck()
-            }
-        }
-    }
-
     private fun containerHealthcheckJobHandler() {
         val start = System.currentTimeMillis()
         logger.debug { "[${nodeName()}]: ContainerHealthcheckJobHandler -- Begin" }
 
         val running = dockerClient.listContainers() // running containers only
-        postchainContainers.forEach { psc ->
-            val dc = running.find { checkContainerName(it, psc.containerName.name) }
+        postchainContainers.forEach { (cname, psc) ->
+            val dc = running.find { checkContainerName(it, cname.name) }
             if (dc == null && psc.containerId != null) {
-                logger.warn { "Container ${psc.containerName} / ${psc.shortContainerId()} is not running and will be restarted" }
+                logger.warn { "Container $cname / ${psc.shortContainerId()} is not running and will be restarted" }
                 dockerClient.startContainer(psc.containerId)
-                logger.info { "Container ${psc.containerName} / ${psc.shortContainerId()} has been restarted" }
+                logger.info { "Container $cname / ${psc.shortContainerId()} has been restarted" }
             }
         }
 
@@ -300,7 +300,7 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     override fun shutdown() {
-        startingOrRunningContainerProcesses()
+        getStartingOrRunningContainerBlockchains()
                 .forEach { stopBlockchain(it, bTrace = null) }
         containerJobManager.shutdown()
         super.shutdown()
@@ -343,10 +343,7 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    private fun terminateBlockchainProcess(
-            container: PostchainContainer,
-            chain: Chain
-    ): Pair<ContainerBlockchainProcess?, Boolean> {
+    private fun terminateBlockchainProcess(chain: Chain, container: PostchainContainer): Pair<ContainerBlockchainProcess?, Boolean> {
         val process = container.findProcesses(chain.chainId)
         return if (process != null) {
             masterBlockchainInfra.exitMasterBlockchainProcess(process)
@@ -369,25 +366,16 @@ open class ContainerManagedBlockchainProcessManager(
         return all.find { checkContainerName(it, containerName) }
     }
 
-    private fun findPostchainContainer(containerName: String) =
-            postchainContainers.find { it.containerName.name == containerName }
-
     override fun getLaunchedBlockchains(): Set<Long> {
-        // chain0 + chainsOf(starting/running containers)
-        return super.getLaunchedBlockchains() + startingOrRunningContainerProcesses()
+        // FYI: chain0 + chainsOf(starting|running containers)
+        return super.getLaunchedBlockchains() + getStartingOrRunningContainerBlockchains()
     }
 
-    private fun startingOrRunningContainerProcesses(): Set<Long> {
-        return postchainContainers
+    private fun getStartingOrRunningContainerBlockchains(): Set<Long> {
+        return postchainContainers.values
                 .filter { it.state == STARTING || it.state == RUNNING }
                 .flatMap { it.getChains() }
                 .toSet()
-    }
-
-    private fun getBridByChainId(chainId: Long): BlockchainRid {
-        return withReadConnection(storage, chainId) { ctx ->
-            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
-        }
     }
 
     private fun getChain(chainId: Long): Chain {
@@ -399,7 +387,13 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    private fun stopRunningChainContainers() {
+    private fun getBridByChainId(chainId: Long): BlockchainRid {
+        return withReadConnection(storage, chainId) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+        }
+    }
+
+    private fun stopRunningContainersIfExist() {
         if (containerNodeConfig.healthcheckRunningContainersAtStartRegexp.isNotEmpty()) {
             val toStop = dockerClient.listContainers().filter {
                 try {
