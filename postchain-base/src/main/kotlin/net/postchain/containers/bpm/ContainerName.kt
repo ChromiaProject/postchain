@@ -4,7 +4,7 @@ import net.postchain.config.app.AppConfig
 
 data class ContainerName(
         val name: String,
-        val directoryContainer: String
+        val directoryContainer: String,
 ) {
 
     companion object {

@@ -13,7 +13,6 @@ import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
-import java.nio.file.Path
 
 
 open class DefaultMasterSyncInfra(
@@ -30,8 +29,7 @@ open class DefaultMasterSyncInfra(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
-            targetContainer: PostchainContainer,
-            containerChainDir: Path?,
+            targetContainer: PostchainContainer
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -53,9 +51,7 @@ open class DefaultMasterSyncInfra(
                 chainId,
                 blockchainRid,
                 targetContainer.containerPorts.hostRestApiPort,
-                communicationManager,
-                dataSource,
-                containerChainDir
+                communicationManager
         )
     }
 

@@ -20,13 +20,9 @@ interface PostchainContainer {
     fun findProcesses(chainId: Long): ContainerBlockchainProcess?
     fun getAllChains(): Set<Long>
     fun getStoppedChains(): Set<Long>
-
-    @Deprecated("Use startProcess() instead")
-    fun addProcess(process: ContainerBlockchainProcess)
     fun startProcess(process: ContainerBlockchainProcess): Boolean
     fun terminateProcess(chainId: Long): ContainerBlockchainProcess?
     fun terminateAllProcesses(): Set<Long>
-
     fun start()
     fun stop()
     fun isEmpty(): Boolean
@@ -63,10 +59,6 @@ class DefaultPostchainContainer(
         return processes.keys
                 .filter { !subnodeAdminClient.isBlockchainRunning(it) }
                 .toSet()
-    }
-
-    override fun addProcess(process: ContainerBlockchainProcess) {
-        processes[process.chainId] = process
     }
 
     override fun startProcess(process: ContainerBlockchainProcess): Boolean {

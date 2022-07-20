@@ -6,12 +6,10 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.FileSystem.Companion.BLOCKCHAINS_DIR
 import net.postchain.containers.bpm.FileSystem.Companion.NODE_CONFIG_FILE
-import net.postchain.containers.bpm.FileSystem.Companion.PEERS_FILE
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_DATABASE_URL
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
 import net.postchain.core.Infrastructure
-import java.io.File
 import java.nio.file.Path
 
 internal class DefaultContainerInitializer(private val appConfig: AppConfig, private val containerConfig: ContainerNodeConfig) : ContainerInitializer {
@@ -22,7 +20,6 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         val dir = fs.createContainerRoot(container.containerName, container.resourceLimits)
         if (dir != null) {
             createContainerNodeConfig(container, dir)
-            createPeersConfig(container, dir)
         }
 
         return dir
@@ -71,20 +68,6 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()
         AppConfig.toPropertiesFile(config, filename)
         logger.info("Container subnode properties file has been created: $filename")
-    }
-
-    @Deprecated("POS-301: Delete it")
-    override fun createPeersConfig(container: PostchainContainer, containerDir: Path) {
-        val peers = """
-            export NODE_HOST=127.0.0.1
-            export NODE_PORT=${AppConfig.DEFAULT_PORT}
-            export NODE_PUBKEY=${appConfig.pubKey}
-            
-        """.trimIndent()
-
-        val filename = containerDir.resolve(PEERS_FILE).toString()
-        File(filename).writeText(peers)
-        logger.info("Container subnode peers file has been created: $filename")
     }
 
     override fun removeContainerChainDir(fs: FileSystem, chain: Chain): Boolean {

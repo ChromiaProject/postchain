@@ -20,7 +20,6 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
     ) {
         val brid = postchainNode.startBlockchain(request!!.chainId)
         if (brid == null) {
-            // TODO: POS-301: Fix NULL reason
             responseObserver?.onError(Status.CANCELLED.withDescription("Blockchain with id ${request.chainId} not found in db.").asRuntimeException())
         } else {
             responseObserver?.onNext(

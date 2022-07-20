@@ -22,10 +22,5 @@ internal interface ContainerInitializer {
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun createPeersConfig(container: PostchainContainer, containerDir: Path)
-
-    /**
-     * TODO: [POS-129]: Add kdoc
-     */
     fun removeContainerChainDir(fs: FileSystem, chain: Chain): Boolean
 }

@@ -6,14 +6,13 @@ import net.postchain.common.BlockchainRid
 import net.postchain.containers.api.MasterApiInfra
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
-import net.postchain.managed.DirectoryDataSource
 import net.postchain.debug.BlockchainProcessName
-import java.nio.file.Path
+import net.postchain.managed.DirectoryDataSource
 
 open class DefaultMasterBlockchainInfra(
         postchainContext: PostchainContext,
         private val masterSyncInfra: MasterSyncInfra,
-        private val masterApiInfra: MasterApiInfra
+        private val masterApiInfra: MasterApiInfra,
 ) : BaseBlockchainInfrastructure(
         masterSyncInfra,
         masterApiInfra,
@@ -21,15 +20,14 @@ open class DefaultMasterBlockchainInfra(
 ), MasterBlockchainInfra {
 
     override fun makeMasterBlockchainProcess(
-        processName: BlockchainProcessName,
-        chainId: Long,
-        blockchainRid: BlockchainRid,
-        dataSource: DirectoryDataSource,
-        targetContainer: PostchainContainer,
-        containerChainDir: Path?
+            processName: BlockchainProcessName,
+            chainId: Long,
+            blockchainRid: BlockchainRid,
+            dataSource: DirectoryDataSource,
+            targetContainer: PostchainContainer,
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(
-                processName, chainId, blockchainRid, dataSource, targetContainer, containerChainDir
+                processName, chainId, blockchainRid, dataSource, targetContainer
         ).also(masterApiInfra::connectContainerProcess)
     }
 

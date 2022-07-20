@@ -4,8 +4,7 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import kotlin.properties.Delegates
 
 /**
- * Describes port mappings (host -> container)
- * for REST API port and Admin Rpc Interface port
+ * Describes port mappings (host -> container) for REST API port and Admin Rpc Interface port
  */
 class ContainerPorts(config: ContainerNodeConfig) {
 
