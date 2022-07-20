@@ -11,12 +11,13 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
-import net.postchain.containers.bpm.DockerTools.containerName
-import net.postchain.containers.bpm.DockerTools.findHostPorts
-import net.postchain.containers.bpm.DockerTools.hasName
-import net.postchain.containers.bpm.DockerTools.shortContainerId
-import net.postchain.containers.bpm.rpc.ContainerJob
-import net.postchain.containers.bpm.rpc.ContainerPorts
+import net.postchain.containers.bpm.docker.DockerClientFactory
+import net.postchain.containers.bpm.docker.DockerTools.containerName
+import net.postchain.containers.bpm.docker.DockerTools.findHostPorts
+import net.postchain.containers.bpm.docker.DockerTools.hasName
+import net.postchain.containers.bpm.docker.DockerTools.shortContainerId
+import net.postchain.containers.bpm.fs.FileSystem
+import net.postchain.containers.bpm.job.ContainerJob
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
@@ -53,7 +54,7 @@ open class ContainerManagedBlockchainProcessManager(
     private val containerInitializer = DefaultContainerInitializer(appConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
-    private val containerJobManagerRpc = net.postchain.containers.bpm.rpc.DefaultContainerJobManager(::containerJobHandlerRpc, ::containerHealthcheckJobHandler)
+    private val containerJobManager = net.postchain.containers.bpm.job.DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
 
     override fun initManagedEnvironment() {
         super.initManagedEnvironment()
@@ -86,7 +87,7 @@ open class ContainerManagedBlockchainProcessManager(
                         val doReload = (this.peerListVersion != peerListVersion)
                         this.peerListVersion = peerListVersion
 
-                        val res = containerJobManagerRpc.withLock {
+                        val res = containerJobManager.withLock {
                             // Reload/start/stops blockchains
                             val res2 = if (doReload) {
                                 rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
@@ -127,7 +128,7 @@ open class ContainerManagedBlockchainProcessManager(
         postchainContainers.values.forEach { cont ->
             cont.getAllChains().forEach {
                 logger.debug("[${nodeName()}]: ContainerJob -- restart chain: ${getChain(it)}")
-                containerJobManagerRpc.restartChain(getChain(it))
+                containerJobManager.restartChain(getChain(it))
             }
         }
     }
@@ -145,13 +146,13 @@ open class ContainerManagedBlockchainProcessManager(
         // Stopping launched blockchains
         launched.filterNot(toLaunch::contains).forEach {
             logger.debug("[${nodeName()}]: ContainerJob -- Stop chain: ${getChain(it)}")
-            containerJobManagerRpc.stopChain(getChain(it))
+            containerJobManager.stopChain(getChain(it))
         }
 
         // Launching new blockchains except blockchain 0
         toLaunch.filter { it != CHAIN0 && it !in launched }.forEach {
             logger.debug("[${nodeName()}]: ContainerJob -- Start chain: ${getChain(it)}")
-            containerJobManagerRpc.startChain(getChain(it))
+            containerJobManager.startChain(getChain(it))
         }
     }
 
@@ -164,12 +165,12 @@ open class ContainerManagedBlockchainProcessManager(
 
             if (height % period == 0L) {
                 logger.debug("[${nodeName()}]: ContainerJob -- Healthcheck job created")
-                containerJobManagerRpc.doHealthcheck()
+                containerJobManager.doHealthcheck()
             }
         }
     }
 
-    private fun containerJobHandlerRpc(job: ContainerJob) {
+    private fun containerJobHandler(job: ContainerJob) {
         val scope = "ContainerJobHandler"
         logger.error {
             "[${nodeName()}]: $scope -- BEGIN: " +
@@ -262,13 +263,13 @@ open class ContainerManagedBlockchainProcessManager(
 
         // 4. Stop chains
         job.chainsToStop.forEach { chain ->
-            val process = terminateBlockchainProcessRpc(chain.chainId, psContainer)
+            val process = terminateBlockchainProcess(chain.chainId, psContainer)
             logger.error { "[${nodeName()}]: $scope -- ContainerBlockchainProcess terminated: $process" }
         }
 
         // 5. Start chains
         job.chainsToStart.forEach { chain ->
-            val process = createBlockchainProcessRpc(chain, psContainer)
+            val process = createBlockchainProcess(chain, psContainer)
             logger.error { "[${nodeName()}]: $scope -- ContainerBlockchainProcess created: $process" }
         }
 
@@ -315,7 +316,7 @@ open class ContainerManagedBlockchainProcessManager(
                 }
 
                 chainIds.forEach {
-                    terminateBlockchainProcessRpc(it, psContainer)
+                    terminateBlockchainProcess(it, psContainer)
                 }
                 if (chainIds.isNotEmpty()) {
                     logger.error { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainIds" }
@@ -335,7 +336,7 @@ open class ContainerManagedBlockchainProcessManager(
     override fun shutdown() {
         getStartingOrRunningContainerBlockchains()
                 .forEach { stopBlockchain(it, bTrace = null) }
-        containerJobManagerRpc.shutdown()
+        containerJobManager.shutdown()
         super.shutdown()
     }
 
@@ -348,7 +349,7 @@ open class ContainerManagedBlockchainProcessManager(
         logger.info("\t" + message) // \t -- for tests
     }
 
-    private fun createBlockchainProcessRpc(chain: Chain, psContainer: PostchainContainer): ContainerBlockchainProcess? {
+    private fun createBlockchainProcess(chain: Chain, psContainer: PostchainContainer): ContainerBlockchainProcess? {
         val process = masterBlockchainInfra.makeMasterBlockchainProcess(
                 BlockchainProcessName(appConfig.pubKey, chain.brid),
                 chain.chainId,
@@ -371,7 +372,7 @@ open class ContainerManagedBlockchainProcessManager(
         return process.takeIf { started }
     }
 
-    private fun terminateBlockchainProcessRpc(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? {
+    private fun terminateBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? {
         return psContainer.terminateProcess(chainId)
                 ?.also { process ->
                     masterBlockchainInfra.exitMasterBlockchainProcess(process)

@@ -4,8 +4,8 @@ import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders
-import net.postchain.containers.bpm.FileSystem.Companion.BLOCKCHAINS_DIR
-import net.postchain.containers.bpm.FileSystem.Companion.NODE_CONFIG_FILE
+import net.postchain.containers.bpm.fs.FileSystem
+import net.postchain.containers.bpm.fs.FileSystem.Companion.NODE_CONFIG_FILE
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_DATABASE_URL
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
@@ -21,23 +21,7 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         if (dir != null) {
             createContainerNodeConfig(container, dir)
         }
-
         return dir
-    }
-
-    override fun initContainerChainWorkingDir(fs: FileSystem, chain: Chain): Path? {
-        // Creating current working dir (target)
-        val dir = getContainerChainDir(fs, chain)
-        val exists = if (dir.toFile().exists()) {
-            logger.info("Container chain dir exists: $dir")
-            true
-        } else {
-            val created = dir.toFile().mkdirs()
-            logger.info("Container chain dir ${if (created) "has" else "hasn't"} been created: $dir")
-            created
-        }
-
-        return if (exists) dir else null
     }
 
     override fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path) {
@@ -68,24 +52,6 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()
         AppConfig.toPropertiesFile(config, filename)
         logger.info("Container subnode properties file has been created: $filename")
-    }
-
-    override fun removeContainerChainDir(fs: FileSystem, chain: Chain): Boolean {
-        // Deleting chain working dir
-        val dir = getContainerChainDir(fs, chain)
-        val res = dir.toFile().deleteRecursively()
-        if (res) {
-            logger.info("Container chain dir has been deleted: $dir")
-        } else {
-            logger.info("Container chain dir hasn't been deleted properly: $dir")
-        }
-        return res
-    }
-
-    private fun getContainerChainDir(fs: FileSystem, chain: Chain): Path {
-        return fs.rootOf(chain.containerName)
-                .resolve(BLOCKCHAINS_DIR)
-                .resolve(chain.chainId.toString())
     }
 
     private fun databaseSchema(containerName: ContainerName): String {

@@ -1,5 +1,6 @@
 package net.postchain.containers.bpm
 
+import net.postchain.containers.bpm.fs.FileSystem
 import java.nio.file.Path
 
 internal interface ContainerInitializer {
@@ -12,15 +13,6 @@ internal interface ContainerInitializer {
     /**
      * TODO: [POS-129]: Add kdoc
      */
-    fun initContainerChainWorkingDir(fs: FileSystem, chain: Chain): Path?
-
-    /**
-     * TODO: [POS-129]: Add kdoc
-     */
     fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path)
 
-    /**
-     * TODO: [POS-129]: Add kdoc
-     */
-    fun removeContainerChainDir(fs: FileSystem, chain: Chain): Boolean
 }

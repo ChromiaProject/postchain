@@ -1,4 +1,4 @@
-package net.postchain.containers.bpm.rpc
+package net.postchain.containers.bpm.job
 
 import mu.KLogging
 import net.postchain.common.toHex

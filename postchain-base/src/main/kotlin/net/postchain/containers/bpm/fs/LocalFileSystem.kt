@@ -1,6 +1,8 @@
-package net.postchain.containers.bpm
+package net.postchain.containers.bpm.fs
 
 import mu.KLogging
+import net.postchain.containers.bpm.ContainerName
+import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.infra.ContainerNodeConfig
 import java.nio.file.Path
 import java.nio.file.Paths

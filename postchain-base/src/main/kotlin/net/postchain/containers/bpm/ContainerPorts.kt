@@ -1,4 +1,4 @@
-package net.postchain.containers.bpm.rpc
+package net.postchain.containers.bpm
 
 import net.postchain.containers.infra.ContainerNodeConfig
 import kotlin.properties.Delegates

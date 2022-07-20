@@ -1,4 +1,4 @@
-package net.postchain.containers.bpm
+package net.postchain.containers.bpm.docker
 
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container

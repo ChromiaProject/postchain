@@ -1,4 +1,4 @@
-package net.postchain.containers.bpm.rpc
+package net.postchain.containers.bpm.job
 
 import net.postchain.containers.bpm.Chain
 import net.postchain.containers.bpm.ContainerName

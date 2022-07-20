@@ -1,5 +1,6 @@
 package net.postchain.containers.bpm.rpc
 
+import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Shutdownable
 
