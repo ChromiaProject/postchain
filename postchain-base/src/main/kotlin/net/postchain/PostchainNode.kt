@@ -78,12 +78,16 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
 
     private fun chainExists(chainId: Long): Boolean {
         return withReadConnection(postchainContext.storage, chainId) {
-            return@withReadConnection DatabaseAccess.of(it).getChainIds(it).containsValue(chainId)
+            DatabaseAccess.of(it).getChainIds(it).containsValue(chainId)
         }
     }
 
     fun stopBlockchain(chainId: Long) {
         processManager.stopBlockchain(chainId, buildBbDebug(chainId))
+    }
+
+    fun isBlockchainRunning(chainId: Long): Boolean {
+        return processManager.retrieveBlockchain(chainId) != null
     }
 
     override fun shutdown() {
@@ -116,8 +120,8 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
     private fun buildBbDebug(chainId: Long): BlockTrace? {
         return if (logger.isDebugEnabled) {
             withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to chainId.toString()
+                    NODE_PUBKEY_TAG to appConfig.pubKey,
+                    CHAIN_IID_TAG to chainId.toString()
             ) {
                 val x = processManager.retrieveBlockchain(chainId)
                 if (x == null) {
@@ -125,8 +129,8 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
                     null
                 } else {
                     val procName = BlockchainProcessName(
-                        postchainContext.appConfig.pubKey,
-                        x.blockchainEngine.getConfiguration().blockchainRid
+                            postchainContext.appConfig.pubKey,
+                            x.blockchainEngine.getConfiguration().blockchainRid
                     )
                     BlockTrace.buildBeforeBlock(procName)
                 }

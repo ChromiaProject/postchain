@@ -7,6 +7,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.RemoteConfigVerifier
 import net.postchain.managed.DirectoryDataSource
@@ -16,7 +17,6 @@ import net.postchain.network.mastersub.protocol.*
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
-import net.postchain.debug.BlockchainProcessName
 import java.util.*
 
 /**
@@ -35,7 +35,7 @@ open class DefaultMasterCommunicationManager(
         private val connectionManager: ConnectionManager,
         private val masterConnectionManager: MasterConnectionManager,
         private val dataSource: DirectoryDataSource,
-        private val processName: BlockchainProcessName
+        private val processName: BlockchainProcessName,
 ) : AbstractMasterCommunicationManager() {
 
     companion object : KLogging()
@@ -181,6 +181,7 @@ open class DefaultMasterCommunicationManager(
 
         val prefixFun: () -> String = { processName.toString() }
         connectionManager.disconnectChain(prefixFun, chainId)
+        masterConnectionManager.disconnectSubChain(processName, chainId)
     }
 
     private fun process(): String {

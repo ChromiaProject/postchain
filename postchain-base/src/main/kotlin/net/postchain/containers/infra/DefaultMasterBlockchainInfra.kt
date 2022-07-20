@@ -26,7 +26,7 @@ open class DefaultMasterBlockchainInfra(
         blockchainRid: BlockchainRid,
         dataSource: DirectoryDataSource,
         targetContainer: PostchainContainer,
-        containerChainDir: Path
+        containerChainDir: Path?
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(
                 processName, chainId, blockchainRid, dataSource, targetContainer, containerChainDir

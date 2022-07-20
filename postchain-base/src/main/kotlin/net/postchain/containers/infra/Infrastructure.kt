@@ -19,7 +19,7 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
         blockchainRid: BlockchainRid,
         dataSource: DirectoryDataSource,
         targetContainer: PostchainContainer,
-        containerChainDir: Path
+        containerChainDir: Path?
     ): ContainerBlockchainProcess
 
     fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess)

@@ -1,8 +1,10 @@
 package net.postchain.containers.infra
 
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
 import net.postchain.config.app.Config
 import net.postchain.containers.bpm.FileSystem
+import net.postchain.server.config.PostchainServerConfig
 import org.apache.commons.configuration2.Configuration
 
 /**
@@ -18,6 +20,7 @@ data class ContainerNodeConfig(
         val masterPort: Int,
         val subnodeHost: String,
         val subnodeRestApiPort: Int,
+        val subnodeAdminRpcPort: Int,
         val sendMasterConnectedPeersPeriod: Long,
         val healthcheckRunningContainersAtStartRegexp: String,
         val healthcheckRunningContainersCheckPeriod: Int,
@@ -55,18 +58,18 @@ data class ContainerNodeConfig(
         val testmodeResourceLimitsRAM: Long,
         val testmodeResourceLimitsCPU: Long,
         val testmodeResourceLimitsSTORAGE: Long,
-        val testmodeDappsContainers: Map<String, String>
+        val testmodeDappsContainers: Map<String, String>,
 ) : Config {
     companion object {
-        const val DEFAULT_PORT: Int = 9870
         const val DEFAULT_CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
 
         const val KEY_PREFIX = "container"
         const val KEY_DOCKER_IMAGE = "docker-image"
-        const val KEY_SUBNODE_API_PORT = "api-port"
         const val KEY_MASTER_HOST = "master-host"
         const val KEY_MASTER_PORT = "master-port"
         const val KEY_SUBNODE_HOST = "subnode-host"
+        const val KEY_SUBNODE_REST_API_PORT = "rest-api-port"
+        const val KEY_SUBNODE_ADMIN_RPC_PORT = "admin-rpc-port"
         const val KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD = "send-master-connected-peers-period"
         const val KEY_HEALTHCHECK_RUNNING_CONTAINERS_AT_START_REGEXP = "healthcheck.running-containers-at-start-regexp"
         const val KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD = "healthcheck.running-containers-check-period"
@@ -91,7 +94,8 @@ data class ContainerNodeConfig(
                         getString(KEY_MASTER_HOST, "localhost"),
                         getInt(KEY_MASTER_PORT, 9860),
                         getString(KEY_SUBNODE_HOST, "localhost"),
-                        getInt(KEY_SUBNODE_API_PORT, 7740),
+                        getInt(KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
+                        getInt(KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),
                         getLong(KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
                         getString(KEY_HEALTHCHECK_RUNNING_CONTAINERS_AT_START_REGEXP, ""),
                         getInt(KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 0),

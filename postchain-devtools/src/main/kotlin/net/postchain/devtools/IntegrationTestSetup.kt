@@ -5,14 +5,15 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.AppConfig.Companion.DEFAULT_PORT
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.core.Transaction
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
-import net.postchain.core.Transaction
 import org.apache.commons.configuration2.MapConfiguration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
@@ -101,9 +102,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     protected fun strategy(node: PostchainTestNode): OnDemandBlockBuildingStrategy {
         return node
-            .getBlockchainInstance()
-            .blockchainEngine
-            .getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
+                .getBlockchainInstance()
+                .blockchainEngine
+                .getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
     }
 
     // TODO: [et]: Check out nullability for return value
@@ -177,9 +178,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * @param systemSetup is the map of what the test setup looks like.
      */
     protected fun createNodesFromSystemSetup(
-        sysSetup: SystemSetup,
-        preWipeDatabase: Boolean = true,
-        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            sysSetup: SystemSetup,
+            preWipeDatabase: Boolean = true,
+            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ) {
         this.systemSetup = sysSetup
 
@@ -209,8 +210,8 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * This code waits for sync on all signer nodes before returning in step 1.
      */
     protected fun awaitFastSynch(
-        sysSetup: SystemSetup,
-        testNodeMap: Map<NodeSeqNumber, PostchainTestNode>
+            sysSetup: SystemSetup,
+            testNodeMap: Map<NodeSeqNumber, PostchainTestNode>
     ) {
         sysSetup.nodeMap.values.forEach { nodeSetup ->
             nodeSetup.chainsToSign.forEach { chainIid ->
@@ -231,8 +232,8 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * Create the [PostchainTestNode], start everything, and return them
      */
     protected fun startAllTestNodesAndAllChains(
-        sysSetup: SystemSetup,
-        preWipeDatabase: Boolean
+            sysSetup: SystemSetup,
+            preWipeDatabase: Boolean
     ): Map<NodeSeqNumber, PostchainTestNode> {
         val retMap = mutableMapOf<NodeSeqNumber, PostchainTestNode>()
         for (nodeSetup in sysSetup.nodeMap.values) {
@@ -257,9 +258,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * Generates config for all [NodeSetup] objects
      */
     protected fun createNodeConfProvidersAndAddToNodeSetup(
-        sysSetup: SystemSetup,
-        confOverrides: MapConfiguration,
-        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            sysSetup: SystemSetup,
+            confOverrides: MapConfiguration,
+            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ) {
         val peerList = sysSetup.toPeerInfoList()
         confOverrides.setProperty("testpeerinfos", peerList.toTypedArray())
@@ -267,11 +268,11 @@ open class IntegrationTestSetup : AbstractIntegration() {
         val testName: String = getTestName()
         for (nodeSetup in sysSetup.nodeMap.values) {
             val nodeConfigProvider = NodeConfigurationProviderGenerator.buildFromSetup(
-                testName,
-                confOverrides,
-                nodeSetup,
-                sysSetup,
-                setupAction
+                    testName,
+                    confOverrides,
+                    nodeSetup,
+                    sysSetup,
+                    setupAction
             )
             nodeSetup.configurationProvider = nodeConfigProvider
         }
@@ -286,7 +287,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * @return list of [PostchainTestNode] s.
      */
     protected fun createMultiChainNodesFromSystemSetup(systemSetup: SystemSetup) =
-        systemSetup.toTestNodes().toTypedArray()
+            systemSetup.toTestNodes().toTypedArray()
 
     /**
      * Takes a [SystemSetup] and adds [NodeConfigurationProvider] to all [NodeSetup] in it.
@@ -313,8 +314,8 @@ open class IntegrationTestSetup : AbstractIntegration() {
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
         if (peerInfos == null) {
             peerInfos =
-                    Array(nodeCount) { PeerInfo("localhost", BASE_PORT + it, pubKey(it)) } +
-                            Array(replicasCount) { PeerInfo("localhost", BASE_PORT - it - 1, pubKey(-it - 1)) }
+                    Array(nodeCount) { PeerInfo("localhost", DEFAULT_PORT + it, pubKey(it)) } +
+                            Array(replicasCount) { PeerInfo("localhost", DEFAULT_PORT - it - 1, pubKey(-it - 1)) }
         }
 
         return peerInfos!!
@@ -336,10 +337,10 @@ open class IntegrationTestSetup : AbstractIntegration() {
     }
 
     protected fun buildBlockNoWait(
-        nodes: List<PostchainTestNode>,
-        chainId: Long,
-        toHeight: Long,
-        vararg txs: Transaction
+            nodes: List<PostchainTestNode>,
+            chainId: Long,
+            toHeight: Long,
+            vararg txs: Transaction
     ) {
         nodes.forEach {
             it.enqueueTxs(chainId, *txs)

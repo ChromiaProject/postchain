@@ -29,11 +29,11 @@ class CommandRunServer : CliktCommand(name = "run-server", help = "Start postcha
     private val debug by debugOption()
 
     private val port by option("-p", "--port", envvar = "POSTCHAIN_SERVER_PORT", help = "Port for the server")
-        .int().default(50051)
+            .int().default(PostchainServerConfig.DEFAULT_RPC_SERVER_PORT)
 
     private val activeChains by option("--initial-chain-ids", "-c", envvar = "POSTCHAIN_INITIAL_CHAIN_IDS")
-        .help("Chain IDs that will be started directly")
-        .long().split(",")
+            .help("Chain IDs that will be started directly")
+            .long().split(",")
 
     private val tlsOptions by TlsOptions().cooccurring()
 
@@ -44,9 +44,9 @@ class CommandRunServer : CliktCommand(name = "run-server", help = "Start postcha
             PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
         } ?: PostchainServerConfig(port)
         PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug, serverConfig)
-            .apply {
-                start(activeChains)
-                blockUntilShutdown()
-            }
+                .apply {
+                    start(activeChains)
+                    blockUntilShutdown()
+                }
     }
 }

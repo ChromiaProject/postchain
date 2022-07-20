@@ -105,13 +105,13 @@ class DefaultMasterConnectionManager(
                 null
             }
             chain.getConnection() != null -> {
-                logger.debug { "$processName: Subnode already connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
+                logger.warn { "$processName: Subnode already connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 chain.closeConnection() // Close old connection here and store a new one
                 chain.setConnection(connection)
                 chain.config.messageHandler
             }
             else -> {
-                logger.debug { "$processName: Subnode connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
+                logger.info { "$processName: Subnode connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
                 chain.setConnection(connection)
                 chain.config.messageHandler
             }

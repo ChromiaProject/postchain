@@ -3,14 +3,15 @@ package net.postchain.containers.bpm
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.config.node.NodeConfig
+import net.postchain.core.Shutdownable
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.HeartbeatEvent
 import net.postchain.ebft.heartbeat.HeartbeatListener
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.MasterCommunicationManager
-import net.postchain.debug.BlockchainProcessName
 import java.nio.file.Path
 
-interface ContainerBlockchainProcess : HeartbeatListener {
+interface ContainerBlockchainProcess : HeartbeatListener, Shutdownable {
     val processName: BlockchainProcessName
     val chainId: Long
     val blockchainRid: BlockchainRid
@@ -22,14 +23,14 @@ interface ContainerBlockchainProcess : HeartbeatListener {
 }
 
 class DefaultContainerBlockchainProcess(
-    val nodeConfig: NodeConfig,
-    override val processName: BlockchainProcessName,
-    override val chainId: Long,
-    override val blockchainRid: BlockchainRid,
-    override val restApiPort: Int,
-    private val communicationManager: MasterCommunicationManager,
-    private val dataSource: DirectoryDataSource, // TODO [POS-164]: (!)
-    private val containerChainDir: Path
+        val nodeConfig: NodeConfig,
+        override val processName: BlockchainProcessName,
+        override val chainId: Long,
+        override val blockchainRid: BlockchainRid,
+        override val restApiPort: Int,
+        private val communicationManager: MasterCommunicationManager,
+        private val dataSource: DirectoryDataSource, // TODO [POS-164]: (!)
+        private val containerChainDir: Path?,
 ) : ContainerBlockchainProcess {
 
     companion object : KLogging()
@@ -57,13 +58,19 @@ class DefaultContainerBlockchainProcess(
         if (configsToDump.isNotEmpty()) {
             logger.info("Number of chain configs to dump: ${configsToDump.size}")
             configs.filterKeys { it > lastHeight }.forEach { (height, config) ->
-                val filepath = containerChainDir.resolve("$height.gtv")
-                filepath.toFile().writeBytes(config) // TODO: [POS-129]: Add exceptions handling
-                logger.info("Config file dumped: $filepath")
-                lastHeight = height
+                if (containerChainDir != null) {
+                    val filepath = containerChainDir.resolve("$height.gtv")
+                    filepath.toFile().writeBytes(config) // TODO: [POS-129]: Add exceptions handling
+                    logger.info("Config file dumped: $filepath")
+                    lastHeight = height
+                }
             }
         }
     }
 
     override fun toString(): String = processName.toString()
+
+    override fun shutdown() {
+        communicationManager.shutdown()
+    }
 }

@@ -1,6 +1,7 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.FileSystem.Companion.BLOCKCHAINS_DIR
@@ -62,7 +63,7 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
          * control here and know that it is always free.
          * If -1, no API communication => subnodeRestApiPort=-1
          */
-        if (config.getInt("api.port", 7740) > -1) {
+        if (config.getInt("api.port", RestApiConfig.DEFAULT_REST_API_PORT) > -1) {
             config.setProperty("api.port", containerConfig.subnodeRestApiPort)
         }
 
@@ -72,10 +73,11 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         logger.info("Container subnode properties file has been created: $filename")
     }
 
+    @Deprecated("POS-301: Delete it")
     override fun createPeersConfig(container: PostchainContainer, containerDir: Path) {
         val peers = """
             export NODE_HOST=127.0.0.1
-            export NODE_PORT=${ContainerNodeConfig.DEFAULT_PORT}
+            export NODE_PORT=${AppConfig.DEFAULT_PORT}
             export NODE_PUBKEY=${appConfig.pubKey}
             
         """.trimIndent()
@@ -99,8 +101,8 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
 
     private fun getContainerChainDir(fs: FileSystem, chain: Chain): Path {
         return fs.rootOf(chain.containerName)
-            .resolve(BLOCKCHAINS_DIR)
-            .resolve(chain.chainId.toString())
+                .resolve(BLOCKCHAINS_DIR)
+                .resolve(chain.chainId.toString())
     }
 
     private fun databaseSchema(containerName: ContainerName): String {
