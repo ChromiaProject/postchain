@@ -39,7 +39,7 @@ class DefaultPostchainContainer(
     override fun startProcess(process: ContainerBlockchainProcess): Boolean {
         val config0 = dataSource.getConfiguration(process.blockchainRid.data, 0L)
         return if (config0 != null) {
-            subnodeAdminClient.startBlockchain(process.chainId, config0).also {
+            subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid, config0).also {
                 if (it) processes[process.chainId] = process
             }
         } else {

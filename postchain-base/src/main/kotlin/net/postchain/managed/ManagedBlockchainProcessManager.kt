@@ -367,9 +367,7 @@ open class ManagedBlockchainProcessManager(
                 val chainId = db.getChainId(ctx0, blockchainRid)
                 retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
                 if (chainId == null) {
-                    val newChainId = db.getMaxChainId(ctx0)
-                            ?.let { maxOf(it + 1, 100) }
-                            ?: 100
+                    val newChainId = maxOf(db.getMaxChainId(ctx0) ?: 0, 99) + 1
                     withReadWriteConnection(storage, newChainId) { newCtx ->
                         db.initializeBlockchain(newCtx, blockchainRid)
                     }

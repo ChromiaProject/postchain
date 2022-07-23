@@ -5,6 +5,7 @@ import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
 import mu.KLogging
+import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.server.service.*
@@ -64,12 +65,15 @@ class DefaultSubnodeAdminClient(
         }
     }
 
-    override fun startBlockchain(chainId: Long, config0: ByteArray): Boolean {
+    override fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid, config: ByteArray): Boolean {
         return try {
             val request = InitializeBlockchainRequest.newBuilder()
                     .setChainId(chainId)
                     .setOverride(true)
-                    .setGtv(ByteString.copyFrom(config0))
+                    .setGtv(ByteString.copyFrom(config))
+                    // Original brid is passed to subnode since dataSource.getConfiguration()
+                    // returns original config with patched signers and its brid differs from the original one
+                    .setBrid(blockchainRid.toHex())
                     .build()
 
             val response = service.initializeBlockchain(request)

@@ -8,6 +8,7 @@ import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -99,7 +100,11 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
                 return@withWriteConnection false
             }
 
-            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(config)
+            val brid = when {
+                request.hasBrid() -> BlockchainRid.buildFromHex(request.brid)
+                else -> GtvToBlockchainRidFactory.calculateBlockchainRid(config)
+            }
+
             db.initializeBlockchain(ctx, brid)
             DependenciesValidator.validateBlockchainRids(ctx, listOf())
             // TODO: Blockchain dependencies [DependenciesValidator#validateBlockchainRids]

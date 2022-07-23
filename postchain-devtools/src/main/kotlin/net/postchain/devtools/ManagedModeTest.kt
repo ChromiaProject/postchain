@@ -423,13 +423,6 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         return conf
     }
 
-    override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
-        val brid = BlockchainRid(blockchainRidRaw)
-        val hBC = bridToConfs[brid]
-        val h = hBC?.mapNotNull { it.key to getConfiguration(blockchainRidRaw, it.key) }?.toMap()
-        return h as Map<Long, ByteArray>? ?: mapOf()
-    }
-
     override fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long? {
         val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return null
         for (h in l.keys) {

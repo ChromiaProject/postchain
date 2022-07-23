@@ -105,13 +105,11 @@ open class BaseBlockchainProcessManager(
                             )
 
                             withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
-                                val processName =
-                                        BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
+                                val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
                                 startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
                                 val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
-                                val engine =
-                                        blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
+                                val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
                                 startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
                                 createAndRegisterBlockchainProcess(
