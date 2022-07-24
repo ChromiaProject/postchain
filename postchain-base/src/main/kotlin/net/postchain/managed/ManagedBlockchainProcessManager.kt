@@ -105,7 +105,6 @@ open class ManagedBlockchainProcessManager(
 
         val blockQueries = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
             val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(ctx0, CHAIN0)
-
                     ?: throw ProgrammerMistake("chain0 configuration not found")
 
             val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
