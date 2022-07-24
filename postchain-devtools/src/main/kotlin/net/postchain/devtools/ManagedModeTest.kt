@@ -6,10 +6,7 @@ import net.postchain.base.configuration.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.devtools.mminfra.MockManagedNodeDataSource
-import net.postchain.devtools.mminfra.TestBlockchainConfiguration
-import net.postchain.devtools.mminfra.TestManagedBlockchainProcessManager
-import net.postchain.devtools.mminfra.TestManagedEBFTInfrastructureFactory
+import net.postchain.devtools.mminfra.*
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
@@ -78,6 +75,10 @@ open class ManagedModeTest : AbstractSyncTest() {
                     GTXBlockchainConfigurationFactory::class.java.name
             ))
 
+            data.setValue(KEY_BLOCKSTRATEGY, GtvDictionary.build(mapOf(
+                    KEY_BLOCKSTRATEGY_MAXBLOCKTIME to GtvInteger(2_000)
+            )))
+
             val gtx = mapOf(KEY_GTX_MODULES to GtvArray(arrayOf(
                     GtvString(StandardOpsGTXModule::class.java.name))
             ))
@@ -106,7 +107,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     fun setupDataSources(nodeSet: NodeSet) {
         for (i in 0 until nodeSet.size) {
             if (!nodeSet.contains(i)) {
-                throw IllegalStateException("We don't have node nr: " + i)
+                throw IllegalStateException("We don't have node nr: $i")
             }
             val dataSource = createMockDataSource(i)
             mockDataSources.put(i, dataSource)
@@ -178,17 +179,6 @@ open class ManagedModeTest : AbstractSyncTest() {
         buildBlock(c0, 0)
     }
 
-
-    class TestBlockchainConfigurationData {
-        private val m = mutableMapOf<String, Gtv>()
-        fun getDict(): GtvDictionary {
-            return GtvDictionary.build(m)
-        }
-
-        fun setValue(key: String, value: Gtv) {
-            m[key] = value
-        }
-    }
 
     protected open fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
         nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }

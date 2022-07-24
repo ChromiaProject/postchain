@@ -192,6 +192,8 @@ open class ContainerManagedBlockchainProcessManager(
         val dockerContainer = findDockerContainer(job.containerName)
 
         if (psContainer == null) {
+            logger.error { "[${nodeName()}]: $scope -- PostchainContainer not found and will be created" }
+
             // Finding available/existent host ports
             val containerPorts = ContainerPorts(containerNodeConfig)
             val hostPorts = dockerClient.findHostPorts(dockerContainer, containerPorts.getPorts())
