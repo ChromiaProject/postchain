@@ -2,8 +2,6 @@ package net.postchain.devtools.mminfra
 
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
-import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.NodeRid
 import net.postchain.crypto.devtools.KeyPairHelper
@@ -12,11 +10,9 @@ import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.managed.ManagedNodeDataSource
 
-typealias Key = Pair<BlockchainRid, Long>
-
 open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
     // Brid -> (height -> Pair(BlockchainConfiguration, binaryBlockchainConfig)
-    val bridToConfs: MutableMap<BlockchainRid, MutableMap<Long, Pair<BlockchainConfiguration, ByteArray>>> = mutableMapOf()
+    val bridToConfigs: MutableMap<BlockchainRid, MutableMap<Long, Pair<BlockchainConfiguration, ByteArray>>> = mutableMapOf()
     private val chainToNodeSet: MutableMap<BlockchainRid, ManagedModeTest.NodeSet> = mutableMapOf()
     private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<NodeRid>>()
 
@@ -28,23 +24,22 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         return chainToNodeSet.filterValues { it.contains(nodeIndex) }.keys.map { it.data }
     }
 
-    //Does not return the real blockchain configuration byteArray
     override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {
-        val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return null
-        var conf: ByteArray? = null
-        for (entry in l) {
-            if (entry.key <= height) {
-                conf = toByteArray(Key(BlockchainRid(blockchainRidRaw), entry.key))
+        val configs = bridToConfigs[BlockchainRid(blockchainRidRaw)] ?: return null
+        var config: ByteArray? = null
+        for ((h, c) in configs) {
+            if (h <= height) {
+                config = c.second
             } else {
-                return conf
+                return config
             }
         }
-        return conf
+        return config
     }
 
     override fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long? {
-        val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return null
-        for (h in l.keys) {
+        val configs = bridToConfigs[BlockchainRid(blockchainRidRaw)] ?: return null
+        for (h in configs.keys) {
             if (h > height) {
                 return h
             }
@@ -70,7 +65,7 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
             val replicaSet = chainToNodeSet[it]?.replicas ?: emptySet()
             val replicas = replicaSet.map { NodeRid(KeyPairHelper.pubKey(it)) }.toMutableSet()
             replicas.addAll(extraReplicas[it] ?: emptySet())
-            result.put(it, replicas.toList())
+            result[it] = replicas.toList()
         }
         return result
     }
@@ -79,45 +74,30 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         extraReplicas.computeIfAbsent(brid) { mutableSetOf<NodeRid>() }.add(replica)
     }
 
-    private fun key(brid: BlockchainRid, height: Long): Key {
-        return Pair(brid, height)
-    }
-
-    private fun toByteArray(key: Key): ByteArray {
-        var heightHex = key.second.toString(8)
-        if (heightHex.length % 2 == 1) {
-            heightHex = "0" + heightHex
-        }
-        return (key.first.toHex() + heightHex).hexStringToByteArray()
-    }
-
-    private fun toKey(bytes: ByteArray): Key {
-        val rid = BlockchainRid(bytes.copyOf(32))
-        val height = bytes.copyOfRange(32, bytes.size).toHex().toLong(8)
-        return Key(rid, height)
-    }
-
-    fun getConf(bytes: ByteArray): BlockchainConfiguration? {
-        val key = toKey(bytes)
-
-        return bridToConfs[key.first]?.get(key.second)?.first
+    fun getBuiltConfiguration(chainId: Long, rawConfigurationData: ByteArray): BlockchainConfiguration {
+        val brid = ChainUtil.ridOf(chainId)
+        val configs = bridToConfigs[brid]!!
+        return configs.values
+                .first { cfgToRaw ->
+                    cfgToRaw.second.contentEquals(rawConfigurationData)
+                }.first
     }
 
     fun addConf(rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, nodeSet: ManagedModeTest.NodeSet, rawBcConf: ByteArray) {
-        val confs = bridToConfs.computeIfAbsent(rid) { sortedMapOf() }
-        if (confs.put(height, Pair(conf, rawBcConf)) != null) {
-            throw IllegalArgumentException("Setting blockchain configuraion for height that already has a configuration")
+        val configs = bridToConfigs.computeIfAbsent(rid) { sortedMapOf() }
+        if (configs.put(height, Pair(conf, rawBcConf)) != null) {
+            throw IllegalArgumentException("Setting blockchain configuration for height that already has a configuration")
         } else {
             awaitDebug("### NEW BC CONFIG for chain: ${nodeSet.chain} (bc rid: ${rid.toShortHex()}) at height: $height")
         }
-        chainToNodeSet.put(ChainUtil.ridOf(nodeSet.chain), nodeSet)
+        chainToNodeSet[ChainUtil.ridOf(nodeSet.chain)] = nodeSet
     }
 
     /**
      * This is to force a node to become totally unaware of a certain blockchain.
      */
     fun delBlockchain(rid: BlockchainRid) {
-        bridToConfs.remove(rid)
+        bridToConfigs.remove(rid)
         extraReplicas.remove(rid)
         chainToNodeSet.remove(rid)
     }
