@@ -24,7 +24,7 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         return dir
     }
 
-    override fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path) {
+    private fun createContainerNodeConfig(container: PostchainContainer, containerDir: Path) {
         // Cloning original nodeConfig
         val config = appConfig.cloneConfiguration()
 

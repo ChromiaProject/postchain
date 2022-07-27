@@ -66,6 +66,7 @@ class DefaultSubConnectionManager(
 
     private val preAddedMsMessageHandlers = mutableMapOf<Long, MsMessageHandler>()
     private val reconnectionTimer = Timer("Reconnection timer")
+    private val reconnectionScheduled = AtomicBoolean(false)
     private var isShutDown = false
 
     private val connectedPeersHandler: MsMessageHandler = object : MsMessageHandler {
@@ -183,8 +184,6 @@ class DefaultSubConnectionManager(
             connection: SubConnection,
     ): MsMessageHandler? {
 
-        logger.info { "${logger(descriptor)}: Master node connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
-
         val chain = chains.get(descriptor.blockchainRid)
         return when {
             chain == null -> {
@@ -198,7 +197,7 @@ class DefaultSubConnectionManager(
                 chain.getPacketHandler()
             }
             else -> {
-                logger.info { "${logger(descriptor)}: Master node connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
+                logger.info { "${logger(descriptor)}: Master node connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
                 chain.setConnection(connection)
                 chain.getPacketHandler()
             }
@@ -264,25 +263,21 @@ class DefaultSubConnectionManager(
     // Private
     // ----------------------------------
     private fun scheduleReconnection(chain: ChainWithOneMasterConnection) {
-        logger.error { "${logger(chain)}: ---------- BEGIN ----------" }
+        logger.debug { "${logger(chain)}: ---------- BEGIN ----------" }
         val brid = chain.config.blockchainRid.toShortHex()
         if (reconnectionScheduled.compareAndSet(false, true)) {
-            ++reconnectionCounter
             val (delay, unit) = 15_000L to "ms"
-            logger.info("${logger(chain)}: Reconnecting ($reconnectionCounter) in $delay $unit to master node: blockchainRid: $brid")
+            logger.info("${logger(chain)}: Reconnecting in $delay $unit to master node: blockchainRid: $brid")
             reconnectionTimer.schedule(delay) {
-                logger.info("${logger(chain)}: Reconnecting ($reconnectionCounter) to master node: blockchainRid: $brid")
+                logger.info("${logger(chain)}: Reconnecting to master node: blockchainRid: $brid")
                 connectToMaster(chain)
                 reconnectionScheduled.set(false)
             }
         } else {
-            logger.error("${logger(chain)}: Reconnection is already scheduled: blockchainRid: $brid")
+            logger.debug("${logger(chain)}: Reconnection is already scheduled: blockchainRid: $brid")
         }
-        logger.error { "${logger(chain)}: ---------- END ----------" }
+        logger.debug { "${logger(chain)}: ---------- END ----------" }
     }
-
-    private val reconnectionScheduled = AtomicBoolean(false)
-    private var reconnectionCounter: Int = 0
 
     private fun loggerPrefix(blockchainRid: BlockchainRid): String =
             BlockchainProcessName(appConfig.pubKey, blockchainRid).toString()

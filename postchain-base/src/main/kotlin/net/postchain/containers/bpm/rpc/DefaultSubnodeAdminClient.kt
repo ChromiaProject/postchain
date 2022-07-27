@@ -31,12 +31,12 @@ class DefaultSubnodeAdminClient(
             val target = "${containerNodeConfig.subnodeHost}:${containerPorts.hostAdminRpcPort}"
             repeat(MAX_RETRIES) {
                 try {
-                    logger.error { "connect() -- Connecting to subnode container $target ..." }
+                    logger.debug { "connect() -- Connecting to subnode container $target ..." }
                     val creds = InsecureChannelCredentials.create()
                     channel = Grpc.newChannelBuilder(target, creds).build()
                     service = PostchainServiceGrpc.newBlockingStub(channel)
                     healthcheckService = DebugServiceGrpc.newBlockingStub(channel)
-                    logger.error { "connect() -- Subnode container connection established" }
+                    logger.info { "connect() -- Subnode container connection established" }
                     return@task
                 } catch (e: Exception) {
                     logger.error(e) { "connect() -- Can't connect to subnode, attempt $it of $MAX_RETRIES" }
@@ -78,14 +78,14 @@ class DefaultSubnodeAdminClient(
 
             val response = service.initializeBlockchain(request)
             if (response.brid != null) {
-                logger.error { "startBlockchain(${chainId}) -- blockchain started ${response.brid}" }
+                logger.debug { "startBlockchain(${chainId}) -- blockchain started ${response.brid}" }
                 true
             } else {
                 logger.error { "startBlockchain(${chainId}) -- can't start blockchain" }
                 false
             }
         } catch (e: Exception) {
-            logger.error(e) { "startBlockchain(${chainId}) -- can't start blockchain" }
+            logger.error { "startBlockchain(${chainId}) -- can't start blockchain: ${e.message}" }
             false
         }
     }
@@ -97,10 +97,10 @@ class DefaultSubnodeAdminClient(
                     .build()
 
             val response = service.stopBlockchain(request)
-            logger.error { "stopBlockchain($chainId) -- blockchain stopped: service's reply: ${response.message}" }
+            logger.debug { "stopBlockchain($chainId) -- blockchain stopped: service's reply: ${response.message}" }
             true
         } catch (e: Exception) {
-            logger.error(e) { "stopBlockchain($chainId) -- can't stop blockchain" }
+            logger.error { "stopBlockchain($chainId) -- can't stop blockchain: : ${e.message}" }
             false
         }
     }
@@ -111,10 +111,10 @@ class DefaultSubnodeAdminClient(
                     .setChainId(chainId)
                     .build()
             val response = service.findBlockchain(request)
-            logger.error { "isBlockchainRunning($chainId) -- ${response.running}" }
+            logger.debug { "isBlockchainRunning($chainId) -- ${response.running}" }
             response.running
         } catch (e: Exception) {
-            logger.error(e) { "isBlockchainRunning($chainId) -- exception occurred" }
+            logger.error { "isBlockchainRunning($chainId) -- exception occurred: : ${e.message}" }
             false
         }
     }
