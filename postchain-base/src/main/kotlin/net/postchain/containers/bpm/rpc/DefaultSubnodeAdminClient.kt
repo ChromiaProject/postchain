@@ -60,7 +60,7 @@ class DefaultSubnodeAdminClient(
             val reply = healthcheckService.debugService(request) // Asking something
             reply.message != ""
         } catch (e: Exception) {
-            logger.error(e) { e.message }
+            logger.error { e.message }
             false
         }
     }
