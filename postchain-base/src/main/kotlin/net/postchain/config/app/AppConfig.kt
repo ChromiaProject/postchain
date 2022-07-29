@@ -43,6 +43,11 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
         fun toPropertiesFile(config: Configuration, configFile: String) {
             ConfigurationUtils.dump(config, PrintWriter(FileWriter(configFile)))
         }
+
+        fun removeProperty(config: Configuration, prefix: String) {
+            val keys = config.getKeys(prefix).asSequence().toList()
+            keys.forEach(config::clearProperty)
+        }
     }
 
     /**
