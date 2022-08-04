@@ -34,12 +34,14 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
         return client.postTransactionSync(dataBuilder, confirmationLevel)
     }
 }
+
 /**
  * Holds the acknowledgement message from the Postchain Server
  */
 interface TransactionResult {
     val status: TransactionStatus
     val httpStatusCode: Int?
+    val rejectReason: String? // Undefined if (status != TransactionStatus.REJECTED)
 }
 
 interface PostchainClient {
