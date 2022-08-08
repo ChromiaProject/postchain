@@ -76,11 +76,11 @@ object ContainerConfigFactory {
                 .portBindings(portBindings)
                 .publishAllPorts(true)
                 .apply {
-                    if (resources.hasRam) memory(resources.ramBytes)
+                    if (resources.hasRam()) memory(resources.ramBytes())
                 }.apply {
-                    if (resources.hasCpu) {
-                        cpuPeriod(resources.cpuPeriod)
-                        cpuQuota(resources.cpuQuota)
+                    if (resources.hasCpu()) {
+                        cpuPeriod(resources.cpuPeriod())
+                        cpuQuota(resources.cpuQuota())
                     }
                 }
                 .build()

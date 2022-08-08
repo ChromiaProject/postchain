@@ -15,17 +15,17 @@ data class ContainerResourceLimits(
 ) {
 
     // ram
-    val hasRam = ram > 0
-    val ramBytes = ram * 1024 * 1024L
+    fun hasRam() = ram > 0
+    fun ramBytes() = ram * 1024 * 1024L
 
     // cpu
-    val hasCpu = cpu > 0
-    val cpuPeriod = 100_000L
-    val cpuQuota = cpu * cpuPeriod / 100L
+    fun hasCpu() = cpu > 0
+    fun cpuPeriod() = 100_000L
+    fun cpuQuota() = cpu * cpuPeriod() / 100L
 
     // storage
-    val hasStorage = storage > 0
-    val storageMb = storage
+    fun hasStorage() = storage > 0
+    fun storageMb() = storage
 
     constructor(ram: Long?, cpu: Long?, storage: Long?) :
             this(ram ?: -1, cpu ?: -1, storage ?: -1)
