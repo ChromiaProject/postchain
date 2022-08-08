@@ -2,6 +2,7 @@ package net.postchain.containers.bpm.docker
 
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
+import com.spotify.docker.client.messages.ContainerInfo
 import net.postchain.common.Utils.findFreePort
 import net.postchain.common.Utils.findFreePorts
 
@@ -27,21 +28,20 @@ object DockerTools {
     fun DockerClient.findHostPorts(dockerContainer: Container?, containerPorts: Pair<Int, Int>): Pair<Int, Int> {
         return if (dockerContainer != null) {
             val info = this.inspectContainer(dockerContainer.id())
-            fun hostPortFor(port: Int) = info.hostConfig()?.portBindings()?.get("${port}/tcp")
-                    ?.firstOrNull()?.hostPort()?.toInt()
-
-            fun Int?.orFindFree() = this ?: findFreePort()
-
-            val hostPort1 = hostPortFor(containerPorts.first)
-            val hostPort2 = hostPortFor(containerPorts.second)
-
+            val hostPort1 = info.hostPortFor(containerPorts.first)
+            val hostPort2 = info.hostPortFor(containerPorts.second)
             when {
                 hostPort1 == null && hostPort2 == null -> findFreePorts()
-                else -> hostPort1.orFindFree() to hostPort2.orFindFree()
+                else -> getOrFindFree(hostPort1) to getOrFindFree(hostPort2)
             }
 
         } else {
             findFreePorts()
         }
     }
+
+    private fun ContainerInfo.hostPortFor(port: Int) = hostConfig()?.portBindings()?.get("${port}/tcp")
+            ?.firstOrNull()?.hostPort()?.toInt()
+
+    private fun getOrFindFree(port: Int?) = port ?: findFreePort()
 }

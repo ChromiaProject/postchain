@@ -20,7 +20,6 @@ class HealthcheckJob : Job(DefaultContainerJobManager.JOB_TAG_HEALTHCHECK)
  */
 class ContainerJob(val containerName: ContainerName) : Job(containerName.name) {
 
-    val key = containerName.name
     val chainsToStop = mutableSetOf<Chain>()
     val chainsToStart = mutableSetOf<Chain>()
     var done: Boolean = false

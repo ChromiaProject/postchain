@@ -46,7 +46,7 @@ internal class DefaultContainerJobManager(
         val job = jobOf(chain.containerName)
         job.stopChain(chain)
         if (job.isEmpty()) {
-            jobs.remove(job.containerName.name)
+            jobs.remove(job.name)
         }
     }
 
@@ -54,7 +54,7 @@ internal class DefaultContainerJobManager(
         val job = jobOf(chain.containerName)
         job.startChain(chain)
         if (job.isEmpty()) {
-            jobs.remove(job.containerName.name)
+            jobs.remove(job.name)
         }
     }
 
@@ -81,7 +81,7 @@ internal class DefaultContainerJobManager(
 
                 // Processing the job
                 if (currentJob != null) {
-                    val cur = currentJob!!
+                    val cur = currentJob
                     try {
                         if (cur is HealthcheckJob) {
                             val containersInProgress = jobs.keys.toSet()
@@ -95,16 +95,16 @@ internal class DefaultContainerJobManager(
                             // Merging the job with a new enqueued one for the same container
                             lockJobs.withLock {
                                 if (!cur.done) {
-                                    jobs.merge(cur.key, cur) { new, _ -> cur.merge(new) }
+                                    jobs.merge(cur.name, cur) { new, _ -> cur.merge(new) }
                                 } else {
-                                    jobs.computeIfPresent(cur.key) { _, new ->
+                                    jobs.computeIfPresent(cur.name) { _, new ->
                                         (new as ContainerJob).minus(cur).takeIf(ContainerJob::isNotEmpty)
                                     }
                                 }
                             }
                         }
                     } catch (e: Exception) {
-                        logger.error("Can't handle container job: ${currentJob!!}", e)
+                        logger.error("Can't handle container job: $currentJob", e)
                     }
                 }
 

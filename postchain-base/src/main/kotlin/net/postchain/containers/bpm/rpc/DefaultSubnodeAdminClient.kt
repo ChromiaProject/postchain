@@ -111,8 +111,8 @@ class DefaultSubnodeAdminClient(
                     .setChainId(chainId)
                     .build()
             val response = service.findBlockchain(request)
-            logger.debug { "isBlockchainRunning($chainId) -- ${response.running}" }
-            response.running
+            logger.debug { "isBlockchainRunning($chainId) -- ${response.active}" }
+            response.active
         } catch (e: Exception) {
             logger.error { "isBlockchainRunning($chainId) -- exception occurred: : ${e.message}" }
             false

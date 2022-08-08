@@ -67,5 +67,5 @@ message FindBlockchainRequest {
 
 message FindBlockchainReply {
   string brid = 1;
-  bool running = 2;
+  bool active = 2;
 }
