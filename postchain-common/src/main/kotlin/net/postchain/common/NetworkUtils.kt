@@ -2,7 +2,7 @@ package net.postchain.common
 
 import java.net.ServerSocket
 
-object Utils {
+object NetworkUtils {
 
     fun findFreePort(): Int {
         return ServerSocket(0).use {

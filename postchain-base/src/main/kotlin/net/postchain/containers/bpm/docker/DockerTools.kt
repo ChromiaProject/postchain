@@ -3,8 +3,8 @@ package net.postchain.containers.bpm.docker
 import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import com.spotify.docker.client.messages.ContainerInfo
-import net.postchain.common.Utils.findFreePort
-import net.postchain.common.Utils.findFreePorts
+import net.postchain.common.NetworkUtils.findFreePort
+import net.postchain.common.NetworkUtils.findFreePorts
 
 object DockerTools {
 
