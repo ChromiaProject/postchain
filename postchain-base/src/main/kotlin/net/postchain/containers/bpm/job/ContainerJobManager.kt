@@ -1,14 +1,12 @@
 package net.postchain.containers.bpm.job
 
 import mu.KLogging
-import net.postchain.common.toHex
 import net.postchain.containers.bpm.Chain
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.core.Shutdownable
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
-import kotlin.random.Random
 
 internal interface ContainerJobManager {
     fun <T> withLock(action: () -> T): T
@@ -30,7 +28,6 @@ internal class DefaultContainerJobManager(
     private val lockJobs = ReentrantLock()
 
     companion object : KLogging() {
-        val JOB_TAG_HEALTHCHECK = "healthcheck_" + Random.Default.nextBytes(8).toHex()
         private const val SLEEP_TIMEOUT = 200L
     }
 
@@ -63,7 +60,7 @@ internal class DefaultContainerJobManager(
     }
 
     override fun doHealthcheck() {
-        jobs[JOB_TAG_HEALTHCHECK] = HealthcheckJob()
+        jobs[HealthcheckJob.NAME] = HealthcheckJob()
     }
 
     private fun startThread(): Thread {

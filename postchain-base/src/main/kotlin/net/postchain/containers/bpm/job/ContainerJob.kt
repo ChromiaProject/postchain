@@ -1,7 +1,9 @@
 package net.postchain.containers.bpm.job
 
+import net.postchain.common.toHex
 import net.postchain.containers.bpm.Chain
 import net.postchain.containers.bpm.ContainerName
+import kotlin.random.Random
 
 /**
  * Basic class for all jobs
@@ -12,7 +14,11 @@ open class Job(val name: String)
  * Indicates that health check should be done for all containers.
  * Usually, it means to start stopped containers that should be run.
  */
-class HealthcheckJob : Job(DefaultContainerJobManager.JOB_TAG_HEALTHCHECK)
+class HealthcheckJob : Job(NAME) {
+    companion object {
+        val NAME = "healthcheck_" + Random.Default.nextBytes(8).toHex()
+    }
+}
 
 /**
  * Describes actions over chains that should be done for the container [containerName].
