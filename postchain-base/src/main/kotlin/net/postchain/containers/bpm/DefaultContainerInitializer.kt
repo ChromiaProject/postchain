@@ -49,9 +49,6 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
             config.setProperty("api.port", containerConfig.subnodeRestApiPort)
         }
 
-        // Removing container properties (used by master only)
-        AppConfig.removeProperty(config, KEY_CONTAINER_PREFIX)
-
         // Creating a nodeConfig file
         val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()
         AppConfig.toPropertiesFile(config, filename)
