@@ -9,5 +9,6 @@ import net.postchain.common.tx.TransactionStatus
  */
 class TransactionResultImpl(
         override val status: TransactionStatus,
-        override val httpStatusCode: Int?
+        override val httpStatusCode: Int?,
+        override val rejectReason: String?
 ) : TransactionResult

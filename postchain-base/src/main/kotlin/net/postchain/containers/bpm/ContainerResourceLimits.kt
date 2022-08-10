@@ -1,19 +1,48 @@
 package net.postchain.containers.bpm
 
+import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit.*
+
+/**
+ * Implements Docker resource constraints
+ * https://docs.docker.com/config/containers/resource_constraints/
+ */
 data class ContainerResourceLimits(
-        val ram: Long,           // Mb
-        val cpu: Long,           // TODO: [et]: ?
-        val storage: Long        // Mb
+        private val resourceLimits: Map<ResourceLimit, Long>
 ) {
 
-    constructor(ram: Long?, cpu: Long?, storage: Long?) :
-            this(ram ?: -1, cpu ?: -1, storage ?: -1)
+    constructor(vararg limits: Pair<ResourceLimit, Long>) : this(mapOf(*limits))
+
+    enum class ResourceLimit { RAM, CPU, STORAGE }
 
     companion object {
-        const val RAM_KEY = "ram"
-        const val CPU_KEY = "cpu"
-        const val STORAGE_KEY = "storage"
 
-        fun default() = ContainerResourceLimits(-1, -1, -1)
+        fun default() = ContainerResourceLimits(emptyMap())
+
+        fun fromValues(ram: Long, cpu: Long, storage: Long) = ContainerResourceLimits(
+                RAM to ram, CPU to cpu, STORAGE to storage
+        )
+
     }
+
+    /**
+     * RAM in Mb
+     */
+    fun hasRam() = getOrDefault(RAM) > 0L
+    fun ramBytes() = getOrDefault(RAM) * 1024 * 1024L
+
+    /**
+     * CPU: Percent of cpus, corresponds to '--cpus' docker cli option
+     * 10 == 0.1 cpu(s), 150 == 1.5 cpu(s)
+     */
+    fun hasCpu() = getOrDefault(CPU) > 0
+    fun cpuPeriod() = 100_000L
+    fun cpuQuota() = getOrDefault(CPU) * cpuPeriod() / 100L
+
+    /**
+     * Storage in Mb
+     */
+    fun hasStorage() = getOrDefault(STORAGE) > 0
+    fun storageMb() = getOrDefault(STORAGE)
+
+    private fun getOrDefault(key: ResourceLimit) = resourceLimits[key] ?: -1L
 }

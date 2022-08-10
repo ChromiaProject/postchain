@@ -251,7 +251,8 @@ open class ContainerManagedBlockchainProcessManager(
         // 3. Asserting subnode is connected and running
         if (dockerContainer != null && job.chainsToStart.isNotEmpty()) {
             if (!psContainer.isSubnodeConnected()) {
-                logger.error { "[${nodeName()}]: $scope -- Subnode is not connected, container: ${job.containerName}" }
+                logger.warn { "[${nodeName()}]: $scope -- Subnode is not connected, container: ${job.containerName}" }
+                job.postpone(5_000)
                 return result(false)
             } else {
                 logger.info { "[${nodeName()}]: $scope -- Subnode is connected, container: ${job.containerName}" }

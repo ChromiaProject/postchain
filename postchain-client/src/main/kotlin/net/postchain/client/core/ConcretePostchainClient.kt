@@ -98,16 +98,17 @@ class ConcretePostchainClient(
         val txJson = """{"tx" : $txHex}"""
         val txHashHex = txBuilder.getDigestForSigning().toHex()
 
-        fun submitTransaction(): Int {
+        fun submitTransaction(): Pair<Int, String?> {
             val httpPost = HttpPost("$serverUrl/tx/$blockchainRIDHex")
             httpPost.setHeader("Content-type", APPLICATION_JSON)
             httpPost.entity = StringEntity(txJson)
-            val statusCode = httpClient.execute(httpPost).use { response ->
+            return httpClient.execute(httpPost).use { response ->
+                var errorString: String? = null
                 if (response.code >= 400) {
                     response.entity?.let {
                         val responseBody = parseResponse(it.content)
                         val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                        val errorString = jsonObject.get("error")?.asString?.uppercase()
+                        errorString = jsonObject.get("error")?.asString
                         if (errorString != null) {
                             logger.info { "Transaction rejected: $errorString" }
                         } else {
@@ -115,26 +116,25 @@ class ConcretePostchainClient(
                         }
                     }
                 }
-                response.code
+                response.code to errorString
             }
-            return statusCode
         }
 
         when (confirmationLevel) {
 
             ConfirmationLevel.NO_WAIT -> {
-                val statusCode = submitTransaction()
+                val (statusCode, error) = submitTransaction()
                 return if (statusCode == 200) {
-                    TransactionResultImpl(WAITING, statusCode)
+                    TransactionResultImpl(WAITING, statusCode, null)
                 } else {
-                    TransactionResultImpl(REJECTED, statusCode)
+                    TransactionResultImpl(REJECTED, statusCode, error)
                 }
             }
 
             ConfirmationLevel.UNVERIFIED -> {
-                val statusCode = submitTransaction()
+                val (statusCode, error) = submitTransaction()
                 if (statusCode in 400..499) {
-                    return TransactionResultImpl(REJECTED, statusCode)
+                    return TransactionResultImpl(REJECTED, statusCode, error)
                 }
                 val httpGet = HttpGet("$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
                 httpGet.setHeader("Content-type", APPLICATION_JSON)
@@ -152,7 +152,8 @@ class ConcretePostchainClient(
                                     logger.warn { "No status in response\n$responseBody" }
                                 } else {
                                     val status = TransactionStatus.valueOf(statusString)
-                                    lastKnownTxResult = TransactionResultImpl(status, response.code)
+                                    val rejectReason = jsonObject.get("rejectReason")?.asString
+                                    lastKnownTxResult = TransactionResultImpl(status, response.code, rejectReason)
                                     if (status == CONFIRMED || status == REJECTED) return lastKnownTxResult!!
                                 }
 
@@ -165,7 +166,7 @@ class ConcretePostchainClient(
                     }
                 }
 
-                return lastKnownTxResult ?: TransactionResultImpl(UNKNOWN, null)
+                return lastKnownTxResult ?: TransactionResultImpl(UNKNOWN, null, null)
             }
 
             else -> throw NotImplementedError("ConfirmationLevel $confirmationLevel is not yet implemented")

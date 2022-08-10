@@ -63,7 +63,7 @@ data class ContainerNodeConfig(
     companion object {
         const val DEFAULT_CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
 
-        const val KEY_PREFIX = "container"
+        const val KEY_CONTAINER_PREFIX = "container"
         const val KEY_DOCKER_IMAGE = "docker-image"
         const val KEY_MASTER_HOST = "master-host"
         const val KEY_MASTER_PORT = "master-port"
@@ -84,11 +84,11 @@ data class ContainerNodeConfig(
         const val KEY_TESTMODE_RESOURCE_LIMITS_CPU = "testmode.resource-limits-cpu"
         const val KEY_TESTMODE_RESOURCE_LIMITS_STORAGE = "testmode.resource-limits-storage"
 
-        fun fullKey(subKey: String) = "$KEY_PREFIX.${subKey}"
+        fun fullKey(subKey: String) = "$KEY_CONTAINER_PREFIX.${subKey}"
 
         @JvmStatic
         fun fromAppConfig(config: AppConfig): ContainerNodeConfig {
-            return with(config.subset(KEY_PREFIX)) {
+            return with(config.subset(KEY_CONTAINER_PREFIX)) {
                 ContainerNodeConfig(
                         getString(KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
                         getString(KEY_MASTER_HOST, "localhost"),
