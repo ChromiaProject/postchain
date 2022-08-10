@@ -31,19 +31,19 @@ class DefaultSubnodeAdminClient(
             val target = "${containerNodeConfig.subnodeHost}:${containerPorts.hostAdminRpcPort}"
             repeat(MAX_RETRIES) {
                 try {
-                    logger.debug { "connect() -- Connecting to subnode container $target ..." }
+                    logger.debug { "connect() -- Connecting to subnode container on $target ..." }
                     val creds = InsecureChannelCredentials.create()
                     channel = Grpc.newChannelBuilder(target, creds).build()
                     service = PostchainServiceGrpc.newBlockingStub(channel)
                     healthcheckService = DebugServiceGrpc.newBlockingStub(channel)
-                    logger.info { "connect() -- Subnode container connection established" }
+                    logger.info { "connect() -- Subnode container connection established on $target" }
                     return@task
                 } catch (e: Exception) {
-                    logger.error(e) { "connect() -- Can't connect to subnode, attempt $it of $MAX_RETRIES" }
+                    logger.error(e) { "connect() -- Can't connect to subnode on $target, attempt $it of $MAX_RETRIES" }
                 }
 
                 if (it == MAX_RETRIES - 1) {
-                    logger.error { "connect() -- Can't connect to subnode, $MAX_RETRIES failed attempts" }
+                    logger.error { "connect() -- Can't connect to subnode on $target, $MAX_RETRIES failed attempts" }
                 } else {
                     Thread.sleep(RETRY_INTERVAL.toLong())
                 }
@@ -60,7 +60,7 @@ class DefaultSubnodeAdminClient(
             val reply = healthcheckService.debugService(request) // Asking something
             reply.message != ""
         } catch (e: Exception) {
-            logger.error(e) { e.message }
+            logger.error { e.message }
             false
         }
     }

@@ -70,14 +70,18 @@ object ContainerConfigFactory {
          */
 
         // Host config
+        val resources = container.resourceLimits
         val hostConfig = HostConfig.builder()
                 .appendBinds(*volumes.toTypedArray())
                 .portBindings(portBindings)
                 .publishAllPorts(true)
                 .apply {
-                    if (container.resourceLimits.ram > 0) memory(container.resourceLimits.ram)
+                    if (resources.hasRam()) memory(resources.ramBytes())
                 }.apply {
-                    if (container.resourceLimits.cpu > 0) cpuQuota(container.resourceLimits.cpu)
+                    if (resources.hasCpu()) {
+                        cpuPeriod(resources.cpuPeriod())
+                        cpuQuota(resources.cpuQuota())
+                    }
                 }
                 .build()
 

@@ -7,6 +7,7 @@ import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.bpm.fs.FileSystem.Companion.NODE_CONFIG_FILE
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_CONTAINER_PREFIX
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_DATABASE_URL
 import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
 import net.postchain.core.Infrastructure
@@ -47,6 +48,9 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         if (config.getInt("api.port", RestApiConfig.DEFAULT_REST_API_PORT) > -1) {
             config.setProperty("api.port", containerConfig.subnodeRestApiPort)
         }
+
+        // Removing container properties (used by master only)
+        AppConfig.removeProperty(config, KEY_CONTAINER_PREFIX)
 
         // Creating a nodeConfig file
         val filename = containerDir.resolve(NODE_CONFIG_FILE).toString()

@@ -26,7 +26,7 @@ class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
                     null
                 } else {
                     val fs = "${config.zfsPoolName}/${containerName.name}"
-                    val quota = resourceLimits.storage.toString()
+                    val quota = resourceLimits.storageMb().toString()
                     val cmd = arrayOf(script, fs, quota)
                     Runtime.getRuntime().exec(cmd).waitFor(10, TimeUnit.SECONDS)
                     if (root.toFile().exists()) {
