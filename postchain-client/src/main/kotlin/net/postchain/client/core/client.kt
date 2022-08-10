@@ -8,8 +8,10 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GTXDataBuilder
 import nl.komponents.kovenant.Promise
+import java.time.Instant
 
 class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: BlockchainRid, signers: Array<ByteArray>) {
 
@@ -17,6 +19,11 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
 
     fun addOperation(opName: String, vararg args: Gtv) {
         dataBuilder.addOperation(opName, arrayOf(*args))
+    }
+
+    /** Add a "nop" operation with timestamp to make the transaction unique. */
+    fun addNop() {
+        addOperation("nop", gtv(Instant.now().toEpochMilli()))
     }
 
     fun sign(sigMaker: SigMaker) {

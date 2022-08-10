@@ -128,11 +128,11 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
         val brid = withReadConnection(postchainNode.postchainContext.storage, request!!.chainId) {
             DatabaseAccess.of(it).getBlockchainRid(it)
         }
-        val running = postchainNode.isBlockchainRunning(request.chainId)
+        val active = postchainNode.isBlockchainRunning(request.chainId)
 
         responseObserver?.onNext(FindBlockchainReply.newBuilder().run {
             this.brid = brid?.toHex() ?: ""
-            this.running = running
+            this.active = active
             build()
         })
         responseObserver?.onCompleted()

@@ -1,14 +1,12 @@
 package net.postchain.containers.bpm.job
 
 import mu.KLogging
-import net.postchain.common.toHex
 import net.postchain.containers.bpm.Chain
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.core.Shutdownable
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
-import kotlin.random.Random
 
 internal interface ContainerJobManager {
     fun <T> withLock(action: () -> T): T
@@ -30,7 +28,6 @@ internal class DefaultContainerJobManager(
     private val lockJobs = ReentrantLock()
 
     companion object : KLogging() {
-        val JOB_TAG_HEALTHCHECK = "healthcheck_" + Random.Default.nextBytes(8).toHex()
         private const val SLEEP_TIMEOUT = 200L
     }
 
@@ -46,7 +43,7 @@ internal class DefaultContainerJobManager(
         val job = jobOf(chain.containerName)
         job.stopChain(chain)
         if (job.isEmpty()) {
-            jobs.remove(job.containerName.name)
+            jobs.remove(job.name)
         }
     }
 
@@ -54,7 +51,7 @@ internal class DefaultContainerJobManager(
         val job = jobOf(chain.containerName)
         job.startChain(chain)
         if (job.isEmpty()) {
-            jobs.remove(job.containerName.name)
+            jobs.remove(job.name)
         }
     }
 
@@ -63,7 +60,7 @@ internal class DefaultContainerJobManager(
     }
 
     override fun doHealthcheck() {
-        jobs[JOB_TAG_HEALTHCHECK] = HealthcheckJob()
+        jobs[HealthcheckJob.NAME] = HealthcheckJob()
     }
 
     private fun startThread(): Thread {
@@ -81,7 +78,7 @@ internal class DefaultContainerJobManager(
 
                 // Processing the job
                 if (currentJob != null) {
-                    val cur = currentJob!!
+                    val cur = currentJob
                     try {
                         if (cur is HealthcheckJob) {
                             val containersInProgress = jobs.keys.toSet()
@@ -95,16 +92,16 @@ internal class DefaultContainerJobManager(
                             // Merging the job with a new enqueued one for the same container
                             lockJobs.withLock {
                                 if (!cur.done) {
-                                    jobs.merge(cur.key, cur) { new, _ -> cur.merge(new) }
+                                    jobs.merge(cur.name, cur) { new, _ -> cur.merge(new) }
                                 } else {
-                                    jobs.computeIfPresent(cur.key) { _, new ->
+                                    jobs.computeIfPresent(cur.name) { _, new ->
                                         (new as ContainerJob).minus(cur).takeIf(ContainerJob::isNotEmpty)
                                     }
                                 }
                             }
                         }
                     } catch (e: Exception) {
-                        logger.error("Can't handle container job: ${currentJob!!}", e)
+                        logger.error("Can't handle container job: $currentJob", e)
                     }
                 }
 
