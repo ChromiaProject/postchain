@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.AppConfig.Companion.DEFAULT_PORT
 import net.postchain.core.*
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.testinfra.TestTransaction
@@ -12,7 +13,6 @@ import net.postchain.devtools.utils.configuration.UniversalFileLocationStrategy
 import net.postchain.devtools.utils.configuration.activeChainIds
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.core.*
 import org.apache.commons.configuration2.CompositeConfiguration
 import org.apache.commons.configuration2.MapConfiguration
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -310,8 +310,8 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
         if (peerInfos == null) {
             peerInfos =
-                    Array(nodeCount) { PeerInfo("localhost", BASE_PORT + it, generatePubKey(it)) } +
-                            Array(replicasCount) { PeerInfo("localhost", BASE_PORT - it - 1, generatePubKey(-it - 1)) }
+                    Array(nodeCount) { PeerInfo("localhost", DEFAULT_PORT + it, generatePubKey(it)) } +
+                            Array(replicasCount) { PeerInfo("localhost", DEFAULT_PORT - it - 1, generatePubKey(-it - 1)) }
         }
 
         return peerInfos!!

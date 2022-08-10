@@ -1,43 +1,20 @@
 package net.postchain.devtools
 
 import mu.KLogging
-import net.postchain.PostchainContext
-import net.postchain.api.rest.infra.BaseApiInfrastructure
-import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.BaseBlockchainContext
-import net.postchain.base.BaseBlockchainInfrastructure
-import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.*
-import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.withReadWriteConnection
-import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
-import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfig
-import net.postchain.core.*
+import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.devtools.ManagedModeTest.NodeSet
-import net.postchain.devtools.testinfra.TestTransactionFactory
+import net.postchain.devtools.mminfra.*
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
-import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.*
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
-import net.postchain.managed.ManagedBlockchainProcessManager
-import net.postchain.managed.ManagedEBFTInfrastructureFactory
-import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.core.block.BlockTrace
-import net.postchain.core.TransactionFactory
-import net.postchain.core.block.BlockBuildingStrategy
-import net.postchain.core.block.BlockQueries
 import java.lang.Thread.sleep
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.LinkedBlockingQueue
 
 /**
  * This is still somewhat not in line with the [SystemSetup] architecture, defined in the parent class.
@@ -98,6 +75,10 @@ open class ManagedModeTest : AbstractSyncTest() {
                     GTXBlockchainConfigurationFactory::class.java.name
             ))
 
+            data.setValue(KEY_BLOCKSTRATEGY, GtvDictionary.build(mapOf(
+                    KEY_BLOCKSTRATEGY_MAXBLOCKTIME to GtvInteger(2_000)
+            )))
+
             val gtx = mapOf(KEY_GTX_MODULES to GtvArray(arrayOf(
                     GtvString(StandardOpsGTXModule::class.java.name))
             ))
@@ -126,7 +107,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     fun setupDataSources(nodeSet: NodeSet) {
         for (i in 0 until nodeSet.size) {
             if (!nodeSet.contains(i)) {
-                throw IllegalStateException("We don't have node nr: " + i)
+                throw IllegalStateException("We don't have node nr: $i")
             }
             val dataSource = createMockDataSource(i)
             mockDataSources.put(i, dataSource)
@@ -199,30 +180,6 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
 
-    class TestBlockchainConfigurationData {
-        private val m = mutableMapOf<String, Gtv>()
-        fun getDict(): GtvDictionary {
-            return GtvDictionary.build(m)
-        }
-
-        fun setValue(key: String, value: Gtv) {
-            m[key] = value
-        }
-    }
-
-
-    class TestBlockchainConfiguration(data: BlockchainConfigurationData) :
-            BaseBlockchainConfiguration(data) {
-        override fun getTransactionFactory(): TransactionFactory {
-            return TestTransactionFactory()
-        }
-
-        override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
-            return OnDemandBlockBuildingStrategy(blockStrategyConfig, blockQueries, txQueue)
-        }
-    }
-
-
     protected open fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
         nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
     }
@@ -235,8 +192,7 @@ open class ManagedModeTest : AbstractSyncTest() {
             excludeChain0Nodes: Set<Int> = setOf(),
             waitForRestart: Boolean = true
     ): NodeSet {
-        if (signers.intersect(replicas).isNotEmpty()) throw
-        IllegalArgumentException("a node cannot be both signer and replica")
+        if (signers.intersect(replicas).isNotEmpty()) throw IllegalArgumentException("a node cannot be both signer and replica")
         val maxIndex = c0.all().size
         signers.forEach {
             if (it >= maxIndex) throw IllegalArgumentException("bad signer index")
@@ -253,134 +209,8 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 }
 
-class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
-    lateinit var nodeConfig: NodeConfig
-    lateinit var dataSource: MockManagedNodeDataSource
-    override fun makeProcessManager(
-            postchainContext: PostchainContext,
-            blockchainInfrastructure: BlockchainInfrastructure,
-            blockchainConfigurationProvider: BlockchainConfigurationProvider): BlockchainProcessManager {
-        return TestManagedBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider, dataSource)
-    }
 
-    override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
-        with(postchainContext) {
-            dataSource = appConfig.getProperty("infrastructure.datasource") as MockManagedNodeDataSource
-
-            val syncInfra = EBFTSynchronizationInfrastructure(this)
-            val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
-            return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)
-        }
-    }
-
-    override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return MockBlockchainConfigurationProvider(dataSource)
-    }
-}
-
-
-class TestManagedBlockchainInfrastructure(postchainContext: PostchainContext,
-                                          syncInfra: SynchronizationInfrastructure, apiInfra: ApiInfrastructure,
-                                          val mockDataSource: MockManagedNodeDataSource) :
-        BaseBlockchainInfrastructure(syncInfra, apiInfra, postchainContext) {
-    override fun makeBlockchainConfiguration(
-            rawConfigurationData: ByteArray,
-            eContext: EContext,
-            nodeId: Int,
-            chainId: Long,
-    ): BlockchainConfiguration {
-
-        return mockDataSource.getConf(rawConfigurationData)!!
-    }
-}
-
-class TestManagedBlockchainProcessManager(
-        postchainContext: PostchainContext,
-        blockchainInfrastructure: BlockchainInfrastructure,
-        blockchainConfigProvider: BlockchainConfigurationProvider,
-        val testDataSource: ManagedNodeDataSource)
-    : ManagedBlockchainProcessManager(
-        postchainContext,
-        blockchainInfrastructure,
-        blockchainConfigProvider
-) {
-
-    companion object : KLogging()
-
-    private val blockchainStarts = ConcurrentHashMap<Long, BlockingQueue<Long>>()
-
-    override fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
-        return testDataSource
-    }
-
-    /**
-     * Overriding the original method, so that we now, instead of checking the DB for what
-     * BCs to launch we instead
-     */
-    override fun retrieveBlockchainsToLaunch(): Set<Long> {
-        val result = mutableListOf<Long>()
-        testDataSource.computeBlockchainList().forEach {
-            val brid = BlockchainRid(it)
-            val chainIid = ChainUtil.iidOf(brid)
-            result.add(chainIid)
-            retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")
-            withReadWriteConnection(storage, chainIid) { newCtx ->
-                DatabaseAccess.of(newCtx).initializeBlockchain(newCtx, brid)
-            }
-        }
-        retrieveDebug("NOTE TEST! - End, restart: ${result.size} ")
-        return result.toSet()
-    }
-
-    private fun getQueue(chainId: Long): BlockingQueue<Long> {
-        return blockchainStarts.computeIfAbsent(chainId) {
-            LinkedBlockingQueue<Long>()
-        }
-    }
-
-    // Marks the BC height directly after the last BC restart.
-    // (The ACTUAL BC height will often proceed beyond this height, but we don't track that here)
-    var lastHeightStarted = ConcurrentHashMap<Long, Long>()
-
-    /**
-     * Overriding the original startBlockchain() and adding extra logic for measuring restarts.
-     *
-     * (This method will run for for every new height where we have a new BC configuration,
-     * b/c the BC will get restarted before the configuration can be used.
-     * Every time this method runs the [lastHeightStarted] gets updated with the restart height.)
-     */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
-        val blockchainRid = super.startBlockchain(chainId, bTrace)
-        if (blockchainRid == null) {
-            return null
-        }
-        val process = blockchainProcesses[chainId]!!
-        val queries = process.blockchainEngine.getBlockQueries()
-        val height = queries.getBestHeight().get()
-        lastHeightStarted[chainId] = height
-        return blockchainRid
-    }
-
-    /**
-     * Awaits a start/restart of a BC.
-     *
-     * @param nodeIndex the node we should wait for
-     * @param chainId the chain we should wait for
-     * @param atLeastHeight the height we should wait for. Note that this height MUST be a height where we have a
-     *           new BC configuration kicking in, because that's when the BC will be restarted.
-     *           Example: if a new BC config starts at height 10, then we should put [atLeastHeight] to 9.
-     */
-    fun awaitStarted(nodeIndex: Int, chainId: Long, atLeastHeight: Long) {
-        awaitDebug("++++++ AWAIT node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
-        while (lastHeightStarted.get(chainId) ?: -2L < atLeastHeight) {
-            sleep(10)
-        }
-        awaitDebug("++++++ WAIT OVER! node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
-    }
-}
-
-val awaitDebugLog = false
+const val awaitDebugLog = false
 
 /**
  * Sometimes we want to monitor how long we are waiting and WHAT we are weighting for, then we can turn on this flag.
@@ -388,125 +218,6 @@ val awaitDebugLog = false
  */
 fun awaitDebug(dbg: String) {
     if (awaitDebugLog) {
-        System.out.println("TEST: $dbg")
-    }
-}
-
-typealias Key = Pair<BlockchainRid, Long>
-
-
-open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
-    // Brid -> (height -> Pair(BlockchainConfiguration, binaryBlockchainConfig)
-    val bridToConfs: MutableMap<BlockchainRid, MutableMap<Long, Pair<BlockchainConfiguration, ByteArray>>> = mutableMapOf()
-    private val chainToNodeSet: MutableMap<BlockchainRid, NodeSet> = mutableMapOf()
-    private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<NodeRid>>()
-
-    override fun getPeerListVersion(): Long {
-        return 1L
-    }
-
-    override fun computeBlockchainList(): List<ByteArray> {
-        return chainToNodeSet.filterValues { it.contains(nodeIndex) }.keys.map { it.data }
-    }
-
-    //Does not return the real blockchain configuration byteArray
-    override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {
-        val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return null
-        var conf: ByteArray? = null
-        for (entry in l) {
-            if (entry.key <= height) {
-                conf = toByteArray(Key(BlockchainRid(blockchainRidRaw), entry.key))
-            } else {
-                return conf
-            }
-        }
-        return conf
-    }
-
-    override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
-        val brid = BlockchainRid(blockchainRidRaw)
-        val hBC = bridToConfs[brid]
-        val h = hBC?.mapNotNull { it.key to getConfiguration(blockchainRidRaw, it.key) }?.toMap()
-        return h as Map<Long, ByteArray>? ?: mapOf()
-    }
-
-    override fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long? {
-        val l = bridToConfs[BlockchainRid(blockchainRidRaw)] ?: return null
-        for (h in l.keys) {
-            if (h > height) {
-                return h
-            }
-        }
-        return null
-    }
-
-    override fun getPeerInfos(): Array<PeerInfo> {
-        return emptyArray()
-    }
-
-    override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
-        return emptyMap()
-    }
-
-    override fun getNodeReplicaMap(): Map<NodeRid, List<NodeRid>> {
-        return mapOf()
-    }
-
-    override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>> {
-        val result = mutableMapOf<BlockchainRid, List<NodeRid>>()
-        chainToNodeSet.keys.union(extraReplicas.keys).forEach {
-            val replicaSet = chainToNodeSet[it]?.replicas ?: emptySet()
-            val replicas = replicaSet.map { NodeRid(KeyPairHelper.pubKey(it)) }.toMutableSet()
-            replicas.addAll(extraReplicas[it] ?: emptySet())
-            result.put(it, replicas.toList())
-        }
-        return result
-    }
-
-    fun addExtraReplica(brid: BlockchainRid, replica: NodeRid) {
-        extraReplicas.computeIfAbsent(brid) { mutableSetOf<NodeRid>() }.add(replica)
-    }
-
-    private fun key(brid: BlockchainRid, height: Long): Key {
-        return Pair(brid, height)
-    }
-
-    private fun toByteArray(key: Key): ByteArray {
-        var heightHex = key.second.toString(8)
-        if (heightHex.length % 2 == 1) {
-            heightHex = "0" + heightHex
-        }
-        return (key.first.toHex() + heightHex).hexStringToByteArray()
-    }
-
-    private fun toKey(bytes: ByteArray): Key {
-        val rid = BlockchainRid(bytes.copyOf(32))
-        val height = bytes.copyOfRange(32, bytes.size).toHex().toLong(8)
-        return Key(rid, height)
-    }
-
-    fun getConf(bytes: ByteArray): BlockchainConfiguration? {
-        val key = toKey(bytes)
-
-        return bridToConfs[key.first]?.get(key.second)?.first
-    }
-
-    fun addConf(rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, nodeSet: NodeSet, rawBcConf: ByteArray) {
-        val confs = bridToConfs.computeIfAbsent(rid) { sortedMapOf() }
-        if (confs.put(height, Pair(conf, rawBcConf)) != null) {
-            throw IllegalArgumentException("Setting blockchain configuraion for height that already has a configuration")
-        } else {
-            awaitDebug("### NEW BC CONFIG for chain: ${nodeSet.chain} (bc rid: ${rid.toShortHex()}) at height: $height")
-        }
-        chainToNodeSet.put(ChainUtil.ridOf(nodeSet.chain), nodeSet)
-    }
-
-    /**
-     * This is to force a node to become totally unaware of a certain blockchain.
-     */
-    fun delBlockchain(rid: BlockchainRid) {
-        bridToConfs.remove(rid)
-        extraReplicas.remove(rid)
-        chainToNodeSet.remove(rid)
+        println("TEST: $dbg")
     }
 }
