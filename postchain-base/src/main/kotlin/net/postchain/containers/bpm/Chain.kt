@@ -2,7 +2,7 @@ package net.postchain.containers.bpm
 
 import net.postchain.common.BlockchainRid
 
-internal class Chain(
+class Chain(
         val containerName: ContainerName,
         val chainId: Long,
         val brid: BlockchainRid

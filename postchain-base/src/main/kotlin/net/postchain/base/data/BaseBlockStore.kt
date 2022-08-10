@@ -3,15 +3,17 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.base.*
+import net.postchain.base.BaseBlockHeader
+import net.postchain.base.BaseTxEContext
+import net.postchain.base.ConfirmationProofMaterial
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.*
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.core.block.*
+import net.postchain.crypto.Secp256K1CryptoSystem
 
 /**
  * Provides database access to the location where the blockchain with related metadata and transactions

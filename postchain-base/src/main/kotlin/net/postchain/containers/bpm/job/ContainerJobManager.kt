@@ -1,6 +1,8 @@
-package net.postchain.containers.bpm
+package net.postchain.containers.bpm.job
 
 import mu.KLogging
+import net.postchain.containers.bpm.Chain
+import net.postchain.containers.bpm.ContainerName
 import net.postchain.core.Shutdownable
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
@@ -11,22 +13,22 @@ internal interface ContainerJobManager {
     fun stopChain(chain: Chain)
     fun startChain(chain: Chain)
     fun restartChain(chain: Chain)
-    fun executeHealthcheck()
+    fun doHealthcheck()
 }
 
 internal class DefaultContainerJobManager(
-        val jobHandler: ContainerJobHandler,
-        val healthcheckJobHandler: HealthcheckJobHandler
+        val jobHandler: (job: ContainerJob) -> Unit,
+        val healthcheckJobHandler: (Set<String>) -> Unit,
 ) : ContainerJobManager, Shutdownable {
 
     private val containerJobsThread: Thread
     private var isProcessJobs = true
-    private val jobs = LinkedHashMap<ContainerName, Job>()
+    private val jobs = LinkedHashMap<String, Job>() // name -> job
     private var currentJob: Job? = null
     private val lockJobs = ReentrantLock()
 
     companion object : KLogging() {
-        private const val JOB_TAG_HEALTHCHECK = "healthcheck"
+        private const val SLEEP_TIMEOUT = 200L
     }
 
     init {
@@ -41,7 +43,7 @@ internal class DefaultContainerJobManager(
         val job = jobOf(chain.containerName)
         job.stopChain(chain)
         if (job.isEmpty()) {
-            jobs.remove(job.containerName)
+            jobs.remove(job.name)
         }
     }
 
@@ -49,7 +51,7 @@ internal class DefaultContainerJobManager(
         val job = jobOf(chain.containerName)
         job.startChain(chain)
         if (job.isEmpty()) {
-            jobs.remove(job.containerName)
+            jobs.remove(job.name)
         }
     }
 
@@ -57,14 +59,14 @@ internal class DefaultContainerJobManager(
         jobOf(chain.containerName).restartChain(chain)
     }
 
-    override fun executeHealthcheck() {
-        jobOf(ContainerName(JOB_TAG_HEALTHCHECK, ""))
+    override fun doHealthcheck() {
+        jobs[HealthcheckJob.NAME] = HealthcheckJob()
     }
 
     private fun startThread(): Thread {
         return thread(name = "containerJobThread") {
             while (isProcessJobs) {
-                // Get next job
+                // Getting next job
                 lockJobs.withLock {
                     currentJob = null
                     if (jobs.isNotEmpty()) {
@@ -74,20 +76,36 @@ internal class DefaultContainerJobManager(
                     }
                 }
 
-                // Process the job
+                // Processing the job
                 if (currentJob != null) {
+                    val cur = currentJob
                     try {
-                        if (currentJob!!.containerName.name == JOB_TAG_HEALTHCHECK) {
-                            healthcheckJobHandler()
-                        } else {
-                            jobHandler(currentJob!!.containerName, currentJob!!.toStop, currentJob!!.toStart)
+                        if (cur is HealthcheckJob) {
+                            val containersInProgress = jobs.keys.toSet()
+                            healthcheckJobHandler(containersInProgress)
+
+                        } else if (cur is ContainerJob) {
+                            if (cur.shouldRun()) {
+                                jobHandler(cur)
+                            }
+
+                            // Merging the job with a new enqueued one for the same container
+                            lockJobs.withLock {
+                                if (!cur.done) {
+                                    jobs.merge(cur.name, cur) { new, _ -> cur.merge(new) }
+                                } else {
+                                    jobs.computeIfPresent(cur.name) { _, new ->
+                                        (new as ContainerJob).minus(cur).takeIf(ContainerJob::isNotEmpty)
+                                    }
+                                }
+                            }
                         }
                     } catch (e: Exception) {
-                        logger.error("Can't handle the container job: ${currentJob!!.containerName}", e)
+                        logger.error("Can't handle container job: $currentJob", e)
                     }
                 }
 
-                Thread.sleep(100)
+                Thread.sleep(SLEEP_TIMEOUT)
             }
         }
     }
@@ -97,44 +115,9 @@ internal class DefaultContainerJobManager(
         containerJobsThread.join()
     }
 
-    private fun jobOf(containerName: ContainerName): Job {
-        return jobs.computeIfAbsent(containerName) {
-            Job(containerName)
-        }
+    private fun jobOf(containerName: ContainerName): ContainerJob {
+        return jobs.computeIfAbsent(containerName.name) {
+            ContainerJob(containerName)
+        } as ContainerJob
     }
 }
-
-internal class Job(val containerName: ContainerName) {
-
-    val toStop = mutableSetOf<Chain>()
-    val toStart = mutableSetOf<Chain>()
-
-    fun stopChain(chain: Chain) {
-        if (toStart.contains(chain)) {
-            toStart.remove(chain)
-        } else {
-            toStop.add(chain)
-        }
-    }
-
-    fun startChain(chain: Chain) {
-        if (toStop.contains(chain)) {
-            toStop.remove(chain)
-        } else {
-            toStart.add(chain)
-        }
-    }
-
-    fun restartChain(chain: Chain) {
-        toStop.add(chain)
-        toStart.add(chain)
-    }
-
-    fun isEmpty(): Boolean {
-        return toStop.isEmpty() && toStart.isEmpty()
-    }
-}
-
-internal typealias ContainerJobHandler = (containerName: ContainerName, toStop: Set<Chain>, toStart: Set<Chain>) -> Unit
-internal typealias HealthcheckJobHandler = () -> Unit
-

@@ -13,7 +13,7 @@ object ChainUtil {
     fun ridOf(chainIid: Long): BlockchainRid {
         val hexChainIid = chainIid.toString(8)
         val base = "0000000000000000000000000000000000000000000000000000000000000000"
-        val rid = base.substring(0, 64-hexChainIid.length) + hexChainIid
+        val rid = base.substring(0, 64 - hexChainIid.length) + hexChainIid
         return BlockchainRid.buildFromHex(rid)
     }
 

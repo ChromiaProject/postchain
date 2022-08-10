@@ -1,7 +1,9 @@
-package net.postchain.containers.bpm
+package net.postchain.containers.bpm.fs
 
 import mu.KLogging
-import net.postchain.containers.bpm.FileSystem.Type.ZFS
+import net.postchain.containers.bpm.ContainerName
+import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.containers.bpm.fs.FileSystem.Type.ZFS
 import net.postchain.containers.infra.ContainerNodeConfig
 import java.nio.file.Path
 
@@ -21,13 +23,6 @@ import java.nio.file.Path
  *     │   └── ...
  *     ├── containers/
  *     │   ├── n020CCD8A_cont0/                container
- *     │   │   ├── blockchains/                blockchains of the container
- *     │   │   │   ├── 100/                    chainId
- *     │   │   │   │   ├── 0.gtv               config0 / gtv
- *     │   │   │   │   ├── 0.xml               config0 / xml
- *     │   │   │   │   └── brid.txt            brid
- *     │   │   │   └── 101/
- *     │   │   │       └── ...
  *     │   │   ├── logs                        logs
  *     │   │   ├── env-peers.sh                this node host, port, pubkey
  *     │   │   └── node-config.properties      node config file

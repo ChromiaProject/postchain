@@ -22,6 +22,7 @@ message InitializeBlockchainRequest {
     string xml = 3;
     bytes gtv = 4;
   }
+  optional string brid = 5;
 }
 
 message InitializeBlockchainReply {
@@ -66,4 +67,5 @@ message FindBlockchainRequest {
 
 message FindBlockchainReply {
   string brid = 1;
+  bool active = 2;
 }
