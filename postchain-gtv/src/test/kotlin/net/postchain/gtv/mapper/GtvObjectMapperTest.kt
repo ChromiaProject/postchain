@@ -17,6 +17,10 @@ data class Simple(@Name("key") val value: Long)
 
 data class BasicDict(@Name("dict") val simple: Simple)
 
+enum class SimpleEnum {
+    A, B
+}
+
 internal class GtvObjectMapperTest {
 
     @Test
@@ -64,16 +68,19 @@ internal class GtvObjectMapperTest {
         data class AllTypes(
                 @Name("string") val s: String,
                 @Name("long") val l: Long,
+                @Name("enum") val e: SimpleEnum,
                 @Name("byte") val b: ByteArray // Do not run isEqualTo
         )
 
         val actual = gtv(mapOf(
                 "string" to gtv("a"),
                 "long" to gtv(1),
+                "enum" to gtv("A"),
                 "byte" to gtv("b".toByteArray())
         )).toObject<AllTypes>()
         assert(actual.l).isEqualTo(1L)
         assert(actual.s).isEqualTo("a")
+        assert(actual.e).isEqualTo(SimpleEnum.A)
         assert(actual.b).isContentEqualTo("b".toByteArray())
     }
 
