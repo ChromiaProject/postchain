@@ -137,4 +137,51 @@ class PostchainService(private val postchainNode: PostchainNode) : PostchainServ
         })
         responseObserver?.onCompleted()
     }
+
+    override fun addBlockchainReplica(
+        request: AddBlockchainReplicaRequest?, responseObserver: StreamObserver<AddBlockchainReplicaReply>?
+    ) {
+        val success = postchainNode.postchainContext.storage.withWriteConnection { ctx ->
+            val db = DatabaseAccess.of(ctx)
+
+            val foundInPeerInfo = db.findPeerInfo(ctx, null, null, request!!.pubkey)
+            if (foundInPeerInfo.isEmpty()) {
+                responseObserver?.onError(
+                    Status.NOT_FOUND.withDescription("Given pubkey is not a peer. First add it as a peer.")
+                        .asRuntimeException()
+                )
+                return@withWriteConnection false
+            }
+
+            db.addBlockchainReplica(ctx, request.brid, request.pubkey)
+            true
+        }
+
+        if (!success) return
+        responseObserver?.onNext(AddBlockchainReplicaReply.newBuilder().run {
+            message = "Node ${request!!.pubkey} has been added as a replica for chain with brid ${request.brid}"
+            build()
+        })
+        responseObserver?.onCompleted()
+    }
+
+    override fun removeBlockchainReplica(
+        request: RemoveBlockchainReplicaRequest?, responseObserver: StreamObserver<RemoveBlockchainReplicaReply>?
+    ) {
+        postchainNode.postchainContext.storage.withWriteConnection { ctx ->
+            val db = DatabaseAccess.of(ctx)
+
+            val removedReplica = db.removeBlockchainReplica(ctx, request!!.brid, request.pubkey)
+
+            val message = if (removedReplica.isEmpty()) {
+                "No replica has been removed"
+            } else {
+                "Successfully removed replica: $removedReplica"
+            }
+            responseObserver?.onNext(
+                RemoveBlockchainReplicaReply.newBuilder().setMessage(message).build()
+            )
+            responseObserver?.onCompleted()
+        }
+    }
 }
