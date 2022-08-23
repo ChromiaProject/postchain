@@ -17,16 +17,16 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
 
     private val dataBuilder = GTXDataBuilder(blockchainRID, signers, Secp256K1CryptoSystem())
 
-    fun addOperation(opName: String, vararg args: Gtv) {
+    fun addOperation(opName: String, vararg args: Gtv) = apply {
         dataBuilder.addOperation(opName, arrayOf(*args))
     }
 
     /** Add a "nop" operation with timestamp to make the transaction unique. */
-    fun addNop() {
+    fun addNop() = apply {
         addOperation("nop", gtv(Instant.now().toEpochMilli()))
     }
 
-    fun sign(sigMaker: SigMaker) {
+    fun sign(sigMaker: SigMaker) = apply {
         if (!dataBuilder.finished) {
             dataBuilder.finish()
         }
