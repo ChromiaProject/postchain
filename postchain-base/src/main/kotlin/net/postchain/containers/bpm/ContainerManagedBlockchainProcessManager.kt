@@ -61,7 +61,7 @@ open class ContainerManagedBlockchainProcessManager(
     override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, appConfig, containerNodeConfig)
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return { blockTrace: BlockTrace?, _, blockTimestamp: Long ->
+        return afterCommitHandler@{ blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
             try {
                 rTrace("Before", chainId, blockTrace)
                 if (chainId != CHAIN0) {
@@ -72,6 +72,12 @@ open class ContainerManagedBlockchainProcessManager(
                     false
                 } else {
                     rTrace("Before", chainId, blockTrace)
+                    for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
+
+                    rTrace("Sync", chainId, blockTrace)
+                    val gotLock = chainSynchronizers[chainId]!!.tryLock()
+                    if (!gotLock) return@afterCommitHandler false
+
                     // Sending heartbeat to other chains
                     heartbeatManager.beat(blockTimestamp)
 
@@ -102,6 +108,7 @@ open class ContainerManagedBlockchainProcessManager(
                         res2
                     }
 
+                    chainSynchronizers[chainId]!!.unlock()
                     rTrace("After", chainId, blockTrace)
                     res
                 }
@@ -129,25 +136,27 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun stopStartBlockchains(reloadChain0: Boolean) {
-        val toLaunch = retrieveBlockchainsToLaunch()
-        val launched = getLaunchedBlockchains()
+        synchronized(synchronizer) {
+            val toLaunch = retrieveBlockchainsToLaunch()
+            val launched = getLaunchedBlockchains()
 
-        // Chain0
-        if (reloadChain0) {
-            logger.debug("[${nodeName()}]: ContainerJob -- Restart chain0")
-            restartBlockchainAsync(CHAIN0, null)
-        }
+            // Chain0
+            if (reloadChain0) {
+                logger.debug("[${nodeName()}]: ContainerJob -- Restart chain0")
+                restartBlockchainAsync(CHAIN0, null)
+            }
 
-        // Stopping launched blockchains
-        launched.filterNot(toLaunch::contains).forEach {
-            logger.debug("[${nodeName()}]: ContainerJob -- Stop chain: ${getChain(it)}")
-            containerJobManager.stopChain(getChain(it))
-        }
+            // Stopping launched blockchains
+            launched.filterNot(toLaunch::contains).forEach {
+                logger.debug("[${nodeName()}]: ContainerJob -- Stop chain: ${getChain(it)}")
+                containerJobManager.stopChain(getChain(it))
+            }
 
-        // Launching new blockchains except blockchain 0
-        toLaunch.filter { it != CHAIN0 && it !in launched }.forEach {
-            logger.debug("[${nodeName()}]: ContainerJob -- Start chain: ${getChain(it)}")
-            containerJobManager.startChain(getChain(it))
+            // Launching new blockchains except blockchain 0
+            toLaunch.filter { it != CHAIN0 && it !in launched }.forEach {
+                logger.debug("[${nodeName()}]: ContainerJob -- Start chain: ${getChain(it)}")
+                containerJobManager.startChain(getChain(it))
+            }
         }
     }
 
