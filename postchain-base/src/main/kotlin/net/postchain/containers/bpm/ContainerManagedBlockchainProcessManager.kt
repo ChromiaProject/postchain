@@ -61,7 +61,7 @@ open class ContainerManagedBlockchainProcessManager(
     override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, appConfig, containerNodeConfig)
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return afterCommitHandler@{ blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
+        return { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
             try {
                 rTrace("Before", chainId, blockTrace)
                 if (chainId != CHAIN0) {
@@ -77,10 +77,6 @@ open class ContainerManagedBlockchainProcessManager(
                     // Sending heartbeat to other chains
                     heartbeatManager.beat(blockTimestamp)
 
-                    rTrace("Sync", chainId, blockTrace)
-                    // If chain is already being stopped/restarted by another thread we will not get the lock and may return
-                    if (!tryAcquireChainLock(chainId)) return@afterCommitHandler false
-
                     // Preloading blockchain configuration
                     preloadChain0Configuration()
 
@@ -89,6 +85,7 @@ open class ContainerManagedBlockchainProcessManager(
                     val doReload = (this.peerListVersion != peerListVersion)
                     this.peerListVersion = peerListVersion
 
+                    rTrace("Sync", chainId, blockTrace)
                     val res = containerJobManager.withLock {
                         // Reload/start/stops blockchains
                         val res2 = if (doReload) {
@@ -116,8 +113,6 @@ open class ContainerManagedBlockchainProcessManager(
                 e.printStackTrace()
                 restartBlockchainAsync(chainId, blockTrace)
                 true // let's hope restarting a blockchain fixes the problem
-            } finally {
-                releaseChainLock(chainId)
             }
         }
     }

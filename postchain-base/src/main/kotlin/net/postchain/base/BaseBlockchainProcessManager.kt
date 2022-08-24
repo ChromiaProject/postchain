@@ -17,6 +17,7 @@ import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -50,6 +51,7 @@ open class BaseBlockchainProcessManager(
     protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     protected val extensions: List<BlockchainProcessManagerExtension> = makeExtensions()
+    private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
 
     // For DEBUG only
     var insideATest = false
@@ -72,6 +74,10 @@ open class BaseBlockchainProcessManager(
      * @param chainId is the chain to start.
      */
     protected fun startBlockchainAsync(chainId: Long, bTrace: BlockTrace?) {
+        if (!scheduledForStart.add(chainId)) {
+            logger.info { "Chain $chainId is already scheduled for start" }
+            return
+        }
         startAsyncInfo("Enqueue async starting of blockchain", chainId)
         executor.execute {
             try {
@@ -162,6 +168,8 @@ open class BaseBlockchainProcessManager(
                     } catch (e: Exception) {
                         logger.error(e) { e.message }
                         null
+                    } finally {
+                        scheduledForStart.remove(chainId)
                     }
                 }
             }
@@ -207,6 +215,7 @@ open class BaseBlockchainProcessManager(
                 }
             }
         }
+        if (!restart) chainSynchronizers.remove(chainId)
     }
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
