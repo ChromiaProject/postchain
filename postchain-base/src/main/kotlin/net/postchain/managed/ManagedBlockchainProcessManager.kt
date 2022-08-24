@@ -204,15 +204,15 @@ open class ManagedBlockchainProcessManager(
                 for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
                 wrTrace("Sync", chainId, bTrace)
-                val gotLock = chainSynchronizers[chainId]!!.tryLock()
-                if (!gotLock) return false
+                // If chain is already being stopped/restarted by another thread we will not get the lock and may return
+                if (!tryAcquireChainLock(chainId)) return false
 
                 val restart = if (chainId == CHAIN0) {
                     afterCommitHandlerChain0(bTrace, blockTimestamp)
                 } else {
                     afterCommitHandlerChainN(bTrace)
                 }
-                chainSynchronizers[chainId]!!.unlock()
+
                 wrTrace("After", chainId, bTrace)
                 restart
             } catch (e: Exception) {
@@ -220,6 +220,8 @@ open class ManagedBlockchainProcessManager(
                 e.printStackTrace()
                 restartBlockchainAsync(chainId, bTrace)
                 true // let's hope restarting a blockchain fixes the problem
+            } finally {
+                releaseChainLock(chainId)
             }
         }
 

@@ -6,6 +6,7 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.*
@@ -313,6 +314,19 @@ open class BaseBlockchainProcessManager(
                     }
                     .values.toTypedArray()
         }
+    }
+
+    protected fun tryAcquireChainLock(chainId: Long): Boolean {
+        return chainSynchronizers[chainId]?.tryLock()
+            ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
+    }
+
+    protected fun releaseChainLock(chainId: Long) {
+        chainSynchronizers[chainId]?.apply {
+            if (isHeldByCurrentThread) {
+                unlock()
+            }
+        } ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
     }
 
     // ----------------------------------------------
