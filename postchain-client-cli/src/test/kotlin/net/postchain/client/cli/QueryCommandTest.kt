@@ -21,7 +21,7 @@ internal class QueryCommandTest {
         val testConfigPath = this::class.java.getResource("/config.cfg")!!.path
         val testConfig = PostchainClientConfig.fromProperties(testConfigPath)
         val provider: PostchainClientProvider = mock {
-            on { createClient(eq(testConfig.apiUrl), eq(testConfig.blockchainRid), any()) } doReturn client
+            on { createClient(eq(testConfig.apiUrl), eq(testConfig.blockchainRid), any(), any()) } doReturn client
         }
 
         val command = QueryCommand(provider)

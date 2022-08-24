@@ -23,6 +23,7 @@ import org.apache.hc.client5.http.classic.methods.HttpGet
 import org.apache.hc.client5.http.classic.methods.HttpPost
 import org.apache.hc.client5.http.impl.classic.HttpClients
 import org.apache.hc.core5.http.io.entity.StringEntity
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
 import java.io.BufferedReader
 import java.io.InputStream
 
@@ -31,7 +32,9 @@ private const val APPLICATION_JSON = "application/json"
 class ConcretePostchainClient(
         private val resolver: PostchainNodeResolver,
         private val blockchainRID: BlockchainRid,
-        private val defaultSigner: DefaultSigner?
+        private val defaultSigner: DefaultSigner?,
+        private val retrieveTxStatusAttempts: Int = RETRIEVE_TX_STATUS_ATTEMPTS,
+        private val httpClient: CloseableHttpClient = HttpClients.createDefault()
 ) : PostchainClient {
 
     companion object : KLogging()
@@ -39,9 +42,7 @@ class ConcretePostchainClient(
     // We don't use any adapters b/c this is very simple
     private val gson = GsonBuilder().create()!!
     private val serverUrl = resolver.getNodeURL(blockchainRID)
-    private val httpClient = HttpClients.createDefault()
     private val blockchainRIDHex = blockchainRID.toHex()
-    private val retrieveTxStatusAttempts = 20
     private val retrieveTxStatusIntervalMs = 500L
 
     override fun makeTransaction(): GTXTransactionBuilder {
@@ -141,7 +142,7 @@ class ConcretePostchainClient(
 
                 // keep polling till getting Confirmed or Rejected
                 var lastKnownTxResult: TransactionResult? = null
-                (0 until retrieveTxStatusAttempts).forEach { _ ->
+                repeat(retrieveTxStatusAttempts) {
                     try {
                         httpClient.execute(httpGet).use { response ->
                             response.entity?.let {
