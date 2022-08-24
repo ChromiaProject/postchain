@@ -51,6 +51,8 @@ interface TransactionResult {
     val rejectReason: String? // Undefined if (status != TransactionStatus.REJECTED)
 }
 
+const val RETRIEVE_TX_STATUS_ATTEMPTS = 20
+
 interface PostchainClient {
     fun makeTransaction(): GTXTransactionBuilder
     fun makeTransaction(signers: Array<ByteArray>): GTXTransactionBuilder

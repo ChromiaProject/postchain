@@ -1,6 +1,5 @@
 package net.postchain.client.cli
 
-//import net.postchain.client.PostchainClientConfig
 import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient
@@ -29,13 +28,6 @@ internal class ConcretePostchainClientTest {
         val nodeResolver = object : PostchainNodeResolver {
             override fun getNodeURL(blockchainRID: BlockchainRid) = url
         }
-        class ClientUnderTest(val injectedClient: CloseableHttpClient, resolver: PostchainNodeResolver, blockchainRID: BlockchainRid, defaultSigner: DefaultSigner?, nullableRetrieveTxStatusAttempts: Int?)
-            : ConcretePostchainClient(resolver, blockchainRID, defaultSigner, nullableRetrieveTxStatusAttempts) {
-
-            override fun createHttpClient(): CloseableHttpClient {
-                return injectedClient
-            }
-        }
 
         val httpResponse: CloseableHttpResponse = mock {
             on { getCode() } doReturn 200
@@ -45,12 +37,17 @@ internal class ConcretePostchainClientTest {
             on { execute(any()) } doReturn httpResponse
         }
 
-        val client = ClientUnderTest(httpClient, nodeResolver,
-            BlockchainRid.buildFromHex("EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"),
-            null, numberPassed)
-            val cryptoSystem = Secp256K1CryptoSystem()
-            val gtxdataBuilder = GTXDataBuilder(BlockchainRid.ZERO_RID, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+        val client: ConcretePostchainClient
+        if (null != numberPassed) {
+            client = ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex("EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"),
+            null, numberPassed, httpClient)
+        } else {
+            client = ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex("EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"),
+            null, httpClient = httpClient)
+        }
 
+        val cryptoSystem = Secp256K1CryptoSystem()
+        val gtxdataBuilder = GTXDataBuilder(BlockchainRid.ZERO_RID, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
         // Just any operation
         gtxdataBuilder.addOperation("nop", arrayOf(gtv((0..100000).random().toLong())))
         gtxdataBuilder.finish()

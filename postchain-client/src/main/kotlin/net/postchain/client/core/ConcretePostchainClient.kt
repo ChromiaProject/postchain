@@ -29,13 +29,12 @@ import java.io.InputStream
 
 private const val APPLICATION_JSON = "application/json"
 
-const val RETRIEVE_TX_STATUS_ATTEMPTS = 20
-
 open class ConcretePostchainClient(
         private val resolver: PostchainNodeResolver,
         private val blockchainRID: BlockchainRid,
         private val defaultSigner: DefaultSigner?,
-        private val nullableRetrieveTxStatusAttempts: Int? = null
+        private val retrieveTxStatusAttempts: Int = RETRIEVE_TX_STATUS_ATTEMPTS,
+        private val httpClient: CloseableHttpClient = HttpClients.createDefault()
 ) : PostchainClient {
 
     companion object : KLogging()
@@ -43,13 +42,8 @@ open class ConcretePostchainClient(
     // We don't use any adapters b/c this is very simple
     private val gson = GsonBuilder().create()!!
     private val serverUrl = resolver.getNodeURL(blockchainRID)
-    private var httpClient = createHttpClient()
     private val blockchainRIDHex = blockchainRID.toHex()
     private val retrieveTxStatusIntervalMs = 500L
-
-    open fun createHttpClient(): CloseableHttpClient {
-        return HttpClients.createDefault()
-    }
 
     override fun makeTransaction(): GTXTransactionBuilder {
         return GTXTransactionBuilder(this, blockchainRID, arrayOf(defaultSigner!!.pubkey))
@@ -101,7 +95,6 @@ open class ConcretePostchainClient(
     }
 
     private fun doPostTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
-        httpClient = createHttpClient()
         val txHex = txBuilder.serialize().toHex()
         val txJson = """{"tx" : $txHex}"""
         val txHashHex = txBuilder.getDigestForSigning().toHex()
@@ -110,7 +103,7 @@ open class ConcretePostchainClient(
             val httpPost = HttpPost("$serverUrl/tx/$blockchainRIDHex")
             httpPost.setHeader("Content-type", APPLICATION_JSON)
             httpPost.entity = StringEntity(txJson)
-            return httpClient.execute(httpPost).use { response ->
+            return httpClient!!.execute(httpPost).use { response ->
                 var errorString: String? = null
                 if (response.code >= 400) {
                     response.entity?.let {
@@ -149,8 +142,7 @@ open class ConcretePostchainClient(
 
                 // keep polling till getting Confirmed or Rejected
                 var lastKnownTxResult: TransactionResult? = null
-                val retrieveTxStatusAttempts : Int? = (nullableRetrieveTxStatusAttempts ?: RETRIEVE_TX_STATUS_ATTEMPTS)
-                (0 until retrieveTxStatusAttempts!!).forEach { i ->
+                (0 until retrieveTxStatusAttempts).forEach { _ ->
                     try {
                         httpClient.execute(httpGet).use { response ->
                             response.entity?.let {
