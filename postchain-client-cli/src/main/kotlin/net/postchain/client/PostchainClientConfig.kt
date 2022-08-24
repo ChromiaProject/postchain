@@ -3,11 +3,12 @@ package net.postchain.client
 import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
+import net.postchain.client.core.RETRIEVE_TX_STATUS_ATTEMPTS
 
 data class PostchainClientConfig(
         val apiUrl: String,
         val blockchainRid: BlockchainRid,
-        val retrieveTxStatusAttempts: Int?,
+        val retrieveTxStatusAttempts: Int,
         private val privKey: String,
         private val pubKey: String
 ) {
@@ -24,9 +25,8 @@ data class PostchainClientConfig(
                             ?: config.getString("api-url", ""),
                     blockchainRid = (System.getenv("POSTCHAIN_CLIENT_BLOCKCHAIN_RID")
                             ?: config.getString("blockchain-rid", "")).let { BlockchainRid.buildFromHex(it) },
-                    retrieveTxStatusAttempts = (System.getenv("RETRIEVE_TX_STATUS_ATTEMPTS")
-                            ?: config.getString("retrieveTxStatusAttempts", ""))
-                            .let { if (null == it || it.isEmpty()) null else it.toInt() },
+                    retrieveTxStatusAttempts = System.getenv("POSTCHAIN_CLIENT_STATUS_POLL_COUNT")?.toInt()
+                            ?: config.getInt("status.poll-count", RETRIEVE_TX_STATUS_ATTEMPTS),
                     privKey = System.getenv("POSTCHAIN_CLIENT_PRIVKEY")
                             ?: config.getString("privkey", ""),
                     pubKey = System.getenv("POSTCHAIN_CLIENT_PUBKEY")

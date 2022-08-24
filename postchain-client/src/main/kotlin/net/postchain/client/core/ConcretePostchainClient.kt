@@ -103,7 +103,7 @@ class ConcretePostchainClient(
             val httpPost = HttpPost("$serverUrl/tx/$blockchainRIDHex")
             httpPost.setHeader("Content-type", APPLICATION_JSON)
             httpPost.entity = StringEntity(txJson)
-            return httpClient!!.execute(httpPost).use { response ->
+            return httpClient.execute(httpPost).use { response ->
                 var errorString: String? = null
                 if (response.code >= 400) {
                     response.entity?.let {
@@ -142,7 +142,7 @@ class ConcretePostchainClient(
 
                 // keep polling till getting Confirmed or Rejected
                 var lastKnownTxResult: TransactionResult? = null
-                (0 until retrieveTxStatusAttempts).forEach { _ ->
+                repeat(retrieveTxStatusAttempts) {
                     try {
                         httpClient.execute(httpGet).use { response ->
                             response.entity?.let {

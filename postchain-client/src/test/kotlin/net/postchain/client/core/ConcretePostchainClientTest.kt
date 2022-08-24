@@ -8,9 +8,11 @@ import net.postchain.client.core.PostchainClientProvider
 import net.postchain.client.core.PostchainNodeResolver
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.DefaultSigner
+import net.postchain.client.core.RETRIEVE_TX_STATUS_ATTEMPTS
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.BeforeEach
 import org.mockito.kotlin.*
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
 import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse
@@ -22,33 +24,30 @@ import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.crypto.devtools.KeyPairHelper
 
 internal class ConcretePostchainClientTest {
+    private var url = "http://localhost:7740"
+    private lateinit var nodeResolver: PostchainNodeResolver
+    private lateinit var httpResponse: CloseableHttpResponse
+    private lateinit var httpClient: CloseableHttpClient
+    private val brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"
+    private val cryptoSystem = Secp256K1CryptoSystem()
+    private val gtxdataBuilder = GTXDataBuilder(BlockchainRid.ZERO_RID, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
 
-    fun driveTestCorrectNumberOfAttempts(numberPassed: Int?, numberExpected: Int) {
-        val url = "http://localhost:7740"
-        val nodeResolver = object : PostchainNodeResolver {
+    @BeforeEach
+    fun setup() {
+        nodeResolver = object : PostchainNodeResolver {
             override fun getNodeURL(blockchainRID: BlockchainRid) = url
         }
 
-        val httpResponse: CloseableHttpResponse = mock {
+        httpResponse = mock {
             on { getCode() } doReturn 200
         }
 
-        val httpClient: CloseableHttpClient = mock {
+        httpClient = mock {
             on { execute(any()) } doReturn httpResponse
         }
+    }
 
-        val brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"
-        val client: ConcretePostchainClient
-        if (null != numberPassed) {
-            client = ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid),
-            null, numberPassed, httpClient)
-        } else {
-            client = ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid),
-            null, httpClient = httpClient)
-        }
-
-        val cryptoSystem = Secp256K1CryptoSystem()
-        val gtxdataBuilder = GTXDataBuilder(BlockchainRid.ZERO_RID, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+    fun driveTestCorrectNumberOfAttempts(client: ConcretePostchainClient, numberExpected: Int) {
         // Just any operation
         gtxdataBuilder.addOperation("nop", arrayOf(gtv((0..100000).random().toLong())))
         gtxdataBuilder.finish()
@@ -63,12 +62,18 @@ internal class ConcretePostchainClientTest {
     }
 
     @Test
-    fun `Correct number of attempts by default`() {
-        driveTestCorrectNumberOfAttempts(numberPassed = null, numberExpected = 20)
+    fun `Max number of attempts by default`() {
+        driveTestCorrectNumberOfAttempts(
+            ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, httpClient = httpClient),
+            // If I didn't pass a max value, it defaults to RETRIEVE_TX_STATUS_ATTEMPTS = 20
+            numberExpected = RETRIEVE_TX_STATUS_ATTEMPTS)
     }
 
     @Test
-    fun `Correct number of attempts parameterized`() {
-        driveTestCorrectNumberOfAttempts(numberPassed = 10, numberExpected = 10)
+    fun `Max number of attempts parameterized`() {
+        driveTestCorrectNumberOfAttempts(
+            ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, 10, httpClient),
+            // If I pass a custom max value, verify it uses it
+            numberExpected = 10)
     }
 }
