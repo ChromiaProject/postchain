@@ -3,7 +3,6 @@ package net.postchain.client
 import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
-import net.postchain.client.core.ConcretePostchainClient
 
 data class PostchainClientConfig(
         val apiUrl: String,

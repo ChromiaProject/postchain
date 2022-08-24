@@ -45,12 +45,15 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
 
     internal fun runInternal(config: PostchainClientConfig, awaitConfirmation: Boolean, opName: String, vararg args: Gtv) {
         val sigMaker = cryptoSystem.buildSigMaker(config.pubKeyByteArray, config.privKeyByteArray)
-        clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray), config.retrieveTxStatusAttempts)
-                .makeTransaction()
-                .apply {
-                    addOperation(opName, *args)
-                    sign(sigMaker)
-                    postSync(if (awaitConfirmation) ConfirmationLevel.UNVERIFIED else ConfirmationLevel.NO_WAIT)
-                }
+        val client = if (null != config.retrieveTxStatusAttempts)
+            clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray), config.retrieveTxStatusAttempts)
+            else
+            clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray))
+        client.makeTransaction()
+            .apply {
+                addOperation(opName, *args)
+                sign(sigMaker)
+                postSync(if (awaitConfirmation) ConfirmationLevel.UNVERIFIED else ConfirmationLevel.NO_WAIT)
+            }
     }
 }

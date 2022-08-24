@@ -37,12 +37,13 @@ internal class ConcretePostchainClientTest {
             on { execute(any()) } doReturn httpResponse
         }
 
+        val brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"
         val client: ConcretePostchainClient
         if (null != numberPassed) {
-            client = ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex("EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"),
+            client = ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid),
             null, numberPassed, httpClient)
         } else {
-            client = ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex("EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"),
+            client = ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid),
             null, httpClient = httpClient)
         }
 

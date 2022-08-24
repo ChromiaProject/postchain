@@ -29,7 +29,7 @@ import java.io.InputStream
 
 private const val APPLICATION_JSON = "application/json"
 
-open class ConcretePostchainClient(
+class ConcretePostchainClient(
         private val resolver: PostchainNodeResolver,
         private val blockchainRID: BlockchainRid,
         private val defaultSigner: DefaultSigner?,
