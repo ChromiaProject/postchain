@@ -89,6 +89,8 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
                     if (queue.offer(comparableTx)) {
                         logger.debug{ "Enqueued tx $rid" }
                         queueMap.set(rid, comparableTx)
+                        // If this tx was previously rejected we should clear that status now and retry it
+                        rejects.remove(rid)
                         return EnqueueTransactionResult.OK
                     } else {
                         logger.debug{ "Skipping tx $rid, overloaded. Queue contains ${queue.size} elements" }

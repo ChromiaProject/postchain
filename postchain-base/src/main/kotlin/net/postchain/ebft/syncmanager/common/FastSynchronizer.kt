@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.Config
 import net.postchain.core.*
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
@@ -74,7 +75,7 @@ data class FastSyncParameters(
         /**
          * 10 minutes in milliseconds
          */
-        var blacklistingTimeoutMs: Long = 10 * 60 * 1000) {
+        var blacklistingTimeoutMs: Long = 10 * 60 * 1000) : Config {
     companion object {
         @JvmStatic
         fun fromAppConfig(config: AppConfig, init: (FastSyncParameters) -> Unit = {}): FastSyncParameters {

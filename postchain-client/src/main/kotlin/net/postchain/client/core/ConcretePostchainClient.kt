@@ -6,12 +6,17 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import mu.KLogging
+import net.postchain.client.config.STATUS_POLL_COUNT
+import net.postchain.client.config.STATUS_POLL_INTERVAL
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.common.tx.TransactionStatus.*
+import net.postchain.common.tx.TransactionStatus.CONFIRMED
+import net.postchain.common.tx.TransactionStatus.REJECTED
+import net.postchain.common.tx.TransactionStatus.UNKNOWN
+import net.postchain.common.tx.TransactionStatus.WAITING
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
@@ -21,6 +26,7 @@ import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
 import org.apache.hc.client5.http.classic.methods.HttpGet
 import org.apache.hc.client5.http.classic.methods.HttpPost
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
 import org.apache.hc.client5.http.impl.classic.HttpClients
 import org.apache.hc.core5.http.io.entity.StringEntity
 import java.io.BufferedReader
@@ -29,9 +35,12 @@ import java.io.InputStream
 private const val APPLICATION_JSON = "application/json"
 
 class ConcretePostchainClient(
-        private val resolver: PostchainNodeResolver,
-        private val blockchainRID: BlockchainRid,
-        private val defaultSigner: DefaultSigner?
+    private val resolver: PostchainNodeResolver,
+    private val blockchainRID: BlockchainRid,
+    private val defaultSigner: DefaultSigner?,
+    private val statusPollCount: Int = STATUS_POLL_COUNT,
+    private val statusPollInterval: Long = STATUS_POLL_INTERVAL,
+    private val httpClient: CloseableHttpClient = HttpClients.createDefault()
 ) : PostchainClient {
 
     companion object : KLogging()
@@ -39,13 +48,10 @@ class ConcretePostchainClient(
     // We don't use any adapters b/c this is very simple
     private val gson = GsonBuilder().create()!!
     private val serverUrl = resolver.getNodeURL(blockchainRID)
-    private val httpClient = HttpClients.createDefault()
     private val blockchainRIDHex = blockchainRID.toHex()
-    private val retrieveTxStatusAttempts = 20
-    private val retrieveTxStatusIntervalMs = 500L
 
     override fun makeTransaction(): GTXTransactionBuilder {
-        return GTXTransactionBuilder(this, blockchainRID, arrayOf(defaultSigner!!.pubkey))
+        return GTXTransactionBuilder(this, blockchainRID, defaultSigner?.let { arrayOf(it.pubkey) } ?: arrayOf())
     }
 
     override fun makeTransaction(signers: Array<ByteArray>): GTXTransactionBuilder {
@@ -98,16 +104,17 @@ class ConcretePostchainClient(
         val txJson = """{"tx" : $txHex}"""
         val txHashHex = txBuilder.getDigestForSigning().toHex()
 
-        fun submitTransaction(): Int {
+        fun submitTransaction(): Pair<Int, String?> {
             val httpPost = HttpPost("$serverUrl/tx/$blockchainRIDHex")
             httpPost.setHeader("Content-type", APPLICATION_JSON)
             httpPost.entity = StringEntity(txJson)
-            val statusCode = httpClient.execute(httpPost).use { response ->
+            return httpClient.execute(httpPost).use { response ->
+                var errorString: String? = null
                 if (response.code >= 400) {
                     response.entity?.let {
                         val responseBody = parseResponse(it.content)
                         val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                        val errorString = jsonObject.get("error")?.asString?.uppercase()
+                        errorString = jsonObject.get("error")?.asString
                         if (errorString != null) {
                             logger.info { "Transaction rejected: $errorString" }
                         } else {
@@ -115,33 +122,32 @@ class ConcretePostchainClient(
                         }
                     }
                 }
-                response.code
+                response.code to errorString
             }
-            return statusCode
         }
 
         when (confirmationLevel) {
 
             ConfirmationLevel.NO_WAIT -> {
-                val statusCode = submitTransaction()
+                val (statusCode, error) = submitTransaction()
                 return if (statusCode == 200) {
-                    TransactionResultImpl(WAITING, statusCode)
+                    TransactionResultImpl(WAITING, statusCode, null)
                 } else {
-                    TransactionResultImpl(REJECTED, statusCode)
+                    TransactionResultImpl(REJECTED, statusCode, error)
                 }
             }
 
             ConfirmationLevel.UNVERIFIED -> {
-                val statusCode = submitTransaction()
+                val (statusCode, error) = submitTransaction()
                 if (statusCode in 400..499) {
-                    return TransactionResultImpl(REJECTED, statusCode)
+                    return TransactionResultImpl(REJECTED, statusCode, error)
                 }
                 val httpGet = HttpGet("$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
                 httpGet.setHeader("Content-type", APPLICATION_JSON)
 
                 // keep polling till getting Confirmed or Rejected
                 var lastKnownTxResult: TransactionResult? = null
-                (0 until retrieveTxStatusAttempts).forEach { _ ->
+                repeat(statusPollCount) {
                     try {
                         httpClient.execute(httpGet).use { response ->
                             response.entity?.let {
@@ -152,20 +158,21 @@ class ConcretePostchainClient(
                                     logger.warn { "No status in response\n$responseBody" }
                                 } else {
                                     val status = TransactionStatus.valueOf(statusString)
-                                    lastKnownTxResult = TransactionResultImpl(status, response.code)
+                                    val rejectReason = jsonObject.get("rejectReason")?.asString
+                                    lastKnownTxResult = TransactionResultImpl(status, response.code, rejectReason)
                                     if (status == CONFIRMED || status == REJECTED) return lastKnownTxResult!!
                                 }
 
-                                Thread.sleep(retrieveTxStatusIntervalMs)
+                                Thread.sleep(statusPollInterval)
                             }
                         }
                     } catch (e: Exception) {
                         logger.warn(e) { "Unable to poll for new block" }
-                        Thread.sleep(retrieveTxStatusIntervalMs)
+                        Thread.sleep(statusPollInterval)
                     }
                 }
 
-                return lastKnownTxResult ?: TransactionResultImpl(UNKNOWN, null)
+                return lastKnownTxResult ?: TransactionResultImpl(UNKNOWN, null, null)
             }
 
             else -> throw NotImplementedError("ConfirmationLevel $confirmationLevel is not yet implemented")

@@ -35,7 +35,7 @@ open class DefaultMasterCommunicationManager(
         private val connectionManager: ConnectionManager,
         private val masterConnectionManager: MasterConnectionManager,
         private val dataSource: DirectoryDataSource,
-        private val processName: BlockchainProcessName
+        private val processName: BlockchainProcessName,
 ) : AbstractMasterCommunicationManager() {
 
     companion object : KLogging()
@@ -44,10 +44,10 @@ open class DefaultMasterCommunicationManager(
 
     override fun init() {
         val subnodeChainConfig = SubChainConfig(chainId, blockchainRid, subnodePacketConsumer())
-        masterConnectionManager.connectSubChain(processName, subnodeChainConfig)
+        masterConnectionManager.initSubChainConnection(processName, subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = scheduleTask(containerNodeConfig.containerSendConnectedPeersPeriod) {
+        sendConnectedPeersTask = scheduleTask(containerNodeConfig.sendMasterConnectedPeersPeriod) {
             val peers = connectionManager.getConnectedNodes(chainId)
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.byteArray })
             masterConnectionManager.sendPacketToSub(msg)
@@ -181,6 +181,7 @@ open class DefaultMasterCommunicationManager(
 
         val prefixFun: () -> String = { processName.toString() }
         connectionManager.disconnectChain(prefixFun, chainId)
+        masterConnectionManager.disconnectSubChain(processName, chainId)
     }
 
     private fun process(): String {

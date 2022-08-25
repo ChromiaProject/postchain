@@ -180,6 +180,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
     if (gtv == null) return null
     return when {
         classType.isGtv() -> gtv
+        classType.isEnum -> getEnumValue(classType.name , gtv.asString())
         classType.isLong() -> gtv.asInteger()
         classType.isString() -> gtv.asString()
         classType.isBoolean() -> gtv.asBoolean()
@@ -194,6 +195,10 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
             classType.constructors[0].newInstance(*n.toTypedArray())
         }
     }
+}
+fun getEnumValue(enumClassName: String, enumValue: String): Any {
+    val enum = Class.forName(enumClassName).enumConstants as Array<Enum<*>>
+    return enum.first { it.name == enumValue }
 }
 
 private fun Class<*>.isPrimitiveType(): Boolean {

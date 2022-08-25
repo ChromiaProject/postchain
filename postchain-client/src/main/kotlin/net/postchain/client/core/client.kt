@@ -8,23 +8,32 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GTXDataBuilder
 import nl.komponents.kovenant.Promise
+import java.time.Instant
 
 class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: BlockchainRid, signers: Array<ByteArray>) {
 
     private val dataBuilder = GTXDataBuilder(blockchainRID, signers, Secp256K1CryptoSystem())
 
-    fun addOperation(opName: String, vararg args: Gtv) {
+    fun addOperation(opName: String, vararg args: Gtv) = apply {
         dataBuilder.addOperation(opName, arrayOf(*args))
     }
 
-    fun sign(sigMaker: SigMaker) {
+    /** Add a "nop" operation with timestamp to make the transaction unique. */
+    fun addNop() = apply {
+        addOperation("nop", gtv(Instant.now().toEpochMilli()))
+    }
+
+    fun sign(sigMaker: SigMaker) = apply {
         if (!dataBuilder.finished) {
             dataBuilder.finish()
         }
         dataBuilder.addSignature(sigMaker.signDigest(dataBuilder.getDigestForSigning()))
     }
+
+    fun finish() = apply { dataBuilder.finish() }
 
     fun post(confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception> {
         return client.postTransaction(dataBuilder, confirmationLevel)
@@ -34,13 +43,16 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
         return client.postTransactionSync(dataBuilder, confirmationLevel)
     }
 }
+
 /**
  * Holds the acknowledgement message from the Postchain Server
  */
 interface TransactionResult {
     val status: TransactionStatus
     val httpStatusCode: Int?
+    val rejectReason: String? // Undefined if (status != TransactionStatus.REJECTED)
 }
+
 
 interface PostchainClient {
     fun makeTransaction(): GTXTransactionBuilder

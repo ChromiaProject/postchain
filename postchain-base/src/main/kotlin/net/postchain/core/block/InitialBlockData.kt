@@ -10,13 +10,11 @@ import net.postchain.common.BlockchainRid
  *           ("null" means this blockchain doesn't have any dependencies)
  */
 class InitialBlockData(
-    val blockchainRid: BlockchainRid,
-    val blockIID: Long,
-    val chainID: Long,
-    val prevBlockRID: ByteArray,
-    val height: Long,
-    val timestamp: Long,
-    val blockHeightDependencyArr: Array<ByteArray?>?
-    ) {
-
-}
+        val blockchainRid: BlockchainRid,
+        val blockIID: Long,
+        val chainID: Long,
+        val prevBlockRID: ByteArray,
+        val height: Long,
+        val timestamp: Long,
+        val blockHeightDependencyArr: Array<ByteArray?>?,
+)

@@ -9,17 +9,15 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
-import java.nio.file.Path
 
 interface MasterSyncInfra : SynchronizationInfrastructure {
 
     fun makeMasterBlockchainProcess(
-        processName: BlockchainProcessName,
-        chainId: Long,
-        blockchainRid: BlockchainRid,
-        dataSource: DirectoryDataSource,
-        targetContainer: PostchainContainer,
-        containerChainDir: Path
+            processName: BlockchainProcessName,
+            chainId: Long,
+            blockchainRid: BlockchainRid,
+            dataSource: DirectoryDataSource,
+            targetContainer: PostchainContainer,
     ): ContainerBlockchainProcess
 
     fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess)

@@ -10,12 +10,13 @@ import net.postchain.network.mastersub.protocol.MsMessage
 interface MasterConnectionManager : Shutdownable {
 
     /**
-     * Connects subnode chain. Usually is called by [MasterCommunicationManager].
+     * Initializes subnode connection on the master side, and gets it ready to receive subnode packets.
+     * Usually is called by [MasterCommunicationManager].
      *
      * @param processName a name of blockchain process which connects subnode chain. Used for logging.
      * @param subChainConfig a config of subnode chain.
      */
-    fun connectSubChain(processName: BlockchainProcessName, subChainConfig: SubChainConfig)
+    fun initSubChainConnection(processName: BlockchainProcessName, subChainConfig: SubChainConfig)
 
     /**
      * Sends a message to subnode chain

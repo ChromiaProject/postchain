@@ -38,7 +38,7 @@ data class BlockchainConfigurationData(
          * from the user's side has to be taken to eventually get the TX into the queue.
          */
         @Name(KEY_QUEUE_CAPACITY)
-        @DefaultValue(defaultLong =  2500) // 5 seconds (if 500 tps)
+        @DefaultValue(defaultLong = 2500) // 5 seconds (if 500 tps)
         val txQueueSize: Long,
 
         @Name(KEY_BLOCKSTRATEGY_NAME)
