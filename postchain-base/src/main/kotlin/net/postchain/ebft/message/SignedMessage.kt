@@ -1,7 +1,7 @@
 package net.postchain.ebft.message
 
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.core.UserMistake
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder

@@ -3,12 +3,23 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
+import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.*
-import net.postchain.common.BlockchainRid
+import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.AppContext
+import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TxDetail
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
 import java.sql.Connection
@@ -94,7 +105,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val schemas = connection.metaData.schemas
 
         while (schemas.next()) {
-            if (schemas.getString(1).toLowerCase() == schema.toLowerCase()) {
+            if (schemas.getString(1).equals(schema, true)) {
                 return true
             }
         }

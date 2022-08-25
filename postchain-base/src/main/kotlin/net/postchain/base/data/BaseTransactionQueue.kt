@@ -3,8 +3,16 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.core.*
+import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.tx.EnqueueTransactionResult
+import net.postchain.common.tx.TransactionStatus
+import net.postchain.core.TransactionQueue
+import net.postchain.core.Transaction
+import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
+import kotlin.collections.HashMap
+import kotlin.collections.LinkedHashMap
 
 class ComparableTransaction(val tx: Transaction) {
     override fun equals(other: Any?): Boolean {
@@ -31,6 +39,7 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
     private val queue = LinkedBlockingQueue<ComparableTransaction>(queueCapacity)
     private val queueMap = HashMap<ByteArrayKey, ComparableTransaction>() // transaction by RID
     private val taken = mutableListOf<ComparableTransaction>()
+    private val txsToRetry: Queue<ComparableTransaction> = LinkedList()
     private val rejects = object : LinkedHashMap<ByteArrayKey, Exception?>() {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ByteArrayKey, java.lang.Exception?>?): Boolean {
             return size > MAX_REJECTED
@@ -39,6 +48,9 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
 
     @Synchronized
     override fun takeTransaction(): Transaction? {
+        if (txsToRetry.isNotEmpty()) {
+            return txsToRetry.poll().tx
+        }
         val tx = queue.poll()
         return if (tx != null) {
             taken.add(tx)
@@ -56,14 +68,14 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
         return queue.size
     }
 
-    override fun enqueue(tx: Transaction): TransactionResult {
-        if (tx.isSpecial()) return TransactionResult.INVALID
+    override fun enqueue(tx: Transaction): EnqueueTransactionResult {
+        if (tx.isSpecial()) return EnqueueTransactionResult.INVALID
 
         val rid = ByteArrayKey(tx.getRID())
         synchronized(this) {
             if (queueMap.contains(rid)) {
                 logger.debug{ "Skipping $rid first test" }
-                return TransactionResult.DUPLICATE
+                return EnqueueTransactionResult.DUPLICATE
             }
         }
 
@@ -73,21 +85,23 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
                 synchronized(this) {
                     if (queueMap.contains(rid)) {
                         logger.debug{ "Skipping $rid second test" }
-                        return TransactionResult.DUPLICATE
+                        return EnqueueTransactionResult.DUPLICATE
                     }
                     if (queue.offer(comparableTx)) {
                         logger.debug{ "Enqueued tx $rid" }
                         queueMap.set(rid, comparableTx)
-                        return TransactionResult.OK
+                        // If this tx was previously rejected we should clear that status now and retry it
+                        rejects.remove(rid)
+                        return EnqueueTransactionResult.OK
                     } else {
                         logger.debug{ "Skipping tx $rid, overloaded. Queue contains ${queue.size} elements" }
-                        return TransactionResult.FULL
+                        return EnqueueTransactionResult.FULL
                     }
                 }
             } else {
                 logger.debug { "Tx $rid didn't pass the check" }
                 rejectTransaction(tx, null)
-                return TransactionResult.INVALID
+                return EnqueueTransactionResult.INVALID
             }
 
         } catch (e: UserMistake) {
@@ -95,7 +109,7 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
             rejectTransaction(tx, e)
         }
 
-        return TransactionResult.UNKNOWN
+        return EnqueueTransactionResult.UNKNOWN
     }
 
     @Synchronized
@@ -122,11 +136,20 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
             queue.remove(ct)
             queueMap.remove(ByteArrayKey(tx.getRID()))
             taken.remove(ct)
+            txsToRetry.remove(ct)
         }
     }
 
     @Synchronized
     override fun getRejectionReason(txRID: ByteArrayKey): Exception? {
         return rejects[txRID]
+    }
+
+    @Synchronized
+    override fun retryAllTakenTransactions() {
+        with(txsToRetry) {
+            clear()
+            addAll(taken)
+        }
     }
 }

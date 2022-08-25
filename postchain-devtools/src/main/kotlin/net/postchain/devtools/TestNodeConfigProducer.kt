@@ -123,7 +123,7 @@ object TestNodeConfigProducer {
         baseConfig.setProperty("database.username", "postchain")
         baseConfig.setProperty("database.password", "postchain")
         // TODO: Maybe a personalized schema name like this is not needed (this is just legacy from the node.properties files)
-        val goodTestName = testName.filter { it.isLetterOrDigit() }.toLowerCase()
+        val goodTestName = testName.filter { it.isLetterOrDigit() }.lowercase()
         baseConfig.setProperty("database.schema", goodTestName + nodeConf.sequenceNumber.nodeNumber)
 
         // Legacy way of creating nodes, append nodeIndex to schema name

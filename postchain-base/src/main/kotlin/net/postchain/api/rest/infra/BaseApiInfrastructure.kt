@@ -13,22 +13,22 @@ import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 
 open class BaseApiInfrastructure(
-        protected val restApiConfig: RestApiConfig,
-        val nodeDiagnosticContext: NodeDiagnosticContext?
+    protected val restApiConfig: RestApiConfig,
+    val nodeDiagnosticContext: NodeDiagnosticContext?
 ) : ApiInfrastructure {
 
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
-            if (ssl) {
+            if (tls) {
                 RestApi(
-                        port,
-                        basePath,
-                        sslCertificate,
-                        sslCertificatePassword)
+                    port,
+                    basePath,
+                    tlsCertificate,
+                    tlsCertificatePassword)
             } else {
                 RestApi(
-                        port,
-                        basePath)
+                    port,
+                    basePath)
             }
         } else {
             null
@@ -47,7 +47,8 @@ open class BaseApiInfrastructure(
                         process.networkAwareTxQueue,
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
-                        DefaultDebugInfoQuery(nodeDiagnosticContext)
+                        DefaultDebugInfoQuery(nodeDiagnosticContext),
+                        engine.getConfiguration().blockchainRid
                 )
             } else {
                 apiModel = PostchainModel(
@@ -55,7 +56,8 @@ open class BaseApiInfrastructure(
                         engine.getTransactionQueue(),
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries,
-                        DefaultDebugInfoQuery(nodeDiagnosticContext)
+                        DefaultDebugInfoQuery(nodeDiagnosticContext),
+                        engine.getConfiguration().blockchainRid
                 )
             }
 

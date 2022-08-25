@@ -3,14 +3,20 @@
 package net.postchain.base
 
 import mu.KLogging
-import net.postchain.base.data.GenericBlockHeaderValidator
+import net.postchain.common.BlockchainRid
 import net.postchain.common.TimeLog
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.TransactionFailed
+import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.*
-import net.postchain.core.ValidationResult.Result.OK
-import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
+import net.postchain.core.TransactionFactory
+import net.postchain.core.block.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /**
  * The abstract block builder has only a vague concept about the core procedures of a block builder, for example:
@@ -25,7 +31,8 @@ abstract class AbstractBlockBuilder(
         val ectx: EContext,               // a general DB context (use bctx when possible)
         val blockchainRID: BlockchainRid, // is the RID of the chain
         val store: BlockStore,
-        val txFactory: TransactionFactory // Used for serializing transaction data
+        val txFactory: TransactionFactory, // Used for serializing transaction data
+        private val maxTxExecutionTime: Long
 ) : BlockBuilder, TxEventSink {
 
     companion object: KLogging()
@@ -92,7 +99,7 @@ abstract class AbstractBlockBuilder(
         // a meaningful error message to log.
         TimeLog.startSum("AbstractBlockBuilder.appendTransaction().isCorrect")
         if (!tx.isCorrect()) {
-            throw UserMistake("Transaction ${tx.getRID().toHex()} is not correct")
+            throw TransactionIncorrect("Transaction ${tx.getRID().toHex()} is not correct")
         }
         TimeLog.end("AbstractBlockBuilder.appendTransaction().isCorrect")
         val txctx: TxEContext
@@ -105,14 +112,33 @@ abstract class AbstractBlockBuilder(
         }
         // In case of errors, tx.apply may either return false or throw UserMistake
         TimeLog.startSum("AbstractBlockBuilder.appendTransaction().apply")
-        if (tx.apply(txctx)) {
+
+        if (applyTransaction(tx, txctx)) {
             txctx.done()
             transactions.add(tx)
             rawTransactions.add(tx.getRawData())
         } else {
-            throw UserMistake("Transaction ${tx.getRID().toHex()} failed")
+            throw TransactionFailed("Transaction ${tx.getRID().toHex()} failed")
         }
         TimeLog.end("AbstractBlockBuilder.appendTransaction().apply")
+    }
+
+    private fun applyTransaction(tx: Transaction, txctx: TxEContext): Boolean {
+        return if (maxTxExecutionTime > 0) {
+            try {
+                CompletableFuture.supplyAsync { tx.apply(txctx) }
+                        .orTimeout(maxTxExecutionTime, TimeUnit.MILLISECONDS)
+                        .get()
+            } catch (e: ExecutionException) {
+                throw if (e.cause is TimeoutException) {
+                    TransactionFailed("Transaction failed to execute within given time constraint: $maxTxExecutionTime ms")
+                } else {
+                    e
+                }
+            }
+        } else {
+            tx.apply(txctx)
+        }
     }
 
     /**
@@ -125,46 +151,6 @@ abstract class AbstractBlockBuilder(
         finalized = true
         return blockHeader
     }
-
-    /**
-     * Apart from finalizing the block, validate the header
-     *
-     * @param blockHeader Block header to finalize and validate
-     * @throws UserMistake Happens if validation of the block header fails
-     */
-    override fun finalizeAndValidate(blockHeader: BlockHeader) {
-        val validationResult = validateBlockHeader(blockHeader)
-        when (validationResult.result) {
-            OK -> {
-                store.finalizeBlock(bctx, blockHeader)
-                _blockData = BlockData(blockHeader, rawTransactions)
-                finalized = true
-            }
-            PREV_BLOCK_MISMATCH -> throw BadDataMistake(BadDataType.PREV_BLOCK_MISMATCH, validationResult.message)
-            else -> throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
-        }
-    }
-
-    /**
-     * (Note: don't call this. We only keep this as a public function for legacy tests to work)
-     */
-    internal fun validateBlockHeader(blockHeader: BlockHeader): ValidationResult {
-        val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
-        return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
-            blockHeader,
-            initialBlockData,
-            ::computeMerkleRootHash,
-            ::getBlockRidAtHeight,
-            bctx.timestamp,
-            nrOfDependencies
-        )
-    }
-
-
-    /**
-     * @return the block RID at a certain height
-     */
-    private fun getBlockRidAtHeight(height: Long) = store.getBlockRID(ectx, height)
 
     /**
      * Return block data if block is finalized.
@@ -203,12 +189,12 @@ abstract class AbstractBlockBuilder(
     }
 
     // Only used for logging
-    override fun setBTrace(newBlockTrace: BlockTrace) {
+    override fun setBTrace(bTrace: BlockTrace) {
         if (blockTrace == null) {
-            blockTrace = newBlockTrace
+            blockTrace = bTrace
         } else {
             // Update existing object with missing info
-            blockTrace!!.addDataIfMissing(newBlockTrace)
+            blockTrace!!.addDataIfMissing(bTrace)
         }
     }
 
@@ -224,3 +210,4 @@ abstract class AbstractBlockBuilder(
         }
     }
 }
+

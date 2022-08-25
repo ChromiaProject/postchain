@@ -2,17 +2,18 @@
 
 package net.postchain.managed
 
-import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BlockQueries
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.NodeRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.core.NodeRid
 import java.time.Instant
 
 open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: AppConfig) : ManagedNodeDataSource {
-    private val nmApiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger()
+
+    protected val nmApiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger().toInt()
 
     override fun getPeerInfos(): Array<PeerInfo> {
         // TODO: [POS-90]: Implement correct error processing
@@ -55,16 +56,6 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
         return if (res.isNull()) null else res.asByteArray()
     }
 
-    override fun getConfigurations(blockchainRidRaw: ByteArray): Map<Long, ByteArray> {
-        val res = queries.query(
-                "nm_get_blockchain_configurations",
-                buildArgs("blockchain_rid" to GtvFactory.gtv(blockchainRidRaw))
-        ).get()
-
-        return res.asArray()
-                .associate { heightConfig -> heightConfig[0].asInteger() to heightConfig[1].asByteArray() }
-    }
-
     override fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long? {
         val res = queries.query(
                 "nm_find_next_configuration_height",
@@ -81,9 +72,7 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
     }
 
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
-        return if (nmApiVersion == 1L) {
-            mapOf()
-        } else {
+        return if (nmApiVersion >= 2) {
             val blockchains = computeBlockchainList()
             val heights = queries.query(
                     "nm_get_blockchain_last_height_map",
@@ -95,6 +84,9 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
             blockchains.mapIndexed { i, brid ->
                 BlockchainRid(brid) to if (i < heights.size) heights[i].asInteger() else -1
             }.toMap()
+
+        } else {
+            mapOf()
         }
     }
 

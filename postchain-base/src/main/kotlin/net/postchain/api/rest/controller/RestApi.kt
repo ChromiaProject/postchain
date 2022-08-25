@@ -18,10 +18,10 @@ import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.GTXQuery
 import net.postchain.api.rest.model.TxRID
 import net.postchain.common.TimeLog
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.ProgrammerMistake
-import net.postchain.core.UserMistake
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import spark.Request
@@ -32,10 +32,10 @@ import spark.Service
  * Contains information on the rest API, such as network parameters and available queries
  */
 class RestApi(
-        private val listenPort: Int,
-        private val basePath: String,
-        private val sslCertificate: String? = null,
-        private val sslCertificatePassword: String? = null
+    private val listenPort: Int,
+    private val basePath: String,
+    private val tlsCertificate: String? = null,
+    private val tlsCertificatePassword: String? = null
 ) : Modellable {
 
     val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
@@ -58,13 +58,13 @@ class RestApi(
     }
 
     override fun attachModel(blockchainRid: String, chainModel: ChainModel) {
-        val brid = blockchainRid.toUpperCase()
+        val brid = blockchainRid.uppercase()
         models[brid] = chainModel
         bridByIID[chainModel.chainIID] = brid
     }
 
     override fun detachModel(blockchainRid: String) {
-        val brid = blockchainRid.toUpperCase()
+        val brid = blockchainRid.uppercase()
         val model = models.remove(brid)
         if (model != null) {
             bridByIID.remove(model.chainIID)
@@ -72,7 +72,7 @@ class RestApi(
     }
 
     override fun retrieveModel(blockchainRid: String): ChainModel? {
-        return models[blockchainRid.toUpperCase()] as? Model
+        return models[blockchainRid.uppercase()] as? Model
     }
 
     fun actualPort(): Int {
@@ -98,6 +98,16 @@ class RestApi(
             response.body(toJson(error))
         }
 
+        http.exception(InvalidTnxException::class.java) { error, _, response ->
+            response.status(400)
+            response.body(toJson(error))
+        }
+
+        http.exception(DuplicateTnxException::class.java) { error, _, response ->
+            response.status(409) // Conflict
+            response.body(toJson(error))
+        }
+
         http.exception(OverloadedException::class.java) { error, _, response ->
             response.status(503) // Service unavailable
             response.body(toJson(error))
@@ -114,8 +124,8 @@ class RestApi(
 
     private fun buildRouter(http: Service) {
         http.port(listenPort)
-        if (sslCertificate != null) {
-            http.secure(sslCertificate, sslCertificatePassword, null, null)
+        if (tlsCertificate != null) {
+            http.secure(tlsCertificate, tlsCertificatePassword, null, null)
         }
 
         http.before { req, res ->
@@ -188,6 +198,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
+            // undocumented
             http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/confirmationProof", redirectGet { request, _ ->
                 val result = runTxActionOnModel(request) { model, txRID ->
                     model.getConfirmationProof(txRID)
@@ -255,8 +266,10 @@ class RestApi(
                 handleDebugQuery(request)
             }
 
-            http.get("/brid/$PARAM_BLOCKCHAIN_RID") { request, _ ->
-                checkBlockchainRID(request)
+            http.get("/brid/$PARAM_BLOCKCHAIN_RID") { request, response ->
+                val brid = checkBlockchainRID(request)
+                response.type("text/plain")
+                brid
             }
         }
 
@@ -435,7 +448,7 @@ class RestApi(
 
     private fun chainModel(request: Request): ChainModel {
         val blockchainRID = checkBlockchainRID(request)
-        return models[blockchainRID.toUpperCase()]
+        return models[blockchainRID.uppercase()]
                 ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
     }
 

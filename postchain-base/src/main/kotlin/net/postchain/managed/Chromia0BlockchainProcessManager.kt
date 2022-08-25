@@ -4,18 +4,18 @@ package net.postchain.managed
 
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockWitness
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.common.data.ByteArrayKey
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.core.BlockchainInfrastructure
-import net.postchain.core.ByteArrayKey
 import net.postchain.core.AfterCommitHandler
-import net.postchain.debug.BlockTrace
+import net.postchain.core.BlockchainInfrastructure
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
+import net.postchain.core.block.BlockTrace
 
 /**
  * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.
@@ -39,7 +39,7 @@ class Chromia0BlockchainProcessManager(
                 val witnessData = dba.getWitnessData(eContext, blockRID)
                 val witness = BaseBlockWitness.fromBytes(witnessData)
                 val txb = GTXDataBuilder(chain0Engine.getConfiguration().blockchainRid,
-                        arrayOf(), SECP256K1CryptoSystem())
+                        arrayOf(), Secp256K1CryptoSystem())
                 // sorting signatures makes it more likely we can avoid duplicate anchor transactions
                 val sortedSignatures = witness.getSignatures().sortedBy { ByteArrayKey(it.subjectID) }
                 txb.addOperation("anchor_block",

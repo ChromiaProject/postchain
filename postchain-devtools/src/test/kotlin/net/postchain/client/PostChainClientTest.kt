@@ -2,15 +2,20 @@
 
 package net.postchain.client
 
-import net.postchain.client.core.*
+
+import net.postchain.client.core.ConfirmationLevel
+import net.postchain.client.core.DefaultSigner
+import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.PostchainClientFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.common.tx.TransactionStatus
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
-import net.postchain.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import org.awaitility.Awaitility.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo
@@ -34,7 +39,7 @@ class PostChainClientTest : IntegrationTestSetup() {
     private val randomStr = "hello${Random().nextLong()}"
 
     private fun createTestNodes(nodesCount: Int, configFileName: String): Array<PostchainTestNode> {
-        val sysSetup =  SystemSetupFactory.buildSystemSetup(mapOf(1 to configFileName))
+        val sysSetup = SystemSetupFactory.buildSystemSetup(mapOf(1 to configFileName))
         sysSetup.needRestApi = true
         assertEquals(nodesCount, sysSetup.nodeMap.size)
         createNodesFromSystemSetup(sysSetup)

@@ -6,13 +6,13 @@ import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
 import net.postchain.core.NodeStateTracker
 import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpNodeType
 import java.lang.Thread.sleep
 
 /**

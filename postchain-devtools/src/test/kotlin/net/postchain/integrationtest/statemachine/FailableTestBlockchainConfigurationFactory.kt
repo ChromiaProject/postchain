@@ -10,7 +10,7 @@ class FailableTestBlockchainConfigurationFactory : GTXBlockchainConfigurationFac
 
     override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
         val owner = (configurationData as BlockchainConfigurationData)
-                .context.nodeRID!!.toHex().toUpperCase()
+                .context.nodeRID!!.toHex().uppercase()
 
         /*return TestBlockchainConfiguration(
                 configData,

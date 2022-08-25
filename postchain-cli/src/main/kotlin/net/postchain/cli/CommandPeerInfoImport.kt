@@ -2,50 +2,35 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.PropertiesNodeConfigurationProvider
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
 
-@Parameters(commandDescription = "Import peerinfo")
-class CommandPeerInfoImport : Command {
+class CommandPeerInfoImport : CliktCommand(name = "peerinfo-import", help = "Import peer information") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    @Parameter(
-            names = ["-nc", "--node-config"],
-            description = "Configuration file of node (.properties file)",
-            required = true)
-    private var nodeConfigFile = ""
+    private val nodeConfigFile by nodeConfigOption()
 
-    override fun key(): String = "peerinfo-import"
+    override fun run() {
+        printCommandInfo()
 
-    override fun execute(): CliResult {
-        println("peerinfo-import will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        val imported = peerinfoImport(nodeConfigFile)
 
-        return try {
-            val imported = peerinfoImport(nodeConfigFile)
-
-            val report = if (imported.isEmpty()) {
-                "No peerinfo have been imported"
-            } else {
-                imported.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
-                        .joinToString(
-                                separator = "\n",
-                                prefix = "Peerinfo added (${imported.size}):\n")
-            }
-
-            Ok(report)
-
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
+        if (imported.isEmpty()) {
+            println("No peerinfo have been imported")
+        } else {
+            imported.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
+                .forEach {
+                    println("Peerinfo added (${imported.size}):\n$it")
+                }
         }
+
     }
 
     private fun peerinfoImport(nodeConfigFile: String): Array<PeerInfo> {

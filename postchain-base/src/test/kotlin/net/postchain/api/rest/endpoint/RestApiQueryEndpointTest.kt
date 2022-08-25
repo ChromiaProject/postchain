@@ -7,8 +7,8 @@ import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.Query
 import net.postchain.api.rest.controller.QueryResult
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.core.ProgrammerMistake
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

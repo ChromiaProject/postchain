@@ -2,10 +2,10 @@
 
 package net.postchain.ebft.syncmanager
 
-import net.postchain.core.BlockDataWithWitness
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.CompleteBlock
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockData
 
 object BlockDataDecoder {
 
@@ -16,9 +16,9 @@ object BlockDataDecoder {
         return BlockDataWithWitness(header, block.data.transactions, witness)
     }
 
-    fun decodeBlockData(block: BlockData, blockchainConfig: BlockchainConfiguration)
-            : net.postchain.core.BlockData {
+    fun decodeBlockData(block: net.postchain.ebft.message.BlockData, blockchainConfig: BlockchainConfiguration)
+            : BlockData {
         val header = blockchainConfig.decodeBlockHeader(block.header)
-        return net.postchain.core.BlockData(header, block.transactions)
+        return BlockData(header, block.transactions)
     }
 }

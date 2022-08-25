@@ -1,6 +1,6 @@
 package net.postchain.integrationtest.reconnection
 
-import net.postchain.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.assertChainStarted
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration

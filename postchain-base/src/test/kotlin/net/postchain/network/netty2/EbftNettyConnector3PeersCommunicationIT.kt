@@ -4,28 +4,31 @@ package net.postchain.network.netty2
 
 import assertk.assert
 import assertk.assertions.isIn
-import net.postchain.crypto.secp256k1_derivePubKey
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import net.postchain.base.*
+import net.postchain.base.BasePeerCommConfiguration
+import net.postchain.base.PeerInfo
+import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.common.ConnectionDirection
-import net.postchain.network.util.peerInfoFromPublicKey
 import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerConnectionDescriptor
+import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.FIVE_SECONDS
 import org.awaitility.Duration.TEN_SECONDS
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 
 class EbftNettyConnector3PeersCommunicationIT {
 
-    private val cryptoSystem = SECP256K1CryptoSystem()
+    private val cryptoSystem = Secp256K1CryptoSystem()
     private val blockchainRid = BlockchainRid.buildRepeat(0)
 
     private lateinit var peerInfo1: PeerInfo

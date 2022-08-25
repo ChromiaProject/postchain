@@ -3,8 +3,8 @@ package net.postchain.base.data
 import net.postchain.StorageBuilder
 import net.postchain.base.Storage
 import net.postchain.base.withReadConnection
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.core.UserMistake
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn

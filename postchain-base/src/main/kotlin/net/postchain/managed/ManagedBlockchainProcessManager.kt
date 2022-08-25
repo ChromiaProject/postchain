@@ -7,11 +7,13 @@ import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.common.BlockchainRid
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
 
 /**
@@ -61,8 +63,7 @@ open class ManagedBlockchainProcessManager(
     protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
     protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
-    protected val heartbeatManager = DefaultHeartbeatManager(heartbeatConfig)
-    protected var loggedChains: Array<Set<Long>> = emptyArray()
+    protected val heartbeatManager = DefaultHeartbeatManager()
 
     companion object : KLogging()
 
@@ -104,7 +105,6 @@ open class ManagedBlockchainProcessManager(
 
         val blockQueries = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
             val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(ctx0, CHAIN0)
-
                     ?: throw ProgrammerMistake("chain0 configuration not found")
 
             val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
@@ -129,9 +129,9 @@ open class ManagedBlockchainProcessManager(
         }
     }
 
-    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean) {
+    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
         heartbeatManager.removeListener(chainId)
-        super.stopAndUnregisterBlockchainProcess(chainId, restart)
+        super.stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
     }
 
     /**
@@ -366,9 +366,7 @@ open class ManagedBlockchainProcessManager(
                 val chainId = db.getChainId(ctx0, blockchainRid)
                 retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
                 if (chainId == null) {
-                    val newChainId = db.getMaxChainId(ctx0)
-                            ?.let { maxOf(it + 1, 100) }
-                            ?: 100
+                    val newChainId = maxOf(db.getMaxChainId(ctx0) ?: 0, 99) + 1
                     withReadWriteConnection(storage, newChainId) { newCtx ->
                         db.initializeBlockchain(newCtx, blockchainRid)
                     }

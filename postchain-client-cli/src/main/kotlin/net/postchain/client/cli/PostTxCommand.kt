@@ -22,11 +22,11 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
             "string" to "foo, \"bar\"",
             "bytearray" to "will be encoded using the rell notation x\"<myByteArray>\" and will initially be interpreted as a hex-string.",
             "array" to "[foo,123]",
-            "dict" to "{key1=value1,key2=value2}"
+            "dict" to "{key1->value1,key2->value2}"
     ))
             .multiple()
             .transformAll { args ->
-                args.flatMap { it.split(" ").map { arg -> encodeArg(arg) } }
+                args.map{ encodeArg(it) }
             }
 
     private val configFile by configFileOption()
@@ -45,12 +45,12 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
 
     internal fun runInternal(config: PostchainClientConfig, awaitConfirmation: Boolean, opName: String, vararg args: Gtv) {
         val sigMaker = cryptoSystem.buildSigMaker(config.pubKeyByteArray, config.privKeyByteArray)
-        clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray))
-                .makeTransaction()
-                .apply {
-                    addOperation(opName, *args)
-                    sign(sigMaker)
-                    postSync(if (awaitConfirmation) ConfirmationLevel.UNVERIFIED else ConfirmationLevel.NO_WAIT)
-                }
+        val client = clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray), config.retrieveTxStatusAttempts)
+        client.makeTransaction()
+            .apply {
+                addOperation(opName, *args)
+                sign(sigMaker)
+                postSync(if (awaitConfirmation) ConfirmationLevel.UNVERIFIED else ConfirmationLevel.NO_WAIT)
+            }
     }
 }

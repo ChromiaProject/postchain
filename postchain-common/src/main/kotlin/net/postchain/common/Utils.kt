@@ -2,8 +2,6 @@
 
 package net.postchain.common
 
-import java.net.ServerSocket
-
 private val HEX_CHARS = "0123456789ABCDEF"
 
 fun String.hexStringToByteArray(): ByteArray {
@@ -40,14 +38,4 @@ fun ByteArray.toHex(): String {
     }
 
     return result.toString()
-}
-
-object Utils {
-
-    fun findFreePort(): Int {
-        return ServerSocket(0).use {
-            it.reuseAddress = true
-            it.localPort
-        }
-    }
 }

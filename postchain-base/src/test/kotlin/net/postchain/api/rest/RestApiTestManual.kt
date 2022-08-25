@@ -4,21 +4,20 @@ package net.postchain.api.rest
 
 import io.restassured.RestAssured.given
 import net.postchain.common.BlockchainRid
-import net.postchain.base.SECP256K1CryptoSystem
-//import net.postchain.common.RestTools
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
-import net.postchain.devtools.KeyPairHelper.privKey
-import net.postchain.devtools.KeyPairHelper.pubKey
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper.privKey
+import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.GTXDataBuilder
+import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GTXTransactionFactory
 import org.hamcrest.core.IsEqual.equalTo
 import java.util.*
 
 class RestApiTestManual {
     private val port = 58373
-    private val cryptoSystem = SECP256K1CryptoSystem()
+    private val cryptoSystem = Secp256K1CryptoSystem()
     // TODO Olle POS-93 where do we get it?
     private var blockchainRID: BlockchainRid? = null //"78967BAA4768CBCEF11C508326FFB13A956689FCB6DC3BA17F4B895CBB1577A3"
 
