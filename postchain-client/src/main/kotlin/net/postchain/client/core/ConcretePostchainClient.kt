@@ -113,7 +113,7 @@ class ConcretePostchainClient(
                 repeat(retrieveTxStatusAttempts) {
                     try {
                         val response = client(validationRequest)
-                        val status = valueOf(txStatusLens(response).status ?: "unknown")
+                        val status = valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
                         lastKnownTxResult = TransactionResultImpl(status, response.status.code, response.status.description)
                         if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
                     } catch (e: Exception) {
