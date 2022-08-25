@@ -1,19 +1,19 @@
 package net.postchain.client.core
 
+import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.common.BlockchainRid
-import org.http4k.core.HttpHandler
+import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import net.postchain.client.config.STATUS_POLL_COUNT
 
 internal class ConcretePostchainClientTest {
     private var url = "http://localhost:7740"
     private lateinit var nodeResolver: PostchainNodeResolver
-    private lateinit var httpClient: HttpHandler
+    private lateinit var httpClient: AsyncHttpHandler
     private val brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"
     private var requestCounter = 0
 
@@ -23,9 +23,12 @@ internal class ConcretePostchainClientTest {
             override fun getNodeURL(blockchainRID: BlockchainRid) = url
         }
 
-        httpClient = { request: Request ->
-            requestCounter++
-            Response(Status.OK, "")
+        httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                requestCounter++
+                fn(Response(Status.OK, ""))
+            }
+
         }
     }
 

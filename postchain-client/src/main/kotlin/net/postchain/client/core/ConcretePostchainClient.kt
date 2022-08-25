@@ -20,9 +20,13 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GTXDataBuilder
 import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.task
-import org.http4k.client.JavaHttpClient
-import org.http4k.core.*
+import nl.komponents.kovenant.deferred
+import org.http4k.client.ApacheAsyncClient
+import org.http4k.client.AsyncHttpHandler
+import org.http4k.core.Body
+import org.http4k.core.Method
+import org.http4k.core.Request
+import org.http4k.core.Status
 import org.http4k.format.Gson.auto
 import java.lang.Thread.sleep
 
@@ -37,7 +41,7 @@ class ConcretePostchainClient(
     private val defaultSigner: DefaultSigner?,
     private val statusPollCount: Int = STATUS_POLL_COUNT,
     private val statusPollInterval: Long = STATUS_POLL_INTERVAL,
-    private val client: HttpHandler = JavaHttpClient()
+    private val client: AsyncHttpHandler = ApacheAsyncClient()
 ) : PostchainClient {
 
     companion object : KLogging()
@@ -53,27 +57,8 @@ class ConcretePostchainClient(
         return GTXTransactionBuilder(this, blockchainRID, signers)
     }
 
-    override fun postTransaction(
-        txBuilder: GTXDataBuilder,
-        confirmationLevel: ConfirmationLevel
-    ): Promise<TransactionResult, Exception> {
-        return task { doPostTransaction(txBuilder, confirmationLevel) }
-    }
-
-    override fun postTransactionSync(
-        txBuilder: GTXDataBuilder,
-        confirmationLevel: ConfirmationLevel
-    ): TransactionResult {
-        return doPostTransaction(txBuilder, confirmationLevel)
-    }
 
     override fun query(name: String, gtv: Gtv): Promise<Gtv, Exception> {
-        return task { doQuery(name, gtv) }
-    }
-
-    override fun querySync(name: String, gtv: Gtv) = doQuery(name, gtv)
-
-    private fun doQuery(name: String, gtv: Gtv): Gtv {
         val queriesLens = Body.auto<Queries>().toLens()
         val gtxQuery = gtv(gtv(name), gtv)
         val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
@@ -82,58 +67,80 @@ class ConcretePostchainClient(
             Request(Method.POST, "$serverUrl/query_gtx/$blockchainRIDHex")
         )
 
-        val res = client(request)
-        if (res.status != Status.OK) {
-            val error = Body.auto<ErrorResponse>().toLens()(res)
-            throw UserMistake("Can not make query_gtx api call: ${res.status} ${error.error}")
+        val r = deferred<Gtv, Exception>()
+        client(request) { res ->
+            if (res.status != Status.OK) {
+                val error = Body.auto<ErrorResponse>().toLens()(res)
+                r.reject(UserMistake("Can not make query_gtx api call: ${res.status} ${error.error}"))
+            }
+            val respList = Body.auto<List<String>>().toLens()(res)
+            r.resolve(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
         }
-        val respList = Body.auto<List<String>>().toLens()(res)
-        return GtvFactory.decodeGtv(respList.first().hexStringToByteArray())
+        return r.promise
     }
 
-    private fun doPostTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
+    override fun querySync(name: String, gtv: Gtv) = query(name, gtv).get()
+
+    override fun postTransactionSync(
+        txBuilder: GTXDataBuilder,
+        confirmationLevel: ConfirmationLevel
+    ): TransactionResult {
+        return postTransaction(txBuilder, confirmationLevel).get()
+    }
+
+    override fun postTransaction(
+        txBuilder: GTXDataBuilder,
+        confirmationLevel: ConfirmationLevel
+    ): Promise<TransactionResult, Exception> {
         val txLens = Body.auto<Tx>().toLens()
         val tx = Tx(txBuilder.serialize().toHex())
         val request = txLens(tx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
-        when (confirmationLevel) {
+        val result = deferred<TransactionResult, Exception>()
+        client(request) { resp ->
 
-            ConfirmationLevel.NO_WAIT -> {
-                val resp = client(request)
-                val status = if (resp.status == Status.OK) WAITING else REJECTED
-                if (status == REJECTED) println(resp)
-                return TransactionResultImpl(status, resp.status.code, resp.status.description)
-            }
+            when (confirmationLevel) {
 
-            ConfirmationLevel.UNVERIFIED -> {
-                val resp = client(request)
-                if (resp.status.clientError) {
-                    return TransactionResultImpl(REJECTED, resp.status.code, resp.status.description)
+                ConfirmationLevel.NO_WAIT -> {
+                    val status = if (resp.status == Status.OK) WAITING else REJECTED
+                    if (status == REJECTED) println(resp)
+                    result.resolve(TransactionResultImpl(status, resp.status.code, resp.status.description))
                 }
 
-                val txHashHex = txBuilder.getDigestForSigning().toHex()
-                val txStatusLens = Body.auto<TxStatus>().toLens()
-                val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
-
-                var lastKnownTxResult = TransactionResultImpl(UNKNOWN, null, null)
-                // keep polling till getting Confirmed or Rejected
-                repeat(statusPollCount) {
-                    try {
-                        val response = client(validationRequest)
-                        val status = TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
-                        lastKnownTxResult =
-                            TransactionResultImpl(status, response.status.code, response.status.description)
-                        if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
-                    } catch (e: Exception) {
-                        logger.warn(e) { "Unable to poll for new block" }
-                        lastKnownTxResult = TransactionResultImpl(UNKNOWN, null, null)
+                ConfirmationLevel.UNVERIFIED -> {
+                    if (resp.status.clientError) {
+                        return@client result.resolve(TransactionResultImpl(REJECTED, resp.status.code, resp.status.description))
                     }
-                    sleep(statusPollInterval)
+
+                    val txHashHex = txBuilder.getDigestForSigning().toHex()
+                    val txStatusLens = Body.auto<TxStatus>().toLens()
+                    val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
+
+                    var lastKnownTxResult: TransactionResult = TransactionResultImpl(UNKNOWN, null, null)
+                    // keep polling till getting Confirmed or Rejected
+                    repeat(statusPollCount) {
+                        try {
+                            val deferredPollResult = deferred<TransactionResult, Exception>()
+                            client(validationRequest) { response ->
+
+                                val status =
+                                    TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
+                                deferredPollResult.resolve( TransactionResultImpl(status, response.status.code, response.status.description) )
+                            }
+                            lastKnownTxResult = deferredPollResult.promise.get()
+                            if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
+                        } catch (e: Exception) {
+                            logger.warn(e) { "Unable to poll for new block" }
+                            lastKnownTxResult = TransactionResultImpl(UNKNOWN, null, null)
+                        }
+                        sleep(statusPollInterval)
+                    }
+
+                    result.resolve(lastKnownTxResult)
                 }
 
-                return lastKnownTxResult
+                else -> throw NotImplementedError("ConfirmationLevel $confirmationLevel is not yet implemented")
             }
-
-            else -> throw NotImplementedError("ConfirmationLevel $confirmationLevel is not yet implemented")
         }
+        return result.promise
     }
 }

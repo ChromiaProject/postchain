@@ -58,6 +58,11 @@
             <version>4.25.10.1</version>
         </dependency>
         <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-client-apache-async</artifactId>
+            <version>4.25.10.1</version>
+        </dependency>
+        <dependency>
             <groupId>com.madgag.spongycastle</groupId>
             <artifactId>core</artifactId>
             <scope>runtime</scope>
