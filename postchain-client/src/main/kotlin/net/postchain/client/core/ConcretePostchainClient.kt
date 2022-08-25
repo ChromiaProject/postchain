@@ -2,6 +2,7 @@
 
 package net.postchain.client.core
 
+import jdk.jshell.spi.ExecutionControl.NotImplementedException
 import mu.KLogging
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.config.STATUS_POLL_INTERVAL
@@ -102,7 +103,6 @@ class ConcretePostchainClient(
 
                 ConfirmationLevel.NO_WAIT -> {
                     val status = if (resp.status == Status.OK) WAITING else REJECTED
-                    if (status == REJECTED) println(resp)
                     result.resolve(TransactionResultImpl(status, resp.status.code, resp.status.description))
                 }
 
@@ -138,7 +138,7 @@ class ConcretePostchainClient(
                     result.resolve(lastKnownTxResult)
                 }
 
-                else -> throw NotImplementedError("ConfirmationLevel $confirmationLevel is not yet implemented")
+                else -> result.reject(NotImplementedException("ConfirmationLevel $confirmationLevel is not yet implemented"))
             }
         }
         return result.promise
