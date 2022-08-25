@@ -2,9 +2,6 @@
 
 package net.postchain.client.core
 
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonObject
-import com.google.gson.reflect.TypeToken
 import mu.KLogging
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.config.STATUS_POLL_INTERVAL
@@ -23,16 +20,20 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GTXDataBuilder
 import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.task
-import org.apache.hc.client5.http.classic.methods.HttpGet
-import org.apache.hc.client5.http.classic.methods.HttpPost
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
-import org.apache.hc.client5.http.impl.classic.HttpClients
-import org.apache.hc.core5.http.io.entity.StringEntity
-import java.io.BufferedReader
-import java.io.InputStream
+import nl.komponents.kovenant.deferred
+import org.http4k.client.ApacheAsyncClient
+import org.http4k.client.AsyncHttpHandler
+import org.http4k.core.Body
+import org.http4k.core.Method
+import org.http4k.core.Request
+import org.http4k.core.Status
+import org.http4k.format.Gson.auto
+import java.lang.Thread.sleep
 
-private const val APPLICATION_JSON = "application/json"
+data class Tx(val tx: String)
+data class TxStatus(val status: String?)
+data class Queries(val queries: List<String>)
+data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
     private val resolver: PostchainNodeResolver,
@@ -40,13 +41,11 @@ class ConcretePostchainClient(
     private val defaultSigner: DefaultSigner?,
     private val statusPollCount: Int = STATUS_POLL_COUNT,
     private val statusPollInterval: Long = STATUS_POLL_INTERVAL,
-    private val httpClient: CloseableHttpClient = HttpClients.createDefault()
+    private val client: AsyncHttpHandler = ApacheAsyncClient()
 ) : PostchainClient {
 
     companion object : KLogging()
 
-    // We don't use any adapters b/c this is very simple
-    private val gson = GsonBuilder().create()!!
     private val serverUrl = resolver.getNodeURL(blockchainRID)
     private val blockchainRIDHex = blockchainRID.toHex()
 
@@ -58,129 +57,81 @@ class ConcretePostchainClient(
         return GTXTransactionBuilder(this, blockchainRID, signers)
     }
 
-    override fun postTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception> {
-        return task { doPostTransaction(txBuilder, confirmationLevel) }
-    }
-
-    override fun postTransactionSync(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
-        return doPostTransaction(txBuilder, confirmationLevel)
-    }
 
     override fun query(name: String, gtv: Gtv): Promise<Gtv, Exception> {
-        return task { doQuery(name, gtv) }
-    }
-
-    override fun querySync(name: String, gtv: Gtv) = doQuery(name, gtv)
-
-    private fun doQuery(name: String, gtv: Gtv): Gtv {
-        val httpPost = HttpPost("$serverUrl/query_gtx/$blockchainRIDHex")
+        val queriesLens = Body.auto<Queries>().toLens()
         val gtxQuery = gtv(gtv(name), gtv)
-        val jsonQuery = """{"queries" : ["${GtvEncoder.encodeGtv(gtxQuery).toHex()}"]}""".trimMargin()
-        with(httpPost) {
-            entity = StringEntity(jsonQuery)
-            setHeader("Accept", APPLICATION_JSON)
-            setHeader("Content-type", APPLICATION_JSON)
-        }
-        httpClient.execute(httpPost).use { response ->
-            val contentType: String = response.entity.contentType
-            val responseBody = parseResponse(response.entity.content)
-            if (response.code != 200) {
-                val errorMessage = if (contentType.equals(APPLICATION_JSON, ignoreCase = true)) {
-                    val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                    jsonObject.get("error")?.asString
-                } else {
-                    null
-                }
-                throw UserMistake(errorMessage ?: "Can not make query_gtx api call: ${response.code} ${response.reasonPhrase}")
+        val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
+        val request = queriesLens(
+            Queries(listOf(encodedQuery)),
+            Request(Method.POST, "$serverUrl/query_gtx/$blockchainRIDHex")
+        )
+
+        val r = deferred<Gtv, Exception>()
+        client(request) { res ->
+            if (res.status != Status.OK) {
+                val error = Body.auto<ErrorResponse>().toLens()(res)
+                r.reject(UserMistake("Can not make query_gtx api call: ${res.status} ${error.error}"))
             }
-            val type = object : TypeToken<List<String>>() {}.type
-            val gtxHexCode = gson.fromJson<List<String>>(responseBody, type)?.first()
-            return GtvFactory.decodeGtv(gtxHexCode!!.hexStringToByteArray())
+            val respList = Body.auto<List<String>>().toLens()(res)
+            r.resolve(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
         }
+        return r.promise
     }
 
-    private fun doPostTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
-        val txHex = txBuilder.serialize().toHex()
-        val txJson = """{"tx" : $txHex}"""
+    override fun querySync(name: String, gtv: Gtv) = query(name, gtv).get()
+
+    override fun postTransactionSync(txBuilder: GTXDataBuilder): TransactionResult {
+        return postTransaction(txBuilder).get()
+    }
+
+    override fun postTransaction(txBuilder: GTXDataBuilder): Promise<TransactionResult, Exception> {
+        val txLens = Body.auto<Tx>().toLens()
+        val tx = Tx(txBuilder.serialize().toHex())
+        val request = txLens(tx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
+        val result = deferred<TransactionResult, Exception>()
+        client(request) { resp ->
+            val status = if (resp.status == Status.OK) WAITING else REJECTED
+            result.resolve(TransactionResultImpl(status, resp.status.code, resp.status.description))
+        }
+        return result.promise
+    }
+
+    override fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult {
+        val resp = postTransactionSync(txBuilder)
+        if (resp.status == REJECTED) {
+            return resp
+        }
+
         val txHashHex = txBuilder.getDigestForSigning().toHex()
+        val txStatusLens = Body.auto<TxStatus>().toLens()
+        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
 
-        fun submitTransaction(): Pair<Int, String?> {
-            val httpPost = HttpPost("$serverUrl/tx/$blockchainRIDHex")
-            httpPost.setHeader("Content-type", APPLICATION_JSON)
-            httpPost.entity = StringEntity(txJson)
-            return httpClient.execute(httpPost).use { response ->
-                var errorString: String? = null
-                if (response.code >= 400) {
-                    response.entity?.let {
-                        val responseBody = parseResponse(it.content)
-                        val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                        errorString = jsonObject.get("error")?.asString
-                        if (errorString != null) {
-                            logger.info { "Transaction rejected: $errorString" }
-                        } else {
-                            logger.warn { "No error in response\n$responseBody" }
-                        }
-                    }
+        var lastKnownTxResult: TransactionResult = TransactionResultImpl(UNKNOWN, null, null)
+        // keep polling till getting Confirmed or Rejected
+        repeat(statusPollCount) {
+            try {
+                val deferredPollResult = deferred<TransactionResult, Exception>()
+                client(validationRequest) { response ->
+
+                    val status =
+                        TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
+                    deferredPollResult.resolve(
+                        TransactionResultImpl(
+                            status,
+                            response.status.code,
+                            response.status.description
+                        )
+                    )
                 }
-                response.code to errorString
+                lastKnownTxResult = deferredPollResult.promise.get()
+                if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
+            } catch (e: Exception) {
+                logger.warn(e) { "Unable to poll for new block" }
+                lastKnownTxResult = TransactionResultImpl(UNKNOWN, null, null)
             }
+            sleep(statusPollInterval)
         }
-
-        when (confirmationLevel) {
-
-            ConfirmationLevel.NO_WAIT -> {
-                val (statusCode, error) = submitTransaction()
-                return if (statusCode == 200) {
-                    TransactionResultImpl(WAITING, statusCode, null)
-                } else {
-                    TransactionResultImpl(REJECTED, statusCode, error)
-                }
-            }
-
-            ConfirmationLevel.UNVERIFIED -> {
-                val (statusCode, error) = submitTransaction()
-                if (statusCode in 400..499) {
-                    return TransactionResultImpl(REJECTED, statusCode, error)
-                }
-                val httpGet = HttpGet("$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
-                httpGet.setHeader("Content-type", APPLICATION_JSON)
-
-                // keep polling till getting Confirmed or Rejected
-                var lastKnownTxResult: TransactionResult? = null
-                repeat(statusPollCount) {
-                    try {
-                        httpClient.execute(httpGet).use { response ->
-                            response.entity?.let {
-                                val responseBody = parseResponse(it.content)
-                                val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                                val statusString = jsonObject.get("status")?.asString?.uppercase()
-                                if (statusString == null) {
-                                    logger.warn { "No status in response\n$responseBody" }
-                                } else {
-                                    val status = TransactionStatus.valueOf(statusString)
-                                    val rejectReason = jsonObject.get("rejectReason")?.asString
-                                    lastKnownTxResult = TransactionResultImpl(status, response.code, rejectReason)
-                                    if (status == CONFIRMED || status == REJECTED) return lastKnownTxResult!!
-                                }
-
-                                Thread.sleep(statusPollInterval)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        logger.warn(e) { "Unable to poll for new block" }
-                        Thread.sleep(statusPollInterval)
-                    }
-                }
-
-                return lastKnownTxResult ?: TransactionResultImpl(UNKNOWN, null, null)
-            }
-
-            else -> throw NotImplementedError("ConfirmationLevel $confirmationLevel is not yet implemented")
-        }
+        return lastKnownTxResult
     }
-
-    private fun parseResponse(content: InputStream): String {
-        return content.bufferedReader().use(BufferedReader::readText)
-    }
-
 }
