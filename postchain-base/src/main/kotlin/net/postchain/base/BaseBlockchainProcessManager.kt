@@ -49,8 +49,8 @@ open class BaseBlockchainProcessManager(
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
-    protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     protected val extensions: List<BlockchainProcessManagerExtension> = makeExtensions()
+    private val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
 
     // For DEBUG only
