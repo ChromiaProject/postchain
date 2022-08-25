@@ -33,6 +33,8 @@ class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: 
         dataBuilder.addSignature(sigMaker.signDigest(dataBuilder.getDigestForSigning()))
     }
 
+    fun finish() = apply { dataBuilder.finish() }
+
     fun post(confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception> {
         return client.postTransaction(dataBuilder, confirmationLevel)
     }
@@ -51,7 +53,6 @@ interface TransactionResult {
     val rejectReason: String? // Undefined if (status != TransactionStatus.REJECTED)
 }
 
-const val RETRIEVE_TX_STATUS_ATTEMPTS = 20
 
 interface PostchainClient {
     fun makeTransaction(): GTXTransactionBuilder
