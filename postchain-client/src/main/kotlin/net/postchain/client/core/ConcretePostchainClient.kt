@@ -2,7 +2,6 @@
 
 package net.postchain.client.core
 
-import jdk.jshell.spi.ExecutionControl.NotImplementedException
 import mu.KLogging
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.config.STATUS_POLL_INTERVAL
@@ -82,65 +81,57 @@ class ConcretePostchainClient(
 
     override fun querySync(name: String, gtv: Gtv) = query(name, gtv).get()
 
-    override fun postTransactionSync(
-        txBuilder: GTXDataBuilder,
-        confirmationLevel: ConfirmationLevel
-    ): TransactionResult {
-        return postTransaction(txBuilder, confirmationLevel).get()
+    override fun postTransactionSync(txBuilder: GTXDataBuilder): TransactionResult {
+        return postTransaction(txBuilder).get()
     }
 
-    override fun postTransaction(
-        txBuilder: GTXDataBuilder,
-        confirmationLevel: ConfirmationLevel
-    ): Promise<TransactionResult, Exception> {
+    override fun postTransaction(txBuilder: GTXDataBuilder): Promise<TransactionResult, Exception> {
         val txLens = Body.auto<Tx>().toLens()
         val tx = Tx(txBuilder.serialize().toHex())
         val request = txLens(tx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
         val result = deferred<TransactionResult, Exception>()
         client(request) { resp ->
-
-            when (confirmationLevel) {
-
-                ConfirmationLevel.NO_WAIT -> {
-                    val status = if (resp.status == Status.OK) WAITING else REJECTED
-                    result.resolve(TransactionResultImpl(status, resp.status.code, resp.status.description))
-                }
-
-                ConfirmationLevel.UNVERIFIED -> {
-                    if (resp.status.clientError) {
-                        return@client result.resolve(TransactionResultImpl(REJECTED, resp.status.code, resp.status.description))
-                    }
-
-                    val txHashHex = txBuilder.getDigestForSigning().toHex()
-                    val txStatusLens = Body.auto<TxStatus>().toLens()
-                    val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
-
-                    var lastKnownTxResult: TransactionResult = TransactionResultImpl(UNKNOWN, null, null)
-                    // keep polling till getting Confirmed or Rejected
-                    repeat(statusPollCount) {
-                        try {
-                            val deferredPollResult = deferred<TransactionResult, Exception>()
-                            client(validationRequest) { response ->
-
-                                val status =
-                                    TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
-                                deferredPollResult.resolve( TransactionResultImpl(status, response.status.code, response.status.description) )
-                            }
-                            lastKnownTxResult = deferredPollResult.promise.get()
-                            if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
-                        } catch (e: Exception) {
-                            logger.warn(e) { "Unable to poll for new block" }
-                            lastKnownTxResult = TransactionResultImpl(UNKNOWN, null, null)
-                        }
-                        sleep(statusPollInterval)
-                    }
-
-                    result.resolve(lastKnownTxResult)
-                }
-
-                else -> result.reject(NotImplementedException("ConfirmationLevel $confirmationLevel is not yet implemented"))
-            }
+            val status = if (resp.status == Status.OK) WAITING else REJECTED
+            result.resolve(TransactionResultImpl(status, resp.status.code, resp.status.description))
         }
         return result.promise
+    }
+
+    override fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult {
+        val resp = postTransactionSync(txBuilder)
+        if (resp.status == REJECTED) {
+            return resp
+        }
+
+        val txHashHex = txBuilder.getDigestForSigning().toHex()
+        val txStatusLens = Body.auto<TxStatus>().toLens()
+        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
+
+        var lastKnownTxResult: TransactionResult = TransactionResultImpl(UNKNOWN, null, null)
+        // keep polling till getting Confirmed or Rejected
+        repeat(statusPollCount) {
+            try {
+                val deferredPollResult = deferred<TransactionResult, Exception>()
+                client(validationRequest) { response ->
+
+                    val status =
+                        TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
+                    deferredPollResult.resolve(
+                        TransactionResultImpl(
+                            status,
+                            response.status.code,
+                            response.status.description
+                        )
+                    )
+                }
+                lastKnownTxResult = deferredPollResult.promise.get()
+                if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
+            } catch (e: Exception) {
+                logger.warn(e) { "Unable to poll for new block" }
+                lastKnownTxResult = TransactionResultImpl(UNKNOWN, null, null)
+            }
+            sleep(statusPollInterval)
+        }
+        return lastKnownTxResult
     }
 }

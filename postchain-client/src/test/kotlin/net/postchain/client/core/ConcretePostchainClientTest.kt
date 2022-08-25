@@ -36,7 +36,7 @@ internal class ConcretePostchainClientTest {
         client.makeTransaction()
             .addNop()
             .finish()
-            .postSync(ConfirmationLevel.UNVERIFIED)
+            .postSyncAwaitConfirmation()
 
         // Verify
         assertEquals(numberExpected + 1, requestCounter)
