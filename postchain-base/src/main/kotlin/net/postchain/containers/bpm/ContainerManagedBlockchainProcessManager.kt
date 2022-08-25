@@ -71,41 +71,39 @@ open class ContainerManagedBlockchainProcessManager(
                     }
                     false
                 } else {
-                    synchronized(synchronizer) {
-                        rTrace("Sync block / before", chainId, blockTrace)
-                        // Sending heartbeat to other chains
-                        heartbeatManager.beat(blockTimestamp)
+                    rTrace("Before", chainId, blockTrace)
+                    // Sending heartbeat to other chains
+                    heartbeatManager.beat(blockTimestamp)
 
-                        // Preloading blockchain configuration
-                        preloadChain0Configuration()
+                    // Preloading blockchain configuration
+                    preloadChain0Configuration()
 
-                        // Checking out the peer list changes
-                        val peerListVersion = dataSource.getPeerListVersion()
-                        val doReload = (this.peerListVersion != peerListVersion)
-                        this.peerListVersion = peerListVersion
+                    // Checking out the peer list changes
+                    val peerListVersion = dataSource.getPeerListVersion()
+                    val doReload = (this.peerListVersion != peerListVersion)
+                    this.peerListVersion = peerListVersion
 
-                        val res = containerJobManager.withLock {
-                            // Reload/start/stops blockchains
-                            val res2 = if (doReload) {
-                                rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
-                                reloadAllBlockchains()
-                                true
-                            } else {
-                                rTrace("about to restart chain0", chainId, blockTrace)
-                                // Checking out for chain0 configuration changes
-                                val reloadChain0 = isConfigurationChanged(CHAIN0)
-                                stopStartBlockchains(reloadChain0)
-                                reloadChain0
-                            }
-
-                            // Docker containers healthcheck
-                            scheduleDockerContainersHealthcheck()
-                            res2
+                    val res = containerJobManager.withLock {
+                        // Reload/start/stops blockchains
+                        val res2 = if (doReload) {
+                            rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
+                            reloadAllBlockchains()
+                            true
+                        } else {
+                            rTrace("about to restart chain0", chainId, blockTrace)
+                            // Checking out for chain0 configuration changes
+                            val reloadChain0 = isConfigurationChanged(CHAIN0)
+                            stopStartBlockchains(reloadChain0)
+                            reloadChain0
                         }
 
-                        rTrace("Sync block / after", chainId, blockTrace)
-                        res
+                        // Docker containers healthcheck
+                        scheduleDockerContainersHealthcheck()
+                        res2
                     }
+
+                    rTrace("After", chainId, blockTrace)
+                    res
                 }
             } catch (e: Exception) {
                 logger.error("Exception in RestartHandler: $e")

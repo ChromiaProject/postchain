@@ -201,18 +201,15 @@ open class ManagedBlockchainProcessManager(
         fun wrappedAfterCommitHandler(bTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
             return try {
                 wrTrace("Before", chainId, bTrace)
-                synchronized(synchronizer) {
-                    wrTrace("Sync", chainId, bTrace)
-                    for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
+                for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
-                    val restart = if (chainId == CHAIN0) {
-                        afterCommitHandlerChain0(bTrace, blockTimestamp)
-                    } else {
-                        afterCommitHandlerChainN(bTrace)
-                    }
-                    wrTrace("After", chainId, bTrace)
-                    restart
+                val restart = if (chainId == CHAIN0) {
+                    afterCommitHandlerChain0(bTrace, blockTimestamp)
+                } else {
+                    afterCommitHandlerChainN(bTrace)
                 }
+                wrTrace("After", chainId, bTrace)
+                restart
             } catch (e: Exception) {
                 logger.error("Exception in restart handler: $e")
                 e.printStackTrace()
