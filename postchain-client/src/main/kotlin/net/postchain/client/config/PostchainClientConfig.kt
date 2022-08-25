@@ -10,8 +10,8 @@ data class PostchainClientConfig(
     val apiUrl: String,
     val blockchainRid: BlockchainRid,
     val keyPair: KeyPair,
-    val statusPollCount: Int,
-    val statusPollInterval: Long,
+    val statusPollCount: Int = STATUS_POLL_COUNT,
+    val statusPollInterval: Long = STATUS_POLL_INTERVAL,
 ) {
     val pubKeyByteArray = keyPair.pubKey.key
     val privKeyByteArray = keyPair.privKey.key
