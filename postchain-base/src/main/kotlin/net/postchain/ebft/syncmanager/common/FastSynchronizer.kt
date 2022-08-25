@@ -540,7 +540,9 @@ class FastSynchronizer(
         unfinishedTrace("Received for $j")
         var bTrace: BlockTrace? = null
         if (logger.isDebugEnabled) {
-            bTrace = BlockTrace.build(null, h.blockRID, height)
+            logger.trace { "handleUnfinishedBlock() - Creating block trace with procname: $procName , height: $height " }
+
+            bTrace = BlockTrace.build(procName, h.blockRID, height)
         }
         val expectedHeader = j.header
 

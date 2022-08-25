@@ -328,8 +328,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     private fun getCopyBTrace(heightToCopy: Long): BlockTrace? {
         return if (logger.isTraceEnabled) {
+            logger.trace { "getCopyBTrace() - Creating block trace with procname: $process , height: $heightToCopy " }
+
             this.blockTrace = BlockTrace.buildBeforeBlock(workerContext.processName, heightToCopy) // At this point we don't have the Block RID.
-            copyLog("Got block height", heightToCopy)
             this.blockTrace
         } else {
             null // Use null for speed

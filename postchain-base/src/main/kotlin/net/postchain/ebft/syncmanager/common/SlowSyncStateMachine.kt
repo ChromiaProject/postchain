@@ -30,9 +30,8 @@ class SlowSyncStateMachine(
 
     companion object: KLogging() {
 
-        fun buildWithExistingHeight(chainIid: Int, height: Long): SlowSyncStateMachine {
+        fun buildWithChain(chainIid: Int): SlowSyncStateMachine {
             val slowSyncStateMachine = SlowSyncStateMachine(chainIid)
-            slowSyncStateMachine.lastCommittedBlockHeight = height
             return slowSyncStateMachine
         }
     }
@@ -51,7 +50,7 @@ class SlowSyncStateMachine(
     }
 
     fun getStartHeight(): Long {
-        return lastCommittedBlockHeight + 1
+        return lastCommittedBlockHeight + 1L
     }
 
     /**
@@ -61,7 +60,7 @@ class SlowSyncStateMachine(
     fun maybeGetBlockRange(nowMs: Long, sendRequest: (Long, SlowSyncStateMachine, NodeRid?) -> Unit) {
         when (state) {
             SlowSyncStates.WAIT_FOR_ACTION -> {
-                val startingAtHeight = lastCommittedBlockHeight + 1
+                val startingAtHeight = getStartHeight()
                 logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid, not waiting for anything, so get height $startingAtHeight and above." }
                 sendRequest(startingAtHeight, this, null) // We don't mind asking the old peer
             }
@@ -119,11 +118,11 @@ class SlowSyncStateMachine(
      */
     fun updateAfterSuccessfulCommit(committedBlockHeight: Long, nowMs: Long) {
         if (state != SlowSyncStates.WAIT_FOR_COMMIT) {
-            throw ProgrammerMistake("updateToWaitForAction(): Incorrect state: $state")
+            throw ProgrammerMistake("updateAfterSuccessfulCommit(): Incorrect state: $state")
         }
 
-        if ((lastCommittedBlockHeight + 1) != committedBlockHeight) {
-            logger.warn("updateToWaitForAction() - ChainIid: $chainIid something is wrong. Committed height: $committedBlockHeight but last commit was $lastCommittedBlockHeight")
+        if (getStartHeight() != committedBlockHeight) {
+            logger.warn("updateAfterSuccessfulCommit() - ChainIid: $chainIid something is wrong. Committed height: $committedBlockHeight but last commit was $lastCommittedBlockHeight")
         }
 
         if (committedBlockHeight > lastUncommittedBlockHeight) {
@@ -138,6 +137,7 @@ class SlowSyncStateMachine(
             waitForHeight = null
         }
 
+        logger.debug { "updateAfterSuccessfulCommit() - Prev last committed height: $lastCommittedBlockHeight , now: $committedBlockHeight, $this" }
         lastCommittedBlockHeight = committedBlockHeight
 
     }

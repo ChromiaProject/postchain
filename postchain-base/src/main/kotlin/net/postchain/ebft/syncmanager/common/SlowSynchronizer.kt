@@ -36,7 +36,7 @@ class SlowSynchronizer(
 
     private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
 
-    private var stateMachine = SlowSyncStateMachine.buildWithExistingHeight(blockchainConfiguration.chainID.toInt(), blockHeight)
+    private var stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt())
 
     companion object : KLogging()
 
@@ -49,6 +49,8 @@ class SlowSynchronizer(
         try {
             blockHeight = blockQueries.getBestHeight().get()
             syncDebug("Start", blockHeight)
+            stateMachine.lastCommittedBlockHeight = blockHeight
+
             lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             var sleepData = SlowSyncSleepData()
 
@@ -165,7 +167,7 @@ class SlowSynchronizer(
 
         if (!stateMachine.isPeerWeAreWaitingFor(peerId)) {
             // Perhaps this is due to our initial request timed out, we are indeed waiting for this block range, so let's use it
-            logger.debug("Slow Synch: We didn't expect $peerId to send us a block range (startingAtHeight = $startingAtHeight) " +
+            logger.debug("Slow Sync: We didn't expect $peerId to send us a block range (startingAtHeight = $startingAtHeight) " +
                     "(We wanted ${stateMachine.waitForNodeId} to do it).")
         }
 
@@ -175,7 +177,13 @@ class SlowSynchronizer(
             val blockData = block.data
             val headerWitnessPair = handleBlockHeader(peerId, blockData.header, block.witness, expectedHeight)
                 ?: return (expectedHeight - startingAtHeight).toInt() // Header failed for some reason. Just give up
-            handleUnfinishedBlock(peerId, headerWitnessPair.first, headerWitnessPair.second, expectedHeight, blockData.transactions)
+            handleUnfinishedBlock(
+                peerId,
+                headerWitnessPair.first,
+                headerWitnessPair.second,
+                expectedHeight,
+                blockData.transactions
+            )
             expectedHeight++ // We expect blocks to be in the correct order in the list
         }
         val processedBlocks = (expectedHeight - startingAtHeight).toInt()
@@ -247,8 +255,10 @@ class SlowSynchronizer(
 
         unfinishedTrace("Received for height: $height")
         var bTrace: BlockTrace? = null
-        if (logger.isDebugEnabled) {
-            bTrace = BlockTrace.build(null, header.blockRID, height)
+        if (logger.isTraceEnabled) {
+            logger.trace { "handleUnfinishedBlock() - Creating block trace with procname: $procName , height: $height " }
+
+            bTrace = BlockTrace.build(procName, header.blockRID, height)
         }
 
         // The witness has already been verified in handleBlockHeader().
@@ -276,9 +286,17 @@ class SlowSynchronizer(
             .fail {
                 // peer and try another peer
                 if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
-                    logger.warn { "Exception committing block height $height from peer $peerId: ${it.message}" }
+                    if (logger.isTraceEnabled) {
+                        logger.warn { "Exception committing block height $height from peer: $peerId: ${it.message}, cause: {${it.cause}, from bTrace: ${bTrace?.toString()}" }
+                    } else {
+                        logger.warn { "Exception committing block height $height from peer: $peerId: ${it.message}, cause: {${it.cause}" }
+                    }
                 } else {
-                    logger.warn(it) { "Exception committing block height $height from peer $peerId:" }
+                    if (logger.isTraceEnabled) {
+                        logger.warn(it) { "Exception committing block height $height from peer: $peerId from bTrace: ${bTrace?.toString()}" }
+                    } else {
+                        logger.warn(it) { "Exception committing block height $height from peer: $peerId" }
+                    }
                 }
                 stateMachine.updateAfterFailedCommit(height, System.currentTimeMillis())
             }

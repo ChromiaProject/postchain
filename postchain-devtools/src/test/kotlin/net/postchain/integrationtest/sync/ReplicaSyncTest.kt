@@ -56,12 +56,12 @@ class ReplicaSyncTest : AbstractSyncTest() {
      *       replica by inserting into "blockchain_replicas" for the wiped Replica 1.
      *       Therefore in step 4, replica 1 can sync from replica 2.
      *
-     * 1. run peer 0 and replicas (1,2) up to the height= 0
+     * 1. run peer 0 [03A3:70]/03A30169 and replicas (1,2) up to the height= 0
      * 2. stop peer 0 ("stopIndex" list)
-     * 3. kill replica 1 ("syncIndex" list) and wipe the DB.
+     * 3. kill replica 1 [03B8:A5]/03B82A54 ("syncIndex" list) and wipe the DB.
      * 4. wait until replica 1 gets back to the height they had (by syncing from replica 2 via fastsync)
      * 5. start peer 0
-     * 6. build one more block
+     * 6. build one more block and wait until all nodes have it.
      */
     @Test
     fun testRemoveAndAddAgain() {

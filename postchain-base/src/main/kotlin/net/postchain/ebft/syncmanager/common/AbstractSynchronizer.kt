@@ -3,6 +3,7 @@ package net.postchain.ebft.syncmanager.common
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.block.BlockHeader
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.worker.WorkerContext
 
@@ -38,6 +39,11 @@ abstract class AbstractSynchronizer(
         }
         return header.blockHeaderRec.getHeight()
     }
+
+    protected val procName = BlockchainProcessName(
+        workerContext.appConfig.pubKey,
+        blockchainConfiguration.blockchainRid
+    )
 
 
     // -------------

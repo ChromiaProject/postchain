@@ -89,6 +89,7 @@ class BaseBlockManager(
             if (theIntent is FetchBlockAtHeightIntent && theIntent.height == height) {
                 runDBOp({
                     val bTrace = if (logger.isTraceEnabled) {
+                        logger.trace { "onReceivedBlockAtHeight() - Creating block trace with procname: $processName , height: $height " }
                         BlockTrace.build(processName, block.header.blockRID, height)
                     } else {
                         null // Use null for performance
