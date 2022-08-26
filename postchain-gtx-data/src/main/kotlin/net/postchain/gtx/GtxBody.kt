@@ -7,7 +7,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.gtxmessages.GTXBody
+import net.postchain.gtv.gtxmessages.RawGtxBody
 import net.postchain.gtv.merkle.MerkleHashCalculator
 
 class GtxBody(
@@ -24,10 +24,10 @@ class GtxBody(
         return rid
     }
 
-    fun asn() = GTXBody(
+    fun asn() = RawGtxBody(
         BerOctetString(blockchainRid.data),
-        GTXBody.Operations(operations.map { it.asn() }),
-        GTXBody.Signers(signers.map { BerOctetString(it) })
+        RawGtxBody.Operations(operations.map { it.asn() }),
+        RawGtxBody.Signers(signers.map { BerOctetString(it) })
     )
 
     fun toGtv() = gtv(
@@ -38,7 +38,7 @@ class GtxBody(
 
     companion object {
         @JvmStatic
-        fun fromAsn(body: GTXBody): GtxBody {
+        fun fromAsn(body: RawGtxBody): GtxBody {
             return GtxBody(
                 BlockchainRid(body.blockchainRid.value),
                 body.operations.seqOf.map { GtxOperation.fromAsn(it) },
