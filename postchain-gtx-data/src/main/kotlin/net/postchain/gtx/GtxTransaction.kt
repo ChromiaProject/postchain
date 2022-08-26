@@ -2,32 +2,41 @@ package net.postchain.gtx
 
 import com.beanit.jasn1.ber.ReverseByteArrayOutputStream
 import com.beanit.jasn1.ber.types.BerOctetString
-import net.postchain.common.BlockchainRid
-import net.postchain.crypto.Signature
+import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
 import net.postchain.gtv.gtxmessages.GTXTransaction
+import net.postchain.gtv.merkle.MerkleHashCalculator
 
 class GtxTransaction(
-    private val blockchainRid: BlockchainRid,
+    val gtxBody: GtxBody,
+    val signatures: List<ByteArray>
 ) {
 
-    val signers = mutableListOf<ByteArray>()
-    val ops = mutableListOf<GtxOperation>()
-    val signatures = mutableListOf<ByteArray>()
-    val tx = GTXTransaction()
-
-    fun addOperation(name: String, vararg args: Gtv) {
-        ops.add(GtxOperation(name, *args))
-    }
-
-    fun addSignature(sign: Signature) = signers.add(sign.subjectID) && signatures.add(sign.data)
+    fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>) = gtxBody.calculateTxRid(calculator)
 
     fun encode(): ByteArray {
+        if (signatures.size != gtxBody.signers.size) throw UserMistake("Not fully signed")
         val encoded = ReverseByteArrayOutputStream(1000, true)
         GTXTransaction(
-            GtxBody(blockchainRid, ops, signers).asn(),
+            gtxBody.asn(),
             GTXTransaction.Signatures(signatures.map { BerOctetString(it) })
         ).encode(encoded)
         return encoded.array
+    }
+
+    companion object {
+        @JvmStatic
+        fun fromGtv(gtv: Gtv): GtxTransaction {
+            if ((gtv !is GtvArray) && gtv.asArray().size != 2) throw IllegalArgumentException("Gtv must be an array of size 2")
+            gtv.asArray().let { array ->
+                if (array[0] !is GtvArray) throw IllegalArgumentException("First element must be an array")
+                if (array[1] !is GtvArray) throw IllegalArgumentException("Second element must be an array")
+                return GtxTransaction(
+                    GtxBody.fromGtv(array[0]),
+                    array[1].asArray().map { it.asByteArray() }
+                )
+            }
+        }
     }
 }
