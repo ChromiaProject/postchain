@@ -65,7 +65,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         val txBuilder = client.makeTransaction()
 
         // When
-        txBuilder.post().success {
+        txBuilder.post().thenAccept {
             // Then
             verify(client).postTransaction(any())
         }
@@ -118,7 +118,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         val client = createPostChainClient(blockchainRid)
 
         await().untilCallTo {
-            client.postTransaction(builder).get()
+            client.postTransaction(builder).toCompletableFuture().join()
         } matches { resp ->
             resp?.status == TransactionStatus.WAITING
         }
@@ -144,7 +144,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         val gtv = gtv("txRID" to gtv(builder.getDigestForSigning().toHex()))
 
         await().untilCallTo {
-            client.query("gtx_test_get_value", gtv).get()
+            client.query("gtx_test_get_value", gtv).toCompletableFuture().join()
         } matches { resp ->
             resp?.asString() == randomStr
         }
