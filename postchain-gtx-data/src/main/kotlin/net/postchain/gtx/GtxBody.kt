@@ -24,7 +24,7 @@ class GtxBody(
         return rid
     }
 
-    fun asn() = RawGtxBody(
+    internal fun asn() = RawGtxBody(
         BerOctetString(blockchainRid.data),
         RawGtxBody.Operations(operations.map { it.asn() }),
         RawGtxBody.Signers(signers.map { BerOctetString(it) })
@@ -38,7 +38,7 @@ class GtxBody(
 
     companion object {
         @JvmStatic
-        fun fromAsn(body: RawGtxBody): GtxBody {
+        internal fun fromAsn(body: RawGtxBody): GtxBody {
             return GtxBody(
                 BlockchainRid(body.blockchainRid.value),
                 body.operations.seqOf.map { GtxOperation.fromAsn(it) },
