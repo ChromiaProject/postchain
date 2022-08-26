@@ -3,7 +3,7 @@
 package net.postchain.gtv
 
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.gtv.gtvmessages.RawGtv
 import java.io.ByteArrayInputStream
 
 object GtvDecoder {
