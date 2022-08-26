@@ -6,13 +6,13 @@ import net.postchain.gtv.gtxmessages.GTXOperation
 
 class GtxOperation(val name: String, vararg val args: Gtv) {
 
-    fun asn() = GTXOperation(BerUTF8String(name), GTXOperation.Args(args.map { it.getRawGtv() }))
+    internal fun asn() = GTXOperation(BerUTF8String(name), GTXOperation.Args(args.map { it.getRawGtv() }))
 
     fun gtv() = GtvFactory.gtv(GtvFactory.gtv(name), GtvFactory.gtv(args.toList()))
 
     companion object {
         @JvmStatic
-        fun fromAsn(op: GTXOperation): GtxOperation {
+        internal fun fromAsn(op: GTXOperation): GtxOperation {
             return GtxOperation(op.name.toString(), *op.args.seqOf.map { GtvDecoder.fromRawGtv(it) }.toTypedArray())
         }
         @JvmStatic
