@@ -1,4 +1,4 @@
 package net.postchain.client.core
 
-class TxRid {
-}
+@JvmInline
+value class TxRid(val rid: String)

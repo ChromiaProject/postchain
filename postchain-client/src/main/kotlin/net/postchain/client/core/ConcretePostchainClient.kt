@@ -86,29 +86,29 @@ class ConcretePostchainClient(
     }
 
     override fun postTransaction(txBuilder: GTXDataBuilder): Promise<TransactionResult, Exception> {
+        if (!txBuilder.finished) txBuilder.finish()
         val txLens = Body.auto<Tx>().toLens()
+        val txRid = TxRid(txBuilder.getDigestForSigning().toHex())
         val tx = Tx(txBuilder.serialize().toHex())
         val request = txLens(tx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
         val result = deferred<TransactionResult, Exception>()
         client(request) { resp ->
             val status = if (resp.status == Status.OK) WAITING else REJECTED
-            result.resolve(TransactionResult(status, resp.status.code, resp.status.description))
+            result.resolve(TransactionResult(txRid, status, resp.status.code, resp.status.description))
         }
         return result.promise
     }
 
     override fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult {
-        val txRid = txBuilder.getDigestForSigning()
         val resp = postTransactionSync(txBuilder)
         if (resp.status == REJECTED) {
             return resp
         }
 
-        val txHashHex = txBuilder.getDigestForSigning().toHex()
         val txStatusLens = Body.auto<TxStatus>().toLens()
-        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
+        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/${resp.txRid.rid}/status")
 
-        var lastKnownTxResult = TransactionResult(UNKNOWN, null, null)
+        var lastKnownTxResult = TransactionResult(resp.txRid, UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected
         repeat(statusPollCount) {
             try {
@@ -119,6 +119,7 @@ class ConcretePostchainClient(
                         TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
                     deferredPollResult.resolve(
                         TransactionResult(
+                            resp.txRid,
                             status,
                             response.status.code,
                             response.status.description
@@ -129,7 +130,7 @@ class ConcretePostchainClient(
                 if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
             } catch (e: Exception) {
                 logger.warn(e) { "Unable to poll for new block" }
-                lastKnownTxResult = TransactionResult(UNKNOWN, null, null)
+                lastKnownTxResult = TransactionResult(resp.txRid, UNKNOWN, null, null)
             }
             sleep(statusPollInterval)
         }
