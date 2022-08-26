@@ -137,7 +137,7 @@
                                 <argument>-f</argument>
                                 <!--argument>${project.basedir}/src/main/resources/asn/base_messages.asn</argument-->
                                 <argument>${project.basedir}/src/main/resources/asn/gtv_messages.asn</argument>
-                                <!--argument>${project.basedir}/src/main/resources/asn/gtx_messages.asn</argument-->
+                                <argument>${project.basedir}/src/main/resources/asn/gtx_messages.asn</argument>
                                 <argument>-o</argument>
                                 <argument>${project.build.directory}/generated-sources/</argument>
                                 <argument>-p</argument>
