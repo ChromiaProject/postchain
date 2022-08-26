@@ -7,7 +7,6 @@ import com.github.ajalt.clikt.parameters.arguments.transformAll
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -50,7 +49,7 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
             .apply {
                 addOperation(opName, *args)
                 sign(sigMaker)
-                postSync(if (awaitConfirmation) ConfirmationLevel.UNVERIFIED else ConfirmationLevel.NO_WAIT)
+                if (awaitConfirmation) postSyncAwaitConfirmation() else postSync()
             }
     }
 }
