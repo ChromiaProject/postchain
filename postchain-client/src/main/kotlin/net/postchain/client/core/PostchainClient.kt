@@ -12,6 +12,7 @@ interface PostchainClient {
     fun postTransaction(txBuilder: GTXDataBuilder): Promise<TransactionResult, Exception>
     fun postTransactionSync(txBuilder: GTXDataBuilder): TransactionResult
     fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult
+    fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult
 
     fun query(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Promise<Gtv, Exception>
     fun querySync(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Gtv

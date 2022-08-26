@@ -104,13 +104,16 @@ class ConcretePostchainClient(
         if (resp.status == REJECTED) {
             return resp
         }
+        return awaitConfirmation(resp.txRid, statusPollCount, statusPollInterval)
+    }
 
+    override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {
         val txStatusLens = Body.auto<TxStatus>().toLens()
-        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/${resp.txRid.rid}/status")
+        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/${txRid.rid}/status")
 
-        var lastKnownTxResult = TransactionResult(resp.txRid, UNKNOWN, null, null)
+        var lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected
-        repeat(statusPollCount) {
+        repeat(retries) {
             try {
                 val deferredPollResult = deferred<TransactionResult, Exception>()
                 client(validationRequest) { response ->
@@ -119,7 +122,7 @@ class ConcretePostchainClient(
                         TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
                     deferredPollResult.resolve(
                         TransactionResult(
-                            resp.txRid,
+                            txRid,
                             status,
                             response.status.code,
                             response.status.description
@@ -130,9 +133,9 @@ class ConcretePostchainClient(
                 if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
             } catch (e: Exception) {
                 logger.warn(e) { "Unable to poll for new block" }
-                lastKnownTxResult = TransactionResult(resp.txRid, UNKNOWN, null, null)
+                lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
             }
-            sleep(statusPollInterval)
+            sleep(pollInterval)
         }
         return lastKnownTxResult
     }
