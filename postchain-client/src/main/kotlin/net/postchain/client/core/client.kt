@@ -10,8 +10,8 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GTXDataBuilder
-import nl.komponents.kovenant.Promise
 import java.time.Instant
+import java.util.concurrent.CompletionStage
 
 class GTXTransactionBuilder(private val client: PostchainClient, blockchainRID: BlockchainRid, signers: Array<ByteArray>) {
 
@@ -56,11 +56,11 @@ interface PostchainClient {
     fun makeTransaction(): GTXTransactionBuilder
     fun makeTransaction(signers: Array<ByteArray>): GTXTransactionBuilder
 
-    fun postTransaction(txBuilder: GTXDataBuilder): Promise<TransactionResult, Exception>
+    fun postTransaction(txBuilder: GTXDataBuilder): CompletionStage<TransactionResult>
     fun postTransactionSync(txBuilder: GTXDataBuilder): TransactionResult
     fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult
 
-    fun query(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Promise<Gtv, Exception>
+    fun query(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): CompletionStage<Gtv>
     fun querySync(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Gtv
 
 }
