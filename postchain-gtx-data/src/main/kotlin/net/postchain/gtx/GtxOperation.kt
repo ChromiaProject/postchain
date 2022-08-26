@@ -1,10 +1,7 @@
 package net.postchain.gtx
 
 import com.beanit.jasn1.ber.types.string.BerUTF8String
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvArray
-import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.GtvString
+import net.postchain.gtv.*
 import net.postchain.gtv.gtxmessages.GTXOperation
 
 class GtxOperation(val name: String, vararg val args: Gtv) {
@@ -14,6 +11,10 @@ class GtxOperation(val name: String, vararg val args: Gtv) {
     fun gtv() = GtvFactory.gtv(GtvFactory.gtv(name), GtvFactory.gtv(args.toList()))
 
     companion object {
+        @JvmStatic
+        fun fromAsn(op: GTXOperation): GtxOperation {
+            return GtxOperation(op.name.toString(), *op.args.seqOf.map { GtvDecoder.fromRawGtv(it) }.toTypedArray())
+        }
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxOperation {
             if ((gtv !is GtvArray) && gtv.asArray().size != 2) throw IllegalArgumentException("Gtv must be an array of size 2")

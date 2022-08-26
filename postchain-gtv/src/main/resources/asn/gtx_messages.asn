@@ -14,7 +14,7 @@ IMPORTS RawGtv FROM GtvMessages;
 	}
 	
 	GTXTransaction ::= SEQUENCE {
-	    body SEQUENCE OF GTXBody,
+	    body GTXBody,
 		signatures SEQUENCE OF OCTET STRING
 	}
 	

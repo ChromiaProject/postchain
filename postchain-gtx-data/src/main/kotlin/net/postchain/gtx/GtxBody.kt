@@ -8,7 +8,6 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtxmessages.GTXBody
-import net.postchain.gtv.gtxmessages.GTXTransaction
 import net.postchain.gtv.merkle.MerkleHashCalculator
 
 class GtxBody(
@@ -25,14 +24,10 @@ class GtxBody(
         return rid
     }
 
-    fun asn() = GTXTransaction.Body(
-        listOf(
-            GTXBody(
-                BerOctetString(blockchainRid.data),
-                GTXBody.Operations(operations.map { it.asn() }),
-                GTXBody.Signers(signers.map { BerOctetString(it) })
-            )
-        )
+    fun asn() = GTXBody(
+        BerOctetString(blockchainRid.data),
+        GTXBody.Operations(operations.map { it.asn() }),
+        GTXBody.Signers(signers.map { BerOctetString(it) })
     )
 
     fun toGtv() = gtv(
@@ -42,6 +37,14 @@ class GtxBody(
     )
 
     companion object {
+        @JvmStatic
+        fun fromAsn(body: GTXBody): GtxBody {
+            return GtxBody(
+                BlockchainRid(body.blockchainRid.value),
+                body.operations.seqOf.map { GtxOperation.fromAsn(it) },
+                body.signers.seqOf.map { it.value })
+        }
+
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxBody {
             if ((gtv !is GtvArray) && gtv.asArray().size != 3) throw IllegalArgumentException("Gtv must be an array of size 3")

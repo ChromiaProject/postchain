@@ -7,6 +7,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.gtxmessages.GTXTransaction
 import net.postchain.gtv.merkle.MerkleHashCalculator
+import java.io.ByteArrayInputStream
 
 class GtxTransaction(
     val gtxBody: GtxBody,
@@ -26,6 +27,17 @@ class GtxTransaction(
     }
 
     companion object {
+        @JvmStatic
+        fun decode(b: ByteArray): GtxTransaction {
+            val bytes = ByteArrayInputStream(b)
+            val decoded = GTXTransaction().apply { decode(bytes) }
+            decoded.body
+            return GtxTransaction(
+                GtxBody.fromAsn(decoded.body),
+                decoded.signatures.seqOf.map { it.value }
+            )
+        }
+
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxTransaction {
             if ((gtv !is GtvArray) && gtv.asArray().size != 2) throw IllegalArgumentException("Gtv must be an array of size 2")
