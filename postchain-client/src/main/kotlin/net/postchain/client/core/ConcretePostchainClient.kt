@@ -19,8 +19,6 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GTXDataBuilder
-import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.deferred
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
@@ -29,6 +27,9 @@ import org.http4k.core.Request
 import org.http4k.core.Status
 import org.http4k.format.Gson.auto
 import java.lang.Thread.sleep
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
+import java.util.concurrent.CompletionStage
 
 data class Tx(val tx: String)
 data class TxStatus(val status: String?)
@@ -58,7 +59,7 @@ class ConcretePostchainClient(
     }
 
 
-    override fun query(name: String, gtv: Gtv): Promise<Gtv, Exception> {
+    override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {
         val queriesLens = Body.auto<Queries>().toLens()
         val gtxQuery = gtv(gtv(name), gtv)
         val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
@@ -67,36 +68,42 @@ class ConcretePostchainClient(
             Request(Method.POST, "$serverUrl/query_gtx/$blockchainRIDHex")
         )
 
-        val r = deferred<Gtv, Exception>()
+        val r = CompletableFuture<Gtv>()
         client(request) { res ->
             if (res.status != Status.OK) {
                 val error = Body.auto<ErrorResponse>().toLens()(res)
-                r.reject(UserMistake("Can not make query_gtx api call: ${res.status} ${error.error}"))
+                r.completeExceptionally(UserMistake("Can not make query_gtx api call: ${res.status} ${error.error}"))
             }
             val respList = Body.auto<List<String>>().toLens()(res)
-            r.resolve(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
+            r.complete(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
         }
-        return r.promise
+        return r
     }
 
-    override fun querySync(name: String, gtv: Gtv) = query(name, gtv).get()
-
-    override fun postTransactionSync(txBuilder: GTXDataBuilder): TransactionResult {
-        return postTransaction(txBuilder).get()
+    override fun querySync(name: String, gtv: Gtv): Gtv = try {
+        query(name, gtv).toCompletableFuture().join()
+    } catch (e: CompletionException) {
+        throw e.cause ?: e
     }
 
-    override fun postTransaction(txBuilder: GTXDataBuilder): Promise<TransactionResult, Exception> {
+    override fun postTransactionSync(txBuilder: GTXDataBuilder): TransactionResult = try {
+        postTransaction(txBuilder).toCompletableFuture().join()
+    } catch (e: CompletionException) {
+        throw e.cause ?: e
+    }
+
+    override fun postTransaction(txBuilder: GTXDataBuilder): CompletionStage<TransactionResult> {
         if (!txBuilder.finished) txBuilder.finish()
         val txLens = Body.auto<Tx>().toLens()
         val txRid = TxRid(txBuilder.getDigestForSigning().toHex())
         val tx = Tx(txBuilder.serialize().toHex())
         val request = txLens(tx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
-        val result = deferred<TransactionResult, Exception>()
+        val result = CompletableFuture<TransactionResult>()
         client(request) { resp ->
             val status = if (resp.status == Status.OK) WAITING else REJECTED
-            result.resolve(TransactionResult(txRid, status, resp.status.code, resp.status.description))
+            result.complete(TransactionResult(txRid, status, resp.status.code, resp.status.description))
         }
-        return result.promise
+        return result
     }
 
     override fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult {
@@ -115,12 +122,11 @@ class ConcretePostchainClient(
         // keep polling till getting Confirmed or Rejected
         repeat(retries) {
             try {
-                val deferredPollResult = deferred<TransactionResult, Exception>()
+                val deferredPollResult = CompletableFuture<TransactionResult>()
                 client(validationRequest) { response ->
-
                     val status =
                         TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
-                    deferredPollResult.resolve(
+                    deferredPollResult.complete(
                         TransactionResult(
                             txRid,
                             status,
@@ -129,7 +135,7 @@ class ConcretePostchainClient(
                         )
                     )
                 }
-                lastKnownTxResult = deferredPollResult.promise.get()
+                lastKnownTxResult = deferredPollResult.join()
                 if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
             } catch (e: Exception) {
                 logger.warn(e) { "Unable to poll for new block" }
