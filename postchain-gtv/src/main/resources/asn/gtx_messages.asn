@@ -1,15 +1,20 @@
-Messages DEFINITIONS ::= BEGIN
+GtxMessages DEFINITIONS ::= BEGIN
 
-	
+IMPORTS RawGtv FROM GtvMessages;
+
 	GTXOperation ::= SEQUENCE {
-		opName UTF8String,
-		args SEQUENCE OF Gtv
+		name UTF8String,
+		args SEQUENCE OF RawGtv
+	}
+
+	GTXBody ::= SEQUENCE {
+		blockchainRid OCTET STRING,
+		operations SEQUENCE OF GTXOperation,
+		signers SEQUENCE OF OCTET STRING
 	}
 	
 	GTXTransaction ::= SEQUENCE {
-		blockchainRID OCTET STRING,
-		operations SEQUENCE OF GTXOperation,
-		signers SEQUENCE OF OCTET STRING,
+	    body GTXBody,
 		signatures SEQUENCE OF OCTET STRING
 	}
 	

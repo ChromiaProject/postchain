@@ -3,7 +3,7 @@
 package net.postchain.gtv
 
 import com.beanit.jasn1.ber.types.BerInteger
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.gtv.gtvmessages.RawGtv
 import java.math.BigInteger
 
 data class GtvInteger(val integer: Long) : GtvPrimitive() {
