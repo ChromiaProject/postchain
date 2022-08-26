@@ -92,12 +92,13 @@ class ConcretePostchainClient(
         val result = deferred<TransactionResult, Exception>()
         client(request) { resp ->
             val status = if (resp.status == Status.OK) WAITING else REJECTED
-            result.resolve(TransactionResultImpl(status, resp.status.code, resp.status.description))
+            result.resolve(TransactionResult(status, resp.status.code, resp.status.description))
         }
         return result.promise
     }
 
     override fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult {
+        val txRid = txBuilder.getDigestForSigning()
         val resp = postTransactionSync(txBuilder)
         if (resp.status == REJECTED) {
             return resp
@@ -107,7 +108,7 @@ class ConcretePostchainClient(
         val txStatusLens = Body.auto<TxStatus>().toLens()
         val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
 
-        var lastKnownTxResult: TransactionResult = TransactionResultImpl(UNKNOWN, null, null)
+        var lastKnownTxResult = TransactionResult(UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected
         repeat(statusPollCount) {
             try {
@@ -117,7 +118,7 @@ class ConcretePostchainClient(
                     val status =
                         TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
                     deferredPollResult.resolve(
-                        TransactionResultImpl(
+                        TransactionResult(
                             status,
                             response.status.code,
                             response.status.description
@@ -128,7 +129,7 @@ class ConcretePostchainClient(
                 if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
             } catch (e: Exception) {
                 logger.warn(e) { "Unable to poll for new block" }
-                lastKnownTxResult = TransactionResultImpl(UNKNOWN, null, null)
+                lastKnownTxResult = TransactionResult(UNKNOWN, null, null)
             }
             sleep(statusPollInterval)
         }

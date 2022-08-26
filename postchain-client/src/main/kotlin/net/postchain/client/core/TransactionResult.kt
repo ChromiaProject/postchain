@@ -7,8 +7,8 @@ import net.postchain.common.tx.TransactionStatus
 /**
  * Acknowledge from the server. Holds the status of the TX.
  */
-class TransactionResultImpl(
-        override val status: TransactionStatus,
-        override val httpStatusCode: Int?,
-        override val rejectReason: String?
-) : TransactionResult
+data class TransactionResult(
+        val status: TransactionStatus,
+        val httpStatusCode: Int?,
+        val rejectReason: String?
+)
