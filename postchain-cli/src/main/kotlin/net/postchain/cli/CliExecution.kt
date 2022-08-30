@@ -13,6 +13,7 @@ import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
@@ -120,6 +121,11 @@ object CliExecution {
         val configStore = BaseConfigurationDataStore
 
         runStorageCommand(nodeConfigFile, chainId) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            val lastBlockHeight = db.getLastBlockHeight(ctx)
+            if (lastBlockHeight >= height) {
+                throw UserMistake("Cannot add configuration at $height, since last block is already at $lastBlockHeight")
+            }
 
             fun init() = try {
                 configStore.addConfigurationData(ctx, height, blockchainConfig)
@@ -271,6 +277,10 @@ object CliExecution {
         }
     }
 
+    fun listConfigurations(nodeConfigFile: String, chainId: Long) =
+        runStorageCommand(nodeConfigFile, chainId) { ctx ->
+            DatabaseAccess.of(ctx).listConfigurations(ctx)
+        }
 
     fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: String) {
         tryCreateBasicDataSource(nodeConfigFile)?.let { return } ?: if (retryTimes > 0) {
