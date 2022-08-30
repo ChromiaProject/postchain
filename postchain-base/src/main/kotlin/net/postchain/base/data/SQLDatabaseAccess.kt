@@ -580,6 +580,17 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, nullableLongRes, height)
     }
 
+    override fun listConfigurations(ctx: EContext): List<Long> {
+        val sql = """
+            SELECT height 
+            FROM ${tableConfigurations(ctx)} 
+            ORDER BY height
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, mapListHandler).map { configuration ->
+            configuration["height"] as Long
+        }
+    }
+
     override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {
         val sql = "SELECT configuration_data FROM ${tableConfigurations(ctx)} WHERE height = ?"
         return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height)

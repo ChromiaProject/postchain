@@ -271,6 +271,10 @@ object CliExecution {
         }
     }
 
+    fun listConfigurations(nodeConfigFile: String, chainId: Long) =
+        runStorageCommand(nodeConfigFile, chainId) { ctx ->
+            DatabaseAccess.of(ctx).listConfigurations(ctx)
+        }
 
     fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: String) {
         tryCreateBasicDataSource(nodeConfigFile)?.let { return } ?: if (retryTimes > 0) {
