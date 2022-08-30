@@ -12,25 +12,25 @@ import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.printCommandInfo
 
-class CommandRollback : CliktCommand(name = "rollback", help = "Rollback configuration to a given height for a blockchain.") {
+class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", help = "Remove configuration at a given height for a blockchain.") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
     private val nodeConfigFile by nodeConfigOption()
 
     private val chainId by chainIdOption().required()
 
-    private val height by option("-h", "--height", help = "Height of configuration").long().required()
+    private val height by option("-h", "--height", help = "Height of configuration to remove").long().required()
 
     override fun run() {
         printCommandInfo()
 
         runStorageCommand(nodeConfigFile, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            val count = db.rollbackConfiguration(ctx, height)
+            val count = db.removeConfiguration(ctx, height)
             if (count > 0)
-                println("Rolled back $count configurations")
+                println("Removed configuration at height $height")
             else
-                println("No future configurations since $height to roll back")
+                println("No configurations at $height to remove")
         }
     }
 }
