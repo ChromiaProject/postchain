@@ -115,27 +115,12 @@ class ConcretePostchainClient(
     }
 
     override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {
-        val txStatusLens = Body.auto<TxStatus>().toLens()
-        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/${txRid.rid}/status")
-
         var lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected
         repeat(retries) {
             try {
-                val deferredPollResult = CompletableFuture<TransactionResult>()
-                client(validationRequest) { response ->
-                    val status =
-                        TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
-                    deferredPollResult.complete(
-                        TransactionResult(
-                            txRid,
-                            status,
-                            response.status.code,
-                            response.status.description
-                        )
-                    )
-                }
-                lastKnownTxResult = deferredPollResult.join()
+                val deferredPollResult = checkTxStatus(txRid)
+                lastKnownTxResult = deferredPollResult.toCompletableFuture().join()
                 if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
             } catch (e: Exception) {
                 logger.warn(e) { "Unable to poll for new block" }
@@ -144,5 +129,24 @@ class ConcretePostchainClient(
             sleep(pollInterval)
         }
         return lastKnownTxResult
+    }
+
+    override fun checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult> {
+        val txStatusLens = Body.auto<TxStatus>().toLens()
+        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/${txRid.rid}/status")
+        val result = CompletableFuture<TransactionResult>()
+        client(validationRequest) { response ->
+            val status =
+                TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
+            result.complete(
+                TransactionResult(
+                    txRid,
+                    status,
+                    response.status.code,
+                    response.status.description
+                )
+            )
+        }
+        return result
     }
 }
