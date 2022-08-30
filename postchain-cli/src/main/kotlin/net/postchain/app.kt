@@ -19,6 +19,7 @@ fun main(args: Array<String>) {
             CommandAddBlockchain(),
             CommandAddConfiguration(),
             CommandHistory(),
+            CommandRollback(),
             CommandBlockchainReplicaAdd(),
             CommandBlockchainReplicaRemove(),
             CommandCheckBlockchain(),

@@ -591,6 +591,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
+    override fun rollbackConfiguration(ctx: EContext, height: Long): Int {
+        if (queryRunner.query(
+                ctx.conn,
+                "SELECT height FROM ${tableConfigurations(ctx)} WHERE height = ?",
+                nullableLongRes,
+                height
+            ) == null) {
+            throw UserMistake("No configuration at $height, unable to rollback")
+        } else {
+            return queryRunner.update(ctx.conn, "DELETE FROM ${tableConfigurations(ctx)} WHERE height > ?", height)
+        }
+    }
+
     override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {
         val sql = "SELECT configuration_data FROM ${tableConfigurations(ctx)} WHERE height = ?"
         return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height)
