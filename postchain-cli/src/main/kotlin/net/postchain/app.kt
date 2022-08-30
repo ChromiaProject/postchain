@@ -18,7 +18,7 @@ fun main(args: Array<String>) {
         .subcommands(
             CommandAddBlockchain(),
             CommandAddConfiguration(),
-            CommandHistory(),
+            CommandListConfigurations(),
             CommandRollback(),
             CommandBlockchainReplicaAdd(),
             CommandBlockchainReplicaRemove(),

@@ -8,7 +8,7 @@ import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.printCommandInfo
 
-class CommandHistory : CliktCommand(name = "history", help = "Shows configuration history for a blockchain.") {
+class CommandListConfigurations : CliktCommand(name = "list-configurations", help = "Lists configurations for a blockchain.") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
     private val nodeConfigFile by nodeConfigOption()
