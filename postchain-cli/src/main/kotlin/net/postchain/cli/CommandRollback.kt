@@ -28,9 +28,9 @@ class CommandRollback : CliktCommand(name = "rollback", help = "Rollback configu
             val db = DatabaseAccess.of(ctx)
             val count = db.rollbackConfiguration(ctx, height)
             if (count > 0)
-                println("Configuration rolled back to height $height")
+                println("Rolled back $count configurations")
             else
-                println("No configurations since $height to roll back")
+                println("No future configurations since $height to roll back")
         }
     }
 }

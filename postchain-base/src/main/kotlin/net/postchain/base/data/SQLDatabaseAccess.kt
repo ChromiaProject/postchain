@@ -22,6 +22,7 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
+import java.lang.Long.max
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant
@@ -599,9 +600,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 height
             ) == null) {
             throw UserMistake("No configuration at $height, unable to rollback")
-        } else {
-            return queryRunner.update(ctx.conn, "DELETE FROM ${tableConfigurations(ctx)} WHERE height > ?", height)
         }
+        val lastBlockHeight = getLastBlockHeight(ctx)
+        return queryRunner.update(ctx.conn, "DELETE FROM ${tableConfigurations(ctx)} WHERE height > ?", max(height, lastBlockHeight))
     }
 
     override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {
