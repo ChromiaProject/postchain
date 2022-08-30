@@ -6,9 +6,9 @@ import net.postchain.core.NodeRid
 /**
  * Keeps track of peer's statuses. The currently tracked statuses are
  *
- * Blacklisted: We have received invalid data from the peer, or it's otherwise misbehaving
- * Unresponsive: We haven't received a timely response from the peer
- * Responsive: Node should work well
+ * - Blacklisted: We have received invalid data from the peer, or it's otherwise misbehaving
+ * - Unresponsive: We haven't received a timely response from the peer
+ * - Responsive: Node should work well
  */
 abstract class AbstractPeerStatuses<StateType : KnownState> {
 

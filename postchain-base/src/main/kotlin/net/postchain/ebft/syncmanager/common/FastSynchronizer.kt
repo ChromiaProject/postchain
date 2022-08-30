@@ -123,6 +123,8 @@ class FastSynchronizer(
     // This is the communication mechanism from the async commitBlock callback to main loop
     private val finishedJobs = LinkedBlockingQueue<Job>()
 
+    val peerStatuses = FastSyncPeerStatuses(prms) // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
+
     companion object : KLogging()
 
 
@@ -197,9 +199,13 @@ class FastSynchronizer(
      * if we only had time to connect to a single or very few nodes.
      */
     fun syncUntilResponsiveNodesDrained() {
-        val timeout = System.currentTimeMillis() + params.exitDelay
+        syncUntilResponsiveNodesDrained(params.exitDelay)
+    }
+
+    fun syncUntilResponsiveNodesDrained(exitDelay: Long) {
+        val timeout = System.currentTimeMillis() + exitDelay
         if (logger.isDebugEnabled) {
-            logger.debug("syncUntilResponsiveNodesDrained() begin with exitDelay: ${params.exitDelay}")
+            logger.debug("syncUntilResponsiveNodesDrained() begin with exitDelay: $exitDelay")
         }
         syncUntil {
             val syncableCount = peerStatuses.getSyncable(blockHeight + 1).intersect(configuredPeers).size

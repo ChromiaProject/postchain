@@ -38,6 +38,8 @@ class SlowSynchronizer(
 
     private var stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt())
 
+    val peerStatuses = SlowSyncPeerStatuses(prms) // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
+
     companion object : KLogging()
 
     /**
@@ -136,7 +138,7 @@ class SlowSynchronizer(
                         val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
                         sleepData.updateData(processedBlocks)
                     }
-                    is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
+                    is Status ->  { ; } // Do nothing, we don't measure drained
                     else -> logger.debug { "Unhandled type $message from peer $peerId" }
                 }
             } catch (e: Exception) {
@@ -210,9 +212,6 @@ class SlowSynchronizer(
             if (witness.isEmpty()) {
                 // Shouldn't happen if peer was working
                 peerStatuses.maybeBlacklist(peerId, "Slow Sync: Sent empty header at height: $requestedHeight ")
-
-                val now = System.currentTimeMillis()
-                peerStatuses.drained(peerId, -1, now)
             } else {
                 peerStatuses.maybeBlacklist(peerId, "Slow Sync: Why we get a witness without a header? Height: $requestedHeight ")
             }
@@ -234,7 +233,6 @@ class SlowSynchronizer(
 
         return if (validator.validateWitness(w, witnessBuilder)) {
             logger.trace { "handleBlockHeader() -- Header for height $requestedHeight received" }
-            peerStatuses.headerReceived(peerId, peerBestHeight)
             Pair(h, w)
         } else {
             peerStatuses.maybeBlacklist(peerId, "Slow Sync: Invalid header received. Height: $requestedHeight")

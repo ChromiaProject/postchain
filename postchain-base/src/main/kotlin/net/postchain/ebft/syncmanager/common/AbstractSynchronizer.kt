@@ -7,7 +7,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.worker.WorkerContext
 
-abstract class AbstractSynchronizer(
+abstract class AbstractSynchronizer (
     val workerContext: WorkerContext,
     val params: FastSyncParameters
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
@@ -17,8 +17,6 @@ abstract class AbstractSynchronizer(
 
     // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
     protected var addBlockCompletionPromise: CompletionPromise? = null
-
-    protected val peerStatuses = FastSyncPeerStatuses(params)
 
     var blockHeight: Long = blockQueries.getBestHeight().get()
 

@@ -6,7 +6,8 @@ import net.postchain.core.NodeRid
 /**
  * Keeps track of peer's statuses. This type has one more status than the superclass:
  *
- * Drained: The peer's tip is reached.
+ * - Drained: The peer's tip is reached (In slow sync nodes cannot become "drained", we are meant to go on forever.
+ *            But in fast sync we need "drained").
  */
 class FastSyncPeerStatuses(val params: FastSyncParameters): AbstractPeerStatuses<FastSyncKnownState>() {
 

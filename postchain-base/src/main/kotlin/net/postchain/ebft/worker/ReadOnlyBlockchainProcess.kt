@@ -53,26 +53,8 @@ class ReadOnlyBlockchainProcess(
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
-        val exitDelay = 1000
-        val timeout = System.currentTimeMillis() + exitDelay
-
-        if (logger.isDebugEnabled) {
-            logger.debug("Read only fastsync: begin with exitDelay: $exitDelay")
-        }
-
-        fastSynchronizer.syncUntil {
-            val syncableCount = peerStatuses.getSyncable(blockHeight + 1).intersect(configuredPeers).size
-
-            // Keep syncing until this becomes true, i.e. to exit we must have:
-            val done = timeout < System.currentTimeMillis()      // 1. must have timeout
-                    && syncableCount == 0                        // 2. must have no syncable nodes
-                    && blockHeight >= params.mustSyncUntilHeight // 3. must BC height above the minimum specified height
-
-            if (logger.isDebugEnabled && done) {
-                logger.debug("We are done fastsyncing. Syncable count: $syncableCount, height: $blockHeight, must sync until: ${params.mustSyncUntilHeight}.")
-            }
-            !isProcessRunning() || done
-        }
+        val exitDelay = 1000L
+        fastSynchronizer.syncUntilResponsiveNodesDrained(exitDelay)
 
         // Move to slow sync and proceed until shutdown
         slowSynchronizer.syncUntil()
