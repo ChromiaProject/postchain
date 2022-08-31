@@ -70,10 +70,10 @@ class SlowSynchronizer(
                 Thread.sleep(sleepData.currentSleepMs)
             }
         } catch (e: BadDataMistake) {
-            FastSynchronizer.logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
+            logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
             throw e
         } catch (e: Exception) {
-            FastSynchronizer.logger.debug(e) { "syncUntil() -- ${"Exception"}" }
+            logger.debug(e) { "syncUntil() -- ${"Exception"}" }
         } finally {
             syncDebug("Await commits", blockHeight)
             peerStatuses.clear()
@@ -149,7 +149,7 @@ class SlowSynchronizer(
 
 
     /**
-     * This is used for syncing from old nodes that doesn't have this new FastSynchronizer algorithm
+     * This is used for syncing from old nodes that doesn't have this new Synchronizer algorithm
      *
      * @return number of processed blocks
      */
