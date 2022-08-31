@@ -2,6 +2,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.core.NodeRid
+import net.postchain.devtools.NameHelper
 
 /**
  * Keeps track of peer's statuses. The currently trackeed statuses are
@@ -223,7 +224,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
     fun drained(peerId: NodeRid, height: Long, now: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
-            logger.warn("We tried to get block from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
+            logger.warn("We tried to get block from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
             return
         }
         if (logger.isDebugEnabled) {
@@ -237,7 +238,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
     fun headerReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
-            logger.warn("We got a header from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
+            logger.warn("We got a header from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
             return
         }
         status.headerReceived(height)
@@ -246,7 +247,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
     fun statusReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
-            logger.warn("Got status from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
+            logger.warn("Got status from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
             return
         }
         status.statusReceived(height)
@@ -272,7 +273,7 @@ class PeerStatuses(val params: FastSyncParameters): KLogging() {
         }
         if (logger.isDebugEnabled) {
             if (status.isMaybeLegacy() != isLegacy) {
-                logger.debug("Setting new fast sync peer: ${peerId.shortString()} status maybe legacy: $isLegacy.")
+                logger.debug("Setting new fast sync peer: ${NameHelper.peerName(peerId)} status maybe legacy: $isLegacy.")
             }
         }
         status.maybeLegacy(isLegacy)
