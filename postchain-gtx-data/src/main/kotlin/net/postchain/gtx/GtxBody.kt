@@ -1,6 +1,5 @@
 package net.postchain.gtx
 
-import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.gtv.Gtv
@@ -8,7 +7,9 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtxmessages.RawGtxBody
+import net.postchain.gtv.gtxmessages.RawGtxBody.Signers
 import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkleHash
 
 class GtxBody(
     val blockchainRid: BlockchainRid,
@@ -20,14 +21,16 @@ class GtxBody(
 
     fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>): Hash {
         if (this::rid.isInitialized) return rid
-        rid = calculator.calculateLeafHash(toGtv())
+        rid = toGtv().merkleHash(calculator)
         return rid
     }
 
     internal fun asn() = RawGtxBody(
-        BerOctetString(blockchainRid.data),
+        gtv(blockchainRid.data).getRawGtv(),
         RawGtxBody.Operations(operations.map { it.asn() }),
-        RawGtxBody.Signers(signers.map { BerOctetString(it) })
+        Signers(
+            signers.map { gtv(it).getRawGtv() }
+        )
     )
 
     fun toGtv() = gtv(
@@ -40,9 +43,9 @@ class GtxBody(
         @JvmStatic
         internal fun fromAsn(body: RawGtxBody): GtxBody {
             return GtxBody(
-                BlockchainRid(body.blockchainRid.value),
+                BlockchainRid(body.blockchainRid.byteArray.value),
                 body.operations.seqOf.map { GtxOperation.fromAsn(it) },
-                body.signers.seqOf.map { it.value })
+                body.signers.seqOf.map { it.byteArray.value })
         }
 
         @JvmStatic

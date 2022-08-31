@@ -1,10 +1,10 @@
 package net.postchain.gtx
 
 import com.beanit.jasn1.ber.ReverseByteArrayOutputStream
-import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtxmessages.RawGtx
 import net.postchain.gtv.merkle.MerkleHashCalculator
 import java.io.ByteArrayInputStream
@@ -21,8 +21,8 @@ class Gtx(
         val encoded = ReverseByteArrayOutputStream(1000, true)
         RawGtx(
             gtxBody.asn(),
-            RawGtx.Signatures(signatures.map { BerOctetString(it) })
-        ).encode(encoded)
+            RawGtx.Signatures(signatures.map { gtv(it).getRawGtv() })
+        ).encode(encoded, true)
         return encoded.array
     }
 
@@ -34,7 +34,7 @@ class Gtx(
             decoded.body
             return Gtx(
                 GtxBody.fromAsn(decoded.body),
-                decoded.signatures.seqOf.map { it.value }
+                decoded.signatures.seqOf.map { it.byteArray.value }
             )
         }
 
