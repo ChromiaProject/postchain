@@ -14,7 +14,7 @@ package net.postchain.ebft.syncmanager.common
  * receive a Status message (which is sent regularly from peers in normal
  * sync mode).
  */
-class FastSyncKnownState(prms: FastSyncParameters) : KnownState(prms)  {
+class FastSyncKnownState(prms: SyncParameters) : KnownState(prms)  {
 
     private var drainedTime: Long = 0
     private var drainedHeight: Long = -1

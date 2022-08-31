@@ -21,7 +21,7 @@ import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
-import net.postchain.ebft.syncmanager.common.FastSyncParameters
+import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import nl.komponents.kovenant.Promise
 import java.lang.Thread.sleep
@@ -52,7 +52,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
     private val fastSynchronizer = FastSynchronizer(
             workerContext, blockDatabase,
-            FastSyncParameters.fromAppConfig(workerContext.appConfig),
+            SyncParameters.fromAppConfig(workerContext.appConfig),
             ::isProcessRunning
     )
 
@@ -96,7 +96,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             brid: BlockchainRid, // the BC we are trying to pull blocks from
             myBRID: BlockchainRid, // our BC
             blockDatabase: BlockDatabase,
-            params: FastSyncParameters) {
+            params: SyncParameters) {
 
         if (brid == myBRID) {
             netDebug("Try network sync using own BRID")

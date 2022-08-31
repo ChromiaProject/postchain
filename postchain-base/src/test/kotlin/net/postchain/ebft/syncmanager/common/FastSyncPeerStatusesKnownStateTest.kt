@@ -9,7 +9,7 @@ class FastSyncPeerStatusesKnownStateTest {
 
     @Test
     fun test_drained() {
-        val params = FastSyncParameters()
+        val params = SyncParameters()
         val state = FastSyncKnownState(params)
 
         // Initial state
@@ -31,7 +31,7 @@ class FastSyncPeerStatusesKnownStateTest {
 
     @Test
     fun test_resurrect_after_unresponsive() {
-        val params = FastSyncParameters()
+        val params = SyncParameters()
         val state = FastSyncKnownState(params)
 
         // Initial state
@@ -57,7 +57,7 @@ class FastSyncPeerStatusesKnownStateTest {
      */
     @Test
     fun test_blacklist_and_timeout() {
-        val params = FastSyncParameters()
+        val params = SyncParameters()
         val state = FastSyncKnownState(params)
 
         // Initial state

@@ -19,7 +19,7 @@ import mu.KLogging
  * height + 1). They also serve as a discovery mechanism, in which we become
  * aware of our neighborhood.
  */
-open class KnownState(val params: FastSyncParameters) {
+open class KnownState(val params: SyncParameters) {
 
     companion object: KLogging() {}
 

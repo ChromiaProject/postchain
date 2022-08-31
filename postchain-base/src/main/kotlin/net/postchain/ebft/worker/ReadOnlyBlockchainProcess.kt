@@ -5,7 +5,7 @@ package net.postchain.ebft.worker
 import mu.KLogging
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.ebft.BaseBlockDatabase
-import net.postchain.ebft.syncmanager.common.FastSyncParameters
+import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.block.BlockQueries
@@ -27,7 +27,7 @@ class ReadOnlyBlockchainProcess(
         blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY
     )
 
-    private val params = FastSyncParameters.fromAppConfig(workerContext.appConfig)
+    private val params = SyncParameters.fromAppConfig(workerContext.appConfig)
 
     private val fastSynchronizer = FastSynchronizer(
         workerContext,
@@ -43,8 +43,6 @@ class ReadOnlyBlockchainProcess(
         ::isProcessRunning
     )
 
-    private val peerStatuses = FastSyncPeerStatuses(params)
-
     var blockHeight: Long = blockQueries.getBestHeight().get()
         private set
 
@@ -53,8 +51,7 @@ class ReadOnlyBlockchainProcess(
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
-        val exitDelay = 1000L
-        fastSynchronizer.syncUntilResponsiveNodesDrained(exitDelay)
+        fastSynchronizer.syncUntilResponsiveNodesDrained()
 
         // Move to slow sync and proceed until shutdown
         slowSynchronizer.syncUntil()

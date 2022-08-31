@@ -8,8 +8,7 @@ import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.worker.WorkerContext
 
 abstract class AbstractSynchronizer (
-    val workerContext: WorkerContext,
-    val params: FastSyncParameters
+    val workerContext: WorkerContext
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
 
     protected val blockchainConfiguration = workerContext.engine.getConfiguration()

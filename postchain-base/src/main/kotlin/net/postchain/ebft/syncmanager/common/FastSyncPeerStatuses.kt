@@ -9,7 +9,7 @@ import net.postchain.core.NodeRid
  * - Drained: The peer's tip is reached (In slow sync nodes cannot become "drained", we are meant to go on forever.
  *            But in fast sync we need "drained").
  */
-class FastSyncPeerStatuses(val params: FastSyncParameters): AbstractPeerStatuses<FastSyncKnownState>() {
+class FastSyncPeerStatuses(val params: SyncParameters): AbstractPeerStatuses<FastSyncKnownState>() {
 
     companion object : KLogging() {}
 

@@ -18,7 +18,7 @@ class FastSyncPeerStatusesTest {
 
     private fun before() {
 
-        val params = FastSyncParameters()
+        val params = SyncParameters()
         fsps = FastSyncPeerStatuses(params)
 
         fsps.addPeer(peer1)

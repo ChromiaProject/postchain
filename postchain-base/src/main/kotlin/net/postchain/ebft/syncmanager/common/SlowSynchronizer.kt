@@ -30,15 +30,15 @@ import net.postchain.ebft.worker.WorkerContext
 class SlowSynchronizer(
     private val wrkrCntxt: WorkerContext,
     val blockDatabase: BlockDatabase,
-    private val prms: FastSyncParameters,
+    private val params: SyncParameters,
     val isProcessRunning: () -> Boolean
-) : AbstractSynchronizer(wrkrCntxt, prms) {
+) : AbstractSynchronizer(wrkrCntxt) {
 
     private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
 
     private var stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt())
 
-    val peerStatuses = SlowSyncPeerStatuses(prms) // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
+    val peerStatuses = SlowSyncPeerStatuses(params) // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
 
     companion object : KLogging()
 

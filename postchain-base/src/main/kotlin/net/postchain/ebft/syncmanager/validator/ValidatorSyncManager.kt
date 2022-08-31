@@ -51,7 +51,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         this.processingIntent = DoNothingIntent
         this.lastStatusLogged = Date().time
         val nodeConfig = workerContext.nodeConfig
-        val params = FastSyncParameters.fromAppConfig(workerContext.appConfig) {
+        val params = SyncParameters.fromAppConfig(workerContext.appConfig) {
             it.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
         }
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params, isProcessRunning)
