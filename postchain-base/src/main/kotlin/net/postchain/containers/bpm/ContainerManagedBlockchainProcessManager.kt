@@ -61,7 +61,7 @@ open class ContainerManagedBlockchainProcessManager(
     override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, appConfig, containerNodeConfig)
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return { blockTrace: BlockTrace?, _, blockTimestamp: Long ->
+        return { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
             try {
                 rTrace("Before", chainId, blockTrace)
                 if (chainId != CHAIN0) {
@@ -71,46 +71,47 @@ open class ContainerManagedBlockchainProcessManager(
                     }
                     false
                 } else {
-                    synchronized(synchronizer) {
-                        rTrace("Sync block / before", chainId, blockTrace)
-                        // Sending heartbeat to other chains
-                        heartbeatManager.beat(blockTimestamp)
+                    rTrace("Before", chainId, blockTrace)
+                    for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
-                        // Preloading blockchain configuration
-                        preloadChain0Configuration()
+                    // Sending heartbeat to other chains
+                    heartbeatManager.beat(blockTimestamp)
 
-                        // Checking out the peer list changes
-                        val peerListVersion = dataSource.getPeerListVersion()
-                        val doReload = (this.peerListVersion != peerListVersion)
-                        this.peerListVersion = peerListVersion
+                    // Preloading blockchain configuration
+                    preloadChain0Configuration()
 
-                        val res = containerJobManager.withLock {
-                            // Reload/start/stops blockchains
-                            val res2 = if (doReload) {
-                                rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
-                                reloadAllBlockchains()
-                                true
-                            } else {
-                                rTrace("about to restart chain0", chainId, blockTrace)
-                                // Checking out for chain0 configuration changes
-                                val reloadChain0 = isConfigurationChanged(CHAIN0)
-                                stopStartBlockchains(reloadChain0)
-                                reloadChain0
-                            }
+                    // Checking out the peer list changes
+                    val peerListVersion = dataSource.getPeerListVersion()
+                    val doReload = (this.peerListVersion != peerListVersion)
+                    this.peerListVersion = peerListVersion
 
-                            // Docker containers healthcheck
-                            scheduleDockerContainersHealthcheck()
-                            res2
+                    rTrace("Sync", chainId, blockTrace)
+                    val res = containerJobManager.withLock {
+                        // Reload/start/stops blockchains
+                        val res2 = if (doReload) {
+                            rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
+                            reloadAllBlockchains()
+                            true
+                        } else {
+                            rTrace("about to restart chain0", chainId, blockTrace)
+                            // Checking out for chain0 configuration changes
+                            val reloadChain0 = isConfigurationChanged(CHAIN0)
+                            stopStartBlockchains(reloadChain0)
+                            reloadChain0
                         }
 
-                        rTrace("Sync block / after", chainId, blockTrace)
-                        res
+                        // Docker containers healthcheck
+                        scheduleDockerContainersHealthcheck()
+                        res2
                     }
+
+                    rTrace("After", chainId, blockTrace)
+                    res
                 }
             } catch (e: Exception) {
                 logger.error("Exception in RestartHandler: $e")
                 e.printStackTrace()
-                restartBlockchainAsync(chainId, blockTrace)
+                startBlockchainAsync(chainId, blockTrace)
                 true // let's hope restarting a blockchain fixes the problem
             }
         }
@@ -120,7 +121,7 @@ open class ContainerManagedBlockchainProcessManager(
      * Restart all chains. Begin with chain zero.
      */
     private fun reloadAllBlockchains() {
-        restartBlockchainAsync(CHAIN0, null)
+        startBlockchainAsync(CHAIN0, null)
 
         postchainContainers.values.forEach { cont ->
             cont.getAllChains().forEach {
@@ -137,7 +138,7 @@ open class ContainerManagedBlockchainProcessManager(
         // Chain0
         if (reloadChain0) {
             logger.debug("[${nodeName()}]: ContainerJob -- Restart chain0")
-            restartBlockchainAsync(CHAIN0, null)
+            startBlockchainAsync(CHAIN0, null)
         }
 
         // Stopping launched blockchains

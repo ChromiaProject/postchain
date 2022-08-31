@@ -187,7 +187,7 @@ open class ManagedBlockchainProcessManager(
 
             return if (isConfigurationChanged(chainId)) {
                 wrTrace("chainN, restart needed", chainId, bTrace)
-                restartBlockchainAsync(chainId, bTrace)
+                startBlockchainAsync(chainId, bTrace)
                 true
             } else {
                 wrTrace("chainN, no restart", chainId, bTrace)
@@ -201,23 +201,27 @@ open class ManagedBlockchainProcessManager(
         fun wrappedAfterCommitHandler(bTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
             return try {
                 wrTrace("Before", chainId, bTrace)
-                synchronized(synchronizer) {
-                    wrTrace("Sync", chainId, bTrace)
-                    for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
+                for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
-                    val restart = if (chainId == CHAIN0) {
-                        afterCommitHandlerChain0(bTrace, blockTimestamp)
-                    } else {
-                        afterCommitHandlerChainN(bTrace)
-                    }
-                    wrTrace("After", chainId, bTrace)
-                    restart
+                wrTrace("Sync", chainId, bTrace)
+                // If chain is already being stopped/restarted by another thread we will not get the lock and may return
+                if (!tryAcquireChainLock(chainId)) return false
+
+                val restart = if (chainId == CHAIN0) {
+                    afterCommitHandlerChain0(bTrace, blockTimestamp)
+                } else {
+                    afterCommitHandlerChainN(bTrace)
                 }
+
+                wrTrace("After", chainId, bTrace)
+                restart
             } catch (e: Exception) {
                 logger.error("Exception in restart handler: $e")
                 e.printStackTrace()
-                restartBlockchainAsync(chainId, bTrace)
+                startBlockchainAsync(chainId, bTrace)
                 true // let's hope restarting a blockchain fixes the problem
+            } finally {
+                releaseChainLock(chainId)
             }
         }
 
@@ -228,7 +232,7 @@ open class ManagedBlockchainProcessManager(
      * Restart all chains. Begin with chain zero.
      */
     private fun reloadBlockchainsAsync(bTrace: BlockTrace?) {
-        executor.submit {
+        synchronized(synchronizer) {
             reloadAllDebug("Begin", bTrace)
             val toLaunch = retrieveBlockchainsToLaunch()
             val launched = getLaunchedBlockchains()
@@ -236,13 +240,13 @@ open class ManagedBlockchainProcessManager(
 
             // Starting blockchains: at first chain0, then the rest
             reloadAllInfo("Launching blockchain", 0)
-            startBlockchain(0L, bTrace)
+            startBlockchainAsync(0L, bTrace)
 
             // Launching new blockchains except blockchain 0
             toLaunch.filter { it != 0L }
                     .forEach {
                         reloadAllInfo("Launching blockchain", it)
-                        startBlockchain(it, bTrace)
+                        startBlockchainAsync(it, bTrace)
                     }
 
             // Stopping launched blockchains
@@ -250,7 +254,7 @@ open class ManagedBlockchainProcessManager(
                     .filter { it in launched }
                     .forEach {
                         reloadAllInfo("Stopping blockchain", it)
-                        stopBlockchain(it, bTrace)
+                        stopBlockchainAsync(it, bTrace)
                     }
         }
     }
@@ -264,7 +268,7 @@ open class ManagedBlockchainProcessManager(
      * @param reloadChain0 is true if the chain zero must be restarted.
      */
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
-        executor.submit {
+        synchronized(synchronizer) {
             ssaTrace("Begin", bTrace)
             val toLaunch = retrieveBlockchainsToLaunch()
             val launched = getLaunchedBlockchains()
@@ -273,7 +277,7 @@ open class ManagedBlockchainProcessManager(
             // Launching blockchain 0
             if (reloadChain0) {
                 ssaInfo("Reloading of blockchain 0 is required, launching it", 0L)
-                startBlockchain(0L, bTrace)
+                startBlockchainAsync(0L, bTrace)
             }
 
             // Launching new blockchains except blockchain 0
@@ -281,7 +285,7 @@ open class ManagedBlockchainProcessManager(
                     .filter { it !in launched }
                     .forEach {
                         ssaInfo("Launching blockchain", it)
-                        startBlockchain(it, bTrace)
+                        startBlockchainAsync(it, bTrace)
                     }
 
             // Stopping launched blockchains
@@ -289,15 +293,9 @@ open class ManagedBlockchainProcessManager(
                     .filter { it in launched }
                     .forEach {
                         ssaInfo("Stopping blockchain", it)
-                        stopBlockchain(it, bTrace)
+                        stopBlockchainAsync(it, bTrace)
                     }
             ssaTrace("End", bTrace)
-        }
-    }
-
-    protected fun restartBlockchainAsync(chainId: Long, bTrace: BlockTrace?) {
-        executor.submit {
-            startBlockchain(chainId, bTrace)
         }
     }
 
