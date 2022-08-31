@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Paths
 import kotlin.io.path.absolutePathString
+import kotlin.test.assertContains
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -116,6 +117,8 @@ class CliIntegrationIT {
         // assert config added
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
         assertNotNull(configData)
+        val configurations = CliExecution.listConfigurations(nodeConfigPath, chainId)
+        assertContains(configurations, heightSecondConfig)
     }
 
     @Test
@@ -146,5 +149,7 @@ class CliIntegrationIT {
         // assert config added
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
         assertNotNull(configData)
+        val configurations = CliExecution.listConfigurations(nodeConfigPath, chainId)
+        assertContains(configurations, heightSecondConfig)
     }
 }
