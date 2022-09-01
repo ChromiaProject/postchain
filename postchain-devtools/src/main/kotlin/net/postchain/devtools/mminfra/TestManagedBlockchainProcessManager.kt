@@ -71,11 +71,8 @@ class TestManagedBlockchainProcessManager(
      * b/c the BC will get restarted before the configuration can be used.
      * Every time this method runs the [lastHeightStarted] gets updated with the restart height.)
      */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid {
         val blockchainRid = super.startBlockchain(chainId, bTrace)
-        if (blockchainRid == null) {
-            return null
-        }
         val process = blockchainProcesses[chainId]!!
         val queries = process.blockchainEngine.getBlockQueries()
         val height = queries.getBestHeight().get()
