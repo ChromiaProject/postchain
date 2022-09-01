@@ -9,13 +9,12 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.AlreadyExists
 import net.postchain.common.exception.NotFound
-import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 
 class PostchainService(private val postchainNode: PostchainNode) {
     fun startBlockchain(chainId: Long): BlockchainRid {
-        return postchainNode.startBlockchain(chainId) ?: throw NotFound("Blockchain with id $chainId not found in db.")
+        return postchainNode.startBlockchain(chainId)
     }
 
     fun stopBlockchain(chainId: Long) {
@@ -49,8 +48,7 @@ class PostchainService(private val postchainNode: PostchainNode) {
             db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
             true
         }
-        // TODO propagate more specific error from `startBlockchain` method
-        return postchainNode.startBlockchain(chainId) ?: throw UserMistake("Unable to start blockchain")
+        return postchainNode.startBlockchain(chainId)
     }
 
     fun findBlockchain(chainId: Long): Pair<BlockchainRid, Boolean>? {

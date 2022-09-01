@@ -7,6 +7,7 @@ import mu.withLoggingContext
 import net.postchain.PostchainContext
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.*
@@ -109,9 +110,10 @@ open class BaseBlockchainProcessManager(
      *
      * @param chainId is the chain to start
      * @param bTrace is the block that CAUSED this restart (needed for serious program flow tracking)
-     * @return the Blockchain's RID if successful, else null
+     * @return the Blockchain's RID if successful
+     * @throws UserMistake if failed
      */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid {
         chainSynchronizers.putIfAbsent(chainId, ReentrantLock())
         chainSynchronizers[chainId]!!.withLock {
             return synchronized(synchronizer) {
@@ -159,15 +161,10 @@ open class BaseBlockchainProcessManager(
                                 }
                                 blockchainConfig.blockchainRid
                             } else {
-                                logger.error("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
-                                null
+                                throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
                             }
 
                         }
-
-                    } catch (e: Exception) {
-                        logger.error(e) { e.message }
-                        null
                     } finally {
                         scheduledForStart.remove(chainId)
                     }
