@@ -47,7 +47,10 @@ class TestManagedBlockchainProcessManager(
             result.add(chainIid)
             retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")
             withReadWriteConnection(storage, chainIid) { newCtx ->
-                DatabaseAccess.of(newCtx).initializeBlockchain(newCtx, brid)
+                val db = DatabaseAccess.of(newCtx)
+                if (db.getChainId(newCtx, brid) == null) {
+                    db.initializeBlockchain(newCtx, brid)
+                }
             }
         }
         retrieveDebug("NOTE TEST! - End, restart: ${result.size} ")
