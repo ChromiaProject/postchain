@@ -36,6 +36,7 @@ internal class ConcretePostchainClientTest {
         client.makeTransaction()
             .addNop()
             .finish()
+            .build()
             .postSyncAwaitConfirmation()
 
         // Verify

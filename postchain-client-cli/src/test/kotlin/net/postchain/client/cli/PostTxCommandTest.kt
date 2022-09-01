@@ -1,10 +1,12 @@
 package net.postchain.client.cli
 
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientProvider
-import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.client.transaction.TransactionBuilder
+import net.postchain.common.BlockchainRid
+import net.postchain.common.hexStringToByteArray
+import net.postchain.crypto.Secp256K1CryptoSystem
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 
@@ -12,9 +14,8 @@ internal class PostTxCommandTest {
 
     @Test
     fun `Transactions are sent to client`() {
-        val txBuilder: GTXTransactionBuilder = mock {}
         val client: PostchainClient = mock {
-            on { makeTransaction() } doReturn txBuilder
+            on { makeTransaction() } doReturn TransactionBuilder(this.mock, BlockchainRid.ZERO_RID, listOf("0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57".hexStringToByteArray()), Secp256K1CryptoSystem())
         }
 
         val testConfigPath = this::class.java.getResource("/config.cfg")!!.path
@@ -38,14 +39,6 @@ internal class PostTxCommandTest {
         )
 
         verify(client).makeTransaction()
-        verify(txBuilder).addOperation(
-            "test_tx",
-            gtv(1),
-            gtv("foo"),
-            gtv("foo bar"),
-            gtv(listOf(gtv(1), gtv("foo"))),
-            gtv(mapOf("a" to gtv("b")))
-        )
-        verify(txBuilder).postSync()
+        verify(client).postTransactionSync(any())
     }
 }
