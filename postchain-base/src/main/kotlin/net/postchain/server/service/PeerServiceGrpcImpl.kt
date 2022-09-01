@@ -3,8 +3,8 @@ package net.postchain.server.service
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import io.grpc.stub.StreamObserver
+import net.postchain.common.exception.AlreadyExists
 import net.postchain.common.hexStringToByteArray
-import net.postchain.server.AlreadyExists
 
 class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrpc.PeerServiceImplBase() {
 

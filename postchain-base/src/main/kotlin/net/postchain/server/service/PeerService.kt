@@ -4,7 +4,7 @@ import net.postchain.PostchainContext
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withWriteConnection
-import net.postchain.server.AlreadyExists
+import net.postchain.common.exception.AlreadyExists
 
 class PeerService(private val postchainContext: PostchainContext) {
 

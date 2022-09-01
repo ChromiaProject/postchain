@@ -7,11 +7,11 @@ import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.AlreadyExists
+import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
-import net.postchain.server.AlreadyExists
-import net.postchain.server.NotFound
 
 class PostchainService(private val postchainNode: PostchainNode) {
     fun startBlockchain(chainId: Long): BlockchainRid {

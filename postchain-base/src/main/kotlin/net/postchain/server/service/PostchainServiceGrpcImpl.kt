@@ -3,11 +3,11 @@ package net.postchain.server.service
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.AlreadyExists
+import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.server.AlreadyExists
-import net.postchain.server.NotFound
 
 class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
     PostchainServiceGrpc.PostchainServiceImplBase() {
