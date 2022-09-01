@@ -34,7 +34,7 @@ class SinglePeerDoubleChainsDependencyTest : ConfigFileBasedIntegrationTest() {
         val blockchainRid = node.addBlockchain(1L, blockchainConfig)
         assertk.assert {
             node.startBlockchain(1L)
-        }.returnedValue { null }
+        }.thrownError { }
     }
 
 
