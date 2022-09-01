@@ -57,7 +57,7 @@ class ConcretePostchainClient(
 
     override fun makeTransaction() = makeTransaction(defaultSigner?.let { listOf(it.pubkey) } ?: listOf())
 
-    override fun makeTransaction(signers: List<ByteArray>) = TransactionBuilder(this, blockchainRID, signers, cryptoSystem)
+    override fun makeTransaction(signers: List<ByteArray>) = TransactionBuilder(this, blockchainRID, signers, listOf(), cryptoSystem)
 
 
     override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {

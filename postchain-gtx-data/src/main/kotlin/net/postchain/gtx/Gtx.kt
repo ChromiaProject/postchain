@@ -46,7 +46,6 @@ class Gtx(
         fun decode(b: ByteArray): Gtx {
             val bytes = ByteArrayInputStream(b)
             val decoded = RawGtx().apply { decode(bytes) }
-            decoded.body
             return Gtx(
                 GtxBody.fromAsn(decoded.body),
                 decoded.signatures.seqOf.map { it.value }

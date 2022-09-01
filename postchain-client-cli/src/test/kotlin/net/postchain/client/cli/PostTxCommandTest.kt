@@ -15,7 +15,7 @@ internal class PostTxCommandTest {
     @Test
     fun `Transactions are sent to client`() {
         val client: PostchainClient = mock {
-            on { makeTransaction() } doReturn TransactionBuilder(this.mock, BlockchainRid.ZERO_RID, listOf("0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57".hexStringToByteArray()), Secp256K1CryptoSystem())
+            on { makeTransaction() } doReturn TransactionBuilder(this.mock, BlockchainRid.ZERO_RID, listOf("0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57".hexStringToByteArray()), listOf(), Secp256K1CryptoSystem())
         }
 
         val testConfigPath = this::class.java.getResource("/config.cfg")!!.path

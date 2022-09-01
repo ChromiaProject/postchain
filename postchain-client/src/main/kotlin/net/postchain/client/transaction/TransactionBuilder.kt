@@ -2,46 +2,52 @@ package net.postchain.client.transaction
 
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
-import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
-import net.postchain.gtx.GtxBody
-import net.postchain.gtx.GtxOperation
+import net.postchain.gtx.GtxBuilder
 import java.time.Instant
 
 class TransactionBuilder(
     private val client: PostchainClient,
-    private val blockchainRid: BlockchainRid,
-    private val signers: List<ByteArray>,
-    private val cryptoSystem: CryptoSystem,
+    blockchainRid: BlockchainRid,
+    signers: List<ByteArray>,
+    private val defaultSigners: List<SigMaker> = listOf(),
+    cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
 ) {
-    private val calculator = GtvMerkleHashCalculator(cryptoSystem)
-    private val operations = mutableListOf<GtxOperation>()
+    private val gtxBuilder = GtxBuilder(blockchainRid, signers, cryptoSystem)
 
     /**
      * Adds an operation to this transaction
      */
     fun addOperation(name: String, vararg args: Gtv) = apply {
-        operations.add(GtxOperation(name, *args))
+        gtxBuilder.addOperation(name, *args)
     }
+
     /**
      * Adds a null operation to make the transaction unique
      */
     fun addNop() = addOperation("nop", gtv(Instant.now().toEpochMilli()))
 
+    /**
+     * Sign this transaction with default signers and [PostchainClient.postTransaction]
+     */
+    fun post() = defaultSign().post()
 
     /**
-     * Marks this transaction as finished and ready to be signed
+     * Sign this transaction with default signers and [PostchainClient.postTransactionSync]
      */
-    fun finish(): SignatureBuilder {
-        val body = GtxBody(blockchainRid, operations, signers)
-        return SignatureBuilder(body)
-    }
+    fun postSync() = defaultSign().postSync()
+
+    /**
+     * Sign this transaction with default signers and [PostchainClient.postTransactionSyncAwaitConfirmation]
+     */
+    fun postSyncAwaitConfirmation() = defaultSign().postSyncAwaitConfirmation()
+
+    private fun defaultSign() = sign(*defaultSigners.toTypedArray())
 
     /**
      * Sign this transaction and prepare it to be posted
@@ -52,49 +58,45 @@ class TransactionBuilder(
         }.build()
     }
 
-    inner class SignatureBuilder(private val body: GtxBody, private val check: Boolean = false) {
+    /**
+     * Marks this transaction as finished and ready to be signed
+     */
+    fun finish(): SignatureBuilder {
+        return SignatureBuilder(gtxBuilder.finish())
+    }
 
-        private val signatures = mutableListOf<Signature>()
-        private val txRid = body.calculateTxRid(calculator)
+    inner class SignatureBuilder(private val signBuilder: GtxBuilder.GtxSignBuilder) {
 
         /**
          * Sign this transaction
          */
         fun sign(sigMaker: SigMaker) = apply {
-            sign(sigMaker.signDigest(txRid))
+            signBuilder.sign(sigMaker)
         }
-
-        /**
-         * Add a signature to this transaction
-         */
-        fun sign(signature: Signature) = apply {
-            if (signatures.contains(signature)) throw UserMistake("Signature already exists")
-            if (signers.find { it.contentEquals(signature.subjectID) } == null) throw UserMistake("Signature belongs to unknown signer")
-            if (check && cryptoSystem.verifyDigest(txRid, signature)) {
-                throw UserMistake("Signature ${signature.subjectID} is not valid")
-            }
-            signatures.add(signature)
-        }
-
-        /**
-         * Build a GTX
-         */
-        fun buildGtx() = Gtx(body, signatures.map { it.data })
 
         /**
          * Build a transaction that can be posted
          */
         fun build(): PostableTransaction {
-            return PostableTransaction(buildGtx())
+            return PostableTransaction(signBuilder.buildGtx())
         }
     }
 
     inner class PostableTransaction(private val tx: Gtx) {
 
+        /**
+         * [PostchainClient.postTransaction]
+         */
         fun post() = client.postTransaction(tx)
 
+        /**
+         * [PostchainClient.postTransactionSync]
+         */
         fun postSync() = client.postTransactionSync(tx)
 
+        /**
+         * [PostchainClient.postTransactionSyncAwaitConfirmation]
+         */
         fun postSyncAwaitConfirmation() = client.postTransactionSyncAwaitConfirmation(tx)
     }
 }

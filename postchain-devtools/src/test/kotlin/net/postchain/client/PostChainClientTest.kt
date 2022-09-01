@@ -45,7 +45,7 @@ class PostChainClientTest : IntegrationTestSetup() {
     }
 
     private fun createSignedNopTx(client: PostchainClient, bcRid: BlockchainRid): TransactionBuilder.PostableTransaction {
-        return TransactionBuilder(client, bcRid, listOf(pubKey0), cryptoSystem)
+        return TransactionBuilder(client, bcRid, listOf(pubKey0), listOf(), cryptoSystem)
             .addOperation("gtx_test", gtv(1L), gtv(randomStr))
             .sign(sigMaker0)
     }
