@@ -41,6 +41,24 @@ class Gtx(
         gtv(signatures.map { gtv(it) })
     )
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Gtx
+
+        if (gtxBody != other.gtxBody) return false
+        if (!signatures.toTypedArray().contentDeepEquals(other.signatures.toTypedArray())) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = gtxBody.hashCode()
+        result = 31 * result + signatures.hashCode()
+        return result
+    }
+
     companion object {
         @JvmStatic
         fun decode(b: ByteArray): Gtx {

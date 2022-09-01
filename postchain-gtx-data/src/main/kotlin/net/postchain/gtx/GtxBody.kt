@@ -43,6 +43,26 @@ class GtxBody(
         gtv(signers.map { gtv(it) })
     )
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as GtxBody
+
+        if (blockchainRid != other.blockchainRid) return false
+        if (operations != other.operations) return false
+        if (!signers.toTypedArray().contentDeepEquals(other.signers.toTypedArray())) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = blockchainRid.hashCode()
+        result = 31 * result + operations.hashCode()
+        result = 31 * result + signers.hashCode()
+        return result
+    }
+
     companion object {
         @JvmStatic
         internal fun fromAsn(body: RawGtxBody): GtxBody {

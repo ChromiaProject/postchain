@@ -7,6 +7,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.gtxmessages.RawGtxOp
+import net.postchain.gtx.data.OpData
 
 class GtxOp(val name: String, vararg val args: Gtv) {
 
@@ -18,6 +19,23 @@ class GtxOp(val name: String, vararg val args: Gtv) {
      * 2. array of arguments [GtvArray]
      */
     fun toGtv() = gtv(gtv(name), gtv(args.toList()))
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as GtxOp
+
+        if (name != other.name) return false
+        if (!args.contentEquals(other.args)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + args.contentHashCode()
+        return result
+    }
 
     companion object {
         @JvmStatic
@@ -33,5 +51,8 @@ class GtxOp(val name: String, vararg val args: Gtv) {
                 return GtxOp(array[0].asString(), *array[1].asArray())
             }
         }
+
+        @JvmStatic
+        fun fromOpData(opData: OpData) = GtxOp(opData.opName, *opData.args)
     }
 }

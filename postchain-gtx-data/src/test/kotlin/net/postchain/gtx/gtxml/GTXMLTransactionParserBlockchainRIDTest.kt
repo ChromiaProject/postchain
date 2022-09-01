@@ -4,8 +4,8 @@ package net.postchain.gtx.gtxml
 
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.devtools.MockCryptoSystem
-import net.postchain.gtx.data.GTXTransactionBodyData
-import net.postchain.gtx.data.GTXTransactionData
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBody
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -21,12 +21,13 @@ class GTXMLTransactionParserBlockchainRIDTest {
             </transaction>
         """.trimIndent()
 
-        val expectedBody = GTXTransactionBodyData(
+        val expectedBody = GtxBody(
                 blockchainRID,
-                arrayOf(),
-                arrayOf())
+                listOf(),
+                listOf()
+        )
 
-        val expectedTx = GTXTransactionData(expectedBody, arrayOf())
+        val expectedTx = Gtx(expectedBody, listOf())
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(
             xml,
@@ -45,11 +46,12 @@ class GTXMLTransactionParserBlockchainRIDTest {
             </transaction>
         """.trimIndent()
 
-        val expectedBody = GTXTransactionBodyData(
+        val expectedBody = GtxBody(
                 blockchainRID,
-                arrayOf(), arrayOf())
+                listOf(), listOf()
+        )
 
-        val expectedTx = GTXTransactionData(expectedBody, arrayOf())
+        val expectedTx = Gtx(expectedBody, listOf())
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(
             xml,
@@ -68,11 +70,12 @@ class GTXMLTransactionParserBlockchainRIDTest {
             </transaction>
         """.trimIndent()
 
-        val expectedBody = GTXTransactionBodyData(
+        val expectedBody = GtxBody(
                 BlockchainRid.ZERO_RID,
-                arrayOf(), arrayOf())
+                listOf(), listOf()
+        )
 
-        val expectedTx = GTXTransactionData(expectedBody, arrayOf())
+        val expectedTx = Gtx(expectedBody, listOf())
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(
             xml,
@@ -91,11 +94,12 @@ class GTXMLTransactionParserBlockchainRIDTest {
             </transaction>
         """.trimIndent()
 
-        val expectedBody = GTXTransactionBodyData(
+        val expectedBody = GtxBody(
                 blockchainRID,
-                arrayOf(), arrayOf())
+                listOf(), listOf()
+        )
 
-        val expectedTx = GTXTransactionData(expectedBody, arrayOf())
+        val expectedTx = Gtx(expectedBody, listOf())
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(
             xml,
