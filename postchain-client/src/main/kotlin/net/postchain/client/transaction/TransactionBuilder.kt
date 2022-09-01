@@ -7,7 +7,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
@@ -21,21 +21,31 @@ class TransactionBuilder(
     private val cryptoSystem: CryptoSystem,
 ) {
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
-    val operations = mutableListOf<GtxOperation>()
+    private val operations = mutableListOf<GtxOperation>()
 
-    fun addNop() = apply {
-        addOperation("nop", GtvFactory.gtv(Instant.now().toEpochMilli()))
-    }
-
+    /**
+     * Adds an operation to this transaction
+     */
     fun addOperation(name: String, vararg args: Gtv) = apply {
         operations.add(GtxOperation(name, *args))
     }
+    /**
+     * Adds a null operation to make the transaction unique
+     */
+    fun addNop() = addOperation("nop", gtv(Instant.now().toEpochMilli()))
 
+
+    /**
+     * Marks this transaction as finished and ready to be signed
+     */
     fun finish(): SignatureBuilder {
         val body = GtxBody(blockchainRid, operations, signers)
         return SignatureBuilder(body)
     }
 
+    /**
+     * Sign this transaction and prepare it to be posted
+     */
     fun sign(vararg sigMaker: SigMaker): PostableTransaction {
         return finish().apply {
             sigMaker.forEach { sign(it) }
@@ -44,30 +54,38 @@ class TransactionBuilder(
 
     inner class SignatureBuilder(private val body: GtxBody, private val check: Boolean = false) {
 
-        val signatures = mutableListOf<Signature>()
+        private val signatures = mutableListOf<Signature>()
         private val txRid = body.calculateTxRid(calculator)
 
+        /**
+         * Sign this transaction
+         */
         fun sign(sigMaker: SigMaker) = apply {
-            val signature = sigMaker.signDigest(txRid)
-            sign(signature)
+            sign(sigMaker.signDigest(txRid))
         }
 
+        /**
+         * Add a signature to this transaction
+         */
         fun sign(signature: Signature) = apply {
             if (signatures.contains(signature)) throw UserMistake("Signature already exists")
             if (signers.find { it.contentEquals(signature.subjectID) } == null) throw UserMistake("Signature belongs to unknown signer")
             if (check && cryptoSystem.verifyDigest(txRid, signature)) {
-                throw UserMistake("Signature is not valid")
+                throw UserMistake("Signature ${signature.subjectID} is not valid")
             }
             signatures.add(signature)
         }
 
-        fun buildTx(): Gtx {
-            if (signatures.size != signers.size) throw UserMistake("${signatures.size} signatures found, expected ${signers.size}")
-            return Gtx(body, signatures.map { it.data })
-        }
+        /**
+         * Build a GTX
+         */
+        fun buildGtx() = Gtx(body, signatures.map { it.data })
 
+        /**
+         * Build a transaction that can be posted
+         */
         fun build(): PostableTransaction {
-            return PostableTransaction(buildTx())
+            return PostableTransaction(buildGtx())
         }
     }
 

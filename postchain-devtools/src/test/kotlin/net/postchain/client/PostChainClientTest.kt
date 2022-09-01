@@ -8,7 +8,6 @@ import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientFactory
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
@@ -75,7 +74,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         // Mock
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val client = createPostChainClient(blockchainRID)
-        assertThrows<UserMistake> {
+        assertThrows<IllegalArgumentException> {
             val txBuilder = client.makeTransaction().finish().build()
         }
 
