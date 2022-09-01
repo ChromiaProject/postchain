@@ -1,5 +1,6 @@
 package net.postchain.gtx
 
+import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
@@ -9,14 +10,19 @@ import net.postchain.gtv.gtxmessages.RawGtxOp
 
 class GtxOperation(val name: String, vararg val args: Gtv) {
 
-    internal fun asn() = RawGtxOp(gtv(name).getRawGtv(), gtv(*args).getRawGtv())
+    internal fun asn() = RawGtxOp(BerUTF8String(name), gtv(*args).getRawGtv())
 
-    fun gtv() = gtv(gtv(name), gtv(args.toList()))
+    /**
+     * Elements are structured like an ordered array with elements:
+     * 1. Operation name [GtvString]
+     * 2. array of arguments [GtvArray]
+     */
+    fun toGtv() = gtv(gtv(name), gtv(args.toList()))
 
     companion object {
         @JvmStatic
         internal fun fromAsn(op: RawGtxOp): GtxOperation {
-            return GtxOperation(op.name.string.toString(), *op.args.array.seqOf.map { GtvDecoder.fromRawGtv(it) }.toTypedArray())
+            return GtxOperation(op.name.toString(), *op.args.array.seqOf.map { GtvDecoder.fromRawGtv(it) }.toTypedArray())
         }
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxOperation {

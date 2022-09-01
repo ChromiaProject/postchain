@@ -1,5 +1,6 @@
 package net.postchain.gtx
 
+import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.gtv.Gtv
@@ -26,16 +27,22 @@ class GtxBody(
     }
 
     internal fun asn() = RawGtxBody(
-        gtv(blockchainRid.data).getRawGtv(),
+        BerOctetString(blockchainRid.data),
         RawGtxBody.Operations(operations.map { it.asn() }),
         Signers(
-            signers.map { gtv(it).getRawGtv() }
+            signers.map { BerOctetString(it) }
         )
     )
 
+    /**
+     * Elements are structured like an ordered array with elements:
+     * 1. blockchainRId [GtvByteArray]
+     * 2. operations [GtvArray]
+     * 3. signers [GtvArray]
+     */
     fun toGtv() = gtv(
         gtv(blockchainRid),
-        gtv(operations.map { it.gtv() }),
+        gtv(operations.map { it.toGtv() }),
         gtv(signers.map { gtv(it) })
     )
 
@@ -43,9 +50,10 @@ class GtxBody(
         @JvmStatic
         internal fun fromAsn(body: RawGtxBody): GtxBody {
             return GtxBody(
-                BlockchainRid(body.blockchainRid.byteArray.value),
+                BlockchainRid(body.blockchainRid.value),
                 body.operations.seqOf.map { GtxOperation.fromAsn(it) },
-                body.signers.seqOf.map { it.byteArray.value })
+                body.signers.seqOf.map { it.value }
+            )
         }
 
         @JvmStatic

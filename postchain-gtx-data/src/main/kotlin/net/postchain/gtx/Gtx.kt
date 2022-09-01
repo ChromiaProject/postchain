@@ -1,9 +1,11 @@
 package net.postchain.gtx
 
 import com.beanit.jasn1.ber.ReverseByteArrayOutputStream
+import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtxmessages.RawGtx
 import net.postchain.gtv.merkle.MerkleHashCalculator
@@ -25,10 +27,19 @@ class Gtx(
         val encoded = ReverseByteArrayOutputStream(1000, true)
         RawGtx(
             gtxBody.asn(),
-            RawGtx.Signatures(signatures.map { gtv(it).getRawGtv() })
+            RawGtx.Signatures(signatures.map { BerOctetString(it) })
         ).encode(encoded, true)
         return encoded.array
     }
+    /**
+     * Elements are structured like an ordered array with elements:
+     * 1. transaction data body [GtvByteArray]
+     * 2. signatures [GtvArray]
+     */
+    fun toGtv() = gtv(
+        gtxBody.toGtv(),
+        gtv(signatures.map { gtv(it) })
+    )
 
     companion object {
         @JvmStatic
@@ -38,7 +49,7 @@ class Gtx(
             decoded.body
             return Gtx(
                 GtxBody.fromAsn(decoded.body),
-                decoded.signatures.seqOf.map { it.byteArray.value }
+                decoded.signatures.seqOf.map { it.value }
             )
         }
 

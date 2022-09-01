@@ -24,7 +24,7 @@ internal class GtxRegressionTest {
         val opData = OpData("foo", arrayOf(gtv("bar"), gtv(1)))
         val gtxOp = GtxOperation("foo", gtv("bar"), gtv(1))
 
-        assertEquals(OpDataSerializer.serializeToGtv(opData), gtxOp.gtv())
+        assertEquals(OpDataSerializer.serializeToGtv(opData), gtxOp.toGtv())
 
         val encoded = ReverseByteArrayOutputStream(1000, true)
         gtxOp.asn().encode(encoded, true)
