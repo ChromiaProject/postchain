@@ -8,6 +8,7 @@ import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.service.AlreadyExistMode
 import net.postchain.service.PostchainService
 
 class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
@@ -88,8 +89,9 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
 
         try {
-            val blockchainRid =
-                postchainService.initializeBlockchain(request.chainId, maybeBrid, request.override, config)
+            val mode = if (request.override) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
+            postchainService.initializeBlockchain(request.chainId, maybeBrid, mode, config)
+            val blockchainRid = postchainService.startBlockchain(request.chainId)
             responseObserver.onNext(InitializeBlockchainReply.newBuilder().run {
                 message = "Blockchain has been initialized with blockchain RID: $blockchainRid"
                 brid = blockchainRid.toHex()
