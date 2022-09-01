@@ -8,27 +8,27 @@ import net.postchain.server.AlreadyExists
 
 class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrpc.PeerServiceImplBase() {
 
-    override fun addPeer(request: AddPeerRequest?, responseObserver: StreamObserver<AddPeerReply>?) {
-        val pubkey = request!!.pubkey
-        verifyPubKey(pubkey)?.let { return responseObserver?.onError(it)!! }
+    override fun addPeer(request: AddPeerRequest, responseObserver: StreamObserver<AddPeerReply>) {
+        val pubkey = request.pubkey
+        verifyPubKey(pubkey)?.let { return responseObserver.onError(it) }
 
         try {
             peerService.addPeer(request.pubkey, request.host, request.port, request.override)
-            responseObserver?.onNext(
+            responseObserver.onNext(
                 AddPeerReply.newBuilder()
                     .setMessage("Peer was added successfully")
                     .build()
             )
-            responseObserver?.onCompleted()
+            responseObserver.onCompleted()
         } catch (e: AlreadyExists) {
-            responseObserver?.onError(
+            responseObserver.onError(
                 Status.ALREADY_EXISTS.withDescription(e.message).asRuntimeException()
             )
         }
     }
 
-    override fun removePeer(request: RemovePeerRequest?, responseObserver: StreamObserver<RemovePeerReply>?) {
-        val pubkey = request!!.pubkey
+    override fun removePeer(request: RemovePeerRequest, responseObserver: StreamObserver<RemovePeerReply>) {
+        val pubkey = request.pubkey
         verifyPubKey(pubkey)?.let { return }
         val removedPeer = peerService.removePeer(pubkey)
 
@@ -37,12 +37,12 @@ class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrp
         } else {
             "Successfully removed peer: ${removedPeer[0]}"
         }
-        responseObserver?.onNext(
+        responseObserver.onNext(
             RemovePeerReply.newBuilder()
                 .setMessage(message)
                 .build()
         )
-        responseObserver?.onCompleted()
+        responseObserver.onCompleted()
     }
 
     private fun verifyPubKey(pubkey: String): StatusRuntimeException? {
@@ -59,7 +59,7 @@ class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrp
         return null
     }
 
-    override fun listPeers(request: ListPeersRequest?, responseObserver: StreamObserver<ListPeersReply>?) {
+    override fun listPeers(request: ListPeersRequest, responseObserver: StreamObserver<ListPeersReply>) {
         val peers = peerService.listPeers()
 
         val message = if (peers.isEmpty()) {
@@ -70,11 +70,11 @@ class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrp
                 "Peers (${peers.size}):\n"
             )
         }
-        responseObserver?.onNext(
+        responseObserver.onNext(
             ListPeersReply.newBuilder()
                 .setMessage(message)
                 .build()
         )
-        responseObserver?.onCompleted()
+        responseObserver.onCompleted()
     }
 }

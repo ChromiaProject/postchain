@@ -4,13 +4,13 @@ import io.grpc.stub.StreamObserver
 
 class DebugServiceGrpcImpl(private val debugService: DebugService) : DebugServiceGrpc.DebugServiceImplBase() {
 
-    override fun debugService(request: DebugRequest?, responseObserver: StreamObserver<DebugReply>?) {
+    override fun debugService(request: DebugRequest, responseObserver: StreamObserver<DebugReply>) {
         val message = debugService.debugService()
-        responseObserver?.onNext(
+        responseObserver.onNext(
             DebugReply.newBuilder()
                 .setMessage(message)
                 .build()
         )
-        responseObserver?.onCompleted()
+        responseObserver.onCompleted()
     }
 }
