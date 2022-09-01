@@ -4,8 +4,8 @@ package net.postchain.gtv
 
 import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.common.BlockchainRid
-import net.postchain.gtv.messages.DictPair
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.gtv.gtvmessages.DictPair
+import net.postchain.gtv.gtvmessages.RawGtv
 import java.math.BigInteger
 
 fun Boolean.toLong() = if (this) 1L else 0L

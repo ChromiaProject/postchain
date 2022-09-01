@@ -1,6 +1,8 @@
-package net.postchain.containers.bpm
+package net.postchain.containers.bpm.fs
 
 import mu.KLogging
+import net.postchain.containers.bpm.ContainerName
+import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.infra.ContainerNodeConfig
 import java.io.File
 import java.nio.file.Path
@@ -24,7 +26,7 @@ class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
                     null
                 } else {
                     val fs = "${config.zfsPoolName}/${containerName.name}"
-                    val quota = resourceLimits.storage.toString()
+                    val quota = resourceLimits.storageMb().toString()
                     val cmd = arrayOf(script, fs, quota)
                     Runtime.getRuntime().exec(cmd).waitFor(10, TimeUnit.SECONDS)
                     if (root.toFile().exists()) {

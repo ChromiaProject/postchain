@@ -3,8 +3,8 @@
 package net.postchain.gtv
 
 import com.beanit.jasn1.ber.types.string.BerUTF8String
-import net.postchain.gtv.messages.DictPair
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.gtv.gtvmessages.DictPair
+import net.postchain.gtv.gtvmessages.RawGtv
 
 data class GtvDictionary private constructor(val dict: Map<String, Gtv>) : GtvCollection() {
 

@@ -1,10 +1,10 @@
 package net.postchain.containers.bpm
 
 import com.spotify.docker.client.messages.ContainerConfig
-import com.spotify.docker.client.messages.ContainerInfo
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
 
 object ContainerConfigFactory {
@@ -52,10 +52,16 @@ object ContainerConfigFactory {
          * DockerPort must be both node and container specific and cannot be -1 or 0 (at least not allowed in Ubuntu.)
          * Therefore, use random port selection
          */
-        val dockerPort = "${containerNodeConfig.subnodeRestApiPort}/tcp"
-        val portBindings = if (restApiConfig.port > -1) {
-            mapOf(dockerPort to listOf(PortBinding.of("0.0.0.0", container.restApiPort)))
-        } else mapOf()
+        val portBindings = mutableMapOf<String, List<PortBinding>>() // { dockerPort -> hostIp:hostPort }
+        val containerPorts = container.containerPorts
+        // rest-api-port
+        val restApiPort = "${containerPorts.restApiPort}/tcp"
+        if (restApiConfig.port > -1) {
+            portBindings[restApiPort] = listOf(PortBinding.of("0.0.0.0", containerPorts.hostRestApiPort))
+        }
+        // admin-rpc-port
+        val adminRpcPort = "${containerPorts.adminRpcPort}/tcp"
+        portBindings[adminRpcPort] = listOf(PortBinding.of("0.0.0.0", containerPorts.hostAdminRpcPort))
 
         /**
          * CPU:
@@ -64,28 +70,27 @@ object ContainerConfigFactory {
          */
 
         // Host config
+        val resources = container.resourceLimits
         val hostConfig = HostConfig.builder()
                 .appendBinds(*volumes.toTypedArray())
                 .portBindings(portBindings)
                 .publishAllPorts(true)
                 .apply {
-                    if (container.resourceLimits.ram > 0) memory(container.resourceLimits.ram)
+                    if (resources.hasRam()) memory(resources.ramBytes())
                 }.apply {
-                    if (container.resourceLimits.cpu > 0) cpuQuota(container.resourceLimits.cpu)
+                    if (resources.hasCpu()) {
+                        cpuPeriod(resources.cpuPeriod())
+                        cpuQuota(resources.cpuQuota())
+                    }
                 }
                 .build()
 
         return ContainerConfig.builder()
                 .image(containerNodeConfig.containerImage)
                 .hostConfig(hostConfig)
-                .exposedPorts(dockerPort)
+                .exposedPorts(portBindings.keys)
                 .env("POSTCHAIN_DEBUG=${restApiConfig.debug}")
                 .build()
-    }
-
-    fun getHostPort(containerInfo: ContainerInfo, containerPort: Int): Int? {
-        val bindings = containerInfo.hostConfig()?.portBindings()?.get("${containerPort}/tcp")
-        return bindings?.firstOrNull()?.hostPort()?.toInt()
     }
 
 }

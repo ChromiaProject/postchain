@@ -1,7 +1,6 @@
 package net.postchain.client.cli
 
-import net.postchain.client.PostchainClientConfig
-import net.postchain.client.core.ConfirmationLevel
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientProvider
@@ -21,7 +20,7 @@ internal class PostTxCommandTest {
         val testConfigPath = this::class.java.getResource("/config.cfg")!!.path
         val testConfig = PostchainClientConfig.fromProperties(testConfigPath)
         val provider: PostchainClientProvider = mock {
-            on { createClient(eq(testConfig.apiUrl), eq(testConfig.blockchainRid), any()) } doReturn client
+            on { createClient(eq(testConfig.apiUrl), eq(testConfig.blockchainRid), any(), any(), any()) } doReturn client
         }
 
         val command = PostTxCommand(provider)
@@ -47,6 +46,6 @@ internal class PostTxCommandTest {
             gtv(listOf(gtv(1), gtv("foo"))),
             gtv(mapOf("a" to gtv("b")))
         )
-        verify(txBuilder).postSync(ConfirmationLevel.NO_WAIT)
+        verify(txBuilder).postSync()
     }
 }

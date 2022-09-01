@@ -6,8 +6,7 @@ import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.arguments.transformAll
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
-import net.postchain.client.PostchainClientConfig
-import net.postchain.client.core.ConfirmationLevel
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -45,12 +44,12 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
 
     internal fun runInternal(config: PostchainClientConfig, awaitConfirmation: Boolean, opName: String, vararg args: Gtv) {
         val sigMaker = cryptoSystem.buildSigMaker(config.pubKeyByteArray, config.privKeyByteArray)
-        clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray))
-                .makeTransaction()
-                .apply {
-                    addOperation(opName, *args)
-                    sign(sigMaker)
-                    postSync(if (awaitConfirmation) ConfirmationLevel.UNVERIFIED else ConfirmationLevel.NO_WAIT)
-                }
+        val client = clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray), config.statusPollCount)
+        client.makeTransaction()
+            .apply {
+                addOperation(opName, *args)
+                sign(sigMaker)
+                if (awaitConfirmation) postSyncAwaitConfirmation() else postSync()
+            }
     }
 }

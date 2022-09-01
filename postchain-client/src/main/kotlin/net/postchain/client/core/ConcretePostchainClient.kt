@@ -2,178 +2,151 @@
 
 package net.postchain.client.core
 
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonObject
-import com.google.gson.reflect.TypeToken
 import mu.KLogging
+import net.postchain.client.config.STATUS_POLL_COUNT
+import net.postchain.client.config.STATUS_POLL_INTERVAL
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.common.tx.TransactionStatus.*
+import net.postchain.common.tx.TransactionStatus.CONFIRMED
+import net.postchain.common.tx.TransactionStatus.REJECTED
+import net.postchain.common.tx.TransactionStatus.UNKNOWN
+import net.postchain.common.tx.TransactionStatus.WAITING
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.data.GTXDataBuilder
-import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.task
-import org.apache.hc.client5.http.classic.methods.HttpGet
-import org.apache.hc.client5.http.classic.methods.HttpPost
-import org.apache.hc.client5.http.impl.classic.HttpClients
-import org.apache.hc.core5.http.io.entity.StringEntity
-import java.io.BufferedReader
-import java.io.InputStream
+import org.http4k.client.ApacheAsyncClient
+import org.http4k.client.AsyncHttpHandler
+import org.http4k.core.Body
+import org.http4k.core.Method
+import org.http4k.core.Request
+import org.http4k.core.Status
+import org.http4k.format.Gson.auto
+import java.lang.Thread.sleep
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
+import java.util.concurrent.CompletionStage
 
-private const val APPLICATION_JSON = "application/json"
+data class Tx(val tx: String)
+data class TxStatus(val status: String?)
+data class Queries(val queries: List<String>)
+data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
-        private val resolver: PostchainNodeResolver,
-        private val blockchainRID: BlockchainRid,
-        private val defaultSigner: DefaultSigner?
+    private val resolver: PostchainNodeResolver,
+    private val blockchainRID: BlockchainRid,
+    private val defaultSigner: DefaultSigner?,
+    private val statusPollCount: Int = STATUS_POLL_COUNT,
+    private val statusPollInterval: Long = STATUS_POLL_INTERVAL,
+    private val client: AsyncHttpHandler = ApacheAsyncClient()
 ) : PostchainClient {
 
     companion object : KLogging()
 
-    // We don't use any adapters b/c this is very simple
-    private val gson = GsonBuilder().create()!!
     private val serverUrl = resolver.getNodeURL(blockchainRID)
-    private val httpClient = HttpClients.createDefault()
     private val blockchainRIDHex = blockchainRID.toHex()
-    private val retrieveTxStatusAttempts = 20
-    private val retrieveTxStatusIntervalMs = 500L
 
     override fun makeTransaction(): GTXTransactionBuilder {
-        return GTXTransactionBuilder(this, blockchainRID, arrayOf(defaultSigner!!.pubkey))
+        return GTXTransactionBuilder(this, blockchainRID, defaultSigner?.let { arrayOf(it.pubkey) } ?: arrayOf())
     }
 
     override fun makeTransaction(signers: Array<ByteArray>): GTXTransactionBuilder {
         return GTXTransactionBuilder(this, blockchainRID, signers)
     }
 
-    override fun postTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): Promise<TransactionResult, Exception> {
-        return task { doPostTransaction(txBuilder, confirmationLevel) }
-    }
 
-    override fun postTransactionSync(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
-        return doPostTransaction(txBuilder, confirmationLevel)
-    }
-
-    override fun query(name: String, gtv: Gtv): Promise<Gtv, Exception> {
-        return task { doQuery(name, gtv) }
-    }
-
-    override fun querySync(name: String, gtv: Gtv) = doQuery(name, gtv)
-
-    private fun doQuery(name: String, gtv: Gtv): Gtv {
-        val httpPost = HttpPost("$serverUrl/query_gtx/$blockchainRIDHex")
+    override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {
+        val queriesLens = Body.auto<Queries>().toLens()
         val gtxQuery = gtv(gtv(name), gtv)
-        val jsonQuery = """{"queries" : ["${GtvEncoder.encodeGtv(gtxQuery).toHex()}"]}""".trimMargin()
-        with(httpPost) {
-            entity = StringEntity(jsonQuery)
-            setHeader("Accept", APPLICATION_JSON)
-            setHeader("Content-type", APPLICATION_JSON)
-        }
-        httpClient.execute(httpPost).use { response ->
-            val contentType: String = response.entity.contentType
-            val responseBody = parseResponse(response.entity.content)
-            if (response.code != 200) {
-                val errorMessage = if (contentType.equals(APPLICATION_JSON, ignoreCase = true)) {
-                    val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                    jsonObject.get("error")?.asString
-                } else {
-                    null
-                }
-                throw UserMistake(errorMessage ?: "Can not make query_gtx api call: ${response.code} ${response.reasonPhrase}")
+        val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
+        val request = queriesLens(
+            Queries(listOf(encodedQuery)),
+            Request(Method.POST, "$serverUrl/query_gtx/$blockchainRIDHex")
+        )
+
+        val r = CompletableFuture<Gtv>()
+        client(request) { res ->
+            if (res.status != Status.OK) {
+                val error = Body.auto<ErrorResponse>().toLens()(res)
+                r.completeExceptionally(UserMistake("Can not make query_gtx api call: ${res.status} ${error.error}"))
             }
-            val type = object : TypeToken<List<String>>() {}.type
-            val gtxHexCode = gson.fromJson<List<String>>(responseBody, type)?.first()
-            return GtvFactory.decodeGtv(gtxHexCode!!.hexStringToByteArray())
+            val respList = Body.auto<List<String>>().toLens()(res)
+            r.complete(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
         }
+        return r
     }
 
-    private fun doPostTransaction(txBuilder: GTXDataBuilder, confirmationLevel: ConfirmationLevel): TransactionResult {
-        val txHex = txBuilder.serialize().toHex()
-        val txJson = """{"tx" : $txHex}"""
-        val txHashHex = txBuilder.getDigestForSigning().toHex()
-
-        fun submitTransaction(): Int {
-            val httpPost = HttpPost("$serverUrl/tx/$blockchainRIDHex")
-            httpPost.setHeader("Content-type", APPLICATION_JSON)
-            httpPost.entity = StringEntity(txJson)
-            val statusCode = httpClient.execute(httpPost).use { response ->
-                if (response.code >= 400) {
-                    response.entity?.let {
-                        val responseBody = parseResponse(it.content)
-                        val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                        val errorString = jsonObject.get("error")?.asString?.uppercase()
-                        if (errorString != null) {
-                            logger.info { "Transaction rejected: $errorString" }
-                        } else {
-                            logger.warn { "No error in response\n$responseBody" }
-                        }
-                    }
-                }
-                response.code
-            }
-            return statusCode
-        }
-
-        when (confirmationLevel) {
-
-            ConfirmationLevel.NO_WAIT -> {
-                val statusCode = submitTransaction()
-                return if (statusCode == 200) {
-                    TransactionResultImpl(WAITING, statusCode)
-                } else {
-                    TransactionResultImpl(REJECTED, statusCode)
-                }
-            }
-
-            ConfirmationLevel.UNVERIFIED -> {
-                val statusCode = submitTransaction()
-                if (statusCode in 400..499) {
-                    return TransactionResultImpl(REJECTED, statusCode)
-                }
-                val httpGet = HttpGet("$serverUrl/tx/$blockchainRIDHex/$txHashHex/status")
-                httpGet.setHeader("Content-type", APPLICATION_JSON)
-
-                // keep polling till getting Confirmed or Rejected
-                var lastKnownTxResult: TransactionResult? = null
-                (0 until retrieveTxStatusAttempts).forEach { _ ->
-                    try {
-                        httpClient.execute(httpGet).use { response ->
-                            response.entity?.let {
-                                val responseBody = parseResponse(it.content)
-                                val jsonObject = gson.fromJson(responseBody, JsonObject::class.java)
-                                val statusString = jsonObject.get("status")?.asString?.uppercase()
-                                if (statusString == null) {
-                                    logger.warn { "No status in response\n$responseBody" }
-                                } else {
-                                    val status = TransactionStatus.valueOf(statusString)
-                                    lastKnownTxResult = TransactionResultImpl(status, response.code)
-                                    if (status == CONFIRMED || status == REJECTED) return lastKnownTxResult!!
-                                }
-
-                                Thread.sleep(retrieveTxStatusIntervalMs)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        logger.warn(e) { "Unable to poll for new block" }
-                        Thread.sleep(retrieveTxStatusIntervalMs)
-                    }
-                }
-
-                return lastKnownTxResult ?: TransactionResultImpl(UNKNOWN, null)
-            }
-
-            else -> throw NotImplementedError("ConfirmationLevel $confirmationLevel is not yet implemented")
-        }
+    override fun querySync(name: String, gtv: Gtv): Gtv = try {
+        query(name, gtv).toCompletableFuture().join()
+    } catch (e: CompletionException) {
+        throw e.cause ?: e
     }
 
-    private fun parseResponse(content: InputStream): String {
-        return content.bufferedReader().use(BufferedReader::readText)
+    override fun postTransactionSync(txBuilder: GTXDataBuilder): TransactionResult = try {
+        postTransaction(txBuilder).toCompletableFuture().join()
+    } catch (e: CompletionException) {
+        throw e.cause ?: e
     }
 
+    override fun postTransaction(txBuilder: GTXDataBuilder): CompletionStage<TransactionResult> {
+        if (!txBuilder.finished) txBuilder.finish()
+        val txLens = Body.auto<Tx>().toLens()
+        val txRid = TxRid(txBuilder.getDigestForSigning().toHex())
+        val tx = Tx(txBuilder.serialize().toHex())
+        val request = txLens(tx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
+        val result = CompletableFuture<TransactionResult>()
+        client(request) { resp ->
+            val status = if (resp.status == Status.OK) WAITING else REJECTED
+            result.complete(TransactionResult(txRid, status, resp.status.code, resp.status.description))
+        }
+        return result
+    }
+
+    override fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult {
+        val resp = postTransactionSync(txBuilder)
+        if (resp.status == REJECTED) {
+            return resp
+        }
+        return awaitConfirmation(resp.txRid, statusPollCount, statusPollInterval)
+    }
+
+    override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {
+        var lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
+        // keep polling till getting Confirmed or Rejected
+        repeat(retries) {
+            try {
+                val deferredPollResult = checkTxStatus(txRid)
+                lastKnownTxResult = deferredPollResult.toCompletableFuture().join()
+                if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
+            } catch (e: Exception) {
+                logger.warn(e) { "Unable to poll for new block" }
+                lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
+            }
+            sleep(pollInterval)
+        }
+        return lastKnownTxResult
+    }
+
+    override fun checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult> {
+        val txStatusLens = Body.auto<TxStatus>().toLens()
+        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/${txRid.rid}/status")
+        val result = CompletableFuture<TransactionResult>()
+        client(validationRequest) { response ->
+            val status =
+                TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
+            result.complete(
+                TransactionResult(
+                    txRid,
+                    status,
+                    response.status.code,
+                    response.status.description
+                )
+            )
+        }
+        return result
+    }
 }

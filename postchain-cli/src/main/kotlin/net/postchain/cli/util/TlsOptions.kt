@@ -5,7 +5,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
 
-class SslOptions : OptionGroup(help = "SSL/TLS configuration options") {
+class TlsOptions : OptionGroup(help = "SSL/TLS configuration options") {
     val certChainFile by option(
         "-ccf",
         "--cert-chain-file",

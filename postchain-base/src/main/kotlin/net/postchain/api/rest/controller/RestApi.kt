@@ -32,10 +32,10 @@ import spark.Service
  * Contains information on the rest API, such as network parameters and available queries
  */
 class RestApi(
-        private val listenPort: Int,
-        private val basePath: String,
-        private val sslCertificate: String? = null,
-        private val sslCertificatePassword: String? = null
+    private val listenPort: Int,
+    private val basePath: String,
+    private val tlsCertificate: String? = null,
+    private val tlsCertificatePassword: String? = null
 ) : Modellable {
 
     val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
@@ -124,8 +124,8 @@ class RestApi(
 
     private fun buildRouter(http: Service) {
         http.port(listenPort)
-        if (sslCertificate != null) {
-            http.secure(sslCertificate, sslCertificatePassword, null, null)
+        if (tlsCertificate != null) {
+            http.secure(tlsCertificate, tlsCertificatePassword, null, null)
         }
 
         http.before { req, res ->

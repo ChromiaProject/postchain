@@ -1,6 +1,6 @@
 package net.postchain.client.cli
 
-import net.postchain.client.PostchainClientConfig
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.gtv.GtvFactory.gtv
@@ -21,7 +21,7 @@ internal class QueryCommandTest {
         val testConfigPath = this::class.java.getResource("/config.cfg")!!.path
         val testConfig = PostchainClientConfig.fromProperties(testConfigPath)
         val provider: PostchainClientProvider = mock {
-            on { createClient(eq(testConfig.apiUrl), eq(testConfig.blockchainRid), any()) } doReturn client
+            on { createClient(eq(testConfig.apiUrl), eq(testConfig.blockchainRid), any(), any(), any()) } doReturn client
         }
 
         val command = QueryCommand(provider)

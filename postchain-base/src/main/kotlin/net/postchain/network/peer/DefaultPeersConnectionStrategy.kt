@@ -17,8 +17,10 @@ import kotlin.random.Random
  *
  * Note: this strategy handles connections to individual peers, which means it needs [PeerConnectionManager].
  */
-class DefaultPeersConnectionStrategy(val connectionManager: PeerConnectionManager,
-                                     val me: NodeRid) : PeersConnectionStrategy {
+class DefaultPeersConnectionStrategy(
+        val connectionManager: PeerConnectionManager,
+        val me: NodeRid,
+) : PeersConnectionStrategy {
 
     private val peerToDelayMap: MutableMap<NodeRid, ExponentialDelay> = mutableMapOf()
     private val timerQueue = ScheduledThreadPoolExecutor(1)
@@ -88,12 +90,15 @@ class DefaultPeersConnectionStrategy(val connectionManager: PeerConnectionManage
         }, delay.getDelayMillisAndIncrease(), TimeUnit.MILLISECONDS)
     }
 
-    override fun duplicateConnectionDetected(chainID: Long, isOriginalOutgoing: Boolean,
-                                             peerId: NodeRid): Boolean {
-        if (shouldIConnect(peerId)) {
-            return !isOriginalOutgoing
+    override fun duplicateConnectionDetected(
+            chainID: Long,
+            isOriginalOutgoing: Boolean,
+            peerId: NodeRid,
+    ): Boolean {
+        return if (shouldIConnect(peerId)) {
+            !isOriginalOutgoing
         } else {
-            return isOriginalOutgoing
+            isOriginalOutgoing
         }
     }
 

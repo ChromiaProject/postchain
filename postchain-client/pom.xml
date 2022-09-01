@@ -40,12 +40,23 @@
 
         <!-- Tools -->
         <dependency>
-            <groupId>nl.komponents.kovenant</groupId>
-            <artifactId>kovenant-core</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-core</artifactId>
+            <version>4.25.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-format-gson</artifactId>
+            <version>4.25.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-client-apache-async</artifactId>
+            <version>4.25.10.1</version>
         </dependency>
         <dependency>
             <groupId>com.madgag.spongycastle</groupId>
@@ -60,12 +71,34 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-configuration2</artifactId>
-            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.willowtreeapps.assertk</groupId>
+            <artifactId>assertk</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito.kotlin</groupId>
+            <artifactId>mockito-kotlin</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

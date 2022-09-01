@@ -24,6 +24,7 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
+import java.lang.Long.max
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant
@@ -621,6 +622,25 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             ORDER BY height LIMIT 1
         """.trimIndent()
         return queryRunner.query(ctx.conn, sql, nullableLongRes, height)
+    }
+
+    override fun listConfigurations(ctx: EContext): List<Long> {
+        val sql = """
+            SELECT height 
+            FROM ${tableConfigurations(ctx)} 
+            ORDER BY height
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, mapListHandler).map { configuration ->
+            configuration["height"] as Long
+        }
+    }
+
+    override fun removeConfiguration(ctx: EContext, height: Long): Int {
+        val lastBlockHeight = getLastBlockHeight(ctx)
+        if (lastBlockHeight >= height) {
+            throw UserMistake("Cannot remove configuration at $height, since last block is already at $lastBlockHeight")
+        }
+        return queryRunner.update(ctx.conn, "DELETE FROM ${tableConfigurations(ctx)} WHERE height = ?", height)
     }
 
     override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {

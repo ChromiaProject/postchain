@@ -26,6 +26,8 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
     companion object {
 
+        const val DEFAULT_PORT: Int = 9870
+
         fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig {
             val params = Parameters().properties()
                     .setFileName(configFile)
@@ -40,6 +42,11 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
         fun toPropertiesFile(config: Configuration, configFile: String) {
             ConfigurationUtils.dump(config, PrintWriter(FileWriter(configFile)))
+        }
+
+        fun removeProperty(config: Configuration, prefix: String) {
+            val keys = config.getKeys(prefix).asSequence().toList()
+            keys.forEach(config::clearProperty)
         }
     }
 
@@ -95,7 +102,7 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
     val port: Int
         get() = System.getenv("POSTCHAIN_PORT")?.toInt()
-            ?: config.getInt("messaging.port", 9870)
+                ?: config.getInt("messaging.port", DEFAULT_PORT)
 
     val pubKeyByteArray: ByteArray
         get() = pubKey.hexStringToByteArray()

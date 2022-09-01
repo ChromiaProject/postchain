@@ -2,18 +2,16 @@ package net.postchain.managed
 
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
-import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.ContainerResourceLimits.Companion.CPU_KEY
-import net.postchain.containers.bpm.ContainerResourceLimits.Companion.RAM_KEY
-import net.postchain.containers.bpm.ContainerResourceLimits.Companion.STORAGE_KEY
+import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.GtvFactory
 
 class BaseDirectoryDataSource(
-    queries: BlockQueries,
-    appConfig: AppConfig,
-    private val containerNodeConfig: ContainerNodeConfig
+        queries: BlockQueries,
+        appConfig: AppConfig,
+        private val containerNodeConfig: ContainerNodeConfig
 ) : BaseManagedNodeDataSource(queries, appConfig),
         DirectoryDataSource {
 
@@ -54,22 +52,20 @@ class BaseDirectoryDataSource(
     // TODO: [et]: directory vs containerId?
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
         return if (containerNodeConfig.testmode) {
-            ContainerResourceLimits(
+            ContainerResourceLimits.fromValues(
                     containerNodeConfig.testmodeResourceLimitsRAM,
                     containerNodeConfig.testmodeResourceLimitsCPU,
                     containerNodeConfig.testmodeResourceLimitsSTORAGE
             )
         } else {
-            val queryReply = queries.query(
+            val resourceLimits = queries.query(
                     "nm_get_container_limits",
                     buildArgs("name" to GtvFactory.gtv(containerId))
             ).get().asDict()
+                    .map { ResourceLimit.valueOf(it.key.uppercase()) to it.value.asInteger() }
+                    .toMap()
 
-            ContainerResourceLimits(
-                    queryReply[RAM_KEY]?.asInteger(),
-                    queryReply[CPU_KEY]?.asInteger(),
-                    queryReply[STORAGE_KEY]?.asInteger()
-            )
+            ContainerResourceLimits(resourceLimits)
         }
     }
 

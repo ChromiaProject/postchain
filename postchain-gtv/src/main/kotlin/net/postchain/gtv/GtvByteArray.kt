@@ -4,7 +4,7 @@ package net.postchain.gtv
 
 import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.toHex
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.gtv.gtvmessages.RawGtv
 import java.util.*
 
 

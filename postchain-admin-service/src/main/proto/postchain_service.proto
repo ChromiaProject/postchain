@@ -13,6 +13,8 @@ service PostchainService {
   rpc InitializeBlockchain (InitializeBlockchainRequest) returns (InitializeBlockchainReply) {} // Adds and starts blockchain
   rpc AddConfiguration (AddConfigurationRequest) returns (AddConfigurationReply) {} // Add configuration at height
   rpc FindBlockchain (FindBlockchainRequest) returns (FindBlockchainReply) {} // Find blockchain rid
+  rpc AddBlockchainReplica (AddBlockchainReplicaRequest) returns (AddBlockchainReplicaReply) {} // Add a bc replica
+  rpc RemoveBlockchainReplica (RemoveBlockchainReplicaRequest) returns (RemoveBlockchainReplicaReply) {} // Remove a bc replica
 }
 
 message InitializeBlockchainRequest {
@@ -22,6 +24,7 @@ message InitializeBlockchainRequest {
     string xml = 3;
     bytes gtv = 4;
   }
+  optional string brid = 5;
 }
 
 message InitializeBlockchainReply {
@@ -66,4 +69,23 @@ message FindBlockchainRequest {
 
 message FindBlockchainReply {
   string brid = 1;
+  bool active = 2;
+}
+
+message AddBlockchainReplicaRequest {
+  string brid = 1;
+  string pubkey = 2;
+}
+
+message AddBlockchainReplicaReply {
+  string message = 1;
+}
+
+message RemoveBlockchainReplicaRequest {
+  string brid = 1;
+  string pubkey = 2;
+}
+
+message RemoveBlockchainReplicaReply {
+  string message = 1;
 }
