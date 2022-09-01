@@ -8,6 +8,9 @@ import net.postchain.PostchainNode
 import net.postchain.config.app.AppConfig
 import net.postchain.server.config.PostchainServerConfig
 import net.postchain.server.service.*
+import net.postchain.service.DebugService
+import net.postchain.service.PeerService
+import net.postchain.service.PostchainService
 
 class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false, private val config: PostchainServerConfig) {
 

@@ -8,6 +8,7 @@ import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.service.PostchainService
 
 class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
     PostchainServiceGrpc.PostchainServiceImplBase() {

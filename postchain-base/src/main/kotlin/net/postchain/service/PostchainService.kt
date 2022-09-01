@@ -1,4 +1,4 @@
-package net.postchain.server.service
+package net.postchain.service
 
 import net.postchain.PostchainNode
 import net.postchain.base.data.DatabaseAccess

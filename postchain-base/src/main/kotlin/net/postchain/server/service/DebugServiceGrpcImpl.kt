@@ -1,6 +1,7 @@
 package net.postchain.server.service
 
 import io.grpc.stub.StreamObserver
+import net.postchain.service.DebugService
 
 class DebugServiceGrpcImpl(private val debugService: DebugService) : DebugServiceGrpc.DebugServiceImplBase() {
 

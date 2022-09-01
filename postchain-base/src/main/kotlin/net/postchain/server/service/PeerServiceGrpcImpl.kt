@@ -5,6 +5,7 @@ import io.grpc.StatusRuntimeException
 import io.grpc.stub.StreamObserver
 import net.postchain.common.exception.AlreadyExists
 import net.postchain.common.hexStringToByteArray
+import net.postchain.service.PeerService
 
 class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrpc.PeerServiceImplBase() {
 
