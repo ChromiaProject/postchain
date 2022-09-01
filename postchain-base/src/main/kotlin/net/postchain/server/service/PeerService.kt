@@ -17,7 +17,7 @@ class PeerService(private val postchainContext: PostchainContext) {
             }
             val targetKey = db.findPeerInfo(ctx, null, null, pubkey)
             if (targetKey.isNotEmpty() && !override) {
-                throw AlreadyExists("public key already added for a host, use to add anyway")
+                throw AlreadyExists("public key already added for a host, use override to add anyway")
             }
             db.addPeerInfo(ctx, host, port, pubkey)
         }
