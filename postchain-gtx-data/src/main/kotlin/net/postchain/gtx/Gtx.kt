@@ -26,7 +26,7 @@ class Gtx(
         if (signatures.size != gtxBody.signers.size) throw UserMistake("Not fully signed")
         val encoded = ReverseByteArrayOutputStream(1000, true)
         RawGtx(
-            gtxBody.asn(),
+            gtxBody.toRaw(),
             RawGtx.Signatures(signatures.map { BerOctetString(it) })
         ).encode(encoded)
         return encoded.array

@@ -27,7 +27,7 @@ internal class GtxRegressionTest {
         assertEquals(OpDataSerializer.serializeToGtv(opData), gtxOp.toGtv())
 
         val encoded = ReverseByteArrayOutputStream(1000, true)
-        gtxOp.asn().encode(encoded, true)
+        gtxOp.toRaw().encode(encoded, true)
 
         GtvDecoder.decodeGtv(encoded.array)
         assertArrayEquals(GtvEncoder.encodeGtv(OpDataSerializer.serializeToGtv(opData)), encoded.array)
@@ -44,7 +44,7 @@ internal class GtxRegressionTest {
         assertArrayEquals(oldBody.calculateRID(calculator), newBody.calculateTxRid(calculator))
 
         val encoded = ReverseByteArrayOutputStream(1000, true)
-        newBody.asn().encode(encoded, true)
+        newBody.toRaw().encode(encoded, true)
 
         val oldEncoded = GtvEncoder.encodeGtv(GtxTransactionBodyDataSerializer.serializeToGtv(oldBody))
 

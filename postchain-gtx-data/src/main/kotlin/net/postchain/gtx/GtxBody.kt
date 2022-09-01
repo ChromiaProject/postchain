@@ -25,9 +25,9 @@ class GtxBody(
         return rid
     }
 
-    internal fun asn() = RawGtxBody(
+    internal fun toRaw() = RawGtxBody(
         BerOctetString(blockchainRid.data),
-        RawGtxBody.Operations(operations.map { it.asn() }),
+        RawGtxBody.Operations(operations.map { it.toRaw() }),
         Signers(signers.map { BerOctetString(it) })
     )
 

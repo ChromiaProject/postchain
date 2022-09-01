@@ -10,7 +10,7 @@ import net.postchain.gtv.gtxmessages.RawGtxOp
 
 class GtxOperation(val name: String, vararg val args: Gtv) {
 
-    internal fun asn() = RawGtxOp(BerUTF8String(name), RawGtxOp.Args(args.map { it.getRawGtv() }))
+    internal fun toRaw() = RawGtxOp(BerUTF8String(name), RawGtxOp.Args(args.map { it.getRawGtv() }))
 
     /**
      * Elements are structured like an ordered array with elements:
