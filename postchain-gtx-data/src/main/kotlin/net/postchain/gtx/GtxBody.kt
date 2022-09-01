@@ -18,6 +18,10 @@ class GtxBody(
     val signers: List<ByteArray>
 ) {
 
+    constructor(blockchainRid: BlockchainRid, operations: Array<GtxOp>, signers: Array<ByteArray>) :
+            this(blockchainRid, operations.toList(), signers.toList())
+
+
     lateinit var rid: Hash
 
     fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>): Hash {

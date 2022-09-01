@@ -7,8 +7,8 @@ import net.postchain.gtv.gtxml.ObjectFactory
 import net.postchain.gtv.gtxml.OperationsType
 import net.postchain.gtv.gtxml.SignaturesType
 import net.postchain.gtv.gtxml.SignersType
-import net.postchain.gtx.data.GTXTransactionData
-import net.postchain.gtx.data.OpData
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxOp
 import java.io.StringWriter
 import javax.xml.bind.JAXB
 
@@ -20,12 +20,12 @@ object GTXMLTransactionEncoder {
     /**
      * Encodes [GTXData] into XML format
      */
-    fun encodeXMLGTXTransaction(gtxTxData: GTXTransactionData): String {
+    fun encodeXMLGTXTransaction(gtxTxData: Gtx): String {
         val transactionType = objectFactory.createTransactionType()
-        transactionType.blockchainRID = gtxTxData.transactionBodyData.blockchainRID.toHex()
-        transactionType.signers = encodeSigners(gtxTxData.transactionBodyData.signers)
-        transactionType.operations = encodeOperations(gtxTxData.transactionBodyData.operations)
-        transactionType.signatures = encodeSignature(gtxTxData.signatures)
+        transactionType.blockchainRID = gtxTxData.gtxBody.blockchainRid.toHex()
+        transactionType.signers = encodeSigners(gtxTxData.gtxBody.signers.toTypedArray())
+        transactionType.operations = encodeOperations(gtxTxData.gtxBody.operations)
+        transactionType.signatures = encodeSignature(gtxTxData.signatures.toTypedArray())
 
         val jaxbElement = objectFactory.createTransaction(transactionType)
 
@@ -43,11 +43,11 @@ object GTXMLTransactionEncoder {
         }
     }
 
-    private fun encodeOperations(operations: Array<OpData>): OperationsType {
+    private fun encodeOperations(operations: List<GtxOp>): OperationsType {
         with(objectFactory.createOperationsType()) {
             operations.forEach {
                 val operationType = objectFactory.createOperationType()
-                operationType.name = it.opName
+                operationType.name = it.name
                 it.args.map(GtvMLEncoder::encodeGTXMLValueToJAXBElement)
                         .toCollection(operationType.parameters)
                 this.operation.add(operationType)

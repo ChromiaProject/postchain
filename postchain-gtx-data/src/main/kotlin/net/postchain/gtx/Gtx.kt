@@ -16,6 +16,8 @@ class Gtx(
     val signatures: List<ByteArray>
 ) {
 
+    constructor(gtxBody: GtxBody, signatures: Array<ByteArray>) : this(gtxBody, signatures.toList())
+
     init {
         require(gtxBody.signers.size == signatures.size) { "Expected ${gtxBody.signers.size} signatures, found ${signatures.size}" }
     }
