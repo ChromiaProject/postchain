@@ -14,7 +14,7 @@ import net.postchain.gtv.merkleHash
 
 class GtxBody(
     val blockchainRid: BlockchainRid,
-    val operations: List<GtxOperation>,
+    val operations: List<GtxOp>,
     val signers: List<ByteArray>
 ) {
 
@@ -48,7 +48,7 @@ class GtxBody(
         internal fun fromAsn(body: RawGtxBody): GtxBody {
             return GtxBody(
                 BlockchainRid(body.blockchainRid.value),
-                body.operations.seqOf.map { GtxOperation.fromAsn(it) },
+                body.operations.seqOf.map { GtxOp.fromAsn(it) },
                 body.signers.seqOf.map { it.value }
             )
         }
@@ -62,7 +62,7 @@ class GtxBody(
                 if (array[2] !is GtvArray) throw IllegalArgumentException("Third element must be an array")
                 return GtxBody(
                     BlockchainRid(array[0].asByteArray()),
-                    array[1].asArray().map { GtxOperation.fromGtv(it) },
+                    array[1].asArray().map { GtxOp.fromGtv(it) },
                     array[2].asArray().map { it.asByteArray() }
                 )
             }

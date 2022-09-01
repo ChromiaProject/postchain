@@ -12,7 +12,6 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.data.factory.GtxTransactionDataFactory
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -27,11 +26,12 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
     val dummyBcRid = BlockchainRid.buildFromHex( "ABABAABABABABABABABABABABABABABAABABABABABABABABABABABABABAABABA")
 
     private fun makeTestTx(id: Long, value: String, blockchainRid: BlockchainRid): ByteArray {
-        val b = GTXDataBuilder(blockchainRid, arrayOf(pubKey(0)), net.postchain.devtools.gtx.myCS)
-        b.addOperation("gtx_test", arrayOf(gtv(id), gtv(value)))
-        b.finish()
-        b.sign(net.postchain.devtools.gtx.myCS.buildSigMaker(pubKey(0), privKey(0)))
-        return b.serialize()
+        val b = GtxBuilder(blockchainRid, listOf(pubKey(0)), net.postchain.devtools.gtx.myCS)
+            .addOperation("gtx_test", gtv(id), gtv(value))
+            .finish()
+            .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(pubKey(0), privKey(0)))
+            .buildGtx()
+        return b.encode()
     }
 
     @Test

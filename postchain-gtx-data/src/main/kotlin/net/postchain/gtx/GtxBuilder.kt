@@ -14,13 +14,15 @@ open class GtxBuilder(
     private val cryptoSystem: CryptoSystem,
 ) {
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
-    private val operations = mutableListOf<GtxOperation>()
+    private val operations = mutableListOf<GtxOp>()
+
+    fun isEmpty() = operations.isEmpty()
 
     /**
      * Adds an operation to this transaction
      */
     fun addOperation(name: String, vararg args: Gtv) = apply {
-        operations.add(GtxOperation(name, *args))
+        operations.add(GtxOp(name, *args))
     }
 
 
@@ -33,10 +35,12 @@ open class GtxBuilder(
     }
 
 
-    inner class GtxSignBuilder(private val body: GtxBody, private val check: Boolean = false) {
+    inner class GtxSignBuilder(private val body: GtxBody, private val check: Boolean = true) {
 
         private val signatures = mutableListOf<Signature>()
-        private val txRid = body.calculateTxRid(calculator)
+        val txRid = body.calculateTxRid(calculator)
+
+        fun isFullySigned() = signatures.size == body.signers.size
 
         /**
          * Sign this transaction
@@ -51,7 +55,7 @@ open class GtxBuilder(
         fun sign(signature: Signature) = apply {
             if (signatures.contains(signature)) throw UserMistake("Signature already exists")
             if (signers.find { it.contentEquals(signature.subjectID) } == null) throw UserMistake("Signature belongs to unknown signer")
-            if (check && cryptoSystem.verifyDigest(txRid, signature)) {
+            if (check && !cryptoSystem.verifyDigest(txRid, signature)) {
                 throw UserMistake("Signature ${signature.subjectID} is not valid")
             }
             signatures.add(signature)

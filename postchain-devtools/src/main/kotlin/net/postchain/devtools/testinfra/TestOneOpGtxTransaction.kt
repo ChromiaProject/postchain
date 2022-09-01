@@ -7,7 +7,8 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
-import net.postchain.gtx.data.GTXDataBuilder
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBuilder
 
 /**
  * This represents a "real" GTX transaction (which means it can be transformed to GTV and GTX without generating errors)
@@ -34,7 +35,7 @@ open class TestOneOpGtxTransaction(
     protected val cryptoSystem = factory.cs
 
     // Cache
-    protected var cachedBuilder: GTXDataBuilder? = null
+    protected var cachedGtx: Gtx? = null
     protected var cachedGtxTx: GTXTransaction? = null
 
     /**
@@ -45,7 +46,7 @@ open class TestOneOpGtxTransaction(
 
 
     fun getGTXTransaction(): GTXTransaction {
-        if (cachedBuilder == null) {
+        if (cachedGtx == null) {
             buildTheTx()
         }
 
@@ -58,7 +59,7 @@ open class TestOneOpGtxTransaction(
      * @return a binary representation of the TX
      */
     fun getRawData(): ByteArray {
-        if (cachedBuilder == null) {
+        if (cachedGtx == null) {
             buildTheTx()
         }
 
@@ -69,7 +70,7 @@ open class TestOneOpGtxTransaction(
      * Returns the RID of the cachedGtxTx.
      */
     fun getRID(): Hash {
-        if (cachedBuilder == null) {
+        if (cachedGtx == null) {
             buildTheTx()
         }
 
@@ -77,7 +78,7 @@ open class TestOneOpGtxTransaction(
     }
 
     fun getHash(): Hash {
-        if (cachedBuilder == null) {
+        if (cachedGtx == null) {
             buildTheTx()
         }
 
@@ -89,16 +90,17 @@ open class TestOneOpGtxTransaction(
      * real GXT TX (that's why we are using this class, right)
      */
     open fun buildTheTx() {
-        val b = GTXDataBuilder(blockchainRID, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
         val arg0 = GtvFactory.gtv(1.toLong())
         val arg1 = GtvFactory.gtv("${id} and ${id}")
-        b.addOperation(op_name, arrayOf(arg0, arg1))
-        b.finish()
-        b.sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
-        cachedBuilder = b
+        val gtx = GtxBuilder(blockchainRID, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+            .addOperation(op_name, arg0, arg1)
+            .finish()
+            .sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
+            .buildGtx()
+        cachedGtx = gtx
 
         // So, the question here is: are we doing any work twice? I don't think so
         //     (apart from the relatively cheap transformation between GTV and GTX)
-        cachedGtxTx = factory.build(b.getGTXTransactionData())
+        cachedGtxTx = factory.build(gtx)
     }
 }

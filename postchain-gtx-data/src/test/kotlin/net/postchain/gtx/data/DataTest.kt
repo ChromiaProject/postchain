@@ -3,14 +3,20 @@
 package net.postchain.gtx.data
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import org.junit.jupiter.api.Assertions.*
+import net.postchain.gtx.GtxBuilder
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 
 fun mustThrowError(msg: String, code: () -> Unit) {
@@ -23,20 +29,20 @@ fun mustThrowError(msg: String, code: () -> Unit) {
 
 class GTXDataTest {
 
-    private fun addOperations(b: GTXDataBuilder, signerPub: List<ByteArray>) {
+    private fun addOperations(b: GtxBuilder, signerPub: List<ByteArray>) {
         // primitives
-        b.addOperation("hello", arrayOf(GtvNull, gtv(42), gtv("Wow"), gtv(signerPub[0])))
+        b.addOperation("hello", GtvNull, gtv(42), gtv("Wow"), gtv(signerPub[0]))
         // array of primitives
-        b.addOperation("bro", arrayOf(gtv(GtvNull, gtv(2), gtv("Nope"))))
+        b.addOperation("bro", gtv(GtvNull, gtv(2), gtv("Nope")))
         // dict
-        b.addOperation("dictator", arrayOf(gtv(mapOf("two" to gtv(2), "five" to GtvNull))))
+        b.addOperation("dictator", gtv(mapOf("two" to gtv(2), "five" to GtvNull)))
         // complex structure
-        b.addOperation("soup", arrayOf(
+        b.addOperation("soup",
                 // map with array
                 gtv(mapOf("array" to gtv(gtv(1), gtv(2), gtv(3)))),
                 // array with map
                 gtv(gtv(mapOf("inner" to gtv("space"))), GtvNull)
-        ))
+        )
     }
 
     @Test
@@ -45,45 +51,48 @@ class GTXDataTest {
         val signerPriv = (0..3).map(::privKey)
         val crypto = Secp256K1CryptoSystem()
 
-        val b = GTXDataBuilder(BlockchainRid.buildRepeat(0), signerPub.slice(0..2).toTypedArray(), crypto)
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), signerPub.slice(0..2), crypto)
         addOperations(b, signerPub)
-        b.finish()
-        b.sign(crypto.buildSigMaker(signerPub[0], signerPriv[0]))
+        val txBuilder = b.finish()
+            .sign(crypto.buildSigMaker(signerPub[0], signerPriv[0]))
 
         // try recreating from a serialized copy
-        val b2 = GTXDataBuilder.decode(b.serialize(), crypto)
-        val txBodyMerkleRoot = b2.getDigestForSigning()
+        assertThrows<IllegalArgumentException> {
+            txBuilder.buildGtx()
+        }
         val sigMaker = crypto.buildSigMaker(signerPub[1], signerPriv[1])
+        val txBodyMerkleRoot = txBuilder.txRid
         val signature = sigMaker.signDigest(txBodyMerkleRoot)
-        b2.addSignature(signature)
+        txBuilder.sign(signature)
+        assertThrows<UserMistake> {  // Should not accept duplicate signatures
+            txBuilder.sign(signature)
+        }
+        assertThrows<UserMistake> {
+            val signature1 = Signature(signerPub[2], signerPub[2])
+            txBuilder.sign(signature1)
+        }
 
-        mustThrowError("Allows duplicate signature") {
-            b2.addSignature(signature, true)
-        }
-        mustThrowError("Allows invalid signature") {
-            b2.addSignature(Signature(signerPub[2], signerPub[2]), true)
-        }
-        mustThrowError("Allows signature from wrong participant") {
+        assertThrows<UserMistake> {  // Allows signature from wrong participant
             val signatureMaker = crypto.buildSigMaker(signerPub[3], signerPriv[3])
             val wrongSignature = signatureMaker.signDigest(txBodyMerkleRoot)
-            b2.addSignature(wrongSignature, true)
+            txBuilder.sign(wrongSignature)
         }
 
         val sigMaker2 = crypto.buildSigMaker(signerPub[2], signerPriv[2])
-        b2.sign(sigMaker2)
+        txBuilder.sign(sigMaker2)
 
-        assertTrue(b2.isFullySigned())
+        assertTrue(txBuilder.isFullySigned())
 
         //val d = decodeGTXData(b2.serialize())
-        val d: GTXTransactionData = decodeGTXTransactionData(b2.serialize())
-        val body = d.transactionBodyData
+        val d = decodeGTXTransactionData(txBuilder.buildGtx().encode())
+        val body = d.gtxBody
 
-        assertTrue(body.signers.contentDeepEquals(
+        assertTrue(body.signers.toTypedArray().contentDeepEquals(
                 signerPub.slice(0..2).toTypedArray()
         ))
         assertEquals(3, d.signatures.size)
         assertEquals(4, body.operations.size)
-        assertEquals("bro", body.operations[1].opName)
+        assertEquals("bro", body.operations[1].name)
         val op0 = body.operations[0]
         assertTrue(op0.args[0].isNull())
         assertEquals(42, op0.args[1].asInteger())

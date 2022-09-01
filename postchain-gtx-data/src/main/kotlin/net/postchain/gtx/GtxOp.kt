@@ -8,7 +8,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.gtxmessages.RawGtxOp
 
-class GtxOperation(val name: String, vararg val args: Gtv) {
+class GtxOp(val name: String, vararg val args: Gtv) {
 
     internal fun toRaw() = RawGtxOp(BerUTF8String(name), RawGtxOp.Args(args.map { it.getRawGtv() }))
 
@@ -21,16 +21,16 @@ class GtxOperation(val name: String, vararg val args: Gtv) {
 
     companion object {
         @JvmStatic
-        internal fun fromAsn(op: RawGtxOp): GtxOperation {
-            return GtxOperation(op.name.toString(), *op.args.seqOf.map { GtvDecoder.fromRawGtv(it) }.toTypedArray())
+        internal fun fromAsn(op: RawGtxOp): GtxOp {
+            return GtxOp(op.name.toString(), *op.args.seqOf.map { GtvDecoder.fromRawGtv(it) }.toTypedArray())
         }
         @JvmStatic
-        fun fromGtv(gtv: Gtv): GtxOperation {
+        fun fromGtv(gtv: Gtv): GtxOp {
             if ((gtv !is GtvArray) && gtv.asArray().size != 2) throw IllegalArgumentException("Gtv must be an array of size 2")
             gtv.asArray().let { array ->
                 if (array[0] !is GtvString) throw IllegalArgumentException("First element must be a string")
                 if (array[1] !is GtvArray) throw IllegalArgumentException("Second element must be an array")
-                return GtxOperation(array[0].asString(), array[1])
+                return GtxOp(array[0].asString(), *array[1].asArray())
             }
         }
     }

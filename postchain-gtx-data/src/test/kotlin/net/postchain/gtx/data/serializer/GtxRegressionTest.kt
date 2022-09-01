@@ -9,7 +9,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
-import net.postchain.gtx.GtxOperation
+import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.GTXTransactionBodyData
 import net.postchain.gtx.data.GTXTransactionData
 import net.postchain.gtx.data.OpData
@@ -22,7 +22,7 @@ internal class GtxRegressionTest {
     @Test
     fun gtxOp() {
         val opData = OpData("foo", arrayOf(gtv("bar"), gtv(1)))
-        val gtxOp = GtxOperation("foo", gtv("bar"), gtv(1))
+        val gtxOp = GtxOp("foo", gtv("bar"), gtv(1))
 
         assertEquals(OpDataSerializer.serializeToGtv(opData), gtxOp.toGtv())
 
@@ -31,6 +31,7 @@ internal class GtxRegressionTest {
 
         GtvDecoder.decodeGtv(encoded.array)
         assertArrayEquals(GtvEncoder.encodeGtv(OpDataSerializer.serializeToGtv(opData)), encoded.array)
+        assertArrayEquals(GtvEncoder.encodeGtv(gtxOp.toGtv()), encoded.array)
     }
 
     @Test
@@ -50,15 +51,17 @@ internal class GtxRegressionTest {
 
         GtvDecoder.decodeGtv(encoded.array)
         assertArrayEquals(oldEncoded, encoded.array)
+        assertArrayEquals(GtvEncoder.encodeGtv(newBody.toGtv()), encoded.array)
     }
 
     @Test
     fun gtx() {
         val brid = BlockchainRid.ZERO_RID
-        val newTx = Gtx(GtxBody(brid, listOf(), listOf()), listOf())
-        val oldTx = GTXTransactionData(GTXTransactionBodyData(brid, arrayOf(), arrayOf()), arrayOf())
+        val newTx = Gtx(GtxBody(brid, listOf(GtxOp("foo", gtv(1))), listOf()), listOf())
+        val oldTx = GTXTransactionData(GTXTransactionBodyData(brid, arrayOf(OpData("foo", arrayOf(gtv(1)))), arrayOf()), arrayOf())
 
         GtvDecoder.decodeGtv(newTx.encode())
         assertArrayEquals(oldTx.serialize(), newTx.encode())
+        assertArrayEquals(GtvEncoder.encodeGtv(newTx.toGtv()), newTx.encode())
     }
 }

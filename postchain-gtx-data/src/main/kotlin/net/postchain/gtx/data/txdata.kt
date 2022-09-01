@@ -4,15 +4,9 @@ package net.postchain.gtx.data
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
-import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.exception.UserMistake
-import net.postchain.crypto.CryptoSystem
-import net.postchain.crypto.SigMaker
-import net.postchain.crypto.Signature
 import net.postchain.gtv.*
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.MerkleHashCalculator
-import net.postchain.gtx.data.factory.GtxTransactionDataFactory
+import net.postchain.gtx.Gtx
 import net.postchain.gtx.data.serializer.GtxTransactionBodyDataSerializer
 import net.postchain.gtx.data.serializer.GtxTransactionDataSerializer
 import java.util.*
@@ -142,119 +136,10 @@ data class GTXTransactionData(
 }
 
 
-fun decodeGTXTransactionData(_rawData: ByteArray): GTXTransactionData {
+fun decodeGTXTransactionData(_rawData: ByteArray): Gtx {
     // Decode to RawGTV
     val gtv: Gtv = GtvDecoder.decodeGtv(_rawData)
 
     // GTV -> GTXTransactionData
-    return GtxTransactionDataFactory.deserializeFromGtv(gtv)
-}
-
-// TODO: cache data for signing and digest
-
-/**
- * Used for signing
- */
-class GTXDataBuilder(val blockchainRID: BlockchainRid,
-                     val signers: Array<ByteArray>,
-                     val crypto: CryptoSystem,
-                     val signatures: Array<ByteArray>,
-                     val operations: MutableList<OpData>,
-                     var finished: Boolean) {
-
-    val calculator = GtvMerkleHashCalculator(crypto)
-
-    // construct empty builder
-    constructor(blockchainRID: BlockchainRid,
-                signers: Array<ByteArray>,
-                crypto: CryptoSystem) :
-            this(
-                    blockchainRID,
-                    signers,
-                    crypto,
-                    Array(signers.size, { EMPTY_SIGNATURE }),
-                    mutableListOf<OpData>(),
-                    false)
-
-    companion object {
-        fun decode(bytes: ByteArray, crypto: CryptoSystem, finished: Boolean = true): GTXDataBuilder {
-            val gtvData = GtvFactory.decodeGtv(bytes)
-            val txData = GtxTransactionDataFactory.deserializeFromGtv(gtvData)
-            val txBody = txData.transactionBodyData
-            return GTXDataBuilder(
-                    txBody.blockchainRID,
-                    txBody.signers,
-                    crypto,
-                    txData.signatures,
-                    txBody.operations.toMutableList(),
-                    finished)
-        }
-    }
-
-    fun finish() {
-        finished = true
-    }
-
-    fun isFullySigned(): Boolean {
-        return signatures.all { !it.contentEquals(EMPTY_SIGNATURE) }
-    }
-
-    fun addOperation(opName: String, args: Array<Gtv>) {
-        if (finished) throw ProgrammerMistake("Already finished")
-        operations.add(OpData(opName, args))
-    }
-
-    fun verifySignature(s: Signature): Boolean {
-        return crypto.verifyDigest(getDigestForSigning(), s)
-    }
-
-    fun addSignature(s: Signature, check: Boolean = true) {
-        if (!finished) throw ProgrammerMistake("Must be finished before signing")
-
-        if (check) {
-            if (!verifySignature(s)) {
-                throw UserMistake("Signature is not valid")
-            }
-        }
-
-        val idx = signers.indexOfFirst { it.contentEquals(s.subjectID) }
-        if (idx != -1) {
-            if (signatures[idx].contentEquals(EMPTY_SIGNATURE)) {
-                signatures[idx] = s.data
-            } else throw UserMistake("Signature already exists")
-        } else throw UserMistake("Singer not found")
-    }
-
-    /**
-     * @return Merkle root hash of transaction body
-     */
-    fun getDigestForSigning(): ByteArray {
-        if (!finished) throw ProgrammerMistake("Must be finished before signing")
-
-        return getGTXTransactionBodyData().calculateRID(calculator)
-    }
-
-    /**
-     * @param sigMaker can create signatures
-     * @return a signed merkle root of the TX body
-     */
-    fun sign(sigMaker: SigMaker) {
-        addSignature(sigMaker.signDigest(getDigestForSigning()), false)
-    }
-
-    fun getGTXTransactionBodyData(): GTXTransactionBodyData {
-        return GTXTransactionBodyData(
-                blockchainRID,
-                operations.toTypedArray(),
-                signers)
-    }
-
-    fun getGTXTransactionData(): GTXTransactionData {
-        val body = getGTXTransactionBodyData()
-        return GTXTransactionData(body, signatures)
-    }
-
-    fun serialize(): ByteArray {
-        return getGTXTransactionData().serialize()
-    }
+    return Gtx.fromGtv(gtv)
 }
