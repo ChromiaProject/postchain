@@ -21,17 +21,14 @@ class GtxBody(
     lateinit var rid: Hash
 
     fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>): Hash {
-        if (this::rid.isInitialized) return rid
-        rid = toGtv().merkleHash(calculator)
+        if (!this::rid.isInitialized) rid = toGtv().merkleHash(calculator)
         return rid
     }
 
     internal fun asn() = RawGtxBody(
         BerOctetString(blockchainRid.data),
         RawGtxBody.Operations(operations.map { it.asn() }),
-        Signers(
-            signers.map { BerOctetString(it) }
-        )
+        Signers(signers.map { BerOctetString(it) })
     )
 
     /**

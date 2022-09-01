@@ -10,7 +10,7 @@ import net.postchain.gtv.gtxmessages.RawGtxOp
 
 class GtxOperation(val name: String, vararg val args: Gtv) {
 
-    internal fun asn() = RawGtxOp(BerUTF8String(name), gtv(*args).getRawGtv())
+    internal fun asn() = RawGtxOp(BerUTF8String(name), RawGtxOp.Args(args.map { it.getRawGtv() }))
 
     /**
      * Elements are structured like an ordered array with elements:
@@ -22,7 +22,7 @@ class GtxOperation(val name: String, vararg val args: Gtv) {
     companion object {
         @JvmStatic
         internal fun fromAsn(op: RawGtxOp): GtxOperation {
-            return GtxOperation(op.name.toString(), *op.args.array.seqOf.map { GtvDecoder.fromRawGtv(it) }.toTypedArray())
+            return GtxOperation(op.name.toString(), *op.args.seqOf.map { GtvDecoder.fromRawGtv(it) }.toTypedArray())
         }
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxOperation {

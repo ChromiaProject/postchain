@@ -28,7 +28,7 @@ class Gtx(
         RawGtx(
             gtxBody.asn(),
             RawGtx.Signatures(signatures.map { BerOctetString(it) })
-        ).encode(encoded, true)
+        ).encode(encoded)
         return encoded.array
     }
     /**

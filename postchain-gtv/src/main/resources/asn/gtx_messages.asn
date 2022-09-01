@@ -8,7 +8,7 @@ IMPORTS RawGtv FROM GtvMessages;
     --  [ string, [ gtv ] ]
 	RawGtxOp ::= [5] EXPLICIT SEQUENCE {
 		name [2] EXPLICIT UTF8String, -- RawGtv { string } --
-		args RawGtv { array }
+		args [5] EXPLICIT SEQUENCE OF RawGtv -- RawGtv { array } --
 	}
 
     -- Gtx Body
