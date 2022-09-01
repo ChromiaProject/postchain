@@ -17,15 +17,14 @@ import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-internal class OpDataSerializerTest {
+internal class GtxRegressionTest {
 
     @Test
-    fun opData() {
+    fun gtxOp() {
         val opData = OpData("foo", arrayOf(gtv("bar"), gtv(1)))
         val gtxOp = GtxOperation("foo", gtv("bar"), gtv(1))
 
         assertEquals(OpDataSerializer.serializeToGtv(opData), gtxOp.gtv())
-
 
         val encoded = ReverseByteArrayOutputStream(1000, true)
         gtxOp.asn().encode(encoded, true)
@@ -35,7 +34,7 @@ internal class OpDataSerializerTest {
     }
 
     @Test
-    fun txRid() {
+    fun gtxBody() {
         val calculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
         val brid = BlockchainRid.ZERO_RID
 
@@ -54,11 +53,12 @@ internal class OpDataSerializerTest {
     }
 
     @Test
-    fun encode() {
-        val brid = BlockchainRid.buildFromHex("ABABABABAABABABABABABABABABABABBABABABABBAABABABABABABABABABABAA")
+    fun gtx() {
+        val brid = BlockchainRid.ZERO_RID
         val newTx = Gtx(GtxBody(brid, listOf(), listOf()), listOf())
         val oldTx = GTXTransactionData(GTXTransactionBodyData(brid, arrayOf(), arrayOf()), arrayOf())
 
+        GtvDecoder.decodeGtv(newTx.encode())
         assertArrayEquals(oldTx.serialize(), newTx.encode())
     }
 }

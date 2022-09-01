@@ -14,6 +14,10 @@ class Gtx(
     val signatures: List<ByteArray>
 ) {
 
+    init {
+        require(gtxBody.signers.size == signatures.size) { "Expected ${gtxBody.signers.size} signatures, found ${signatures.size}" }
+    }
+
     fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>) = gtxBody.calculateTxRid(calculator)
 
     fun encode(): ByteArray {
