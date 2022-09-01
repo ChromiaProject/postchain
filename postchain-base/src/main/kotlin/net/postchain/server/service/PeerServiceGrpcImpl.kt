@@ -29,7 +29,7 @@ class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrp
 
     override fun removePeer(request: RemovePeerRequest, responseObserver: StreamObserver<RemovePeerReply>) {
         val pubkey = request.pubkey
-        verifyPubKey(pubkey)?.let { return }
+        verifyPubKey(pubkey)?.let { return responseObserver.onError(it) }
         val removedPeer = peerService.removePeer(pubkey)
 
         val message = if (removedPeer.isEmpty()) {
