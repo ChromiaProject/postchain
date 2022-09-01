@@ -4,8 +4,8 @@ import io.grpc.stub.StreamObserver
 
 class DebugServiceGrpcImpl(private val debugService: DebugService) : DebugServiceGrpc.DebugServiceImplBase() {
 
-    override fun debugService(request: DebugRequest, responseObserver: StreamObserver<DebugReply>) {
-        val message = debugService.debugService()
+    override fun debugInfo(request: DebugRequest, responseObserver: StreamObserver<DebugReply>) {
+        val message = debugService.debugInfo()
         responseObserver.onNext(
             DebugReply.newBuilder()
                 .setMessage(message)

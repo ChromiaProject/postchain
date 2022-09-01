@@ -8,7 +8,7 @@ class DebugService(private val nodeDiagnosticContext: NodeDiagnosticContext?) {
 
     private val jsonBuilder = JsonFactory.makePrettyJson()
 
-    fun debugService(): String =
+    fun debugInfo(): String =
         if (nodeDiagnosticContext == null) {
             "Debug mode is not enabled"
         } else {
