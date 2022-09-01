@@ -14,4 +14,8 @@ class TransactionIncorrect(message: String, cause: Exception? = null) : UserMist
  */
 class TransactionFailed(message: String, cause: Exception? = null) : UserMistake(message, cause)
 
+class NotFound(message: String, cause: Exception? = null) : UserMistake(message, cause)
+
+class AlreadyExists(message: String, cause: Exception? = null) : UserMistake(message, cause)
+
 open class ProgrammerMistake(message: String, cause: Exception? = null) : RuntimeException(message, cause)
