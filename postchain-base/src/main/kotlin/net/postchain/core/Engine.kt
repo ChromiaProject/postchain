@@ -59,7 +59,7 @@ interface BlockchainProcess {
  *  Manages a set of [BlockchainProcess]:es (see the implementations for detailed documentation)
  */
 interface BlockchainProcessManager : Shutdownable, Synchronizable {
-    fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid?
+    fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid
     fun retrieveBlockchain(chainId: Long): BlockchainProcess?
     fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean = false)
 }

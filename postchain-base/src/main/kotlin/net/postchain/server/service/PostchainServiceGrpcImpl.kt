@@ -28,6 +28,8 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             responseObserver.onCompleted()
         } catch (e: NotFound) {
             responseObserver.onError(Status.NOT_FOUND.withDescription(e.message).asRuntimeException())
+        } catch (e: UserMistake) {
+            responseObserver.onError(Status.INTERNAL.withDescription(e.message).asRuntimeException())
         }
     }
 
@@ -101,6 +103,10 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         } catch (e: AlreadyExists) {
             responseObserver.onError(
                 Status.ALREADY_EXISTS.withDescription(e.message).asRuntimeException()
+            )
+        } catch (e: NotFound) {
+            responseObserver.onError(
+                Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
             )
         } catch (e: UserMistake) {
             responseObserver.onError(

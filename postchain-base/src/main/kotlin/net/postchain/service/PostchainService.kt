@@ -15,7 +15,7 @@ import net.postchain.gtv.GtvEncoder
 
 class PostchainService(private val postchainNode: PostchainNode) {
     fun startBlockchain(chainId: Long): BlockchainRid {
-        return postchainNode.startBlockchain(chainId) ?: throw NotFound("Blockchain with id $chainId not found in db.")
+        return postchainNode.startBlockchain(chainId)
     }
 
     fun stopBlockchain(chainId: Long) {

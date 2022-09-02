@@ -2,6 +2,8 @@
 
 package net.postchain.cli
 
+import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
 import net.postchain.base.BaseConfigurationDataStore
@@ -13,6 +15,7 @@ import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
@@ -23,6 +26,8 @@ import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFileReader
+import net.postchain.metrics.CHAIN_IID_TAG
+import net.postchain.metrics.NODE_PUBKEY_TAG
 import net.postchain.service.AlreadyExistMode
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
@@ -30,7 +35,7 @@ import java.sql.Connection
 import java.sql.SQLException
 import java.util.concurrent.TimeoutException
 
-object CliExecution {
+object CliExecution : KLogging() {
 
     /**
      * @return blockchain RID
@@ -242,7 +247,22 @@ object CliExecution {
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
 
         with(PostchainNode(appConfig, wipeDb = false, debug = debug)) {
-            chainIds.forEach { startBlockchain(it) }
+            chainIds.forEach {
+                withLoggingContext(
+                    NODE_PUBKEY_TAG to appConfig.pubKey,
+                    CHAIN_IID_TAG to it.toString()
+                ) {
+                    try {
+                        startBlockchain(it)
+                    } catch (e: NotFound) {
+                        logger.error(e.message)
+                    } catch (e: UserMistake) {
+                        logger.error(e.message)
+                    } catch (e: Exception) {
+                        logger.error(e) { e.message }
+                    }
+                }
+            }
         }
     }
 
