@@ -126,45 +126,43 @@ open class BaseBlockchainProcessManager(
                         stopBlockchain(chainId, bTrace, true)
 
                         startInfo("Starting of blockchain", chainId)
-                        withReadWriteConnection(storage, chainId) { eContext ->
+                        val blockchainConfig = withReadWriteConnection(storage, chainId) { eContext ->
                             val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
                             if (configuration != null) {
-
-                                val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                                        configuration, eContext, NODE_ID_AUTO, chainId
+                                blockchainInfrastructure.makeBlockchainConfiguration(
+                                    configuration, eContext, NODE_ID_AUTO, chainId
                                 )
-
-                                withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
-                                    val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
-                                    startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
-
-                                    val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
-                                    val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
-                                    startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
-
-                                    createAndRegisterBlockchainProcess(
-                                            chainId,
-                                            blockchainConfig,
-                                            processName,
-                                            engine,
-                                            awaitPermissionToProcessMessages(blockchainConfig)
-                                    )
-                                    logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
-
-                                    startInfoDebug(
-                                            "Blockchain has been started",
-                                            processName,
-                                            chainId,
-                                            blockchainConfig.blockchainRid,
-                                            bTrace
-                                    )
-                                }
-                                blockchainConfig.blockchainRid
                             } else {
                                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
                             }
-
                         }
+
+                        withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
+                            val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
+                            startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
+
+                            val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
+                            val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
+                            startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
+
+                            createAndRegisterBlockchainProcess(
+                                    chainId,
+                                    blockchainConfig,
+                                    processName,
+                                    engine,
+                                    awaitPermissionToProcessMessages(blockchainConfig)
+                            )
+                            logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
+
+                            startInfoDebug(
+                                    "Blockchain has been started",
+                                    processName,
+                                    chainId,
+                                    blockchainConfig.blockchainRid,
+                                    bTrace
+                            )
+                        }
+                        blockchainConfig.blockchainRid
                     } finally {
                         scheduledForStart.remove(chainId)
                     }
