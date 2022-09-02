@@ -8,7 +8,9 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtxmessages.RawGtxBody
+import net.postchain.gtv.gtxmessages.RawGtxBody.Signers
 import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkleHash
 
 class GtxBody(
     val blockchainRid: BlockchainRid,
@@ -19,20 +21,25 @@ class GtxBody(
     lateinit var rid: Hash
 
     fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>): Hash {
-        if (this::rid.isInitialized) return rid
-        rid = calculator.calculateLeafHash(toGtv())
+        if (!this::rid.isInitialized) rid = toGtv().merkleHash(calculator)
         return rid
     }
 
-    internal fun asn() = RawGtxBody(
+    internal fun toRaw() = RawGtxBody(
         BerOctetString(blockchainRid.data),
-        RawGtxBody.Operations(operations.map { it.asn() }),
-        RawGtxBody.Signers(signers.map { BerOctetString(it) })
+        RawGtxBody.Operations(operations.map { it.toRaw() }),
+        Signers(signers.map { BerOctetString(it) })
     )
 
+    /**
+     * Elements are structured like an ordered array with elements:
+     * 1. blockchainRId [GtvByteArray]
+     * 2. operations [GtvArray]
+     * 3. signers [GtvArray]
+     */
     fun toGtv() = gtv(
         gtv(blockchainRid),
-        gtv(operations.map { it.gtv() }),
+        gtv(operations.map { it.toGtv() }),
         gtv(signers.map { gtv(it) })
     )
 
@@ -42,7 +49,8 @@ class GtxBody(
             return GtxBody(
                 BlockchainRid(body.blockchainRid.value),
                 body.operations.seqOf.map { GtxOperation.fromAsn(it) },
-                body.signers.seqOf.map { it.value })
+                body.signers.seqOf.map { it.value }
+            )
         }
 
         @JvmStatic

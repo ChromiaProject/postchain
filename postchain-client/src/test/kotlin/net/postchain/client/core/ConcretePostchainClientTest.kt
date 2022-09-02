@@ -35,7 +35,6 @@ internal class ConcretePostchainClientTest {
     fun driveTestCorrectNumberOfAttempts(client: ConcretePostchainClient, numberExpected: Int) {
         client.makeTransaction()
             .addNop()
-            .finish()
             .postSyncAwaitConfirmation()
 
         // Verify

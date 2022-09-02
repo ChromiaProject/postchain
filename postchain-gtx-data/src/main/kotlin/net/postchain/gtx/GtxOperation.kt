@@ -1,14 +1,23 @@
 package net.postchain.gtx
 
 import com.beanit.jasn1.ber.types.string.BerUTF8String
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvString
 import net.postchain.gtv.gtxmessages.RawGtxOp
 
 class GtxOperation(val name: String, vararg val args: Gtv) {
 
-    internal fun asn() = RawGtxOp(BerUTF8String(name), RawGtxOp.Args(args.map { it.getRawGtv() }))
+    internal fun toRaw() = RawGtxOp(BerUTF8String(name), RawGtxOp.Args(args.map { it.getRawGtv() }))
 
-    fun gtv() = GtvFactory.gtv(GtvFactory.gtv(name), GtvFactory.gtv(args.toList()))
+    /**
+     * Elements are structured like an ordered array with elements:
+     * 1. Operation name [GtvString]
+     * 2. array of arguments [GtvArray]
+     */
+    fun toGtv() = gtv(gtv(name), gtv(args.toList()))
 
     companion object {
         @JvmStatic

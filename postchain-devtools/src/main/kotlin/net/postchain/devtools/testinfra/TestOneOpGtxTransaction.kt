@@ -5,9 +5,9 @@ package net.postchain.devtools.testinfra
 import net.postchain.common.data.Hash
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.data.GTXDataBuilder
 
 /**
  * This represents a "real" GTX transaction (which means it can be transformed to GTV and GTX without generating errors)

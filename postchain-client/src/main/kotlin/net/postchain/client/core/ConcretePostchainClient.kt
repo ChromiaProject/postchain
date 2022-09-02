@@ -5,6 +5,7 @@ package net.postchain.client.core
 import mu.KLogging
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.config.STATUS_POLL_INTERVAL
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
@@ -14,11 +15,13 @@ import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.common.tx.TransactionStatus.WAITING
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.data.GTXDataBuilder
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtx.Gtx
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
@@ -49,14 +52,12 @@ class ConcretePostchainClient(
 
     private val serverUrl = resolver.getNodeURL(blockchainRID)
     private val blockchainRIDHex = blockchainRID.toHex()
+    private val cryptoSystem = Secp256K1CryptoSystem()
+    private val calculator = GtvMerkleHashCalculator(cryptoSystem)
 
-    override fun makeTransaction(): GTXTransactionBuilder {
-        return GTXTransactionBuilder(this, blockchainRID, defaultSigner?.let { arrayOf(it.pubkey) } ?: arrayOf())
-    }
+    override fun makeTransaction() = makeTransaction(defaultSigner?.let { listOf(it.pubkey) } ?: listOf())
 
-    override fun makeTransaction(signers: Array<ByteArray>): GTXTransactionBuilder {
-        return GTXTransactionBuilder(this, blockchainRID, signers)
-    }
+    override fun makeTransaction(signers: List<ByteArray>) = TransactionBuilder(this, blockchainRID, signers, listOf(), cryptoSystem)
 
 
     override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {
@@ -86,18 +87,17 @@ class ConcretePostchainClient(
         throw e.cause ?: e
     }
 
-    override fun postTransactionSync(txBuilder: GTXDataBuilder): TransactionResult = try {
-        postTransaction(txBuilder).toCompletableFuture().join()
+    override fun postTransactionSync(tx: Gtx): TransactionResult = try {
+        postTransaction(tx).toCompletableFuture().join()
     } catch (e: CompletionException) {
         throw e.cause ?: e
     }
 
-    override fun postTransaction(txBuilder: GTXDataBuilder): CompletionStage<TransactionResult> {
-        if (!txBuilder.finished) txBuilder.finish()
+    override fun postTransaction(tx: Gtx): CompletionStage<TransactionResult> {
         val txLens = Body.auto<Tx>().toLens()
-        val txRid = TxRid(txBuilder.getDigestForSigning().toHex())
-        val tx = Tx(txBuilder.serialize().toHex())
-        val request = txLens(tx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
+        val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
+        val encodedTx = Tx(tx.encode().toHex())
+        val request = txLens(encodedTx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
         client(request) { resp ->
             val status = if (resp.status == Status.OK) WAITING else REJECTED
@@ -106,8 +106,8 @@ class ConcretePostchainClient(
         return result
     }
 
-    override fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult {
-        val resp = postTransactionSync(txBuilder)
+    override fun postTransactionSyncAwaitConfirmation(tx: Gtx): TransactionResult {
+        val resp = postTransactionSync(tx)
         if (resp.status == REJECTED) {
             return resp
         }
