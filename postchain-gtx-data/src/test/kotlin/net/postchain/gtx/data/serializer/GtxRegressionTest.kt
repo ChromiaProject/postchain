@@ -7,30 +7,24 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
-import net.postchain.gtx.GtxOperation
-import net.postchain.gtx.data.GTXTransactionBodyData
-import net.postchain.gtx.data.GTXTransactionData
-import net.postchain.gtx.data.OpData
+import net.postchain.gtx.GtxOp
 import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 internal class GtxRegressionTest {
 
     @Test
     fun gtxOp() {
-        val opData = OpData("foo", arrayOf(gtv("bar"), gtv(1)))
-        val gtxOp = GtxOperation("foo", gtv("bar"), gtv(1))
-
-        assertEquals(OpDataSerializer.serializeToGtv(opData), gtxOp.toGtv())
+        val gtxOp = GtxOp("foo", gtv("bar"), gtv(1))
 
         val encoded = ReverseByteArrayOutputStream(1000, true)
         gtxOp.toRaw().encode(encoded, true)
 
         GtvDecoder.decodeGtv(encoded.array)
-        assertArrayEquals(GtvEncoder.encodeGtv(OpDataSerializer.serializeToGtv(opData)), encoded.array)
+        assertArrayEquals(GtvEncoder.encodeGtv(gtxOp.toGtv()), encoded.array)
     }
 
     @Test
@@ -38,27 +32,23 @@ internal class GtxRegressionTest {
         val calculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
         val brid = BlockchainRid.ZERO_RID
 
-        val oldBody = GTXTransactionBodyData(brid, arrayOf(), arrayOf())
         val newBody = GtxBody(brid, listOf(), listOf())
 
-        assertArrayEquals(oldBody.calculateRID(calculator), newBody.calculateTxRid(calculator))
+        assertArrayEquals(newBody.toGtv().merkleHash(calculator), newBody.calculateTxRid(calculator))
 
         val encoded = ReverseByteArrayOutputStream(1000, true)
         newBody.toRaw().encode(encoded, true)
 
-        val oldEncoded = GtvEncoder.encodeGtv(GtxTransactionBodyDataSerializer.serializeToGtv(oldBody))
-
         GtvDecoder.decodeGtv(encoded.array)
-        assertArrayEquals(oldEncoded, encoded.array)
+        assertArrayEquals(GtvEncoder.encodeGtv(newBody.toGtv()), encoded.array)
     }
 
     @Test
     fun gtx() {
         val brid = BlockchainRid.ZERO_RID
-        val newTx = Gtx(GtxBody(brid, listOf(), listOf()), listOf())
-        val oldTx = GTXTransactionData(GTXTransactionBodyData(brid, arrayOf(), arrayOf()), arrayOf())
+        val newTx = Gtx(GtxBody(brid, listOf(GtxOp("foo", gtv(1))), listOf()), listOf())
 
         GtvDecoder.decodeGtv(newTx.encode())
-        assertArrayEquals(oldTx.serialize(), newTx.encode())
+        assertArrayEquals(GtvEncoder.encodeGtv(newTx.toGtv()), newTx.encode())
     }
 }
