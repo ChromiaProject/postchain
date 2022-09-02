@@ -4,13 +4,11 @@ package net.postchain.gtx.data
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
-import net.postchain.gtv.*
-import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
-import net.postchain.gtx.data.serializer.GtxTransactionBodyDataSerializer
-import net.postchain.gtx.data.serializer.GtxTransactionDataSerializer
 import java.util.*
 
 object GtxBase {
@@ -78,19 +76,7 @@ data class GTXTransactionBodyData(
         }.toTypedArray()
     }
 
-    fun calculateRID(calculator: MerkleHashCalculator<Gtv>): Hash {
-        if (cachedRid == null) {
-            val txBodyGtvArr: GtvArray = GtxTransactionBodyDataSerializer.serializeToGtv(this)
-            cachedRid = txBodyGtvArr.merkleHash(calculator)
-        }
 
-        return cachedRid!!
-    }
-
-    fun serialize(): ByteArray {
-        val gtvArray =  GtxTransactionBodyDataSerializer.serializeToGtv(this)
-        return GtvEncoder.encodeGtv(gtvArray)
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -112,35 +98,6 @@ data class GTXTransactionBodyData(
         return result
     }
 }
-
-data class GTXTransactionData(
-    val transactionBodyData: GTXTransactionBodyData,
-    val signatures: Array<ByteArray>) {
-
-    fun serialize(): ByteArray {
-        val gtvArray = GtxTransactionDataSerializer.serializeToGtv(this)
-        return  GtvEncoder.encodeGtv(gtvArray)
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as GTXTransactionData
-
-        if (transactionBodyData != other.transactionBodyData) return false
-        if (!Arrays.deepEquals(signatures, other.signatures)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = transactionBodyData.hashCode()
-        result = 31 * result + Arrays.hashCode(signatures)
-        return result
-    }
-}
-
 
 fun decodeGTXTransactionData(_rawData: ByteArray): Gtx {
     // Decode to RawGTV

@@ -7,10 +7,10 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
-import net.postchain.gtx.data.GTXTransactionBodyData
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test
 
@@ -32,10 +32,9 @@ internal class GtxRegressionTest {
         val calculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
         val brid = BlockchainRid.ZERO_RID
 
-        val oldBody = GTXTransactionBodyData(brid, arrayOf(), arrayOf())
         val newBody = GtxBody(brid, listOf(), listOf())
 
-        assertArrayEquals(oldBody.calculateRID(calculator), newBody.calculateTxRid(calculator))
+        assertArrayEquals(newBody.toGtv().merkleHash(calculator), newBody.calculateTxRid(calculator))
 
         val encoded = ReverseByteArrayOutputStream(1000, true)
         newBody.toRaw().encode(encoded, true)
