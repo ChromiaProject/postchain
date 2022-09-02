@@ -36,7 +36,7 @@ class GTXMLTransactionParserAutoSignTest {
 
         val expectedBody = GtxBody(
                 blockchainRID,
-                listOf(
+                arrayOf(
                         GtxOp("ft_transfer",
                                         GtvString("hello"),
                                         GtvString("hello2"),
@@ -44,7 +44,7 @@ class GTXMLTransactionParserAutoSignTest {
                                         GtvInteger(42),
                                         GtvInteger(43))
                 ),
-                listOf(
+                arrayOf(
                         pubKey0,
                         byteArrayOf(0x12, 0x38, 0x71, 0x23),
                         byteArrayOf(0x12, 0x38, 0x71, 0x24),
@@ -55,7 +55,7 @@ class GTXMLTransactionParserAutoSignTest {
         // Auto-signing
         val merkleRoot = expectedBody.calculateTxRid(mockCalculator)
         val expectedTx = Gtx( expectedBody,
-                listOf(
+                arrayOf(
                         sigMaker0.signDigest(merkleRoot).data, // Auto signed
                         byteArrayOf(0x34, 0x56, 0x78, 0x54),
                         byteArrayOf(0x34, 0x56, 0x78, 0x55),
@@ -102,7 +102,7 @@ class GTXMLTransactionParserAutoSignTest {
 
         val expectedBody = GtxBody(
                 blockchainRID,
-                listOf(
+                arrayOf(
                         GtxOp("ft_transfer",
                                         GtvString("hello"),
                                         GtvString("hello2"),
@@ -110,7 +110,7 @@ class GTXMLTransactionParserAutoSignTest {
                                         GtvInteger(42),
                                         GtvInteger(43))
                 ),
-                listOf(
+                arrayOf(
                         pubKey0,
                         byteArrayOf(0x12, 0x38, 0x71, 0x23),
                         byteArrayOf(0x12, 0x38, 0x71, 0x24),
@@ -120,7 +120,7 @@ class GTXMLTransactionParserAutoSignTest {
 
         val expectedTx = Gtx(
                 expectedBody,
-                listOf(
+                arrayOf(
                         byteArrayOf(), // empty signature
                         byteArrayOf(0x34, 0x56, 0x78, 0x54),
                         byteArrayOf(0x34, 0x56, 0x78, 0x55),
@@ -153,7 +153,7 @@ class GTXMLTransactionParserAutoSignTest {
 
         val expectedBody = GtxBody(
                 blockchainRID,
-                listOf(
+                arrayOf(
                         GtxOp("ft_transfer",
                                         GtvString("hello"),
                                         GtvString("hello2"),
@@ -161,12 +161,12 @@ class GTXMLTransactionParserAutoSignTest {
                                         GtvInteger(42),
                                         GtvInteger(43))
                 ),
-                listOf(pubKey0, pubKey1)
+                arrayOf(pubKey0, pubKey1)
         )
 
         val merkleRoot = expectedBody.calculateTxRid(mockCalculator)
         val expectedTx = Gtx(expectedBody,
-                    listOf(
+                    arrayOf(
                         sigMaker0.signDigest(merkleRoot).data,
                         sigMaker1.signDigest(merkleRoot).data
                     )

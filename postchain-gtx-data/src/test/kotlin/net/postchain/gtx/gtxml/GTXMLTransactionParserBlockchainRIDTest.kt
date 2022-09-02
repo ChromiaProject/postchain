@@ -12,6 +12,7 @@ import org.junit.jupiter.api.assertThrows
 
 class GTXMLTransactionParserBlockchainRIDTest {
     val blockchainRID = BlockchainRid.buildRepeat(0x0A)
+    private val expectedBody = GtxBody(blockchainRID, listOf(), listOf())
 
     @Test
     fun parseGTXMLTransaction_in_context_with_empty_blockchainRID_successfully() {
@@ -20,12 +21,6 @@ class GTXMLTransactionParserBlockchainRIDTest {
                 <signers/><operations/><signatures/>
             </transaction>
         """.trimIndent()
-
-        val expectedBody = GtxBody(
-                blockchainRID,
-                listOf(),
-                listOf()
-        )
 
         val expectedTx = Gtx(expectedBody, listOf())
 
@@ -45,11 +40,6 @@ class GTXMLTransactionParserBlockchainRIDTest {
                 <signers/><operations/><signatures/>
             </transaction>
         """.trimIndent()
-
-        val expectedBody = GtxBody(
-                blockchainRID,
-                listOf(), listOf()
-        )
 
         val expectedTx = Gtx(expectedBody, listOf())
 
@@ -72,7 +62,7 @@ class GTXMLTransactionParserBlockchainRIDTest {
 
         val expectedBody = GtxBody(
                 BlockchainRid.ZERO_RID,
-                listOf(), listOf()
+                arrayOf(), arrayOf()
         )
 
         val expectedTx = Gtx(expectedBody, listOf())
@@ -93,11 +83,6 @@ class GTXMLTransactionParserBlockchainRIDTest {
                 <signers/><operations/><signatures/>
             </transaction>
         """.trimIndent()
-
-        val expectedBody = GtxBody(
-                blockchainRID,
-                listOf(), listOf()
-        )
 
         val expectedTx = Gtx(expectedBody, listOf())
 

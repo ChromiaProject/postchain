@@ -18,7 +18,7 @@ class GTXMLTransactionEncodeTest {
     fun encodeXMLGTXTransaction_successfully() {
         val gtxTxBodyData = GtxBody(
                 blockchainRID,
-                listOf(
+                arrayOf(
                         GtxOp("ft_transfer",
                                         GtvString("hello"),
                                         GtvString("hello2"),
@@ -31,14 +31,14 @@ class GTXMLTransactionEncodeTest {
                                         GtvInteger(142),
                                         GtvInteger(143))
                 ),
-                listOf(
+                arrayOf(
                         byteArrayOf(0x12, 0x38, 0x71, 0x23),
                         byteArrayOf(0x12, 0x38, 0x71, 0x24)
                 )
         )
 
         val gtxTx = Gtx(gtxTxBodyData,
-                listOf(
+                arrayOf(
                         byteArrayOf(0x34, 0x56, 0x78, 0x54),
                         byteArrayOf(0x34, 0x56, 0x78, 0x55)
                 )
@@ -55,11 +55,11 @@ class GTXMLTransactionEncodeTest {
     fun encodeXMLGTXTransaction_empty_successfully() {
         val gtxTxBodyData = GtxBody(
                 blockchainRID,
-                listOf(),
-                listOf()
+                arrayOf(),
+                arrayOf()
         )
 
-        val gtxTx = Gtx(gtxTxBodyData, listOf())
+        val gtxTx = Gtx(gtxTxBodyData, arrayOf())
 
         val expected = javaClass.getResource("/net/postchain/gtx/gtxml/encode/tx_empty.xml").readText()
                 .replace("\r\n", "\n").trim()
