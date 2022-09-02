@@ -28,7 +28,7 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
     }
 
     // Meant to be used in tests, could be deleted if not needed
-    fun build(gtx: Gtx) = internalBuild(null, gtx.toGtv())
+    fun build(gtx: Gtx) = internalMainBuild(null, gtx.toGtv(), gtx)
 
     // ----------------- Internal workings -------------------
 

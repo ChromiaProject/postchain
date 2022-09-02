@@ -11,7 +11,6 @@ import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
 
 /**
  * A transaction based on the GTX format.
@@ -128,7 +127,7 @@ class GTXTransaction (
             return _rawData
         }
         if (cachedRawData == null) {
-            cachedRawData =  GtvEncoder.encodeGtv(gtvData)
+            cachedRawData =  gtxData.encode()
         }
         return cachedRawData!!
     }
@@ -145,8 +144,4 @@ class GTXTransaction (
         }
         return true
     }
-
 }
-
-
-
