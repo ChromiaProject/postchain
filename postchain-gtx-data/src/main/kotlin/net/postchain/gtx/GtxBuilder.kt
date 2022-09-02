@@ -30,7 +30,7 @@ open class GtxBuilder(
     }
 
     /**
-     * Adds a null operation to make the transaction unique
+     * Adds a nop operation to make the transaction unique
      */
     fun addNop() = addOperation("nop", GtvFactory.gtv(Instant.now().toEpochMilli()))
 
