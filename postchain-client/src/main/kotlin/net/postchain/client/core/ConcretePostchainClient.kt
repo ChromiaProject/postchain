@@ -3,10 +3,8 @@
 package net.postchain.client.core
 
 import mu.KLogging
-import net.postchain.client.config.STATUS_POLL_COUNT
-import net.postchain.client.config.STATUS_POLL_INTERVAL
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.transaction.TransactionBuilder
-import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -15,7 +13,7 @@ import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.common.tx.TransactionStatus.WAITING
-import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.KeyPair
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
@@ -40,24 +38,21 @@ data class Queries(val queries: List<String>)
 data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
-    private val resolver: PostchainNodeResolver,
-    private val blockchainRID: BlockchainRid,
-    private val defaultSigner: DefaultSigner?,
-    private val statusPollCount: Int = STATUS_POLL_COUNT,
-    private val statusPollInterval: Long = STATUS_POLL_INTERVAL,
+    private val config: PostchainClientConfig,
+
     private val client: AsyncHttpHandler = ApacheAsyncClient()
 ) : PostchainClient {
 
     companion object : KLogging()
 
-    private val serverUrl = resolver.getNodeURL(blockchainRID)
-    private val blockchainRIDHex = blockchainRID.toHex()
-    private val cryptoSystem = Secp256K1CryptoSystem()
+    private val serverUrl = config.apiUrl
+    private val blockchainRIDHex = config.blockchainRid.toHex()
+    private val cryptoSystem = config.cryptoSystem
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
 
-    override fun makeTransaction() = makeTransaction(defaultSigner?.let { listOf(it.pubkey) } ?: listOf())
+    override fun txBuilder() = txBuilder(config.signers)
 
-    override fun makeTransaction(signers: List<ByteArray>) = TransactionBuilder(this, blockchainRID, signers, listOf(), cryptoSystem)
+    override fun txBuilder(signers: List<KeyPair>) = TransactionBuilder(this, config.blockchainRid, signers.map { it.pubKey.key }, signers.map { it.sigMaker(cryptoSystem) }, cryptoSystem)
 
 
     override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {
@@ -111,7 +106,7 @@ class ConcretePostchainClient(
         if (resp.status == REJECTED) {
             return resp
         }
-        return awaitConfirmation(resp.txRid, statusPollCount, statusPollInterval)
+        return awaitConfirmation(resp.txRid, config.statusPollCount, config.statusPollInterval)
     }
 
     override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {

@@ -3,12 +3,15 @@
 package net.postchain.client
 
 
-import net.postchain.client.core.DefaultSigner
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.PostchainClient
-import net.postchain.client.core.PostchainClientFactory
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PrivKey
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
@@ -33,7 +36,6 @@ class PostChainClientTest : IntegrationTestSetup() {
     private val pubKey0 = KeyPairHelper.pubKey(0)
     private val privKey0 = KeyPairHelper.privKey(0)
     private val sigMaker0 = cryptoSystem.buildSigMaker(pubKey0, privKey0)
-    private val defaultSigner = DefaultSigner(sigMaker0, pubKey0)
     private val randomStr = "hello${Random().nextLong()}"
 
     private fun createTestNodes(nodesCount: Int, configFileName: String): Array<PostchainTestNode> {
@@ -51,8 +53,10 @@ class PostChainClientTest : IntegrationTestSetup() {
     }
 
     private fun createPostChainClient(bcRid: BlockchainRid): PostchainClient {
-        val resolver = PostchainClientFactory.makeSimpleNodeResolver("http://127.0.0.1:${nodes[0].getRestApiHttpPort()}")
-        return PostchainClientFactory.getClient(resolver, bcRid, defaultSigner)
+        return ConcretePostchainClientProvider().createClient(
+            PostchainClientConfig(
+            "http://127.0.0.1:${nodes[0].getRestApiHttpPort()}", bcRid, listOf(KeyPair(PubKey(pubKey0), PrivKey(privKey0)))
+            ))
     }
 
     @Test
@@ -75,7 +79,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val client = createPostChainClient(blockchainRID)
         assertThrows<IllegalArgumentException> {
-            val txBuilder = client.makeTransaction().finish().build()
+            val txBuilder = client.txBuilder().finish().build()
         }
 
         // When
@@ -87,7 +91,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         // Mock
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val client = spy(createPostChainClient(blockchainRID))
-        val txBuilder = client.makeTransaction()
+        val txBuilder = client.txBuilder()
 
         txBuilder.addOperation("nop")
         txBuilder.addOperation("nop", gtv(Instant.now().toEpochMilli()))
