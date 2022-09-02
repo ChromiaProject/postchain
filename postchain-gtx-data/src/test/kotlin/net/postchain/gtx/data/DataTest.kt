@@ -10,6 +10,7 @@ import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -83,8 +84,7 @@ class GTXDataTest {
 
         assertTrue(txBuilder.isFullySigned())
 
-        //val d = decodeGTXData(b2.serialize())
-        val d = decodeGTXTransactionData(txBuilder.buildGtx().encode())
+        val d = Gtx.decode(txBuilder.buildGtx().encode())
         val body = d.gtxBody
 
         assertTrue(body.signers.toTypedArray().contentDeepEquals(
