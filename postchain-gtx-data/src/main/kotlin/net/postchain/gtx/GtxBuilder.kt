@@ -3,15 +3,18 @@ package net.postchain.gtx
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import java.time.Instant
 
 open class GtxBuilder(
     private val blockchainRid: BlockchainRid,
     private val signers: List<ByteArray>,
-    private val cryptoSystem: CryptoSystem,
+    private val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
 ) {
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
     private val operations = mutableListOf<GtxOp>()
@@ -24,6 +27,11 @@ open class GtxBuilder(
     fun addOperation(name: String, vararg args: Gtv) = apply {
         operations.add(GtxOp(name, *args))
     }
+
+    /**
+     * Adds a null operation to make the transaction unique
+     */
+    fun addNop() = addOperation("nop", GtvFactory.gtv(Instant.now().toEpochMilli()))
 
 
     /**

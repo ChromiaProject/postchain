@@ -6,10 +6,8 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBuilder
-import java.time.Instant
 
 class TransactionBuilder(
     private val client: PostchainClient,
@@ -30,7 +28,7 @@ class TransactionBuilder(
     /**
      * Adds a null operation to make the transaction unique
      */
-    fun addNop() = addOperation("nop", gtv(Instant.now().toEpochMilli()))
+    fun addNop() = gtxBuilder.addNop()
 
     /**
      * Sign this transaction with default signers and [PostchainClient.postTransaction]
