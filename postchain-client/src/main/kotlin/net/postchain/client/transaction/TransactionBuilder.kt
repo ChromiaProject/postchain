@@ -28,7 +28,7 @@ class TransactionBuilder(
     /**
      * Adds a null operation to make the transaction unique
      */
-    fun addNop() = gtxBuilder.addNop()
+    fun addNop() = apply { gtxBuilder.addNop() }
 
     /**
      * Sign this transaction with default signers and [PostchainClient.postTransaction]
