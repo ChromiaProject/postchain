@@ -3,7 +3,7 @@ package net.postchain.d1.anchor
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
-import net.postchain.gtx.OpData
+import net.postchain.gtx.data.OpData
 
 /**
  * This data class hides the ordering of the [OpData] arguments to the outside world

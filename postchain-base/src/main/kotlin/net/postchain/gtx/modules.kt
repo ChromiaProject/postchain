@@ -5,11 +5,16 @@ package net.postchain.gtx
 import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
-import net.postchain.core.UserMistake
 import net.postchain.gtv.Gtv
+import net.postchain.gtx.data.ExtOpData
+import net.postchain.gtx.special.GTXSpecialTxExtension
 
+/**
+ * The GTX Module is the basis of a "Dapp".
+ */
 interface GTXModule {
     fun makeTransactor(opData: ExtOpData): Transactor
     fun getOperations(): Set<String>

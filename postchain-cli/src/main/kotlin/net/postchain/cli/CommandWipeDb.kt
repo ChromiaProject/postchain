@@ -2,28 +2,18 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.StorageBuilder
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
 
-@Parameters(commandDescription = "Wipe db")
-class CommandWipeDb : Command {
+class CommandWipeDb : CliktCommand(name = "wipe-db", help = "Wipe Database") {
 
-    override fun key(): String = "wipe-db"
+    private val nodeConfigFile by nodeConfigOption()
 
-    @Parameter(
-            names = ["-nc", "--node-config"],
-            description = "Configuration file of blockchain (.properties file)")
-    private var nodeConfigFile = ""
-
-    override fun execute(): CliResult {
-        return try {
-            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
-            StorageBuilder.buildStorage(appConfig, true).close()
-            Ok("Database has been wiped successfully")
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
-        }
+    override fun run() {
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        StorageBuilder.buildStorage(appConfig, true).close()
+        println("Database has been wiped successfully")
     }
 }

@@ -7,15 +7,17 @@ import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.blockchain.*
 import net.postchain.core.*
+import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.icmf.*
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXModule
-import net.postchain.gtx.GTXSpecialTxExtension
-import net.postchain.gtx.OpData
+import net.postchain.gtx.data.OpData
+import net.postchain.gtx.special.GTXSpecialTxExtension
 
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.

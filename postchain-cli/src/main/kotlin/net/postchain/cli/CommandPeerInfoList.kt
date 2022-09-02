@@ -2,46 +2,30 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 
-@Parameters(commandDescription = "List peerinfo")
-class CommandPeerInfoList : Command {
+class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List peer information") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    @Parameter(
-            names = ["-nc", "--node-config"],
-            description = "Configuration file of node (.properties file)",
-            required = true)
-    private var nodeConfigFile = ""
+    private val nodeConfigFile by nodeConfigOption()
 
-    override fun key(): String = "peerinfo-list"
+    override fun run() {
+        printCommandInfo()
 
-    override fun execute(): CliResult {
-        println("peerinfo-list will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        val peerInfos = peerinfoList(nodeConfigFile)
 
-        return try {
-            val peerInfos = peerinfoList(nodeConfigFile)
-
-            val report = if (peerInfos.isEmpty()) {
-                "No peerinfo found"
-            } else {
-                peerInfos.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
-                        .joinToString(
-                                separator = "\n",
-                                prefix = "Peerinfos (${peerInfos.size}):\n")
-            }
-
-            Ok(report)
-
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
+        if (peerInfos.isEmpty()) {
+            println("No peerinfo found")
+        } else {
+            peerInfos.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
+                .forEach {
+                    println("Peerinfos (${peerInfos.size}):\n$it")
+                }
         }
     }
 

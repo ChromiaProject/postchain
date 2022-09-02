@@ -1,9 +1,9 @@
 package net.postchain.d1.anchor
 
 import mu.KLogging
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.EContext
-import net.postchain.core.ProgrammerMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory

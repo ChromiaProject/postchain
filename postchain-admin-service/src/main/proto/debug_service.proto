@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "net.postchain.server.service";
+option java_outer_classname = "DebugProto";
+
+package postchain.rpc;
+
+service DebugService {
+  rpc DebugInfo (DebugRequest) returns (DebugReply) {}
+}
+
+message DebugRequest {}
+
+message DebugReply {
+  string message = 1;
+}

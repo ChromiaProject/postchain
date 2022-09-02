@@ -5,8 +5,8 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
-import net.postchain.core.ProgrammerMistake
 
 
 /**
@@ -141,7 +141,7 @@ class BlockchainDependencies(
     /**
      * @return the height of the dependency.
      *
-     * If there is no height yet we will assume 0.
+     * If there is no height yet, we will assume 0.
      * This was decided after discussion with Alex: we allow this to make testing easier, but in "real world" a
      * blockchain we depend on should have at least a genesis block.
      */
@@ -161,7 +161,7 @@ class BlockchainDependencies(
         return if (isEmpty()) {
             null
         } else {
-            internalArray.map { it ->
+            internalArray.map {
                 if (it.heightDependency != null) {
                     it.heightDependency.lastBlockRid
                 } else {

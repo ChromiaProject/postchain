@@ -2,7 +2,7 @@
 
 package net.postchain.gtv
 
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.gtv.gtvmessages.RawGtv
 import java.util.*
 
 

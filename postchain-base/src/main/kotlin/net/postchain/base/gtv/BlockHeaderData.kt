@@ -3,16 +3,16 @@
 package net.postchain.base.gtv
 
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
-import net.postchain.core.UserMistake
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 
 /**
  * The structure of the block header goes like this:
  *
- *  1. bockchainRid [GtvByteArray]
+ *  1. blockchainRid [GtvByteArray]
  *  2. prevBlockRid [GtvByteArray]
  *  3. rootHash [GtvByteArray]
  *  4. timestamp [GtvInteger]
@@ -43,11 +43,11 @@ data class BlockHeaderData(
     }
 
     fun getTimestamp(): Long {
-        return gtvTimestamp.integer.toLong()
+        return gtvTimestamp.integer
     }
 
     fun getHeight(): Long {
-        return gtvHeight.integer.toLong()
+        return gtvHeight.integer
     }
 
     /**
@@ -61,14 +61,12 @@ data class BlockHeaderData(
             is GtvNull -> arrayOf()
             is GtvArray -> {
                 val lastBlockRidArray = arrayOfNulls<Hash>(gtvDependencies.getSize())
-                var i = 0
-                for (blockRid in gtvDependencies.array) {
+                for ((i, blockRid) in gtvDependencies.array.withIndex()) {
                     lastBlockRidArray[i] = when (blockRid) {
                         is GtvByteArray -> blockRid.bytearray
                         is GtvNull -> null // Allowed
                         else -> throw UserMistake("Cannot use type ${blockRid.type} in dependency list (at pos: $i)")
                     }
-                    i++
                 }
                 lastBlockRidArray
             }
@@ -78,13 +76,8 @@ data class BlockHeaderData(
 
     }
 
-    fun getExtra(): Map<String, String> {
-        val retMap = HashMap<String, String>()
-        for (key in this.gtvExtra.dict.keys) {
-            val gtvValue = gtvExtra[key] as GtvString
-            retMap.put(key, gtvValue.string)
-        }
-        return retMap
+    fun getExtra(): Map<String, Gtv> {
+        return gtvExtra.asDict()
     }
 
     fun toGtv(): GtvArray {

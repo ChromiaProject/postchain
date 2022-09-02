@@ -4,10 +4,15 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.Config
 import net.postchain.core.*
-import net.postchain.core.BlockHeader
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.BlockWitness
+import net.postchain.devtools.NameHelper
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
@@ -72,7 +77,7 @@ data class FastSyncParameters(
         /**
          * 10 minutes in milliseconds
          */
-        var blacklistingTimeoutMs: Long = 10 * 60 * 1000) {
+        var blacklistingTimeoutMs: Long = 10 * 60 * 1000) : Config {
     companion object {
         @JvmStatic
         fun fromAppConfig(config: AppConfig, init: (FastSyncParameters) -> Unit = {}): FastSyncParameters {
@@ -138,7 +143,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         val startTime = System.currentTimeMillis()
         var hasRestartFailed = false
         override fun toString(): String {
-            return "${this@FastSynchronizer.workerContext.processName}-h${height}-${peerId.shortString()}"
+            return "${this@FastSynchronizer.workerContext.processName}-h${height}-${NameHelper.peerName(peerId)}"
         }
     }
 

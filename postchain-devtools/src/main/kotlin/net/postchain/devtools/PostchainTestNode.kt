@@ -3,19 +3,28 @@
 package net.postchain.devtools
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.PostchainNode
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
-import net.postchain.common.BlockchainRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
 import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.common.exception.NotFound
+import net.postchain.common.exception.UserMistake
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockQueries
+import net.postchain.metrics.BLOCKCHAIN_RID_TAG
+import net.postchain.metrics.CHAIN_IID_TAG
+import net.postchain.metrics.NODE_PUBKEY_TAG
 import kotlin.properties.Delegates
 
 /**
@@ -65,10 +74,16 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
-            val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
-            logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
-            DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
-            BaseConfigurationDataStore.addConfigurationData(eContext, 0, blockchainConfig)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            withLoggingContext(
+                NODE_PUBKEY_TAG to appConfig.pubKey,
+                CHAIN_IID_TAG to chainId.toString(),
+                BLOCKCHAIN_RID_TAG to brid.toHex()
+            ) {
+                logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
+                DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
+                BaseConfigurationDataStore.addConfigurationData(eContext, 0, blockchainConfig)
+            }
             brid
         }
     }
@@ -77,9 +92,15 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
-            logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
-            val brid = BlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
-            BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            withLoggingContext(
+                NODE_PUBKEY_TAG to appConfig.pubKey,
+                CHAIN_IID_TAG to chainId.toString(),
+                BLOCKCHAIN_RID_TAG to brid.toHex()
+            ) {
+                logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
+                BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
+            }
             brid
         }
     }
@@ -88,19 +109,40 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
-            logger.debug("Set must_sync_until for chain: $brid, height: $height")
-            BaseConfigurationDataStore.setMustSyncUntil(eContext, brid, height)
+            withLoggingContext(
+                NODE_PUBKEY_TAG to appConfig.pubKey,
+                CHAIN_IID_TAG to chainId.toString(),
+                BLOCKCHAIN_RID_TAG to brid.toHex()
+            ) {
+                logger.debug("Set must_sync_until for chain: $brid, height: $height")
+                BaseConfigurationDataStore.setMustSyncUntil(eContext, brid, height)
+            }
         }
     }
 
-    fun startBlockchain(): BlockchainRid? {
-        return startBlockchain(DEFAULT_CHAIN_IID)
+    fun startBlockchain() {
+        withLoggingContext(
+            NODE_PUBKEY_TAG to appConfig.pubKey,
+            CHAIN_IID_TAG to DEFAULT_CHAIN_IID.toString()
+        ) {
+            try {
+                startBlockchain(DEFAULT_CHAIN_IID)
+            } catch (e: NotFound) {
+                logger.error(e.message)
+            } catch (e: UserMistake) {
+                logger.error(e.message)
+            } catch (e: Exception) {
+                logger.error(e) { e.message }
+            }
+        }
     }
 
     override fun shutdown() {
-        logger.debug("shutdown node ${peerName(pubKey)}")
-        super.shutdown()
-        logger.debug("shutdown node ${peerName(pubKey)} done")
+        withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
+            logger.debug("shutdown node ${peerName(pubKey)}")
+            super.shutdown()
+            logger.debug("shutdown node ${peerName(pubKey)} done")
+        }
     }
 
     fun getRestApiModel(): Model {

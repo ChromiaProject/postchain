@@ -3,7 +3,7 @@
 package net.postchain.base.gtv
 
 import net.postchain.common.data.Hash
-import net.postchain.core.InitialBlockData
+import net.postchain.core.block.InitialBlockData
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 

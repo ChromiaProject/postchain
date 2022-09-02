@@ -3,8 +3,11 @@ package net.postchain.base.configuration
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.core.*
 import net.postchain.common.BlockchainRid
+import net.postchain.core.BlockchainContext
+import net.postchain.core.EContext
+import net.postchain.core.NODE_ID_AUTO
+import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
@@ -35,7 +38,7 @@ data class BlockchainConfigurationData(
          * from the user's side has to be taken to eventually get the TX into the queue.
          */
         @Name(KEY_QUEUE_CAPACITY)
-        @DefaultValue(defaultLong =  2500) // 5 seconds (if 500 tps)
+        @DefaultValue(defaultLong = 2500) // 5 seconds (if 500 tps)
         val txQueueSize: Long,
 
         @Name(KEY_BLOCKSTRATEGY_NAME)
@@ -53,7 +56,13 @@ data class BlockchainConfigurationData(
         private val blockchainDependenciesRaw: Gtv?,
         @Name(KEY_GTX)
         @Nullable
-        val gtx: Gtv?
+        val gtx: Gtv?,
+        @Name(KEY_MAX_TX_EXECUTION_TIME)
+        @DefaultValue(defaultLong = 0)
+        val maxTxExecutionTime: Long,
+        @Name(KEY_REVOLT)
+        @Nullable
+        val revoltConfigData: Gtv?
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()

@@ -9,9 +9,9 @@ import net.postchain.debug.NodeDiagnosticContext
 import java.net.URL
 
 class DefaultMasterApiInfra(
-        restApiConfig: RestApiConfig,
-        nodeDiagnosticContext: NodeDiagnosticContext?,
-        private val containerNodeConfig: ContainerNodeConfig
+    restApiConfig: RestApiConfig,
+    nodeDiagnosticContext: NodeDiagnosticContext?,
+    private val containerNodeConfig: ContainerNodeConfig
 ) : BaseApiInfrastructure(
         restApiConfig,
         nodeDiagnosticContext
@@ -20,7 +20,7 @@ class DefaultMasterApiInfra(
     override fun connectContainerProcess(process: ContainerBlockchainProcess) {
         if (restApi != null) {
             val path = URL("http",
-                    containerNodeConfig.slaveHost,
+                    containerNodeConfig.subnodeHost,
                     process.restApiPort,
                     restApiConfig.basePath
             ).toString()

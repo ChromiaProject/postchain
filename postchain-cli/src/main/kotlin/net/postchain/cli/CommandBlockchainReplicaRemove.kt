@@ -1,60 +1,41 @@
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.common.BlockchainRid
+import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
+import net.postchain.cli.util.blockchainRidOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
+import net.postchain.cli.util.requiredPubkeyOption
+import net.postchain.common.BlockchainRid
 
-
-@Parameters(commandDescription = "Remove node as replica for given blockchain rid. If brid not given command will be " +
-        "applied on all blockchains.")
-class CommandBlockchainReplicaRemove : Command {
+class CommandBlockchainReplicaRemove : CliktCommand(
+    name = "blockchain-replica-remove",
+    help = "Remove node as replica for given blockchain rid. If brid not given command will be " +
+            "applied on all blockchains."
+) {
     // TODO: Eliminate it later or reduce to DbConfig only
-    @Parameter(
-            names = ["-nc", "--node-config"],
-            description = "Configuration file of node (.properties file)",
-            required = true)
-    private var nodeConfigFile = ""
+    private val nodeConfigFile by nodeConfigOption()
 
-    @Parameter(
-            names = ["-brid", "--blockchain-rid"],
-            description = "Blockchain RID",
-            required = false)
-    private var blockchainRID = ""
+    private val blockchainRID by blockchainRidOption()
 
-    @Parameter(
-            names = ["-pk", "--pub-key"],
-            description = "Public key",
-            required = true)
-    private var pubKey = ""
+    private val pubKey by requiredPubkeyOption()
 
-    override fun key(): String = "blockchain-replica-remove"
 
-    override fun execute(): CliResult {
-        println("blockchain-replica-remove will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+    override fun run() {
+        printCommandInfo()
 
-        return try {
-            val brid = if (blockchainRID == "") null else blockchainRID
-            val removed = blockchainReplicaRemove(brid, pubKey)
+        val removed = blockchainReplicaRemove(blockchainRID.toHex(), pubKey)
 
-            val report = if (removed.isEmpty()) {
-                "No replica has been removed"
-            } else {
-                val listRemoved = removed.map { it.toString() }
-                listRemoved.joinToString(
-                                separator = "\n",
-                                prefix = "Replica $pubKey removed from brid (${removed.size}):\n")
+        if (removed.isEmpty()) {
+            println("No replica has been removed")
+        } else {
+            removed.forEach {
+                println("Replica $pubKey removed from brid (${removed.size}):\n$it")
             }
-
-            Ok(report)
-
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
         }
+
+
     }
 
     private fun blockchainReplicaRemove(brid: String?, pubKey: String): Set<BlockchainRid> {

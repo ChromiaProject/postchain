@@ -8,7 +8,6 @@ import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALL
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQUEST_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQUEST_METHOD
 import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_BLOCKCHAIN_RID
-import net.postchain.api.rest.json.JsonFactory
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import spark.Request
@@ -17,12 +16,12 @@ import spark.Service
 import spark.Service.ignite
 import kotlin.test.assertEquals
 
-// POS-129: Testing of Spark's redirect feature
+/** POS-129: Testing of Spark's redirect feature */
+
 class RestApiRedirectTest {
 
     private val brid = "78967BAA4768CBCEF11C508326FFB13A956689FCB6DC3BA17F4B895CBB1577A3"
     private val brid2 = "78967BAA4768CBCEF11C508326FFB13A956689FCB6DC3BA17F4B895CBB1577A4"
-    private val gson = JsonFactory.makeJson()
     private lateinit var http: Service
 
     @BeforeEach
@@ -62,7 +61,6 @@ class RestApiRedirectTest {
         http.stop()
     }
 
-    //    @Test
     fun test() {
         val res: Response = given().basePath("/").port(9999)
                 .get("/blocks/$brid")

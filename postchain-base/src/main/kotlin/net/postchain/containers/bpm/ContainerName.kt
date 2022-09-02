@@ -2,25 +2,22 @@ package net.postchain.containers.bpm
 
 import net.postchain.config.app.AppConfig
 
-data class ContainerName(
-        val name: String,
-        val directory: String
+data class ContainerName private constructor(
+        val directoryContainer: String,
+        val dockerContainer: String,
 ) {
+
+    val name = dockerContainer
 
     companion object {
 
-        fun create(appConfig: AppConfig, directory: String): ContainerName {
-            val name = "n${appConfig.pubKey.take(8)}_${directory}"
-            return ContainerName(name, directory)
+        fun create(appConfig: AppConfig, directoryContainer: String): ContainerName {
+            val dockerContainer = "n${appConfig.pubKey.take(8)}_${directoryContainer}"
+            return ContainerName(directoryContainer, dockerContainer)
         }
-
-        fun createGroupName(groupName: String) = ContainerName(groupName, "")
-
     }
 
-    fun isGroup(groupName: String): Boolean = name == groupName
-
     override fun toString(): String {
-        return name
+        return dockerContainer
     }
 }

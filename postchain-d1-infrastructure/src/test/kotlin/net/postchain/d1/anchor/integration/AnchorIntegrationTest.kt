@@ -1,8 +1,8 @@
 package net.postchain.d1.anchor.integration
 
 import mu.KLogging
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.d1.anchor.AnchorGTXModule
 import net.postchain.d1.anchor.AnchorSpecialTxExtension
 import net.postchain.d1.anchor.AnchorTestGTXModule
@@ -66,7 +66,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
         // --------------------
         // Need a TX factory for testing
         // --------------------
-        val cs = SECP256K1CryptoSystem()
+        val cs = Secp256K1CryptoSystem()
 
         // Anchor (special) TX
         val anchorBlockchainRID: BlockchainRid = sysSetup.blockchainMap[ANCHOR_CHAIN_ID]!!.rid

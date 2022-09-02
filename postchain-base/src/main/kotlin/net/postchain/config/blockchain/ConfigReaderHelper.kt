@@ -1,7 +1,7 @@
 package net.postchain.config.blockchain
 
 import net.postchain.common.BlockchainRid
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvType
 

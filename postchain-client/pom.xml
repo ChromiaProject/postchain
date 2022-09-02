@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.4.2-SNAPSHOT</version>
+        <version>3.7.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -26,13 +26,7 @@
         <!-- Postchain -->
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-base</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>*</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
+            <artifactId>postchain-common</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -40,17 +34,29 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-common</artifactId>
+            <artifactId>postchain-gtx-data</artifactId>
         </dependency>
+
 
         <!-- Tools -->
         <dependency>
-            <groupId>nl.komponents.kovenant</groupId>
-            <artifactId>kovenant-core</artifactId>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-core</artifactId>
+            <version>4.25.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-format-gson</artifactId>
+            <version>4.25.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-client-apache-async</artifactId>
+            <version>4.25.10.1</version>
         </dependency>
         <dependency>
             <groupId>com.madgag.spongycastle</groupId>
@@ -65,12 +71,34 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-configuration2</artifactId>
-            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.willowtreeapps.assertk</groupId>
+            <artifactId>assertk</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito.kotlin</groupId>
+            <artifactId>mockito-kotlin</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

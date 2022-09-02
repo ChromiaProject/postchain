@@ -4,8 +4,8 @@ package net.postchain.network.peer
 
 import mu.KLogging
 import net.postchain.common.ExponentialDelay
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.NodeRid
-import net.postchain.core.ProgrammerMistake
 import net.postchain.devtools.NameHelper.peerName
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -17,8 +17,10 @@ import kotlin.random.Random
  *
  * Note: this strategy handles connections to individual peers, which means it needs [PeerConnectionManager].
  */
-class DefaultPeersConnectionStrategy(val connectionManager: PeerConnectionManager,
-                                     val me: NodeRid) : PeersConnectionStrategy {
+class DefaultPeersConnectionStrategy(
+        val connectionManager: PeerConnectionManager,
+        val me: NodeRid,
+) : PeersConnectionStrategy {
 
     private val peerToDelayMap: MutableMap<NodeRid, ExponentialDelay> = mutableMapOf()
     private val timerQueue = ScheduledThreadPoolExecutor(1)
@@ -79,7 +81,7 @@ class DefaultPeersConnectionStrategy(val connectionManager: PeerConnectionManage
 
         logger.info { "${peerName(me)}/${chainID}: Reconnecting in ${delay.delayCounterMillis} ms to peer = ${peerName(peerId)}" }
         timerQueue.schedule({
-            logger.info { "${peerName(me)}/${chainID}: Reconnecting to peer: peer = ${peerName(peerId)}" }
+            logger.info { "${peerName(me)}/${chainID}: Reconnecting to peer = ${peerName(peerId)}" }
             try {
                 connectionManager.connectChainPeer(chainID, peerId)
             } catch (e: ProgrammerMistake) {
@@ -88,12 +90,15 @@ class DefaultPeersConnectionStrategy(val connectionManager: PeerConnectionManage
         }, delay.getDelayMillisAndIncrease(), TimeUnit.MILLISECONDS)
     }
 
-    override fun duplicateConnectionDetected(chainID: Long, isOriginalOutgoing: Boolean,
-                                             peerId: NodeRid): Boolean {
-        if (shouldIConnect(peerId)) {
-            return !isOriginalOutgoing
+    override fun duplicateConnectionDetected(
+            chainID: Long,
+            isOriginalOutgoing: Boolean,
+            peerId: NodeRid,
+    ): Boolean {
+        return if (shouldIConnect(peerId)) {
+            !isOriginalOutgoing
         } else {
-            return isOriginalOutgoing
+            isOriginalOutgoing
         }
     }
 

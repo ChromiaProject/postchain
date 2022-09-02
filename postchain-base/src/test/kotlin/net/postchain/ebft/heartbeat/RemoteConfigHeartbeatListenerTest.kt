@@ -1,9 +1,10 @@
 package net.postchain.ebft.heartbeat
 
-import net.postchain.common.hexStringToByteArray
+import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.MockStorage
-import net.postchain.common.BlockchainRid
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
 import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
@@ -18,6 +19,9 @@ class RemoteConfigHeartbeatListenerTest {
     private val chainId = 0L
     private val blockchainRid = BlockchainRid.ZERO_RID
     private val now = System.currentTimeMillis()
+    private val config = GtvEncoder.encodeGtv(GtvFactory.gtv("valid config"))
+    private val configHash = RemoteConfigVerifier.calculateHash(config)
+    private val invalidConfig = config.dropLast(1).toByteArray()
 
     @Test
     fun testNoHeartbeatEventRegistered_then_checkFailed() {
@@ -69,51 +73,63 @@ class RemoteConfigHeartbeatListenerTest {
             blockchainConfigProvider = mockBlockchainConfigProvider
         }
 
-        // 1
-        // Interaction: Register the first Heartbeat event
+        /// 1
+        // Interaction (1): Register the first Heartbeat event
         sut.onHeartbeat(HeartbeatEvent(now - 10_000L))
 
-        // Assert: Heartbeat event registered, but no RemoteConfig received so RemoteConfig check FAILED
+        // Assert (1): Heartbeat event registered, but no RemoteConfig received so RemoteConfig check FAILED
         assertFalse(sut.checkHeartbeat(now))
 
-        // Verification: remote config requested
+        // Verification (1): remote config requested
         val message = argumentCaptor<MsMessage>()
         verify(connManager, times(1)).sendMessageToMaster(eq(chainId), message.capture())
         assertEquals(MsFindNextBlockchainConfigMessage::class, message.firstValue::class)
 
+        /// 2
+        // Interaction (2): Then _invalid_ remote config received
+        val invalidRemoteConfig = MsNextBlockchainConfigMessage(BlockchainRid.ZERO_RID.data, 0L, invalidConfig, configHash)
+        sut.onMessage(invalidRemoteConfig)
 
-        // 2
-        // Interaction (2): Then remote config received
-        val remoteConfig = MsNextBlockchainConfigMessage("aaaa".hexStringToByteArray(), 0L, "bbbb".hexStringToByteArray())
+        // Assert (2): Heartbeat event registered, requested RemoteConfig is NOT recorded and RemoteConfig check FAILED
+        assertFalse(sut.checkHeartbeat(now + 1L))
+
+        // Verification (2): the NEW remote config requested again
+        verify(connManager, times(2)).sendMessageToMaster(eq(chainId), message.capture())
+        assertEquals(MsFindNextBlockchainConfigMessage::class, message.firstValue::class)
+
+        /// 3
+        // Interaction (3): Then valid remote config received
+        val configHash = RemoteConfigVerifier.calculateHash(config)
+        val remoteConfig = MsNextBlockchainConfigMessage(BlockchainRid.ZERO_RID.data, 0L, config, configHash)
         sut.onMessage(remoteConfig)
 
-        // Assert (2): Heartbeat event registered, RemoteConfig received and RemoteConfig check PASSED
-        assert(sut.checkHeartbeat(now))
+        // Assert (3): Heartbeat event registered, RemoteConfig received and RemoteConfig check PASSED
+        assert(sut.checkHeartbeat(now + 2L))
 
-        // Verification (2): the NEW remote config is not yet requested
-        verify(connManager, times(1)).sendMessageToMaster(eq(chainId), message.capture())
+        // Verification (3): the NEW remote config is not yet requested
+        verify(connManager, times(2)).sendMessageToMaster(eq(chainId), message.capture())
         assertEquals(MsFindNextBlockchainConfigMessage::class, message.secondValue::class)
 
         val future = now + 15_000L // remoteConfigRequestInterval < future < remoteConfigTimeout
         sut.onHeartbeat(HeartbeatEvent(future))
 
-        // 3
-        // Assert (3): Heartbeat event registered, RemoteConfig received and RemoteConfig check PASSED
+        /// 4
+        // Assert (4): Heartbeat event registered, RemoteConfig received and RemoteConfig check PASSED
         assert(sut.checkHeartbeat(future))
 
-        // Verification (3): the NEW remote config requested
-        verify(connManager, times(2)).sendMessageToMaster(eq(chainId), message.capture())
+        // Verification (4): the NEW remote config requested
+        verify(connManager, times(3)).sendMessageToMaster(eq(chainId), message.capture())
         assertEquals(MsFindNextBlockchainConfigMessage::class, message.thirdValue::class)
 
         val future2 = now + 25_000L // remoteConfigRequestInterval < remoteConfigTimeout < future2
         sut.onHeartbeat(HeartbeatEvent(future2))
 
-        // 4
-        // Assert (4): Heartbeat event registered, RemoteConfig received but RemoteConfig check FAILED
+        /// 5
+        // Assert (5): Heartbeat event registered, RemoteConfig received but RemoteConfig check FAILED
         assertFalse(sut.checkHeartbeat(future2))
 
-        // Verification (4): the NEW remote config requested
-        verify(connManager, times(3)).sendMessageToMaster(eq(chainId), message.capture())
+        // Verification (5): the NEW remote config requested
+        verify(connManager, times(4)).sendMessageToMaster(eq(chainId), message.capture())
         assertEquals(MsFindNextBlockchainConfigMessage::class, message.lastValue::class)
     }
 

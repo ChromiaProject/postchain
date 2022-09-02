@@ -6,10 +6,10 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import net.postchain.common.toHex
-import net.postchain.core.Transaction
 import net.postchain.devtools.PostchainTestNode
-import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.query
+import net.postchain.devtools.testinfra.TestTransaction
+import net.postchain.core.Transaction
 
 object TxChartHelper {
 

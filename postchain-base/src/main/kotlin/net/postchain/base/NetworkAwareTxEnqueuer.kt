@@ -4,8 +4,8 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.common.toHex
+import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.core.TransactionQueue
-import net.postchain.core.TransactionResult
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.network.CommunicationManager
 
@@ -13,8 +13,8 @@ import net.postchain.network.CommunicationManager
  * Transaction queue for transactions added locally via the REST API
  */
 class NetworkAwareTxQueue(
-        private val queue: TransactionQueue,
-        private val network: CommunicationManager<EbftMessage>)
+    private val queue: TransactionQueue,
+    private val network: CommunicationManager<EbftMessage>)
     : TransactionQueue by queue {
 
     companion object : KLogging()
@@ -54,9 +54,9 @@ Despite these drawbacks, I think this is the way to go for now. I haven't found 
 where we are guaranteed not to drop transactions.
  */
 
-    override fun enqueue(tx: net.postchain.core.Transaction): TransactionResult {
+    override fun enqueue(tx: net.postchain.core.Transaction): EnqueueTransactionResult {
         val result = queue.enqueue(tx)
-        if (result == TransactionResult.OK) {
+        if (result == EnqueueTransactionResult.OK) {
             logger.debug("Node broadcasting tx ${tx.getRID().toHex()}")
             network.broadcastPacket(net.postchain.ebft.message.Transaction(tx.getRawData()))
         }

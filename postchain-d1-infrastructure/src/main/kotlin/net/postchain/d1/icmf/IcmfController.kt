@@ -3,7 +3,7 @@
 package net.postchain.d1.icmf
 
 import net.postchain.base.Storage
-import net.postchain.core.ProgrammerMistake
+import net.postchain.common.exception.ProgrammerMistake
 
 class IcmfController(storage: Storage) {
     val localDispatcher = IcmfLocalDispatcher(storage)
