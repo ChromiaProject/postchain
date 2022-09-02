@@ -78,7 +78,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, ectx: BlockEContext): Boolean {
         val gtxTransaction = tx as GTXTransaction
         val gtxData = gtxTransaction.gtxData
-        val operations = gtxData.transactionBodyData.operations
+        val operations = gtxData.gtxBody.operations
         if (operations.isEmpty()) return false
 
         var idx = 0
@@ -88,8 +88,8 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                 val rops = ext.getRelevantOps()
                 val selectesOps = mutableListOf<OpData>()
                 // select relevant ops
-                while (operations[idx].opName in rops) {
-                    selectesOps.add(operations[idx])
+                while (operations[idx].name in rops) {
+                    selectesOps.add(operations[idx].toOpData())
                     idx += 1
                     if (idx >= operations.size) break
                 }
@@ -103,14 +103,14 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         return if (idx == operations.size) {
             true
         } else if (idx == operations.size - 1) {
-            if (operations[idx].opName == GtxSpecNop.OP_NAME) { // __nop is allowed as last operation
+            if (operations[idx].name == GtxSpecNop.OP_NAME) { // __nop is allowed as last operation
                 true
             } else {
-                logger.warn("Unprocessed special op: ${operations[idx].opName}")
+                logger.warn("Unprocessed special op: ${operations[idx].name}")
                 false
             }
         } else {
-            val opNames = operations.slice(IntRange(idx, operations.size)).map { it.opName }
+            val opNames = operations.slice(IntRange(idx, operations.size)).map { it.name }
                 .joinToString()
             logger.warn("Too many operations in special transaction: $opNames")
             false

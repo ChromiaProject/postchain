@@ -12,7 +12,6 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtx.data.GTXTransactionData
 
 /**
  * A transaction based on the GTX format.
@@ -30,7 +29,7 @@ import net.postchain.gtx.data.GTXTransactionData
 class GTXTransaction (
     val _rawData: ByteArray?,
     val gtvData: Gtv,
-    val gtxData: GTXTransactionData,
+    val gtxData: Gtx,
     val signers: Array<ByteArray>,
     val signatures: Array<ByteArray>,
     val ops: Array<Transactor>,

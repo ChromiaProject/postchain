@@ -11,26 +11,19 @@ import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.GTXTransactionBodyData
-import net.postchain.gtx.data.GTXTransactionData
-import net.postchain.gtx.data.OpData
 import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 internal class GtxRegressionTest {
 
     @Test
     fun gtxOp() {
-        val opData = OpData("foo", arrayOf(gtv("bar"), gtv(1)))
         val gtxOp = GtxOp("foo", gtv("bar"), gtv(1))
-
-        assertEquals(OpDataSerializer.serializeToGtv(opData), gtxOp.toGtv())
 
         val encoded = ReverseByteArrayOutputStream(1000, true)
         gtxOp.toRaw().encode(encoded, true)
 
         GtvDecoder.decodeGtv(encoded.array)
-        assertArrayEquals(GtvEncoder.encodeGtv(OpDataSerializer.serializeToGtv(opData)), encoded.array)
         assertArrayEquals(GtvEncoder.encodeGtv(gtxOp.toGtv()), encoded.array)
     }
 
@@ -47,10 +40,7 @@ internal class GtxRegressionTest {
         val encoded = ReverseByteArrayOutputStream(1000, true)
         newBody.toRaw().encode(encoded, true)
 
-        val oldEncoded = GtvEncoder.encodeGtv(GtxTransactionBodyDataSerializer.serializeToGtv(oldBody))
-
         GtvDecoder.decodeGtv(encoded.array)
-        assertArrayEquals(oldEncoded, encoded.array)
         assertArrayEquals(GtvEncoder.encodeGtv(newBody.toGtv()), encoded.array)
     }
 
@@ -58,10 +48,8 @@ internal class GtxRegressionTest {
     fun gtx() {
         val brid = BlockchainRid.ZERO_RID
         val newTx = Gtx(GtxBody(brid, listOf(GtxOp("foo", gtv(1))), listOf()), listOf())
-        val oldTx = GTXTransactionData(GTXTransactionBodyData(brid, arrayOf(OpData("foo", arrayOf(gtv(1)))), arrayOf()), arrayOf())
 
         GtvDecoder.decodeGtv(newTx.encode())
-        assertArrayEquals(oldTx.serialize(), newTx.encode())
         assertArrayEquals(GtvEncoder.encodeGtv(newTx.toGtv()), newTx.encode())
     }
 }

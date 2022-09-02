@@ -19,7 +19,6 @@ import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
-import net.postchain.gtx.data.GTXTransactionData
 import net.postchain.gtx.data.OpData
 import org.spongycastle.asn1.ua.DSTU4145NamedCurves.params
 import java.io.StringReader
@@ -40,7 +39,7 @@ class TransactionContext(val blockchainRID: BlockchainRid?,
 object GTXMLTransactionParser {
 
     /**
-     * Parses XML represented as string into [GTXTransactionData] within the [TransactionContext]
+     * Parses XML represented as string into [Gtx] within the [TransactionContext]
      */
     fun parseGTXMLTransaction(xml: String, context: TransactionContext, cs: CryptoSystem): Gtx {
         return parseGTXMLTransaction(

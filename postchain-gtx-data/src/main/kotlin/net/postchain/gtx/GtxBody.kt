@@ -11,6 +11,7 @@ import net.postchain.gtv.gtxmessages.RawGtxBody
 import net.postchain.gtv.gtxmessages.RawGtxBody.Signers
 import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import net.postchain.gtx.data.ExtOpData
 
 class GtxBody(
     val blockchainRid: BlockchainRid,
@@ -27,6 +28,13 @@ class GtxBody(
     fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>): Hash {
         if (!this::rid.isInitialized) rid = toGtv().merkleHash(calculator)
         return rid
+    }
+
+    // Extended OpData
+    fun getExtOpData(): Array<ExtOpData> {
+        return operations.mapIndexed { idx, op ->
+            ExtOpData.build(op, idx, this)
+        }.toTypedArray()
     }
 
     internal fun toRaw() = RawGtxBody(

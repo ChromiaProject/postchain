@@ -19,6 +19,8 @@ class GtxOp(val name: String, vararg val args: Gtv) {
      * 2. array of arguments [GtvArray]
      */
     fun toGtv() = gtv(gtv(name), gtv(args.toList()))
+
+    fun toOpData() = OpData(name, args as Array<Gtv>)
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

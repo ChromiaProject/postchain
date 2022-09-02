@@ -7,6 +7,8 @@ import net.postchain.common.data.Hash
 import net.postchain.gtv.*
 import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBody
+import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.serializer.GtxTransactionBodyDataSerializer
 import net.postchain.gtx.data.serializer.GtxTransactionDataSerializer
 import java.util.*
@@ -40,7 +42,7 @@ data class OpData(val opName: String, val args: Array<Gtv>) {
 
 class ExtOpData(val opName: String,
                 val opIndex: Int,
-                val args: Array<Gtv>,
+                val args: Array<out Gtv>,
                 val blockchainRID: BlockchainRid,
                 val signers: Array<ByteArray>,
                 val operations: Array<OpData> ) {
@@ -52,6 +54,10 @@ class ExtOpData(val opName: String,
          */
         fun build(op: OpData, opIndex: Int, bodyData: GTXTransactionBodyData): ExtOpData {
             return ExtOpData(op.opName, opIndex, op.args, bodyData.blockchainRID, bodyData.signers, bodyData.operations)
+        }
+
+        fun build(op: GtxOp, opIndex: Int, body: GtxBody): ExtOpData {
+            return ExtOpData(op.name, opIndex, op.args, body.blockchainRid, body.signers.toTypedArray(), body.operations.map { it.toOpData() }.toTypedArray())
         }
     }
 

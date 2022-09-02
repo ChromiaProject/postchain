@@ -12,7 +12,6 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.data.factory.GtxTransactionDataFactory
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -55,8 +54,8 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
         val nanoDelta = measureNanoTime {
             for (rawTx in transactions) {
                 val gtvData = GtvFactory.decodeGtv(rawTx)
-                val gtxData = GtxTransactionDataFactory.deserializeFromGtv(gtvData)
-                total += gtxData.transactionBodyData.operations.size
+                val gtxData = Gtx.fromGtv(gtvData)
+                total += gtxData.gtxBody.operations.size
             }
         }
        assertTrue(total == 1000)
