@@ -3,6 +3,7 @@ package net.postchain.gtx
 import com.beanit.jasn1.ber.ReverseByteArrayOutputStream
 import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
@@ -24,6 +25,7 @@ class Gtx(
 
     fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>) = gtxBody.calculateTxRid(calculator)
 
+    fun encodeHex() = encode().toHex()
     fun encode(): ByteArray {
         if (signatures.size != gtxBody.signers.size) throw UserMistake("Not fully signed")
         val encoded = ReverseByteArrayOutputStream(1000, true)

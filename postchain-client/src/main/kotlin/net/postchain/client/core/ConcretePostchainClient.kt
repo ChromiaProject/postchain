@@ -96,7 +96,7 @@ class ConcretePostchainClient(
     override fun postTransaction(tx: Gtx): CompletionStage<TransactionResult> {
         val txLens = Body.auto<Tx>().toLens()
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
-        val encodedTx = Tx(tx.encode().toHex())
+        val encodedTx = Tx(tx.encodeHex())
         val request = txLens(encodedTx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
         client(request) { resp ->
