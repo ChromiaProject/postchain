@@ -5,8 +5,8 @@ import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockRid
 import net.postchain.core.TxEContext
-import net.postchain.gtx.ExtOpData
 import net.postchain.gtx.GTXOperation
+import net.postchain.gtx.data.ExtOpData
 import org.apache.commons.dbutils.QueryRunner
 
 private val r = QueryRunner()
