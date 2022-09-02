@@ -1,5 +1,6 @@
 package net.postchain.client.core
 
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.common.BlockchainRid
 import org.http4k.client.AsyncHttpHandler
@@ -33,7 +34,7 @@ internal class ConcretePostchainClientTest {
     }
 
     fun driveTestCorrectNumberOfAttempts(client: ConcretePostchainClient, numberExpected: Int) {
-        client.makeTransaction()
+        client.txBuilder()
             .addNop()
             .postSyncAwaitConfirmation()
 
@@ -44,7 +45,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Max number of attempts by default`() {
         driveTestCorrectNumberOfAttempts(
-            ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, statusPollInterval = 1, client = httpClient),
+            ConcretePostchainClient(PostchainClientConfig(url, BlockchainRid.buildFromHex(brid), statusPollInterval = 1), client = httpClient),
             // If I didn't pass a max value, it defaults to RETRIEVE_TX_STATUS_ATTEMPTS = 20
             numberExpected = STATUS_POLL_COUNT)
     }
@@ -52,7 +53,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Max number of attempts parameterized`() {
         driveTestCorrectNumberOfAttempts(
-            ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, 10, statusPollInterval = 1, client = httpClient),
+            ConcretePostchainClient(PostchainClientConfig(url, BlockchainRid.buildFromHex(brid),  statusPollCount = 10, statusPollInterval = 1), client = httpClient),
             // If I pass a custom max value, verify it uses it
             numberExpected = 10
         )
