@@ -1,5 +1,6 @@
 package net.postchain.client.config
 
+import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.config.cryptoSystem
@@ -10,8 +11,8 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 const val STATUS_POLL_COUNT = 20
 const val STATUS_POLL_INTERVAL = 500L //ms
 data class PostchainClientConfig(
-    val apiUrl: String,
     val blockchainRid: BlockchainRid,
+    val endpointPool: EndpointPool,
     val signers: List<KeyPair> = listOf(),
     val statusPollCount: Int = STATUS_POLL_COUNT,
     val statusPollInterval: Long = STATUS_POLL_INTERVAL,
@@ -29,10 +30,10 @@ data class PostchainClientConfig(
             require(pubkeys.size == privkeys.size) { "Equally manny pubkeys as privkeys must be provider, but ${pubkeys.size} and ${privkeys.size} was found"}
             val signers = pubkeys.zip(privkeys).map { KeyPair.of(it.first, it.second) }
             return PostchainClientConfig(
-                apiUrl = System.getenv("POSTCHAIN_CLIENT_API_URL")
-                    ?: config.getString("api.url", ""),
                 blockchainRid = (System.getenv("POSTCHAIN_CLIENT_BLOCKCHAIN_RID")
                     ?: config.getString("brid", "")).let { BlockchainRid.buildFromHex(it) },
+                endpointPool = EndpointPool((System.getenv("POSTCHAIN_CLIENT_API_URL")
+                    ?: config.getString("api.url", "")).split(",")),
                 signers = signers,
                 statusPollCount = System.getenv("POSTCHAIN_CLIENT_STATUS_POLL_COUNT")?.toInt()
                     ?: config.getInt("status.poll-count", STATUS_POLL_COUNT),
