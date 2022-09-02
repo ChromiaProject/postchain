@@ -70,7 +70,7 @@ open class ManagedBlockchainProcessManager(
     /**
      * Check if this is the "chain zero" and if so we need to set the dataSource in a few objects before we go on.
      */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid {
         if (chainId == CHAIN0) {
             initManagedEnvironment()
         }
