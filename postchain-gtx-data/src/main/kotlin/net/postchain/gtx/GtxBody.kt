@@ -13,7 +13,7 @@ import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 
-class GtxBody(
+data class GtxBody(
     val blockchainRid: BlockchainRid,
     val operations: List<GtxOp>,
     val signers: List<ByteArray>
@@ -63,7 +63,10 @@ class GtxBody(
 
         if (blockchainRid != other.blockchainRid) return false
         if (operations != other.operations) return false
-        if (!signers.toTypedArray().contentDeepEquals(other.signers.toTypedArray())) return false
+        if (signers.size != other.signers.size) return false
+        signers.forEachIndexed { i, signer ->
+            if (!signer.contentEquals(other.signers[i])) return false
+        }
 
         return true
     }

@@ -31,7 +31,7 @@ data class OpData(val opName: String, val args: Array<Gtv>) {
 
 class ExtOpData(val opName: String,
                 val opIndex: Int,
-                val args: Array<out Gtv>,
+                val args: Array<Gtv>,
                 val blockchainRID: BlockchainRid,
                 val signers: Array<ByteArray>,
                 val operations: Array<OpData> ) {
@@ -39,7 +39,7 @@ class ExtOpData(val opName: String,
     companion object {
 
         fun build(op: GtxOp, opIndex: Int, body: GtxBody): ExtOpData {
-            return ExtOpData(op.opName, opIndex, op.args, body.blockchainRid, body.signers.toTypedArray(), body.operations.map { it.toOpData() }.toTypedArray())
+            return ExtOpData(op.opName, opIndex, op.args as Array<Gtv>, body.blockchainRid, body.signers.toTypedArray(), body.operations.map { it.toOpData() }.toTypedArray())
         }
     }
 }

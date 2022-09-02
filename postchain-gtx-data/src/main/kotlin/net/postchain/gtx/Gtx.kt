@@ -35,6 +35,7 @@ class Gtx(
         ).encode(encoded)
         return encoded.array
     }
+
     /**
      * Elements are structured like an ordered array with elements:
      * 1. transaction data body [GtvByteArray]
@@ -52,7 +53,10 @@ class Gtx(
         other as Gtx
 
         if (gtxBody != other.gtxBody) return false
-        if (!signatures.toTypedArray().contentDeepEquals(other.signatures.toTypedArray())) return false
+        if (signatures.size != other.signatures.size) return false
+        signatures.forEachIndexed { i, signature ->
+            if (!signature.contentEquals(other.signatures[i])) return false
+        }
 
         return true
     }
