@@ -199,7 +199,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         if (chain.isConnected(peerId)) {
             logger.debug {
                 "${logger(chain.peerConfig)}: connectChainPeer() - already connected chain $chainId " +
-                        "to peer: ${peerId.shortString()} so do nothing. "
+                        "to peer: ${peerName(peerId)} so do nothing. "
             }
         } else {
             connectorConnectPeer(chain.peerConfig, peerId)
@@ -239,7 +239,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         } else {
             logger.debug(
                     "${logger(chain.peerConfig)}: connectChainPeer() - cannot connect chain $chainId " +
-                            "to peer: ${peerId.shortString()} b/c chain missing that connection. "
+                            "to peer: ${peerName(peerId)} b/c chain missing that connection. "
             )
         }
     }
