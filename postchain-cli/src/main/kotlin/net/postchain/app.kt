@@ -2,42 +2,42 @@
 
 package net.postchain
 
-import net.postchain.cli.Cli
-import net.postchain.cli.CliError
-import net.postchain.cli.Ok
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.subcommands
+import net.postchain.cli.*
 import java.io.File
 import java.lang.management.ManagementFactory
 
+
+class Postchain: CliktCommand(name = "postchain") {
+    override fun run() = Unit
+}
 fun main(args: Array<String>) {
     dumpPid()
-    val cliResult = Cli().parse(args)
-    when(cliResult){
-        is CliError -> {
-            when(cliResult) {
-                is CliError.MissingCommand -> {
-                    println(cliResult.message + "\n")
-                    Cli().usageCommands()
-                    println("\n")
-                }
-                is CliError.ArgumentNotFound -> {
-                    println(cliResult.message + "\n")
-                    Cli().usage(cliResult.command)
-                }
-                else -> cliResult.message?.let {
-                    println("\n$it\n")
-                }
-            }
-            System.exit(cliResult.code)
-        }
-        is Ok -> {
-            cliResult.info?.also {
-                println("\n$it\n")
-            }
-            if(!cliResult.isLongRunning){
-                System.exit(cliResult.code)
-            }
-        }
-    }
+    return Postchain()
+        .subcommands(
+            CommandAddBlockchain(),
+            CommandAddConfiguration(),
+            CommandListConfigurations(),
+            CommandRemoveConfiguration(),
+            CommandBlockchainReplicaAdd(),
+            CommandBlockchainReplicaRemove(),
+            CommandCheckBlockchain(),
+            CommandGenerateContainerZfsInitScript(),
+            CommandKeygen(),
+            CommandMustSyncUntil(),
+            CommandPeerInfoAdd(),
+            CommandPeerInfoFind(),
+            CommandPeerInfoImport(),
+            CommandPeerInfoList(),
+            CommandPeerInfoRemove(),
+            CommandRunNode(),
+            CommandRunNodeAuto(),
+            CommandRunServer(),
+            CommandWaitDb(),
+            CommandWipeDb(),
+        )
+        .main(args)
 }
 
 fun dumpPid() {

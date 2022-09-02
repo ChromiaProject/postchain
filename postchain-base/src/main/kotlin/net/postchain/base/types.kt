@@ -3,7 +3,9 @@
 package net.postchain.base
 
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.data.ByteArrayKey
 import net.postchain.core.*
+import net.postchain.core.block.BlockBuilder
 import net.postchain.gtv.Gtv
 import java.sql.Connection
 

@@ -2,33 +2,35 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.crypto.secp256k1_derivePubKey
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.common.toHex
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.secp256k1_derivePubKey
 import org.bitcoinj.crypto.MnemonicCode
+import java.io.FileOutputStream
+import java.util.*
 
-@Parameters(commandDescription = "Generates public/private key pair")
-class CommandKeygen : Command {
 
-    @Parameter(
-            names = ["-m", "--mnemonic"],
-            description = "Mnemonic word list, words separated by space, e.g: \"lift employ roast rotate liar holiday sun fever output magnet...\"")
-    private var wordList = ""
+class CommandKeygen : CliktCommand(name = "keygen", help = "Generates public/private key pair") {
 
-    override fun key(): String = "keygen"
+    private val wordList by option(
+        "-m", "--mnemonic",
+        help = """
+            Mnemonic word list, words separated by space, e.g:
+                "lift employ roast rotate liar holiday sun fever output magnet...""
+        """.trimIndent()
+    )
+        .default("")
 
-    override fun execute(): CliResult {
-        val keys = keygen()
-        return Ok(keys)
-    }
+    private val file by option("-s", "--save", help = "File to save the generated keypair in")
 
     /**
      * Cryptographic key generator. Will generate a pair of public and private keys and print to stdout.
      */
-    private fun keygen(): String {
-        val cs = SECP256K1CryptoSystem()
+    override fun run() {
+        val cs = Secp256K1CryptoSystem()
         var privKey = cs.getRandomBytes(32)
         val mnemonicInstance = MnemonicCode.INSTANCE
         var mnemonic = mnemonicInstance.toMnemonic(privKey).joinToString(" ")
@@ -40,10 +42,25 @@ class CommandKeygen : Command {
         }
 
         val pubKey = secp256k1_derivePubKey(privKey)
-        return """
+
+        file?.let { fileName ->
+            val properties = Properties()
+            properties["privkey"] = privKey.toHex()
+            properties["pubkey"] = pubKey.toHex()
+
+            FileOutputStream(fileName).use { fs ->
+                properties.store(fs, "Keypair generated using secp256k1")
+                fs.flush()
+            }
+        }
+        println(
+            """
             |privkey:   ${privKey.toHex()}
             |pubkey:    ${pubKey.toHex()}
-            |mnemonic:  ${mnemonic} 
+            |mnemonic:  $mnemonic 
         """.trimMargin()
+        )
     }
+
+
 }

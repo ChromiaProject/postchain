@@ -3,9 +3,6 @@
 package net.postchain.api.rest
 
 import com.google.gson.JsonParser
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.Model
@@ -16,15 +13,19 @@ import net.postchain.api.rest.model.TxRID
 import net.postchain.base.cryptoSystem
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.BlockDetail
+import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
+import net.postchain.core.block.BlockDetail
 import net.postchain.ebft.NodeState
 import net.postchain.ebft.rest.contract.EBFTstateNodeStatusContract
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 class RestApiModelTest {
 
@@ -79,10 +80,10 @@ class RestApiModelTest {
         whenever(model.getTransaction(TxRID(txRID.hexStringToByteArray())))
                 .thenReturn(ApiTx("1234"))
 
-        restApi.attachModel(blockchainRID1.toUpperCase(), model)
+        restApi.attachModel(blockchainRID1.uppercase(), model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/tx/${blockchainRID1.toLowerCase()}/$txRID")
+                .get("/tx/${blockchainRID1.lowercase()}/$txRID")
                 .then()
                 .statusCode(200)
     }
@@ -360,10 +361,10 @@ class RestApiModelTest {
     fun test_transactions_get_all() {
 
         val response = listOf<TransactionInfoExt>(
-                TransactionInfoExt("blockRid002".toByteArray(), 1, "some other header".toByteArray(), "signatures".toByteArray(), 1574849760, cryptoSystem.digest("tx1".toByteArray()), "tx1 - 001".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx1".toByteArray()),
-                TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx2".toByteArray()), "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx2".toByteArray()),
-                TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),
-                TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
+                TransactionInfoExt(BlockRid.buildRepeat(2).data, 1, "some other header".toByteArray(), "signatures".toByteArray(), 1574849760, cryptoSystem.digest("tx1".toByteArray()), "tx1 - 001".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx1".toByteArray()),
+                TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx2".toByteArray()), "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx2".toByteArray()),
+                TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),
+                TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
         whenever(model.getTransactionsInfo(Long.MAX_VALUE, 300))
                 .thenReturn(response)
@@ -379,10 +380,10 @@ class RestApiModelTest {
     @Test
     fun test_transactions_get_no_params() {
         val response = listOf(
-                TransactionInfoExt("blockRid002".toByteArray(), 1, "some other header".toByteArray(), "signatures".toByteArray(), 1574849760, cryptoSystem.digest("tx1".toByteArray()), "tx1 - 001".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx1".toByteArray()),
-                TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx2".toByteArray()), "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx2".toByteArray()),
-                TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),
-                TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
+                TransactionInfoExt(BlockRid.buildRepeat(2).data, 1, "some other header".toByteArray(), "signatures".toByteArray(), 1574849760, cryptoSystem.digest("tx1".toByteArray()), "tx1 - 001".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx1".toByteArray()),
+                TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx2".toByteArray()), "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx2".toByteArray()),
+                TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),
+                TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
         whenever(model.getTransactionsInfo(Long.MAX_VALUE, 25))
                 .thenReturn(response)
@@ -399,7 +400,7 @@ class RestApiModelTest {
     fun test_block_get_one() {
         val tx = "tx2".toByteArray()
         val txRID = cryptoSystem.digest(tx)
-        val response = TransactionInfoExt("blockRid004".toByteArray(), 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
+        val response = TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
         whenever(model.getTransactionInfo(TxRID(txRID)))
                 .thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
@@ -408,13 +409,13 @@ class RestApiModelTest {
                 .get("/transactions/$blockchainRID1/${txRID.toHex()}")
                 .then()
                 .statusCode(200)
-                .assertThat().body(equalTo(gson.toJson(response).toString()))
+            .assertThat().body("blockRID", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
     }
 
     @Test
     fun test_block_get_by_RID() {
-        val blockRID = "blockRid001".toByteArray()
-        val response = BlockDetail("blockRid001".toByteArray(), blockchainRID3.toByteArray(), "some header".toByteArray(), 0, listOf<TxDetail>(), "signatures".toByteArray(), 1574849700)
+        val blockRID = BlockRid.buildRepeat(4).data
+        val response = BlockDetail(blockRID, blockchainRID3.toByteArray(), "some header".toByteArray(), 0, listOf<TxDetail>(), "signatures".toByteArray(), 1574849700)
         whenever(model.getBlock(blockRID, true))
                 .thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
@@ -423,6 +424,6 @@ class RestApiModelTest {
                 .get("/blocks/$blockchainRID1/${blockRID.toHex()}")
                 .then()
                 .statusCode(200)
-                .assertThat().body(equalTo(gson.toJson(response).toString()))
+                .assertThat().body("rid", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
     }
 }

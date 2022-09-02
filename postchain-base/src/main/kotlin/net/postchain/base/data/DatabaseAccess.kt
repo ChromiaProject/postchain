@@ -3,9 +3,18 @@
 package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
-import net.postchain.common.data.Hash
-import net.postchain.core.*
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.core.NodeRid
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.AppContext
+import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TxDetail
 import java.sql.Connection
 import java.time.Instant
 
@@ -77,6 +86,8 @@ interface DatabaseAccess {
     // Blockchain configurations
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
     fun findNextConfigurationHeight(ctx: EContext, height: Long): Long?
+    fun listConfigurations(ctx: EContext): List<Long>
+    fun removeConfiguration(ctx: EContext, height: Long): Int
 
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)

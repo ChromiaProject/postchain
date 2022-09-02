@@ -21,8 +21,8 @@ object NodeConfigurationProviderFactory {
         appConfig: AppConfig,
         storageFactory: (AppConfig) -> Storage
     ): NodeConfigurationProvider {
-        if (appConfig.nodeConfigProvider.toLowerCase() == "legacy") {
-            KotlinLogging.logger {  }.warn("Using deprecated legacy configuration provider, change to ${Properties.name.toLowerCase()}")
+        if (appConfig.nodeConfigProvider.lowercase() == "legacy") {
+            KotlinLogging.logger {  }.warn("Using deprecated legacy configuration provider, change to ${Properties.name.lowercase()}")
         }
         return when (fromAlias(appConfig.nodeConfigProvider)) {
             Properties -> PropertiesNodeConfigurationProvider(appConfig)

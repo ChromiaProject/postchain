@@ -6,9 +6,9 @@ import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.core.ConfigurationDataStore
-import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
+import net.postchain.core.EContext
 
 object BaseConfigurationDataStore : KLogging(), ConfigurationDataStore {
 

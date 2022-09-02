@@ -2,9 +2,9 @@
 
 package net.postchain.base
 
-import net.postchain.core.BlockHeader
-import net.postchain.core.BlockWitness
-import net.postchain.core.BlockWitnessBuilder
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.BlockWitnessBuilder
 
 interface BlockWitnessProvider {
     // Returns a new witness builder for the current header

@@ -3,10 +3,15 @@
 package net.postchain.base
 
 import mu.KLogging
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.core.*
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Signature
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.MultiSigBlockWitness
+import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import java.nio.ByteBuffer
 
 /**

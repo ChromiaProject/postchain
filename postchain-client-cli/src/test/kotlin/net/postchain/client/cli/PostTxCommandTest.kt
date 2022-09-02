@@ -1,10 +1,9 @@
 package net.postchain.client.cli
 
-import net.postchain.client.core.ConfirmationLevel
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientProvider
-import net.postchain.client.testConfig
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
@@ -18,15 +17,35 @@ internal class PostTxCommandTest {
             on { makeTransaction() } doReturn txBuilder
         }
 
+        val testConfigPath = this::class.java.getResource("/config.cfg")!!.path
+        val testConfig = PostchainClientConfig.fromProperties(testConfigPath)
         val provider: PostchainClientProvider = mock {
-            on { createClient(eq(testConfig.apiUrl), eq(testConfig.blockchainRid), any()) } doReturn client
+            on { createClient(eq(testConfig.apiUrl), eq(testConfig.blockchainRid), any(), any(), any()) } doReturn client
         }
 
         val command = PostTxCommand(provider)
 
-        command.runInternal(testConfig, "test_tx", gtv(1))
+        // Verify various argument types are working, e.g. strings containing spaces
+        command.parse(
+            listOf(
+                "--config", testConfigPath, "test_tx",
+                "1",
+                "foo",
+                "foo bar",
+                "[1,foo]",
+                "{a->b}"
+            )
+        )
 
         verify(client).makeTransaction()
-        verify(txBuilder).postSync(ConfirmationLevel.NO_WAIT)
+        verify(txBuilder).addOperation(
+            "test_tx",
+            gtv(1),
+            gtv("foo"),
+            gtv("foo bar"),
+            gtv(listOf(gtv(1), gtv("foo"))),
+            gtv(mapOf("a" to gtv("b")))
+        )
+        verify(txBuilder).postSync()
     }
 }

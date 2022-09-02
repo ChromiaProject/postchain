@@ -2,19 +2,19 @@
 
 package net.postchain.api.rest.endpoint
 
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRID
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.TransactionStatus
+import net.postchain.common.tx.TransactionStatus
 import org.hamcrest.Matchers.equalToIgnoringCase
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 
 /**
  * [GetStatus] and [GetTx] endpoints have common part,

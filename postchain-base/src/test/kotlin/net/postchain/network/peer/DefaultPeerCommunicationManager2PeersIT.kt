@@ -6,11 +6,11 @@ import assertk.assert
 import assertk.assertions.containsExactly
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.core.NodeRid
-import net.postchain.core.byteArrayKeyOf
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test
 
 class DefaultPeerCommunicationManager2PeersIT {
 
-    private val cryptoSystem = SECP256K1CryptoSystem()
+    private val cryptoSystem = Secp256K1CryptoSystem()
     private val blockchainRid = BlockchainRid.buildRepeat(0)
 
     private lateinit var peerInfo1: PeerInfo

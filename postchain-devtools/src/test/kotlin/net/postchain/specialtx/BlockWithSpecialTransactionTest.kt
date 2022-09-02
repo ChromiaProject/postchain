@@ -2,15 +2,15 @@
 
 package net.postchain.specialtx
 
-import net.postchain.base.SECP256K1CryptoSystem
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.specialtx.SpecialTxTestGTXModule
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
-import net.postchain.gtx.GTXAutoSpecialTxExtension
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.special.GTXAutoSpecialTxExtension
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -61,7 +61,7 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         // --------------------
         val blockchainRID: BlockchainRid = nodes[0].getBlockchainInstance().blockchainEngine.getConfiguration().blockchainRid
         val module = SpecialTxTestGTXModule() // Had to build a special module for this test
-        val cs = SECP256K1CryptoSystem()
+        val cs = Secp256K1CryptoSystem()
         gtxTxFactory = GTXTransactionFactory(blockchainRID, module, cs)
 
         // --------------------

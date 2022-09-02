@@ -7,7 +7,7 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import net.postchain.api.rest.model.ApiTx
-import net.postchain.core.UserMistake
+import net.postchain.common.exception.UserMistake
 import java.lang.reflect.Type
 
 internal class TransactionDeserializer : JsonDeserializer<ApiTx> {

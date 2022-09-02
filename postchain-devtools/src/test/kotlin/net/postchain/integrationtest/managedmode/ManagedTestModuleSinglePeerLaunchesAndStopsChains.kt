@@ -3,7 +3,6 @@
 package net.postchain.integrationtest.managedmode
 
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.EContext
 import net.postchain.gtv.*
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.SimpleGTXModule
@@ -13,6 +12,7 @@ import net.postchain.integrationtest.managedmode.TestModulesHelper.argHeight
 import net.postchain.integrationtest.managedmode.TestModulesHelper.peerInfoToGtv
 import net.postchain.integrationtest.managedmode.TestPeerInfos.Companion.peerInfo0
 import net.postchain.util.TestKLogging
+import net.postchain.core.EContext
 
 open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : SimpleGTXModule<Unit>(
         Unit,
@@ -77,7 +77,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
                         "blockchainRid: ${argBlockchainRid(args)}"
             }
 
-            val blockchainConfigFilename = when (argBlockchainRid(args).toUpperCase()) {
+            val blockchainConfigFilename = when (argBlockchainRid(args).uppercase()) {
                 BLOCKCHAIN_RIDS[0L] -> {
                     when (argHeight(args)) {
                         5L -> "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_0_height_5.xml"
