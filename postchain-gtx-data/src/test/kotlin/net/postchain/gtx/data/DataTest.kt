@@ -92,7 +92,7 @@ class GTXDataTest {
         ))
         assertEquals(3, d.signatures.size)
         assertEquals(4, body.operations.size)
-        assertEquals("bro", body.operations[1].name)
+        assertEquals("bro", body.operations[1].opName)
         val op0 = body.operations[0]
         assertTrue(op0.args[0].isNull())
         assertEquals(42, op0.args[1].asInteger())

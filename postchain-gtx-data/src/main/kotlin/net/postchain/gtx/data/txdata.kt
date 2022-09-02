@@ -39,7 +39,7 @@ class ExtOpData(val opName: String,
     companion object {
 
         fun build(op: GtxOp, opIndex: Int, body: GtxBody): ExtOpData {
-            return ExtOpData(op.name, opIndex, op.args, body.blockchainRid, body.signers.toTypedArray(), body.operations.map { it.toOpData() }.toTypedArray())
+            return ExtOpData(op.opName, opIndex, op.args, body.blockchainRid, body.signers.toTypedArray(), body.operations.map { it.toOpData() }.toTypedArray())
         }
     }
 }

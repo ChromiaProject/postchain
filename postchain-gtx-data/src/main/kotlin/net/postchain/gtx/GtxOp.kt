@@ -9,32 +9,32 @@ import net.postchain.gtv.GtvString
 import net.postchain.gtv.gtxmessages.RawGtxOp
 import net.postchain.gtx.data.OpData
 
-class GtxOp(val name: String, vararg val args: Gtv) {
+class GtxOp(val opName: String, vararg val args: Gtv) {
 
-    internal fun toRaw() = RawGtxOp(BerUTF8String(name), RawGtxOp.Args(args.map { it.getRawGtv() }))
+    internal fun toRaw() = RawGtxOp(BerUTF8String(opName), RawGtxOp.Args(args.map { it.getRawGtv() }))
 
     /**
      * Elements are structured like an ordered array with elements:
      * 1. Operation name [GtvString]
      * 2. array of arguments [GtvArray]
      */
-    fun toGtv() = gtv(gtv(name), gtv(args.toList()))
+    fun toGtv() = gtv(gtv(opName), gtv(args.toList()))
 
-    fun toOpData() = OpData(name, args as Array<Gtv>)
+    fun toOpData() = OpData(opName, args as Array<Gtv>)
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
         other as GtxOp
 
-        if (name != other.name) return false
+        if (opName != other.opName) return false
         if (!args.contentEquals(other.args)) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = name.hashCode()
+        var result = opName.hashCode()
         result = 31 * result + args.contentHashCode()
         return result
     }

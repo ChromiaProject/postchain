@@ -88,7 +88,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                 val rops = ext.getRelevantOps()
                 val selectesOps = mutableListOf<OpData>()
                 // select relevant ops
-                while (operations[idx].name in rops) {
+                while (operations[idx].opName in rops) {
                     selectesOps.add(operations[idx].toOpData())
                     idx += 1
                     if (idx >= operations.size) break
@@ -103,14 +103,14 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         return if (idx == operations.size) {
             true
         } else if (idx == operations.size - 1) {
-            if (operations[idx].name == GtxSpecNop.OP_NAME) { // __nop is allowed as last operation
+            if (operations[idx].opName == GtxSpecNop.OP_NAME) { // __nop is allowed as last operation
                 true
             } else {
-                logger.warn("Unprocessed special op: ${operations[idx].name}")
+                logger.warn("Unprocessed special op: ${operations[idx].opName}")
                 false
             }
         } else {
-            val opNames = operations.slice(IntRange(idx, operations.size)).map { it.name }
+            val opNames = operations.slice(IntRange(idx, operations.size)).map { it.opName }
                 .joinToString()
             logger.warn("Too many operations in special transaction: $opNames")
             false
