@@ -1,6 +1,7 @@
 package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -64,7 +65,7 @@ open class GtxBuilder(
             if (signatures.contains(signature)) throw UserMistake("Signature already exists")
             if (signers.find { it.contentEquals(signature.subjectID) } == null) throw UserMistake("Signature belongs to unknown signer")
             if (check && !cryptoSystem.verifyDigest(txRid, signature)) {
-                throw UserMistake("Signature ${signature.subjectID} is not valid")
+                throw TransactionIncorrect("Signature ${signature.subjectID} is not valid")
             }
             signatures.add(signature)
         }
