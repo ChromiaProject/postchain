@@ -74,7 +74,9 @@ data class GtxBody(
     override fun hashCode(): Int {
         var result = blockchainRid.hashCode()
         result = 31 * result + operations.hashCode()
-        result = 31 * result + signers.hashCode()
+        signers.forEach {
+            result = 31 * result + it.contentHashCode()
+        }
         return result
     }
 

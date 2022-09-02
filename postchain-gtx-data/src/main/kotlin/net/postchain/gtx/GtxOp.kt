@@ -21,6 +21,7 @@ class GtxOp(val opName: String, vararg val args: Gtv) {
     fun toGtv() = gtv(gtv(opName), gtv(args.toList()))
 
     fun toOpData() = OpData(opName, args as Array<Gtv>)
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -35,7 +36,7 @@ class GtxOp(val opName: String, vararg val args: Gtv) {
 
     override fun hashCode(): Int {
         var result = opName.hashCode()
-        result = 31 * result + args.contentHashCode()
+        result = 31 * result + args.contentDeepHashCode()
         return result
     }
 

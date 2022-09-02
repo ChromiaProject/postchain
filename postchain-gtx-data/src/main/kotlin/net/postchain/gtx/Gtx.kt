@@ -63,7 +63,9 @@ class Gtx(
 
     override fun hashCode(): Int {
         var result = gtxBody.hashCode()
-        result = 31 * result + signatures.hashCode()
+        signatures.forEach {
+            result = 31 * result + it.contentHashCode()
+        }
         return result
     }
 
