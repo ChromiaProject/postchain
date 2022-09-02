@@ -4,13 +4,12 @@ package net.postchain.integrationtest.reconnection
 
 import assertk.assertions.containsExactly
 import assertk.assertions.isFalse
-import net.postchain.core.BlockQueries
-import net.postchain.core.Transaction
-import net.postchain.core.byteArrayKeyOf
+import net.postchain.common.data.byteArrayKeyOf
+import net.postchain.core.block.BlockQueries
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.testinfra.TestTransaction
+import net.postchain.core.Transaction
 import nl.komponents.kovenant.Promise
 import java.util.*
 

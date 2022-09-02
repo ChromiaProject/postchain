@@ -1,11 +1,11 @@
 package net.postchain.network.mastersub.subnode
 
 import net.postchain.base.BasePeerCommConfiguration
-import net.postchain.crypto.CryptoSystem
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerInfo
-import net.postchain.core.ByteArrayKey
+import net.postchain.common.data.ByteArrayKey
 import net.postchain.core.NodeRid
+import net.postchain.crypto.CryptoSystem
 
 class DefaultSubPeerCommConfig(
         networkNodes: NetworkNodes,

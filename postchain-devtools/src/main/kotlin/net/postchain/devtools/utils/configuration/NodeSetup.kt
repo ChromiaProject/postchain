@@ -1,8 +1,10 @@
 package net.postchain.devtools.utils.configuration
 
 import mu.KLogging
+import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -22,18 +24,16 @@ import org.apache.commons.configuration2.PropertiesConfiguration
  * @property configurationProvider is the configuration provider for the node
  */
 data class NodeSetup(
-    val sequenceNumber: NodeSeqNumber,
-    val chainsToSign: Set<Int>,
-    val chainsToRead: Set<Int>,
-    val pubKeyHex: String,
-    val privKeyHex: String,
-    val nodeSpecificConfigs: Configuration = PropertiesConfiguration(),
-    var configurationProvider: NodeConfigurationProvider? = null // We might not set this at first
+        val sequenceNumber: NodeSeqNumber,
+        val chainsToSign: Set<Int>,
+        val chainsToRead: Set<Int>,
+        val pubKeyHex: String,
+        val privKeyHex: String,
+        val nodeSpecificConfigs: Configuration = PropertiesConfiguration(),
+        var configurationProvider: NodeConfigurationProvider? = null // We might not set this at first
 ) {
 
     companion object : KLogging() {
-        const val DEFAULT_PORT_BASE_NR = 9870 // Just some made up number. Can be used if there is no other test running in parallel on this machine.
-        const val DEFAULT_API_PORT_BASE = 7740 // Made up number, used for the REST API
 
         fun buildSimple(nodeNr: NodeSeqNumber,
                         signerChains: Set<Int>,
@@ -55,10 +55,10 @@ data class NodeSetup(
     /**
      * The nodes have ports depending on the order of their sequence number
      */
-    fun getPortNumber() = getPortNumber(DEFAULT_PORT_BASE_NR)
+    fun getPortNumber() = getPortNumber(AppConfig.DEFAULT_PORT)
     fun getPortNumber(portBase: Int) = sequenceNumber.nodeNumber + portBase
 
-    fun getApiPortNumber() = getApiPortNumber(DEFAULT_API_PORT_BASE)
+    fun getApiPortNumber() = getApiPortNumber(RestApiConfig.DEFAULT_REST_API_PORT)
     fun getApiPortNumber(portBase: Int) = sequenceNumber.nodeNumber + portBase // Must be different from "normal" port base
 
     /**
@@ -85,8 +85,8 @@ data class NodeSetup(
      * Turns this [NodeSetup] to a [PostchainTestNode] and adds and starts all blockchains on it
      */
     fun toTestNodeAndStartAllChains(
-        systemSetup: SystemSetup,
-        preWipeDatabase: Boolean = true
+            systemSetup: SystemSetup,
+            preWipeDatabase: Boolean = true
     ): PostchainTestNode {
 
         require(configurationProvider != null) { "Cannot build a PostchainTestNode without a NodeConfigurationProvider set" }
@@ -97,7 +97,7 @@ data class NodeSetup(
             // TODO: These chains can in turn be depending on each other, so they should be "sorted" first
             chainsToRead.forEach { chainId ->
                 val chainSetup = systemSetup.blockchainMap[chainId]
-                    ?: error("Incorrect SystemSetup")
+                        ?: error("Incorrect SystemSetup")
                 startChain(node, chainSetup, "read only")
             }
         }
@@ -105,7 +105,7 @@ data class NodeSetup(
         logger.debug("Node ${sequenceNumber.nodeNumber}: Start all blockchains we should sign")
         chainsToSign.forEach { chainId ->
             val chainSetup = systemSetup.blockchainMap[chainId]
-                ?: error("Incorrect SystemSetup")
+                    ?: error("Incorrect SystemSetup")
             startChain(node, chainSetup, "")
         }
 
@@ -119,8 +119,8 @@ data class NodeSetup(
         } else {
             logger.debug("Node ${sequenceNumber.nodeNumber}: Begin starting $chainLogType chainId: ${chain.chainId}")
             chain.prepareBlockchainOnNode(
-                chain,
-                node
+                    chain,
+                    node
             )  // Don't think this is needed, since we could have put the setting in the setup
             node.startBlockchain(chain.chainId.toLong())
             logger.debug("Node ${sequenceNumber.nodeNumber}: Finished starting $chainLogType chainId: ${chain.chainId}")

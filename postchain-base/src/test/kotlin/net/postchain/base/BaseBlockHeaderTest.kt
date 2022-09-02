@@ -2,17 +2,18 @@
 
 package net.postchain.base
 
-import net.postchain.common.data.Hash
 import net.postchain.common.BlockchainRid
-import net.postchain.core.BlockHeader
-import net.postchain.core.InitialBlockData
+import net.postchain.common.data.Hash
+import net.postchain.core.block.InitialBlockData
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.core.block.BlockHeader
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class BaseBlockHeaderTest {
     val blockchainRID = BlockchainRid.ZERO_RID
     val prevBlockRID0 = ByteArray(32, {if (it==31) 99 else 0}) // This is incorrect. Should include 99 at the end
-    val cryptoSystem = SECP256K1CryptoSystem()
+    val cryptoSystem = Secp256K1CryptoSystem()
 
     @Test
     fun makeHeaderWithCchainId0() {
@@ -59,7 +60,7 @@ class BaseBlockHeaderTest {
         val timestamp = 10000L + height
         val dependencies = createBlockchainDependencies()
         val blockData = InitialBlockData(blockchainRid, blockIID, chainId, prevBlockRid, height, timestamp, dependencies)
-        return BaseBlockHeader.make(SECP256K1CryptoSystem(), blockData, rootHash, timestamp, mapOf())
+        return BaseBlockHeader.make(Secp256K1CryptoSystem(), blockData, rootHash, timestamp, mapOf())
     }
 
     private fun createBlockchainDependencies(): Array<Hash?>? {

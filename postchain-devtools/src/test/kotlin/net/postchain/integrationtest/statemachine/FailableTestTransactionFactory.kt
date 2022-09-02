@@ -1,9 +1,9 @@
 package net.postchain.integrationtest.statemachine
 
 import mu.KLogging
+import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionFactory
-import net.postchain.devtools.testinfra.TestTransaction
 import java.io.DataInputStream
 
 /**

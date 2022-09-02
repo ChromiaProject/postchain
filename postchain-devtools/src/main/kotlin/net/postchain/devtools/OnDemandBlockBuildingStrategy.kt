@@ -3,13 +3,18 @@
 package net.postchain.devtools
 
 import mu.KLogging
+import net.postchain.base.AbstractBlockBuilder
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
-import net.postchain.core.*
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.TransactionQueue
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockData
 import java.util.concurrent.LinkedBlockingQueue
 
 @Suppress("UNUSED_PARAMETER")
 class OnDemandBlockBuildingStrategy(
-        configData: BaseBlockBuildingStrategyConfigurationData,
+        val configData: BaseBlockBuildingStrategyConfigurationData,
         val blockQueries: BlockQueries,
         val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
@@ -58,6 +63,7 @@ class OnDemandBlockBuildingStrategy(
     }
 
     override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean {
-        return false
+        val abb = bb as AbstractBlockBuilder
+        return abb.transactions.size >= configData.maxBlockTransactions
     }
 }

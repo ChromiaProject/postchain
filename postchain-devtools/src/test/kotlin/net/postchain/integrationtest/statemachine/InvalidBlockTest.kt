@@ -1,10 +1,7 @@
 package net.postchain.integrationtest.statemachine
 
-import net.postchain.devtools.IntegrationTest
-import net.postchain.devtools.PostchainTestNode
+import net.postchain.devtools.*
 import net.postchain.devtools.testinfra.TestTransaction
-import net.postchain.devtools.assertChainStarted
-import net.postchain.devtools.enqueueTxsAndAwaitBuiltBlock
 import net.postchain.integrationtest.reconfiguration.TxChartHelper
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
@@ -50,8 +47,9 @@ class InvalidBlockTest : IntegrationTest() {
                     nodes.forEach { it.assertChainStarted() }
                 }
 
-        // Building a block 0 with two txs via node 0
-        nodes[0].enqueueTxsAndAwaitBuiltBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 0, tx(0), tx(1), tx(2))
+        // Building a block 0 with two txs via node 0 (resulting block will be empty)
+        nodes[0].enqueueTxs(PostchainTestNode.DEFAULT_CHAIN_IID, tx(0), tx(1), tx(2))
+        buildBlock(0)
 
         // Asserting chain 1 is started for all nodes
         await().atMost(Duration.ONE_MINUTE)
@@ -62,8 +60,9 @@ class InvalidBlockTest : IntegrationTest() {
                     println(chart1)
                 }
 
-        // Building a block 0 with two txs via node 0
-        nodes[1].enqueueTxsAndAwaitBuiltBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 1, tx(10), tx(11), tx(12))
+        // Building a block 1 with two txs via node 1
+        nodes[1].enqueueTxs(PostchainTestNode.DEFAULT_CHAIN_IID, tx(10), tx(11), tx(12))
+        buildBlock(1)
 
         // Asserting chain 1 is started for all nodes
         await().atMost(Duration.ONE_MINUTE)

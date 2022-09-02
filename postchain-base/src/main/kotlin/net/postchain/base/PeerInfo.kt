@@ -2,7 +2,8 @@
 
 package net.postchain.base
 
-import net.postchain.core.ByteArrayKey
+import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.toHex
 import net.postchain.core.NodeRid
 import java.time.Instant
 
@@ -43,6 +44,10 @@ open class PeerInfo(val host: String, val port: Int, val pubKey: ByteArray, val 
         result = 31 * result + pubKey.contentHashCode()
         result = 31 * result + (timestamp?.hashCode() ?: 0)
         return result
+    }
+
+    override fun toString(): String {
+        return "PeerInfo(host='$host', port=$port, pubKey=${pubKey.toHex()})"
     }
 }
 

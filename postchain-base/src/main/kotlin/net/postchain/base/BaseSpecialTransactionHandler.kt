@@ -1,9 +1,7 @@
-// Copyright (c) 2020 ChromaWay AB. See README for license information.
-
 package net.postchain.base
 
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockEContext
-import net.postchain.core.ProgrammerMistake
 import net.postchain.core.Transaction
 
 enum class SpecialTransactionPosition {
@@ -25,7 +23,11 @@ class NullSpecialTransactionHandler : SpecialTransactionHandler {
         throw ProgrammerMistake("NullSpecialTransactionHandler.createSpecialTransaction")
     }
 
-    override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, bctx: BlockEContext): Boolean {
+    override fun validateSpecialTransaction(
+        position: SpecialTransactionPosition,
+        tx: Transaction,
+        bctx: BlockEContext
+    ): Boolean {
         throw ProgrammerMistake("NullSpecialTransactionHandler.createSpecialTransaction")
     }
 }

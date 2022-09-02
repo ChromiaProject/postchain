@@ -2,8 +2,8 @@ package net.postchain.d1.anchor
 
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.core.EContext
-import net.postchain.gtx.GTXSpecialTxExtension
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.gtx.special.GTXSpecialTxExtension
 
 /**
  * This module doesn't do much.

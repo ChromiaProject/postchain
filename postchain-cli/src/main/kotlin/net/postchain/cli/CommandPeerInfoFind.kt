@@ -2,61 +2,35 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import org.apache.commons.lang3.builder.ToStringBuilder
-import org.apache.commons.lang3.builder.ToStringStyle
+import net.postchain.cli.util.*
 
-@Parameters(commandDescription = "Find peerinfo")
-class CommandPeerInfoFind : Command {
+class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find peerinfo") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    @Parameter(
-            names = ["-nc", "--node-config"],
-            description = "Configuration file of node (.properties file)",
-            required = true)
-    private var nodeConfigFile = ""
+    private val nodeConfigFile by nodeConfigOption()
 
-    @Parameter(
-            names = ["-h", "--host"],
-            description = "Host")
-    private var host: String? = null
+    private val host by hostOption()
 
-    @Parameter(
-            names = ["-p", "--port"],
-            description = "Post")
-    private var port: Int? = null
+    private val port by portOption()
 
-    @Parameter(
-            names = ["-pk", "--pub-key"],
-            description = "Public key")
-    private var pubKey: String? = null
+    private val pubKey by pubkeyOption()
 
-    override fun key(): String = "peerinfo-find"
+    override fun run() {
+        printCommandInfo()
 
-    override fun execute(): CliResult {
-        println("peerinfo-find will be executed with options: " +
-                ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE))
+        val peerInfos = peerinfoFind(nodeConfigFile, host, port, pubKey)
 
-        return try {
-            val peerInfos = peerinfoFind(nodeConfigFile, host, port, pubKey)
-
-            val report = if (peerInfos.isEmpty()) {
-                "No peerinfo found"
-            } else {
-                peerInfos.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
-                        .joinToString(
-                                separator = "\n",
-                                prefix = "Peerinfos (${peerInfos.size}):\n")
-            }
-
-            Ok(report)
-
-        } catch (e: CliError.Companion.CliException) {
-            CliError.CommandNotAllowed(message = e.message)
+        if (peerInfos.isEmpty()) {
+            println("No peerinfo found")
+        } else {
+            peerInfos.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
+                .forEach {
+                    println("Peerinfos (${peerInfos.size}):\n$it")
+                }
         }
     }
 

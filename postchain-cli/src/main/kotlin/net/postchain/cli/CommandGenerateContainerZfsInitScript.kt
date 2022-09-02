@@ -2,16 +2,13 @@
 
 package net.postchain.cli
 
-import com.beust.jcommander.Parameters
+import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.containers.infra.ContainerNodeConfig
 import java.io.File
 
-@Parameters(commandDescription = "Generates container-zfs-init-script.sh file")
-class CommandGenerateContainerZfsInitScript : Command {
+class CommandGenerateContainerZfsInitScript : CliktCommand(name = "generate-container-zfs-init-script", help = "Generates container-zfs-init-script.sh file") {
 
-    override fun key(): String = "generate-container-zfs-init-script"
-
-    override fun execute(): CliResult {
+    override fun run() {
         val body = """
             #!/bin/sh
             
@@ -26,7 +23,6 @@ class CommandGenerateContainerZfsInitScript : Command {
             fi
             
         """.trimIndent()
-        File(ContainerNodeConfig.CONTAINER_ZFS_INIT_SCRIPT).writeText(body)
-        return Ok()
+        File(ContainerNodeConfig.DEFAULT_CONTAINER_ZFS_INIT_SCRIPT).writeText(body)
     }
 }

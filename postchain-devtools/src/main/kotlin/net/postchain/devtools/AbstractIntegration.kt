@@ -1,11 +1,12 @@
 package net.postchain.devtools
 
-import net.postchain.base.SECP256K1CryptoSystem
-import net.postchain.core.BlockBuilder
-import net.postchain.core.BlockWitness
 import net.postchain.core.BlockchainEngine
-import net.postchain.core.MultiSigBlockWitnessBuilder
-import net.postchain.debug.BlockTrace
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.MultiSigBlockWitnessBuilder
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 
@@ -30,11 +31,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
  */
 abstract class AbstractIntegration {
 
-    val cryptoSystem = SECP256K1CryptoSystem()
-
-    companion object {
-        const val BASE_PORT = 9870
-    }
+    val cryptoSystem = Secp256K1CryptoSystem()
 
     /**
      * Put logic in here that should run after each test (the "@after" annotation will guarantee execution)

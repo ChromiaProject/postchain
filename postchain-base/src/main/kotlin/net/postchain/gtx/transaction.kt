@@ -3,11 +3,16 @@
 package net.postchain.gtx
 
 import net.postchain.common.data.Hash
-import net.postchain.core.*
+import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.UserMistake
+import net.postchain.core.Transaction
+import net.postchain.core.Transactor
+import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtx.data.GTXTransactionData
 
 /**
  * A transaction based on the GTX format.
@@ -20,20 +25,18 @@ import net.postchain.gtv.GtvEncoder
  * @property ops are the operations of the TX
  * @property myHash is the merkle root of the TX
  * @property myRID  is the merkle root of the TX body
- * @property module is the module the transaction is related to
  * @property cs is the [CryptoSystem] we use
  */
 class GTXTransaction (
-        val _rawData: ByteArray?,
-        val gtvData: Gtv,
-        val gtxData: GTXTransactionData,
-        val signers: Array<ByteArray>,
-        val signatures: Array<ByteArray>,
-        val ops: Array<Transactor>,
-        val myHash: Hash,
-        val myRID: ByteArray,
-        module: GTXModule,
-        val cs: CryptoSystem
+    val _rawData: ByteArray?,
+    val gtvData: Gtv,
+    val gtxData: GTXTransactionData,
+    val signers: Array<ByteArray>,
+    val signatures: Array<ByteArray>,
+    val ops: Array<Transactor>,
+    val myHash: Hash,
+    val myRID: ByteArray,
+    val cs: CryptoSystem
 ): Transaction {
 
     var cachedRawData: ByteArray? = null // We are not sure we have the rawData, and if ever need to calculate it it will be cache here.
@@ -136,7 +139,7 @@ class GTXTransaction (
     }
 
     override fun apply(ctx: TxEContext): Boolean {
-        if (!isCorrect()) throw UserMistake("Transaction is not correct")
+        if (!isCorrect()) throw TransactionIncorrect("Transaction is not correct")
         for (op in ops) {
             if (!op.apply(ctx))
                 throw UserMistake("Operation failed")

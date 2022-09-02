@@ -4,16 +4,17 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.arguments.transformAll
-import net.postchain.base.BlockchainRidFactory.cryptoSystem
-import net.postchain.client.PostchainClientConfig
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.PostchainClientProvider
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 
 class QueryCommand(private val clientProvider: PostchainClientProvider) : CliktCommand(name = "query", help = "Make a query towards a postchain node") {
     private val configFile by configFileOption()
+    private val cryptoSystem = Secp256K1CryptoSystem()
 
     private val queryName by argument(help = "name of the query to make.")
 
