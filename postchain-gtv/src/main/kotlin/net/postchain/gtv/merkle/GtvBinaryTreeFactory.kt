@@ -19,7 +19,7 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
 
     /**
      * Generic builder.
-     * @param Gtv will take any damn thing
+     * @param gtv will take any damn thing
      */
     fun buildFromGtv(gtv: Gtv): GtvBinaryTree {
         return buildFromGtvAndPath(gtv, GtvPath.NO_PATHS)
@@ -27,8 +27,8 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
 
     /**
      * Generic builder.
-     * @param Gtv will take any damn thing
-     * @param GtvPathList will tell us what element that are path leafs
+     * @param gtv will take any damn thing
+     * @param gtvPaths will tell us what element that are path leaves
      */
     fun buildFromGtvAndPath(gtv: Gtv, gtvPaths: GtvPathSet): GtvBinaryTree {
         if (logger.isTraceEnabled) {
@@ -51,16 +51,16 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
      * The only tricky bit of this method is that we need to remove paths that are irrelevant for the leaf in question.
      *
      * @param leafList the list of [Gtv] we will use for leafs in the tree
-     * @param GtvPaths the paths we have to consider while creating the leafs
+     * @param gtvPaths the paths we have to consider while creating the leafs
      * @return an array of all the leafs as [BinaryTreeElement] s. Note that some leafs might not be primitive values
-     *   but some sort of collection with their own leafs (recursivly)
+     *   but some sort of collection with their own leafs (recursively)
      */
     fun buildLeafElements(leafList: List<Gtv>, gtvPaths: GtvPathSet): ArrayList<BinaryTreeElement> {
         val leafArray = arrayListOf<BinaryTreeElement>()
 
         val onlyArrayPaths = gtvPaths.keepOnlyArrayPaths() // For performance, since we will loop soon
 
-        for (i in 0..(leafList.size - 1)) {
+        for (i in leafList.indices) {
             val pathsRelevantForThisLeaf = onlyArrayPaths.getTailIfFirstElementIsArrayOfThisIndexFromList(i)
             val leaf = leafList[i]
             val binaryTreeElement = handleLeaf(leaf, pathsRelevantForThisLeaf)
@@ -76,7 +76,6 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
      *
      * @param leaf we should turn into a tree element
      * @param gtvPaths
-     * @param memoization is not used for this leaf (since we know it's not in cache) but might be used below
      * @return the tree element we created.
      */
     override fun innerHandleLeaf(leaf: Gtv, gtvPaths: GtvPathSet): BinaryTreeElement {

@@ -13,8 +13,8 @@ abstract class BinaryNodeHashCalculator(val cryptoSystem: CryptoSystem?) {
      * We smack on the prefix before hashing.
      *
      * @param prefix the one byte prefix to use
-     * @param hashLeft The hash of the left sub tree
-     * @param hashRight The hash of the right sub tree
+     * @param hashLeft The hash of the left subtree
+     * @param hashRight The hash of the right subtree
      * @param hashFun The only reason we pass the function as a parameter is to simplify testing.
      * @return the hash of two combined hashes.
      */

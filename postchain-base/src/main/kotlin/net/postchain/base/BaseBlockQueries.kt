@@ -32,7 +32,7 @@ class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witnes
  * @param blockchainConfiguration Configuration data for the blockchain
  * @param storage Connection manager
  * @param blockStore Blockchain storage facilitator
- * @param chainID Blockchain identifier
+ * @param chainId Blockchain identifier
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
 open class BaseBlockQueries(
