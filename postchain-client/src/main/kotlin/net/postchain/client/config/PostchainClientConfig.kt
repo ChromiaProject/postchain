@@ -2,7 +2,7 @@ package net.postchain.client.config
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.PropertiesFileLoader
-import net.postchain.common.reflection.newInstanceOf
+import net.postchain.common.config.cryptoSystem
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -38,7 +38,7 @@ data class PostchainClientConfig(
                     ?: config.getInt("status.poll-count", STATUS_POLL_COUNT),
                 statusPollInterval = System.getenv("POSTCHAIN_CLIENT_STATUS_POLL_INTERVAL")?.toLong()
                     ?: config.getLong("status.poll-interval", STATUS_POLL_INTERVAL),
-                cryptoSystem = config.getString("crypto")?.let { newInstanceOf(it) } ?: Secp256K1CryptoSystem()
+                cryptoSystem = config.cryptoSystem()
             )
         }
     }
