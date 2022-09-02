@@ -1,6 +1,7 @@
 package net.postchain.client.core
 
 import net.postchain.client.transaction.TransactionBuilder
+import net.postchain.crypto.KeyPair
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtx.Gtx
@@ -10,12 +11,12 @@ interface PostchainClient {
     /**
      * Creates a [TransactionBuilder] with the default signer list
      */
-    fun makeTransaction(): TransactionBuilder
+    fun txBuilder(): TransactionBuilder
 
     /**
      * Creates a [TransactionBuilder] with a given list of signers
      */
-    fun makeTransaction(signers: List<ByteArray>): TransactionBuilder
+    fun txBuilder(signers: List<KeyPair>): TransactionBuilder
 
     /**
      * Post a [Gtx] transaction asynchronously
