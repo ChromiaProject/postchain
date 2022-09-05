@@ -4,9 +4,9 @@ package net.postchain.base
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.InitialBlockData
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.core.block.BlockHeader
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 

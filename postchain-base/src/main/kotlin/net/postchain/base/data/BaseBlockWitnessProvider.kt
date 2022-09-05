@@ -3,13 +3,10 @@ package net.postchain.base.data
 import net.postchain.base.BaseBlockWitnessBuilder
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.core.block.*
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.getBFTRequiredSignatureCount
-import net.postchain.core.block.*
-import net.postchain.core.block.BlockHeader
-import net.postchain.core.block.BlockWitnessBuilder
-import net.postchain.core.block.MultiSigBlockWitnessBuilder
 
 /**
  * The [BaseBlockWitnessProvider] can be re-used by block builders at different heights, only the

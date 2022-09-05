@@ -5,13 +5,19 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.AbstractBlockBuilder
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
-import net.postchain.core.block.BlockBuildingStrategy
-import net.postchain.core.block.BlockQueries
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockQueries
 import java.util.concurrent.LinkedBlockingQueue
 
+/**
+ * This block building strategy is very useful for tests.
+ *
+ * Not only can we tell the blockchain when to build blocks [buildBlocksUpTo()], we can also wait for a block
+ * to get done [awaitCommitted()].
+ */
 @Suppress("UNUSED_PARAMETER")
 class OnDemandBlockBuildingStrategy(
         val configData: BaseBlockBuildingStrategyConfigurationData,

@@ -23,12 +23,14 @@ abstract class EbftMessage(val topic: MessageTopic) {
                 MessageTopic.BLOCKSIG.value -> BlockSignature(data[1].asByteArray(), Signature(data[2].asByteArray(), data[3].asByteArray()))
                 MessageTopic.GETBLOCKSIG.value -> GetBlockSignature(data[1].asByteArray())
                 MessageTopic.BLOCKDATA.value -> BlockData(data[1].asByteArray(), data[2].asArray().map { it.asByteArray() })
-                MessageTopic.COMPLETEBLOCK.value -> CompleteBlock(BlockData(data[1].asByteArray(), data[2].asArray().map { it.asByteArray() }), data[3].asInteger(), data[4].asByteArray())
+                MessageTopic.COMPLETEBLOCK.value -> CompleteBlock.buildFromGtv(data, 1)
                 MessageTopic.GETBLOCKATHEIGHT.value -> GetBlockAtHeight(data[1].asInteger())
                 MessageTopic.GETUNFINISHEDBLOCK.value -> GetUnfinishedBlock(data[1].asByteArray())
                 MessageTopic.UNFINISHEDBLOCK.value -> UnfinishedBlock(data[1].asByteArray(), data[2].asArray().map { it.asByteArray() })
                 MessageTopic.GETBLOCKHEADERANDBLOCK.value -> GetBlockHeaderAndBlock(data[1].asInteger())
                 MessageTopic.BLOCKHEADER.value -> BlockHeader(data[1].asByteArray(), data[2].asByteArray(), data[3].asInteger())
+                MessageTopic.GETBLOCKRANGE.value -> GetBlockRange(data[1].asInteger())
+                MessageTopic.BLOCKRANGE.value -> BlockRange.buildFromGtv(data)
                 else -> throw BadDataMistake(BadDataType.BAD_MESSAGE, "Message topic $topic is not handled")
             }
         }

@@ -5,9 +5,8 @@ package net.postchain.core
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.Storage
 import net.postchain.common.BlockchainRid
-import net.postchain.gtv.Gtv
-import net.postchain.core.TransactionFactory
 import net.postchain.core.block.*
+import net.postchain.gtv.Gtv
 
 /**
  * [BlockchainConfiguration] describes an individual blockchain instance (within Postchain system).
