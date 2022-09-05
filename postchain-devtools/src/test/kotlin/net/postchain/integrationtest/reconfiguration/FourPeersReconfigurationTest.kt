@@ -49,7 +49,7 @@ class FourPeersReconfigurationTest : ReconfigurationTest() {
         nodes[2].addConfiguration(DEFAULT_CHAIN_IID, 7, blockchainConfig2)
         nodes[3].addConfiguration(DEFAULT_CHAIN_IID, 8, blockchainConfig2)
 
-        // Again: Adding chain1's blockchainConfig3 with DummyModule3 at height 7 to all nodes
+        // Again: Adding chain1's blockchainConfig3 with DummyModule3 at height 10 to all nodes
         nodes[0].addConfiguration(DEFAULT_CHAIN_IID, 10, blockchainConfig3)
         nodes[1].addConfiguration(DEFAULT_CHAIN_IID, 10, blockchainConfig3)
         nodes[2].addConfiguration(DEFAULT_CHAIN_IID, 10, blockchainConfig3)
@@ -69,6 +69,7 @@ class FourPeersReconfigurationTest : ReconfigurationTest() {
             assertk.assert(node.getModules().first()).isInstanceOf(DummyModule1::class)
         }
 
+        buildBlocksWithChainRestart(8)
         // Asserting blockchainConfig2 with DummyModule2 is loaded by all nodes
         await().atMost(Duration.TEN_SECONDS.multiply(3))
                 .untilAsserted {
@@ -78,7 +79,8 @@ class FourPeersReconfigurationTest : ReconfigurationTest() {
                     }
                 }
 
-        // Asserting blockchainConfig2 with DummyModule3 is loaded by all nodes
+        buildBlocksWithChainRestart(11)
+        // Asserting blockchainConfig3 with DummyModule3 is loaded by all nodes
         await().atMost(Duration.TEN_SECONDS.multiply(3))
                 .untilAsserted {
                     nodes.forEach { node ->
