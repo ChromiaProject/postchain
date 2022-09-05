@@ -344,10 +344,10 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     /**
      * Use this instead of [buildBlock] when you expect chain to restart while building up to specified height
      */
-    fun buildBlocksWithChainRestart(toHeight: Int, vararg txs: TestTransaction) {
+    fun buildBlocksWithChainRestart(toHeight: Long, vararg txs: TestTransaction) {
         nodes.forEach {
             enqueueTransactions(it, *txs)
-            strategy(it).buildBlocksUpTo(toHeight.toLong())
+            strategy(it).buildBlocksUpTo(toHeight)
         }
         var allAtHeight = false
         while (!allAtHeight) {
@@ -356,7 +356,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
                 nodes.forEach {
                     val strategy = getStrategySafely(it)
                     // If chain has restarted we need to update height in the new strategy instance
-                    strategy?.buildBlocksUpTo(toHeight.toLong())
+                    strategy?.buildBlocksUpTo(toHeight)
 
                     if (strategy == null || strategy.shouldBuildBlock()) {
                         allAtHeight = false
@@ -368,11 +368,6 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     }
 
     private fun getStrategySafely(node: PostchainTestNode): OnDemandBlockBuildingStrategy? {
-        val bc = node.retrieveBlockchain()
-        return if (bc != null) {
-            bc.blockchainEngine.getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
-        } else {
-            null
-        }
+        return node.retrieveBlockchain()?.blockchainEngine?.getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy?
     }
 }
