@@ -2,6 +2,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.core.NodeRid
+import net.postchain.devtools.NameHelper
 
 /**
  * Keeps track of peer's statuses. The currently tracked statuses are
@@ -64,7 +65,7 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
         }
         if (logger.isDebugEnabled) {
             if (status.isMaybeLegacy() != isLegacy) {
-                logger.debug("Setting new fast sync peer: ${peerId.shortString()} status maybe legacy: $isLegacy.")
+                logger.debug("Setting new fast sync peer: ${NameHelper.peerName(peerId)} status maybe legacy: $isLegacy.")
             }
         }
         status.maybeLegacy(isLegacy)

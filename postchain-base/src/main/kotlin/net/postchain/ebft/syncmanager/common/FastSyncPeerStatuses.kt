@@ -2,6 +2,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.core.NodeRid
+import net.postchain.devtools.NameHelper
 
 /**
  * Keeps track of peer's statuses. This type has one more status than the superclass:
@@ -16,7 +17,7 @@ class FastSyncPeerStatuses(val params: SyncParameters): AbstractPeerStatuses<Fas
     fun drained(peerId: NodeRid, height: Long, now: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
-            logger.warn("We tried to get block from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
+            logger.warn("We tried to get block from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
             return
         }
         if (logger.isDebugEnabled) {
@@ -30,7 +31,7 @@ class FastSyncPeerStatuses(val params: SyncParameters): AbstractPeerStatuses<Fas
     fun headerReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
-            logger.warn("We got a header from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
+            logger.warn("We got a header from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
             return
         }
         status.headerReceived(height)
@@ -39,7 +40,7 @@ class FastSyncPeerStatuses(val params: SyncParameters): AbstractPeerStatuses<Fas
     fun statusReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
         if (status.isBlacklisted()) {
-            logger.warn("Got status from a blacklisted node: ${peerId.shortString()}, was it recently blacklisted?")
+            logger.warn("Got status from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
             return
         }
         status.statusReceived(height)

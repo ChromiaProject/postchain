@@ -4,7 +4,7 @@ package net.postchain.gtv
 
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.merkle.proof.MerkleProofElement
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.gtv.gtvmessages.RawGtv
 
 /**
  * The virtual version of [GtvDictionary] only implements few of the methods defined in [Gtv].

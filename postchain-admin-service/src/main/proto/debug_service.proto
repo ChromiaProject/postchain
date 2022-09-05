@@ -7,7 +7,7 @@ option java_outer_classname = "DebugProto";
 package postchain.rpc;
 
 service DebugService {
-  rpc DebugService (DebugRequest) returns (DebugReply) {}
+  rpc DebugInfo (DebugRequest) returns (DebugReply) {}
 }
 
 message DebugRequest {}

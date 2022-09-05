@@ -11,6 +11,8 @@ import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.NotFound
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
 import net.postchain.core.block.BlockBuildingStrategy
@@ -118,8 +120,21 @@ class PostchainTestNode(
         }
     }
 
-    fun startBlockchain(): BlockchainRid? {
-        return startBlockchain(DEFAULT_CHAIN_IID)
+    fun startBlockchain() {
+        withLoggingContext(
+            NODE_PUBKEY_TAG to appConfig.pubKey,
+            CHAIN_IID_TAG to DEFAULT_CHAIN_IID.toString()
+        ) {
+            try {
+                startBlockchain(DEFAULT_CHAIN_IID)
+            } catch (e: NotFound) {
+                logger.error(e.message)
+            } catch (e: UserMistake) {
+                logger.error(e.message)
+            } catch (e: Exception) {
+                logger.error(e) { e.message }
+            }
+        }
     }
 
     override fun shutdown() {

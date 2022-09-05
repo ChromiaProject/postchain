@@ -1,7 +1,6 @@
 package net.postchain.client.cli
 
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConfirmationLevel
 import net.postchain.client.core.GTXTransactionBuilder
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientProvider
@@ -47,6 +46,6 @@ internal class PostTxCommandTest {
             gtv(listOf(gtv(1), gtv("foo"))),
             gtv(mapOf("a" to gtv("b")))
         )
-        verify(txBuilder).postSync(ConfirmationLevel.NO_WAIT)
+        verify(txBuilder).postSync()
     }
 }

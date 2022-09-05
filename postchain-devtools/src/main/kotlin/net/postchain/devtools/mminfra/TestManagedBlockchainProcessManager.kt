@@ -47,7 +47,10 @@ class TestManagedBlockchainProcessManager(
             result.add(chainIid)
             retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")
             withReadWriteConnection(storage, chainIid) { newCtx ->
-                DatabaseAccess.of(newCtx).initializeBlockchain(newCtx, brid)
+                val db = DatabaseAccess.of(newCtx)
+                if (db.getChainId(newCtx, brid) == null) {
+                    db.initializeBlockchain(newCtx, brid)
+                }
             }
         }
         retrieveDebug("NOTE TEST! - End, restart: ${result.size} ")
@@ -71,11 +74,8 @@ class TestManagedBlockchainProcessManager(
      * b/c the BC will get restarted before the configuration can be used.
      * Every time this method runs the [lastHeightStarted] gets updated with the restart height.)
      */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid {
         val blockchainRid = super.startBlockchain(chainId, bTrace)
-        if (blockchainRid == null) {
-            return null
-        }
         val process = blockchainProcesses[chainId]!!
         val queries = process.blockchainEngine.getBlockQueries()
         val height = queries.getBestHeight().get()

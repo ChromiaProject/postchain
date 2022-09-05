@@ -11,6 +11,7 @@ import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
+import net.postchain.devtools.NameHelper
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.*
@@ -71,7 +72,7 @@ class FastSynchronizer(
         val startTime = System.currentTimeMillis()
         var hasRestartFailed = false
         override fun toString(): String {
-            return "${this@FastSynchronizer.workerContext.processName}-h${height}-${peerId.shortString()}"
+            return "${this@FastSynchronizer.workerContext.processName}-h${height}-${NameHelper.peerName(peerId)}"
         }
     }
 

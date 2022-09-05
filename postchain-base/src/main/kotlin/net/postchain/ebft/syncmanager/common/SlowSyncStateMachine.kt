@@ -3,6 +3,7 @@ package net.postchain.ebft.syncmanager.common
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.NodeRid
+import net.postchain.devtools.NameHelper
 
 
 /**
@@ -69,7 +70,7 @@ class SlowSyncStateMachine(
                     // We waited too long, let's ask someone else
                     logger.debug {
                         "maybeGetBlockRange() - ChainIid: $chainIid waited too long, for anything, try again with height: $waitForHeight " +
-                                "and above (but don't ask ${waitForNodeId!!.shortString()})."
+                                "and above (but don't ask ${NameHelper.peerName(waitForNodeId!!)} )."
                     }
                     state = SlowSyncStates.WAIT_FOR_ACTION // Reset
                     sendRequest(waitForHeight!!, this, waitForNodeId!!)
