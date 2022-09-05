@@ -8,7 +8,7 @@ import net.postchain.common.BlockchainRid
  *
  * Note:
  * You still have to be careful with this tool since it cannot accept you going back in time and look for "old"
- * configs, it's is only fast (an generally works as intended) when you move forward in block heights.
+ * configs, it is only fast (a generally works as intended) when you move forward in block heights.
  * Configurations for lower heights will be discarded, only the most recent height's configuration will be kept
  */
 interface HeightAwareConfigReader {

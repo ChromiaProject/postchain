@@ -4,6 +4,7 @@ import net.postchain.base.Storage
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory
 
@@ -26,7 +27,7 @@ import net.postchain.gtv.GtvFactory
  * Why not use [BlockchainConfiguration]:
  * Sometimes it's too much work to create a real [BlockchainConfiguration] instance (or we are worried
  * we might create instances that will cause a conflict somewhere) for those cases the [HeightAwareConfigReader] is
- * useful, b/c we can lookup whatever setting we need with a minimal effort.
+ * useful, b/c we can look up whatever setting we need with a minimal effort.
  */
 class QuickHeightAwareConfigReader (
     private val storage: Storage,
@@ -39,11 +40,11 @@ class QuickHeightAwareConfigReader (
     class CachedHeight(
         var lastLookupHeight: Long,
         var lastFoundHeight: Long,
-        var lastFonudDict: GtvDictionary
+        var lastFoundDict: GtvDictionary
     ) {
 
         /**
-         * @return true if we should check if we have an new config at this height
+         * @return true if we should check if we have a new config at this height
          */
         fun needToDoNewLookup(currentHeight: Long): Boolean {
             if (currentHeight < lastLookupHeight) {
@@ -66,11 +67,11 @@ class QuickHeightAwareConfigReader (
          */
         fun update(foundHeight: Long, foundDict: GtvDictionary) {
             this.lastFoundHeight = foundHeight
-            this.lastFonudDict = foundDict
+            this.lastFoundDict = foundDict
         }
     }
 
-    // Warning Warning
+    // Warning!
     // Caching is always dangerous, in this one we assume height always move forward for all chains
     // If we start looking for old heights this cache will become unpredictable, but will hopefully throw exception
     private val cache = HashMap<Long, CachedHeight>()  // ChainIid -> CacheHeight
@@ -87,11 +88,11 @@ class QuickHeightAwareConfigReader (
 
     /**
      * @param chainIid is the BC we are interested in.
-     * @param currentHeight is the block height we are at right now (to find the correct version of the config)
+     * @param blockHeight is the block height we are at right now (to find the correct version of the config)
      * @return a list of [BlockchainRid] from the configuration values, or empty list
      */
     override fun getBcRidArray(chainIid: Long, blockHeight: Long, confKey: String): List<BlockchainRid> {
-        var gtvDict: GtvDictionary = getTheDict(chainIid, blockHeight)
+        val gtvDict: GtvDictionary = getTheDict(chainIid, blockHeight)
 
         val settings = gtvDict[confKey]
         return ConfigReaderHelper.readAsBlockchainRid(settings, chainIid, confKey)
@@ -103,36 +104,36 @@ class QuickHeightAwareConfigReader (
     private fun getTheDict(chainIid: Long, currentHeight: Long): GtvDictionary {
         var gtvDict: GtvDictionary? = null
         var cached = cache[chainIid]
-        var foundConfigHeight: Long? = null
+        var foundConfigHeight: Long?
         if (cached != null) {
             if (cached.needToDoNewLookup(currentHeight)) {
                 // We must do a lookup
                 withReadConnection(storage, chainIid) { eContext ->
                     foundConfigHeight = bcConfigProvider.getHistoricConfigurationHeight(eContext, chainIid, currentHeight)
                     if (foundConfigHeight == null) {
-                        //This is some sort of error i think
+                        // This is some sort of error I think
                     } else if (cached!!.isThisSameConfigAsLastTime(foundConfigHeight!!, currentHeight)) {
                         // Nothing new, let's use the cached one
-                        gtvDict = cached!!.lastFonudDict
+                        gtvDict = cached!!.lastFoundDict
                     } else {
-                        // We've got a more recent hit, let's update directly so we don't forget
+                        // We've got a more recent hit, let's update directly, so we don't forget
                         cached!!.lastFoundHeight = foundConfigHeight!!
                         // Must get new dict, so don't set it
                     }
                 }
             } else {
-                gtvDict = cached.lastFonudDict
+                gtvDict = cached.lastFoundDict
             }
         }
 
         if (gtvDict == null) {
             // Apparently we failed to get anything from the cache, oh well, let's dig it up then
-            gtvDict = populateCache(chainIid, currentHeight)!! // We simlpy MUST have a config for the chain.
+            gtvDict = populateCache(chainIid, currentHeight)!! // We simply MUST have a config for the chain.
             if (cached == null) {
                 cached = CachedHeight(currentHeight, currentHeight, gtvDict!!) // We can use current height as found height, doesn't matter
                 cache[chainIid] = cached
             }
-            cached.lastFonudDict = gtvDict!!
+            cached.lastFoundDict = gtvDict!!
         }
 
         return gtvDict!!
