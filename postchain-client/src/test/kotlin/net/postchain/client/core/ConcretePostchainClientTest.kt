@@ -48,7 +48,7 @@ internal class ConcretePostchainClientTest {
         driveTestCorrectNumberOfAttempts(
             ConcretePostchainClient(PostchainClientConfig(
                 BlockchainRid.buildFromHex(brid),
-                EndpointPool.singleUrlPool(url),
+                EndpointPool.singleUrl(url),
                 statusPollInterval = 1
             ), client = httpClient),
             // If I didn't pass a max value, it defaults to RETRIEVE_TX_STATUS_ATTEMPTS = 20
@@ -60,7 +60,7 @@ internal class ConcretePostchainClientTest {
         driveTestCorrectNumberOfAttempts(
             ConcretePostchainClient(PostchainClientConfig(
                 BlockchainRid.buildFromHex(brid),
-                EndpointPool.singleUrlPool(url),
+                EndpointPool.singleUrl(url),
                 statusPollCount = 10,
                 statusPollInterval = 1
             ), client = httpClient),

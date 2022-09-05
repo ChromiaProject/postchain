@@ -57,7 +57,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         return ConcretePostchainClientProvider().createClient(
             PostchainClientConfig(
                 bcRid,
-                EndpointPool.singleUrlPool("http://127.0.0.1:${nodes[0].getRestApiHttpPort()}"),
+                EndpointPool.singleUrl("http://127.0.0.1:${nodes[0].getRestApiHttpPort()}"),
                 listOf(KeyPair(PubKey(pubKey0), PrivKey(privKey0)))
             ))
     }
