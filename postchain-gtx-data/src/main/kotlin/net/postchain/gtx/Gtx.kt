@@ -3,6 +3,7 @@ package net.postchain.gtx
 import com.beanit.jasn1.ber.ReverseByteArrayOutputStream
 import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
@@ -16,12 +17,15 @@ class Gtx(
     val signatures: List<ByteArray>
 ) {
 
+    constructor(gtxBody: GtxBody, signatures: Array<ByteArray>) : this(gtxBody, signatures.toList())
+
     init {
         require(gtxBody.signers.size == signatures.size) { "Expected ${gtxBody.signers.size} signatures, found ${signatures.size}" }
     }
 
     fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>) = gtxBody.calculateTxRid(calculator)
 
+    fun encodeHex() = encode().toHex()
     fun encode(): ByteArray {
         if (signatures.size != gtxBody.signers.size) throw UserMistake("Not fully signed")
         val encoded = ReverseByteArrayOutputStream(1000, true)
@@ -31,6 +35,7 @@ class Gtx(
         ).encode(encoded)
         return encoded.array
     }
+
     /**
      * Elements are structured like an ordered array with elements:
      * 1. transaction data body [GtvByteArray]
@@ -40,6 +45,29 @@ class Gtx(
         gtxBody.toGtv(),
         gtv(signatures.map { gtv(it) })
     )
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Gtx
+
+        if (gtxBody != other.gtxBody) return false
+        if (signatures.size != other.signatures.size) return false
+        signatures.forEachIndexed { i, signature ->
+            if (!signature.contentEquals(other.signatures[i])) return false
+        }
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = gtxBody.hashCode()
+        signatures.forEach {
+            result = 31 * result + it.contentHashCode()
+        }
+        return result
+    }
 
     companion object {
         @JvmStatic

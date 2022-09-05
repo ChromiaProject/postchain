@@ -11,18 +11,30 @@ import net.postchain.gtv.gtxmessages.RawGtxBody
 import net.postchain.gtv.gtxmessages.RawGtxBody.Signers
 import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import net.postchain.gtx.data.ExtOpData
 
-class GtxBody(
+data class GtxBody(
     val blockchainRid: BlockchainRid,
-    val operations: List<GtxOperation>,
+    val operations: List<GtxOp>,
     val signers: List<ByteArray>
 ) {
+
+    constructor(blockchainRid: BlockchainRid, operations: Array<GtxOp>, signers: Array<ByteArray>) :
+            this(blockchainRid, operations.toList(), signers.toList())
+
 
     lateinit var rid: Hash
 
     fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>): Hash {
         if (!this::rid.isInitialized) rid = toGtv().merkleHash(calculator)
         return rid
+    }
+
+    // Extended OpData
+    fun getExtOpData(): Array<ExtOpData> {
+        return operations.mapIndexed { idx, op ->
+            ExtOpData.build(op, idx, this)
+        }.toTypedArray()
     }
 
     internal fun toRaw() = RawGtxBody(
@@ -43,12 +55,37 @@ class GtxBody(
         gtv(signers.map { gtv(it) })
     )
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as GtxBody
+
+        if (blockchainRid != other.blockchainRid) return false
+        if (operations != other.operations) return false
+        if (signers.size != other.signers.size) return false
+        signers.forEachIndexed { i, signer ->
+            if (!signer.contentEquals(other.signers[i])) return false
+        }
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = blockchainRid.hashCode()
+        result = 31 * result + operations.hashCode()
+        signers.forEach {
+            result = 31 * result + it.contentHashCode()
+        }
+        return result
+    }
+
     companion object {
         @JvmStatic
         internal fun fromAsn(body: RawGtxBody): GtxBody {
             return GtxBody(
                 BlockchainRid(body.blockchainRid.value),
-                body.operations.seqOf.map { GtxOperation.fromAsn(it) },
+                body.operations.seqOf.map { GtxOp.fromAsn(it) },
                 body.signers.seqOf.map { it.value }
             )
         }
@@ -62,7 +99,7 @@ class GtxBody(
                 if (array[2] !is GtvArray) throw IllegalArgumentException("Third element must be an array")
                 return GtxBody(
                     BlockchainRid(array[0].asByteArray()),
-                    array[1].asArray().map { GtxOperation.fromGtv(it) },
+                    array[1].asArray().map { GtxOp.fromGtv(it) },
                     array[2].asArray().map { it.asByteArray() }
                 )
             }
