@@ -20,7 +20,7 @@ import java.nio.ByteBuffer
  * @param _rawData Deserialized signatures
  * @param _signatures Serialized signatures
  */
-class BaseBlockWitness(val _rawData: ByteArray, val _signatures: Array<Signature>)
+class BaseBlockWitness(private val _rawData: ByteArray, private val _signatures: Array<Signature>)
     : MultiSigBlockWitness {
 
     override fun getSignatures(): Array<Signature> {
@@ -39,7 +39,7 @@ class BaseBlockWitness(val _rawData: ByteArray, val _signatures: Array<Signature
         val fromBytes = { rawWitness: ByteArray ->
             val buffer = ByteBuffer.wrap(rawWitness)
             val sigCount = buffer.int
-            val signatures = Array<Signature>(sigCount) {
+            val signatures = Array(sigCount) {
                 val subjectIdSize = buffer.int
                 val subjectId = ByteArray(subjectIdSize)
                 buffer.get(subjectId)
@@ -81,8 +81,8 @@ class BaseBlockWitness(val _rawData: ByteArray, val _signatures: Array<Signature
  */
 class BaseBlockWitnessBuilder(val cryptoSystem: CryptoSystem,
                               val blockHeader: BlockHeader,
-                              val subjects: Array<ByteArray>,
-                              val threshold: Int) : MultiSigBlockWitnessBuilder {
+                              private val subjects: Array<ByteArray>,
+                              private val threshold: Int) : MultiSigBlockWitnessBuilder {
 
     /**
      * Signatures from [subjects] that have signed the [blockHeader]
@@ -121,12 +121,12 @@ class BaseBlockWitnessBuilder(val cryptoSystem: CryptoSystem,
      * @throws UserMistake If subject attempts to add more than one signature
      */
     override fun applySignature(s: Signature) {
-        if (!subjects.any({ s.subjectID.contentEquals(it) })) {
+        if (!subjects.any { s.subjectID.contentEquals(it) }) {
             throw UserMistake("Unexpected subject ${s.subjectID.toHex()} of signature")
         }
 
         // Do not add two signatures from the same subject!
-        if (signatures.any({ it.subjectID.contentEquals(s.subjectID) })) {
+        if (signatures.any { it.subjectID.contentEquals(s.subjectID) }) {
             return
         }
         if (!cryptoSystem.verifyDigest(blockHeader.blockRID, s)) {

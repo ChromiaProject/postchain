@@ -18,7 +18,7 @@ import net.postchain.gtv.GtvFactory.gtv
  *  4. timestamp [GtvInteger]
  *  5. height [GtvInteger]
  *  6. dependencies [GtvArray] or [GtvNull] (this is to save space)
- *  6. extra  [GtvDictionary]
+ *  7. extra  [GtvDictionary]
  */
 data class BlockHeaderData(
         val gtvBlockchainRid: GtvByteArray,

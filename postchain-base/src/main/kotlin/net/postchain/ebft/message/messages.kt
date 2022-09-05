@@ -27,7 +27,7 @@ class BlockSignature(val blockRID: ByteArray, val sig: Signature): EbftMessage(M
 
     override fun toGtv(): GtvArray {
         return gtv(topic.toGtv(), gtv(blockRID),
-                gtv(sig.subjectID), gtv(sig.data))
+            gtv(sig.subjectID), gtv(sig.data))
     }
 }
 
@@ -42,7 +42,7 @@ class BlockData(val header: ByteArray, val transactions: List<ByteArray>): EbftM
 
     override fun toGtv(): Gtv {
         return gtv(topic.toGtv(), gtv(header),
-                gtv(transactions.map { gtv(it) }))
+            gtv(transactions.map { gtv(it) }))
     }
 }
 
@@ -72,8 +72,8 @@ class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArra
 
     override fun toGtv(): Gtv {
         return gtv(topic.toGtv(),
-                gtv(data.header), gtv(data.transactions.map { gtv(it) }),
-                gtv(height), gtv(witness))
+            gtv(data.header), gtv(data.transactions.map { gtv(it) }),
+            gtv(height), gtv(witness))
     }
 }
 
@@ -106,7 +106,7 @@ class Identification(val pubKey: ByteArray, val blockchainRID: BlockchainRid, va
 }
 
 class Status(val blockRID: ByteArray?, val height: Long, val revolting: Boolean, val round: Long,
-                  val serial: Long, val state: Int): EbftMessage(MessageTopic.STATUS) {
+             val serial: Long, val state: Int): EbftMessage(MessageTopic.STATUS) {
 
 
     override fun toGtv(): Gtv {
@@ -116,7 +116,7 @@ class Status(val blockRID: ByteArray?, val height: Long, val revolting: Boolean,
             GtvNull
         }
         return gtv(topic.toGtv(), currentBlockRid, gtv(height),
-                gtv(revolting), gtv(round), gtv(serial), gtv(state.toLong()))
+            gtv(revolting), gtv(round), gtv(serial), gtv(state.toLong()))
     }
 }
 
