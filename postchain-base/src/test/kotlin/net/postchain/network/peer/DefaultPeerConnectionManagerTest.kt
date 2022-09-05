@@ -10,6 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.NodeRid
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
@@ -19,7 +20,6 @@ import net.postchain.network.common.LazyPacket
 import net.postchain.network.common.NodeConnector
 import net.postchain.network.netty2.NettyPeerConnection
 import net.postchain.network.util.peerInfoFromPublicKey
-import net.postchain.debug.BlockchainProcessName
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

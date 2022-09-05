@@ -10,12 +10,12 @@ import net.postchain.common.data.ByteArrayKey
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.data.GTXDataBuilder
-import net.postchain.core.block.BlockTrace
 
 /**
  * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.

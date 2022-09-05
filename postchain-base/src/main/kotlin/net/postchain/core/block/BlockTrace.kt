@@ -17,8 +17,8 @@ import net.postchain.debug.BlockchainProcessName
  * For historic sync the block construction passes through 3 threads, typically:
  *
  *  1. [historicSync-X] (where we attempt to add a block) ->
- *  2. [-1-BaseBlockDatabaseWorker] (running BlockDatabase.addBlock()) Note1: Normal logging doesn't print in here, not sure why? ->
- *  3. [-1-BaseBlockDatabaseWorker] (running BlockBuilder.commit()) Note2: But in here the regular logging works again. ->
+ *  2. [-1-BaseBlockDatabaseWorker] (running BlockDatabase.addBlock()) (here we don't see who caused this block to be added) ->
+ *  3. [-1-BaseBlockDatabaseWorker] (running BlockBuilder.commit())  ->
  *  4. [pool-4-thread-1] (running ProcMan, handling potential restart)
  *
  * When we are at step 4 it's usually pretty difficult to see what block caused the restart.

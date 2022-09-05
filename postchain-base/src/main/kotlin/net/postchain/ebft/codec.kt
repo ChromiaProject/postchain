@@ -34,7 +34,7 @@ fun decodeWithoutVerification(bytes: ByteArray): SignedMessage {
 
 fun decodeAndVerify(bytes: ByteArray, pubKey: ByteArray, verify: Verifier): EbftMessage {
     return tryDecodeAndVerify(bytes, pubKey, verify)
-            ?: throw UserMistake("Verification failed")
+        ?: throw UserMistake("Verification failed")
 }
 
 fun decodeAndVerify(bytes: ByteArray, verify: Verifier): EbftMessage? {

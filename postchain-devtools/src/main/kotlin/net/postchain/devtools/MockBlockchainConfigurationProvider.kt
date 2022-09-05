@@ -3,9 +3,9 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
+import net.postchain.core.EContext
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.core.EContext
 
 /**
  * This test conf provider can emulate managed mode, but is using a stubbed [ManagedNodeDataSource] that can be
