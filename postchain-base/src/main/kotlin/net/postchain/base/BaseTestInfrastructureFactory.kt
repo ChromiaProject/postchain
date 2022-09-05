@@ -84,6 +84,10 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-        return BaseBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
+        return BaseBlockchainProcessManager(postchainContext,
+                blockchainInfrastructure,
+                blockchainConfigurationProvider,
+                listOf()
+        )
     }
 }

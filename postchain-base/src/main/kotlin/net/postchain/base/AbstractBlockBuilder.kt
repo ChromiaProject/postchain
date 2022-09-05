@@ -176,6 +176,7 @@ abstract class AbstractBlockBuilder(
             throw ProgrammerMistake("Invalid witness")
         }
         store.commitBlock(bctx, blockWitness)
+        bctx.blockWasCommitted()
         commitLog("End")
     }
 

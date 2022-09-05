@@ -24,6 +24,7 @@ import net.postchain.gtx.data.OpData
  * Special transactions are usually created by a [GTXSpecialTxExtension], which makes this extendable.
  */
 open class GTXSpecialTxHandler(val module: GTXModule,
+                               val chainID: Long,
                                val blockchainRID: BlockchainRid,
                                val cs: CryptoSystem,
                                val factory: GTXTransactionFactory
@@ -36,7 +37,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     init {
         val opSet = mutableSetOf<String>()
         for (x in extensions) {
-            x.init(module, blockchainRID, cs)
+            x.init(module, chainID, blockchainRID, cs)
             for (op in x.getRelevantOps()) {
                 if (op in opSet) throw ProgrammerMistake("Overlapping op: $op")
                 opSet.add(op)
