@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.*
+import net.postchain.service.AlreadyExistMode
 
 class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer information to database") {
 

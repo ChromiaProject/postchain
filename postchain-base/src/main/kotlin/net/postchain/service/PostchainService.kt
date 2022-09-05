@@ -1,6 +1,7 @@
 package net.postchain.service
 
 import net.postchain.PostchainNode
+import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
@@ -33,22 +34,40 @@ class PostchainService(private val postchainNode: PostchainNode) {
         }
     }
 
-    fun initializeBlockchain(chainId: Long, maybeBrid: BlockchainRid?, override: Boolean, config: Gtv): BlockchainRid {
+    fun initializeBlockchain(chainId: Long, maybeBrid: BlockchainRid?, mode: AlreadyExistMode, config: Gtv,
+                             givenDependencies: List<BlockchainRelatedInfo> = listOf()): BlockchainRid {
+        val brid = maybeBrid ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config)
+
         withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            if (db.getBlockchainRid(ctx) != null && !override) {
-                throw AlreadyExists("Blockchain already exists")
+
+            fun init() {
+                db.initializeBlockchain(ctx, brid)
+                DependenciesValidator.validateBlockchainRids(ctx, givenDependencies)
+                db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
             }
 
-            val brid = maybeBrid ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config)
+            when (mode) {
+                AlreadyExistMode.ERROR -> {
+                    if (db.getBlockchainRid(ctx) == null) {
+                        init()
+                    } else {
+                        throw AlreadyExists("Blockchain already exists")
+                    }
+                }
 
-            db.initializeBlockchain(ctx, brid)
-            DependenciesValidator.validateBlockchainRids(ctx, listOf())
-            // TODO: Blockchain dependencies [DependenciesValidator#validateBlockchainRids]
-            db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
+                AlreadyExistMode.FORCE -> {
+                    init()
+                }
+
+                AlreadyExistMode.IGNORE -> {
+                    db.getBlockchainRid(ctx) ?: init()
+                }
+            }
             true
         }
-        return postchainNode.startBlockchain(chainId)
+
+        return brid
     }
 
     fun findBlockchain(chainId: Long): Pair<BlockchainRid, Boolean>? {
