@@ -44,7 +44,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
-        sysSetup.confInfrastructure = "net.postchain.d1.anchor.D1TestInfrastructureFactory"
+        sysSetup.confInfrastructure = net.postchain.d1.anchor.D1TestInfrastructureFactory::class.java.name
 
         // -----------------------------
         // Important!! We don't want to create any regular test transactions for the Anchor chain
