@@ -55,8 +55,8 @@ open class BaseBlockEContext(
     val txEventSink: TxEventSink
 ) : EContext by ectx, BlockEContext {
 
-    var alreadyCommitted = false
-    val hooks = mutableListOf<() -> Unit>()
+    private var alreadyCommitted = false
+    private val hooks = mutableListOf<() -> Unit>()
 
     override fun addAfterCommitHook(hook: () -> Unit) {
         hooks.add(hook)
