@@ -274,10 +274,8 @@ open class BaseBlockBuilder(
                 throw BlockValidationMistake("Special transaction validation failed")
             }
             haveSpecialEndTransaction = true
-        } else {
-            if (expectBeginTx) {
-                throw BlockValidationMistake("First transaction must be special transaction")
-            }
+        } else if (expectBeginTx) {
+            throw BlockValidationMistake("First transaction must be special transaction")
         }
     }
 
@@ -312,5 +310,4 @@ open class BaseBlockBuilder(
             extraData
         )
     }
-
 }

@@ -10,9 +10,9 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.data.GTXDataBuilder
 import org.apache.commons.lang3.RandomStringUtils
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

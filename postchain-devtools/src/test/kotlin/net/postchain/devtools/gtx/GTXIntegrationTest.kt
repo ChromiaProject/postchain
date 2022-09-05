@@ -4,15 +4,15 @@ package net.postchain.devtools.gtx
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.core.Transaction
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GtxNop
-import net.postchain.core.Transaction
+import net.postchain.gtx.data.GTXDataBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

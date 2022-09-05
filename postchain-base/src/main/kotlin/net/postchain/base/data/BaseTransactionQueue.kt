@@ -7,12 +7,11 @@ import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.core.TransactionQueue
 import net.postchain.core.Transaction
+import net.postchain.core.TransactionQueue
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.collections.HashMap
-import kotlin.collections.LinkedHashMap
 
 class ComparableTransaction(val tx: Transaction) {
     override fun equals(other: Any?): Boolean {
