@@ -14,7 +14,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
 /**
  * Postchain has different test categories:
  *
- * 1. Unit tests - A test whithout dependencies.
+ * 1. Unit tests - A test without dependencies.
  * 2. Integration tests - Depends on the DB.
  * 3. Nightly test - Tests with a lot of data.
  * 4. Manual test - Requires some manual work to run.

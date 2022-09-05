@@ -35,9 +35,9 @@ class SQLOpDesc(val name: String, val query: String, val args: Array<SQLOpArg>)
 
 fun makeSQLQueryDesc(opName: String, argNames: Array<String>, argTypes: Array<String>): SQLOpDesc {
     val fixedArgNames = if (argNames.size > argTypes.size) {
-        // Queries returns a table. The column names of that table are also
+        // Query returns a table. The column names of that table are also
         // included in argNames for some reason
-        argNames.slice(0..argTypes.size - 1).toTypedArray()
+        argNames.slice(argTypes.indices).toTypedArray()
     } else argNames
     if (fixedArgNames.size != fixedArgNames.size)
         throw UserMistake("Cannot define SQL op ${opName}: wrong parameter list")
@@ -45,9 +45,9 @@ fun makeSQLQueryDesc(opName: String, argNames: Array<String>, argTypes: Array<St
     val args = convertArgs(fixedArgNames, argTypes, opName)
 
     val query = if (args.size == 0) {
-        "SELECT * FROM ${opName} (?)"
+        "SELECT * FROM $opName (?)"
     } else {
-        "SELECT * FROM ${opName} (?, ${Array(args.size, { "?" }).joinToString()})"
+        "SELECT * FROM $opName (?, ${Array(args.size) { "?" }.joinToString()})"
     }
     return SQLOpDesc(opName, query, args.toTypedArray())
 }
@@ -61,9 +61,9 @@ fun makeSQLOpDesc(opName: String, argNames: Array<String>, argTypes: Array<Strin
     val args = convertArgs(argNames, argTypes, opName)
 
     val query = if (args.size == 0) {
-        "SELECT ${opName} (?::gtx_ctx)"
+        "SELECT $opName (?::gtx_ctx)"
     } else {
-        "SELECT ${opName} (?::gtx_ctx, ${Array(args.size, { "?" }).joinToString()})"
+        "SELECT $opName (?::gtx_ctx, ${Array(args.size) { "?" }.joinToString()})"
     }
     return SQLOpDesc(opName, query, args.toTypedArray())
 }
@@ -226,13 +226,14 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
         val opList = mutableListOf<Pair<String, SQLOpDesc>>()
         for (op in oplist) {
             val name = op["name"] as String
-            val opDesc = makeSQLQueryDesc(name,
-                    decodeSQLTextArray(op["argnames"]!!),
-                    decodeSQLTextArray(op["argtypes"]!!))
+            val opDesc = makeSQLQueryDesc(
+                name,
+                decodeSQLTextArray(op["argnames"]!!),
+                decodeSQLTextArray(op["argtypes"]!!)
+            )
             opList.add(name to opDesc)
         }
-        val result = mapOf(*opList.toTypedArray())
-        return result
+        return mapOf(*opList.toTypedArray())
     }
 
     private fun populateOps(ctx: EContext) {

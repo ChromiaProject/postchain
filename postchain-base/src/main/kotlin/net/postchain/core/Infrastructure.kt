@@ -5,9 +5,9 @@ package net.postchain.core
 import net.postchain.PostchainContext
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.network.common.ConnectionManager
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.network.common.ConnectionManager
 
 /**
  * Responsible blockchain process lifecycle, i.e. creating, exiting and restarting blockchain processes.
