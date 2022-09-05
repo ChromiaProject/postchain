@@ -5,6 +5,10 @@ image: maven:3.8.4-jdk-11
     when: always
     paths:
       - "**/*.log"
+    reports:
+      junit:
+        - "*/target/surefire-reports/TEST-*.xml"
+        - "*/target/failsafe-reports/TEST-*.xml"
     expire_in: 1 week
 
 .git_template: &git_setup |
