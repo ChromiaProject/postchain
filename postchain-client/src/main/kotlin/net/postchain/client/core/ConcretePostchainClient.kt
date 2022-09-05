@@ -18,6 +18,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtx.data.GTXDataBuilder
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
@@ -71,9 +72,11 @@ class ConcretePostchainClient(
         val r = CompletableFuture<Gtv>()
         client(request) { res ->
             if (res.status != Status.OK) {
-                val error = Body.auto<ErrorResponse>().toLens()(res)
-                r.completeExceptionally(UserMistake("Can not make query_gtx api call: ${res.status} ${error.error}"))
+                val msg = if (res.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(res).error
+                r.completeExceptionally(UserMistake("Can not make query_gtx api call: ${res.status} $msg"))
+                return@client
             }
+            if (res.body == Body.EMPTY) r.complete(GtvNull) && return@client
             val respList = Body.auto<List<String>>().toLens()(res)
             r.complete(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
         }
