@@ -2,9 +2,8 @@
 
 package net.postchain.gtx.data
 
-import net.postchain.common.data.Hash
-import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.CryptoSystem
@@ -12,6 +11,7 @@ import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import net.postchain.gtv.*
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtx.data.factory.GtxTransactionDataFactory
 import net.postchain.gtx.data.serializer.GtxTransactionBodyDataSerializer
 import net.postchain.gtx.data.serializer.GtxTransactionDataSerializer

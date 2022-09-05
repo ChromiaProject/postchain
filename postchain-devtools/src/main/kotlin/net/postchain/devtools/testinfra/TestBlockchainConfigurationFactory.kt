@@ -2,8 +2,8 @@
 
 package net.postchain.devtools.testinfra
 
-import net.postchain.core.BlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
 open class TestBlockchainConfigurationFactory : GTXBlockchainConfigurationFactory() {

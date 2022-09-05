@@ -2,11 +2,10 @@
 
 package net.postchain.gtx.gtxml
 
-import net.postchain.common.hexStringToByteArray
-import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.data.byteArrayKeyOf
+import net.postchain.common.hexStringToByteArray
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
@@ -16,6 +15,7 @@ import net.postchain.gtv.gtxml.ParamType
 import net.postchain.gtv.gtxml.SignersType
 import net.postchain.gtv.gtxml.TransactionType
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtx.data.GTXTransactionBodyData
 import net.postchain.gtx.data.GTXTransactionData
 import net.postchain.gtx.data.OpData

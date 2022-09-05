@@ -68,7 +68,6 @@
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <commons-configuration2.version>2.1.1</commons-configuration2.version>
         <commons-beanutils.version>1.9.3</commons-beanutils.version>
-        <testcontainers.version>1.16.2</testcontainers.version>
         <micrometer.version>1.9.0</micrometer.version>
 
         <maven.compiler.source>11</maven.compiler.source>
@@ -129,13 +128,6 @@
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-bom</artifactId>
                 <version>${kotlin.version}</version>
-                <scope>import</scope>
-                <type>pom</type>
-            </dependency>
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers-bom</artifactId>
-                <version>${testcontainers.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
