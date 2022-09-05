@@ -44,7 +44,7 @@ class ConcretePostchainClient(
 
     companion object : KLogging()
 
-    private val nextEndpoint get() = config.endpointPool.next()
+    private fun nextEndpoint() = config.endpointPool.next()
     private val blockchainRIDHex = config.blockchainRid.toHex()
     private val cryptoSystem = config.cryptoSystem
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
@@ -58,7 +58,7 @@ class ConcretePostchainClient(
         val queriesLens = Body.auto<Queries>().toLens()
         val gtxQuery = gtv(gtv(name), gtv)
         val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
-        val endpoint = nextEndpoint
+        val endpoint = nextEndpoint()
         val request = queriesLens(
             Queries(listOf(encodedQuery)),
             Request(Method.POST, "${endpoint.url}/query_gtx/$blockchainRIDHex")
@@ -92,7 +92,7 @@ class ConcretePostchainClient(
         val txLens = Body.auto<Tx>().toLens()
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
         val encodedTx = Tx(tx.encodeHex())
-        val endpoint = nextEndpoint
+        val endpoint = nextEndpoint()
         val request = txLens(encodedTx, Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
         client(request) { resp ->
@@ -129,7 +129,7 @@ class ConcretePostchainClient(
 
     override fun checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult> {
         val txStatusLens = Body.auto<TxStatus>().toLens()
-        val endpoint = nextEndpoint
+        val endpoint = nextEndpoint()
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDHex/${txRid.rid}/status")
         val result = CompletableFuture<TransactionResult>()
         client(validationRequest) { response ->

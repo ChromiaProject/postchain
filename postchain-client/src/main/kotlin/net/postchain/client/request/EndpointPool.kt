@@ -21,6 +21,6 @@ class EndpointPool(urls: List<String>) {
 
     companion object {
         @JvmStatic
-        fun singeUrlPool(url: String) = EndpointPool(listOf(url))
+        fun singleUrlPool(url: String) = EndpointPool(listOf(url))
     }
 }
