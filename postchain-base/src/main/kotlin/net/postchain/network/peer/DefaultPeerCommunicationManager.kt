@@ -9,12 +9,12 @@ import net.postchain.common.toHex
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.NodeRid
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.CommunicationManager
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import net.postchain.network.common.ConnectionManager
-import net.postchain.debug.BlockchainProcessName
 
 class DefaultPeerCommunicationManager<PacketType>(
         val connectionManager: ConnectionManager,

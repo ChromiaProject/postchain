@@ -2,11 +2,11 @@
 
 package net.postchain.base
 
-import net.postchain.core.block.BlockBuildingStrategy
-import net.postchain.core.block.BlockQueries
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockQueries
 
 class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigurationData,
                                 blockQueries: BlockQueries,
