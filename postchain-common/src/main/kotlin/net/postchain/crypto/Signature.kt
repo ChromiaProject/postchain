@@ -3,8 +3,9 @@
 package net.postchain.crypto
 
 /**
- * Id is something which identifies subject which produces the
+ * @param subjectID is something which identifies subject which produces the
  * signature, e.g. pubkey or hash of pubkey
+ * @param data is the actual signature data
  */
 data class Signature(val subjectID: ByteArray, val data: ByteArray) {
 
