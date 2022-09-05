@@ -15,10 +15,7 @@ import net.postchain.ebft.rest.contract.serialize
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
 import net.postchain.ebft.syncmanager.StatusLogInterval
-import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
-import net.postchain.ebft.syncmanager.common.FastSyncParameters
-import net.postchain.ebft.syncmanager.common.FastSynchronizer
-import net.postchain.ebft.syncmanager.common.Messaging
+import net.postchain.ebft.syncmanager.common.*
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.mapper.toObject
 import nl.komponents.kovenant.task
@@ -54,7 +51,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         this.processingIntent = DoNothingIntent
         this.lastStatusLogged = Date().time
         val nodeConfig = workerContext.nodeConfig
-        val params = FastSyncParameters.fromAppConfig(workerContext.appConfig) {
+        val params = SyncParameters.fromAppConfig(workerContext.appConfig) {
             it.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
         }
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params, isProcessRunning)
@@ -93,10 +90,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 when (message) {
                     // same case for replica and validator node
                     is GetBlockAtHeight -> sendBlockAtHeight(xPeerId, message.height)
-                    is GetBlockHeaderAndBlock -> {
-                        sendBlockHeaderAndBlock(xPeerId, message.height,
-                                this.statusManager.myStatus.height - 1)
-                    }
+                    is GetBlockRange -> sendBlockRangeFromHeight(xPeerId, message.startAtHeight,
+                        this.statusManager.myStatus.height - 1)
+                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
+                        this.statusManager.myStatus.height - 1)
                     else -> {
                         if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
                             // validator consensus logic
@@ -144,6 +141,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                                     BlockData(message.header, message.transactions),
                                                     blockchainConfiguration)
                                     )
+                                }
+                                is BlockRange -> {
+                                    // Only replicas should receive BlockRanges (via SlowSync)
+                                    logger.warn("Why did we get a block range from peer: ${xPeerId}? (Starting " +
+                                            "height: ${message.startAtHeight}, blocks: ${message.blocks.size}) ")
                                 }
                                 is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
                                 is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)

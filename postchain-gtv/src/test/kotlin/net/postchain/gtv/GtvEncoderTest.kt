@@ -48,10 +48,10 @@ class GtvEncoderTest {
 
     @Test
     fun testGtvByteArray() {
-        var bytes =  ByteArray(3)
-        bytes.set(0, 0x10)
-        bytes.set(1, 0x1A)
-        bytes.set(2, 0x68)
+        val bytes =  ByteArray(3)
+        bytes[0] = 0x10
+        bytes[1] = 0x1A
+        bytes[2] = 0x68
         val expected = GtvByteArray(bytes)
         val b = GtvEncoder.encodeGtv(expected)
         val result = GtvDecoder.decodeGtv(b)
@@ -82,7 +82,7 @@ class GtvEncoderTest {
         // TODO: this test is 10 times smaller than it should be because we trigger OOM
         // currently it requires >2 GB to compute hash
         val gtvArray  = (1..size).map { GtvInteger( it.toLong() ) }.toTypedArray()
-        var encoded = ByteArray(0)
+        var encoded: ByteArray
         val gtv = GtvArray(gtvArray)
         val serializationTime = measureTimeMillis {
             encoded = GtvEncoder.encodeGtv(gtv)

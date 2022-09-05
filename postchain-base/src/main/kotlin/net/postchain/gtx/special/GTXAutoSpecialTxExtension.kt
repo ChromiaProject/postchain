@@ -1,13 +1,13 @@
 package net.postchain.gtx.special
 
+import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
+import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
-import net.postchain.core.BlockEContext
-import net.postchain.base.SpecialTransactionPosition
 
 /**
  * This extension adds "begin" and "end" to the block, which how a block should be constructed.
