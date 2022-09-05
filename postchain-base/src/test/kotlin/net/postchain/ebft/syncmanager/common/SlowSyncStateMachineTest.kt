@@ -53,4 +53,28 @@ class SlowSyncStateMachineTest {
         sssm.updateAfterSuccessfulCommit(3L, 226L)
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
     }
+
+    @Test
+    fun failing_commit() {
+
+        val sssm = SlowSyncStateMachine(1)
+        assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
+        assertEquals(-1L, sssm.lastCommittedBlockHeight)
+
+        sssm.maybeGetBlockRange(111L, ::dummySend)
+        assertEquals(SlowSyncStates.WAIT_FOR_REPLY, sssm.state)
+        assertEquals(0L, sssm.waitForHeight)
+        assertEquals(theOnlyOtherNode, sssm.waitForNodeId)
+
+        // Getting 3 blocks (heights: 0,1,2)
+        sssm.updateToWaitForCommit(3, 113L)
+        assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
+        assertEquals(2L, sssm.lastUncommittedBlockHeight)
+
+        // 3 first commit fails
+        sssm.updateAfterFailedCommit(0L, 124L)
+        assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state) // Back to beginning
+        assertEquals(-1L, sssm.lastUncommittedBlockHeight) // We are back to square zero
+        assertEquals(-1L, sssm.lastCommittedBlockHeight) // We are back to square zero
+    }
 }
