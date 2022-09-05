@@ -37,7 +37,8 @@ import kotlin.concurrent.withLock
 open class BaseBlockchainProcessManager(
         protected val postchainContext: PostchainContext,
         protected val blockchainInfrastructure: BlockchainInfrastructure,
-        protected val blockchainConfigProvider: BlockchainConfigurationProvider
+        protected val blockchainConfigProvider: BlockchainConfigurationProvider,
+        bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
 ) : BlockchainProcessManager {
 
     override val synchronizer = Any()
@@ -50,9 +51,12 @@ open class BaseBlockchainProcessManager(
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
-    protected val extensions: List<BlockchainProcessManagerExtension> = makeExtensions()
-    private val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
+    protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
+    protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
+
+    // FYI: [et]: For integration testing. Will be removed or refactored later
+    private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
 
     // For DEBUG only
     var insideATest = false
@@ -62,11 +66,6 @@ open class BaseBlockchainProcessManager(
 
     init {
         initiateChainDiagnosticData()
-    }
-
-    /** overridable */
-    protected fun makeExtensions(): List<BlockchainProcessManagerExtension> {
-        return listOf()
     }
 
     /**
