@@ -10,8 +10,9 @@ import net.postchain.devtools.TxCache
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtx.*
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
+import kotlin.test.fail
 
 /**
  * Main idea is to have one "source" blockchain that generates block, so that these blocks can be anchored by another
@@ -93,7 +94,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
 
         val blockDataFull = bockQueries.getBlockAtHeight(heightZero.toLong()).get()!!
         System.out.println("block $heightZero fetched.")
-        Assert.assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
+        assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
         val theOnlyTx = blockDataFull.transactions[0] // There is only one
 
         checkForAnchorOp(
@@ -122,12 +123,12 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
     private fun checkForOperation(tx: ByteArray, opName: String, numberOfOperations: Int, currTxFactory: GTXTransactionFactory) {
         try {
             val txGtx = currTxFactory.decodeTransaction(tx) as GTXTransaction // For Anchor chain this MUST be the anchor GTX Tx Factory
-            Assert.assertEquals(numberOfOperations, txGtx.ops.size)
+            assertEquals(numberOfOperations, txGtx.ops.size)
             val op = txGtx.ops[0] as GTXOperation
             System.out.println("Op : ${op.toString()}")
-            Assert.assertEquals(opName, op.data.opName)
+            assertEquals(opName, op.data.opName)
         } catch (e: Exception) {
-            Assert.fail("Could not decode due to: ${e.message}")
+            fail("Could not decode due to: ${e.message}")
         }
     }
 
