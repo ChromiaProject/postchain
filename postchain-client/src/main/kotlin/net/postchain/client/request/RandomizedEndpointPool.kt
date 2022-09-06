@@ -14,6 +14,10 @@ class RandomizedEndpointPool(urls: List<String>) : EndpointPool {
     override fun next(): Endpoint {
         if (size == 1) return endpoints.first()
         val reachableEndpoints = endpoints.filter { it.isReachable() }
+        if (reachableEndpoints.isEmpty()) {
+            endpoints.forEach { it.setReachable() }
+            return next()
+        }
         return reachableEndpoints[nextRand(reachableEndpoints.size)]
     }
 

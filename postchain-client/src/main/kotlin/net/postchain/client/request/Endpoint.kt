@@ -6,4 +6,6 @@ class Endpoint(val url: String) {
     fun isReachable() = health == EndpointHealthStatus.Reachable
 
     fun setUnreachable() { health = EndpointHealthStatus.Unreachable }
+
+    fun setReachable() { health = EndpointHealthStatus.Reachable }
 }
