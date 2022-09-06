@@ -3,7 +3,9 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
+import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -38,8 +40,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
     protected fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
-    protected fun tableEvents(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_events")
-    protected fun tableStates(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_states")
+    protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
+    protected fun tableEventLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_event_leafs")
+    protected fun tableStateLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_state_leafs")
 
     fun tableGtxModuleVersion(ctx: EContext): String = tableName(ctx, "gtx_module_version")
 
@@ -61,6 +64,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
+    protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
 
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
@@ -68,9 +72,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     // --- Insert ---
     protected abstract fun cmdInsertTransactions(ctx: EContext): String
+    protected abstract fun cmdInsertPage(ctx: EContext, name: String): String
     protected abstract fun cmdInsertConfiguration(ctx: EContext): String
-    protected abstract fun cmdInsertEvents(ctx: EContext, prefix: String): String
-    protected abstract fun cmdInsertStates(ctx: EContext, prefix: String): String
+    protected abstract fun cmdInsertEvent(ctx: EContext, prefix: String): String
+    protected abstract fun cmdInsertState(ctx: EContext, prefix: String): String
     protected abstract fun cmdPruneEvents(ctx: EContext, prefix: String): String
     protected abstract fun cmdPruneStates(ctx: EContext, prefix: String): String
     abstract fun cmdCreateTableGtxModuleVersion(ctx: EContext): String
@@ -320,22 +325,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     // ---- Event and State ----
 
-    /**
-     * Fetch one event that matches the given hash (if height is correct)
-     */
-    override fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
-        val sql = """SELECT * FROM (SELECT block_height, hash, data, 
-            RANK() OVER (ORDER BY event_iid) rank_number 
-            FROM ${tableEvents(ctx, prefix)} 
-            WHERE block_height = ?) x WHERE hash = ?"""
-        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
+    override fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): DatabaseAccess.EventInfo? {
+        val sql = """SELECT block_height, position, hash, data 
+            FROM ${tableEventLeafs(ctx, prefix)} 
+            WHERE hash = ?"""
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, eventHash)
         if (rows.isEmpty()) return null
-        val data = rows.first() // Should there be more than one?
+        val data = rows.first()
         return DatabaseAccess.EventInfo(
-                (data["rank_number"] as Long) - 1,
-                data["block_height"] as Long,
-                data["hash"] as Hash,
-                data["data"] as ByteArray
+            data["position"] as Long,
+            data["block_height"] as Long,
+            data["hash"] as Hash,
+            data["data"] as ByteArray
         )
     }
 
@@ -344,7 +345,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      */
     override fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
         val sql = """SELECT block_height, hash, data, event_iid
-            FROM ${tableEvents(ctx, prefix)} 
+            FROM ${tableEventLeafs(ctx, prefix)} 
             WHERE block_height = ?
             ORDER BY event_iid """
 
@@ -356,7 +357,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      */
     override fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
         val sql = """SELECT block_height, hash, data, event_iid
-            FROM ${tableEvents(ctx, prefix)} 
+            FROM ${tableEventLeafs(ctx, prefix)} 
             WHERE block_height > ?
             ORDER BY event_iid
             LIMIT ? """
@@ -385,7 +386,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): DatabaseAccess.AccountState? {
-        val sql = """SELECT block_height, state_n, data FROM ${tableStates(ctx, prefix)} WHERE block_height <= ? AND state_n = ?"""
+        val sql = """SELECT block_height, state_n, data FROM ${tableStateLeafs(ctx, prefix)} 
+            WHERE block_height <= ? AND state_n = ? 
+            ORDER BY state_iid DESC LIMIT 1"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, state_n)
         if (rows.isEmpty()) return null
         val data = rows.first()
@@ -396,12 +399,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
-    override fun insertEvent(ctx: EContext, prefix: String, height: Long, hash: Hash, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertEvents(ctx, prefix), height, hash, data)
+    override fun insertEvent(ctx: EContext, prefix: String, height: Long, position: Long,  hash: Hash, data: ByteArray) {
+        queryRunner.update(ctx.conn, cmdInsertEvent(ctx, prefix), height, position, hash, data)
     }
 
     override fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertStates(ctx, prefix), height, state_n, data)
+        queryRunner.update(ctx.conn, cmdInsertState(ctx, prefix), height, state_n, data)
     }
 
     override fun pruneEvents(ctx: EContext, prefix: String, heightMustBeHigherThan: Long) {
@@ -415,12 +418,52 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
 
+    override fun insertPage(ctx: EContext, name: String, page: Page) {
+        val childHashes = page.childHashes.fold(ByteArray(0)) {total, item -> total.plus(item)}
+        queryRunner.update(ctx.conn, cmdInsertPage(ctx, name), page.blockHeight, page.level, page.left, childHashes)
+    }
+
+    /**
+     * If we didn't prune the old one then we need to query the snapshot page
+     * at highest block height that less than or equal to specific height
+     */
+    override fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
+        val sql = """
+            SELECT child_hashes FROM ${tablePages(ctx, name)} 
+            WHERE block_height = (SELECT MAX(block_height) FROM ${tablePages(ctx, name)} 
+                                    WHERE block_height <= ? AND level = ? AND left_index = ?)
+            AND level = ? AND left_index = ?"""
+        val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left, level, left)
+        // if data size is not contain correct length then it regards to error
+        if (data == null || data.size % HASH_LENGTH != 0) return null
+        val length = data.size / HASH_LENGTH
+        val childHashes = Array(length){ByteArray(HASH_LENGTH)}
+        for (i in 0 until length) {
+            val start = i * HASH_LENGTH
+            val end = start + HASH_LENGTH - 1
+            childHashes[i] = data.sliceArray(start..end)
+        }
+        return Page(height, level, left, childHashes)
+    }
+
+    override fun createPageTable(ctx: EContext, prefix: String) {
+        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, prefix))
+    }
 
     override fun createEventLeafTable(ctx: EContext, prefix: String) {
         queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx, prefix))
     }
 
+
     // --- Init App ----
+    override fun createStateLeafTable(ctx: EContext, prefix: String) {
+        queryRunner.update(ctx.conn, cmdCreateTableState(ctx, prefix))
+    }
+
+    override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height <= ?"
+        return queryRunner.query(ctx.conn, sql, intRes, height)
+    }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
         /**
