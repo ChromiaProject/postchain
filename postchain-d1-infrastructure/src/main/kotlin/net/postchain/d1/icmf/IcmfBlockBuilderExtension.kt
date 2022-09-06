@@ -10,10 +10,12 @@ import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockBuilder
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
 const val ICMF_EVENT_TYPE = "icmf"
+const val ICMF_BLOCK_HEADER_EXTRA = "icmf_send"
 
 class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
@@ -47,6 +49,6 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
                     blockEContext.height, prevMessageBlockHeight, event.first, GtvEncoder.encodeGtv(event.second))
             }
         }
-        return mapOf() // TODO return data for block header
+        return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv("hashhash")) // TODO return sensible data for block header
     }
 }

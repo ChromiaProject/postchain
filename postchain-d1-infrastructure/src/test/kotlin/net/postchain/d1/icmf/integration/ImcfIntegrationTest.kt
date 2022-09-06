@@ -5,6 +5,8 @@ import net.postchain.base.withReadConnection
 import net.postchain.d1.icmf.IcmfTestTransaction
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
+import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
 import org.apache.commons.dbutils.QueryRunner
 import org.junit.jupiter.api.Test
 import net.postchain.d1.icmf.tableMessages
@@ -31,14 +33,21 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
             withReadConnection(node.postchainContext.storage, CHAIN_ID.toLong()) {
                 val db = DatabaseAccess.of(it)
                 val queryRunner = QueryRunner()
-                val res = queryRunner.query(
+
+                val res1 = queryRunner.query(
                     it.conn,
                     "SELECT block_height, prev_message_block_height FROM ${db.tableMessages(it)}",
                     MapListHandler()
                 )
-                assertEquals(1, res.size)
-                assertEquals(0L, res[0]["block_height"])
-                assertEquals(-1L, res[0]["prev_message_block_height"])
+                assertEquals(1, res1.size)
+                assertEquals(0L, res1[0]["block_height"])
+                assertEquals(-1L, res1[0]["prev_message_block_height"])
+
+                val blockQueries = node.getBlockchainInstance(CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
+                val blockRid = blockQueries.getBlockRid(0).get()
+                val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
+                val decodedHeader = BlockHeaderDataFactory.buildFromBinary(blockHeader.rawData)
+                assertEquals("hashhash", decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asString())
             }
         }
     }
