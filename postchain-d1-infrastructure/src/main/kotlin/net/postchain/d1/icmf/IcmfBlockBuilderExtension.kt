@@ -9,6 +9,8 @@ import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockBuilder
 import net.postchain.gtv.Gtv
 
+const val ICMF_EVENT_TYPE = "icmf"
+
 class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
@@ -19,7 +21,7 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
 
     override fun init(blockEContext: BlockEContext, bb: BlockBuilder) {
         val baseBB = bb as BaseBlockBuilder
-        baseBB.installEventProcessor("icmf", this)
+        baseBB.installEventProcessor(ICMF_EVENT_TYPE, this)
     }
 
     override fun finalize(): Map<String, Gtv> {

@@ -7,7 +7,7 @@ import net.postchain.gtv.GtvFactory.gtv
 class IcmfTestTransaction(id: Int, good: Boolean = true, correct: Boolean = true) : TestTransaction(id, good, correct) {
 
     override fun apply(ctx: TxEContext): Boolean {
-        ctx.emitEvent("icmf", gtv("test"))
+        ctx.emitEvent(ICMF_EVENT_TYPE, gtv("test"))
         return true
     }
 }
