@@ -11,7 +11,7 @@
         </dict>
     </entry>
     <entry key="configurationfactory">
-        <string>net.postchain.devtools.testinfra.TestBlockchainConfigurationFactory</string>
+        <string>net.postchain.d1.icmf.integration.IcmfTestBlockchainConfigurationFactory</string>
     </entry>
     <entry key="signers">
         <array>
@@ -34,7 +34,6 @@
             <entry key="modules">
                 <array>
                     <string>net.postchain.d1.icmf.IcmfGTXModule</string>
-                    <string>net.postchain.configurations.GTXTestModule</string> <!-- Normal GTX test TXs will do -->
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>
             </entry>

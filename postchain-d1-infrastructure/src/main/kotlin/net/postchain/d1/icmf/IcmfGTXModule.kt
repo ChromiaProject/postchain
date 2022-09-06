@@ -7,6 +7,8 @@ import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import org.apache.commons.dbutils.QueryRunner
 
+fun DatabaseAccess.tableMessages(ctx: EContext) = tableName(ctx, "${IcmfGTXModule.PREFIX}.messages")
+
 class IcmfGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()) {
 
     companion object {
@@ -16,7 +18,7 @@ class IcmfGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()) {
     override fun initializeDB(ctx: EContext) {
         DatabaseAccess.of(ctx).apply {
             val queryRunner = QueryRunner()
-            val createMessageTableSql = "CREATE TABLE ${tableName(ctx, "${PREFIX}.messages")}" +
+            val createMessageTableSql = "CREATE TABLE ${tableMessages(ctx)}" +
                     " (message_iid BIGSERIAL PRIMARY KEY," +
                     " block_height BIGINT NOT NULL, " +
                     " prev_message_block_height BIGINT NOT NULL, " +
