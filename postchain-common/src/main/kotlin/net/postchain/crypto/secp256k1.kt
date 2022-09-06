@@ -3,6 +3,7 @@
 package net.postchain.crypto
 
 import net.postchain.common.data.Hash
+import org.spongycastle.asn1.x9.X9ECParameters
 import org.spongycastle.crypto.digests.SHA256Digest
 import org.spongycastle.crypto.ec.CustomNamedCurves
 import org.spongycastle.crypto.params.ECDomainParameters
@@ -19,7 +20,7 @@ import java.util.*
 
 // signing code taken from bitcoinj ECKey
 
-val CURVE_PARAMS = CustomNamedCurves.getByName("secp256k1")
+val CURVE_PARAMS: X9ECParameters = CustomNamedCurves.getByName("secp256k1")
 val CURVE = ECDomainParameters(CURVE_PARAMS.curve, CURVE_PARAMS.g, CURVE_PARAMS.n, CURVE_PARAMS.h)
 val HALF_CURVE_ORDER: BigInteger = CURVE_PARAMS.n.shiftRight(1)
 
@@ -89,7 +90,7 @@ fun secp256k1_sign(digest: ByteArray, privateKeyBytes: ByteArray): ByteArray {
     val privKey = ECPrivateKeyParameters(privateKey, CURVE)
     signer.init(true, privKey)
     val components = signer.generateSignature(digest)
-    if (components[0] <= HALF_CURVE_ORDER) {
+    if (components[1] > HALF_CURVE_ORDER) {
         // canonicalize low S
         components[1] = CURVE.n.subtract(components[1])
     }
