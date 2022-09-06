@@ -24,7 +24,6 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
-import java.lang.Long.max
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant

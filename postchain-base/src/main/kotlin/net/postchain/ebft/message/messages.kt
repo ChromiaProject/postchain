@@ -3,6 +3,7 @@
 package net.postchain.ebft.message
 
 import net.postchain.common.BlockchainRid
+import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvFactory.gtv
@@ -46,6 +47,28 @@ class BlockData(val header: ByteArray, val transactions: List<ByteArray>): EbftM
 }
 
 class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArray): EbftMessage(MessageTopic.COMPLETEBLOCK) {
+
+    companion object {
+
+        fun buildFromBlockDataWithWitness(height: Long, blockData: BlockDataWithWitness): CompleteBlock {
+            return CompleteBlock(
+                BlockData(blockData.header.rawData, blockData.transactions),
+                height,
+                blockData.witness.getRawData()
+            )
+        }
+
+        fun buildFromGtv(data: GtvArray, arrOffset: Int): CompleteBlock {
+
+            return CompleteBlock(
+                BlockData(data[0 + arrOffset].asByteArray(),
+                    data[1 + arrOffset].asArray().map { it.asByteArray() }
+                ),
+                data[2 + arrOffset].asInteger(),
+                data[3 + arrOffset].asByteArray()
+            )
+        }
+    }
 
     override fun toGtv(): Gtv {
         return gtv(topic.toGtv(),
@@ -121,5 +144,71 @@ class BlockHeader(val header: ByteArray, val witness: ByteArray, val requestedHe
     override fun toGtv(): Gtv {
         return gtv(topic.toGtv(), gtv(header), gtv(witness), gtv(requestedHeight))
     }
+}
+
+/**
+ * Requests that the peer replies with a BlockRange beginning at "height"
+ *
+ * @property startAtHeight is the height of the first block we want to get (and then we also want any
+ * existing blocks after this)
+ */
+class GetBlockRange(val startAtHeight: Long) : EbftMessage(MessageTopic.GETBLOCKRANGE) {
+
+    override fun toGtv(): Gtv {
+        return gtv(topic.toGtv(), gtv(startAtHeight))
+    }
+
+}
+
+/**
+ * Holds a number of blocks from "height" and onwards
+ *
+ * @property startAtHeight is the height of the first block in the range
+ * @property isFull "true" means that we have more blocks but couldn't fit them in the package
+ * @property blocks is a list of [CompleteBlock]
+ */
+class BlockRange(val startAtHeight: Long, val isFull: Boolean, val blocks: List<CompleteBlock>) : EbftMessage(MessageTopic.BLOCKRANGE) {
+
+    companion object {
+
+        /**
+         * Consumes the raw GTV incoming data
+         */
+        fun buildFromGtv(data: GtvArray): BlockRange {
+            val startAtHeight = data[1].asInteger()
+            val isFull = data[2].asBoolean()
+            val blocks = mutableListOf<CompleteBlock>()
+
+            val gtvBlockArr = data[3]
+            for (gtvThing in gtvBlockArr.asArray()) {
+                var blockGtv = gtvThing as GtvArray
+                blocks.add(CompleteBlock.buildFromGtv(blockGtv, 0))
+            }
+
+            return BlockRange(startAtHeight, isFull, blocks)
+        }
+    }
+
+    override fun toGtv(): Gtv {
+        val gtvBlockList = mutableListOf<Gtv>()
+        for (block in blocks) {
+            val gtvBlock = gtv(completeBlockToGtv(block.data, block.height, block.witness))
+            gtvBlockList.add(gtvBlock)
+        }
+        return gtv(topic.toGtv(), gtv(startAtHeight), gtv(isFull), gtv(gtvBlockList))
+    }
+
+}
+
+/**
+ * We do it this way since we don't want to store the "topic" of the [CompleteBlock] message
+ */
+fun completeBlockToGtv(data: BlockData, height: Long, witness: ByteArray): List<Gtv> {
+    return listOf(
+        gtv(data.header),
+        gtv(data.transactions.map { gtv(it) }),
+        gtv(height),
+        gtv(witness)
+    )
 }
 

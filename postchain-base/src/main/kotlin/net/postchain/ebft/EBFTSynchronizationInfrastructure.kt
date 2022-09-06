@@ -10,6 +10,7 @@ import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
@@ -18,7 +19,6 @@ import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
 import net.postchain.network.common.*
 import net.postchain.network.peer.*
-import net.postchain.debug.BlockchainProcessName
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
@@ -102,7 +102,7 @@ open class EBFTSynchronizationInfrastructure(
         } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY) {
             ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also { it.start() }
         } else {
-            ReadOnlyBlockchainProcess(workerContext).also { it.start() }
+            ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries()).also { it.start() }
         }
     }
 

@@ -12,6 +12,8 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.TransactionFactory
+import net.postchain.core.ValidationResult.Result.OK
+import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
 import net.postchain.core.block.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
@@ -176,6 +178,7 @@ abstract class AbstractBlockBuilder(
             throw ProgrammerMistake("Invalid witness")
         }
         store.commitBlock(bctx, blockWitness)
+        bctx.blockWasCommitted()
         commitLog("End")
     }
 

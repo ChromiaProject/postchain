@@ -3,6 +3,7 @@
 package net.postchain.integrationtest.managedmode
 
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.EContext
 import net.postchain.gtv.*
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.SimpleGTXModule
@@ -12,7 +13,6 @@ import net.postchain.integrationtest.managedmode.TestModulesHelper.argHeight
 import net.postchain.integrationtest.managedmode.TestModulesHelper.peerInfoToGtv
 import net.postchain.integrationtest.managedmode.TestPeerInfos.Companion.peerInfo0
 import net.postchain.util.TestKLogging
-import net.postchain.core.EContext
 
 open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : SimpleGTXModule<Unit>(
         Unit,
