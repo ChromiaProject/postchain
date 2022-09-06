@@ -6,6 +6,7 @@ package net.postchain.client
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.PostchainClient
+import net.postchain.client.request.EndpointPool
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
 import net.postchain.common.tx.TransactionStatus
@@ -55,7 +56,9 @@ class PostChainClientTest : IntegrationTestSetup() {
     private fun createPostChainClient(bcRid: BlockchainRid): PostchainClient {
         return ConcretePostchainClientProvider().createClient(
             PostchainClientConfig(
-            "http://127.0.0.1:${nodes[0].getRestApiHttpPort()}", bcRid, listOf(KeyPair(PubKey(pubKey0), PrivKey(privKey0)))
+                bcRid,
+                EndpointPool.singleUrl("http://127.0.0.1:${nodes[0].getRestApiHttpPort()}"),
+                listOf(KeyPair(PubKey(pubKey0), PrivKey(privKey0)))
             ))
     }
 
