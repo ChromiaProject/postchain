@@ -23,6 +23,7 @@ class IcmfGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()) {
                     " block_height BIGINT NOT NULL, " +
                     " prev_message_block_height BIGINT NOT NULL, " +
                     " tx_iid BIGINT NOT NULL REFERENCES ${tableName(ctx, "transactions")}(tx_iid), " +
+                    " topic TEXT NOT NULL, " +
                     " body BYTEA NOT NULL)"
             queryRunner.update(ctx.conn, createMessageTableSql)
         }

@@ -22,7 +22,7 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
 
     private lateinit var blockEContext: BlockEContext
 
-    private val queuedEvents = mutableListOf<Pair<Long, Gtv>>()
+    private val queuedEvents = mutableListOf<Pair<Long, IcmfMessage>>()
 
     override fun init(blockEContext: BlockEContext, bb: BlockBuilder) {
         this.blockEContext = blockEContext
@@ -32,7 +32,7 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         logger.info { "ICMF message sent" }
-        queuedEvents.add(ctxt.txIID to data)
+        queuedEvents.add(ctxt.txIID to IcmfMessage.fromGtv(data))
     }
 
     override fun finalize(): Map<String, Gtv> {
@@ -44,9 +44,9 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
 
             for (event in queuedEvents) {
                 queryRunner.update(blockEContext.conn,
-                    """INSERT INTO ${tableMessages(blockEContext)}(block_height, prev_message_block_height, tx_iid, body) 
-                           VALUES(?, ?, ?, ?)""",
-                    blockEContext.height, prevMessageBlockHeight, event.first, GtvEncoder.encodeGtv(event.second))
+                    """INSERT INTO ${tableMessages(blockEContext)}(block_height, prev_message_block_height, tx_iid, topic, body) 
+                           VALUES(?, ?, ?, ?, ?)""",
+                    blockEContext.height, prevMessageBlockHeight, event.first, event.second.topic, GtvEncoder.encodeGtv(event.second.body))
             }
         }
         return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv("hashhash")) // TODO return sensible data for block header

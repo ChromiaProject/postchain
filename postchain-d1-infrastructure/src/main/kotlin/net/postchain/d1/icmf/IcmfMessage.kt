@@ -9,9 +9,20 @@ import net.postchain.gtv.GtvFactory.gtv
  * Smallest message unit for ICMF
  */
 data class IcmfMessage(
-    val height: Long,  // Block height this message corresponds to
-    val messageType: String, // Type of message
-    val body: Gtv )
+    val topic: String, // Topic of message
+    val body: Gtv
+) {
+
+    companion object {
+        fun fromGtv(gtv: Gtv): IcmfMessage {
+            return IcmfMessage(gtv["topic"]!!.asString(), gtv["body"]!!)
+        }
+    }
+
+    fun toGtv(): Gtv {
+        return gtv("topic" to gtv(topic), "body" to body)
+    }
+}
 
 /**
  * Conceptually = all messages related to a block

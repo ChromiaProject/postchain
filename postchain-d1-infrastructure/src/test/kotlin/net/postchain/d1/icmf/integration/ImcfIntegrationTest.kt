@@ -36,12 +36,13 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
 
                 val res1 = queryRunner.query(
                     it.conn,
-                    "SELECT block_height, prev_message_block_height FROM ${db.tableMessages(it)}",
+                    "SELECT block_height, prev_message_block_height, topic FROM ${db.tableMessages(it)}",
                     MapListHandler()
                 )
                 assertEquals(1, res1.size)
                 assertEquals(0L, res1[0]["block_height"])
                 assertEquals(-1L, res1[0]["prev_message_block_height"])
+                assertEquals("topic", res1[0]["topic"])
 
                 val blockQueries = node.getBlockchainInstance(CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
                 val blockRid = blockQueries.getBlockRid(0).get()
