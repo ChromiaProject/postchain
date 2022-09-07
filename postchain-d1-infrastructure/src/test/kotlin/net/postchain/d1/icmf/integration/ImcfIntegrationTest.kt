@@ -7,6 +7,7 @@ import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
+import net.postchain.d1.icmf.IcmfGTXModule
 import net.postchain.gtv.GtvFactory.gtv
 import org.apache.commons.dbutils.QueryRunner
 import org.junit.jupiter.api.Test
@@ -21,7 +22,7 @@ private const val CHAIN_ID = 1
 class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
 
     @Test
-    fun icmfDummy() {
+    fun icmfHappyPath() {
         val mapBcFiles: Map<Int, String> = mapOf(
             CHAIN_ID to "/net/postchain/icmf/integration/blockchain_config_1.xml",
         )
@@ -61,6 +62,16 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
                     expectedHash,
                     decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()["topic"]!!.asByteArray()
                 )
+
+                val allMessages = IcmfGTXModule.getAllMessages(Unit, it, gtv(mapOf("topic" to gtv("topic"), "height" to gtv(0))))
+                assertEquals(2, allMessages.asArray().size)
+                assertEquals("test0", allMessages.asArray()[0].asString())
+                assertEquals("test1", allMessages.asArray()[1].asString())
+
+                val messages = IcmfGTXModule.getMessages(Unit, it, gtv(mapOf("topic" to gtv("topic"), "height" to gtv(0))))
+                assertEquals(2, messages.asArray().size)
+                assertEquals("test0", messages.asArray()[0].asString())
+                assertEquals("test1", messages.asArray()[1].asString())
             }
         }
     }
