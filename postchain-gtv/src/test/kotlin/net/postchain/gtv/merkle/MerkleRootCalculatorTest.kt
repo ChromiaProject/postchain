@@ -70,26 +70,6 @@ class MerkleRootCalculatorTest {
     }
 
     @Test
-    fun testBlockHeaderData() {
-        val blockHeaderRec = BlockHeaderData(
-            GtvByteArray("EA7C89EC2886B4BB490233BAD968FA6B6D2E4432AF86D8E1DCE603E873AA1BBE".hexStringToByteArray()),
-            GtvByteArray("1F3CA8300DC9AB8F7D81682411EBC81E299CF7C7FA35C12163980E0BA42A34FE".hexStringToByteArray()),
-            GtvByteArray("E384EA79AD1CA544ADEE13C6B1CCD33497A00BBF6A1E2F6DC4C61E264E0C08B3".hexStringToByteArray()),
-            GtvInteger(1618930736155L),
-            GtvInteger(44L),
-            GtvNull,
-            GtvDictionary.build(mapOf(
-                "l2RootEvent" to GtvByteArray("21521DD32F61FF94D8701F40620210DA9AA172102B19F71E50ED8189DE707402".hexStringToByteArray()),
-                "l2RootState" to GtvByteArray("A96F3202DDEDB7F3228EEDA0F97AA39163E1EA1085E5FC52BA40836C429A8F71".hexStringToByteArray())
-            )
-        ))
-        val blockRID = blockHeaderRec.toGtv().merkleHash(  GtvMerkleHashCalculator(Secp256K1CryptoSystem()) )
-        println(GtvNull.merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem())).toHex())
-        println(GtvByteArray("E384EA79AD1CA544ADEE13C6B1CCD33497A00BBF6A1E2F6DC4C61E264E0C08B3".hexStringToByteArray()).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem())).toHex())
-        print(blockRID.toHex())
-    }
-
-    @Test
     fun testGtvInteger() {
         var actual = GtvInteger(0L).merkleHash(GtvMerkleHashCalculator(Secp256K1CryptoSystem()))
         var expected = "90B136DFC51E08EE70ED929C620C0808D4230EC1015D46C92CCAA30772651DC0"
