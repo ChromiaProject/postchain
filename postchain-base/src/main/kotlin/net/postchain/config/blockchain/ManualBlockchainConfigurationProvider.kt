@@ -20,12 +20,11 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
 
         // Some safety checks
         if (configHeight == null) {
-            logger.error("Don't look for a chain: $chainId that doesn't exist or doesn't have a configuration. " +
-                    "Probably bug!")
+            logger.warn("activeBlockNeedsNewConfig() - Chain: $chainId doesn't have a configuration in DB")
         } else if (configHeight < activeHeight) {
             if (logger.isDebugEnabled) {
                 logger.debug("activeBlockNeedsNewConfig() - No need to reload config, since active height: " +
-                            "$activeHeight, should still use conf at: $configHeight "
+                        "$activeHeight, should still use conf at: $configHeight "
                 )
             }
         } else if (configHeight > activeHeight) {
@@ -45,8 +44,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
         val configHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, activeHeight)
 
         return if (configHeight == null) {
-            logger.error("Don't look for a chain: $chainId that doesn't exist or doesn't have a configuration. " +
-                    "Probably bug!")
+            logger.warn("getActiveBlocksConfiguration() - Chain: $chainId doesn't have a configuration in DB")
             null
         } else {
             BaseConfigurationDataStore.getConfigurationData(eContext, configHeight)!!
