@@ -27,30 +27,31 @@ class Chromia0BlockchainProcessManager(
 ) : ManagedBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
-        blockchainConfigProvider) {
+        blockchainConfigProvider
+) {
 
     private fun anchorLastBlock(chainId: Long) {
         withReadConnection(storage, chainId) { eContext ->
-            val dba = DatabaseAccess.of(eContext)
-            val blockRID = dba.getLastBlockRid(eContext, chainId)
-            val chain0Engine = blockchainProcesses[0L]!!.blockchainEngine
+            val db = DatabaseAccess.of(eContext)
+            val blockRID = db.getLastBlockRid(eContext, chainId)
             if (blockRID != null) {
-                val blockHeader = dba.getBlockHeader(eContext, blockRID)
-                val witnessData = dba.getWitnessData(eContext, blockRID)
+                val chain0Engine = blockchainProcesses[0L]!!.blockchainEngine
+                val blockHeader = db.getBlockHeader(eContext, blockRID)
+                val witnessData = db.getWitnessData(eContext, blockRID)
                 val witness = BaseBlockWitness.fromBytes(witnessData)
-                val txb = GTXDataBuilder(chain0Engine.getConfiguration().blockchainRid,
-                        arrayOf(), Secp256K1CryptoSystem())
+                val txb = GTXDataBuilder(
+                        chain0Engine.getConfiguration().blockchainRid,
+                        arrayOf(),
+                        Secp256K1CryptoSystem()
+                )
                 // sorting signatures makes it more likely we can avoid duplicate anchor transactions
                 val sortedSignatures = witness.getSignatures().sortedBy { ByteArrayKey(it.subjectID) }
-                txb.addOperation("anchor_block",
+                txb.addOperation(
+                        "anchor_block",
                         arrayOf(
                                 GtvDecoder.decodeGtv(blockHeader),
-                                GtvArray(
-                                        sortedSignatures.map { GtvByteArray(it.subjectID) }.toTypedArray()
-                                ),
-                                GtvArray(
-                                        sortedSignatures.map { GtvByteArray(it.data) }.toTypedArray()
-                                )
+                                GtvArray(sortedSignatures.map { GtvByteArray(it.subjectID) }.toTypedArray()),
+                                GtvArray(sortedSignatures.map { GtvByteArray(it.data) }.toTypedArray())
                         )
                 )
                 txb.finish()
