@@ -21,6 +21,7 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TxEContext
 import net.postchain.core.TxDetail
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
@@ -399,8 +400,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
-    override fun insertEvent(ctx: EContext, prefix: String, height: Long, position: Long,  hash: Hash, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertEvent(ctx, prefix), height, position, hash, data)
+    override fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long,  hash: Hash, data: ByteArray) {
+        queryRunner.update(ctx.conn, cmdInsertEvent(ctx, prefix), height, position, hash, ctx.txIID, data)
     }
 
     override fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray) {
