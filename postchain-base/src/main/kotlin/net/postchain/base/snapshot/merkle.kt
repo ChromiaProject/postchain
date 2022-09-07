@@ -33,24 +33,24 @@ interface PageStore {
 // base page store can be used for query merkle proof
 open class BasePageStore(
     val name: String,
-    val ctx: EContext?,
+    val ctx: EContext,
     val levelsPerPage: Int,
     val ds: DigestSystem) : PageStore {
 
     override fun writePage(page: Page) {
-        val db = DatabaseAccess.of(ctx!!)
+        val db = DatabaseAccess.of(ctx)
         db.insertPage(ctx, name, page)
     }
 
     // read the page with blockHeight equal or lower than given
     // for a given level and position, if exists
     override fun readPage(blockHeight: Long, level: Int, left: Long): Page? {
-        val db = DatabaseAccess.of(ctx!!)
+        val db = DatabaseAccess.of(ctx)
         return db.getPage(ctx, name, blockHeight, level, left)
     }
 
     override fun highestLevelPage(blockHeight: Long): Int {
-        val db = DatabaseAccess.of(ctx!!)
+        val db = DatabaseAccess.of(ctx)
         return db.getHighestLevelPage(ctx, name, blockHeight)
     }
 
@@ -76,7 +76,7 @@ open class BasePageStore(
 }
 
 open class EventPageStore(
-    ctx: EContext?,
+    ctx: EContext,
     levelsPerPage: Int,
     ds: DigestSystem,
     tableNamePrefix: String
@@ -114,7 +114,7 @@ open class EventPageStore(
 }
 
 open class SnapshotPageStore(
-    ctx: EContext?,
+    ctx: EContext,
     levelsPerPage: Int,
     ds: DigestSystem,
     tableNamePrefix: String

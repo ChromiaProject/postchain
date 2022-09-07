@@ -7,10 +7,12 @@ import net.postchain.common.data.Hash
 import net.postchain.common.data.SHA256
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.core.ExecutionContext
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.mock
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.util.*
@@ -26,8 +28,9 @@ class MerkleTest {
 
     @BeforeEach
     fun setUp() {
-        snapshot = TestSnapshotPageStore(2, ds)
-        event = TestEventPageStore(2, ds)
+        val ctx = mock<ExecutionContext>()
+        snapshot = TestSnapshotPageStore(ctx, 2, ds)
+        event = TestEventPageStore(ctx, 2, ds)
         leafHashes[0] = "044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d".hexStringToByteArray()
         leafHashes[1] = "c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6".hexStringToByteArray()
         leafHashes[3] = "2a80e1ef1d7842f27f2e6be0972bb708b9a135c38860dbe73c27c3486c34f4de".hexStringToByteArray()
@@ -362,6 +365,7 @@ class MerkleTest {
         assertEquals(expected.toHex(), root.toHex())
     }
 
+    @Test
     fun testGetMerkleProofForEvent_RealData() {
         val leafs = arrayListOf<Hash>()
         val data = GtvFactory.gtv(GtvFactory.gtv("000000000000000000000000e35487517b1bee0e22daf706a82f1d3d1fd963fd".hexStringToByteArray()),
