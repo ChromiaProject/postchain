@@ -3,11 +3,10 @@
 package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
-import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.merkleHash
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
