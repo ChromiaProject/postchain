@@ -3,6 +3,7 @@ package net.postchain.d1.icmf
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import org.apache.commons.dbutils.QueryRunner
@@ -30,13 +31,9 @@ class IcmfGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()) {
     }
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf(IcmfBlockBuilderExtension())
+        return listOf(IcmfBlockBuilderExtension(Secp256K1CryptoSystem()))
     }
 
-    /**
-     * We need to write our own special type of operation for each header message we get.
-     * That's the responsibility of [AnchorSpecialTxExtension]
-     */
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
         return listOf()
     }

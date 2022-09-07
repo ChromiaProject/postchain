@@ -8,6 +8,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.BlockEContext
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockBuilder
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -17,7 +18,7 @@ import org.apache.commons.dbutils.handlers.ScalarHandler
 const val ICMF_EVENT_TYPE = "icmf"
 const val ICMF_BLOCK_HEADER_EXTRA = "icmf_send"
 
-class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
+class IcmfBlockBuilderExtension(val cryptoSystem: CryptoSystem) : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var blockEContext: BlockEContext
@@ -31,24 +32,37 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
     }
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
-        logger.info { "ICMF message sent" }
-        queuedEvents.add(ctxt.txIID to IcmfMessage.fromGtv(data))
+        val message = IcmfMessage.fromGtv(data)
+        logger.info("ICMF message sent in topic ${message.topic}")
+        queuedEvents.add(ctxt.txIID to message)
     }
 
     override fun finalize(): Map<String, Gtv> {
         DatabaseAccess.of(blockEContext).apply {
             val queryRunner = QueryRunner()
-            val prevMessageBlockHeight = queryRunner.query(blockEContext.conn,
+            val prevMessageBlockHeight = queryRunner.query(
+                blockEContext.conn,
                 "SELECT block_height FROM ${tableMessages(blockEContext)} ORDER BY block_height DESC LIMIT 1",
-                ScalarHandler<Long>()) ?: -1
+                ScalarHandler<Long>()
+            ) ?: -1
 
             for (event in queuedEvents) {
-                queryRunner.update(blockEContext.conn,
+                queryRunner.update(
+                    blockEContext.conn,
                     """INSERT INTO ${tableMessages(blockEContext)}(block_height, prev_message_block_height, tx_iid, topic, body) 
                            VALUES(?, ?, ?, ?, ?)""",
-                    blockEContext.height, prevMessageBlockHeight, event.first, event.second.topic, GtvEncoder.encodeGtv(event.second.body))
+                    blockEContext.height,
+                    prevMessageBlockHeight,
+                    event.first,
+                    event.second.topic,
+                    GtvEncoder.encodeGtv(event.second.body)
+                )
             }
         }
-        return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv("hashhash")) // TODO return sensible data for block header
+        val hashesByTopic = queuedEvents.map { it.second }.groupBy { it.topic }
+            .mapValues { messages -> messages.value.map { message -> cryptoSystem.digest(GtvEncoder.encodeGtv(message.body)) } }
+        val hashByTopic =
+            hashesByTopic.mapValues { cryptoSystem.digest(it.value.fold(ByteArray(0)) { total, item -> total.plus(item) }) }
+        return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic.mapValues { gtv(it.value) }))
     }
 }

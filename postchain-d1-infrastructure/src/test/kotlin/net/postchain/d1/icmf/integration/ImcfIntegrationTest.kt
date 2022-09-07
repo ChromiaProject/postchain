@@ -7,10 +7,13 @@ import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
+import net.postchain.gtv.GtvFactory.gtv
 import org.apache.commons.dbutils.QueryRunner
 import org.junit.jupiter.api.Test
 import net.postchain.d1.icmf.tableMessages
+import net.postchain.gtv.GtvEncoder
 import org.apache.commons.dbutils.handlers.MapListHandler
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
 private const val CHAIN_ID = 1
@@ -27,7 +30,7 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
 
         runXNodes(sysSetup)
 
-        buildBlock(CHAIN_ID.toLong(), 0, IcmfTestTransaction(0))
+        buildBlock(CHAIN_ID.toLong(), 0, IcmfTestTransaction(0), IcmfTestTransaction(1))
 
         for (node in nodes) {
             withReadConnection(node.postchainContext.storage, CHAIN_ID.toLong()) {
@@ -39,7 +42,7 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
                     "SELECT block_height, prev_message_block_height, topic FROM ${db.tableMessages(it)}",
                     MapListHandler()
                 )
-                assertEquals(1, res1.size)
+                assertEquals(2, res1.size)
                 assertEquals(0L, res1[0]["block_height"])
                 assertEquals(-1L, res1[0]["prev_message_block_height"])
                 assertEquals("topic", res1[0]["topic"])
@@ -48,7 +51,16 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
                 val blockRid = blockQueries.getBlockRid(0).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
                 val decodedHeader = BlockHeaderDataFactory.buildFromBinary(blockHeader.rawData)
-                assertEquals("hashhash", decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asString())
+                val expectedHash = cryptoSystem.digest(
+                    cryptoSystem.digest(GtvEncoder.encodeGtv(gtv("test0")))
+                            + cryptoSystem.digest(
+                        GtvEncoder.encodeGtv(gtv("test1"))
+                    )
+                )
+                assertContentEquals(
+                    expectedHash,
+                    decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()["topic"]!!.asByteArray()
+                )
             }
         }
     }
