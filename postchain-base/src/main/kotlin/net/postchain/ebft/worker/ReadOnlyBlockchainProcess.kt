@@ -20,8 +20,6 @@ class ReadOnlyBlockchainProcess(
 
     companion object : KLogging()
 
-    private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
-
     private val blockDatabase = BaseBlockDatabase(
         blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY
     )
