@@ -51,6 +51,13 @@
             <artifactId>postchain-devtools</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>net.postchain.rell</groupId>
+            <artifactId>rell</artifactId>
+            <version>0.10.11-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

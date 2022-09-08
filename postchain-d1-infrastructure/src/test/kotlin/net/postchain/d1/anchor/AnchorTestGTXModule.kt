@@ -55,7 +55,6 @@ class AnchorTestGTXModule: SimpleGTXModule<Unit>(
             logger.debug("No need to create table, since we have a version: $version")
         }
     }
-
 }
 
 /**
