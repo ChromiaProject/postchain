@@ -223,7 +223,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         bcRid: BlockchainRid,
         minimalHeaders: MutableSet<MinimalBlockHeaderInfo>
     ): ValidationResult {
-
         /**
          * NOTE: We declare this as an inner function to access BC RID.
          *
@@ -328,7 +327,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         op: OpData,
         chainMinimalHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
     ): Boolean {
-
         val anchorObj = AnchorOpDataObject.validateAndDecodeOpData(op) ?: return false
 
         val header: BlockHeaderData = anchorObj.headerData
@@ -355,7 +353,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         )
 
         return true
-
     }
 
     /**
@@ -365,7 +362,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @return the block info for the last anchored block, or nothing if not found
      */
     private fun getLastAnchoredBlock(bcRid: BlockchainRid): TempBlockInfo? {
-
         val bcRidByteArr = bcRid.data // We're sending the RID as bytes, not as a string
         val args = buildArgs(
             Pair("blockchainRid", gtv(bcRidByteArr))
@@ -387,7 +383,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @return the block info for the last anchored block, or nothing if not found
      */
     private fun getAnchoredBlockAtHeight(bcRid: BlockchainRid, height: Long): TempBlockInfo? {
-
         val bcRidByteArr = bcRid.data // We're sending the RID as bytes, not as a string
         val args = buildArgs(
             Pair("blockchainRid", gtv(bcRidByteArr)),
@@ -416,18 +411,17 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         )
     }
 
-
     private fun buildArgs(vararg args: Pair<String, Gtv>): Gtv {
         return gtv(*args)
     }
-}
 
-/**
- * Not really a domain object, just used to return some data
- */
-data class TempBlockInfo(
-    val bcRid: BlockchainRid,
-    val blockRid: BlockRid,
-    val height: Long,
-    val status: Long
-)
+    /**
+     * Not really a domain object, just used to return some data
+     */
+    data class TempBlockInfo(
+        val bcRid: BlockchainRid,
+        val blockRid: BlockRid,
+        val height: Long,
+        val status: Long
+    )
+}
