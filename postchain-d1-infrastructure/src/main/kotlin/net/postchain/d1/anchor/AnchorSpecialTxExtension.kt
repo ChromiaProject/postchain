@@ -1,19 +1,27 @@
 package net.postchain.d1.anchor
 
 import mu.KLogging
-import net.postchain.base.*
+import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.config.blockchain.*
-import net.postchain.core.*
+import net.postchain.core.BlockEContext
+import net.postchain.core.BlockRid
+import net.postchain.core.ValidationResult
 import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.icmf.*
-import net.postchain.gtv.*
+import net.postchain.d1.icmf.ClusterAnchorRoute
+import net.postchain.d1.icmf.IcmfController
+import net.postchain.d1.icmf.IcmfPacket
+import net.postchain.d1.icmf.IcmfPipe
+import net.postchain.d1.icmf.IcmfReceiver
+import net.postchain.d1.icmf.IcmfSpecialTxExtension
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
@@ -29,7 +37,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     private var myChainRid: BlockchainRid? = null // We must know the id of the anchor chain itself
     private var myChainID: Long? = null // We must know the id of the anchor chain itself
 
-    private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long>? = null // This is where we get the actual data to create operations
+    private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long>? =
+        null // This is where we get the actual data to create operations
 
     private var blockQueries: BlockQueries? = null // This is for querying ourselves, i.e. the "anchor rell app"
 
@@ -40,10 +49,10 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     override fun getRelevantOps() = _relevantOps
 
     override fun init(
-            module: GTXModule,
-            chainID: Long,
-            blockchainRID: BlockchainRid,
-            cs: CryptoSystem
+        module: GTXModule,
+        chainID: Long,
+        blockchainRID: BlockchainRid,
+        cs: CryptoSystem
     ) {
         myChainID = chainID
         myChainRid = blockchainRID
@@ -75,7 +84,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * (In an anchor chain there will be no "normal" transactions, only this one big "before" special TX)
      *
      * @param position will always be "begin", we don't care about it here
-     * @param btcx is the context of the anchor chain (but without BC RID)
+     * @param bctx is the context of the anchor chain (but without BC RID)
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val retList = mutableListOf<OpData>()
@@ -96,9 +105,9 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-            pipe: IcmfPipe<ClusterAnchorRoute, Long>,
-            retList: MutableList<OpData>,
-            bctx: BlockEContext
+        pipe: IcmfPipe<ClusterAnchorRoute, Long>,
+        retList: MutableList<OpData>,
+        bctx: BlockEContext
     ) {
         if (pipe.id.route != ClusterAnchorRoute) return
         var counter = 0
@@ -130,14 +139,15 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     }
 
     /**
-     * Transform to [IcmfPackage] to [OpData] put arguments in correct order
+     * Transform to [IcmfPacket] to [OpData] put arguments in correct order
      *
      * @param icmfPackage is what we get from ICMF
      * @return is the [OpData] we can use to create a special TX.
      */
     fun buildOpData(icmfPackage: IcmfPacket): OpData {
         val gtvHeaderMsg = icmfPackage.blockHeader // We don't care about any messages, only the header
-        val headerMsg = BlockHeaderDataFactory.buildFromGtv(gtvHeaderMsg) // Yes, a bit expensive going back and forth between GTV and Domain objects like this
+        val headerMsg =
+            BlockHeaderDataFactory.buildFromGtv(gtvHeaderMsg) // Yes, a bit expensive going back and forth between GTV and Domain objects like this
         val witnessBytes: ByteArray = icmfPackage.witness.asByteArray()
 
         val gtvBlockRid: Gtv = icmfPackage.blockRid
@@ -150,7 +160,11 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     /**
      * We look at the content of all operations (to check if the block headers are ok and nothing is missing)
      */
-    override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>): Boolean {
+    override fun validateSpecialOperations(
+        position: SpecialTransactionPosition,
+        bctx: BlockEContext,
+        ops: List<OpData>
+    ): Boolean {
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
         val valid = ops.all { isOpValidAndFillTheMinimalHeaderMap(it, chainHeadersMap) }
         if (!valid) {
@@ -163,9 +177,14 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             // and we pass that task to the [GenericBlockHeaderValidator]
             val minimalHeaders = chainHeadersMap[bcRid]
             if (minimalHeaders != null) {
-                val valid = chainValidation(bcRid, minimalHeaders)
-                if (valid.result != ValidationResult.Result.OK) {
-                    logger.error("Failing to anchor a block for blockchain ${bcRid.toHex()}. ${valid.message}")
+                if (chainValidation(bcRid, minimalHeaders).result != ValidationResult.Result.OK) {
+                    logger.error(
+                        "Failing to anchor a block for blockchain ${bcRid.toHex()}. ${
+                            chainValidation(
+                                bcRid,
+                                minimalHeaders
+                            ).message
+                        }")
                     return false
                 }
             }
@@ -201,8 +220,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @return the result of the validation
      */
     private fun chainValidation(
-            bcRid: BlockchainRid,
-            minimalHeaders: MutableSet<MinimalBlockHeaderInfo>
+        bcRid: BlockchainRid,
+        minimalHeaders: MutableSet<MinimalBlockHeaderInfo>
     ): ValidationResult {
 
         /**
@@ -223,10 +242,10 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
         // Run the validator
         return GenericBlockHeaderValidator.multiValidationAgainstKnownBlocks(
-                bcRid,
-                myMap,
-                expected,
-                ::getBlockRidAtHeight // Using a locally defined function, and a closure here to use the bc RID
+            bcRid,
+            myMap,
+            expected,
+            ::getBlockRidAtHeight // Using a locally defined function, and a closure here to use the bc RID
         )
     }
 
@@ -240,7 +259,11 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             null
         } else {
             // We found something, return it
-            MinimalBlockHeaderInfo(tmpBlockInfo.blockRid, null, tmpBlockInfo.height) // Don't care about the prev block here
+            MinimalBlockHeaderInfo(
+                tmpBlockInfo.blockRid,
+                null,
+                tmpBlockInfo.height
+            ) // Don't care about the prev block here
         }
     }
 
@@ -248,9 +271,9 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Add the height to the map
      */
     private fun updateChainHeightMap(
-            bcRid: BlockchainRid,
-            newInfo: MinimalBlockHeaderInfo,
-            chainHeightMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
+        bcRid: BlockchainRid,
+        newInfo: MinimalBlockHeaderInfo,
+        chainHeightMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
     ) {
         val headers = chainHeightMap[bcRid]
         if (headers == null) {
@@ -270,8 +293,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         if (icmfReceiver != null)
             throw ProgrammerMistake("Setting receiver twice")
         icmfReceiver = controller.createReceiver(
-                myChainID!!,
-                ClusterAnchorRoute
+            myChainID!!,
+            ClusterAnchorRoute
         ) as IcmfReceiver<ClusterAnchorRoute, Long>
     }
 
@@ -302,8 +325,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Checks a single operation for validity, which means go through the header and verify it.
      */
     private fun isOpValidAndFillTheMinimalHeaderMap(
-            op: OpData,
-            chainMinimalHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
+        op: OpData,
+        chainMinimalHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
     ): Boolean {
 
         val anchorObj = AnchorOpDataObject.validateAndDecodeOpData(op) ?: return false
@@ -313,19 +336,23 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
         val newHeight = header.getHeight()
         if (newHeight < 0) { // Ok, pretty stupid check, but why not
-            logger.error("Someone is trying to anchor a block for blockchain: " +
-                    "${bcRid.toHex()} at height = $newHeight (which is impossible!). ")
+            logger.error(
+                "Someone is trying to anchor a block for blockchain: " +
+                        "${bcRid.toHex()} at height = $newHeight (which is impossible!). "
+            )
             return false
         }
 
-        val headerBlockRid = BlockRid(anchorObj.blockRid) // Another way to get BlockRid is to calculate it from the header
+        val headerBlockRid =
+            BlockRid(anchorObj.blockRid) // Another way to get BlockRid is to calculate it from the header
         val headerPrevBlockRid = BlockRid(header.getPreviousBlockRid())
         val newBlockHeight = header.getHeight()
 
         updateChainHeightMap(
-                bcRid,
-                MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight),
-                chainMinimalHeadersMap)
+            bcRid,
+            MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight),
+            chainMinimalHeadersMap
+        )
 
         return true
 
@@ -341,7 +368,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
         val bcRidByteArr = bcRid.data // We're sending the RID as bytes, not as a string
         val args = buildArgs(
-                Pair("blockchainRid", gtv(bcRidByteArr))
+            Pair("blockchainRid", gtv(bcRidByteArr))
         )
         val block = blockQueries!!.query("get_last_anchored_block", args).get()
 
@@ -363,8 +390,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
         val bcRidByteArr = bcRid.data // We're sending the RID as bytes, not as a string
         val args = buildArgs(
-                Pair("blockchainRid", gtv(bcRidByteArr)),
-                Pair("height", gtv(height))
+            Pair("blockchainRid", gtv(bcRidByteArr)),
+            Pair("height", gtv(height))
         )
         val block = blockQueries!!.query("get_anchored_block_at_height", args).get()
         return if (block == GtvNull) {
@@ -375,34 +402,32 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     }
 
     private fun buildReply(
-            block: Gtv,
-            bcRid: BlockchainRid
+        block: Gtv,
+        bcRid: BlockchainRid
     ): TempBlockInfo {
         val gtvDict = block.asDict()
         val blockRidHex = gtvDict["block_rid"]!!.asString()
         val bRid = BlockRid.buildFromHex(blockRidHex)
         return TempBlockInfo(
-                bcRid,
-                bRid,
-                gtvDict["block_height"]!!.asInteger(),
-                gtvDict["status"]!!.asInteger()
+            bcRid,
+            bRid,
+            gtvDict["block_height"]!!.asInteger(),
+            gtvDict["status"]!!.asInteger()
         )
     }
 
 
     private fun buildArgs(vararg args: Pair<String, Gtv>): Gtv {
-        return GtvFactory.gtv(*args)
+        return gtv(*args)
     }
 }
-
 
 /**
  * Not really a domain object, just used to return some data
  */
 data class TempBlockInfo(
-        val bcRid: BlockchainRid,
-        val blockRid: BlockRid,
-        val height: Long,
-        val status: Long) {
-
-}
+    val bcRid: BlockchainRid,
+    val blockRid: BlockRid,
+    val height: Long,
+    val status: Long
+)
