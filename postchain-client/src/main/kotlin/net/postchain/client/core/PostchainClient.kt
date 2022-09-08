@@ -11,12 +11,12 @@ interface PostchainClient {
     /**
      * Creates a [TransactionBuilder] with the default signer list
      */
-    fun txBuilder(): TransactionBuilder
+    fun transactionBuilder(): TransactionBuilder
 
     /**
      * Creates a [TransactionBuilder] with a given list of signers
      */
-    fun txBuilder(signers: List<KeyPair>): TransactionBuilder
+    fun transactionBuilder(signers: List<KeyPair>): TransactionBuilder
 
     /**
      * Post a [Gtx] transaction asynchronously

@@ -49,9 +49,9 @@ class ConcretePostchainClient(
     private val cryptoSystem = config.cryptoSystem
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
 
-    override fun txBuilder() = txBuilder(config.signers)
+    override fun transactionBuilder() = transactionBuilder(config.signers)
 
-    override fun txBuilder(signers: List<KeyPair>) = TransactionBuilder(this, config.blockchainRid, signers.map { it.pubKey.key }, signers.map { it.sigMaker(cryptoSystem) }, cryptoSystem)
+    override fun transactionBuilder(signers: List<KeyPair>) = TransactionBuilder(this, config.blockchainRid, signers.map { it.pubKey.key }, signers.map { it.sigMaker(cryptoSystem) }, cryptoSystem)
 
 
     override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {

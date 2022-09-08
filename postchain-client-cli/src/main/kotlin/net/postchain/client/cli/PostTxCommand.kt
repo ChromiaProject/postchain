@@ -40,7 +40,7 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
 
     internal fun runInternal(config: PostchainClientConfig, awaitConfirmation: Boolean, opName: String, vararg args: Gtv) {
         val client = clientProvider.createClient(config)
-        val tx = client.txBuilder()
+        val tx = client.transactionBuilder()
             .addOperation(opName, *args)
         if (awaitConfirmation) tx.postSyncAwaitConfirmation() else tx.postSync()
     }
