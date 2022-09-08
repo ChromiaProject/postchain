@@ -35,7 +35,35 @@
                 <array>
                     <string>net.postchain.d1.icmf.IcmfGTXModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                    <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
                 </array>
+            </entry>
+            <entry key="rell">
+                <dict>
+                    <entry key="modules">
+                        <array>
+                            <string>icmf</string>
+                        </array>
+                    </entry>
+                    <entry key="sources">
+                        <dict>
+                            <entry key="icmf/module.rell">
+                            <string>module;
+                                function send_message(topic: text, body: gtv) {
+                                  op_context.emit_event("icmf", (topic = topic, body = body).to_gtv_pretty());
+                                }
+
+                                operation test_message() {
+                                    send_message("my-topic", "hej".to_gtv());
+                                }
+                            </string>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="version">
+                        <string>0.10.11</string>
+                    </entry>
+                </dict>
             </entry>
         </dict>
     </entry>

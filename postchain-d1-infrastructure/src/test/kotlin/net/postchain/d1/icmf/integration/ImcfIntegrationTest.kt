@@ -12,7 +12,11 @@ import net.postchain.gtv.GtvFactory.gtv
 import org.apache.commons.dbutils.QueryRunner
 import org.junit.jupiter.api.Test
 import net.postchain.d1.icmf.tableMessages
+import net.postchain.devtools.getModules
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtx.data.ExtOpData
+import net.postchain.gtx.data.GTXTransactionBodyData
+import net.postchain.gtx.data.OpData
 import org.apache.commons.dbutils.handlers.MapListHandler
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -31,7 +35,14 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
 
         runXNodes(sysSetup)
 
-        buildBlock(CHAIN_ID.toLong(), 0, IcmfTestTransaction(0), IcmfTestTransaction(1))
+        val op = OpData("test_message", arrayOf())
+        val transactor = nodes[0].getModules(CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
+            ExtOpData.build(
+                op, 0, GTXTransactionBodyData(nodes[0].getBlockchainRid(CHAIN_ID.toLong())!!, arrayOf(op), arrayOf())
+            )
+        )
+
+        buildBlock(CHAIN_ID.toLong(), 0, IcmfTestTransaction(0, transactor))
 
         for (node in nodes) {
             withReadConnection(node.postchainContext.storage, CHAIN_ID.toLong()) {
@@ -43,35 +54,32 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
                     "SELECT block_height, prev_message_block_height, topic FROM ${db.tableMessages(it)}",
                     MapListHandler()
                 )
-                assertEquals(2, res1.size)
+                assertEquals(1, res1.size)
                 assertEquals(0L, res1[0]["block_height"])
                 assertEquals(-1L, res1[0]["prev_message_block_height"])
-                assertEquals("topic", res1[0]["topic"])
+                assertEquals("my-topic", res1[0]["topic"])
 
                 val blockQueries = node.getBlockchainInstance(CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
                 val blockRid = blockQueries.getBlockRid(0).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
                 val decodedHeader = BlockHeaderDataFactory.buildFromBinary(blockHeader.rawData)
                 val expectedHash = cryptoSystem.digest(
-                    cryptoSystem.digest(GtvEncoder.encodeGtv(gtv("test0")))
-                            + cryptoSystem.digest(
-                        GtvEncoder.encodeGtv(gtv("test1"))
-                    )
-                )
+                    cryptoSystem.digest(GtvEncoder.encodeGtv(gtv("hej"))))
+
                 assertContentEquals(
                     expectedHash,
-                    decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()["topic"]!!.asByteArray()
+                    decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()["my-topic"]!!.asByteArray()
                 )
 
-                val allMessages = IcmfGTXModule.getAllMessages(Unit, it, gtv(mapOf("topic" to gtv("topic"), "height" to gtv(0))))
-                assertEquals(2, allMessages.asArray().size)
-                assertEquals("test0", allMessages.asArray()[0].asString())
-                assertEquals("test1", allMessages.asArray()[1].asString())
+                val allMessages =
+                    IcmfGTXModule.getAllMessages(Unit, it, gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
+                assertEquals(1, allMessages.asArray().size)
+                assertEquals("hej", allMessages.asArray()[0].asString())
 
-                val messages = IcmfGTXModule.getMessages(Unit, it, gtv(mapOf("topic" to gtv("topic"), "height" to gtv(0))))
-                assertEquals(2, messages.asArray().size)
-                assertEquals("test0", messages.asArray()[0].asString())
-                assertEquals("test1", messages.asArray()[1].asString())
+                val messages =
+                    IcmfGTXModule.getMessages(Unit, it, gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
+                assertEquals(1, messages.asArray().size)
+                assertEquals("hej", messages.asArray()[0].asString())
             }
         }
     }
