@@ -100,6 +100,16 @@ query get_icmf_hash(topic: text, sender: byte_array, sender_height: integer): by
 query get_icmf_messages_since_height(anchor_height: integer, topic: text): list<icmf_packet> {
     return icmf_message @* {.anchor_height >= anchor_height, topic} (icmf_packet(sender = .sender, sender_height = .sender_height, hash = .hash));
 }
+
+query get_last_anchored_block(blockchainRid: byte_array): gtv {
+    // TODO implement get_last_anchored_block query
+    return null.to_gtv();
+}
+
+query get_anchored_block_at_height(blockchainRid: byte_array, height: integer): gtv {
+    // TODO implement get_anchored_block_at_height query
+    return null.to_gtv();
+}
 ]]></string>
                             </entry>
                         </dict>
