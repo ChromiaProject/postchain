@@ -53,55 +53,54 @@ This is a Anchor Chain configuration specifically for testing.
                     <entry key="sources">
                         <dict>
                             <entry key="anchor/module.rell">
-                            <string>module;
+                            <string><![CDATA[module;
 
-                                entity icmf_message {
-                                key topic: text,
-                                sender: byte_array,
-                                sender_height: integer;
-                                hash: byte_array;
-                                anchor_height: integer;
-                                index topic, anchor_height;
-                                }
+entity icmf_message {
+    key topic: text,
+        sender: byte_array,
+        sender_height: integer;
+    hash: byte_array;
+    anchor_height: integer;
+    index topic, anchor_height;
+}
 
-                                struct block_header {
-                                blockchain_rid: byte_array;
-                                previous_block_rid: byte_array;
-                                merkle_root_hash: byte_array;
-                                timestamp: integer;
-                                height: integer;
-                                dependencies: gtv;
-                                extra: map&lt;text,gtv&gt;;
-                                }
+struct block_header {
+    blockchain_rid: byte_array;
+    previous_block_rid: byte_array;
+    merkle_root_hash: byte_array;
+    timestamp: integer;
+    height: integer;
+    dependencies: gtv;
+    extra: map<text,gtv>;
+}
 
-                                struct icmf_packet {
-                                sender: byte_array;
-                                sender_height: integer;
-                                hash: byte_array;
-                                }
+struct icmf_packet {
+    sender: byte_array;
+    sender_height: integer;
+    hash: byte_array;
+}
 
-                                operation __anchor_block_header(block_rid: byte_array, header: block_header, witness: byte_array) {
-                                val icmf_data = map&lt;text,byte_array&gt;.from_gtv(header.extra["icmf_send"]);
-                                for (topic in icmf_data.keys()) {
-                                create icmf_message(
-                                anchor_height = op_context.block_height,
-                                topic = topic,
-                                sender = header.blockchain_rid,
-                                sender_height = header.height,
-                                hash = icmf_data[topic]
-                                );
-                                }
-                                }
+operation __anchor_block_header(block_rid: byte_array, header: block_header, witness: byte_array) {
+    val icmf_data = map<text,byte_array>.from_gtv(header.extra["icmf_send"]);
+    for (topic in icmf_data.keys()) {
+        create icmf_message(
+            anchor_height = op_context.block_height,
+            topic = topic,
+            sender = header.blockchain_rid,
+            sender_height = header.height,
+            hash = icmf_data[topic]
+        );
+    }
+}
 
-                                query get_icmf_hash(topic: text, sender: byte_array, sender_height: integer): byte_array? {
-                                return icmf_message @? {topic, sender, sender_height} (.hash);
-                                }
+query get_icmf_hash(topic: text, sender: byte_array, sender_height: integer): byte_array? {
+    return icmf_message @? {topic, sender, sender_height} (.hash);
+}
 
-                                query get_icmf_messages_since_height(anchor_height: integer, topic: text): list&lt;icmf_packet&gt; {
-                                return icmf_message @* {.anchor_height &gt;= anchor_height, topic} (icmf_packet(sender = .sender, sender_height = .sender_height, hash = .hash));
-                                }
-
-                            </string>
+query get_icmf_messages_since_height(anchor_height: integer, topic: text): list<icmf_packet> {
+    return icmf_message @* {.anchor_height >= anchor_height, topic} (icmf_packet(sender = .sender, sender_height = .sender_height, hash = .hash));
+}
+]]></string>
                             </entry>
                         </dict>
                     </entry>
