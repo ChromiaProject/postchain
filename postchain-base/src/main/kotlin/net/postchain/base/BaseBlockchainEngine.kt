@@ -151,8 +151,8 @@ open class BaseBlockchainEngine(
     }
 
     private fun loadUnfinishedBlockImpl(
-            block: BlockData,
-            transactionsDecoder: (List<ByteArray>) -> List<Transaction>
+        block: BlockData,
+        transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
         withLoggingContext(loggingContext) {
             val grossStart = System.nanoTime()
@@ -288,11 +288,11 @@ open class BaseBlockchainEngine(
     // -----------------
 
     private fun prettyBlockHeader(
-            blockHeader: BlockHeader,
-            acceptedTxs: Int,
-            rejectedTxs: Int,
-            gross: Pair<Long, Long>,
-            net: Pair<Long, Long>
+        blockHeader: BlockHeader,
+        acceptedTxs: Int,
+        rejectedTxs: Int,
+        gross: Pair<Long, Long>,
+        net: Pair<Long, Long>
     ): String {
 
         val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first, 1)
