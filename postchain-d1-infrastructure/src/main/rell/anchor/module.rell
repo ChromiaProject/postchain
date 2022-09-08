@@ -1,12 +1,10 @@
 module;
 
-entity icmf_message {
-    key topic: text,
-        sender: byte_array,
-        sender_height: integer;
-    hash: byte_array;
-    anchor_height: integer;
-    index topic, anchor_height;
+entity anchor_blocks {
+    blockchain_rid: byte_array;
+    block_rid: byte_array;
+    block_height: integer;
+    status: integer;
 }
 
 struct block_header {
@@ -15,33 +13,27 @@ struct block_header {
     merkle_root_hash: byte_array;
     timestamp: integer;
     height: integer;
-    dependencies: gtv;
+    dependencies: gtv; // Can be either GtvNull or GtvArray
     extra: map<text,gtv>;
 }
 
-struct icmf_packet {
-    sender: byte_array;
-    sender_height: integer;
-    hash: byte_array;
-}
-
 operation __anchor_block_header(block_rid: byte_array, header: block_header, witness: byte_array) {
-    val icmf_data = map<text,byte_array>.from_gtv(header.extra["icmf_send"]);
-    for (topic in icmf_data.keys()) {
-        create icmf_message(
-            anchor_height = op_context.block_height,
-            topic = topic,
-            sender = header.blockchain_rid,
-            sender_height = header.height,
-            hash = icmf_data[topic]
-        );
-    }
+    create anchor_blocks(blockchain_rid = header.blockchain_rid, block_rid = block_rid, block_height = header.height, status = 0);
+
+    process_icmf(header);
 }
 
-query get_icmf_hash(topic: text, sender: byte_array, sender_height: integer): byte_array? {
-    return icmf_message @? {topic, sender, sender_height} (.hash);
+struct anchor_block {
+    block_rid: byte_array;
+    block_height: integer;
+    status: integer;
 }
 
-query get_icmf_messages_since_height(anchor_height: integer, topic: text): list<icmf_packet> {
-    return icmf_message @* {.anchor_height >= anchor_height, topic} (icmf_packet(sender = .sender, sender_height = .sender_height, hash = .hash));
+query get_last_anchored_block(blockchain_rid: byte_array): anchor_block? {
+    val block = anchor_blocks @? { blockchain_rid } (block_rid = .block_rid, @sort_desc block_height = .block_height, status = .status) limit 1;
+    return if (block == null) null else anchor_block(block_rid = block.block_rid, block_height = block.block_height, status = block.status);
+}
+
+query get_anchored_block_at_height(blockchain_rid: byte_array, height: integer): anchor_block? {
+    return anchor_blocks @? { blockchain_rid, .block_height == height } (anchor_block(block_rid = .block_rid, block_height = .block_height, status = .status));
 }

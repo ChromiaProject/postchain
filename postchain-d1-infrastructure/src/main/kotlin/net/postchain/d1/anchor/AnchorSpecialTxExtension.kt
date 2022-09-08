@@ -364,7 +364,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     private fun getLastAnchoredBlock(bcRid: BlockchainRid): TempBlockInfo? {
         val bcRidByteArr = bcRid.data // We're sending the RID as bytes, not as a string
         val args = buildArgs(
-            Pair("blockchainRid", gtv(bcRidByteArr))
+            Pair("blockchain_rid", gtv(bcRidByteArr))
         )
         val block = blockQueries!!.query("get_last_anchored_block", args).get()
 
@@ -385,7 +385,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     private fun getAnchoredBlockAtHeight(bcRid: BlockchainRid, height: Long): TempBlockInfo? {
         val bcRidByteArr = bcRid.data // We're sending the RID as bytes, not as a string
         val args = buildArgs(
-            Pair("blockchainRid", gtv(bcRidByteArr)),
+            Pair("blockchain_rid", gtv(bcRidByteArr)),
             Pair("height", gtv(height))
         )
         val block = blockQueries!!.query("get_anchored_block_at_height", args).get()
@@ -401,8 +401,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         bcRid: BlockchainRid
     ): TempBlockInfo {
         val gtvDict = block.asDict()
-        val blockRidHex = gtvDict["block_rid"]!!.asString()
-        val bRid = BlockRid.buildFromHex(blockRidHex)
+        val blockRid = gtvDict["block_rid"]!!.asByteArray()
+        val bRid = BlockRid(blockRid)
         return TempBlockInfo(
             bcRid,
             bRid,

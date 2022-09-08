@@ -1,0 +1,35 @@
+entity icmf_message {
+    key topic: text,
+        sender: byte_array,
+        sender_height: integer;
+    hash: byte_array;
+    anchor_height: integer;
+    index topic, anchor_height;
+}
+
+struct icmf_packet {
+    sender: byte_array;
+    sender_height: integer;
+    hash: byte_array;
+}
+
+function process_icmf(header: block_header) {
+    val icmf_data = map<text,byte_array>.from_gtv(header.extra["icmf_send"]);
+    for (topic in icmf_data.keys()) {
+        create icmf_message(
+            anchor_height = op_context.block_height,
+            topic = topic,
+            sender = header.blockchain_rid,
+            sender_height = header.height,
+            hash = icmf_data[topic]
+        );
+    }
+}
+
+query get_icmf_hash(topic: text, sender: byte_array, sender_height: integer): byte_array? {
+    return icmf_message @? {topic, sender, sender_height} (.hash);
+}
+
+query get_icmf_messages_since_height(anchor_height: integer, topic: text): list<icmf_packet> {
+    return icmf_message @* {.anchor_height >= anchor_height, topic} (icmf_packet(sender = .sender, sender_height = .sender_height, hash = .hash));
+}

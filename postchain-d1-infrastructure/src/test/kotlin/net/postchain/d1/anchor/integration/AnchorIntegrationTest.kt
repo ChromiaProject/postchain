@@ -1,35 +1,29 @@
 package net.postchain.d1.anchor.integration
 
-import mu.KLogging
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.d1.anchor.AnchorGTXModule
-import net.postchain.d1.anchor.AnchorSpecialTxExtension
-import net.postchain.d1.anchor.AnchorTestGTXModule
 import net.postchain.devtools.TxCache
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
-import net.postchain.gtx.*
+import org.apache.commons.dbutils.handlers.MapListHandler
+import org.apache.commons.dbutils.QueryRunner
 import org.junit.jupiter.api.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
-import kotlin.test.fail
+
+private const val CHAIN_ID = 1
+private const val ANCHOR_CHAIN_ID = 2 // Only for this test, we don't have a hard ID for anchoring.
 
 /**
  * Main idea is to have one "source" blockchain that generates block, so that these blocks can be anchored by another
  * "anchor" blockchain. If this work the golden path of anchoring should work.
  *
  * It doesn't matter what the "source" blocks contain.
- * Produces blocks containing Special transactions using the simplest possible setup, but as a minimum we need a new
+ * Produce blocks containing Special transactions using the simplest possible setup, but as a minimum we need a new
  * custom test module to give us the "__xxx" operations needed.
  */
 class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
-
-    companion object : KLogging()
-
-    private lateinit var anchorGtxTxFactory: GTXTransactionFactory // Need it's own since BC RID is part of the factory
-
-    private val ANCHOR_CHAIN_ID = 2 // Only for this test, we don't have a hard ID for anchoring.
-
 
     /**
      * Simple happy test to see that we can run 3 nodes with:
@@ -39,7 +33,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
     @Test
     fun happyAnchor() {
         val mapBcFiles: Map<Int, String> = mapOf(
-            1 to "/net/postchain/anchor/integration/blockchain_config_1.xml",
+            CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_1.xml",
             ANCHOR_CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_2_anchor.xml"
         )
 
@@ -64,21 +58,12 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
         // Only for chain 1 see "shouldHaveNormalTx" setting
         runXNodesAssertions(4, 5, sysSetup, txCache)
 
-        // --------------------
-        // Need a TX factory for testing
-        // --------------------
-        val cs = Secp256K1CryptoSystem()
-
-        // Anchor (special) TX
-        val anchorBlockchainRID: BlockchainRid = sysSetup.blockchainMap[ANCHOR_CHAIN_ID]!!.rid
-        val anchorModule = buildCompositeGTXModule()
-
-        anchorGtxTxFactory = GTXTransactionFactory(anchorBlockchainRID, anchorModule, cs)
+        val blockchainRID: BlockchainRid = sysSetup.blockchainMap[CHAIN_ID]!!.rid
 
         // --------------------
         // ChainId = 2: Check that we begin with nothing
         // --------------------
-        val bockQueries = nodes[0].getBlockchainInstance(ANCHOR_CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
+        val blockQueries = nodes[0].getBlockchainInstance(ANCHOR_CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
 
         // --------------------
         // ChainId = 2: Build first anchor block
@@ -90,50 +75,33 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
         // --------------------
         // ChainId = 2: Actual test
         // --------------------
-        val expectedNumberOfTxs = 1  // Only the begin TX
+        val expectedNumberOfTxs = 1  // Only the first TX
 
-        val blockDataFull = bockQueries.getBlockAtHeight(heightZero.toLong()).get()!!
-        System.out.println("block $heightZero fetched.")
+        val blockDataFull = blockQueries.getBlockAtHeight(heightZero.toLong()).get()!!
         assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
-        val theOnlyTx = blockDataFull.transactions[0] // There is only one
 
-        checkForAnchorOp(
-            theOnlyTx,
-            4,
-            anchorGtxTxFactory // We must use correct factory or else we cannot decode the transaction due to incorrect BC RID.
-        )
-    }
+        withReadConnection(nodes[0].postchainContext.storage, ANCHOR_CHAIN_ID.toLong()) {
+            val db = DatabaseAccess.of(it)
+            val queryRunner = QueryRunner()
 
-    /**
-     * There MUST be a prettier way to do this (without triggering the configurations and creating tables etc)
-     */
-    private fun buildCompositeGTXModule(): CompositeGTXModule {
-        val moduleList = listOf(AnchorGTXModule(), AnchorTestGTXModule(), StandardOpsGTXModule())
-        val anchorModule = CompositeGTXModule(moduleList.toTypedArray(), false)
-        val _opmap = mutableMapOf<String, GTXModule>()
-        for (m in moduleList) {
-            for (op in m.getOperations()) {
-                _opmap[op] = m
-            }
-        }
-        anchorModule.opmap = _opmap.toMap()
-        return anchorModule
-    }
-
-    private fun checkForOperation(tx: ByteArray, opName: String, numberOfOperations: Int, currTxFactory: GTXTransactionFactory) {
-        try {
-            val txGtx = currTxFactory.decodeTransaction(tx) as GTXTransaction // For Anchor chain this MUST be the anchor GTX Tx Factory
-            assertEquals(numberOfOperations, txGtx.ops.size)
-            val op = txGtx.ops[0] as GTXOperation
-            System.out.println("Op : ${op.toString()}")
-            assertEquals(opName, op.data.opName)
-        } catch (e: Exception) {
-            fail("Could not decode due to: ${e.message}")
+            val res = queryRunner.query(
+                it.conn,
+                "SELECT blockchain_rid, block_height, status FROM ${db.tableName(it, "anchor_blocks")}",
+                MapListHandler()
+            )
+            assertEquals(4, res.size)
+            assertContentEquals(blockchainRID.data, res[0]["blockchain_rid"] as ByteArray)
+            assertEquals(0L, res[0]["block_height"])
+            assertEquals(0L, res[0]["status"])
+            assertContentEquals(blockchainRID.data, res[1]["blockchain_rid"] as ByteArray)
+            assertEquals(1L, res[1]["block_height"])
+            assertEquals(0L, res[1]["status"])
+            assertContentEquals(blockchainRID.data, res[2]["blockchain_rid"] as ByteArray)
+            assertEquals(2L, res[2]["block_height"])
+            assertEquals(0L, res[2]["status"])
+            assertContentEquals(blockchainRID.data, res[3]["blockchain_rid"] as ByteArray)
+            assertEquals(3L, res[3]["block_height"])
+            assertEquals(0L, res[3]["status"])
         }
     }
-
-    private fun checkForAnchorOp(tx: ByteArray, numberOfOperations: Int, currTxFactory: GTXTransactionFactory) {
-        checkForOperation(tx, AnchorSpecialTxExtension.OP_BLOCK_HEADER, numberOfOperations, currTxFactory)
-    }
-
 }
