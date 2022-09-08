@@ -42,7 +42,7 @@ internal class PostTxCommandTest {
             )
         )
 
-        verify(mockClient).txBuilder()
+        verify(mockClient).transactionBuilder()
         verify(mockClient).postTransactionSync(any())
     }
 }

@@ -82,7 +82,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val client = createPostChainClient(blockchainRID)
         assertThrows<IllegalArgumentException> {
-            val txBuilder = client.txBuilder().finish().build()
+            val txBuilder = client.transactionBuilder().finish().build()
         }
 
         // When
@@ -94,7 +94,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         // Mock
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val client = spy(createPostChainClient(blockchainRID))
-        val txBuilder = client.txBuilder()
+        val txBuilder = client.transactionBuilder()
 
         txBuilder.addOperation("nop")
         txBuilder.addOperation("nop", gtv(Instant.now().toEpochMilli()))
