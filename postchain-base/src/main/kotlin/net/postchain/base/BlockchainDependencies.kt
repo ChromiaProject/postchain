@@ -13,7 +13,7 @@ import net.postchain.common.toHex
  * Describes the blockchain
  *
  * @property blockchainRid is the external (real) key of the BC
- * @property nickname is a human readable name for this blockchain
+ * @property nickname is a human-readable name for this blockchain
  * @property chainId is the internal ID of the BC
  */
 data class BlockchainRelatedInfo(

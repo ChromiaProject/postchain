@@ -26,7 +26,6 @@ abstract class BinaryTreeFactory<T,TPathSet: PathSet>() : KLogging() {
      *
      * @param leaf the raw data we should wrap in a leaf
      * @param paths a collection of proof paths that might point to this leaf
-     * @param memoization is the cache we can use to find pre-calculated values
      * @param isRoot tells us if this is the top element (we should not search for top element in cache)
      * @return the resulting [BinaryTreeElement] the leaf got converted to
      */
@@ -44,8 +43,7 @@ abstract class BinaryTreeFactory<T,TPathSet: PathSet>() : KLogging() {
      * At this point we should have looked in cache.
      *
      * @param leaf we should turn into a tree element
-     * @param gtvPaths
-     * @param memoization is not used for this leaf (since we know it's not in cache) but might be used below
+     * @param paths
      * @return the tree element we created.
      */
     protected abstract fun innerHandleLeaf(leaf: T, paths: TPathSet): BinaryTreeElement

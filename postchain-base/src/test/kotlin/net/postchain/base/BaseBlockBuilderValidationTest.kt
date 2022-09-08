@@ -4,10 +4,10 @@ package net.postchain.base
 
 import net.postchain.base.data.*
 import net.postchain.common.BlockchainRid
-import net.postchain.core.TxEContext
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.block.InitialBlockData
+import net.postchain.core.TxEContext
 import net.postchain.core.ValidationResult.Result.*
+import net.postchain.core.block.InitialBlockData
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem

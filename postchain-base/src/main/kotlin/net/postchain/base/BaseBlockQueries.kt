@@ -6,10 +6,9 @@ import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.*
+import net.postchain.core.block.*
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
-import net.postchain.base.ConfirmationProof
-import net.postchain.core.block.*
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import nl.komponents.kovenant.Kovenant
 import nl.komponents.kovenant.Promise
@@ -32,7 +31,7 @@ class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witnes
  * @param blockchainConfiguration Configuration data for the blockchain
  * @param storage Connection manager
  * @param blockStore Blockchain storage facilitator
- * @param chainID Blockchain identifier
+ * @param chainId Blockchain identifier
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
 open class BaseBlockQueries(

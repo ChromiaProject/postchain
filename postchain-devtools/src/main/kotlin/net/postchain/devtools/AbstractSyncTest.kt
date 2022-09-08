@@ -8,12 +8,12 @@ import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.core.AppContext
 import net.postchain.core.NodeRid
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
-import net.postchain.core.AppContext
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 
 open class AbstractSyncTest : IntegrationTestSetup() {
@@ -51,7 +51,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 BlockchainPreSetup.simpleBuild(chainId, (0 until signerNodeCount).map { NodeSeqNumber(it) })
         val blockchainSetup = BlockchainSetup.buildFromGtv(chainId, blockchainPreSetup.toGtvConfig(mapOf()))
         val strategyClassName = blockchainSetup.bcGtv[KEY_BLOCKSTRATEGY]?.asDict()?.get("name")?.asString()
-        println("++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: $strategyClassName")
+        logger.debug {"++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: $strategyClassName"}
 
         // 2. Get NodeSetup
         var i = 0
@@ -167,9 +167,9 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         val appConfig = nodeSetup.configurationProvider!!.getConfiguration().appConfig
 
         if (wipeDb) {
-            System.out.println("++ Wiping DB for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}")
+            logger.debug {"++ Wiping DB for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}"}
         } else {
-            System.out.println("++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}")
+            logger.debug {"++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}"}
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDb).close()
@@ -181,7 +181,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 val dbAccess = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
                 peerInfos.forEachIndexed { index, peerInfo ->
                     val isPeerSigner = index < signerCount
-                    addPeerInfo(dbAccess, ctx, peerInfo, brid, isPeerSigner)
+                    addPeerInfo(dbAccess, ctx, peerInfo, brid, isPeerSigner) // Overridden is subclass
                 }
             }
         }
@@ -224,7 +224,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
      * 3. kill the nodes given in the "syncIndex" list (kill means wipe their DB, so all blocks have been lost).
      * 4. wait until the nodes in "syncIndex" list get back to the height they had
      * 5. start the nodes in "stopIndex" list
-     * 6. build one more block
+     * 6. build one more block and wait until all nodes have it.
      *
      * This is actually a rather good way to test fast sync, b/c a "real" node might get wiped and we will get
      * into this situation.
@@ -239,38 +239,42 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     fun runSyncTest(signerCount: Int, replicaCount: Int, syncIndex: Set<Int>, stopIndex: Set<Int>, blocksToSync: Int) {
         val nodeSetups = runNodes(signerCount, replicaCount) // This gives us SystemSetup
 
-        val blockchainRid = nodes[0].getBlockchainRid(0)!!
-        logger.debug { "++ All nodes started" }
-        buildBlock(0, blocksToSync - 1L)
-        logger.debug { "++ All nodes have block ${blocksToSync - 1}" }
+        val checkpointBlockHeight = blocksToSync - 1L  // The block height before the last block
 
-        val expectedBlockRid = nodes[0].blockQueries(0).getBlockRid(blocksToSync - 1L).get()
+        val blockchainRid = nodes[0].getBlockchainRid(0)!!
+        logger.debug { "++ 1.a) All nodes started" }
+        buildBlock(0, checkpointBlockHeight)
+        logger.debug { "++ 1.b) All nodes have block height checkpoint $checkpointBlockHeight" }
+
+        val expectedBlockRid = nodes[0].blockQueries(0).getBlockRid(checkpointBlockHeight).get()
         val peerInfos = nodeSetups[0].configurationProvider!!.getConfiguration().peerInfoMap
         stopIndex.forEach {
-            logger.debug { "++ Shutting down ${n(it)}" }
+            logger.debug { "++ 2.a) Shutting down ${n(it)}" }
             nodes[it].shutdown()
-            logger.debug { "++ Shutting down ${n(it)} done" }
+            logger.debug { "++ 2.b) Shutting down ${n(it)} done" }
         }
         syncIndex.forEach {
-            logger.debug { "++ Restarting clean ${n(it)}" }
+            logger.debug { "++ 3.a) Restarting clean ${n(it)}" }
             restartNodeClean(it, blockchainRid)
-            logger.debug { "++ Restarting clean ${n(it)} done" }
+            logger.debug { "++ 3.b) Restarting clean ${n(it)} done" }
         }
 
         syncIndex.forEach {
-            logger.debug { "++ Awaiting height ${blocksToSync - 1L} on ${n(it)}" }
+            logger.debug { "++ 4.a) Awaiting checkpoint height $checkpointBlockHeight on ${n(it)}" }
             nodes[it].awaitHeight(0, blocksToSync - 1L)
-            val actualBlockRid = nodes[it].blockQueries(0).getBlockRid(blocksToSync - 1L).get()
+            val actualBlockRid = nodes[it].blockQueries(0).getBlockRid(checkpointBlockHeight).get()
             assertArrayEquals(expectedBlockRid, actualBlockRid)
-            logger.debug { "++ Awaiting height ${blocksToSync - 1L} on ${n(it)} done" }
+            logger.debug { "++ 4.b) Awaiting checkpoint height $checkpointBlockHeight on ${n(it)} done" }
         }
 
         stopIndex.forEach {
-            logger.debug { "++ Start ${n(it)} again" }
+            logger.debug { "++ 5. Start ${n(it)} again" }
             startOldNode(it, peerInfos, blockchainRid)
         }
-        awaitHeight(0, blocksToSync - 1L)
+        logger.debug { "++ 6.a) Await until all nodes have checkpoint block height $checkpointBlockHeight" }
+        awaitHeight(0, checkpointBlockHeight)
+        logger.debug { "++ 6.b) Build last block height $blocksToSync" }
         buildBlock(0, blocksToSync.toLong())
-        logger.debug { "++ All nodes have block $blocksToSync" }
+        logger.debug { "++ 6.c) Done. All nodes have last block height $blocksToSync" }
     }
 }

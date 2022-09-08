@@ -12,7 +12,7 @@ object GtvPathFactory {
      * Use this constructor to convert a weakly typed path to a [GtvPath]
      *
      * @param inputArr is just an array with Ints and Strings representing the path
-     * @return a [GtvPath] (same same by well typed)
+     * @return a [GtvPath] (same, same by well typed)
      */
     fun buildFromArrayOfPointers(inputArr: Array<Any>): GtvPath {
         val pathElementList = LinkedList<GtvPathElement>()

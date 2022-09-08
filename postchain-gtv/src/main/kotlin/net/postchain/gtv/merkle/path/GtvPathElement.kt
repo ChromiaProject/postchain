@@ -11,9 +11,9 @@ import net.postchain.gtv.*
 sealed class GtvPathElement(val previous: SearchableGtvPathElement?): PathElement
 
 /**
- * This element will hold a index/key to the next element in the path.
+ * This element will hold an index/key to the next element in the path.
  *
- * Typically a path looks like this:
+ * Typically, a path looks like this:
  *
  *   Searchable... ->  Searchable... -> Searchable... -> Leaf...
  */
