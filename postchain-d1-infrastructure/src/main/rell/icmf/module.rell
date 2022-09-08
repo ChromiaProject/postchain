@@ -1,0 +1,5 @@
+module;
+
+function send_message(topic: text, body: gtv) {
+    op_context.emit_event("icmf", (topic = topic, body = body).to_gtv_pretty());
+}
