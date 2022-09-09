@@ -52,11 +52,13 @@ import net.postchain.ebft.heartbeat.*
 open class ManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
-        blockchainConfigProvider: BlockchainConfigurationProvider
+        blockchainConfigProvider: BlockchainConfigurationProvider,
+        bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
 ) : BaseBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
-        blockchainConfigProvider
+        blockchainConfigProvider,
+        bpmExtensions
 ) {
 
     protected open lateinit var dataSource: ManagedNodeDataSource

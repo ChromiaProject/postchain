@@ -9,6 +9,7 @@ import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected1ElementArray
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected4ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected7ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expectet7and3ElementArrayMerkleRoot
+import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
 import net.postchain.gtv.merkle.TreeHelper.stripWhite
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
@@ -86,7 +87,7 @@ class ArrayToMerkleProofTreeTest {
 
         // Proof -> Serialize
         val serialize: GtvArray = merkleProofTree.serializeToGtv()
-        //println("Serilalized: $serialize")
+        //println("Serialized: $serialize")
 
         val expectedSerialization = "[$ln" +
                 "  103,$ln" +  // 103 =  node type is array
@@ -102,6 +103,7 @@ class ArrayToMerkleProofTreeTest {
                 "    x\"0000000000000000000000000000000000000000000000000000000000000000\"$ln" +
                 "  ]$ln" +
                 "]$ln"
+
        assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
 
         // Serialize -> deserialize

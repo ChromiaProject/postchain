@@ -4,6 +4,10 @@ package net.postchain.devtools.base
 
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataMistake
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
@@ -12,10 +16,6 @@ import net.postchain.devtools.testinfra.ErrorTransaction
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.testinfra.UnexpectedExceptionTransaction
-import net.postchain.core.block.BlockBuilder
-import net.postchain.core.block.BlockData
-import net.postchain.core.block.BlockWitness
-import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

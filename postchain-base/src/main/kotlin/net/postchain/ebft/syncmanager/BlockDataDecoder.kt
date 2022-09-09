@@ -3,9 +3,9 @@
 package net.postchain.ebft.syncmanager
 
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.ebft.message.CompleteBlock
-import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.ebft.message.CompleteBlock
 
 object BlockDataDecoder {
 

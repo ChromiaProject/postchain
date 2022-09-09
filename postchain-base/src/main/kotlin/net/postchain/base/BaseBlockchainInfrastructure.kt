@@ -10,10 +10,10 @@ import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.common.reflection.constructorOf
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.*
+import net.postchain.core.block.*
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.secp256k1_derivePubKey
-import net.postchain.core.block.*
 import net.postchain.debug.BlockchainProcessName
 
 open class BaseBlockchainInfrastructure(
