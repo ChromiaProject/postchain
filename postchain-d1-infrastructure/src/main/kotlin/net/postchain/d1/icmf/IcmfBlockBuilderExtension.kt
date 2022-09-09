@@ -23,7 +23,7 @@ class IcmfBlockBuilderExtension(val cryptoSystem: CryptoSystem) : BaseBlockBuild
 
     private lateinit var blockEContext: BlockEContext
 
-    private val queuedEvents = mutableListOf<Pair<Long, IcmfMessage>>()
+    private val queuedEvents = mutableListOf<Pair<Long, SentIcmfMessage>>()
 
     override fun init(blockEContext: BlockEContext, bb: BlockBuilder) {
         this.blockEContext = blockEContext
@@ -32,7 +32,7 @@ class IcmfBlockBuilderExtension(val cryptoSystem: CryptoSystem) : BaseBlockBuild
     }
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
-        val message = IcmfMessage.fromGtv(data)
+        val message = SentIcmfMessage.fromGtv(data)
         logger.info("ICMF message sent in topic ${message.topic}")
         queuedEvents.add(ctxt.txIID to message)
     }

@@ -9,17 +9,30 @@ import net.postchain.gtv.GtvFactory.gtv
  * Smallest message unit for ICMF
  */
 data class IcmfMessage(
-    val topic: String, // Topic of message
-    val body: Gtv
+    val height: Long,  // Block height this message corresponds to
+    val messageType: String, // Type of message
+    val body: Gtv )
+
+/**
+ * Conceptually = all messages related to a block
+ */
+data class IcmfPacket(
+    val currentPointer: Gtv,
+    val height: Long, // Block height this package corresponds to
+    val blockRid: Gtv, // The BlockRid that goes with the header (for the cases where we cannot calculate it from the header)
+    val blockHeader: Gtv, // Header of the block
+    val witness: Gtv, // Must send the witness so the recipient can validate
+    val messages: List<IcmfMessage> // (potentially) messages
 ) {
 
     companion object {
-        fun fromGtv(gtv: Gtv): IcmfMessage {
-            return IcmfMessage(gtv["topic"]!!.asString(), gtv["body"]!!)
+        /**
+         * @return a [IcmfPackage] without messages (Anchoring can use this)
+         */
+        fun build(height: Long, blockRid: Gtv, header: Gtv, witness: Gtv): IcmfPacket {
+            return IcmfPacket(gtv(height),
+                height, blockRid, header, witness, ArrayList())
         }
     }
 
-    fun toGtv(): Gtv {
-        return gtv("topic" to gtv(topic), "body" to body)
-    }
 }
