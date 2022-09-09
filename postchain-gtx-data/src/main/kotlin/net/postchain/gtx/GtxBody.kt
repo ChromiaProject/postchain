@@ -13,7 +13,7 @@ import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 
-data class GtxBody(
+class GtxBody(
     val blockchainRid: BlockchainRid,
     val operations: List<GtxOp>,
     val signers: List<ByteArray>
