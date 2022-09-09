@@ -8,9 +8,9 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvString
-import net.postchain.gtx.data.GTXTransactionBodyData
-import net.postchain.gtx.data.GTXTransactionData
-import net.postchain.gtx.data.OpData
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBody
+import net.postchain.gtx.GtxOp
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -44,13 +44,10 @@ class GtxDataSerializerTest {
         val expectedGtvTxStruct = gtv(listOf(txb, signatures))
 
         // ---------- Build GTXData ---------------------------
-        val expectedOp = OpData(op_name, op_args.map { gtv(it.toLong()) }.toTypedArray())
-        val body = GTXTransactionBodyData(blockchainRID, arrayOf(expectedOp), arrayOf(aliceSigner))
-        val txData = GTXTransactionData(body, arrayOf(aliceSignature))
+        val expectedOp = GtxOp(op_name, *op_args.map { gtv(it.toLong()) }.toTypedArray())
+        val body = GtxBody(blockchainRID, arrayOf(expectedOp), arrayOf(aliceSigner))
+        val txData = Gtx(body, arrayOf(aliceSignature))
 
-        // ---------- Convert it ------------------------------
-        val tx = GtxTransactionDataSerializer.serializeToGtv(txData)
-
-       assertEquals(expectedGtvTxStruct, tx)
+       assertEquals(expectedGtvTxStruct, txData.toGtv())
     }
 }

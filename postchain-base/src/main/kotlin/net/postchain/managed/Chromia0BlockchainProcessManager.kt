@@ -15,19 +15,19 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtx.data.GTXDataBuilder
+import net.postchain.gtx.GtxBuilder
 
 /**
  * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.
  */
 class Chromia0BlockchainProcessManager(
-        postchainContext: PostchainContext,
-        blockchainInfrastructure: BlockchainInfrastructure,
-        blockchainConfigProvider: BlockchainConfigurationProvider
+    postchainContext: PostchainContext,
+    blockchainInfrastructure: BlockchainInfrastructure,
+    blockchainConfigProvider: BlockchainConfigurationProvider
 ) : ManagedBlockchainProcessManager(
-        postchainContext,
-        blockchainInfrastructure,
-        blockchainConfigProvider
+    postchainContext,
+    blockchainInfrastructure,
+    blockchainConfigProvider
 ) {
 
     private fun anchorLastBlock(chainId: Long) {
@@ -39,24 +39,17 @@ class Chromia0BlockchainProcessManager(
                 val blockHeader = db.getBlockHeader(eContext, blockRID)
                 val witnessData = db.getWitnessData(eContext, blockRID)
                 val witness = BaseBlockWitness.fromBytes(witnessData)
-                val txb = GTXDataBuilder(
-                        chain0Engine.getConfiguration().blockchainRid,
-                        arrayOf(),
-                        Secp256K1CryptoSystem()
-                )
+                val txb = GtxBuilder(chain0Engine.getConfiguration().blockchainRid, listOf(), Secp256K1CryptoSystem())
                 // sorting signatures makes it more likely we can avoid duplicate anchor transactions
                 val sortedSignatures = witness.getSignatures().sortedBy { ByteArrayKey(it.subjectID) }
                 txb.addOperation(
-                        "anchor_block",
-                        arrayOf(
-                                GtvDecoder.decodeGtv(blockHeader),
-                                GtvArray(sortedSignatures.map { GtvByteArray(it.subjectID) }.toTypedArray()),
-                                GtvArray(sortedSignatures.map { GtvByteArray(it.data) }.toTypedArray())
-                        )
+                    "anchor_block",
+                    GtvDecoder.decodeGtv(blockHeader),
+                    GtvArray(sortedSignatures.map { GtvByteArray(it.subjectID) }.toTypedArray()),
+                    GtvArray(sortedSignatures.map { GtvByteArray(it.data) }.toTypedArray())
                 )
-                txb.finish()
                 val tx = chain0Engine.getConfiguration().getTransactionFactory().decodeTransaction(
-                        txb.serialize()
+                    txb.finish().buildGtx().encode()
                 )
                 chain0Engine.getTransactionQueue().enqueue(tx)
             }

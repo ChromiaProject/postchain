@@ -8,9 +8,9 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvString
-import net.postchain.gtx.data.GTXTransactionBodyData
-import net.postchain.gtx.data.GTXTransactionData
-import net.postchain.gtx.data.OpData
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBody
+import net.postchain.gtx.GtxOp
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -26,9 +26,9 @@ class GtxDataFactoryTest {
     fun testBuildGTXDataFromGtv_one_operation() {
 
         // ---------- Build expected  ----------------------
-        val expectedOp = OpData(op_name, op_args.map{ gtv(it.toLong())}.toTypedArray() )
-        val expectedTxBody = GTXTransactionBodyData(blockchainRID, arrayOf(expectedOp), arrayOf(aliceSigner))
-        val expectedTx = GTXTransactionData(expectedTxBody, arrayOf(aliceSignature))
+        val expectedOp = GtxOp(op_name, *op_args.map{ gtv(it.toLong())}.toTypedArray() )
+        val expectedTxBody = GtxBody(blockchainRID, arrayOf(expectedOp), arrayOf(aliceSigner))
+        val expectedTx = Gtx(expectedTxBody, arrayOf(aliceSignature))
 
         // ---------- Build da GTV struct -----------------
 
@@ -47,9 +47,6 @@ class GtxDataFactoryTest {
         val signatures: GtvArray = gtv(listOf(gtv(aliceSignature)))
         val tx = gtv(listOf(txb, signatures))
 
-        // ---------- Convert it ------------------------------
-        val txData: GTXTransactionData = GtxTransactionDataFactory.deserializeFromGtv(tx)
-
-       assertEquals(expectedTx, txData)
+       assertEquals(expectedTx, Gtx.fromGtv(tx))
     }
 }
