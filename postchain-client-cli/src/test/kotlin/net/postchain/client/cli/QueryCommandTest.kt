@@ -1,12 +1,14 @@
 package net.postchain.client.cli
 
-import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 
 private const val TEST_QUERY = "test_query"
 
@@ -19,9 +21,8 @@ internal class QueryCommandTest {
         val client: PostchainClient = mock { }
 
         val testConfigPath = this::class.java.getResource("/config.cfg")!!.path
-        val testConfig = PostchainClientConfig.fromProperties(testConfigPath)
         val provider: PostchainClientProvider = mock {
-            on { createClient(eq(testConfig.apiUrl), eq(testConfig.blockchainRid), any(), any(), any()) } doReturn client
+            on { createClient(any()) } doReturn client
         }
 
         val command = QueryCommand(provider)

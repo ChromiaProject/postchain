@@ -22,7 +22,8 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtx.GTXTransactionFactory
-import net.postchain.gtx.data.GTXDataBuilder
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBuilder
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
 import org.awaitility.Awaitility
@@ -247,11 +248,11 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         testStatusPost(
                 0,
                 "/tx/$blockchainRID",
-                "{\"tx\": \"${builder.serialize().toHex()}\"}",
+                "{\"tx\": \"${builder.encode().toHex()}\"}",
                 200)
 
         // Asserting
-        val txRidHex = builder.getDigestForSigning().toHex()
+        val txRidHex = builder.calculateTxRid(GtvMerkleHashCalculator(cryptoSystem)).toHex()
         val expected = """
             {
                 "status": "rejected",
@@ -485,11 +486,11 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
                 .statusCode(expectedStatus)
     }
 
-    private fun createBuilder(blockchainRid: BlockchainRid, value: String): GTXDataBuilder {
-        val builder = GTXDataBuilder(blockchainRid, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
-        builder.addOperation("gtx_test", arrayOf(gtv(1L), gtv(value)))
-        builder.finish()
-        builder.sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
-        return builder
+    private fun createBuilder(blockchainRid: BlockchainRid, value: String): Gtx {
+        return GtxBuilder(blockchainRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+        .addOperation("gtx_test", gtv(1L), gtv(value))
+        .finish()
+        .sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
+            .buildGtx()
     }
 }
