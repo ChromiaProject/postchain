@@ -37,6 +37,11 @@ class IcmfBlockBuilderExtension(val cryptoSystem: CryptoSystem) : BaseBlockBuild
         queuedEvents.add(ctxt.txIID to message)
     }
 
+    /**
+     * Called once at end of block building.
+     *
+     * @return extra data for block header
+     */
     override fun finalize(): Map<String, Gtv> {
         DatabaseAccess.of(blockEContext).apply {
             val queryRunner = QueryRunner()
