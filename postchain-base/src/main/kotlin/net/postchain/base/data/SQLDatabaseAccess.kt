@@ -22,7 +22,6 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.*
-import java.lang.Long.max
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant
@@ -366,13 +365,13 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     /**
-     * NOTE: We dont' bother to set "pos" so it starts from 0, we just use the event_iid raw.
+     * NOTE: We don't bother to set "pos" so it starts from 0, we just use the event_iid raw.
      *       In this case the important thing is the SORTING of the events, not the exact pos number.
      */
     private fun getEventList(ctx: EContext, blockHeight: Long, sql: String, maxEventsLimit: Int = 1000): List<DatabaseAccess.EventInfo> {
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, maxEventsLimit)
         return if (rows.isEmpty()) {
-            ArrayList<DatabaseAccess.EventInfo>()
+            ArrayList()
         } else {
             rows.map { data ->
                 DatabaseAccess.EventInfo(

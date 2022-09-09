@@ -3,16 +3,15 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
-import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.ebft.BaseBlockDatabase
-import net.postchain.ebft.syncmanager.common.SyncParameters
-import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.block.BlockQueries
+import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
-import net.postchain.ebft.syncmanager.common.FastSyncPeerStatuses
+import net.postchain.ebft.BaseBlockDatabase
+import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
+import net.postchain.ebft.syncmanager.common.SyncParameters
 
 class ReadOnlyBlockchainProcess(
     val workerContext: WorkerContext,
@@ -20,8 +19,6 @@ class ReadOnlyBlockchainProcess(
 ) : AbstractBlockchainProcess("replica-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
-
-    private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
 
     private val blockDatabase = BaseBlockDatabase(
         blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY
