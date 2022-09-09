@@ -2,10 +2,7 @@
 
 package net.postchain.devtools.testinfra.specialtx
 
-import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
-import net.postchain.gtv.GtvFactory
-import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GTXTransactionFactory
 
 /**
@@ -28,23 +25,4 @@ class TestSpecialTxGtxTransaction(
      */
     constructor(factory: GTXTransactionFactory, id: Int, op_name: String) :
             this(factory, id, op_name, arrayOf())
-
-
-    /**
-     * We're delaying this to the last moment, but probably to no avail since we most likely need the
-     * real GXT TX (that's why we are using this class, right)
-     */
-    override fun buildTheTx() {
-        val b = GTXDataBuilder(blockchainRID, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
-        val arg0 = GtvFactory.gtv(1.toLong())
-        val arg1 = GtvFactory.gtv("${id} and ${id}")
-        b.addOperation(op_name, arrayOf(arg0, arg1))
-        b.finish()
-        b.sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
-        cachedBuilder = b
-
-        // So, the question here is: are we doing any work twice? I don't think so
-        //     (apart from the relatively cheap transformation between GTV and GTX)
-        cachedGtxTx = factory.build(b.getGTXTransactionData())
-    }
 }

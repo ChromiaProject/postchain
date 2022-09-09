@@ -1,6 +1,8 @@
 package net.postchain.client.core
 
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
+import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
@@ -34,9 +36,8 @@ internal class ConcretePostchainClientTest {
     }
 
     fun driveTestCorrectNumberOfAttempts(client: ConcretePostchainClient, numberExpected: Int) {
-        client.makeTransaction()
+        client.transactionBuilder()
             .addNop()
-            .finish()
             .postSyncAwaitConfirmation()
 
         // Verify
@@ -46,7 +47,11 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Max number of attempts by default`() {
         driveTestCorrectNumberOfAttempts(
-            ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, statusPollInterval = 1, client = httpClient),
+            ConcretePostchainClient(PostchainClientConfig(
+                BlockchainRid.buildFromHex(brid),
+                EndpointPool.singleUrl(url),
+                statusPollInterval = 1
+            ), client = httpClient),
             // If I didn't pass a max value, it defaults to RETRIEVE_TX_STATUS_ATTEMPTS = 20
             numberExpected = STATUS_POLL_COUNT)
     }
@@ -54,7 +59,12 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Max number of attempts parameterized`() {
         driveTestCorrectNumberOfAttempts(
-            ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, 10, statusPollInterval = 1, client = httpClient),
+            ConcretePostchainClient(PostchainClientConfig(
+                BlockchainRid.buildFromHex(brid),
+                EndpointPool.singleUrl(url),
+                statusPollCount = 10,
+                statusPollInterval = 1
+            ), client = httpClient),
             // If I pass a custom max value, verify it uses it
             numberExpected = 10
         )
@@ -62,7 +72,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `Query response without body should not crash` () {
-        ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, client = object : AsyncHttpHandler {
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), client = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
                 fn(Response(Status.OK).body(Body.EMPTY))
             }
@@ -71,7 +81,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `Query error without body should not crash` () {
-        ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, client = object : AsyncHttpHandler {
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), client = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
                 fn(Response(Status.BAD_REQUEST).body(Body.EMPTY))
             }
