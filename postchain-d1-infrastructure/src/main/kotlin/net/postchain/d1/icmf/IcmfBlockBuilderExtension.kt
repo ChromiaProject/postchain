@@ -66,10 +66,12 @@ class IcmfBlockBuilderExtension(val cryptoSystem: CryptoSystem) : BaseBlockBuild
                 )
             }
         }
-        val hashesByTopic = queuedEvents.map { it.second }.groupBy { it.topic }
+        val hashesByTopic = queuedEvents
+            .map { it.second }
+            .groupBy { it.topic }
             .mapValues { messages -> messages.value.map { message -> cryptoSystem.digest(GtvEncoder.encodeGtv(message.body)) } }
-        val hashByTopic =
-            hashesByTopic.mapValues { cryptoSystem.digest(it.value.fold(ByteArray(0)) { total, item -> total.plus(item) }) }
+        val hashByTopic = hashesByTopic
+            .mapValues { cryptoSystem.digest(it.value.fold(ByteArray(0)) { total, item -> total.plus(item) }) }
         return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic.mapValues { gtv(it.value) }))
     }
 }
