@@ -45,12 +45,12 @@ interface PostchainClient {
     fun checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult>
 
     /**
-     * Perform an asynchronous query towards the client
+     * Perform an asynchronous query
      */
     fun query(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): CompletionStage<Gtv>
 
     /**
-     * Perform a query towards the client
+     * Perform a query
      */
     fun querySync(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Gtv
 }

@@ -26,7 +26,7 @@ class TransactionBuilder(
     }
 
     /**
-     * Adds a null operation to make the transaction unique
+     * Adds a nop operation to make the transaction unique
      */
     fun addNop() = apply { gtxBuilder.addNop() }
 
