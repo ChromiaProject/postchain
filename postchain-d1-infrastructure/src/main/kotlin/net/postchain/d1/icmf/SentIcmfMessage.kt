@@ -9,12 +9,8 @@ data class SentIcmfMessage(
 ) {
 
     companion object {
-        fun fromGtv(gtv: Gtv): SentIcmfMessage {
-            return SentIcmfMessage(gtv["topic"]!!.asString(), gtv["body"]!!)
-        }
+        fun fromGtv(gtv: Gtv): SentIcmfMessage = SentIcmfMessage(gtv["topic"]!!.asString(), gtv["body"]!!)
     }
 
-    fun toGtv(): Gtv {
-        return gtv("topic" to gtv(topic), "body" to body)
-    }
+    fun toGtv(): Gtv = gtv("topic" to gtv(topic), "body" to body)
 }
