@@ -7,9 +7,7 @@ import com.github.ajalt.clikt.parameters.arguments.transformAll
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.DefaultSigner
 import net.postchain.client.core.PostchainClientProvider
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
 
 class PostTxCommand(private val clientProvider: PostchainClientProvider) : CliktCommand(name = "post-tx", help = "Posts transactions to a postchain node") {
@@ -32,8 +30,6 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
 
     private val awaitCompleted by option("--await", "-a", help = "Wait for transaction to be included in a block").flag()
 
-    private val cryptoSystem = Secp256K1CryptoSystem()
-
     override fun run() {
         val config = PostchainClientConfig.fromProperties(configFile.absolutePath)
 
@@ -43,13 +39,9 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
     }
 
     internal fun runInternal(config: PostchainClientConfig, awaitConfirmation: Boolean, opName: String, vararg args: Gtv) {
-        val sigMaker = cryptoSystem.buildSigMaker(config.pubKeyByteArray, config.privKeyByteArray)
-        val client = clientProvider.createClient(config.apiUrl, config.blockchainRid, DefaultSigner(sigMaker, config.pubKeyByteArray), config.statusPollCount)
-        client.makeTransaction()
-            .apply {
-                addOperation(opName, *args)
-                sign(sigMaker)
-                if (awaitConfirmation) postSyncAwaitConfirmation() else postSync()
-            }
+        val client = clientProvider.createClient(config)
+        val tx = client.transactionBuilder()
+            .addOperation(opName, *args)
+        if (awaitConfirmation) tx.postSyncAwaitConfirmation() else tx.postSync()
     }
 }

@@ -3,9 +3,8 @@
 package net.postchain.client.core
 
 import mu.KLogging
-import net.postchain.client.config.STATUS_POLL_COUNT
-import net.postchain.client.config.STATUS_POLL_INTERVAL
-import net.postchain.common.BlockchainRid
+import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -14,12 +13,14 @@ import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.common.tx.TransactionStatus.WAITING
+import net.postchain.crypto.KeyPair
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtx.Gtx
 import net.postchain.gtv.GtvNull
-import net.postchain.gtx.data.GTXDataBuilder
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
@@ -38,35 +39,30 @@ data class Queries(val queries: List<String>)
 data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
-    private val resolver: PostchainNodeResolver,
-    private val blockchainRID: BlockchainRid,
-    private val defaultSigner: DefaultSigner?,
-    private val statusPollCount: Int = STATUS_POLL_COUNT,
-    private val statusPollInterval: Long = STATUS_POLL_INTERVAL,
+    private val config: PostchainClientConfig,
     private val client: AsyncHttpHandler = ApacheAsyncClient()
 ) : PostchainClient {
 
     companion object : KLogging()
 
-    private val serverUrl = resolver.getNodeURL(blockchainRID)
-    private val blockchainRIDHex = blockchainRID.toHex()
+    private fun nextEndpoint() = config.endpointPool.next()
+    private val blockchainRIDHex = config.blockchainRid.toHex()
+    private val cryptoSystem = config.cryptoSystem
+    private val calculator = GtvMerkleHashCalculator(cryptoSystem)
 
-    override fun makeTransaction(): GTXTransactionBuilder {
-        return GTXTransactionBuilder(this, blockchainRID, defaultSigner?.let { arrayOf(it.pubkey) } ?: arrayOf())
-    }
+    override fun transactionBuilder() = transactionBuilder(config.signers)
 
-    override fun makeTransaction(signers: Array<ByteArray>): GTXTransactionBuilder {
-        return GTXTransactionBuilder(this, blockchainRID, signers)
-    }
+    override fun transactionBuilder(signers: List<KeyPair>) = TransactionBuilder(this, config.blockchainRid, signers.map { it.pubKey.key }, signers.map { it.sigMaker(cryptoSystem) }, cryptoSystem)
 
 
     override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {
         val queriesLens = Body.auto<Queries>().toLens()
         val gtxQuery = gtv(gtv(name), gtv)
         val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
+        val endpoint = nextEndpoint()
         val request = queriesLens(
             Queries(listOf(encodedQuery)),
-            Request(Method.POST, "$serverUrl/query_gtx/$blockchainRIDHex")
+            Request(Method.POST, "${endpoint.url}/query_gtx/$blockchainRIDHex")
         )
 
         val r = CompletableFuture<Gtv>()
@@ -89,18 +85,18 @@ class ConcretePostchainClient(
         throw e.cause ?: e
     }
 
-    override fun postTransactionSync(txBuilder: GTXDataBuilder): TransactionResult = try {
-        postTransaction(txBuilder).toCompletableFuture().join()
+    override fun postTransactionSync(tx: Gtx): TransactionResult = try {
+        postTransaction(tx).toCompletableFuture().join()
     } catch (e: CompletionException) {
         throw e.cause ?: e
     }
 
-    override fun postTransaction(txBuilder: GTXDataBuilder): CompletionStage<TransactionResult> {
-        if (!txBuilder.finished) txBuilder.finish()
+    override fun postTransaction(tx: Gtx): CompletionStage<TransactionResult> {
         val txLens = Body.auto<Tx>().toLens()
-        val txRid = TxRid(txBuilder.getDigestForSigning().toHex())
-        val tx = Tx(txBuilder.serialize().toHex())
-        val request = txLens(tx, Request(Method.POST, "$serverUrl/tx/$blockchainRIDHex"))
+        val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
+        val encodedTx = Tx(tx.encodeHex())
+        val endpoint = nextEndpoint()
+        val request = txLens(encodedTx, Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
         client(request) { resp ->
             val status = if (resp.status == Status.OK) WAITING else REJECTED
@@ -109,12 +105,12 @@ class ConcretePostchainClient(
         return result
     }
 
-    override fun postTransactionSyncAwaitConfirmation(txBuilder: GTXDataBuilder): TransactionResult {
-        val resp = postTransactionSync(txBuilder)
+    override fun postTransactionSyncAwaitConfirmation(tx: Gtx): TransactionResult {
+        val resp = postTransactionSync(tx)
         if (resp.status == REJECTED) {
             return resp
         }
-        return awaitConfirmation(resp.txRid, statusPollCount, statusPollInterval)
+        return awaitConfirmation(resp.txRid, config.statusPollCount, config.statusPollInterval)
     }
 
     override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {
@@ -136,9 +132,11 @@ class ConcretePostchainClient(
 
     override fun checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult> {
         val txStatusLens = Body.auto<TxStatus>().toLens()
-        val validationRequest = Request(Method.GET, "$serverUrl/tx/$blockchainRIDHex/${txRid.rid}/status")
+        val endpoint = nextEndpoint()
+        val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDHex/${txRid.rid}/status")
         val result = CompletableFuture<TransactionResult>()
         client(validationRequest) { response ->
+            if (response.status.code == 503) endpoint.setUnreachable()
             val status =
                 TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
             result.complete(

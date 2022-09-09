@@ -12,7 +12,7 @@ import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
-import net.postchain.gtx.data.GTXDataBuilder
+import net.postchain.gtx.GtxBuilder
 import org.apache.commons.lang3.RandomStringUtils
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -71,12 +71,12 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
     }
 
     private fun buildTransaction(blockchainRid: BlockchainRid, value: String): GTXTransaction {
-        val builder = GTXDataBuilder(blockchainRid, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
         val factory = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-        builder.addOperation("gtx_test", arrayOf(GtvFactory.gtv(1L), GtvFactory.gtv(value)))
-        builder.finish()
-        builder.sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
+        val builder = GtxBuilder(blockchainRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+            .addOperation("gtx_test", GtvFactory.gtv(1L), GtvFactory.gtv(value))
+            .finish()
+            .sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
 
-        return factory.build(builder.getGTXTransactionData())
+        return factory.build(builder.buildGtx())
     }
 }
