@@ -86,7 +86,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
 
             val res = queryRunner.query(
                 it.conn,
-                "SELECT blockchain_rid, block_height, status FROM ${db.tableName(it, "anchor_blocks")}",
+                "SELECT blockchain_rid, block_height, status FROM ${db.tableName(it, "anchor_block")}",
                 MapListHandler()
             )
             assertEquals(4, res.size)
