@@ -14,10 +14,12 @@ class IcmfGTXModule : SimpleGTXModule<Unit>(
     mapOf(),
     mapOf()
 ) {
+    val cryptoSystem = Secp256K1CryptoSystem() // TODO inject this
+
     override fun initializeDB(ctx: EContext) {}
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> =
-        listOf(IcmfBlockBuilderExtension(Secp256K1CryptoSystem()))
+        listOf(IcmfBlockBuilderExtension(cryptoSystem))
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf()
 }
