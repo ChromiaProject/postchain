@@ -39,7 +39,7 @@ class BaseManagedBlockBuilder(
     var blocTrace: BlockTrace? = null // Only for logging, remains "null" unless TRACE
 
     /**
-     * Wrapper for blockbuilder operations. Will close current working block for further modifications
+     * Wrapper for block builder operations. Will close current working block for further modifications
      * if an operation fails to execute in full.
      *
      * @param RT type of returned object from called operation (Currently all Unit)
@@ -214,5 +214,4 @@ class BaseManagedBlockBuilder(
             logger.trace("${eContext.chainID} rollback() -- $str, from block: ${getBTrace()}")
         }
     }
-
 }

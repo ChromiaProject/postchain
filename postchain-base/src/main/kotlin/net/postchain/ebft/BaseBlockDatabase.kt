@@ -6,9 +6,9 @@ import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.core.*
-import net.postchain.crypto.Signature
+import net.postchain.core.BlockchainEngine
 import net.postchain.core.block.*
+import net.postchain.crypto.Signature
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.deferred
 import java.util.concurrent.LinkedBlockingQueue

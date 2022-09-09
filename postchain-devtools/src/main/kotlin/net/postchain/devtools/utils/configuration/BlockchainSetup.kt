@@ -17,7 +17,6 @@ import net.postchain.gtv.Gtv
  * @property bcGtv is the BC configuration in the form of [GTV] dictionary
  * @property signerNodeList is a list of [NodeSeqNumber] that must sign this chain
  * @property chainDependencies is a set of the other chain IDs this chain depends on
- * @property listenerLevel can be set for chains that should be started before the rest
  * @property shouldHaveNormalTx  means we will generate regular test TX for this blockchain, a chain with only
  *                               special TX in it (like Anchor chain) should have this value set to false.
  *

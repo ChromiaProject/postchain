@@ -5,6 +5,7 @@ import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import org.http4k.client.AsyncHttpHandler
+import org.http4k.core.Body
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
@@ -67,5 +68,23 @@ internal class ConcretePostchainClientTest {
             // If I pass a custom max value, verify it uses it
             numberExpected = 10
         )
+    }
+
+    @Test
+    fun `Query response without body should not crash` () {
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), client = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                fn(Response(Status.OK).body(Body.EMPTY))
+            }
+        }).query("foo")
+    }
+
+    @Test
+    fun `Query error without body should not crash` () {
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), client = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                fn(Response(Status.BAD_REQUEST).body(Body.EMPTY))
+            }
+        }).query("foo")
     }
 }

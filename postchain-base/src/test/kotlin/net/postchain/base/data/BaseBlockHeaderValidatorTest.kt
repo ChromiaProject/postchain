@@ -3,10 +3,10 @@ package net.postchain.base.data
 import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.base.*
-import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
-import net.postchain.core.block.InitialBlockData
+import net.postchain.common.hexStringToByteArray
 import net.postchain.core.ValidationResult
+import net.postchain.core.block.InitialBlockData
 import net.postchain.gtv.GtvString
 import org.junit.jupiter.api.Test
 
