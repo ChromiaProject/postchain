@@ -60,6 +60,14 @@
         </dependency>
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>rellr</id>
+            <name>Rell Runtime Registry</name>
+            <url>https://gitlab.com/api/v4/projects/32802097/packages/maven</url>
+        </repository>
+    </repositories>
+
     <build>
         <sourceDirectory>src/main/kotlin</sourceDirectory>
         <testSourceDirectory>src/test/kotlin</testSourceDirectory>
