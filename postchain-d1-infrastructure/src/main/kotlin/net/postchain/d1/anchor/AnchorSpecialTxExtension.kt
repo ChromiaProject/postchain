@@ -32,19 +32,23 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
  */
 class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
-    private val _relevantOps = setOf(OP_BLOCK_HEADER)
-
-    private var myChainRid: BlockchainRid? = null // We must know the id of the anchor chain itself
-    private var myChainID: Long? = null // We must know the id of the anchor chain itself
-
-    private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long>? =
-        null // This is where we get the actual data to create operations
-
-    private var blockQueries: BlockQueries? = null // This is for querying ourselves, i.e. the "anchor rell app"
-
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
     }
+
+    private val _relevantOps = setOf(OP_BLOCK_HEADER)
+
+    /** We must know the id of the anchor chain itself */
+    private var myChainRid: BlockchainRid? = null
+
+    /** We must know the id of the anchor chain itself */
+    private var myChainID: Long? = null
+
+    /** We must know the id of the anchor chain itself */
+    private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long>? = null
+
+    /** This is for querying ourselves, i.e. the "anchor Rell app" */
+    private var blockQueries: BlockQueries? = null
 
     override fun getRelevantOps() = _relevantOps
 
@@ -69,11 +73,9 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Asked Alex, and he said we always use "begin" for special TX (unless we are wrapping up something)
      * so we only add them here (if we have any).
      */
-    override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
-        return when (position) {
-            SpecialTransactionPosition.Begin -> true
-            SpecialTransactionPosition.End -> false
-        }
+    override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean = when (position) {
+        SpecialTransactionPosition.Begin -> true
+        SpecialTransactionPosition.End -> false
     }
 
     /**
@@ -87,12 +89,11 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @param bctx is the context of the anchor chain (but without BC RID)
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        val retList = mutableListOf<OpData>()
-
         verifySameChainId(bctx, myChainRid!!)
         val pipes = this.icmfReceiver!!.getRelevantPipes()
 
         // Extract all packages from all pipes
+        val retList = mutableListOf<OpData>()
         for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
                 handlePipe(pipe, retList, bctx)
@@ -129,14 +130,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         }
     }
 
-    private fun getLastAnchoredHeight(blockchainRID: BlockchainRid): Long {
-        val tmpBlockInfo = getLastAnchoredBlock(blockchainRID)
-        return if (tmpBlockInfo == null) {
-            -1
-        } else {
-            tmpBlockInfo.height
-        }
-    }
+    private fun getLastAnchoredHeight(blockchainRID: BlockchainRid): Long =
+        getLastAnchoredBlock(blockchainRID)?.height ?: -1
 
     /**
      * Transform to [IcmfPacket] to [OpData] put arguments in correct order
@@ -144,7 +139,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @param icmfPackage is what we get from ICMF
      * @return is the [OpData] we can use to create a special TX.
      */
-    fun buildOpData(icmfPackage: IcmfPacket): OpData {
+    private fun buildOpData(icmfPackage: IcmfPacket): OpData {
         val gtvHeaderMsg = icmfPackage.blockHeader // We don't care about any messages, only the header
         val headerMsg =
             BlockHeaderDataFactory.buildFromGtv(gtvHeaderMsg) // Yes, a bit expensive going back and forth between GTV and Domain objects like this
@@ -173,7 +168,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
         // Go through it chain by chain
         for (bcRid in chainHeadersMap.keys) {
-            // Each chain must be validated by itself b/c we must now look for gaps in the blocks etc
+            // Each chain must be validated by itself b/c we must now look for gaps in the blocks etc.
             // and we pass that task to the [GenericBlockHeaderValidator]
             val minimalHeaders = chainHeadersMap[bcRid]
             if (minimalHeaders != null) {
@@ -184,7 +179,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
                                 bcRid,
                                 minimalHeaders
                             ).message
-                        }")
+                        }"
+                    )
                     return false
                 }
             }
@@ -367,11 +363,10 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             Pair("blockchain_rid", gtv(bcRidByteArr))
         )
         val block = blockQueries!!.query("get_last_anchored_block", args).get()
-
         return if (block == GtvNull) {
             null
         } else {
-            buildReply(block, bcRid)
+            TempBlockInfo.fromBlock(block, bcRid)
         }
     }
 
@@ -392,28 +387,11 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         return if (block == GtvNull) {
             null
         } else {
-            buildReply(block, bcRid)
+            TempBlockInfo.fromBlock(block, bcRid)
         }
     }
 
-    private fun buildReply(
-        block: Gtv,
-        bcRid: BlockchainRid
-    ): TempBlockInfo {
-        val gtvDict = block.asDict()
-        val blockRid = gtvDict["block_rid"]!!.asByteArray()
-        val bRid = BlockRid(blockRid)
-        return TempBlockInfo(
-            bcRid,
-            bRid,
-            gtvDict["block_height"]!!.asInteger(),
-            gtvDict["status"]!!.asInteger()
-        )
-    }
-
-    private fun buildArgs(vararg args: Pair<String, Gtv>): Gtv {
-        return gtv(*args)
-    }
+    private fun buildArgs(vararg args: Pair<String, Gtv>): Gtv = gtv(*args)
 
     /**
      * Not really a domain object, just used to return some data
@@ -423,5 +401,20 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         val blockRid: BlockRid,
         val height: Long,
         val status: Long
-    )
+    ) {
+        companion object {
+            fun fromBlock(
+                block: Gtv,
+                bcRid: BlockchainRid
+            ): TempBlockInfo {
+                val gtvDict = block.asDict()
+                return TempBlockInfo(
+                    bcRid,
+                    BlockRid(gtvDict["block_rid"]!!.asByteArray()),
+                    gtvDict["block_height"]!!.asInteger(),
+                    gtvDict["status"]!!.asInteger()
+                )
+            }
+        }
+    }
 }
