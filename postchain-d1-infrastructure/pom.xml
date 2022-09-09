@@ -45,20 +45,28 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>net.postchain.rell</groupId>
-            <artifactId>rell</artifactId>
-            <version>0.10.11-SNAPSHOT</version>
-            <scope>test</scope>
-        </dependency>
-
         <!-- We want access to integration test setup classes -->
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-devtools</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>net.postchain.rell</groupId>
+            <artifactId>rell</artifactId>
+            <version>0.10.11-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>rellr</id>
+            <name>Rell Runtime Registry</name>
+            <url>https://gitlab.com/api/v4/projects/32802097/packages/maven</url>
+        </repository>
+    </repositories>
 
     <build>
         <sourceDirectory>src/main/kotlin</sourceDirectory>

@@ -2,10 +2,11 @@ package net.postchain.d1.icmf.integration
 
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
-import net.postchain.d1.icmf.IcmfTestTransaction
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.core.Transactor
+import net.postchain.core.TxEContext
 import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
 import net.postchain.d1.icmf.IcmfGTXModule
 import net.postchain.gtv.GtvFactory.gtv
@@ -13,6 +14,7 @@ import org.apache.commons.dbutils.QueryRunner
 import org.junit.jupiter.api.Test
 import net.postchain.d1.icmf.tableMessages
 import net.postchain.devtools.getModules
+import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.data.GTXTransactionBodyData
@@ -35,14 +37,10 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
 
         runXNodes(sysSetup)
 
-        val op = OpData("test_message", arrayOf())
-        val transactor = nodes[0].getModules(CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
-            ExtOpData.build(
-                op, 0, GTXTransactionBodyData(nodes[0].getBlockchainRid(CHAIN_ID.toLong())!!, arrayOf(op), arrayOf())
-            )
+        buildBlock(
+            CHAIN_ID.toLong(), 0, makeTransaction(0, OpData("test_message", arrayOf(gtv("test0")))),
+            makeTransaction(1, OpData("test_message", arrayOf(gtv("test1"))))
         )
-
-        buildBlock(CHAIN_ID.toLong(), 0, IcmfTestTransaction(0, transactor))
 
         for (node in nodes) {
             withReadConnection(node.postchainContext.storage, CHAIN_ID.toLong()) {
@@ -54,7 +52,7 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
                     "SELECT block_height, prev_message_block_height, topic FROM ${db.tableMessages(it)}",
                     MapListHandler()
                 )
-                assertEquals(1, res1.size)
+                assertEquals(2, res1.size)
                 assertEquals(0L, res1[0]["block_height"])
                 assertEquals(-1L, res1[0]["prev_message_block_height"])
                 assertEquals("my-topic", res1[0]["topic"])
@@ -64,8 +62,11 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
                 val decodedHeader = BlockHeaderDataFactory.buildFromBinary(blockHeader.rawData)
                 val expectedHash = cryptoSystem.digest(
-                    cryptoSystem.digest(GtvEncoder.encodeGtv(gtv("hej"))))
-
+                    cryptoSystem.digest(GtvEncoder.encodeGtv(gtv("test0")))
+                            + cryptoSystem.digest(
+                        GtvEncoder.encodeGtv(gtv("test1"))
+                    )
+                )
                 assertContentEquals(
                     expectedHash,
                     decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()["my-topic"]!!.asByteArray()
@@ -73,14 +74,37 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
 
                 val allMessages =
                     IcmfGTXModule.getAllMessages(Unit, it, gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
-                assertEquals(1, allMessages.asArray().size)
-                assertEquals("hej", allMessages.asArray()[0].asString())
+                assertEquals(2, allMessages.asArray().size)
+                assertEquals("test0", allMessages.asArray()[0].asString())
+                assertEquals("test1", allMessages.asArray()[1].asString())
 
                 val messages =
                     IcmfGTXModule.getMessages(Unit, it, gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
-                assertEquals(1, messages.asArray().size)
-                assertEquals("hej", messages.asArray()[0].asString())
+                assertEquals(2, messages.asArray().size)
+                assertEquals("test0", messages.asArray()[0].asString())
+                assertEquals("test1", messages.asArray()[1].asString())
             }
+        }
+    }
+
+    private fun makeTransaction(id: Int, op: OpData) =
+        IcmfTestTransaction(
+            id,
+            nodes[0].getModules(CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
+                ExtOpData.build(
+                    op,
+                    0,
+                    GTXTransactionBodyData(nodes[0].getBlockchainRid(CHAIN_ID.toLong())!!, arrayOf(op), arrayOf())
+                )
+            )
+        )
+
+    class IcmfTestTransaction(id: Int, val op: Transactor, good: Boolean = true, correct: Boolean = true) :
+        TestTransaction(id, good, correct) {
+        override fun apply(ctx: TxEContext): Boolean {
+            op.isCorrect()
+            op.apply(ctx)
+            return true
         }
     }
 }

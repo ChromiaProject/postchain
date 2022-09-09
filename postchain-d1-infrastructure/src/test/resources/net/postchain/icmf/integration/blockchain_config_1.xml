@@ -48,15 +48,15 @@
                     <entry key="sources">
                         <dict>
                             <entry key="icmf/module.rell">
-                            <string>module;
+                            <string><![CDATA[module;
                                 function send_message(topic: text, body: gtv) {
                                   op_context.emit_event("icmf", (topic = topic, body = body).to_gtv_pretty());
                                 }
 
-                                operation test_message() {
-                                    send_message("my-topic", "hej".to_gtv());
+                                operation test_message(text) {
+                                    send_message("my-topic", text.to_gtv());
                                 }
-                            </string>
+                            ]]></string>
                             </entry>
                         </dict>
                     </entry>
