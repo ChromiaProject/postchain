@@ -3,10 +3,10 @@
 package net.postchain.client.core
 
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.SigMaker
+import net.postchain.crypto.KeyPair
 
 interface PostchainNodeResolver {
     fun getNodeURL(blockchainRID: BlockchainRid): String
 }
 
-class DefaultSigner(val sigMaker: SigMaker, val pubkey: ByteArray)
+class DefaultSigner(val keyPair: KeyPair)

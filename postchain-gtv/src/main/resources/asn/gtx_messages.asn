@@ -2,20 +2,28 @@ GtxMessages DEFINITIONS ::= BEGIN
 
 IMPORTS RawGtv FROM GtvMessages;
 
-	RawGtxOp ::= SEQUENCE {
-		name UTF8String,
-		args SEQUENCE OF RawGtv
+    -- All types are using the same tags as RawGtv to make gtv<->gtx encoding equivalent
+
+    -- Gtx operation
+    --  [ string, [ gtv ] ]
+	RawGtxOp ::= [5] EXPLICIT SEQUENCE {
+		name [2] EXPLICIT UTF8String, -- RawGtv { string } --
+		args [5] EXPLICIT SEQUENCE OF RawGtv -- RawGtv { array } --
 	}
 
-	RawGtxBody ::= SEQUENCE {
-		blockchainRid OCTET STRING,
-		operations SEQUENCE OF RawGtxOp,
-		signers SEQUENCE OF OCTET STRING
+    -- Gtx Body
+    -- [ bytearray, [ gtxOp ], [ bytearray ] ]
+	RawGtxBody ::= [5] EXPLICIT SEQUENCE {
+		blockchainRid [1] EXPLICIT OCTET STRING, -- RawGtv { bytearray } --
+		operations [5] EXPLICIT SEQUENCE OF RawGtxOp,
+		signers [5] EXPLICIT SEQUENCE OF [1] EXPLICIT OCTET STRING -- RawGtv { bytearray} --
 	}
-	
-	RawGtx ::= SEQUENCE {
+
+	-- Gtx
+	-- [ gtxBody, [ bytearray] ]
+	RawGtx ::= [5] EXPLICIT SEQUENCE {
 	    body RawGtxBody,
-		signatures SEQUENCE OF OCTET STRING
+		signatures [5] EXPLICIT SEQUENCE OF [1] EXPLICIT OCTET STRING -- RawGtv { bytearray } --
 	}
-	
+
 END
