@@ -42,18 +42,25 @@ class IcmfBlockBuilderExtension(val cryptoSystem: CryptoSystem) : BaseBlockBuild
             val queryRunner = QueryRunner()
             val prevMessageBlockHeight = queryRunner.query(
                 blockEContext.conn,
-                "SELECT block_height FROM ${tableMessages(blockEContext)} ORDER BY block_height DESC LIMIT 1",
+                "SELECT MAX(block_height) FROM ${tableMessage(blockEContext)}",
+                ScalarHandler<Long>()
+            ) ?: -1
+            var rowid = queryRunner.query(
+                blockEContext.conn,
+                "SELECT MAX(rowid) FROM ${tableMessage(blockEContext)}",
                 ScalarHandler<Long>()
             ) ?: -1
 
             for (event in queuedEvents) {
+                rowid++
                 queryRunner.update(
                     blockEContext.conn,
-                    """INSERT INTO ${tableMessages(blockEContext)}(block_height, prev_message_block_height, tx_iid, topic, body) 
-                           VALUES(?, ?, ?, ?, ?)""",
+                    """INSERT INTO ${tableMessage(blockEContext)}(rowid, transaction, block_height, prev_message_block_height, topic, body) 
+                           VALUES(?, ?, ?, ?, ?, ?)""",
+                    rowid,
+                    event.first,
                     blockEContext.height,
                     prevMessageBlockHeight,
-                    event.first,
                     event.second.topic,
                     GtvEncoder.encodeGtv(event.second.body)
                 )
