@@ -1,0 +1,34 @@
+entity icmf_messages_hash {
+    key topic: text,
+        sender: byte_array,
+        sender_height: integer;
+    anchor_height: integer;
+    hash: byte_array;
+    index topic, anchor_height;
+}
+
+struct topic_data {
+    hash: byte_array;
+    prev_message_block_height: integer;
+}
+
+function process_icmf(header: block_header) {
+    val icmf_data = map<text,topic_data>.from_gtv_pretty(header.extra["icmf_send"]);
+    for (topic in icmf_data.keys()) {
+        create icmf_messages_hash(
+            topic = topic,
+            sender = header.blockchain_rid,
+            sender_height = header.height,
+            anchor_height = op_context.block_height,
+            hash = icmf_data[topic].hash
+        );
+    }
+}
+
+query icmf_get_messages_hash(topic: text, sender: byte_array, sender_height: integer): byte_array? {
+    return icmf_messages_hash @? { topic, sender, sender_height } (.hash);
+}
+
+query icmf_get_messages_hash_since_height(topic: text, anchor_height: integer): list<struct<icmf_messages_hash>> {
+    return icmf_messages_hash @* { topic, .anchor_height >= anchor_height } ($.to_struct());
+}

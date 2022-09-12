@@ -40,9 +40,94 @@ This is a Anchor Chain configuration specifically for testing.
                 <array>
                     <!-- Note: we don't want GTXTestModule here, b/c we are not supposed to write any "normal" TXs -->
                     <string>net.postchain.d1.anchor.AnchorGTXModule</string> <!-- This is the Anchor module: essential!  -->
-                    <string>net.postchain.d1.anchor.AnchorTestGTXModule</string> <!-- This is the stand in for the missing Rell code.  -->
-                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                    <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
                 </array>
+            </entry>
+            <entry key="rell">
+                <dict>
+                    <entry key="modules">
+                        <array>
+                            <string>anchor</string>
+                        </array>
+                    </entry>
+                    <entry key="sources">
+                        <dict>
+                            <entry key="anchor/module.rell">
+                            <string><![CDATA[module;
+
+entity anchor_block {
+    key blockchain_rid: byte_array,
+        block_height: integer;
+    block_rid: byte_array;
+    status: integer;
+}
+
+struct block_header {
+    blockchain_rid: byte_array;
+    previous_block_rid: byte_array;
+    merkle_root_hash: byte_array;
+    timestamp: integer;
+    height: integer;
+    dependencies: gtv; // Can be either GtvNull or GtvArray
+    extra: map<text,gtv>;
+}
+
+struct topic_data {
+    hash: byte_array;
+    prev_message_block_height: integer;
+}
+
+operation __anchor_block_header(block_rid: byte_array, header: block_header, witness: byte_array) {
+    create anchor_block(blockchain_rid = header.blockchain_rid, block_height = header.height, block_rid = block_rid, status = 0);
+
+    process_icmf(header);
+}
+
+query get_last_anchored_block(blockchain_rid: byte_array): struct<anchor_block>? {
+    return anchor_block @? { blockchain_rid } (@omit @sort_desc .block_height, $.to_struct()) limit 1;
+}
+
+query get_anchored_block_at_height(blockchain_rid: byte_array, height: integer): struct<anchor_block>? {
+    return anchor_block @? { blockchain_rid, .block_height == height } ($.to_struct());
+}
+
+entity icmf_messages_hash {
+    key topic: text,
+        sender: byte_array,
+        sender_height: integer;
+    anchor_height: integer;
+    hash: byte_array;
+    index topic, anchor_height;
+}
+
+function process_icmf(header: block_header) {
+    val icmf_data = map<text,topic_data>.from_gtv_pretty(header.extra["icmf_send"]);
+    for (topic in icmf_data.keys()) {
+        create icmf_messages_hash(
+            topic = topic,
+            sender = header.blockchain_rid,
+            sender_height = header.height,
+            anchor_height = op_context.block_height,
+            hash = icmf_data[topic].hash
+        );
+    }
+}
+
+query icmf_get_messages_hash(topic: text, sender: byte_array, sender_height: integer): byte_array? {
+    return icmf_messages_hash @? { topic, sender, sender_height } (.hash);
+}
+
+query icmf_get_messages_hash_since_height(topic: text, anchor_height: integer): list<struct<icmf_messages_hash>> {
+    return icmf_messages_hash @* { topic, .anchor_height >= anchor_height } ($.to_struct());
+}
+]]></string>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="version">
+                        <string>0.10.11</string>
+                    </entry>
+                </dict>
             </entry>
         </dict>
     </entry>

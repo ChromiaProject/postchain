@@ -1,0 +1,32 @@
+module;
+
+entity anchor_block {
+    key blockchain_rid: byte_array,
+        block_height: integer;
+    block_rid: byte_array;
+    status: integer;
+}
+
+struct block_header {
+    blockchain_rid: byte_array;
+    previous_block_rid: byte_array;
+    merkle_root_hash: byte_array;
+    timestamp: integer;
+    height: integer;
+    dependencies: gtv; // Can be either GtvNull or GtvArray
+    extra: map<text,gtv>;
+}
+
+operation __anchor_block_header(block_rid: byte_array, header: block_header, witness: byte_array) {
+    create anchor_block(blockchain_rid = header.blockchain_rid, block_height = header.height, block_rid = block_rid, status = 0);
+
+    process_icmf(header);
+}
+
+query get_last_anchored_block(blockchain_rid: byte_array): struct<anchor_block>? {
+    return anchor_block @? { blockchain_rid } (@omit @sort_desc .block_height, $.to_struct()) limit 1;
+}
+
+query get_anchored_block_at_height(blockchain_rid: byte_array, height: integer): struct<anchor_block>? {
+    return anchor_block @? { blockchain_rid, .block_height == height } ($.to_struct());
+}
