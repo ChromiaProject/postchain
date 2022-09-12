@@ -3,11 +3,16 @@ package net.postchain.d1.anchor.integration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.core.EContext
+import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.TxCache
+import net.postchain.devtools.getModules
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
-import org.apache.commons.dbutils.handlers.MapListHandler
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
 import org.apache.commons.dbutils.QueryRunner
+import org.apache.commons.dbutils.handlers.MapListHandler
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -24,6 +29,9 @@ private const val ANCHOR_CHAIN_ID = 2 // Only for this test, we don't have a har
  * custom test module to give us the "__xxx" operations needed.
  */
 class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
+    companion object {
+        val messagesHash = ByteArray(32) { i -> i.toByte() }
+    }
 
     /**
      * Simple happy test to see that we can run 3 nodes with:
@@ -102,6 +110,51 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
             assertContentEquals(blockchainRID.data, res[3]["blockchain_rid"] as ByteArray)
             assertEquals(3L, res[3]["block_height"])
             assertEquals(0L, res[3]["status"])
+
+            val hash =
+                query(
+                    nodes[0],
+                    it,
+                    "icmf_get_messages_hash",
+                    gtv(
+                        mapOf(
+                            "topic" to gtv("my-topic"),
+                            "sender" to gtv(blockchainRID.data),
+                            "sender_height" to gtv(0)
+                        )
+                    )
+                ).asByteArray()
+            assertContentEquals(messagesHash, hash)
+
+            val hashes =
+                query(
+                    nodes[0],
+                    it,
+                    "icmf_get_messages_hash_since_height",
+                    gtv(
+                        mapOf(
+                            "topic" to gtv("my-topic"),
+                            "anchor_height" to gtv(0)
+                        )
+                    )
+                ).asArray()
+            assertEquals(4, hashes.size)
+            assertContentEquals(blockchainRID.data, hashes[0]["sender"]!!.asByteArray())
+            assertEquals(0L, hashes[0]["sender_height"]!!.asInteger())
+            assertContentEquals(messagesHash, hashes[0]["hash"]!!.asByteArray())
+            assertContentEquals(blockchainRID.data, hashes[1]["sender"]!!.asByteArray())
+            assertEquals(1L, hashes[1]["sender_height"]!!.asInteger())
+            assertContentEquals(messagesHash, hashes[1]["hash"]!!.asByteArray())
+            assertContentEquals(blockchainRID.data, hashes[2]["sender"]!!.asByteArray())
+            assertEquals(2L, hashes[2]["sender_height"]!!.asInteger())
+            assertContentEquals(messagesHash, hashes[3]["hash"]!!.asByteArray())
+            assertContentEquals(blockchainRID.data, hashes[3]["sender"]!!.asByteArray())
+            assertEquals(3L, hashes[3]["sender_height"]!!.asInteger())
+            assertContentEquals(messagesHash, hashes[3]["hash"]!!.asByteArray())
         }
     }
+
+    private fun query(node: PostchainTestNode, ctxt: EContext, name: String, args: Gtv): Gtv =
+        node.getModules(ANCHOR_CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!
+            .query(ctxt, name, args)
 }
