@@ -72,6 +72,11 @@ struct block_header {
     extra: map<text,gtv>;
 }
 
+struct topic_data {
+    hash: byte_array;
+    prev_message_block_height: integer;
+}
+
 operation __anchor_block_header(block_rid: byte_array, header: block_header, witness: byte_array) {
     create anchor_block(blockchain_rid = header.blockchain_rid, block_height = header.height, block_rid = block_rid, status = 0);
 
@@ -96,14 +101,14 @@ entity icmf_messages_hash {
 }
 
 function process_icmf(header: block_header) {
-    val icmf_data = map<text,byte_array>.from_gtv(header.extra["icmf_send"]);
+    val icmf_data = map<text,topic_data>.from_gtv_pretty(header.extra["icmf_send"]);
     for (topic in icmf_data.keys()) {
         create icmf_messages_hash(
             topic = topic,
             sender = header.blockchain_rid,
             sender_height = header.height,
             anchor_height = op_context.block_height,
-            hash = icmf_data[topic]
+            hash = icmf_data[topic].hash
         );
     }
 }

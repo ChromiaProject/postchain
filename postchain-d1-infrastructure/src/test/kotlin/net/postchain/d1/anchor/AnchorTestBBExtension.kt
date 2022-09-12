@@ -13,6 +13,17 @@ class AnchorTestBBExtension : BaseBlockBuilderExtension {
     }
 
     override fun finalize(): Map<String, Gtv> {
-        return mapOf("icmf_send" to gtv(mapOf("my-topic" to gtv(AnchorIntegrationTest.messagesHash))))
+        return mapOf(
+            "icmf_send" to gtv(
+                mapOf(
+                    "my-topic" to gtv(
+                        mapOf(
+                            "hash" to gtv(AnchorIntegrationTest.messagesHash),
+                            "prev_message_block_height" to gtv(-1)
+                        )
+                    )
+                )
+            )
+        )
     }
 }
