@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-private const val CHAIN_ID = 1
+private const val DAPP_CHAIN_ID = 1
 private const val ANCHOR_CHAIN_ID = 2 // Only for this test, we don't have a hard ID for anchoring.
 
 /**
@@ -41,7 +41,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
     @Test
     fun happyAnchor() {
         val mapBcFiles: Map<Int, String> = mapOf(
-            CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_1.xml",
+            DAPP_CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_1.xml",
             ANCHOR_CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_2_anchor.xml"
         )
 
@@ -66,7 +66,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
         // Only for chain 1 see "shouldHaveNormalTx" setting
         runXNodesAssertions(4, 5, sysSetup, txCache)
 
-        val blockchainRID: BlockchainRid = sysSetup.blockchainMap[CHAIN_ID]!!.rid
+        val blockchainRID: BlockchainRid = sysSetup.blockchainMap[DAPP_CHAIN_ID]!!.rid
 
         // --------------------
         // ChainId = 2: Check that we begin with nothing
