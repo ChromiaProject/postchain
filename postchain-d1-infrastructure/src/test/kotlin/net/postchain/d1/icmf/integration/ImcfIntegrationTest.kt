@@ -18,9 +18,9 @@ import net.postchain.devtools.getModules
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtx.GtxBody
+import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
-import net.postchain.gtx.data.GTXTransactionBodyData
-import net.postchain.gtx.data.OpData
 import org.apache.commons.dbutils.handlers.MapListHandler
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -40,8 +40,8 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
         runXNodes(sysSetup)
 
         buildBlock(
-            CHAIN_ID.toLong(), 0, makeTransaction(nodes[0], 0, OpData("test_message", arrayOf(gtv("test0")))),
-            makeTransaction(nodes[0], 1, OpData("test_message", arrayOf(gtv("test1"))))
+            CHAIN_ID.toLong(), 0, makeTransaction(nodes[0], 0, GtxOp("test_message", gtv("test0"))),
+            makeTransaction(nodes[0], 1, GtxOp("test_message", gtv("test1")))
         )
 
         for (node in nodes) {
@@ -92,14 +92,14 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
     private fun query(node: PostchainTestNode, ctxt: EContext, name: String, args: Gtv): Gtv =
         node.getModules(CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!.query(ctxt, name, args)
 
-    private fun makeTransaction(node: PostchainTestNode, id: Int, op: OpData) =
+    private fun makeTransaction(node: PostchainTestNode, id: Int, op: GtxOp) =
         IcmfTestTransaction(
             id,
             node.getModules(CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
                 ExtOpData.build(
                     op,
                     0,
-                    GTXTransactionBodyData(node.getBlockchainRid(CHAIN_ID.toLong())!!, arrayOf(op), arrayOf())
+                    GtxBody(node.getBlockchainRid(CHAIN_ID.toLong())!!, arrayOf(op), arrayOf())
                 )
             )
         )
