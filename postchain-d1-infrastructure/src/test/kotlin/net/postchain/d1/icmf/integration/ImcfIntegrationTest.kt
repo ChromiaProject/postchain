@@ -51,12 +51,11 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
 
                 val res1 = queryRunner.query(
                     it.conn,
-                    "SELECT block_height, prev_message_block_height, topic FROM ${db.tableMessage(it)}",
+                    "SELECT block_height, topic FROM ${db.tableMessage(it)}",
                     MapListHandler()
                 )
                 assertEquals(2, res1.size)
                 assertEquals(0L, res1[0]["block_height"])
-                assertEquals(-1L, res1[0]["prev_message_block_height"])
                 assertEquals("my-topic", res1[0]["topic"])
 
                 val blockQueries = node.getBlockchainInstance(CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
@@ -69,10 +68,13 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
                         GtvEncoder.encodeGtv(gtv("test1"))
                     )
                 )
+                val topicHeader = decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()["my-topic"]!!.asDict()
                 assertContentEquals(
                     expectedHash,
-                    decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()["my-topic"]!!.asByteArray()
+                    topicHeader["hash"]!!.asByteArray()
                 )
+                // TODO test other values for previous height
+                assertEquals(-1, topicHeader["prev_message_block_height"]!!.asInteger())
 
                 val allMessages =
                     query(node, it, "icmf_get_all_messages", gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))

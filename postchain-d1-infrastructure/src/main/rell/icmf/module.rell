@@ -4,7 +4,6 @@ module;
 entity sent_icmf_message {
     topic: text;
     block_height: integer;
-    prev_message_block_height: integer;
     body: byte_array;
     index topic, block_height;
 }
@@ -18,5 +17,9 @@ query icmf_get_messages(topic: text, height: integer): list<gtv> {
 }
 
 function send_message(topic: text, body: gtv) {
-    op_context.emit_event("icmf", (topic = topic, body = body).to_gtv_pretty());
+    create sent_icmf_message(
+        topic = topic,
+        block_height = op_context.block_height,
+        body = body.to_bytes()
+    );
 }
