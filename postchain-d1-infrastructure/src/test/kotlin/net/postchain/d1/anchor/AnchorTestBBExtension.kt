@@ -12,6 +12,6 @@ class AnchorTestBBExtension : BaseBlockBuilderExtension {
     }
 
     override fun finalize(): Map<String, Gtv> {
-        return mapOf("icmf_send" to gtv(mapOf("my-topic" to gtv(ByteArray(0)))))
+        return mapOf("icmf_send" to gtv(mapOf("my-topic" to gtv(ByteArray(32)))))
     }
 }
