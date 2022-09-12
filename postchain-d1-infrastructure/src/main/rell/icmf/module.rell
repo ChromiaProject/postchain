@@ -1,7 +1,7 @@
 module;
 
 @log
-entity icmf_message {
+entity sent_icmf_message {
     topic: text;
     block_height: integer;
     prev_message_block_height: integer;
@@ -10,11 +10,11 @@ entity icmf_message {
 }
 
 query icmf_get_all_messages(topic: text, height: integer): list<gtv> {
-    return icmf_message @* { topic, .block_height >= height } ( gtv.from_bytes(.body) );
+    return sent_icmf_message @* { topic, .block_height >= height } ( gtv.from_bytes(.body) );
 }
 
 query icmf_get_messages(topic: text, height: integer): list<gtv> {
-    return icmf_message @* { topic, .block_height == height } ( gtv.from_bytes(.body) );
+    return sent_icmf_message @* { topic, .block_height == height } ( gtv.from_bytes(.body) );
 }
 
 function send_message(topic: text, body: gtv) {
