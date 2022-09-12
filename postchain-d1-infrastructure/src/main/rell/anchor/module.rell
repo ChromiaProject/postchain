@@ -1,9 +1,9 @@
 module;
 
 entity anchor_block {
-    blockchain_rid: byte_array;
+    key blockchain_rid: byte_array,
+        block_height: integer;
     block_rid: byte_array;
-    block_height: integer;
     status: integer;
 }
 
@@ -18,7 +18,7 @@ struct block_header {
 }
 
 operation __anchor_block_header(block_rid: byte_array, header: block_header, witness: byte_array) {
-    create anchor_block(blockchain_rid = header.blockchain_rid, block_rid = block_rid, block_height = header.height, status = 0);
+    create anchor_block(blockchain_rid = header.blockchain_rid, block_height = header.height, block_rid = block_rid, status = 0);
 
     process_icmf(header);
 }
