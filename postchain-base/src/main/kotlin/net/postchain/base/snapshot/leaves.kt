@@ -5,6 +5,7 @@ package net.postchain.base.snapshot
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.data.Hash
 import net.postchain.core.BlockEContext
+import net.postchain.core.TxEContext
 
 /**
  * The name "Leaf" comes from the idea that these data objects CAN be leafs of a bigger three, where we
@@ -16,15 +17,15 @@ class LeafStore {
     /**
      * Stores the event
      *
-     * @param blockEContext is the context (including block height)
+     * @param txEContext is the context (including block height and tx_iid)
      * @param prefix is what the state will be used for, for example "eif" or "icmf"
      * @param position position of event in block (e.g. 0 is for first event, etc)
      * @param hash is the hash of the data
      * @param data is the binary data
      */
-    fun writeEvent(blockEContext: BlockEContext, prefix: String, position: Long, hash: Hash, data: ByteArray) {
-        val db = DatabaseAccess.of(blockEContext)
-        db.insertEvent(blockEContext, prefix, blockEContext.height, position, hash, data)
+    fun writeEvent(txEContext: TxEContext, prefix: String, position: Long, hash: Hash, data: ByteArray) {
+        val db = DatabaseAccess.of(txEContext)
+        db.insertEvent(txEContext, prefix, txEContext.height, position, hash, data)
     }
 
     /**

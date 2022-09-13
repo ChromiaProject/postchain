@@ -88,7 +88,7 @@ interface DatabaseAccess {
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 
     // Event and State
-    fun insertEvent(ctx: EContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
+    fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
     fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): EventInfo?
     fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>

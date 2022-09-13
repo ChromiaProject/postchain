@@ -48,6 +48,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " block_height BIGINT NOT NULL," +
                 " position BIGINT NOT NULL," +
                 " hash BYTEA NOT NULL," +
+                " tx_iid BIGINT NOT NULL REFERENCES ${tableTransactions(ctx)}(tx_iid), " +
                 " data BYTEA NOT NULL," +
                 " UNIQUE (hash))"
     }
@@ -168,7 +169,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
      * @param prefix is what the state will be used for, for example "eif" or "icmf"
      */
     override fun cmdInsertEvent(ctx: EContext, prefix: String): String {
-        return "INSERT INTO ${tableEventLeafs(ctx, prefix)} (block_height, position, hash, data) " + "VALUES (?, ?,  ?, ?)"
+        return "INSERT INTO ${tableEventLeafs(ctx, prefix)} (block_height, position, hash, tx_iid, data) " + "VALUES (?, ?, ?, ?, ?)"
     }
 
     /**
