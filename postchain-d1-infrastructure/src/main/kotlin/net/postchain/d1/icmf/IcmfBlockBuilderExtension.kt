@@ -55,11 +55,11 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension {
                 .mapValues { messages -> messages.value.map { message -> cryptoSystem.digest(message["body"] as ByteArray) } }
             val hashByTopic = hashesByTopic
                 .mapValues {
-                    gtv(mapOf("hash" to gtv(cryptoSystem.digest(it.value.fold(ByteArray(0)) { total, item ->
+                    TopicHeaderData(cryptoSystem.digest(it.value.fold(ByteArray(0)) { total, item ->
                         total.plus(
                             item
                         )
-                    })), "prev_message_block_height" to gtv(prevMessageBlockHeight)))
+                    }), prevMessageBlockHeight).toGtv()
                 }
             return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic))
         }

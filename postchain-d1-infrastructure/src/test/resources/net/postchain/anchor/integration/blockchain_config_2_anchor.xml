@@ -96,9 +96,10 @@ entity icmf_messages_height {
     index topic, anchor_height;
 }
 
-struct signed_block_header {
+struct signed_block_header_with_anchor_height {
     block_header: byte_array;
     witness: byte_array;
+    anchor_height: integer;
 }
 
 function process_icmf(header: block_header) {
@@ -113,10 +114,10 @@ function process_icmf(header: block_header) {
     }
 }
 
-query icmf_get_headers_with_messages_since_height(topic: text, anchor_height: integer): list<signed_block_header> {
+query icmf_get_headers_with_messages_since_height(topic: text, anchor_height: integer): list<signed_block_header_with_anchor_height> {
     return (m: icmf_messages_height, a: anchor_block) @*
         { a.blockchain_rid == m.sender, a.block_height == m.sender_height, topic, .anchor_height >= anchor_height }
-        (signed_block_header(block_header = a.block_header, witness = a.witness), @omit @sort m.rowid);
+        (signed_block_header_with_anchor_height(block_header = a.block_header, witness = a.witness, anchor_height = m.anchor_height), @omit @sort m.rowid);
 }
 ]]></string>
                             </entry>

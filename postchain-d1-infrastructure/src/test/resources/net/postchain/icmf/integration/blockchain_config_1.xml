@@ -59,11 +59,11 @@ entity sent_icmf_message {
 }
 
 query icmf_get_all_messages(topic: text, height: integer): list<gtv> {
-    return sent_icmf_message @* { topic, .block_height >= height } ( gtv.from_bytes(.body) );
+    return sent_icmf_message @* { topic, .block_height >= height } ( gtv.from_bytes(.body), @omit @sort .rowid );
 }
 
 query icmf_get_messages(topic: text, height: integer): list<gtv> {
-    return sent_icmf_message @* { topic, .block_height == height } ( gtv.from_bytes(.body) );
+    return sent_icmf_message @* { topic, .block_height == height } ( gtv.from_bytes(.body), @omit @sort .rowid );
 }
 
 function send_message(topic: text, body: gtv) {
