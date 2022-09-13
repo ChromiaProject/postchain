@@ -3,8 +3,9 @@
 package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
-import net.postchain.common.BlockchainRid
+import net.postchain.base.snapshot.Page
 import net.postchain.common.data.Hash
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.*
 import net.postchain.core.block.BlockHeader
@@ -87,14 +88,17 @@ interface DatabaseAccess {
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 
     // Event and State
-    fun insertEvent(ctx: EContext, prefix: String, height: Long, hash: Hash, data: ByteArray)
-    fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): EventInfo?
+    fun insertEvent(ctx: EContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
+    fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): EventInfo?
     fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun pruneEvents(ctx: EContext, prefix: String, height: Long)
     fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray)
     fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): AccountState?
     fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, height: Long)
+    fun insertPage(ctx: EContext, name: String, page: Page)
+    fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page?
+    fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int
 
     // Peers
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
@@ -119,6 +123,9 @@ interface DatabaseAccess {
     // To be able to create tables not automatically created by the system
     // (most mandatory tables are not "creatable")
     fun createEventLeafTable(ctx: EContext, prefix: String) // Note: Not used by anchoring
+    fun createPageTable(ctx: EContext, prefix: String)
+    fun createStateLeafTable(ctx: EContext, prefix: String)
+    fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int)
 
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {
