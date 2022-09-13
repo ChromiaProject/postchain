@@ -49,7 +49,8 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " position BIGINT NOT NULL," +
                 " hash BYTEA NOT NULL," +
                 " tx_iid BIGINT NOT NULL REFERENCES ${tableName(ctx, "transactions")}(tx_iid), " +
-                " data BYTEA NOT NULL)"
+                " data BYTEA NOT NULL," +
+                " UNIQUE (hash))"
     }
 
      override fun cmdCreateTableState(ctx: EContext, prefix: String): String {
@@ -59,6 +60,12 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                  " state_n BIGINT NOT NULL, " +
                  " data BYTEA NOT NULL)"
      }
+
+    override fun cmdCreateIndexTableState(ctx: EContext, prefix: String, index: Int): String {
+        return "CREATE INDEX IF NOT EXISTS ${indexTableStateLeafs(ctx, prefix, index)}" +
+                " ON ${tableStateLeafs(ctx, prefix)} USING btree" +
+                " (block_height DESC, state_n DESC)"
+    }
 
     override fun cmdCreateTablePage(ctx: EContext, name: String): String {
         return "CREATE TABLE IF NOT EXISTS ${tablePages(ctx, name)}" +

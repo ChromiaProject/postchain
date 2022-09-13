@@ -141,7 +141,7 @@ class TestLauncher : IntegrationTestSetup() {
             for ((txIdx, txXml) in block.transaction.withIndex()) {
                 try {
                     val gtxData = GTXMLTransactionParser.parseGTXMLTransaction(txXml, txContext, cryptoSystem)
-                    val tx = enqueueTx(node, gtxData.serialize(), blockNum)
+                    val tx = enqueueTx(node, gtxData.encode(), blockNum)
                     enqueued.add(EnqueuedTx(
                             txIdx.toLong(), tx!!.getRID(), txXml.isFailure
                     ))
