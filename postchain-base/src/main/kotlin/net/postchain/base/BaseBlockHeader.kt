@@ -3,7 +3,6 @@
 package net.postchain.base
 
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
@@ -33,7 +32,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
     val blockHeightDependencyArray: Array<Hash?>
     val extraData: Map<String, Gtv>
     val timestamp: Long get() = blockHeaderRec.getTimestamp()
-    val blockHeaderRec: BlockHeaderData = BlockHeaderDataFactory.buildFromBinary(rawData)
+    val blockHeaderRec: BlockHeaderData = BlockHeaderData.fromBinary(rawData)
 
     init {
         prevBlockRID = blockHeaderRec.getPreviousBlockRid()
@@ -74,7 +73,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
             timestamp: Long,
             extraData: Map<String, Gtv>
         ): BaseBlockHeader {
-            val gtvBhd = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, rootHash, timestamp, extraData)
+            val gtvBhd = BlockHeaderData.fromDomainObjects(iBlockData, rootHash, timestamp, extraData)
 
             val raw = GtvEncoder.encodeGtv(gtvBhd.toGtv())
             return BaseBlockHeader(raw, cryptoSystem)

@@ -6,6 +6,7 @@ import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.block.InitialBlockData
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 
@@ -85,17 +86,42 @@ data class BlockHeaderData(
     }
 
     companion object {
+        fun fromBinary(rawData: ByteArray): BlockHeaderData {
+            val gtv: Gtv = GtvDecoder.decodeGtv(rawData)
+            return fromGtv(gtv)
+        }
 
-        fun fromGtv(gtv: GtvArray): BlockHeaderData {
-            return BlockHeaderData(
-                    gtv[0] as GtvByteArray,
-                    gtv[1] as GtvByteArray,
-                    gtv[2] as GtvByteArray,
-                    gtv[3] as GtvInteger,
-                    gtv[4] as GtvInteger,
-                    gtv[5],
-                    gtv[6] as GtvDictionary)
+        fun fromGtv(gtv: Gtv): BlockHeaderData = BlockHeaderData(
+                gtv[0] as GtvByteArray,
+                gtv[1] as GtvByteArray,
+                gtv[2] as GtvByteArray,
+                gtv[3] as GtvInteger,
+                gtv[4] as GtvInteger,
+                gtv[5],
+                gtv[6] as GtvDictionary)
+
+        fun fromDomainObjects(iBlockData: InitialBlockData, rootHash: ByteArray, timestamp: Long, extraData: Map<String, Gtv>): BlockHeaderData {
+            val gtvBlockchainRid: GtvByteArray = gtv(iBlockData.blockchainRid.data)
+            val previousBlockRid: GtvByteArray = gtv(iBlockData.prevBlockRID)
+            val merkleRootHash: GtvByteArray = gtv(rootHash)
+            val gtvTimestamp: GtvInteger = gtv(timestamp)
+            val height: GtvInteger = gtv(iBlockData.height)
+            val dependencies: Gtv = translateArrayOfHashToGtv(iBlockData.blockHeightDependencyArr)
+            val extra = GtvDictionary.build(extraData)
+
+            return BlockHeaderData(gtvBlockchainRid, previousBlockRid, merkleRootHash, gtvTimestamp, height, dependencies, extra)
+        }
+
+        private fun translateArrayOfHashToGtv(hashArr: Array<Hash?>?): Gtv = if (hashArr != null) {
+            gtv(hashArr.map {
+                if (it != null) {
+                    gtv(it)
+                } else {
+                    GtvNull
+                }
+            })
+        } else {
+            GtvNull
         }
     }
-
 }
