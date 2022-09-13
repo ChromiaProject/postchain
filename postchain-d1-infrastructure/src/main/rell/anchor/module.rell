@@ -17,6 +17,7 @@ struct block_header {
     extra: map<text,gtv>;
 }
 
+// TODO save whole block_header and witness for verification
 operation __anchor_block_header(block_rid: byte_array, header: block_header, witness: byte_array) {
     create anchor_block(blockchain_rid = header.blockchain_rid, block_height = header.height, block_rid = block_rid, status = 0);
 

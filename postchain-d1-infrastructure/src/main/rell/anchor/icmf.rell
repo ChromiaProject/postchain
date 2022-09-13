@@ -25,6 +25,7 @@ function process_icmf(header: block_header) {
     }
 }
 
+// TODO return whole block_header and witness for verification
 query icmf_get_messages_hash(topic: text, sender: byte_array, sender_height: integer): byte_array? {
     return icmf_messages_hash @? { topic, sender, sender_height } (.hash);
 }
