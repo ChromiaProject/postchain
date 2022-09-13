@@ -27,7 +27,7 @@ data class IcmfPacket(
 
     companion object {
         /**
-         * @return a [IcmfPackage] without messages (Anchoring can use this)
+         * @return a [IcmfPacket] without messages (Anchoring can use this)
          */
         fun build(height: Long, blockRid: Gtv, header: Gtv, witness: Gtv): IcmfPacket {
             return IcmfPacket(gtv(height),

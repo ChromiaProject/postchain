@@ -356,7 +356,7 @@ Context<y:LabelModel><y:SmartNodeLabelModel distance="4.0"/></y:LabelModel><y:Mo
             <y:AttributeLabel xml:space="preserve">sourceChainIid: Long
 targetChainIid: Long</y:AttributeLabel>
             <y:MethodLabel xml:space="preserve">push(height: Long)
-pull(): IcmfPackage? 
+pull(): IcmfPacket?
 isEmpty(): Boolean</y:MethodLabel>
           </y:UML>
         </y:UMLClassNode>
