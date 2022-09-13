@@ -48,7 +48,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " block_height BIGINT NOT NULL," +
                 " position BIGINT NOT NULL," +
                 " hash BYTEA NOT NULL," +
-                " tx_iid BIGINT NOT NULL REFERENCES ${tableName(ctx, "transactions")}(tx_iid), " +
+                " tx_iid BIGINT NOT NULL REFERENCES ${tableTransactions(ctx)}(tx_iid), " +
                 " data BYTEA NOT NULL," +
                 " UNIQUE (hash))"
     }
