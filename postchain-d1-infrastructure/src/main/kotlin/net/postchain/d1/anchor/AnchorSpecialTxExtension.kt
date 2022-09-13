@@ -115,10 +115,10 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         val blockchainRid = pipe.id.brid
         var currentHeight: Long = getLastAnchoredHeight(blockchainRid)
         while (pipe.mightHaveNewPackets()) {
-            val icmfPackage = pipe.fetchNext(currentHeight)
-            if (icmfPackage != null) {
-                retList.add(buildOpData(icmfPackage))
-                pipe.markTaken(icmfPackage.height, bctx)
+            val icmfPacket = pipe.fetchNext(currentHeight)
+            if (icmfPacket != null) {
+                retList.add(buildOpData(icmfPacket))
+                pipe.markTaken(icmfPacket.height, bctx)
                 currentHeight++ // Try next height
                 counter++
             } else {
@@ -136,16 +136,16 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     /**
      * Transform to [IcmfPacket] to [OpData] put arguments in correct order
      *
-     * @param icmfPackage is what we get from ICMF
+     * @param icmfPacket is what we get from ICMF
      * @return is the [OpData] we can use to create a special TX.
      */
-    private fun buildOpData(icmfPackage: IcmfPacket): OpData {
-        val gtvHeaderMsg = icmfPackage.blockHeader // We don't care about any messages, only the header
+    private fun buildOpData(icmfPacket: IcmfPacket): OpData {
+        val gtvHeaderMsg = icmfPacket.blockHeader // We don't care about any messages, only the header
         val headerMsg =
             BlockHeaderDataFactory.buildFromGtv(gtvHeaderMsg) // Yes, a bit expensive going back and forth between GTV and Domain objects like this
-        val witnessBytes: ByteArray = icmfPackage.witness.asByteArray()
+        val witnessBytes: ByteArray = icmfPacket.witness.asByteArray()
 
-        val gtvBlockRid: Gtv = icmfPackage.blockRid
+        val gtvBlockRid: Gtv = icmfPacket.blockRid
         val gtvHeader: Gtv = headerMsg.toGtv()
         val gtvWitness = GtvByteArray(witnessBytes)
 
