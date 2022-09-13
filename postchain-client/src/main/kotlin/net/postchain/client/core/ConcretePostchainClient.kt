@@ -18,9 +18,9 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
-import net.postchain.gtv.GtvNull
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
@@ -34,7 +34,7 @@ import java.util.concurrent.CompletionException
 import java.util.concurrent.CompletionStage
 
 data class Tx(val tx: String)
-data class TxStatus(val status: String?)
+data class TxStatus(val status: String?, val rejectReason: String?)
 data class Queries(val queries: List<String>)
 data class ErrorResponse(val error: String)
 
@@ -52,7 +52,13 @@ class ConcretePostchainClient(
 
     override fun transactionBuilder() = transactionBuilder(config.signers)
 
-    override fun transactionBuilder(signers: List<KeyPair>) = TransactionBuilder(this, config.blockchainRid, signers.map { it.pubKey.key }, signers.map { it.sigMaker(cryptoSystem) }, cryptoSystem)
+    override fun transactionBuilder(signers: List<KeyPair>) = TransactionBuilder(
+        this,
+        config.blockchainRid,
+        signers.map { it.pubKey.key },
+        signers.map { it.sigMaker(cryptoSystem) },
+        cryptoSystem
+    )
 
 
     override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {
@@ -116,16 +122,18 @@ class ConcretePostchainClient(
     override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {
         var lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected
-        repeat(retries) {
-            try {
-                val deferredPollResult = checkTxStatus(txRid)
-                lastKnownTxResult = deferredPollResult.toCompletableFuture().join()
-                if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
-            } catch (e: Exception) {
-                logger.warn(e) { "Unable to poll for new block" }
-                lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
+        run poll@ {
+            repeat(retries) {
+                try {
+                    val deferredPollResult = checkTxStatus(txRid)
+                    lastKnownTxResult = deferredPollResult.toCompletableFuture().join()
+                    if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@poll
+                } catch (e: Exception) {
+                    logger.warn(e) { "Unable to poll for new block" }
+                    lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
+                }
+                sleep(pollInterval)
             }
-            sleep(pollInterval)
         }
         return lastKnownTxResult
     }
@@ -137,17 +145,17 @@ class ConcretePostchainClient(
         val result = CompletableFuture<TransactionResult>()
         client(validationRequest) { response ->
             if (response.status.code == 503) endpoint.setUnreachable()
-            val status =
-                TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
+            val txStatus = txStatusLens(response)
             result.complete(
                 TransactionResult(
                     txRid,
-                    status,
+                    TransactionStatus.valueOf(txStatus.status?.uppercase() ?: "UNKNOWN"),
                     response.status.code,
-                    response.status.description
+                    txStatus.rejectReason
                 )
             )
         }
         return result
     }
 }
+
