@@ -399,8 +399,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     data class TempBlockInfo(
         val bcRid: BlockchainRid,
         val blockRid: BlockRid,
-        val height: Long,
-        val status: Long
+        val height: Long
     ) {
         companion object {
             fun fromBlock(
@@ -411,8 +410,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
                 return TempBlockInfo(
                     bcRid,
                     BlockRid(gtvDict["block_rid"]!!.asByteArray()),
-                    gtvDict["block_height"]!!.asInteger(),
-                    gtvDict["status"]!!.asInteger()
+                    gtvDict["block_height"]!!.asInteger()
                 )
             }
         }

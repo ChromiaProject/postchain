@@ -57,9 +57,10 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                 gtv(mapOf("topic" to gtv(topic), "anchor_height" to gtv(lastHeight)))
             ).asArray().map { Packet.fromGtv(it) }
             for (packet in packets) {
-                packet.
+//                packet.
             }
         }
+        return listOf()
     }
 
     private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")

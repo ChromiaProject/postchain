@@ -1,6 +1,8 @@
 package net.postchain.d1.anchor.integration
 
+import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
@@ -11,11 +13,14 @@ import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 private const val DAPP_CHAIN_ID = 1
 private const val ANCHOR_CHAIN_ID = 2 // Only for this test, we don't have a hard ID for anchoring.
@@ -94,43 +99,24 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
 
             val res = queryRunner.query(
                 it.conn,
-                "SELECT blockchain_rid, block_height, status FROM ${db.tableName(it, "anchor_block")}",
+                "SELECT blockchain_rid, block_height FROM ${db.tableName(it, "anchor_block")}",
                 MapListHandler()
             )
             assertEquals(4, res.size)
             assertContentEquals(blockchainRID.data, res[0]["blockchain_rid"] as ByteArray)
             assertEquals(0L, res[0]["block_height"])
-            assertEquals(0L, res[0]["status"])
             assertContentEquals(blockchainRID.data, res[1]["blockchain_rid"] as ByteArray)
             assertEquals(1L, res[1]["block_height"])
-            assertEquals(0L, res[1]["status"])
             assertContentEquals(blockchainRID.data, res[2]["blockchain_rid"] as ByteArray)
             assertEquals(2L, res[2]["block_height"])
-            assertEquals(0L, res[2]["status"])
             assertContentEquals(blockchainRID.data, res[3]["blockchain_rid"] as ByteArray)
             assertEquals(3L, res[3]["block_height"])
-            assertEquals(0L, res[3]["status"])
 
-            val hash =
+            val headers =
                 query(
                     nodes[0],
                     it,
-                    "icmf_get_messages_hash",
-                    gtv(
-                        mapOf(
-                            "topic" to gtv("my-topic"),
-                            "sender" to gtv(blockchainRID.data),
-                            "sender_height" to gtv(0)
-                        )
-                    )
-                ).asByteArray()
-            assertContentEquals(messagesHash, hash)
-
-            val hashes =
-                query(
-                    nodes[0],
-                    it,
-                    "icmf_get_messages_hash_since_height",
+                    "icmf_get_headers_with_messages_since_height",
                     gtv(
                         mapOf(
                             "topic" to gtv("my-topic"),
@@ -138,19 +124,20 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
                         )
                     )
                 ).asArray()
-            assertEquals(4, hashes.size)
-            assertContentEquals(blockchainRID.data, hashes[0]["sender"]!!.asByteArray())
-            assertEquals(0L, hashes[0]["sender_height"]!!.asInteger())
-            assertContentEquals(messagesHash, hashes[0]["hash"]!!.asByteArray())
-            assertContentEquals(blockchainRID.data, hashes[1]["sender"]!!.asByteArray())
-            assertEquals(1L, hashes[1]["sender_height"]!!.asInteger())
-            assertContentEquals(messagesHash, hashes[1]["hash"]!!.asByteArray())
-            assertContentEquals(blockchainRID.data, hashes[2]["sender"]!!.asByteArray())
-            assertEquals(2L, hashes[2]["sender_height"]!!.asInteger())
-            assertContentEquals(messagesHash, hashes[3]["hash"]!!.asByteArray())
-            assertContentEquals(blockchainRID.data, hashes[3]["sender"]!!.asByteArray())
-            assertEquals(3L, hashes[3]["sender_height"]!!.asInteger())
-            assertContentEquals(messagesHash, hashes[3]["hash"]!!.asByteArray())
+            assertEquals(4, headers.size)
+            headers.forEachIndexed { index, header ->
+                val rawHeader = header["block_header"]!!.asByteArray()
+                val decodedHeader = BlockHeaderDataFactory.buildFromBinary(rawHeader)
+                assertContentEquals(blockchainRID.data, decodedHeader.getBlockchainRid())
+                assertEquals(index.toLong(), decodedHeader.getHeight())
+                assertContentEquals(messagesHash, decodedHeader.getExtra()["icmf_send"]!!["my-topic"]!!["hash"]!!.asByteArray())
+
+                val witness = BaseBlockWitness.Factory.fromBytes(header["witness"]!!.asByteArray())
+                val digest = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+                witness.getSignatures().forEach { signature ->
+                    assertTrue(cryptoSystem.verifyDigest(digest, signature))
+                }
+            }
         }
     }
 

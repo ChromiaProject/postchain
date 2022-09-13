@@ -4,7 +4,8 @@ entity anchor_block {
     key blockchain_rid: byte_array,
         block_height: integer;
     block_rid: byte_array;
-    status: integer;
+    block_header: byte_array;
+    witness: byte_array;
 }
 
 struct block_header {
@@ -17,11 +18,11 @@ struct block_header {
     extra: map<text,gtv>;
 }
 
-// TODO save whole block_header and witness for verification
-operation __anchor_block_header(block_rid: byte_array, header: block_header, witness: byte_array) {
-    create anchor_block(blockchain_rid = header.blockchain_rid, block_height = header.height, block_rid = block_rid, status = 0);
+operation __anchor_block_header(block_rid: byte_array, header: gtv, witness: byte_array) {
+    val decoded_header = block_header.from_gtv(header);
+    create anchor_block(blockchain_rid = decoded_header.blockchain_rid, block_height = decoded_header.height, block_rid = block_rid, block_header = header.to_bytes(), witness = witness);
 
-    process_icmf(header);
+    process_icmf(decoded_header);
 }
 
 query get_last_anchored_block(blockchain_rid: byte_array): struct<anchor_block>? {
