@@ -34,7 +34,7 @@ class MerkleRootCalculatorTest {
         val gtvArr = gtv(listOfHashes.map { gtv(it)})
         val merkleRoot = gtvArr.merkleHash(calculator)
 
-        assertEquals(expectedMerkleRootOf1, TreeHelper.convertToHex(merkleRoot))
+       assertEquals(expectedMerkleRootOf1, TreeHelper.convertToHex(merkleRoot))
     }
 
     @Test
@@ -62,6 +62,6 @@ class MerkleRootCalculatorTest {
         val gtvArr = gtv(listOfHashes.map { gtv(it)})
         val merkleRoot = gtvArr.merkleHash(calculator)
 
-        assertEquals(expectedMerkleRootOf4, TreeHelper.convertToHex(merkleRoot))
+       assertEquals(expectedMerkleRootOf4, TreeHelper.convertToHex(merkleRoot))
     }
 }
