@@ -1,7 +1,9 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
+import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
@@ -11,6 +13,8 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -22,9 +26,10 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
     }
 
     private val _relevantOps = setOf(OP_ICMF_MESSAGE)
+    private lateinit var cryptoSystem: CryptoSystem
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
-
+        cryptoSystem = cs
     }
 
     override fun getRelevantOps() = _relevantOps
@@ -45,22 +50,42 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
 
         // TODO parallelize this
         for (cluster in allClusters) {
-            val anchoringClient = ConcretePostchainClientProvider().createClient(
-                PostchainClientConfig(
-                    cluster.anchoringChain,
-                    EndpointPool.default(cluster.peers.map { it.restApiUrl })
-                )
-            )
-            // query icmf_get_messages_hash_since_height(topic: text, anchor_height: integer): list<struct<icmf_messages_hash>>
-            val packets = anchoringClient.querySync(
-                "icmf_get_messages_hash_since_height",
-                gtv(mapOf("topic" to gtv(topic), "anchor_height" to gtv(lastHeight)))
-            ).asArray().map { Packet.fromGtv(it) }
-            for (packet in packets) {
-//                packet.
-            }
+            fetchMessagesFromCluster(cluster, topic, lastHeight)
         }
         return listOf()
+    }
+
+    private fun fetchMessagesFromCluster(
+        cluster: D1ClusterInfo,
+        topic: String,
+        lastHeight: Long
+    ): List<IcmfMessage> {
+        val anchoringClient = ConcretePostchainClientProvider().createClient(
+            PostchainClientConfig(
+                cluster.anchoringChain,
+                EndpointPool.default(cluster.peers.map { it.restApiUrl })
+            )
+        )
+        // query icmf_get_headers_with_messages_since_height(topic: text, anchor_height: integer): list<signed_block_header>
+        val signedBlockHeaders = anchoringClient.querySync(
+            "icmf_get_headers_with_messages_since_height",
+            gtv(mapOf("topic" to gtv(topic), "anchor_height" to gtv(lastHeight)))
+        ).asArray().map { SignedBlockHeader.fromGtv(it) }
+
+        val messages = mutableListOf<IcmfMessage>()
+        for (header in signedBlockHeaders) {
+            val decodedHeader = BlockHeaderDataFactory.buildFromBinary(header.rawHeader)
+            val witness = BaseBlockWitness.fromBytes(header.rawWitness)
+            val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+
+            if (!witness.getSignatures().all { cryptoSystem.verifyDigest(blockRid, it) }) {
+                logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.gtvBlockchainRid} at height: ${decodedHeader.gtvHeight}")
+                return listOf()
+            }
+
+            val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
+        }
+        return messages
     }
 
     private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")
@@ -95,12 +120,11 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
         }
     }
 
-    data class Packet(val sender: BlockchainRid, val senderHeight: Long, val hash: ByteArray) {
+    data class SignedBlockHeader(val rawHeader: ByteArray, val rawWitness: ByteArray) {
         companion object {
-            fun fromGtv(gtv: Gtv) = Packet(
-                BlockchainRid(gtv["sender"]!!.asByteArray()),
-                gtv["sender_height"]!!.asInteger(),
-                gtv["hash"]!!.asByteArray()
+            fun fromGtv(gtv: Gtv) = SignedBlockHeader(
+                gtv["block_header"]!!.asByteArray(),
+                gtv["witness"]!!.asByteArray()
             )
         }
     }
