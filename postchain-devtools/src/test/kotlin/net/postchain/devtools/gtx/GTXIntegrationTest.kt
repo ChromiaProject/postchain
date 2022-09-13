@@ -11,8 +11,8 @@ import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxNop
-import net.postchain.gtx.data.GTXDataBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -22,32 +22,35 @@ val myCS = Secp256K1CryptoSystem()
 class GTXIntegrationTest : IntegrationTestSetup() {
 
     fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
-        val b = GTXDataBuilder(bcRid, arrayOf(pubKey(0)), myCS)
-        b.addOperation(GtxNop.OP_NAME, arrayOf(gtv(42)))
-        b.finish()
-        b.sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
-        return b.serialize()
+        val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
+            .addOperation(GtxNop.OP_NAME, gtv(42))
+            .finish()
+            .sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
+            .buildGtx()
+        return b.encode()
     }
 
     fun makeTestTx(id: Long, value: String, bcRid: BlockchainRid): ByteArray {
-        val b = GTXDataBuilder(bcRid, arrayOf(pubKey(0)), myCS)
-        b.addOperation("gtx_test", arrayOf(gtv(id), gtv(value)))
-        b.finish()
-        b.sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
-        return b.serialize()
+        val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
+            .addOperation("gtx_test", gtv(id), gtv(value))
+            .finish()
+            .sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
+            .buildGtx()
+        return b.encode()
     }
 
     fun makeTimeBTx(from: Long, to: Long?, bcRid: BlockchainRid): ByteArray {
-        val b = GTXDataBuilder(bcRid, arrayOf(pubKey(0)), myCS)
-        b.addOperation("timeb", arrayOf(
-                gtv(from),
-                if (to != null) gtv(to) else GtvNull
-        ))
-        // Need to add a valid dummy operation to make the entire TX valid
-        b.addOperation("gtx_test", arrayOf(gtv(1), gtv("true")))
-        b.finish()
-        b.sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
-        return b.serialize()
+        val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
+            .addOperation("timeb",
+                    gtv(from),
+                    if (to != null) gtv(to) else GtvNull
+            )
+            // Need to add a valid dummy operation to make the entire TX valid
+            .addOperation("gtx_test", gtv(1), gtv("true"))
+            .finish()
+            .sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
+            .buildGtx()
+        return b.encode()
     }
 
     @Test

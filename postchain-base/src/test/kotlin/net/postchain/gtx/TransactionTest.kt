@@ -7,7 +7,6 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.data.GTXDataBuilder
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse
@@ -15,11 +14,12 @@ import kotlin.test.assertFalse
 val myCS = Secp256K1CryptoSystem()
 
 fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
-    val b = GTXDataBuilder(bcRid, arrayOf(pubKey(0)), myCS)
-    b.addOperation(GtxNop.OP_NAME, arrayOf(gtv(42)))
-    b.finish()
-    b.sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
-    return b.serialize()
+    val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
+        .addOperation(GtxNop.OP_NAME, gtv(42))
+        .finish()
+        .sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
+        .buildGtx()
+    return b.encode()
 }
 
 class GTXTransactionTest {

@@ -29,10 +29,10 @@ class SigningTest {
         val sigMaker = cs.buildSigMaker(pubKey, privKey)
 
 //        println(pubKey.toHex())
-        assertEquals("03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070", tx.transactionBodyData.signers[0].toHex())
+        assertEquals("03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070", tx.gtxBody.signers[0].toHex())
 
         // Signing
-        val merkleRoot = tx.transactionBodyData.calculateRID(GtvMerkleHashCalculator(cs))
+        val merkleRoot = tx.calculateTxRid(GtvMerkleHashCalculator(cs))
         val signature = sigMaker.signDigest(merkleRoot)
 //        println(signature.data.toHex())
 

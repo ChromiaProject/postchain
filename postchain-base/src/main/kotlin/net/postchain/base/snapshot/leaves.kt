@@ -5,6 +5,7 @@ package net.postchain.base.snapshot
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.data.Hash
 import net.postchain.core.BlockEContext
+import net.postchain.core.TxEContext
 
 /**
  * The name "Leaf" comes from the idea that these data objects CAN be leafs of a bigger three, where we
@@ -16,21 +17,22 @@ class LeafStore {
     /**
      * Stores the event
      *
-     * @param blockEContext is the context (including block height)
-     * @param prefix is what the state will be used for, for example "l2" or "icmf"
+     * @param txEContext is the context (including block height and tx_iid)
+     * @param prefix is what the state will be used for, for example "eif" or "icmf"
+     * @param position position of event in block (e.g. 0 is for first event, etc)
      * @param hash is the hash of the data
      * @param data is the binary data
      */
-    fun writeEvent(blockEContext: BlockEContext, prefix: String, hash: Hash, data: ByteArray) {
-        val db = DatabaseAccess.of(blockEContext)
-        db.insertEvent(blockEContext, prefix, blockEContext.height, hash, data)
+    fun writeEvent(txEContext: TxEContext, prefix: String, position: Long, hash: Hash, data: ByteArray) {
+        val db = DatabaseAccess.of(txEContext)
+        db.insertEvent(txEContext, prefix, txEContext.height, position, hash, data)
     }
 
     /**
      * Stores the state
      *
      * @param blockEContext is the context (including block height)
-     * @param prefix is what the state will be used for, for example "l2"
+     * @param prefix is what the state will be used for, for example "eif"
      * @param state_n // TODO
      * @param data is the binary data
      */
@@ -43,7 +45,7 @@ class LeafStore {
      * Delete events at and below given height
      *
      * @param blockEContext is the context (including block height)
-     * @param prefix is what the state will be used for, for example "l2" or "icmf"
+     * @param prefix is what the state will be used for, for example "eif" or "icmf"
      * @param heightMustBeHigherThan , we will keep data above this height
      */
     fun pruneEvents(blockEContext: BlockEContext, prefix: String, heightMustBeHigherThan: Long) {
@@ -55,7 +57,7 @@ class LeafStore {
      * Delete all states such that state_n is between left and right and state_height <= height
      *
      * @param blockEContext is the context (including block height)
-     * @param prefix is what the state will be used for, for example "l2"
+     * @param prefix is what the state will be used for, for example "eif"
      * @param left
      * @param right
      * @param heightMustBeHigherThan , we will keep data above this height
