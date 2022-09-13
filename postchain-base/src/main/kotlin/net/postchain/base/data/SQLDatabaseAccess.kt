@@ -43,6 +43,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
     protected fun tableEventLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_event_leafs")
     protected fun tableStateLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_state_leafs")
+    protected fun indexTableStateLeafs(ctx: EContext, prefix: String, index: Int): String = tableName(ctx, "idx${index}_${prefix}_state_leafs")
 
     fun tableGtxModuleVersion(ctx: EContext): String = tableName(ctx, "gtx_module_version")
 
@@ -69,6 +70,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
+    protected abstract fun cmdCreateIndexTableState(ctx: EContext, prefix: String, index: Int): String
 
     // --- Insert ---
     protected abstract fun cmdInsertTransactions(ctx: EContext): String
@@ -458,6 +460,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     // --- Init App ----
     override fun createStateLeafTable(ctx: EContext, prefix: String) {
         queryRunner.update(ctx.conn, cmdCreateTableState(ctx, prefix))
+    }
+
+    override fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int) {
+        queryRunner.update(ctx.conn, cmdCreateIndexTableState(ctx, prefix, index))
     }
 
     override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {

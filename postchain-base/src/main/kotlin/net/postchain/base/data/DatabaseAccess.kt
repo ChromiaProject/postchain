@@ -125,6 +125,7 @@ interface DatabaseAccess {
     fun createEventLeafTable(ctx: EContext, prefix: String) // Note: Not used by anchoring
     fun createPageTable(ctx: EContext, prefix: String)
     fun createStateLeafTable(ctx: EContext, prefix: String)
+    fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int)
 
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {
