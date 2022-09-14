@@ -1,27 +1,23 @@
 package net.postchain.d1.icmf.integration
 
-import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.withReadConnection
-import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
-import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.base.withReadConnection
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
 import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
-import net.postchain.gtv.GtvFactory.gtv
-import org.apache.commons.dbutils.QueryRunner
-import org.junit.jupiter.api.Test
-import net.postchain.d1.icmf.tableMessage
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
 import net.postchain.devtools.testinfra.TestTransaction
+import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
+import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
-import org.apache.commons.dbutils.handlers.MapListHandler
+import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
@@ -46,18 +42,6 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
 
         for (node in nodes) {
             withReadConnection(node.postchainContext.storage, CHAIN_ID.toLong()) {
-                val db = DatabaseAccess.of(it)
-                val queryRunner = QueryRunner()
-
-                val res1 = queryRunner.query(
-                    it.conn,
-                    "SELECT block_height, topic FROM ${db.tableMessage(it)}",
-                    MapListHandler()
-                )
-                assertEquals(2, res1.size)
-                assertEquals(0L, res1[0]["block_height"])
-                assertEquals("my-topic", res1[0]["topic"])
-
                 val blockQueries = node.getBlockchainInstance(CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
                 val blockRid = blockQueries.getBlockRid(0).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
