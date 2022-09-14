@@ -35,6 +35,7 @@ import java.util.concurrent.CompletionStage
 
 data class Tx(val tx: String)
 data class TxStatus(val status: String?, val rejectReason: String?)
+data class CurrentBlockHeight(val blockHeight: Long)
 data class Queries(val queries: List<String>)
 data class ErrorResponse(val error: String)
 
@@ -87,6 +88,28 @@ class ConcretePostchainClient(
 
     override fun querySync(name: String, gtv: Gtv): Gtv = try {
         query(name, gtv).toCompletableFuture().join()
+    } catch (e: CompletionException) {
+        throw e.cause ?: e
+    }
+
+    override fun currentBlockHeight(): CompletionStage<Long> {
+        val currentBlockHeightLens = Body.auto<CurrentBlockHeight>().toLens()
+        val endpoint = nextEndpoint()
+        val result = CompletableFuture<Long>()
+        httpClient(Request(Method.GET, "${endpoint.url}/node/$blockchainRIDHex/height")) { response ->
+            if (response.status.code == 503) endpoint.setUnreachable()
+            if (response.status != Status.OK) {
+                val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
+                result.completeExceptionally(UserMistake("Can not make query_gtx api call: ${response.status} $msg"))
+                return@httpClient
+            }
+            result.complete(currentBlockHeightLens(response).blockHeight)
+        }
+        return result
+    }
+
+    override fun currentBlockHeightSync(): Long = try {
+        currentBlockHeight().toCompletableFuture().join()
     } catch (e: CompletionException) {
         throw e.cause ?: e
     }
