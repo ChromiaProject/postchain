@@ -86,12 +86,9 @@ data class BlockHeaderData(
     }
 
     companion object {
-        fun fromBinary(rawData: ByteArray): BlockHeaderData {
-            val gtv: Gtv = GtvDecoder.decodeGtv(rawData)
-            return fromGtv(gtv)
-        }
+        fun fromBinary(rawData: ByteArray) = fromGtv(GtvDecoder.decodeGtv(rawData))
 
-        fun fromGtv(gtv: Gtv): BlockHeaderData = BlockHeaderData(
+        fun fromGtv(gtv: Gtv) = BlockHeaderData(
                 gtv[0] as GtvByteArray,
                 gtv[1] as GtvByteArray,
                 gtv[2] as GtvByteArray,
