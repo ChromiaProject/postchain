@@ -52,44 +52,31 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         // TODO parallelize this
         val allMessages = mutableListOf<IcmfMessage>()
         for (cluster in allClusters) {
-            val lastAnchorHeight = DatabaseAccess.of(bctx).let {
-                val queryRunner = QueryRunner()
-                queryRunner.query(
-                    bctx.conn,
-                    "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
-                    ScalarHandler<Long>(),
-                    cluster.name
-                ) ?: -1
-            }
-
-            val (messages, newHeight) = try {
-                fetchMessagesFromCluster(cluster, lastAnchorHeight)
+            val messages = try {
+                fetchMessagesFromCluster(cluster, bctx)
             } catch (e: Exception) {
                 logger.error(e) { "Unable to fetch ICMF messages from cluster ${cluster.name}" }
-                Pair(listOf(), lastAnchorHeight)
+                listOf()
             }
             allMessages.addAll(messages)
-
-            if (newHeight > lastAnchorHeight) {
-                DatabaseAccess.of(bctx).apply {
-                    val queryRunner = QueryRunner()
-                    queryRunner.update(
-                        bctx.conn,
-                        "INSERT INTO ${tableAnchorHeight(bctx)} (cluster, height) VALUES (?, ?) ON CONFLICT (cluster) DO UPDATE SET height = ?",
-                        cluster.name,
-                        newHeight,
-                        newHeight
-                    )
-                }
-            }
         }
         return allMessages.map { OpData(OP_ICMF_MESSAGE, arrayOf(gtv(it.sender.data), gtv(it.topic), it.body)) }
     }
 
     private fun fetchMessagesFromCluster(
         cluster: D1ClusterInfo,
-        lastAnchorHeight: Long
-    ): Pair<List<IcmfMessage>, Long> {
+        bctx: BlockEContext
+    ): List<IcmfMessage> {
+        val lastAnchorHeight = DatabaseAccess.of(bctx).let {
+            val queryRunner = QueryRunner()
+            queryRunner.query(
+                bctx.conn,
+                "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
+                ScalarHandler<Long>(),
+                cluster.name
+            ) ?: -1
+        }
+
         val anchoringClient = ConcretePostchainClientProvider().createClient(
             PostchainClientConfig(
                 cluster.anchoringChain,
@@ -114,21 +101,45 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
                 if (!witness.getSignatures().all { cryptoSystem.verifyDigest(blockRid, it) }) {
                     logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return Pair(listOf(), lastAnchorHeight)
+                    return listOf()
                 }
 
                 val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
                 if (icmfHeaderData == null) {
                     logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return Pair(listOf(), lastAnchorHeight)
+                    return listOf()
                 }
 
                 val topicData = icmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
                 if (topicData == null) {
                     logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return Pair(listOf(), lastAnchorHeight)
+                    return listOf()
                 }
-                // TODO validate topicData.prevMessageBlockHeight
+
+                DatabaseAccess.of(bctx).apply {
+                    val queryRunner = QueryRunner()
+                    val prevMessageBlockHeight = queryRunner.query(
+                        bctx.conn,
+                        "SELECT height FROM ${tableMessageHeight(bctx)} WHERE cluster = ? AND topic = ?",
+                        ScalarHandler<Long>(),
+                        cluster.name,
+                        topic
+                    )
+
+                    if (topicData.prevMessageBlockHeight != prevMessageBlockHeight) {
+                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $prevMessageBlockHeight for topic $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                        return listOf()
+                    }
+
+                    queryRunner.update(
+                        bctx.conn,
+                        "INSERT INTO ${tableMessageHeight(bctx)} (cluster, topic, height) VALUES (?, ?, ?) ON CONFLICT (cluster, topic) DO UPDATE SET height = ?",
+                        cluster.name,
+                        topic,
+                        decodedHeader.getHeight(),
+                        decodedHeader.getHeight()
+                    )
+                }
 
                 val client = ConcretePostchainClientProvider().createClient(
                     PostchainClientConfig(
@@ -147,7 +158,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                 })
                 if (topicData.hash.contentEquals(computedHash)) {
                     logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return Pair(listOf(), lastAnchorHeight)
+                    return listOf()
                 }
 
                 for (body in bodies) {
@@ -156,7 +167,20 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             }
         }
 
-        return Pair(messages, currentAnchorHeight)
+        if (currentAnchorHeight > lastAnchorHeight) {
+            DatabaseAccess.of(bctx).apply {
+                val queryRunner = QueryRunner()
+                queryRunner.update(
+                    bctx.conn,
+                    "INSERT INTO ${tableAnchorHeight(bctx)} (cluster, height) VALUES (?, ?) ON CONFLICT (cluster) DO UPDATE SET height = ?",
+                    cluster.name,
+                    currentAnchorHeight,
+                    currentAnchorHeight
+                )
+            }
+        }
+
+        return messages
     }
 
     private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")
