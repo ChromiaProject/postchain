@@ -39,8 +39,8 @@ data class Queries(val queries: List<String>)
 data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
-    private val config: PostchainClientConfig,
-    private val client: AsyncHttpHandler = ApacheAsyncClient()
+    override val config: PostchainClientConfig,
+    private val httpClient: AsyncHttpHandler = ApacheAsyncClient()
 ) : PostchainClient {
 
     companion object : KLogging()
@@ -72,13 +72,13 @@ class ConcretePostchainClient(
         )
 
         val r = CompletableFuture<Gtv>()
-        client(request) { res ->
+        httpClient(request) { res ->
             if (res.status != Status.OK) {
                 val msg = if (res.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(res).error
                 r.completeExceptionally(UserMistake("Can not make query_gtx api call: ${res.status} $msg"))
-                return@client
+                return@httpClient
             }
-            if (res.body == Body.EMPTY) r.complete(GtvNull) && return@client
+            if (res.body == Body.EMPTY) r.complete(GtvNull) && return@httpClient
             val respList = Body.auto<List<String>>().toLens()(res)
             r.complete(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
         }
@@ -104,7 +104,7 @@ class ConcretePostchainClient(
         val endpoint = nextEndpoint()
         val request = txLens(encodedTx, Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
-        client(request) { resp ->
+        httpClient(request) { resp ->
             val status = if (resp.status == Status.OK) WAITING else REJECTED
             result.complete(TransactionResult(txRid, status, resp.status.code, resp.status.description))
         }
@@ -143,7 +143,7 @@ class ConcretePostchainClient(
         val endpoint = nextEndpoint()
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDHex/${txRid.rid}/status")
         val result = CompletableFuture<TransactionResult>()
-        client(validationRequest) { response ->
+        httpClient(validationRequest) { response ->
             if (response.status.code == 503) endpoint.setUnreachable()
             val txStatus = txStatusLens(response)
             result.complete(
