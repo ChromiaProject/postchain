@@ -116,11 +116,12 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
                 query(
                     nodes[0],
                     it,
-                    "icmf_get_headers_with_messages_since_height",
+                    "icmf_get_headers_with_messages_between_heights",
                     gtv(
                         mapOf(
                             "topic" to gtv("my-topic"),
-                            "anchor_height" to gtv(0)
+                            "from_anchor_height" to gtv(0),
+                            "to_anchor_height" to gtv(1)
                         )
                     )
                 ).asArray()

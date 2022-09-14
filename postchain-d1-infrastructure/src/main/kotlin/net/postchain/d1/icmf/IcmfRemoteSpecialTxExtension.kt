@@ -3,6 +3,7 @@ package net.postchain.d1.icmf
 import mu.KLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
@@ -18,8 +19,10 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
+import org.apache.commons.dbutils.QueryRunner
+import org.apache.commons.dbutils.handlers.ScalarHandler
 
-class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
+class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         // operation __icmf_message(sender: byte_array, topic: text, body: gtv)
@@ -46,27 +49,45 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val allClusters: Set<D1ClusterInfo> = lookupAllClustersInD1()
 
-        val topic: String = "???" // TODO topic
-        val lastHeight: Long = 0 // TODO lastHeight
-
         // TODO parallelize this
         val allMessages = mutableListOf<IcmfMessage>()
         for (cluster in allClusters) {
-            val (messages, newLastHeight) = try {
-                fetchMessagesFromCluster(cluster, topic, lastHeight)
+            val lastAnchorHeight = DatabaseAccess.of(bctx).let {
+                val queryRunner = QueryRunner()
+                queryRunner.query(
+                    bctx.conn,
+                    "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
+                    ScalarHandler<Long>(),
+                    cluster.name
+                ) ?: -1
+            }
+
+            val (messages, newHeight) = try {
+                fetchMessagesFromCluster(cluster, lastAnchorHeight)
             } catch (e: Exception) {
                 logger.error(e) { "Unable to fetch ICMF messages from cluster ${cluster.name}" }
-                Pair(listOf(), lastHeight)
+                Pair(listOf(), lastAnchorHeight)
             }
             allMessages.addAll(messages)
-            // TODO save newLastHeight
+
+            if (newHeight > lastAnchorHeight) {
+                DatabaseAccess.of(bctx).apply {
+                    val queryRunner = QueryRunner()
+                    queryRunner.update(
+                        bctx.conn,
+                        "INSERT INTO ${tableAnchorHeight(bctx)} (cluster, height) VALUES (?, ?) ON CONFLICT (cluster) DO UPDATE SET height = ?",
+                        cluster.name,
+                        newHeight,
+                        newHeight
+                    )
+                }
+            }
         }
         return allMessages.map { OpData(OP_ICMF_MESSAGE, arrayOf(gtv(it.sender.data), gtv(it.topic), it.body)) }
     }
 
     private fun fetchMessagesFromCluster(
         cluster: D1ClusterInfo,
-        topic: String,
         lastAnchorHeight: Long
     ): Pair<List<IcmfMessage>, Long> {
         val anchoringClient = ConcretePostchainClientProvider().createClient(
@@ -75,61 +96,67 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                 EndpointPool.default(cluster.peers.map { it.restApiUrl })
             )
         )
-        // query icmf_get_headers_with_messages_since_height(topic: text, anchor_height: integer): list<signed_block_header>
-        val signedBlockHeaderWithAnchorHeights = anchoringClient.querySync(
-            "icmf_get_headers_with_messages_since_height",
-            gtv(mapOf("topic" to gtv(topic), "anchor_height" to gtv(lastAnchorHeight)))
-        ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
+
+        val currentAnchorHeight = 10L // TODO implement query in client
 
         val messages = mutableListOf<IcmfMessage>()
-        for (header in signedBlockHeaderWithAnchorHeights) {
-            val decodedHeader = BlockHeaderDataFactory.buildFromBinary(header.rawHeader)
-            val witness = BaseBlockWitness.fromBytes(header.rawWitness)
-            val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        for (topic in topics) {
+            // query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height>
+            val signedBlockHeaderWithAnchorHeights = anchoringClient.querySync(
+                "icmf_get_headers_with_messages_between_heights",
+                gtv(mapOf("topic" to gtv(topic), "from_anchor_height" to gtv(lastAnchorHeight + 1), "to_anchor_height" to gtv(currentAnchorHeight)))
+            ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
 
-            if (!witness.getSignatures().all { cryptoSystem.verifyDigest(blockRid, it) }) {
-                logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                return Pair(listOf(), lastAnchorHeight)
-            }
+            for (header in signedBlockHeaderWithAnchorHeights) {
+                val decodedHeader = BlockHeaderDataFactory.buildFromBinary(header.rawHeader)
+                val witness = BaseBlockWitness.fromBytes(header.rawWitness)
+                val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
-            val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
-            if (icmfHeaderData == null) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                return Pair(listOf(), lastAnchorHeight)
-            }
+                if (!witness.getSignatures().all { cryptoSystem.verifyDigest(blockRid, it) }) {
+                    logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                    return Pair(listOf(), lastAnchorHeight)
+                }
 
-            val topicData = icmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
-            if (topicData == null) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                return Pair(listOf(), lastAnchorHeight)
-            }
-            // TODO validate topicData.prevMessageBlockHeight
+                val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
+                if (icmfHeaderData == null) {
+                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                    return Pair(listOf(), lastAnchorHeight)
+                }
 
-            val client = ConcretePostchainClientProvider().createClient(
-                PostchainClientConfig(
-                    BlockchainRid(decodedHeader.getBlockchainRid()),
-                    EndpointPool.default(cluster.peers.map { it.restApiUrl })
+                val topicData = icmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
+                if (topicData == null) {
+                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                    return Pair(listOf(), lastAnchorHeight)
+                }
+                // TODO validate topicData.prevMessageBlockHeight
+
+                val client = ConcretePostchainClientProvider().createClient(
+                    PostchainClientConfig(
+                        BlockchainRid(decodedHeader.getBlockchainRid()),
+                        EndpointPool.default(cluster.peers.map { it.restApiUrl })
+                    )
                 )
-            )
-            // query icmf_get_messages(topic: text, height: integer): list<gtv>
-            val bodies = client.querySync(
-                "icmf_get_messages",
-                gtv(mapOf("topic" to gtv(topic), "height" to gtv(decodedHeader.getHeight())))
-            ).asArray()
+                // query icmf_get_messages(topic: text, height: integer): list<gtv>
+                val bodies = client.querySync(
+                    "icmf_get_messages",
+                    gtv(mapOf("topic" to gtv(topic), "height" to gtv(decodedHeader.getHeight())))
+                ).asArray()
 
-            val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(it.asByteArray()) }.fold(ByteArray(0)) { total, item ->
-                total.plus(item)
-            })
-            if (topicData.hash.contentEquals(computedHash)) {
-                logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                return Pair(listOf(), lastAnchorHeight)
-            }
+                val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(it.asByteArray()) }.fold(ByteArray(0)) { total, item ->
+                    total.plus(item)
+                })
+                if (topicData.hash.contentEquals(computedHash)) {
+                    logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                    return Pair(listOf(), lastAnchorHeight)
+                }
 
-            for (body in bodies) {
-                messages.add(IcmfMessage(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight(), topic, body))
+                for (body in bodies) {
+                    messages.add(IcmfMessage(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight(), topic, body))
+                }
             }
         }
-        return Pair(messages, signedBlockHeaderWithAnchorHeights.maxOfOrNull { it.anchorHeight } ?: lastAnchorHeight)
+
+        return Pair(messages, currentAnchorHeight)
     }
 
     private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")

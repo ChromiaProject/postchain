@@ -33,7 +33,7 @@
         <dict>
             <entry key="modules">
                 <array>
-                    <string>net.postchain.d1.icmf.IcmfGTXModule</string>
+                    <string>net.postchain.d1.icmf.IcmfSenderGTXModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                     <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
                 </array>

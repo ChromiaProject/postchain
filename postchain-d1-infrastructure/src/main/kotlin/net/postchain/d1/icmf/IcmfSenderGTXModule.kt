@@ -5,7 +5,7 @@ import net.postchain.core.EContext
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
-class IcmfGTXModule : SimpleGTXModule<Unit>(
+class IcmfSenderGTXModule : SimpleGTXModule<Unit>(
     Unit,
     mapOf(),
     mapOf()

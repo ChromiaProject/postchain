@@ -23,7 +23,7 @@ import kotlin.test.assertEquals
 
 private const val CHAIN_ID = 1
 
-class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
+class ImcfSenderIntegrationTest : GtxTxIntegrationTestSetup() {
 
     @Test
     fun icmfHappyPath() {
