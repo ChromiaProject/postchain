@@ -5,7 +5,6 @@ import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockEContext
@@ -142,7 +141,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     private fun buildOpData(icmfPacket: IcmfPacket): OpData {
         val gtvHeaderMsg = icmfPacket.blockHeader // We don't care about any messages, only the header
         val headerMsg =
-            BlockHeaderDataFactory.buildFromGtv(gtvHeaderMsg) // Yes, a bit expensive going back and forth between GTV and Domain objects like this
+            BlockHeaderData.fromGtv(gtvHeaderMsg) // Yes, a bit expensive going back and forth between GTV and Domain objects like this
         val witnessBytes: ByteArray = icmfPacket.witness.asByteArray()
 
         val gtvBlockRid: Gtv = icmfPacket.blockRid
