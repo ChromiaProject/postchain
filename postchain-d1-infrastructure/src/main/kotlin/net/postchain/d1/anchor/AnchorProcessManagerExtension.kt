@@ -4,12 +4,11 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
-import net.postchain.d1.icmf.ClusterAnchorRoute
 import net.postchain.d1.icmf.IcmfController
 import net.postchain.gtx.GTXBlockchainConfiguration
 
 @Suppress("unused")
-class IcmfProcessManagerExtension (val postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
+class AnchorProcessManagerExtension (val postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
 
     lateinit var icmfController: IcmfController
 
@@ -36,13 +35,7 @@ class IcmfProcessManagerExtension (val postchainContext: PostchainContext) : Blo
 
         if (cfg is GTXBlockchainConfiguration) {
             // create receiver when blockchain has anchoring STE
-            getAnchorSpecialTxExtension(cfg)?.let {
-                // Since this configuration has an Anchor extension, let's add the [IcmfReceiver]
-                it.connectIcmfController(getIcmfController(process))
-
-                // We steal the [BlockQueries] from the engine, so that the spec TX extension can call the Anchor Module
-                it.setBlockQueries(engine.getBlockQueries())
-            }
+            getAnchorSpecialTxExtension(cfg)?.connectIcmfController(getIcmfController(process))
 
             // connect process to local dispatcher
             getIcmfController(process).localDispatcher.connectChain(cfg.chainID)
