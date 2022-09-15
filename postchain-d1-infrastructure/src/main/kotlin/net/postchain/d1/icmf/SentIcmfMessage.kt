@@ -5,12 +5,12 @@ import net.postchain.gtv.GtvFactory.gtv
 
 data class SentIcmfMessage(
     val topic: String, // Topic of message
-    val body: Gtv
+    val body: Gtv,
+    val previousMessageBlockHeight: Long
 ) {
 
     companion object {
-        fun fromGtv(gtv: Gtv): SentIcmfMessage = SentIcmfMessage(gtv["topic"]!!.asString(), gtv["body"]!!)
+        fun fromGtv(gtv: Gtv): SentIcmfMessage =
+            SentIcmfMessage(gtv["topic"]!!.asString(), gtv["body"]!!, gtv["previous_message_block_height"]!!.asInteger())
     }
-
-    fun toGtv(): Gtv = gtv("topic" to gtv(topic), "body" to body)
 }
