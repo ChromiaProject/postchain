@@ -8,7 +8,7 @@ import net.postchain.d1.icmf.IcmfController
 import net.postchain.gtx.GTXBlockchainConfiguration
 
 @Suppress("unused")
-class IcmfProcessManagerExtension (val postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
+class AnchorProcessManagerExtension (val postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
 
     lateinit var icmfController: IcmfController
 
