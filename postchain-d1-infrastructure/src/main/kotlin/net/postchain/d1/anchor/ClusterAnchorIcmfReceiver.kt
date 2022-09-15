@@ -1,11 +1,11 @@
 // Copyright (c) 2022 ChromaWay AB. See README for license information.
 
-package net.postchain.d1.icmf
+package net.postchain.d1.anchor
 
-class ClusterAnchorIcmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long> {
+class ClusterAnchorIcmfReceiver {
     val localPipes = mutableMapOf<Long, ClusterAnchorIcmfPipe>()
 
-    override fun getRelevantPipes(): List<IcmfPipe<ClusterAnchorRoute, Long>> {
+    fun getRelevantPipes(): List<ClusterAnchorIcmfPipe> {
         return localPipes.values.toList()
     }
 }
