@@ -72,18 +72,19 @@ class ConcretePostchainClient(
             Request(Method.POST, "${endpoint.url}/query_gtx/$blockchainRIDHex")
         )
 
-        val r = CompletableFuture<Gtv>()
-        httpClient(request) { res ->
-            if (res.status != Status.OK) {
-                val msg = if (res.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(res).error
-                r.completeExceptionally(UserMistake("Can not make query_gtx api call: ${res.status} $msg"))
+        val result = CompletableFuture<Gtv>()
+        httpClient(request) { response ->
+            if (response.status.code == 503) endpoint.setUnreachable()
+            if (response.status != Status.OK) {
+                val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
+                result.completeExceptionally(UserMistake("Can not make query_gtx api call: ${response.status} $msg"))
                 return@httpClient
             }
-            if (res.body == Body.EMPTY) r.complete(GtvNull) && return@httpClient
-            val respList = Body.auto<List<String>>().toLens()(res)
-            r.complete(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
+            if (response.body == Body.EMPTY) result.complete(GtvNull) && return@httpClient
+            val respList = Body.auto<List<String>>().toLens()(response)
+            result.complete(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
         }
-        return r
+        return result
     }
 
     override fun querySync(name: String, gtv: Gtv): Gtv = try {
@@ -100,7 +101,7 @@ class ConcretePostchainClient(
             if (response.status.code == 503) endpoint.setUnreachable()
             if (response.status != Status.OK) {
                 val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
-                result.completeExceptionally(UserMistake("Can not make query_gtx api call: ${response.status} $msg"))
+                result.completeExceptionally(UserMistake("Can not make node/height api call: ${response.status} $msg"))
                 return@httpClient
             }
             result.complete(currentBlockHeightLens(response).blockHeight)
@@ -127,9 +128,10 @@ class ConcretePostchainClient(
         val endpoint = nextEndpoint()
         val request = txLens(encodedTx, Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
-        httpClient(request) { resp ->
-            val status = if (resp.status == Status.OK) WAITING else REJECTED
-            result.complete(TransactionResult(txRid, status, resp.status.code, resp.status.description))
+        httpClient(request) { response ->
+            if (response.status.code == 503) endpoint.setUnreachable()
+            val status = if (response.status == Status.OK) WAITING else REJECTED
+            result.complete(TransactionResult(txRid, status, response.status.code, response.status.description))
         }
         return result
     }
@@ -181,4 +183,3 @@ class ConcretePostchainClient(
         return result
     }
 }
-
