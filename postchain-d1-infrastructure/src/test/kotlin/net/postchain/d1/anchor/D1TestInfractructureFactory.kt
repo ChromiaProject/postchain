@@ -15,7 +15,7 @@ class D1TestInfrastructureFactory: BaseEBFTInfrastructureFactory() {
         return BaseBlockchainProcessManager(postchainContext,
                 blockchainInfrastructure,
                 blockchainConfigurationProvider,
-                listOf(IcmfProcessManagerExtension(postchainContext))
+                listOf(AnchorProcessManagerExtension(postchainContext))
         )
     }
 }

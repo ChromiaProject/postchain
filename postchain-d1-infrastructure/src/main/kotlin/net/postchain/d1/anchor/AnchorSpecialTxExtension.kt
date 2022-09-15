@@ -9,8 +9,8 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
+import net.postchain.core.EContext
 import net.postchain.core.ValidationResult
-import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.icmf.ClusterAnchorRoute
 import net.postchain.d1.icmf.IcmfController
@@ -47,7 +47,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long>? = null
 
     /** This is for querying ourselves, i.e. the "anchor Rell app" */
-    private var blockQueries: BlockQueries? = null
+    private lateinit var module: GTXModule
 
     override fun getRelevantOps() = _relevantOps
 
@@ -59,13 +59,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     ) {
         myChainID = chainID
         myChainRid = blockchainRID
-    }
-
-    /**
-     * Not part of the usual init
-     */
-    fun setBlockQueries(bq: BlockQueries) {
-        blockQueries = bq
+        this.module = module
     }
 
     /**
@@ -112,7 +106,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         if (pipe.id.route != ClusterAnchorRoute) return
         var counter = 0
         val blockchainRid = pipe.id.brid
-        var currentHeight: Long = getLastAnchoredHeight(blockchainRid)
+        var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
         while (pipe.mightHaveNewPackets()) {
             val icmfPacket = pipe.fetchNext(currentHeight)
             if (icmfPacket != null) {
@@ -129,8 +123,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         }
     }
 
-    private fun getLastAnchoredHeight(blockchainRID: BlockchainRid): Long =
-        getLastAnchoredBlock(blockchainRID)?.height ?: -1
+    private fun getLastAnchoredHeight(ctxt: EContext, blockchainRID: BlockchainRid): Long =
+        getLastAnchoredBlock(ctxt, blockchainRID)?.height ?: -1
 
     /**
      * Transform to [IcmfPacket] to [OpData] put arguments in correct order
@@ -171,10 +165,11 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             // and we pass that task to the [GenericBlockHeaderValidator]
             val minimalHeaders = chainHeadersMap[bcRid]
             if (minimalHeaders != null) {
-                if (chainValidation(bcRid, minimalHeaders).result != ValidationResult.Result.OK) {
+                if (chainValidation(bctx, bcRid, minimalHeaders).result != ValidationResult.Result.OK) {
                     logger.error(
                         "Failing to anchor a block for blockchain ${bcRid.toHex()}. ${
                             chainValidation(
+                                bctx,
                                 bcRid,
                                 minimalHeaders
                             ).message
@@ -215,6 +210,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @return the result of the validation
      */
     private fun chainValidation(
+        ctxt: EContext,
         bcRid: BlockchainRid,
         minimalHeaders: MutableSet<MinimalBlockHeaderInfo>
     ): ValidationResult {
@@ -223,7 +219,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
          *
          * @return the block RID at a certain height
          */
-        fun getBlockRidAtHeight(height: Long): ByteArray? = getAnchoredBlockAtHeight(bcRid, height)?.blockRid?.data
+        fun getBlockRidAtHeight(height: Long): ByteArray? = getAnchoredBlockAtHeight(ctxt, bcRid, height)?.blockRid?.data
 
         // Restructure to the format the Validator needs
         val myMap: MutableMap<Long, MinimalBlockHeaderInfo> = mutableMapOf()
@@ -232,7 +228,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         }
 
         // Get the expected data
-        val expected = getExpectedData(bcRid)
+        val expected = getExpectedData(ctxt, bcRid)
 
         // Run the validator
         return GenericBlockHeaderValidator.multiValidationAgainstKnownBlocks(
@@ -246,8 +242,8 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     /**
      * @return the data we expect to find, fetched from Anchor module's own tables
      */
-    private fun getExpectedData(bcRid: BlockchainRid): MinimalBlockHeaderInfo? {
-        val tmpBlockInfo = getLastAnchoredBlock(bcRid)
+    private fun getExpectedData(ctxt: EContext, bcRid: BlockchainRid): MinimalBlockHeaderInfo? {
+        val tmpBlockInfo = getLastAnchoredBlock(ctxt, bcRid)
         return if (tmpBlockInfo == null) {
             // We've never anchored any block for this chain before.
             null
@@ -356,12 +352,12 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @param bcRid is the chain we are interested in
      * @return the block info for the last anchored block, or nothing if not found
      */
-    private fun getLastAnchoredBlock(bcRid: BlockchainRid): TempBlockInfo? {
+    private fun getLastAnchoredBlock(ctxt: EContext, bcRid: BlockchainRid): TempBlockInfo? {
         val bcRidByteArr = bcRid.data // We're sending the RID as bytes, not as a string
         val args = buildArgs(
             Pair("blockchain_rid", gtv(bcRidByteArr))
         )
-        val block = blockQueries!!.query("get_last_anchored_block", args).get()
+        val block = module.query(ctxt, "get_last_anchored_block", args)
         return if (block == GtvNull) {
             null
         } else {
@@ -376,13 +372,13 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @param height is the block height we want to look at
      * @return the block info for the last anchored block, or nothing if not found
      */
-    private fun getAnchoredBlockAtHeight(bcRid: BlockchainRid, height: Long): TempBlockInfo? {
+    private fun getAnchoredBlockAtHeight(ctxt: EContext, bcRid: BlockchainRid, height: Long): TempBlockInfo? {
         val bcRidByteArr = bcRid.data // We're sending the RID as bytes, not as a string
         val args = buildArgs(
             Pair("blockchain_rid", gtv(bcRidByteArr)),
             Pair("height", gtv(height))
         )
-        val block = blockQueries!!.query("get_anchored_block_at_height", args).get()
+        val block = module.query(ctxt, "get_anchored_block_at_height", args)
         return if (block == GtvNull) {
             null
         } else {
