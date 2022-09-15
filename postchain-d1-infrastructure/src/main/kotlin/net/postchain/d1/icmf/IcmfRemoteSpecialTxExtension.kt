@@ -84,7 +84,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             )
         )
 
-        val currentAnchorHeight = 10L // TODO implement query in client
+        val currentAnchorHeight = anchoringClient.currentBlockHeightSync()
 
         val messages = mutableListOf<IcmfMessage>()
         for (topic in topics) {
