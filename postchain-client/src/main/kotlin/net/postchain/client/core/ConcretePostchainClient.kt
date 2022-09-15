@@ -5,6 +5,7 @@ package net.postchain.client.core
 import mu.KLogging
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.transaction.TransactionBuilder
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -182,4 +183,7 @@ class ConcretePostchainClient(
         }
         return result
     }
+
+    override fun blockchain(blockchainRid: BlockchainRid): PostchainClient =
+        ConcretePostchainClient(config.copy(blockchainRid = blockchainRid), httpClient)
 }
