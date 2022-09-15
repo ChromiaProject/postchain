@@ -4,7 +4,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
-import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -61,7 +61,7 @@ class ImcfIntegrationTest : GtxTxIntegrationTestSetup() {
                 val blockQueries = node.getBlockchainInstance(CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
                 val blockRid = blockQueries.getBlockRid(0).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
-                val decodedHeader = BlockHeaderDataFactory.buildFromBinary(blockHeader.rawData)
+                val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
                 val expectedHash = cryptoSystem.digest(
                     cryptoSystem.digest(GtvEncoder.encodeGtv(gtv("test0")))
                             + cryptoSystem.digest(
