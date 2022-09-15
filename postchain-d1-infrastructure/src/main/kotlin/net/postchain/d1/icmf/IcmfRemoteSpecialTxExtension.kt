@@ -1,10 +1,10 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
-import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
@@ -20,10 +20,12 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
+import net.postchain.managed.DirectoryComponent
+import net.postchain.managed.DirectoryDataSource
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
-class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecialTxExtension {
+class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecialTxExtension, DirectoryComponent {
 
     companion object : KLogging() {
         // operation __icmf_header(block_header: byte_array, witness: byte_array)
@@ -35,6 +37,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
     private val _relevantOps = setOf(OP_ICMF_HEADER, OP_ICMF_MESSAGE)
     private lateinit var cryptoSystem: CryptoSystem
+    private lateinit var directoryDataSource: DirectoryDataSource
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
@@ -178,7 +181,22 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         return ops
     }
 
-    private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")
+    private fun lookupAllClustersInD1(): Set<D1ClusterInfo> {
+        return directoryDataSource.getAllClusters().asArray().map { cluster ->
+            // TODO: [et] Possibly ObjectMapper might be used here
+            val name = cluster["name"]!!.asString()
+            val anchorBrid = BlockchainRid(cluster["anchoringChain"]!!.asByteArray())
+            val peers = cluster["peers"]!!.asArray().map {
+                D1PeerInfo(
+                    it["restApiUrl"]!!.asString(),
+                    PubKey(it["pubKey"]!!.asByteArray())
+                )
+            }.toSet()
+
+            D1ClusterInfo(name, anchorBrid, peers)
+
+        }.toSet()
+    }
 
     data class D1ClusterInfo(val name: String, val anchoringChain: BlockchainRid, val peers: Set<D1PeerInfo>)
 
@@ -361,5 +379,9 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             }
         }
         return true
+    }
+
+    override fun setDirectoryDataSource(directoryDataSource: DirectoryDataSource) {
+        this.directoryDataSource = directoryDataSource
     }
 }
