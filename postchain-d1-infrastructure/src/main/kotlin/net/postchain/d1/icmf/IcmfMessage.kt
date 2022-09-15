@@ -2,6 +2,7 @@
 
 package net.postchain.d1.icmf
 
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 
@@ -9,9 +10,10 @@ import net.postchain.gtv.GtvFactory.gtv
  * Smallest message unit for ICMF
  */
 data class IcmfMessage(
+    val sender: BlockchainRid,
     val height: Long,  // Block height this message corresponds to
-    val messageType: String, // Type of message
-    val body: Gtv )
+    val topic: String,
+    val body: Gtv)
 
 /**
  * Conceptually = all messages related to a block
