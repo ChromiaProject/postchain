@@ -14,6 +14,7 @@ import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.heartbeat.*
 
 /**
@@ -119,7 +120,7 @@ open class ManagedBlockchainProcessManager(
     }
 
     protected open fun createDataSource(blockQueries: BlockQueries) =
-            BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
+            BaseDirectoryDataSource(blockQueries, postchainContext.appConfig, null)
 
     override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
         return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {
@@ -128,6 +129,22 @@ open class ManagedBlockchainProcessManager(
             val hbListener: HeartbeatListener = DefaultHeartbeatListener(heartbeatConfig, blockchainConfig.chainID)
             heartbeatManager.addListener(blockchainConfig.chainID, hbListener);
             awaitHeartbeatHandler(hbListener, heartbeatConfig)
+        }
+    }
+
+    override fun createAndRegisterBlockchainProcess(
+            chainId: Long,
+            blockchainConfig: BlockchainConfiguration,
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+    ) {
+        if (chainId == CHAIN0) {
+            extensions.forEach { ext ->
+                if (ext is DirectoryComponent) {
+                    ext.setDirectoryDataSource(dataSource as DirectoryDataSource) // TODO: [et] Fix this
+                }
+            }
         }
     }
 

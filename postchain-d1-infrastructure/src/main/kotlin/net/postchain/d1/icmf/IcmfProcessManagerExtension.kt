@@ -4,19 +4,18 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
-import net.postchain.d1.icmf.ClusterAnchorRoute
 import net.postchain.d1.icmf.IcmfController
 import net.postchain.gtx.GTXBlockchainConfiguration
 
 @Suppress("unused")
-class IcmfProcessManagerExtension (val postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
+class IcmfProcessManagerExtension(val postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
 
     lateinit var icmfController: IcmfController
 
     fun getIcmfController(process: BlockchainProcess): IcmfController {
         if (!::icmfController.isInitialized) {
-                // steal storage from blockchain engine
-                // no, I'm not proud of it...
+            // steal storage from blockchain engine
+            // no, I'm not proud of it...
             icmfController = IcmfController(
                     (process.blockchainEngine as BaseBlockchainEngine).storage
             )
@@ -69,7 +68,8 @@ class IcmfProcessManagerExtension (val postchainContext: PostchainContext) : Blo
     }
 
     @Synchronized
-    override fun shutdown() {    }
+    override fun shutdown() {
+    }
 
     /**
      *
