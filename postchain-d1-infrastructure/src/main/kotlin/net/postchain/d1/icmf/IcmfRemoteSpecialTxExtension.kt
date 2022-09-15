@@ -9,6 +9,7 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
@@ -166,7 +167,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                     .fold(ByteArray(0)) { total, item ->
                         total.plus(item)
                     })
-                if (topicData.hash.contentEquals(computedHash)) {
+                if (!topicData.hash.contentEquals(computedHash)) {
                     logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
                     return listOf()
                 }
@@ -202,17 +203,6 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
     private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")
 
-    /**
-     * I am validator, validate messages.
-     */
-    override fun validateSpecialOperations(
-        position: SpecialTransactionPosition,
-        bctx: BlockEContext,
-        ops: List<OpData>
-    ): Boolean {
-        TODO("Not yet implemented")
-    }
-
     data class D1ClusterInfo(val name: String, val anchoringChain: BlockchainRid, val peers: Set<D1PeerInfo>)
 
     data class D1PeerInfo(val restApiUrl: String, val pubKey: PubKey) {
@@ -244,5 +234,98 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                 gtv["anchor_height"]!!.asInteger()
             )
         }
+    }
+
+    /**
+     * I am validator, validate messages.
+     */
+    override fun validateSpecialOperations(
+        position: SpecialTransactionPosition,
+        bctx: BlockEContext,
+        ops: List<OpData>
+    ): Boolean {
+        var currentIcmfHeaderData: Gtv? = null
+        val messageHashes: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
+        for (op in ops) {
+            when (op.opName) {
+                OP_ICMF_HEADER -> {
+                    if (!validateMessagesHash(messageHashes, currentIcmfHeaderData)) return false
+                    messageHashes.clear()
+
+                    val rawHeader = op.args[0].asByteArray()
+                    val rawWitness = op.args[1].asByteArray()
+
+                    val decodedHeader = BlockHeaderData.fromBinary(rawHeader)
+                    val witness = BaseBlockWitness.fromBytes(rawWitness)
+                    val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+
+                    if (!witness.getSignatures().all { cryptoSystem.verifyDigest(blockRid, it) }) {
+                        logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                        return false
+                    }
+
+                    val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
+                    if (icmfHeaderData == null) {
+                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                        return false
+                    }
+
+                    currentIcmfHeaderData = icmfHeaderData
+                }
+
+                OP_ICMF_MESSAGE -> {
+                    val sender = op.args[0].asByteArray()
+                    val height = op.args[1].asInteger()
+                    val topic = op.args[2].asString()
+                    val body = op.args[3]
+
+                    if (currentIcmfHeaderData == null) {
+                        logger.warn("got $OP_ICMF_MESSAGE before any $OP_ICMF_HEADER")
+                        return false
+                    }
+
+                    val topicData = currentIcmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
+                    if (topicData == null) {
+                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for sender ${sender.toHex()}")
+                        return false
+                    }
+
+                    // TODO validate previous message height
+
+                    messageHashes.computeIfAbsent(topic) { mutableListOf() }
+                        .add(cryptoSystem.digest(body.asByteArray()))
+                }
+            }
+        }
+        if (!validateMessagesHash(messageHashes, currentIcmfHeaderData)) return false
+        return true
+    }
+
+    private fun validateMessagesHash(
+        messageHashes: MutableMap<String, MutableList<ByteArray>>,
+        currentIcmfHeaderData: Gtv?
+    ): Boolean {
+        for ((topic, hashes) in messageHashes) {
+            if (currentIcmfHeaderData == null) {
+                logger.error("got $OP_ICMF_MESSAGE before any $OP_ICMF_HEADER")
+                return false
+            }
+
+            val topicData = currentIcmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
+            if (topicData == null) {
+                logger.error("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic")
+                return false
+            }
+
+            val computedHash = cryptoSystem.digest(hashes
+                .fold(ByteArray(0)) { total, item ->
+                    total.plus(item)
+                })
+            if (!topicData.hash.contentEquals(computedHash)) {
+                logger.warn("invalid messages hash for topic: $topic")
+                return false
+            }
+        }
+        return true
     }
 }
