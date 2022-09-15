@@ -2,7 +2,6 @@ package net.postchain.d1.anchor
 
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.gtx.data.OpData
 
 /**
@@ -40,7 +39,7 @@ data class AnchorOpDataObject(
                 val gtvWitness = op.args[2]
 
                 val blockRid = gtvBlockRid.asByteArray()
-                val header = BlockHeaderDataFactory.buildFromGtv(gtvHeader)
+                val header = BlockHeaderData.fromGtv(gtvHeader)
                 val rawWitness = gtvWitness.asByteArray()
 
                 AnchorOpDataObject(blockRid, header, rawWitness)

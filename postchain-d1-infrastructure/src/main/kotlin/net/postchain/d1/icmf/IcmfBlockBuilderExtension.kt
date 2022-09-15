@@ -5,7 +5,6 @@ import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.BlockEContext
-import net.postchain.core.block.BlockBuilder
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -21,9 +20,8 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension {
     private lateinit var cryptoSystem: CryptoSystem
     private lateinit var blockEContext: BlockEContext
 
-    override fun init(blockEContext: BlockEContext, bb: BlockBuilder) {
+    override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         this.blockEContext = blockEContext
-        val baseBB = bb as BaseBlockBuilder
         cryptoSystem = baseBB.cryptoSystem
     }
 
