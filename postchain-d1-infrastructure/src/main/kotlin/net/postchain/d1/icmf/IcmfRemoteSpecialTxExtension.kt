@@ -1,10 +1,10 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.gtv.BlockHeaderDataFactory
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
@@ -95,7 +95,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
 
             for (header in signedBlockHeaderWithAnchorHeights) {
-                val decodedHeader = BlockHeaderDataFactory.buildFromBinary(header.rawHeader)
+                val decodedHeader = BlockHeaderData.fromBinary(header.rawHeader)
                 val witness = BaseBlockWitness.fromBytes(header.rawWitness)
                 val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 

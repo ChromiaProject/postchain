@@ -1,6 +1,6 @@
 package net.postchain.d1.icmf.integration
 
-import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
@@ -45,7 +45,7 @@ class ImcfSenderIntegrationTest : GtxTxIntegrationTestSetup() {
                 val blockQueries = node.getBlockchainInstance(CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
                 val blockRid = blockQueries.getBlockRid(0).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
-                val decodedHeader = BlockHeaderDataFactory.buildFromBinary(blockHeader.rawData)
+                val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
                 val expectedHash = cryptoSystem.digest(
                     cryptoSystem.digest(GtvEncoder.encodeGtv(gtv("test0")))
                             + cryptoSystem.digest(

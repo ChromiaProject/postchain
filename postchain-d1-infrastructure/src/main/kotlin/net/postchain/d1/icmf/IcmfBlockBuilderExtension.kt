@@ -6,7 +6,6 @@ import net.postchain.base.TxEventSink
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.core.BlockEContext
 import net.postchain.core.TxEContext
-import net.postchain.core.block.BlockBuilder
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
@@ -23,9 +22,8 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
 
     private val queuedEvents = mutableListOf<SentIcmfMessage>()
 
-    override fun init(blockEContext: BlockEContext, bb: BlockBuilder) {
+    override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         this.blockEContext = blockEContext
-        val baseBB = bb as BaseBlockBuilder
         cryptoSystem = baseBB.cryptoSystem
         baseBB.installEventProcessor(ICMF_MESSAGE_TYPE, this)
     }

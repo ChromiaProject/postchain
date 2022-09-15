@@ -2,7 +2,7 @@ package net.postchain.d1.anchor.integration
 
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.gtv.BlockHeaderDataFactory
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
@@ -128,7 +128,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
             assertEquals(4, headers.size)
             headers.forEachIndexed { index, header ->
                 val rawHeader = header["block_header"]!!.asByteArray()
-                val decodedHeader = BlockHeaderDataFactory.buildFromBinary(rawHeader)
+                val decodedHeader = BlockHeaderData.fromBinary(rawHeader)
                 assertContentEquals(blockchainRID.data, decodedHeader.getBlockchainRid())
                 assertEquals(index.toLong(), decodedHeader.getHeight())
                 assertContentEquals(messagesHash, decodedHeader.getExtra()["icmf_send"]!!["my-topic"]!!["hash"]!!.asByteArray())
