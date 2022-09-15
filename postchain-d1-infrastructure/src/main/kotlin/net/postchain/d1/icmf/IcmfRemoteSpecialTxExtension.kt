@@ -25,11 +25,14 @@ import org.apache.commons.dbutils.handlers.ScalarHandler
 class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecialTxExtension {
 
     companion object : KLogging() {
-        // operation __icmf_message(sender: byte_array, topic: text, body: gtv)
+        // operation __icmf_header(block_header: byte_array, witness: byte_array)
+        const val OP_ICMF_HEADER = "__icmf_header"
+
+        // operation __icmf_message(sender: byte_array, height: integer, topic: text, body: gtv)
         const val OP_ICMF_MESSAGE = "__icmf_message"
     }
 
-    private val _relevantOps = setOf(OP_ICMF_MESSAGE)
+    private val _relevantOps = setOf(OP_ICMF_HEADER, OP_ICMF_MESSAGE)
     private lateinit var cryptoSystem: CryptoSystem
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
@@ -50,23 +53,23 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         val allClusters: Set<D1ClusterInfo> = lookupAllClustersInD1()
 
         // TODO parallelize this
-        val allMessages = mutableListOf<IcmfMessage>()
+        val allOps = mutableListOf<OpData>()
         for (cluster in allClusters) {
-            val messages = try {
+            val ops = try {
                 fetchMessagesFromCluster(cluster, bctx)
             } catch (e: Exception) {
                 logger.error(e) { "Unable to fetch ICMF messages from cluster ${cluster.name}" }
                 listOf()
             }
-            allMessages.addAll(messages)
+            allOps.addAll(ops)
         }
-        return allMessages.map { OpData(OP_ICMF_MESSAGE, arrayOf(gtv(it.sender.data), gtv(it.topic), it.body)) }
+        return allOps
     }
 
     private fun fetchMessagesFromCluster(
         cluster: D1ClusterInfo,
         bctx: BlockEContext
-    ): List<IcmfMessage> {
+    ): List<OpData> {
         val lastAnchorHeight = DatabaseAccess.of(bctx).let {
             val queryRunner = QueryRunner()
             queryRunner.query(
@@ -86,12 +89,18 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
         val currentAnchorHeight = anchoringClient.currentBlockHeightSync()
 
-        val messages = mutableListOf<IcmfMessage>()
+        val ops = mutableListOf<OpData>()
         for (topic in topics) {
             // query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height>
             val signedBlockHeaderWithAnchorHeights = anchoringClient.querySync(
                 "icmf_get_headers_with_messages_between_heights",
-                gtv(mapOf("topic" to gtv(topic), "from_anchor_height" to gtv(lastAnchorHeight + 1), "to_anchor_height" to gtv(currentAnchorHeight)))
+                gtv(
+                    mapOf(
+                        "topic" to gtv(topic),
+                        "from_anchor_height" to gtv(lastAnchorHeight + 1),
+                        "to_anchor_height" to gtv(currentAnchorHeight)
+                    )
+                )
             ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
 
             for (header in signedBlockHeaderWithAnchorHeights) {
@@ -153,16 +162,24 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                     gtv(mapOf("topic" to gtv(topic), "height" to gtv(decodedHeader.getHeight())))
                 ).asArray()
 
-                val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(it.asByteArray()) }.fold(ByteArray(0)) { total, item ->
-                    total.plus(item)
-                })
+                val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(it.asByteArray()) }
+                    .fold(ByteArray(0)) { total, item ->
+                        total.plus(item)
+                    })
                 if (topicData.hash.contentEquals(computedHash)) {
                     logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
                     return listOf()
                 }
 
+                ops.add(OpData(OP_ICMF_HEADER, arrayOf(gtv(header.rawHeader), gtv(header.rawWitness))))
+
                 for (body in bodies) {
-                    messages.add(IcmfMessage(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight(), topic, body))
+                    ops.add(
+                        OpData(
+                            OP_ICMF_MESSAGE,
+                            arrayOf(decodedHeader.gtvBlockchainRid, decodedHeader.gtvHeight, gtv(topic), body)
+                        )
+                    )
                 }
             }
         }
@@ -180,7 +197,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             }
         }
 
-        return messages
+        return ops
     }
 
     private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")
@@ -215,7 +232,11 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         }
     }
 
-    data class SignedBlockHeaderWithAnchorHeight(val rawHeader: ByteArray, val rawWitness: ByteArray, val anchorHeight: Long) {
+    data class SignedBlockHeaderWithAnchorHeight(
+        val rawHeader: ByteArray,
+        val rawWitness: ByteArray,
+        val anchorHeight: Long
+    ) {
         companion object {
             fun fromGtv(gtv: Gtv) = SignedBlockHeaderWithAnchorHeight(
                 gtv["block_header"]!!.asByteArray(),
