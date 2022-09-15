@@ -55,4 +55,14 @@ interface PostchainClient {
      * Perform a query
      */
     fun querySync(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Gtv
+
+    /**
+     * Query current block height
+     */
+    fun currentBlockHeight(): CompletionStage<Long>
+
+    /**
+     * Query current block height
+     */
+    fun currentBlockHeightSync(): Long
 }
