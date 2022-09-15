@@ -2,6 +2,7 @@ package net.postchain.client.core
 
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.transaction.TransactionBuilder
+import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
@@ -65,4 +66,9 @@ interface PostchainClient {
      * Query current block height
      */
     fun currentBlockHeightSync(): Long
+
+    /**
+     * @return a client for another blockchain in the same cluster
+     */
+    fun blockchain(blockchainRid: BlockchainRid): PostchainClient
 }
