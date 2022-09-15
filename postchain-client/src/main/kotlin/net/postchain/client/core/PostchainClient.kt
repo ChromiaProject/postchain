@@ -1,5 +1,6 @@
 package net.postchain.client.core
 
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.crypto.KeyPair
 import net.postchain.gtv.Gtv
@@ -8,6 +9,7 @@ import net.postchain.gtx.Gtx
 import java.util.concurrent.CompletionStage
 
 interface PostchainClient {
+    val config: PostchainClientConfig
     /**
      * Creates a [TransactionBuilder] with the default signer list
      */
@@ -53,4 +55,14 @@ interface PostchainClient {
      * Perform a query
      */
     fun querySync(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Gtv
+
+    /**
+     * Query current block height
+     */
+    fun currentBlockHeight(): CompletionStage<Long>
+
+    /**
+     * Query current block height
+     */
+    fun currentBlockHeightSync(): Long
 }

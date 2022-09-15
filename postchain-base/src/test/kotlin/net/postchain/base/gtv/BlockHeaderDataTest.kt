@@ -2,13 +2,14 @@
 
 package net.postchain.base.gtv
 
+import net.postchain.base.gtv.BlockHeaderData.Companion.fromGtv
 import net.postchain.common.BlockchainRid
 import net.postchain.core.block.InitialBlockData
 import net.postchain.gtv.*
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
-class BlockHeaderDataFactoryTest {
+class BlockHeaderDataTest {
 
     val dummyBcRid = BlockchainRid.ZERO_RID
     val dummyPrevBlockRid = "b".toByteArray()
@@ -28,7 +29,7 @@ class BlockHeaderDataFactoryTest {
         depArr[2] = dummyBlockRid
         val iBlockData = buildInitData(depArr)
         val timestamp = 12L
-        val blockHeaderData = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, dummyRootHash, timestamp, mapOf())
+        val blockHeaderData = BlockHeaderData.fromDomainObjects(iBlockData, dummyRootHash, timestamp, mapOf())
 
         val gtvDep = blockHeaderData.gtvDependencies
         assertEquals(GtvType.ARRAY, gtvDep.type)
@@ -49,7 +50,7 @@ class BlockHeaderDataFactoryTest {
         val iBlockData = buildInitData(null)
         val rootHash = "aoeu".toByteArray()
         val timestamp = 12L
-        val blockHeaderData = BlockHeaderDataFactory.buildFromDomainObjects(iBlockData, rootHash, timestamp, mapOf())
+        val blockHeaderData = BlockHeaderData.fromDomainObjects(iBlockData, rootHash, timestamp, mapOf())
 
         assertEquals(blockHeaderData.gtvDependencies, GtvNull)
     }
@@ -64,7 +65,7 @@ class BlockHeaderDataFactoryTest {
         val gtvDependencies = GtvArray(depArr)
         val mainArr = buildGtvArray(gtvDependencies)
         val gtvMainArr = GtvArray(mainArr)
-        val blockHeaderData = BlockHeaderDataFactory.buildFromGtv(gtvMainArr)
+        val blockHeaderData = fromGtv(gtvMainArr)
 
         val gtvDep = blockHeaderData.gtvDependencies
         assertEquals(GtvType.ARRAY, gtvDep.type)
@@ -82,7 +83,7 @@ class BlockHeaderDataFactoryTest {
     fun buildFromGtv_emptyDependencies() {
         val mainArr = buildGtvArray(GtvNull)
         val gtvMainArr = GtvArray(mainArr)
-        val blockHeaderData = BlockHeaderDataFactory.buildFromGtv(gtvMainArr)
+        val blockHeaderData = fromGtv(gtvMainArr)
 
         assertEquals(blockHeaderData.gtvDependencies, GtvNull)
     }
