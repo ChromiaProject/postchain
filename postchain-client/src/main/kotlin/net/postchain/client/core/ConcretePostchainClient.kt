@@ -18,9 +18,9 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
-import net.postchain.gtv.GtvNull
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
@@ -34,13 +34,14 @@ import java.util.concurrent.CompletionException
 import java.util.concurrent.CompletionStage
 
 data class Tx(val tx: String)
-data class TxStatus(val status: String?)
+data class TxStatus(val status: String?, val rejectReason: String?)
+data class CurrentBlockHeight(val blockHeight: Long)
 data class Queries(val queries: List<String>)
 data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
-    private val config: PostchainClientConfig,
-    private val client: AsyncHttpHandler = ApacheAsyncClient()
+    override val config: PostchainClientConfig,
+    private val httpClient: AsyncHttpHandler = ApacheAsyncClient()
 ) : PostchainClient {
 
     companion object : KLogging()
@@ -52,7 +53,13 @@ class ConcretePostchainClient(
 
     override fun transactionBuilder() = transactionBuilder(config.signers)
 
-    override fun transactionBuilder(signers: List<KeyPair>) = TransactionBuilder(this, config.blockchainRid, signers.map { it.pubKey.key }, signers.map { it.sigMaker(cryptoSystem) }, cryptoSystem)
+    override fun transactionBuilder(signers: List<KeyPair>) = TransactionBuilder(
+        this,
+        config.blockchainRid,
+        signers.map { it.pubKey.key },
+        signers.map { it.sigMaker(cryptoSystem) },
+        cryptoSystem
+    )
 
 
     override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {
@@ -66,13 +73,13 @@ class ConcretePostchainClient(
         )
 
         val r = CompletableFuture<Gtv>()
-        client(request) { res ->
+        httpClient(request) { res ->
             if (res.status != Status.OK) {
                 val msg = if (res.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(res).error
                 r.completeExceptionally(UserMistake("Can not make query_gtx api call: ${res.status} $msg"))
-                return@client
+                return@httpClient
             }
-            if (res.body == Body.EMPTY) r.complete(GtvNull) && return@client
+            if (res.body == Body.EMPTY) r.complete(GtvNull) && return@httpClient
             val respList = Body.auto<List<String>>().toLens()(res)
             r.complete(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
         }
@@ -81,6 +88,28 @@ class ConcretePostchainClient(
 
     override fun querySync(name: String, gtv: Gtv): Gtv = try {
         query(name, gtv).toCompletableFuture().join()
+    } catch (e: CompletionException) {
+        throw e.cause ?: e
+    }
+
+    override fun currentBlockHeight(): CompletionStage<Long> {
+        val currentBlockHeightLens = Body.auto<CurrentBlockHeight>().toLens()
+        val endpoint = nextEndpoint()
+        val result = CompletableFuture<Long>()
+        httpClient(Request(Method.GET, "${endpoint.url}/node/$blockchainRIDHex/height")) { response ->
+            if (response.status.code == 503) endpoint.setUnreachable()
+            if (response.status != Status.OK) {
+                val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
+                result.completeExceptionally(UserMistake("Can not make query_gtx api call: ${response.status} $msg"))
+                return@httpClient
+            }
+            result.complete(currentBlockHeightLens(response).blockHeight)
+        }
+        return result
+    }
+
+    override fun currentBlockHeightSync(): Long = try {
+        currentBlockHeight().toCompletableFuture().join()
     } catch (e: CompletionException) {
         throw e.cause ?: e
     }
@@ -98,7 +127,7 @@ class ConcretePostchainClient(
         val endpoint = nextEndpoint()
         val request = txLens(encodedTx, Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
-        client(request) { resp ->
+        httpClient(request) { resp ->
             val status = if (resp.status == Status.OK) WAITING else REJECTED
             result.complete(TransactionResult(txRid, status, resp.status.code, resp.status.description))
         }
@@ -116,16 +145,18 @@ class ConcretePostchainClient(
     override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {
         var lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected
-        repeat(retries) {
-            try {
-                val deferredPollResult = checkTxStatus(txRid)
-                lastKnownTxResult = deferredPollResult.toCompletableFuture().join()
-                if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@repeat
-            } catch (e: Exception) {
-                logger.warn(e) { "Unable to poll for new block" }
-                lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
+        run poll@ {
+            repeat(retries) {
+                try {
+                    val deferredPollResult = checkTxStatus(txRid)
+                    lastKnownTxResult = deferredPollResult.toCompletableFuture().join()
+                    if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@poll
+                } catch (e: Exception) {
+                    logger.warn(e) { "Unable to poll for new block" }
+                    lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
+                }
+                sleep(pollInterval)
             }
-            sleep(pollInterval)
         }
         return lastKnownTxResult
     }
@@ -135,19 +166,19 @@ class ConcretePostchainClient(
         val endpoint = nextEndpoint()
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDHex/${txRid.rid}/status")
         val result = CompletableFuture<TransactionResult>()
-        client(validationRequest) { response ->
+        httpClient(validationRequest) { response ->
             if (response.status.code == 503) endpoint.setUnreachable()
-            val status =
-                TransactionStatus.valueOf(txStatusLens(response).status?.uppercase() ?: "UNKNOWN")
+            val txStatus = txStatusLens(response)
             result.complete(
                 TransactionResult(
                     txRid,
-                    status,
+                    TransactionStatus.valueOf(txStatus.status?.uppercase() ?: "UNKNOWN"),
                     response.status.code,
-                    response.status.description
+                    txStatus.rejectReason
                 )
             )
         }
         return result
     }
 }
+

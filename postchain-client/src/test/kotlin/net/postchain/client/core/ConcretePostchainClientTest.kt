@@ -9,6 +9,7 @@ import org.http4k.core.Body
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
+import org.http4k.format.Gson.auto
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -51,7 +52,7 @@ internal class ConcretePostchainClientTest {
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),
                 statusPollInterval = 1
-            ), client = httpClient),
+            ), httpClient = httpClient),
             // If I didn't pass a max value, it defaults to RETRIEVE_TX_STATUS_ATTEMPTS = 20
             numberExpected = STATUS_POLL_COUNT)
     }
@@ -64,7 +65,7 @@ internal class ConcretePostchainClientTest {
                 EndpointPool.singleUrl(url),
                 statusPollCount = 10,
                 statusPollInterval = 1
-            ), client = httpClient),
+            ), httpClient = httpClient),
             // If I pass a custom max value, verify it uses it
             numberExpected = 10
         )
@@ -72,7 +73,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `Query response without body should not crash` () {
-        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), client = object : AsyncHttpHandler {
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
                 fn(Response(Status.OK).body(Body.EMPTY))
             }
@@ -81,10 +82,34 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `Query error without body should not crash` () {
-        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), client = object : AsyncHttpHandler {
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
                 fn(Response(Status.BAD_REQUEST).body(Body.EMPTY))
             }
         }).query("foo")
+    }
+
+    @Test
+    fun `Tx status retrieves underlying error` () {
+        val result = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                val txLens = Body.auto<TxStatus>().toLens()
+                fn(txLens(TxStatus("rejected", "Message!"), Response(Status.BAD_REQUEST)))
+            }
+        }).checkTxStatus(TxRid("")).toCompletableFuture().join()
+        assertEquals("Message!", result.rejectReason)
+    }
+
+    @Test
+    fun `Await aborts if rejected` () {
+        var nCalls = 0
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                nCalls++
+                val txLens = Body.auto<TxStatus>().toLens()
+                fn(txLens(TxStatus("rejected", "Message!"), Response(Status.BAD_REQUEST)))
+            }
+        }).awaitConfirmation(TxRid(""), 10, 1)
+        assertEquals(1, nCalls)
     }
 }
