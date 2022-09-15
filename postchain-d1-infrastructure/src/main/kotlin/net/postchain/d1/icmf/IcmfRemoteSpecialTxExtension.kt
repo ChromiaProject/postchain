@@ -29,7 +29,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         // operation __icmf_header(block_header: byte_array, witness: byte_array)
         const val OP_ICMF_HEADER = "__icmf_header"
 
-        // operation __icmf_message(sender: byte_array, height: integer, topic: text, body: gtv)
+        // operation __icmf_message(sender: byte_array, topic: text, body: gtv)
         const val OP_ICMF_MESSAGE = "__icmf_message"
     }
 
@@ -126,30 +126,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                     return listOf()
                 }
 
-                DatabaseAccess.of(bctx).apply {
-                    val queryRunner = QueryRunner()
-                    val prevMessageBlockHeight = queryRunner.query(
-                        bctx.conn,
-                        "SELECT height FROM ${tableMessageHeight(bctx)} WHERE cluster = ? AND topic = ?",
-                        ScalarHandler<Long>(),
-                        cluster.name,
-                        topic
-                    )
-
-                    if (topicData.prevMessageBlockHeight != prevMessageBlockHeight) {
-                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $prevMessageBlockHeight for topic $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                        return listOf()
-                    }
-
-                    queryRunner.update(
-                        bctx.conn,
-                        "INSERT INTO ${tableMessageHeight(bctx)} (cluster, topic, height) VALUES (?, ?, ?) ON CONFLICT (cluster, topic) DO UPDATE SET height = ?",
-                        cluster.name,
-                        topic,
-                        decodedHeader.getHeight(),
-                        decodedHeader.getHeight()
-                    )
-                }
+                if (!validatePrevMessageHeight(bctx, decodedHeader.getBlockchainRid(), topic, topicData, decodedHeader.getHeight())) return listOf()
 
                 val client = ConcretePostchainClientProvider().createClient(
                     PostchainClientConfig(
@@ -178,7 +155,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                     ops.add(
                         OpData(
                             OP_ICMF_MESSAGE,
-                            arrayOf(decodedHeader.gtvBlockchainRid, decodedHeader.gtvHeight, gtv(topic), body)
+                            arrayOf(decodedHeader.gtvBlockchainRid, gtv(topic), body)
                         )
                     )
                 }
@@ -236,6 +213,12 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         }
     }
 
+    data class HeaderValidationInfo(
+        val height: Long,
+        val sender: ByteArray,
+        val icmfHeaderData: Map<String, TopicHeaderData>
+    )
+
     /**
      * I am validator, validate messages.
      */
@@ -244,12 +227,12 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         bctx: BlockEContext,
         ops: List<OpData>
     ): Boolean {
-        var currentIcmfHeaderData: Gtv? = null
+        var currentHeaderData: HeaderValidationInfo? = null
         val messageHashes: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         for (op in ops) {
             when (op.opName) {
                 OP_ICMF_HEADER -> {
-                    if (!validateMessagesHash(messageHashes, currentIcmfHeaderData)) return false
+                    if (!validateMessages(messageHashes, currentHeaderData, bctx)) return false
                     messageHashes.clear()
 
                     val rawHeader = op.args[0].asByteArray()
@@ -270,48 +253,99 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                         return false
                     }
 
-                    currentIcmfHeaderData = icmfHeaderData
+                    currentHeaderData = HeaderValidationInfo(decodedHeader.getHeight(), decodedHeader.getBlockchainRid(), icmfHeaderData.asDict().mapValues { TopicHeaderData.fromGtv(it.value) })
                 }
 
                 OP_ICMF_MESSAGE -> {
                     val sender = op.args[0].asByteArray()
-                    val height = op.args[1].asInteger()
-                    val topic = op.args[2].asString()
-                    val body = op.args[3]
+                    val topic = op.args[1].asString()
+                    val body = op.args[2]
 
-                    if (currentIcmfHeaderData == null) {
+                    if (currentHeaderData == null) {
                         logger.warn("got $OP_ICMF_MESSAGE before any $OP_ICMF_HEADER")
                         return false
                     }
 
-                    val topicData = currentIcmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
+                    val topicData = currentHeaderData.icmfHeaderData[topic]
                     if (topicData == null) {
                         logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for sender ${sender.toHex()}")
                         return false
                     }
-
-                    // TODO validate previous message height
 
                     messageHashes.computeIfAbsent(topic) { mutableListOf() }
                         .add(cryptoSystem.digest(body.asByteArray()))
                 }
             }
         }
-        if (!validateMessagesHash(messageHashes, currentIcmfHeaderData)) return false
+        return validateMessages(messageHashes, currentHeaderData, bctx)
+    }
+
+    private fun validateMessages(
+        messageHashes: MutableMap<String, MutableList<ByteArray>>,
+        currentHeaderData: HeaderValidationInfo?,
+        bctx: BlockEContext
+    ): Boolean {
+        if (!validateMessagesHash(messageHashes, currentHeaderData)) return false
+        if (currentHeaderData != null) {
+            for ((topic, data) in currentHeaderData.icmfHeaderData) {
+                if (!validatePrevMessageHeight(
+                        bctx,
+                        currentHeaderData.sender,
+                        topic,
+                        data,
+                        currentHeaderData.height
+                    )
+                ) return false
+            }
+        }
+        return true
+    }
+
+    private fun validatePrevMessageHeight(
+        bctx: BlockEContext,
+        sender: ByteArray,
+        topic: String,
+        topicData: TopicHeaderData,
+        height: Long
+    ): Boolean {
+        DatabaseAccess.of(bctx).apply {
+            val queryRunner = QueryRunner()
+            val prevMessageBlockHeight = queryRunner.query(
+                bctx.conn,
+                "SELECT height FROM ${tableMessageHeight(bctx)} WHERE sender = ? AND topic = ?",
+                ScalarHandler<Long>(),
+                sender,
+                topic
+            )
+
+            if (topicData.prevMessageBlockHeight != prevMessageBlockHeight) {
+                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $prevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")
+                return false
+            }
+
+            queryRunner.update(
+                bctx.conn,
+                "INSERT INTO ${tableMessageHeight(bctx)} (sender, topic, height) VALUES (?, ?, ?) ON CONFLICT (sender, topic) DO UPDATE SET height = ?",
+                sender,
+                topic,
+                height,
+                height
+            )
+        }
         return true
     }
 
     private fun validateMessagesHash(
         messageHashes: MutableMap<String, MutableList<ByteArray>>,
-        currentIcmfHeaderData: Gtv?
+        headerData: HeaderValidationInfo?
     ): Boolean {
         for ((topic, hashes) in messageHashes) {
-            if (currentIcmfHeaderData == null) {
+            if (headerData == null) {
                 logger.error("got $OP_ICMF_MESSAGE before any $OP_ICMF_HEADER")
                 return false
             }
 
-            val topicData = currentIcmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
+            val topicData = headerData.icmfHeaderData[topic]
             if (topicData == null) {
                 logger.error("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic")
                 return false

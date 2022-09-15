@@ -23,13 +23,13 @@ class IcmfReceiverGTXModule(private val topics: List<String>) : SimpleGTXModule<
                 ctx.conn,
                 "CREATE TABLE IF NOT EXISTS ${
                     tableAnchorHeight(ctx)
-                } (cluster text PRIMARY KEY, height BIGINT NOT NULL)"
+                } (cluster TEXT PRIMARY KEY, height BIGINT NOT NULL)"
             )
             queryRunner.update(
                 ctx.conn,
                 "CREATE TABLE IF NOT EXISTS ${
                     tableMessageHeight(ctx)
-                } (cluster text, topic text, height BIGINT NOT NULL, PRIMARY KEY (cluster, topic))"
+                } (sender BYTEA, topic TEXT, height BIGINT NOT NULL, PRIMARY KEY (sender, topic))"
             )
         }
     }
