@@ -5,10 +5,11 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.ModuleInitializer
 
 class FailableTestBlockchainConfigurationFactory : GTXBlockchainConfigurationFactory() {
 
-    override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
+    override fun makeBlockchainConfiguration(configurationData: Any, moduleInitializer: ModuleInitializer): BlockchainConfiguration {
         val owner = (configurationData as BlockchainConfigurationData)
                 .context.nodeRID!!.toHex().uppercase()
 

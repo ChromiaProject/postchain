@@ -15,6 +15,10 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtx.GTXModule
+import net.postchain.gtx.data.ExtOpData
+import net.postchain.gtx.special.GTXSpecialTxExtension
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -110,7 +114,7 @@ open class ManagedBlockchainProcessManager(
                     ?: throw ProgrammerMistake("chain0 configuration not found")
 
             val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                    configuration, ctx0, NODE_ID_AUTO, CHAIN0)
+                    configuration, ctx0, NODE_ID_AUTO, CHAIN0, buildModuleInitializer())
 
             blockchainConfig.makeBlockQueries(storage)
         }
@@ -298,6 +302,14 @@ open class ManagedBlockchainProcessManager(
                         stopBlockchainAsync(it, bTrace)
                     }
             ssaTrace("End", bTrace)
+        }
+    }
+
+    override fun buildModuleInitializer(): (GTXModule) -> Unit {
+        return {
+            if (it is DirectoryComponent) {
+                it.setDirectoryDataSource(dataSource as DirectoryDataSource)
+            }
         }
     }
 

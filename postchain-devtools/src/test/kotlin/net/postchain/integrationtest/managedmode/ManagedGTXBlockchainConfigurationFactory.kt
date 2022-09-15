@@ -7,6 +7,7 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.ModuleInitializer
 
 class ManagedGTXBlockchainConfigurationFactory : GTXBlockchainConfigurationFactory() {
 
@@ -14,9 +15,10 @@ class ManagedGTXBlockchainConfigurationFactory : GTXBlockchainConfigurationFacto
         val moduleRegistry = mutableMapOf<String, GTXModule>()
     }
 
-    override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
+    override fun makeBlockchainConfiguration(configurationData: Any, moduleInitializer: ModuleInitializer): BlockchainConfiguration {
         val baseConfigData = configurationData as BlockchainConfigurationData
         val module = createGtxModule(baseConfigData.context.blockchainRID, baseConfigData)
+        moduleInitializer(module)
         val configuration = GTXBlockchainConfiguration(baseConfigData, module)
         moduleRegistry[module.javaClass.simpleName] = module
         return configuration
