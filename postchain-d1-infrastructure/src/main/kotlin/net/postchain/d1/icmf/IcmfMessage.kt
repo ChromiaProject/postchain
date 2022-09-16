@@ -10,10 +10,10 @@ import net.postchain.gtv.GtvFactory.gtv
  * Smallest message unit for ICMF
  */
 data class IcmfMessage(
-    val sender: BlockchainRid,
-    val height: Long,  // Block height this message corresponds to
-    val topic: String,
-    val body: Gtv)
+        val sender: BlockchainRid,
+        val height: Long,  // Block height this message corresponds to
+        val topic: String,
+        val body: Gtv)
 
 /**
  * Conceptually = all messages related to a block

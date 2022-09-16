@@ -12,7 +12,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
  * The Rell module define the "__anchor_block_header" operation for example, it is not known by this module.
  */
 class AnchorGTXModule : SimpleGTXModule<Unit>(
-    Unit, mapOf(), mapOf()
+        Unit, mapOf(), mapOf()
 ) {
     private val _specialTxExtensions = listOf(AnchorSpecialTxExtension())
 
