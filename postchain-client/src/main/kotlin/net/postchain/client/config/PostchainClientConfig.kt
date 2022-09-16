@@ -38,7 +38,8 @@ data class PostchainClientConfig(
                 signers = signers,
                 statusPollCount = config.getEnvOrIntProperty("POSTCHAIN_CLIENT_STATUS_POLL_COUNT", "status.poll-count", STATUS_POLL_COUNT),
                 statusPollInterval = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_STATUS_POLL_INTERVAL", "status.poll-interval", STATUS_POLL_INTERVAL),
-                cryptoSystem = config.cryptoSystem()
+                cryptoSystem = config.cryptoSystem(),
+                failOverConfig = FailOverConfig.fromConfiguration(config)
             )
         }
     }
