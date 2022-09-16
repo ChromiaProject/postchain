@@ -283,6 +283,8 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
             File(filename).readText()
         }
     }
+
+    override fun shutdown() { }
 }
 
 class SQLGTXModuleFactory : GTXModuleFactory {

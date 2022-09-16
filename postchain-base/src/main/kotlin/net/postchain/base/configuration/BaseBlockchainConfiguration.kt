@@ -142,5 +142,6 @@ open class BaseBlockchainConfiguration(
                     "unable to finish. Class name given: $strategyClassName, Msg: ${e.message}")
         }
     }
-}
 
+    override fun shutdown() { }
+}

@@ -13,7 +13,7 @@ import net.postchain.gtv.Gtv
  * This type is also able to use the configuration settings to construct some core domain objects on its own
  * (for example [BlockBuildingStrategy]).
  */
-interface BlockchainConfiguration {
+interface BlockchainConfiguration : Shutdownable {
     val blockchainContext: BlockchainContext
     val chainID: Long
     val blockchainRid: BlockchainRid
