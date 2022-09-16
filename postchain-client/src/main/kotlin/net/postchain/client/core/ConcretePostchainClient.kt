@@ -4,6 +4,7 @@ package net.postchain.client.core
 
 import mu.KLogging
 import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.request.Endpoint
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
@@ -115,17 +116,33 @@ class ConcretePostchainClient(
         throw e.cause ?: e
     }
 
-    override fun postTransactionSync(tx: Gtx): TransactionResult = try {
-        postTransaction(tx).toCompletableFuture().join()
-    } catch (e: CompletionException) {
-        throw e.cause ?: e
+    override fun postTransactionSync(tx: Gtx): TransactionResult {
+        try {
+            var result: TransactionResult? = null
+            for (j in 1..config.endpointPool.size()) {
+                val endpoint = nextEndpoint()
+                for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
+                    result = postTransactionTo(tx, endpoint).toCompletableFuture().join()
+                    if (result.status == CONFIRMED) return result
+                    if (result.httpStatusCode == 400) return result
+                    if (result.httpStatusCode == 409) return result
+                    sleep(config.failOverConfig.attemptInterval)
+                }
+            }
+            return result!!
+        } catch (e: CompletionException) {
+            throw e.cause ?: e
+        }
     }
 
     override fun postTransaction(tx: Gtx): CompletionStage<TransactionResult> {
+        return postTransactionTo(tx, nextEndpoint())
+    }
+
+    private fun postTransactionTo(tx: Gtx, endpoint: Endpoint): CompletableFuture<TransactionResult> {
         val txLens = Body.auto<Tx>().toLens()
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
         val encodedTx = Tx(tx.encodeHex())
-        val endpoint = nextEndpoint()
         val request = txLens(encodedTx, Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
         httpClient(request) { response ->
@@ -147,7 +164,7 @@ class ConcretePostchainClient(
     override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {
         var lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected
-        run poll@ {
+        run poll@{
             repeat(retries) {
                 try {
                     val deferredPollResult = checkTxStatus(txRid)

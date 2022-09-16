@@ -1,5 +1,6 @@
 package net.postchain.client.core
 
+import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.request.EndpointPool
@@ -51,7 +52,8 @@ internal class ConcretePostchainClientTest {
             ConcretePostchainClient(PostchainClientConfig(
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),
-                statusPollInterval = 1
+                statusPollInterval = 1,
+                failOverConfig = FailOverConfig(1)
             ), httpClient = httpClient),
             // If I didn't pass a max value, it defaults to RETRIEVE_TX_STATUS_ATTEMPTS = 20
             numberExpected = STATUS_POLL_COUNT)
@@ -64,7 +66,8 @@ internal class ConcretePostchainClientTest {
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),
                 statusPollCount = 10,
-                statusPollInterval = 1
+                statusPollInterval = 1,
+                failOverConfig = FailOverConfig(1)
             ), httpClient = httpClient),
             // If I pass a custom max value, verify it uses it
             numberExpected = 10
