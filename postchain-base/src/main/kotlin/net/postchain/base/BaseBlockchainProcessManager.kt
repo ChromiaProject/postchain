@@ -270,9 +270,7 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected open fun buildModuleInitializer(): (GTXModule) -> Unit {
-        return {}
-    }
+    protected open fun buildModuleInitializer(): (GTXModule) -> Unit = {}
 
     protected fun nodeName(): String {
         return peerName(appConfig.pubKey)

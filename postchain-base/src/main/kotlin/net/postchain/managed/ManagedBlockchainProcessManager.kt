@@ -15,10 +15,7 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
-import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXModule
-import net.postchain.gtx.data.ExtOpData
-import net.postchain.gtx.special.GTXSpecialTxExtension
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -65,7 +62,7 @@ open class ManagedBlockchainProcessManager(
         bpmExtensions
 ) {
 
-    protected open lateinit var dataSource: ManagedNodeDataSource
+    protected open lateinit var directoryDataSource: DirectoryDataSource
     protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
     protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
@@ -85,17 +82,17 @@ open class ManagedBlockchainProcessManager(
 
     protected open fun initManagedEnvironment() {
         try {
-            dataSource = buildChain0ManagedDataSource()
-            peerListVersion = dataSource.getPeerListVersion()
+            directoryDataSource = buildChain0ManagedDataSource()
+            peerListVersion = directoryDataSource.getPeerListVersion()
 
             // Setting up managed data source to the nodeConfig
             (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
-                    ?.setPeerInfoDataSource(dataSource)
+                    ?.setPeerInfoDataSource(directoryDataSource)
                     ?: logger.warn { "Node config is not managed, no peer info updates possible" }
 
             // Setting up managed data source to the blockchainConfig
             (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                    ?.setDataSource(dataSource)
+                    ?.setDataSource(directoryDataSource)
                     ?: logger.warn { "Blockchain config is not managed" }
 
         } catch (e: Exception) {
@@ -105,7 +102,7 @@ open class ManagedBlockchainProcessManager(
     }
 
     // TODO: [POS-129]: 'protected open' for tests only. Change that.
-    protected open fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
+    protected open fun buildChain0ManagedDataSource(): DirectoryDataSource {
         val storage = StorageBuilder.buildStorage(
                 postchainContext.appConfig)
 
@@ -123,7 +120,7 @@ open class ManagedBlockchainProcessManager(
     }
 
     protected open fun createDataSource(blockQueries: BlockQueries) =
-            BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
+            BaseDirectoryDataSource(blockQueries, postchainContext.appConfig, null)
 
     override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
         return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {
@@ -308,7 +305,7 @@ open class ManagedBlockchainProcessManager(
     override fun buildModuleInitializer(): (GTXModule) -> Unit {
         return {
             if (it is DirectoryComponent) {
-                it.setDirectoryDataSource(dataSource as DirectoryDataSource)
+                it.setDirectoryDataSource(directoryDataSource)
             }
         }
     }
@@ -338,7 +335,7 @@ open class ManagedBlockchainProcessManager(
             val db = DatabaseAccess.of(ctx)
             val brid = db.getBlockchainRid(ctx)!! // We can only load chains this way if we know their BC RID.
             val height = db.getLastBlockHeight(ctx)
-            val nextConfigHeight = dataSource.findNextConfigurationHeight(brid.data, height)
+            val nextConfigHeight = directoryDataSource.findNextConfigurationHeight(brid.data, height)
             if (nextConfigHeight != null) {
                 logger.info { "Next config height found in managed-mode module: $nextConfigHeight" }
                 if (BaseConfigurationDataStore.findConfigurationHeightForBlock(ctx, nextConfigHeight) != nextConfigHeight) {
@@ -346,7 +343,7 @@ open class ManagedBlockchainProcessManager(
                         "Configuration for the height $nextConfigHeight is not found in ConfigurationDataStore " +
                                 "and will be loaded into it from managed-mode module"
                     }
-                    val config = dataSource.getConfiguration(brid.data, nextConfigHeight)!!
+                    val config = directoryDataSource.getConfiguration(brid.data, nextConfigHeight)!!
                     BaseConfigurationDataStore.addConfigurationData(ctx, nextConfigHeight, config)
                 }
             }
@@ -372,7 +369,7 @@ open class ManagedBlockchainProcessManager(
             val db = DatabaseAccess.of(ctx0)
 
             val locallyConfiguredReplicas = postchainContext.nodeConfigProvider.getConfiguration().blockchainsToReplicate
-            val domainBlockchainSet = dataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
+            val domainBlockchainSet = directoryDataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
             val allMyBlockchains = domainBlockchainSet.union(locallyConfiguredReplicas)
             allMyBlockchains.map { blockchainRid ->
                 val chainId = db.getChainId(ctx0, blockchainRid)
@@ -401,7 +398,7 @@ open class ManagedBlockchainProcessManager(
 
     protected fun isPeerListChanged(): Boolean {
         val prev = peerListVersion
-        peerListVersion = dataSource.getPeerListVersion()
+        peerListVersion = directoryDataSource.getPeerListVersion()
         return prev != peerListVersion
     }
 
