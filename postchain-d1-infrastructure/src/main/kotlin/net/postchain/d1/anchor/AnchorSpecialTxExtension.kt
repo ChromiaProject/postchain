@@ -12,16 +12,12 @@ import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.ValidationResult
 import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.icmf.ClusterAnchorRoute
-import net.postchain.d1.icmf.IcmfController
 import net.postchain.d1.icmf.IcmfPacket
-import net.postchain.d1.icmf.IcmfPipe
-import net.postchain.d1.icmf.IcmfReceiver
 import net.postchain.d1.icmf.IcmfSpecialTxExtension
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
-import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -44,7 +40,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     private var myChainID: Long? = null
 
     /** We must know the id of the anchor chain itself */
-    private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long>? = null
+    private var icmfReceiver: ClusterAnchorIcmfReceiver? = null
 
     /** This is for querying ourselves, i.e. the "anchor Rell app" */
     private lateinit var module: GTXModule
@@ -99,14 +95,12 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-            pipe: IcmfPipe<ClusterAnchorRoute, Long>,
+            pipe: ClusterAnchorIcmfPipe,
             retList: MutableList<OpData>,
             bctx: BlockEContext
     ) {
-        if (pipe.id.route != ClusterAnchorRoute) return
         var counter = 0
-        val blockchainRid = pipe.id.brid
-        var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
+        var currentHeight: Long = getLastAnchoredHeight(bctx, pipe.blockchainRid)
         while (pipe.mightHaveNewPackets()) {
             val icmfPacket = pipe.fetchNext(currentHeight)
             if (icmfPacket != null) {
@@ -119,7 +113,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             }
         }
         if (logger.isDebugEnabled) {
-            logger.debug("Pulled $counter messages from pipeId: ${pipe.id}")
+            logger.debug("Pulled $counter messages from brid: ${pipe.blockchainRid}")
         }
     }
 
@@ -279,13 +273,10 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
     // ------------------------ PUBLIC NON-INHERITED ----------------
 
-    override fun connectIcmfController(controller: IcmfController) {
+    override fun connectIcmfController(controller: ClusterAnchorIcmfReceiverFactory) {
         if (icmfReceiver != null)
             throw ProgrammerMistake("Setting receiver twice")
-        icmfReceiver = controller.createReceiver(
-                myChainID!!,
-                ClusterAnchorRoute
-        ) as IcmfReceiver<ClusterAnchorRoute, Long>
+        icmfReceiver = controller.createReceiver(myChainID!!)
     }
 
     // ------------------------ PRIVATE ----------------
