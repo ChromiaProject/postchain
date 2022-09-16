@@ -10,7 +10,7 @@ import net.postchain.core.BlockchainProcessManager
 import net.postchain.ebft.BaseEBFTInfrastructureFactory
 
 // This is only used in tests, real D1 uses managed mode + containers
-class D1TestInfrastructureFactory: BaseEBFTInfrastructureFactory() {
+class D1TestInfrastructureFactory : BaseEBFTInfrastructureFactory() {
     override fun makeProcessManager(postchainContext: PostchainContext, blockchainInfrastructure: BlockchainInfrastructure, blockchainConfigurationProvider: BlockchainConfigurationProvider): BlockchainProcessManager {
         return BaseBlockchainProcessManager(postchainContext,
                 blockchainInfrastructure,

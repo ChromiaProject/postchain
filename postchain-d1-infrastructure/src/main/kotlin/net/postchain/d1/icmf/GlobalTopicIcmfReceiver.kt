@@ -4,7 +4,7 @@ import net.postchain.core.Shutdownable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
-class GlobalTopicIcmfReceiver(topics: List<String>): IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
+class GlobalTopicIcmfReceiver(topics: List<String>) : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
     private val pipes: ConcurrentMap<String, GlobalTopicPipe> = ConcurrentHashMap()
 
     init {

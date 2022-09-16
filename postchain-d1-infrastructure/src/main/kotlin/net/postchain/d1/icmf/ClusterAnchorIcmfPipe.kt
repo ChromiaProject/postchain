@@ -19,7 +19,7 @@ class ClusterAnchorIcmfPipe(
         override val id: BlockchainRid,
         protected val storage: Storage,
         protected val chainID: Long
-): IcmfPipe<ClusterAnchorRoute, BlockchainRid, Long> {
+) : IcmfPipe<ClusterAnchorRoute, BlockchainRid, Long> {
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
 

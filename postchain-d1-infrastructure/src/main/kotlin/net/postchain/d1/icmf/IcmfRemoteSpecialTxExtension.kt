@@ -1,10 +1,10 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
-import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
@@ -80,10 +80,10 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
     private fun getLastAnchoredHeight(bctx: BlockEContext, clusterName: String): Long = DatabaseAccess.of(bctx).let {
         QueryRunner().query(
-            bctx.conn,
-            "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
-            ScalarHandler(),
-            clusterName
+                bctx.conn,
+                "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
+                ScalarHandler(),
+                clusterName
         ) ?: -1
     }
 
@@ -147,12 +147,12 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                 }
 
                 if (!validatePrevMessageHeight(
-                        bctx,
-                        decodedHeader.getBlockchainRid(),
-                        topic,
-                        topicData,
-                        decodedHeader.getHeight()
-                    )
+                                bctx,
+                                decodedHeader.getBlockchainRid(),
+                                topic,
+                                topicData,
+                                decodedHeader.getHeight()
+                        )
                 ) return listOf()
 
                 val client = ConcretePostchainClientProvider().createClient(
@@ -260,9 +260,9 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                     }
 
                     currentHeaderData = HeaderValidationInfo(
-                        decodedHeader.getHeight(),
-                        decodedHeader.getBlockchainRid(),
-                        icmfHeaderData.asDict().mapValues { TopicHeaderData.fromGtv(it.value) })
+                            decodedHeader.getHeight(),
+                            decodedHeader.getBlockchainRid(),
+                            icmfHeaderData.asDict().mapValues { TopicHeaderData.fromGtv(it.value) })
                 }
 
                 OP_ICMF_MESSAGE -> {

@@ -10,7 +10,7 @@ sealed class Route
  * Routing rule for cluster anchoring chain.
  * meaning: import headers from all chains running on a cluster.
  */
-object ClusterAnchorRoute: Route()
+object ClusterAnchorRoute : Route()
 
 /**
  * Route messages from a specific topic of a specific chain.
@@ -18,11 +18,11 @@ object ClusterAnchorRoute: Route()
 data class SpecificChainRoute(
         val brid: BlockchainRid,
         val topics: List<String>
-): Route()
+) : Route()
 
 /**
  * Route messages from entire network matching specific topic
  */
 data class GlobalTopicsRoute(
         val topics: List<String>
-): Route()
+) : Route()
