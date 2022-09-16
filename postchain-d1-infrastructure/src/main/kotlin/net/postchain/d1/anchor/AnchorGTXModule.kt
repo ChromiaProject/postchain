@@ -13,7 +13,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
  * The Rell module define the "__anchor_block_header" operation for example, it is not known by this module.
  */
 class AnchorGTXModule : SimpleGTXModule<Unit>(
-    Unit, mapOf(), mapOf()
+        Unit, mapOf(), mapOf()
 ) {
     override fun initializeDB(ctx: EContext) {} // Don't need anything, the "real" anchor module creates tables etc
 
