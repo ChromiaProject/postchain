@@ -10,8 +10,8 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.block.BlockTrace
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
+import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
-import net.postchain.managed.ManagedNodeDataSource
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
@@ -20,7 +20,7 @@ class TestManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
         blockchainConfigProvider: BlockchainConfigurationProvider,
-        val testDataSource: ManagedNodeDataSource)
+        val testDataSource: DirectoryDataSource)
     : ManagedBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
@@ -31,7 +31,7 @@ class TestManagedBlockchainProcessManager(
 
     private val blockchainStarts = ConcurrentHashMap<Long, BlockingQueue<Long>>()
 
-    override fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
+    override fun buildChain0ManagedDataSource(): DirectoryDataSource {
         return testDataSource
     }
 

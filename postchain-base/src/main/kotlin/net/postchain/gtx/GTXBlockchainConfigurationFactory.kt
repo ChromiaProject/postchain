@@ -13,13 +13,12 @@ import net.postchain.gtv.mapper.toObject
  */
 open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
-    override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
+    override fun makeBlockchainConfiguration(configurationData: Any, moduleInitializer: ModuleInitializer): BlockchainConfiguration {
         val cfData = configurationData as BlockchainConfigurationData
         val effectiveBRID = cfData.historicBrid ?: configurationData.context.blockchainRID
-        return GTXBlockchainConfiguration(
-            cfData,
-            createGtxModule(effectiveBRID, configurationData)
-        )
+        val module = createGtxModule(effectiveBRID, configurationData)
+        moduleInitializer(module)
+        return GTXBlockchainConfiguration(cfData, module)
     }
 
     open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {

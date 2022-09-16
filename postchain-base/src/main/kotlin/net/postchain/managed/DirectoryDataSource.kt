@@ -1,7 +1,8 @@
 package net.postchain.managed
 
-import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.common.BlockchainRid
+import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.gtv.Gtv
 
 interface DirectoryDataSource : ManagedNodeDataSource {
 
@@ -26,5 +27,8 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits
 
     fun setLimitsForContainer(containerId: String, ramLimit: Long, cpuQuota: Long)
+
+    // TODO: [POS-344]: Gtv for now, might be changed later
+    fun getAllClusters(): Gtv
 
 }

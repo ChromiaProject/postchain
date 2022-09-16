@@ -14,6 +14,7 @@ import net.postchain.core.block.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.gtx.GTXModule
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
@@ -129,7 +130,7 @@ open class BaseBlockchainProcessManager(
                             val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
                             if (configuration != null) {
                                 blockchainInfrastructure.makeBlockchainConfiguration(
-                                    configuration, eContext, NODE_ID_AUTO, chainId
+                                        configuration, eContext, NODE_ID_AUTO, chainId, buildModuleInitializer()
                                 )
                             } else {
                                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
@@ -269,6 +270,8 @@ open class BaseBlockchainProcessManager(
         }
     }
 
+    protected open fun buildModuleInitializer(): (GTXModule) -> Unit = {}
+
     protected fun nodeName(): String {
         return peerName(appConfig.pubKey)
     }
@@ -321,7 +324,7 @@ open class BaseBlockchainProcessManager(
 
     protected fun tryAcquireChainLock(chainId: Long): Boolean {
         return chainSynchronizers[chainId]?.tryLock()
-            ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
+                ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
     }
 
     protected fun releaseChainLock(chainId: Long) {
