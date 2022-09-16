@@ -10,7 +10,7 @@ import net.postchain.d1.anchor.AnchorProcessManagerExtension
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 
-class D1InfrastructureFactory: ManagedEBFTInfrastructureFactory() {
+class D1InfrastructureFactory : ManagedEBFTInfrastructureFactory() {
     override fun makeProcessManager(postchainContext: PostchainContext, blockchainInfrastructure: BlockchainInfrastructure, blockchainConfigurationProvider: BlockchainConfigurationProvider): BlockchainProcessManager {
         return ManagedBlockchainProcessManager(postchainContext,
                 blockchainInfrastructure,
