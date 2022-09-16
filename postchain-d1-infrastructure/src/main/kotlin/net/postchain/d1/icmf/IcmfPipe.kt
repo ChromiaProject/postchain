@@ -5,12 +5,12 @@ package net.postchain.d1.icmf
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 
-data class PipeID<RT: Route> (
+data class PipeID<RT : Route>(
         val route: RT,
         val brid: BlockchainRid
 )
 
-interface IcmfPipe<RT: Route, PtrT> {
+interface IcmfPipe<RT : Route, PtrT> {
     val id: PipeID<RT>
     fun mightHaveNewPackets(): Boolean
     fun fetchNext(currentPointer: PtrT): IcmfPacket?

@@ -9,9 +9,9 @@ import net.postchain.gtx.data.OpData
  * Can do primitive validation of [OpData] too.
  */
 data class AnchorOpDataObject(
-    val blockRid: ByteArray,
-    val headerData: BlockHeaderData,
-    val witness: ByteArray
+        val blockRid: ByteArray,
+        val headerData: BlockHeaderData,
+        val witness: ByteArray
 ) {
 
     companion object : KLogging() {

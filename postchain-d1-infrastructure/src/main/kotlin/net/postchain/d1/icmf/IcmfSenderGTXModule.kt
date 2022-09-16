@@ -6,14 +6,14 @@ import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
 class IcmfSenderGTXModule : SimpleGTXModule<Unit>(
-    Unit,
-    mapOf(),
-    mapOf()
+        Unit,
+        mapOf(),
+        mapOf()
 ) {
     override fun initializeDB(ctx: EContext) {}
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> =
-        listOf(IcmfBlockBuilderExtension())
+            listOf(IcmfBlockBuilderExtension())
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf()
 }

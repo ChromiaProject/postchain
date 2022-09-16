@@ -11,25 +11,25 @@ fun DatabaseAccess.tableAnchorHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.
 fun DatabaseAccess.tableMessageHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.message_height")
 
 class IcmfReceiverGTXModule(private val topics: List<String>) : SimpleGTXModule<Unit>(
-    Unit,
-    mapOf(),
-    mapOf()
+        Unit,
+        mapOf(),
+        mapOf()
 ) {
 
     override fun initializeDB(ctx: EContext) {
         DatabaseAccess.of(ctx).apply {
             val queryRunner = QueryRunner()
             queryRunner.update(
-                ctx.conn,
-                "CREATE TABLE IF NOT EXISTS ${
-                    tableAnchorHeight(ctx)
-                } (cluster TEXT PRIMARY KEY, height BIGINT NOT NULL)"
+                    ctx.conn,
+                    "CREATE TABLE IF NOT EXISTS ${
+                        tableAnchorHeight(ctx)
+                    } (cluster TEXT PRIMARY KEY, height BIGINT NOT NULL)"
             )
             queryRunner.update(
-                ctx.conn,
-                "CREATE TABLE IF NOT EXISTS ${
-                    tableMessageHeight(ctx)
-                } (sender BYTEA, topic TEXT, height BIGINT NOT NULL, PRIMARY KEY (sender, topic))"
+                    ctx.conn,
+                    "CREATE TABLE IF NOT EXISTS ${
+                        tableMessageHeight(ctx)
+                    } (sender BYTEA, topic TEXT, height BIGINT NOT NULL, PRIMARY KEY (sender, topic))"
             )
         }
     }
