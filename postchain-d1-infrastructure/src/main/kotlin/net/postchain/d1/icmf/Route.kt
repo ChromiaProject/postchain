@@ -3,7 +3,6 @@
 package net.postchain.d1.icmf
 
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.ByteArrayKey
 
 sealed class Route
 
@@ -21,15 +20,9 @@ data class SpecificChainRoute(
         val topics: List<String>
 ): Route()
 
-
 /**
  * Route messages from entire network matching specific topic
  */
 data class GlobalTopicRoute(
-        val topic: ByteArrayKey
+        val topic: String
 ): Route()
-
-
-
-
-
