@@ -15,6 +15,7 @@ class IcmfController(storage: Storage) {
                 localDispatcher.connectReceiver(chainID, recv)
                 recv
             }
+
             else -> throw ProgrammerMistake("Unrecognized route")
         }
     }
