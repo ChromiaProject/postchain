@@ -12,7 +12,7 @@ class TestManagedBlockchainInfrastructure(
         postchainContext: PostchainContext,
         syncInfra: SynchronizationInfrastructure,
         apiInfra: ApiInfrastructure,
-        val mockDataSource: MockManagedNodeDataSource
+        val mockDataSource: MockDirectoryDataSource
 ) : BaseBlockchainInfrastructure(syncInfra, apiInfra, postchainContext) {
     override fun makeBlockchainConfiguration(
             rawConfigurationData: ByteArray,
