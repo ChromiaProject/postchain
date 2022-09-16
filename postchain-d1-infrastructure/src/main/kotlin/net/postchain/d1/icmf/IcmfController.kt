@@ -8,7 +8,7 @@ import net.postchain.common.exception.ProgrammerMistake
 class IcmfController(storage: Storage) {
     val localDispatcher = IcmfLocalDispatcher(storage)
 
-    fun createReceiver(chainID: Long, route: Route): IcmfReceiver<*, *> {
+    fun createReceiver(chainID: Long, route: Route): IcmfReceiver<*, *, *> {
         return when (route) {
             is ClusterAnchorRoute -> {
                 val recv = ClusterAnchorIcmfReceiver()

@@ -5,6 +5,7 @@ package net.postchain.d1.icmf
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
@@ -14,10 +15,11 @@ import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 
 class ClusterAnchorIcmfPipe(
-        override val id: PipeID<ClusterAnchorRoute>,
+        override val route: ClusterAnchorRoute,
+        override val id: BlockchainRid,
         protected val storage: Storage,
         protected val chainID: Long
-): IcmfPipe<ClusterAnchorRoute, Long> {
+): IcmfPipe<ClusterAnchorRoute, BlockchainRid, Long> {
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
 

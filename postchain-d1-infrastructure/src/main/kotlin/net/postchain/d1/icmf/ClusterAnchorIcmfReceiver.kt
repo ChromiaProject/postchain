@@ -2,10 +2,12 @@
 
 package net.postchain.d1.icmf
 
-class ClusterAnchorIcmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long> {
+import net.postchain.common.BlockchainRid
+
+class ClusterAnchorIcmfReceiver: IcmfReceiver<ClusterAnchorRoute, BlockchainRid, Long> {
     val localPipes = mutableMapOf<Long, ClusterAnchorIcmfPipe>()
 
-    override fun getRelevantPipes(): List<IcmfPipe<ClusterAnchorRoute, Long>> {
+    override fun getRelevantPipes(): List<IcmfPipe<ClusterAnchorRoute, BlockchainRid, Long>> {
         return localPipes.values.toList()
     }
 }

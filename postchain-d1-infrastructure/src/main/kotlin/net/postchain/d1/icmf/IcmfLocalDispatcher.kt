@@ -15,9 +15,9 @@ class IcmfLocalDispatcher(val storage: Storage) {
         receivers[chainID] = receiver
         for ((c_chainID, brid) in chains) {
             if (c_chainID != chainID) {
-                val pipeID = PipeID(ClusterAnchorRoute, brid)
                 receiver.localPipes[c_chainID] = ClusterAnchorIcmfPipe(
-                        pipeID,
+                        ClusterAnchorRoute,
+                        brid,
                         storage,
                         c_chainID
                 )
@@ -30,11 +30,11 @@ class IcmfLocalDispatcher(val storage: Storage) {
             DatabaseAccess.of(it).getBlockchainRid(it)!!
         }
 
-        val pipeID = PipeID(ClusterAnchorRoute, brid)
         for ((recID, rec) in receivers) {
             if ((recID != chainID) && (chainID !in rec.localPipes)) {
                 rec.localPipes[chainID] = ClusterAnchorIcmfPipe(
-                        pipeID,
+                        ClusterAnchorRoute,
+                        brid,
                         storage,
                         chainID
                 )

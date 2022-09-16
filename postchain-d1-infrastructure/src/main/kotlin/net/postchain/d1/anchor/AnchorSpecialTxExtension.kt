@@ -44,7 +44,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     private var myChainID: Long? = null
 
     /** We must know the id of the anchor chain itself */
-    private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long>? = null
+    private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, BlockchainRid, Long>? = null
 
     /** This is for querying ourselves, i.e. the "anchor Rell app" */
     private lateinit var module: GTXModule
@@ -99,13 +99,13 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-        pipe: IcmfPipe<ClusterAnchorRoute, Long>,
+        pipe: IcmfPipe<ClusterAnchorRoute, BlockchainRid, Long>,
         retList: MutableList<OpData>,
         bctx: BlockEContext
     ) {
-        if (pipe.id.route != ClusterAnchorRoute) return
+        if (pipe.route != ClusterAnchorRoute) return
         var counter = 0
-        val blockchainRid = pipe.id.brid
+        val blockchainRid = pipe.id
         var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
         while (pipe.mightHaveNewPackets()) {
             val icmfPacket = pipe.fetchNext(currentHeight)
@@ -285,7 +285,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         icmfReceiver = controller.createReceiver(
             myChainID!!,
             ClusterAnchorRoute
-        ) as IcmfReceiver<ClusterAnchorRoute, Long>
+        ) as IcmfReceiver<ClusterAnchorRoute, BlockchainRid, Long>
     }
 
     // ------------------------ PRIVATE ----------------
