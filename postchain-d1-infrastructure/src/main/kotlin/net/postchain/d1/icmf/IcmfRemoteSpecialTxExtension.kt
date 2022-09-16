@@ -1,10 +1,10 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
-import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
@@ -20,10 +20,12 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
+import net.postchain.managed.DirectoryComponent
+import net.postchain.managed.DirectoryDataSource
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
-class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecialTxExtension {
+class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecialTxExtension, DirectoryComponent {
 
     companion object : KLogging() {
         // operation __icmf_header(block_header: byte_array, witness: byte_array)
@@ -35,6 +37,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
     private val _relevantOps = setOf(OP_ICMF_HEADER, OP_ICMF_MESSAGE)
     private lateinit var cryptoSystem: CryptoSystem
+    private lateinit var directoryDataSource: DirectoryDataSource
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
@@ -68,24 +71,24 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
     }
 
     private fun fetchMessagesFromCluster(
-        cluster: D1ClusterInfo,
-        bctx: BlockEContext
+            cluster: D1ClusterInfo,
+            bctx: BlockEContext
     ): List<OpData> {
         val lastAnchorHeight = DatabaseAccess.of(bctx).let {
             val queryRunner = QueryRunner()
             queryRunner.query(
-                bctx.conn,
-                "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
-                ScalarHandler<Long>(),
-                cluster.name
+                    bctx.conn,
+                    "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
+                    ScalarHandler<Long>(),
+                    cluster.name
             ) ?: -1
         }
 
         val anchoringClient = ConcretePostchainClientProvider().createClient(
-            PostchainClientConfig(
-                cluster.anchoringChain,
-                EndpointPool.default(cluster.peers.map { it.restApiUrl })
-            )
+                PostchainClientConfig(
+                        cluster.anchoringChain,
+                        EndpointPool.default(cluster.peers.map { it.restApiUrl })
+                )
         )
 
         val currentAnchorHeight = anchoringClient.currentBlockHeightSync()
@@ -94,14 +97,14 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         for (topic in topics) {
             // query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height>
             val signedBlockHeaderWithAnchorHeights = anchoringClient.querySync(
-                "icmf_get_headers_with_messages_between_heights",
-                gtv(
-                    mapOf(
-                        "topic" to gtv(topic),
-                        "from_anchor_height" to gtv(lastAnchorHeight + 1),
-                        "to_anchor_height" to gtv(currentAnchorHeight)
+                    "icmf_get_headers_with_messages_between_heights",
+                    gtv(
+                            mapOf(
+                                    "topic" to gtv(topic),
+                                    "from_anchor_height" to gtv(lastAnchorHeight + 1),
+                                    "to_anchor_height" to gtv(currentAnchorHeight)
+                            )
                     )
-                )
             ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
 
             for (header in signedBlockHeaderWithAnchorHeights) {
@@ -129,21 +132,21 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                 if (!validatePrevMessageHeight(bctx, decodedHeader.getBlockchainRid(), topic, topicData, decodedHeader.getHeight())) return listOf()
 
                 val client = ConcretePostchainClientProvider().createClient(
-                    PostchainClientConfig(
-                        BlockchainRid(decodedHeader.getBlockchainRid()),
-                        EndpointPool.default(cluster.peers.map { it.restApiUrl })
-                    )
+                        PostchainClientConfig(
+                                BlockchainRid(decodedHeader.getBlockchainRid()),
+                                EndpointPool.default(cluster.peers.map { it.restApiUrl })
+                        )
                 )
                 // query icmf_get_messages(topic: text, height: integer): list<gtv>
                 val bodies = client.querySync(
-                    "icmf_get_messages",
-                    gtv(mapOf("topic" to gtv(topic), "height" to gtv(decodedHeader.getHeight())))
+                        "icmf_get_messages",
+                        gtv(mapOf("topic" to gtv(topic), "height" to gtv(decodedHeader.getHeight())))
                 ).asArray()
 
                 val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(it.asByteArray()) }
-                    .fold(ByteArray(0)) { total, item ->
-                        total.plus(item)
-                    })
+                        .fold(ByteArray(0)) { total, item ->
+                            total.plus(item)
+                        })
                 if (!topicData.hash.contentEquals(computedHash)) {
                     logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
                     return listOf()
@@ -153,10 +156,10 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
                 for (body in bodies) {
                     ops.add(
-                        OpData(
-                            OP_ICMF_MESSAGE,
-                            arrayOf(decodedHeader.gtvBlockchainRid, gtv(topic), body)
-                        )
+                            OpData(
+                                    OP_ICMF_MESSAGE,
+                                    arrayOf(decodedHeader.gtvBlockchainRid, gtv(topic), body)
+                            )
                     )
                 }
             }
@@ -166,11 +169,11 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             DatabaseAccess.of(bctx).apply {
                 val queryRunner = QueryRunner()
                 queryRunner.update(
-                    bctx.conn,
-                    "INSERT INTO ${tableAnchorHeight(bctx)} (cluster, height) VALUES (?, ?) ON CONFLICT (cluster) DO UPDATE SET height = ?",
-                    cluster.name,
-                    currentAnchorHeight,
-                    currentAnchorHeight
+                        bctx.conn,
+                        "INSERT INTO ${tableAnchorHeight(bctx)} (cluster, height) VALUES (?, ?) ON CONFLICT (cluster) DO UPDATE SET height = ?",
+                        cluster.name,
+                        currentAnchorHeight,
+                        currentAnchorHeight
                 )
             }
         }
@@ -178,7 +181,22 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         return ops
     }
 
-    private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")
+    private fun lookupAllClustersInD1(): Set<D1ClusterInfo> {
+        return directoryDataSource.getAllClusters().asArray().map { cluster ->
+            // TODO: [POS-344]: Possibly ObjectMapper might be used here
+            val name = cluster["name"]!!.asString()
+            val anchorBrid = BlockchainRid(cluster["anchoringChain"]!!.asByteArray())
+            val peers = cluster["peers"]!!.asArray().map {
+                D1PeerInfo(
+                        it["restApiUrl"]!!.asString(),
+                        PubKey(it["pubKey"]!!.asByteArray())
+                )
+            }.toSet()
+
+            D1ClusterInfo(name, anchorBrid, peers)
+
+        }.toSet()
+    }
 
     data class D1ClusterInfo(val name: String, val anchoringChain: BlockchainRid, val peers: Set<D1PeerInfo>)
 
@@ -200,32 +218,32 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
     }
 
     data class SignedBlockHeaderWithAnchorHeight(
-        val rawHeader: ByteArray,
-        val rawWitness: ByteArray,
-        val anchorHeight: Long
+            val rawHeader: ByteArray,
+            val rawWitness: ByteArray,
+            val anchorHeight: Long
     ) {
         companion object {
             fun fromGtv(gtv: Gtv) = SignedBlockHeaderWithAnchorHeight(
-                gtv["block_header"]!!.asByteArray(),
-                gtv["witness"]!!.asByteArray(),
-                gtv["anchor_height"]!!.asInteger()
+                    gtv["block_header"]!!.asByteArray(),
+                    gtv["witness"]!!.asByteArray(),
+                    gtv["anchor_height"]!!.asInteger()
             )
         }
     }
 
     data class HeaderValidationInfo(
-        val height: Long,
-        val sender: ByteArray,
-        val icmfHeaderData: Map<String, TopicHeaderData>
+            val height: Long,
+            val sender: ByteArray,
+            val icmfHeaderData: Map<String, TopicHeaderData>
     )
 
     /**
      * I am validator, validate messages.
      */
     override fun validateSpecialOperations(
-        position: SpecialTransactionPosition,
-        bctx: BlockEContext,
-        ops: List<OpData>
+            position: SpecialTransactionPosition,
+            bctx: BlockEContext,
+            ops: List<OpData>
     ): Boolean {
         var currentHeaderData: HeaderValidationInfo? = null
         val messageHashes: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
@@ -273,7 +291,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                     }
 
                     messageHashes.computeIfAbsent(topic) { mutableListOf() }
-                        .add(cryptoSystem.digest(body.asByteArray()))
+                            .add(cryptoSystem.digest(body.asByteArray()))
                 }
             }
         }
@@ -281,20 +299,20 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
     }
 
     private fun validateMessages(
-        messageHashes: MutableMap<String, MutableList<ByteArray>>,
-        currentHeaderData: HeaderValidationInfo?,
-        bctx: BlockEContext
+            messageHashes: MutableMap<String, MutableList<ByteArray>>,
+            currentHeaderData: HeaderValidationInfo?,
+            bctx: BlockEContext
     ): Boolean {
         if (!validateMessagesHash(messageHashes, currentHeaderData)) return false
         if (currentHeaderData != null) {
             for ((topic, data) in currentHeaderData.icmfHeaderData) {
                 if (!validatePrevMessageHeight(
-                        bctx,
-                        currentHeaderData.sender,
-                        topic,
-                        data,
-                        currentHeaderData.height
-                    )
+                                bctx,
+                                currentHeaderData.sender,
+                                topic,
+                                data,
+                                currentHeaderData.height
+                        )
                 ) return false
             }
         }
@@ -302,20 +320,20 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
     }
 
     private fun validatePrevMessageHeight(
-        bctx: BlockEContext,
-        sender: ByteArray,
-        topic: String,
-        topicData: TopicHeaderData,
-        height: Long
+            bctx: BlockEContext,
+            sender: ByteArray,
+            topic: String,
+            topicData: TopicHeaderData,
+            height: Long
     ): Boolean {
         DatabaseAccess.of(bctx).apply {
             val queryRunner = QueryRunner()
             val prevMessageBlockHeight = queryRunner.query(
-                bctx.conn,
-                "SELECT height FROM ${tableMessageHeight(bctx)} WHERE sender = ? AND topic = ?",
-                ScalarHandler<Long>(),
-                sender,
-                topic
+                    bctx.conn,
+                    "SELECT height FROM ${tableMessageHeight(bctx)} WHERE sender = ? AND topic = ?",
+                    ScalarHandler<Long>(),
+                    sender,
+                    topic
             )
 
             if (topicData.prevMessageBlockHeight != prevMessageBlockHeight) {
@@ -324,20 +342,20 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             }
 
             queryRunner.update(
-                bctx.conn,
-                "INSERT INTO ${tableMessageHeight(bctx)} (sender, topic, height) VALUES (?, ?, ?) ON CONFLICT (sender, topic) DO UPDATE SET height = ?",
-                sender,
-                topic,
-                height,
-                height
+                    bctx.conn,
+                    "INSERT INTO ${tableMessageHeight(bctx)} (sender, topic, height) VALUES (?, ?, ?) ON CONFLICT (sender, topic) DO UPDATE SET height = ?",
+                    sender,
+                    topic,
+                    height,
+                    height
             )
         }
         return true
     }
 
     private fun validateMessagesHash(
-        messageHashes: MutableMap<String, MutableList<ByteArray>>,
-        headerData: HeaderValidationInfo?
+            messageHashes: MutableMap<String, MutableList<ByteArray>>,
+            headerData: HeaderValidationInfo?
     ): Boolean {
         for ((topic, hashes) in messageHashes) {
             if (headerData == null) {
@@ -352,14 +370,18 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             }
 
             val computedHash = cryptoSystem.digest(hashes
-                .fold(ByteArray(0)) { total, item ->
-                    total.plus(item)
-                })
+                    .fold(ByteArray(0)) { total, item ->
+                        total.plus(item)
+                    })
             if (!topicData.hash.contentEquals(computedHash)) {
                 logger.warn("invalid messages hash for topic: $topic")
                 return false
             }
         }
         return true
+    }
+
+    override fun setDirectoryDataSource(directoryDataSource: DirectoryDataSource) {
+        this.directoryDataSource = directoryDataSource
     }
 }

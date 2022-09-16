@@ -7,6 +7,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.gtx.ModuleInitializer
 import net.postchain.network.common.ConnectionManager
 
 /**
@@ -18,9 +19,9 @@ interface SynchronizationInfrastructure : Shutdownable {
      * This is how a blockchain process get created.
      */
     fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean = { _, _ -> true }
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean = { _, _ -> true }
     ): BlockchainProcess
 
     /**
@@ -43,16 +44,18 @@ interface SynchronizationInfrastructure : Shutdownable {
  */
 interface BlockchainInfrastructure : SynchronizationInfrastructure {
 
-    fun makeBlockchainConfiguration(rawConfigurationData: ByteArray,
-                                    eContext: EContext,
-                                    nodeId: Int,
-                                    chainId: Long,
+    fun makeBlockchainConfiguration(
+            rawConfigurationData: ByteArray,
+            eContext: EContext,
+            nodeId: Int,
+            chainId: Long,
+            moduleInitializer: ModuleInitializer
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(
-        processName: BlockchainProcessName,
-        configuration: BlockchainConfiguration,
-        afterCommitHandler: AfterCommitHandler
+            processName: BlockchainProcessName,
+            configuration: BlockchainConfiguration,
+            afterCommitHandler: AfterCommitHandler
     ): BlockchainEngine
 
 }
@@ -81,11 +84,11 @@ interface BlockchainProcessConnectable {
  * (examples: BBB Ext and GTX Spec TX Ext).
  * To see how it all goes together, see: doc/extension_classes.graphml
  */
-interface SynchronizationInfrastructureExtension: BlockchainProcessConnectable, Shutdownable
+interface SynchronizationInfrastructureExtension : BlockchainProcessConnectable, Shutdownable
 
-interface ApiInfrastructure: BlockchainProcessConnectable, Shutdownable
+interface ApiInfrastructure : BlockchainProcessConnectable, Shutdownable
 
-interface BlockchainProcessManagerExtension: BlockchainProcessConnectable, Shutdownable {
+interface BlockchainProcessManagerExtension : BlockchainProcessConnectable, Shutdownable {
     fun afterCommit(process: BlockchainProcess, height: Long)
 }
 
