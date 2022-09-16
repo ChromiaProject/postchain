@@ -115,8 +115,8 @@ open class ManagedModeTest : AbstractSyncTest() {
         addBlockchainConfiguration(nodeSet, null, 0)
     }
 
-    open fun createMockDataSource(nodeIndex: Int): MockManagedNodeDataSource {
-        return MockManagedNodeDataSource(nodeIndex)
+    open fun createMockDataSource(nodeIndex: Int): MockDirectoryDataSource {
+        return MockDirectoryDataSource(nodeIndex)
     }
 
     fun newBlockchainConfiguration(nodeSet: NodeSet, historicChain: Long?, height: Long, excludeChain0Nodes: Set<Int> = setOf()) {
