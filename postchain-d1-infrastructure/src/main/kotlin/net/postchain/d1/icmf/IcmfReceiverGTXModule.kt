@@ -15,6 +15,7 @@ class IcmfReceiverGTXModule(private val topics: List<String>) : SimpleGTXModule<
     mapOf(),
     mapOf()
 ) {
+    private val _specialTxExtensions = listOf(IcmfRemoteSpecialTxExtension(topics))
 
     override fun initializeDB(ctx: EContext) {
         DatabaseAccess.of(ctx).apply {
@@ -34,5 +35,5 @@ class IcmfReceiverGTXModule(private val topics: List<String>) : SimpleGTXModule<
         }
     }
 
-    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf(IcmfRemoteSpecialTxExtension(topics))
+    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = _specialTxExtensions
 }

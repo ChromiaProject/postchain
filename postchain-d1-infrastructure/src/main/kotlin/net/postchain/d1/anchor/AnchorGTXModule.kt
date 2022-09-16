@@ -1,6 +1,5 @@
 package net.postchain.d1.anchor
 
-import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.core.EContext
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -15,17 +14,13 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 class AnchorGTXModule : SimpleGTXModule<Unit>(
     Unit, mapOf(), mapOf()
 ) {
-    override fun initializeDB(ctx: EContext) {} // Don't need anything, the "real" anchor module creates tables etc
+    private val _specialTxExtensions = listOf(AnchorSpecialTxExtension())
 
-    override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf() // We don't need any BBB extensions to make anchoring work
-    }
+    override fun initializeDB(ctx: EContext) {} // Don't need anything, the "real" anchor module creates tables etc
 
     /**
      * We need to write our own special type of operation for each header message we get.
      * That's the responsibility of [AnchorSpecialTxExtension]
      */
-    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
-        return listOf(AnchorSpecialTxExtension())
-    }
+    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = _specialTxExtensions
 }

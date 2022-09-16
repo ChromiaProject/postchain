@@ -23,6 +23,6 @@ data class SpecificChainRoute(
 /**
  * Route messages from entire network matching specific topic
  */
-data class GlobalTopicRoute(
-        val topic: String
+data class GlobalTopicsRoute(
+        val topics: List<String>
 ): Route()

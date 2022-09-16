@@ -12,7 +12,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
-import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -35,10 +34,14 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
     private val _relevantOps = setOf(OP_ICMF_HEADER, OP_ICMF_MESSAGE)
     private lateinit var cryptoSystem: CryptoSystem
+    private lateinit var receiver: GlobalTopicIcmfReceiver
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
+        receiver = GlobalTopicIcmfReceiver(topics)
     }
+
+    // TODO shutdown receiver on shutdown
 
     override fun getRelevantOps() = _relevantOps
 
@@ -51,20 +54,37 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
      * I am block builder, go fetch messages.
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        val allClusters: Set<D1ClusterInfo> = lookupAllClustersInD1()
+        val pipes = receiver.getRelevantPipes()
 
-        // TODO parallelize this
         val allOps = mutableListOf<OpData>()
-        for (cluster in allClusters) {
-            val ops = try {
-                fetchMessagesFromCluster(cluster, bctx)
-            } catch (e: Exception) {
-                logger.error(e) { "Unable to fetch ICMF messages from cluster ${cluster.name}" }
-                listOf()
+        for (pipe in pipes) {
+            if (pipe.mightHaveNewPackets()) {
+                var counter = 0
+                val clusterName = pipe.id
+                var currentHeight: Long = getLastAnchoredHeight(bctx, clusterName)
+                while (pipe.mightHaveNewPackets()) {
+                    val icmfPacket = pipe.fetchNext(-1)
+                    if (icmfPacket != null) {
+                        allOps.add(buildOpData(icmfPacket))
+                        pipe.markTaken(-1, bctx)
+                        currentHeight++ // Try next height
+                        counter++
+                    } else {
+                        break // Nothing more to find
+                    }
+                }
             }
-            allOps.addAll(ops)
         }
         return allOps
+    }
+
+    private fun getLastAnchoredHeight(bctx: BlockEContext, clusterName: String): Long = DatabaseAccess.of(bctx).let {
+        QueryRunner().query(
+            bctx.conn,
+            "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
+            ScalarHandler(),
+            clusterName
+        ) ?: -1
     }
 
     private fun fetchMessagesFromCluster(
@@ -126,7 +146,14 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                     return listOf()
                 }
 
-                if (!validatePrevMessageHeight(bctx, decodedHeader.getBlockchainRid(), topic, topicData, decodedHeader.getHeight())) return listOf()
+                if (!validatePrevMessageHeight(
+                        bctx,
+                        decodedHeader.getBlockchainRid(),
+                        topic,
+                        topicData,
+                        decodedHeader.getHeight()
+                    )
+                ) return listOf()
 
                 val client = ConcretePostchainClientProvider().createClient(
                     PostchainClientConfig(
@@ -176,27 +203,6 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         }
 
         return ops
-    }
-
-    private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")
-
-    data class D1ClusterInfo(val name: String, val anchoringChain: BlockchainRid, val peers: Set<D1PeerInfo>)
-
-    data class D1PeerInfo(val restApiUrl: String, val pubKey: PubKey) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as D1PeerInfo
-
-            if (restApiUrl != other.restApiUrl) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return restApiUrl.hashCode()
-        }
     }
 
     data class SignedBlockHeaderWithAnchorHeight(
@@ -253,7 +259,10 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                         return false
                     }
 
-                    currentHeaderData = HeaderValidationInfo(decodedHeader.getHeight(), decodedHeader.getBlockchainRid(), icmfHeaderData.asDict().mapValues { TopicHeaderData.fromGtv(it.value) })
+                    currentHeaderData = HeaderValidationInfo(
+                        decodedHeader.getHeight(),
+                        decodedHeader.getBlockchainRid(),
+                        icmfHeaderData.asDict().mapValues { TopicHeaderData.fromGtv(it.value) })
                 }
 
                 OP_ICMF_MESSAGE -> {
