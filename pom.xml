@@ -31,6 +31,7 @@
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <kotlin.version>1.6.21</kotlin.version>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
+        <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
         <!-- Maven -->
         <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
