@@ -5,7 +5,11 @@ package net.postchain.core
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.Storage
 import net.postchain.common.BlockchainRid
-import net.postchain.core.block.*
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockWitness
 import net.postchain.gtv.Gtv
 
 /**
@@ -31,6 +35,7 @@ interface BlockchainConfiguration {
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun initializeDB(ctx: EContext)
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
+    fun shutdownModules()
 }
 
 interface ConfigurationDataStore {
