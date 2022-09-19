@@ -33,19 +33,22 @@ class TransactionBuilder(
     /**
      * Sign this transaction with default signers and [PostchainClient.postTransaction]
      */
-    fun post() = defaultSign().post()
+    fun post() = sign().post()
 
     /**
      * Sign this transaction with default signers and [PostchainClient.postTransactionSync]
      */
-    fun postSync() = defaultSign().postSync()
+    fun postSync() = sign().postSync()
 
     /**
      * Sign this transaction with default signers and [PostchainClient.postTransactionSyncAwaitConfirmation]
      */
-    fun postSyncAwaitConfirmation() = defaultSign().postSyncAwaitConfirmation()
+    fun postSyncAwaitConfirmation() = sign().postSyncAwaitConfirmation()
 
-    private fun defaultSign() = sign(*defaultSigners.toTypedArray())
+    /**
+     * Sign this transaction with the [defaultSigners] and prepare it to be posted
+     */
+    fun sign() = sign(*defaultSigners.toTypedArray())
 
     /**
      * Sign this transaction and prepare it to be posted
@@ -76,8 +79,13 @@ class TransactionBuilder(
          * Build a transaction that can be posted
          */
         fun build(): PostableTransaction {
-            return PostableTransaction(signBuilder.buildGtx())
+            return PostableTransaction(buildGtx())
         }
+
+        /**
+         * Build Gtx
+         */
+        fun buildGtx() = signBuilder.buildGtx()
     }
 
     inner class PostableTransaction(private val tx: Gtx) {
