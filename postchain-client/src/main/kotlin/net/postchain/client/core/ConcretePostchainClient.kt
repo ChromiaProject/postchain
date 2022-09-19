@@ -69,10 +69,12 @@ class ConcretePostchainClient(
                 val request = createQueryRequest(name, gtv, endpoint)
                 endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
                     queryResult = queryTo(request, endpoint).toCompletableFuture().join()
-                    if (queryResult.status.code == 200) return queryResponseToGtv(queryResult)
-                    if (queryResult.status.code == 400) throw buildException(queryResult)
-                    if (queryResult.status.code == 500) throw buildException(queryResult)
-                    if (queryResult.status.code == 503) break@endpoint
+                    when (queryResult.status) {
+                        Status.OK -> return queryResponseToGtv(queryResult)
+                        Status.BAD_REQUEST -> throw buildException(queryResult)
+                        Status.INTERNAL_SERVER_ERROR -> throw buildException(queryResult)
+                        Status.UNKNOWN_HOST -> break@endpoint
+                    }
                     sleep(config.failOverConfig.attemptInterval.toMillis())
                 }
             }
@@ -151,10 +153,10 @@ class ConcretePostchainClient(
                 val endpoint = nextEndpoint()
                 endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
                     result = postTransactionTo(tx, endpoint).toCompletableFuture().join()
-                    if (result.status == CONFIRMED || result.status == WAITING) return result
-                    if (result.httpStatusCode == 400) return result
-                    if (result.httpStatusCode == 409) return result
-                    if (result.httpStatusCode == 503) break@endpoint
+                    when (result.httpStatusCode) {
+                        200, 400, 404, 409 -> return result
+                        503 -> break@endpoint
+                    }
                     sleep(config.failOverConfig.attemptInterval.toMillis())
                 }
             }
