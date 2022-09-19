@@ -35,7 +35,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
-        receiver = GlobalTopicIcmfReceiver(topics, databaseOperations, cryptoSystem)
+        receiver = GlobalTopicIcmfReceiver(topics, cryptoSystem)
     }
 
     override fun getRelevantOps() = _relevantOps

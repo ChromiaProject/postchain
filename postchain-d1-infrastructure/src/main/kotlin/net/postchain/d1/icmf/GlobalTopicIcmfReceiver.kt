@@ -11,39 +11,54 @@ import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
+import kotlin.time.Duration.Companion.minutes
 
-class GlobalTopicIcmfReceiver(topics: List<String>, databaseOperations: DatabaseOperations, cryptoSystem: CryptoSystem) : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
-    companion object : KLogging()
+class GlobalTopicIcmfReceiver(topics: List<String>,
+                              private val cryptoSystem: CryptoSystem) : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
+    companion object : KLogging() {
+        val pollDuration = 1.minutes
+    }
 
+    private val route = GlobalTopicsRoute(topics)
     private val pipes: ConcurrentMap<String, GlobalTopicPipe> = ConcurrentHashMap()
     private val job: Job
 
     init {
         val clusters = lookupAllClustersInD1()
         for (clusterName in clusters) {
-            pipes[clusterName] = GlobalTopicPipe(GlobalTopicsRoute(topics), clusterName, cryptoSystem)
+            pipes[clusterName] = GlobalTopicPipe(route, clusterName, cryptoSystem)
         }
-        logger.info("Starting coroutine from ${Thread.currentThread().name}")
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
             while (true) {
-                delay(1000)
-                logger.info("In coroutine ${Thread.currentThread().name}")
-                // TODO update clusters
+                delay(pollDuration)
+                updateClusters()
             }
         }
-        logger.info("Started coroutine from ${Thread.currentThread().name}")
+    }
+
+    private fun updateClusters() {
+        logger.info("Updating set of clusters")
+        val currentClusters = pipes.keys
+        val updatedClusters = lookupAllClustersInD1()
+        val removedClusters = currentClusters - updatedClusters
+        val addedClusters = updatedClusters - currentClusters
+        for (clusterName in removedClusters) {
+            pipes.remove(clusterName)?.shutdown()
+        }
+        for (clusterName in addedClusters) {
+            pipes[clusterName] = GlobalTopicPipe(route, clusterName, cryptoSystem)
+        }
+        logger.info("Updated set of clusters")
     }
 
     override fun getRelevantPipes(): List<GlobalTopicPipe> = pipes.values.toList()
 
     override fun shutdown() {
-        logger.info("Stopping coroutine from ${Thread.currentThread().name}")
         job.cancel()
-        logger.info("Stopped coroutine from ${Thread.currentThread().name}")
         for (pipe in pipes.values) {
             pipe.shutdown()
         }
     }
 
-    private fun lookupAllClustersInD1(): Set<String> = setOf()  //  TODO("Not yet implemented")
+    private fun lookupAllClustersInD1(): Set<String> = TODO("lookupAllClustersInD1")
 }
