@@ -8,8 +8,6 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import net.postchain.d1.icmf.IcmfPacket
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvByteArray
 import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 
@@ -33,13 +31,11 @@ class ClusterAnchorIcmfPipe(
             val blockRID = dba.getBlockRID(eContext, currentPointer + 1)
             if (blockRID != null) {
                 highestSeen.getAndUpdate { max(it, currentPointer + 1) }
-                val gtvBlockRid: Gtv = GtvByteArray(blockRID)
-
                 // Get raw data
                 val rawHeader = dba.getBlockHeader(eContext, blockRID)  // Note: expensive
                 val rawWitness = dba.getWitnessData(eContext, blockRID)
 
-                IcmfPacket(currentPointer, gtvBlockRid, rawHeader, rawWitness, emptyList())
+                IcmfPacket(currentPointer, blockRID, rawHeader, rawWitness, emptyList())
             } else {
                 null
             }

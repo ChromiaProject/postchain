@@ -18,11 +18,11 @@ data class IcmfMessage(
  * Conceptually = all messages related to a block
  */
 data class IcmfPacket(
-    val height: Long, // Block height this package corresponds to
-    val blockRid: Gtv, // The BlockRid that goes with the header (for the cases where we cannot calculate it from the header)
-    val rawHeader: ByteArray, // Header of the block
-    val rawWitness: ByteArray, // Must send the witness so the recipient can validate
-    val messages: List<IcmfMessage> // (potentially) messages
+        val height: Long, // Block height this package corresponds to
+        val blockRid: ByteArray, // The BlockRid that goes with the header (for the cases where we cannot calculate it from the header)
+        val rawHeader: ByteArray, // Header of the block
+        val rawWitness: ByteArray, // Must send the witness so the recipient can validate
+        val messages: List<IcmfMessage> // (potentially) messages
 )
 
 data class IcmfPackets<PtrT>(

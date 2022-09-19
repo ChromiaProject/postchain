@@ -12,7 +12,8 @@ import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.ValidationResult
 import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.icmf.*
+import net.postchain.d1.icmf.IcmfPacket
+import net.postchain.d1.icmf.IcmfSpecialTxExtension
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
@@ -128,11 +129,10 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @return is the [OpData] we can use to create a special TX.
      */
     private fun buildOpData(icmfPacket: IcmfPacket): OpData {
-        val gtvBlockRid: Gtv = icmfPacket.blockRid
         val gtvHeader: Gtv = GtvDecoder.decodeGtv(icmfPacket.rawHeader)
         val gtvWitness = GtvByteArray(icmfPacket.rawWitness)
 
-        return OpData(OP_BLOCK_HEADER, arrayOf(gtvBlockRid, gtvHeader, gtvWitness))
+        return OpData(OP_BLOCK_HEADER, arrayOf(gtv(icmfPacket.blockRid), gtvHeader, gtvWitness))
     }
 
     /**

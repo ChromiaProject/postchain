@@ -5,14 +5,11 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClientProvider
-import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
+import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -22,7 +19,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
-class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecialTxExtension {
+class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val databaseOperations: DatabaseOperations) : GTXSpecialTxExtension, Shutdownable {
 
     companion object : KLogging() {
         // operation __icmf_header(block_header: byte_array, witness: byte_array)
@@ -38,10 +35,8 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
-        receiver = GlobalTopicIcmfReceiver(topics)
+        receiver = GlobalTopicIcmfReceiver(topics, databaseOperations, cryptoSystem)
     }
-
-    // TODO shutdown receiver on shutdown
 
     override fun getRelevantOps() = _relevantOps
 
@@ -60,25 +55,29 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
                 val clusterName = pipe.id
-                var currentHeight: Long = getLastAnchoredHeight(bctx, clusterName)
+                val lastAnchoredHeight = databaseOperations.loadLastAnchoredHeight(bctx, clusterName)
+                var currentHeight: Long = lastAnchoredHeight
                 while (pipe.mightHaveNewPackets()) {
                     val icmfPackets = pipe.fetchNext(currentHeight)
                     if (icmfPackets != null) {
-                        allOps.addAll(buildOpData(icmfPackets))
+                        allOps.addAll(buildOpData(icmfPackets.packets))
                         pipe.markTaken(icmfPackets.currentPointer, bctx)
                         currentHeight = icmfPackets.currentPointer
                     } else {
                         break // Nothing more to find
                     }
                 }
+                if (currentHeight > lastAnchoredHeight) {
+                    databaseOperations.saveLastAnchoredHeight(bctx, clusterName, currentHeight)
+                }
             }
         }
         return allOps
     }
 
-    private fun buildOpData(icmfPackets: IcmfPackets<Long>): List<OpData> {
+    private fun buildOpData(icmfPackets: List<IcmfPacket>): List<OpData> {
         val operations = mutableListOf<OpData>()
-        for (packet in icmfPackets.packets) {
+        for (packet in icmfPackets) {
             operations.add(OpData(OP_ICMF_HEADER, arrayOf(gtv(packet.rawHeader), gtv(packet.rawWitness))))
 
             for (message in packet.messages) {
@@ -86,147 +85,6 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             }
         }
         return operations
-    }
-
-    private fun getLastAnchoredHeight(bctx: BlockEContext, clusterName: String): Long = DatabaseAccess.of(bctx).let {
-        QueryRunner().query(
-                bctx.conn,
-                "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
-                ScalarHandler(),
-                clusterName
-        ) ?: -1
-    }
-/*
-    private fun fetchMessagesFromCluster(
-            cluster: D1ClusterInfo,
-            bctx: BlockEContext
-    ): List<OpData> {
-        val lastAnchorHeight = DatabaseAccess.of(bctx).let {
-            val queryRunner = QueryRunner()
-            queryRunner.query(
-                    bctx.conn,
-                    "SELECT height FROM ${it.tableAnchorHeight(bctx)} WHERE cluster = ?",
-                    ScalarHandler<Long>(),
-                    cluster.name
-            ) ?: -1
-        }
-
-        val anchoringClient = ConcretePostchainClientProvider().createClient(
-                PostchainClientConfig(
-                        cluster.anchoringChain,
-                        EndpointPool.default(cluster.peers.map { it.restApiUrl })
-                )
-        )
-
-        val currentAnchorHeight = anchoringClient.currentBlockHeightSync()
-
-        val ops = mutableListOf<OpData>()
-        for (topic in topics) {
-            // query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height>
-            val signedBlockHeaderWithAnchorHeights = anchoringClient.querySync(
-                    "icmf_get_headers_with_messages_between_heights",
-                    gtv(
-                            mapOf(
-                                    "topic" to gtv(topic),
-                                    "from_anchor_height" to gtv(lastAnchorHeight + 1),
-                                    "to_anchor_height" to gtv(currentAnchorHeight)
-                            )
-                    )
-            ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
-
-            for (header in signedBlockHeaderWithAnchorHeights) {
-                val decodedHeader = BlockHeaderData.fromBinary(header.rawHeader)
-                val witness = BaseBlockWitness.fromBytes(header.rawWitness)
-                val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-
-                if (!witness.getSignatures().all { cryptoSystem.verifyDigest(blockRid, it) }) {
-                    logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return listOf()
-                }
-
-                val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
-                if (icmfHeaderData == null) {
-                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return listOf()
-                }
-
-                val topicData = icmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
-                if (topicData == null) {
-                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return listOf()
-                }
-
-                if (!validatePrevMessageHeight(
-                                bctx,
-                                decodedHeader.getBlockchainRid(),
-                                topic,
-                                topicData,
-                                decodedHeader.getHeight()
-                        )
-                ) return listOf()
-
-                val client = ConcretePostchainClientProvider().createClient(
-                        PostchainClientConfig(
-                                BlockchainRid(decodedHeader.getBlockchainRid()),
-                                EndpointPool.default(cluster.peers.map { it.restApiUrl })
-                        )
-                )
-                // query icmf_get_messages(topic: text, height: integer): list<gtv>
-                val bodies = client.querySync(
-                        "icmf_get_messages",
-                        gtv(mapOf("topic" to gtv(topic), "height" to gtv(decodedHeader.getHeight())))
-                ).asArray()
-
-                val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(it.asByteArray()) }
-                        .fold(ByteArray(0)) { total, item ->
-                            total.plus(item)
-                        })
-                if (!topicData.hash.contentEquals(computedHash)) {
-                    logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return listOf()
-                }
-
-                ops.add(OpData(OP_ICMF_HEADER, arrayOf(gtv(header.rawHeader), gtv(header.rawWitness))))
-
-                for (body in bodies) {
-                    ops.add(
-                            OpData(
-                                    OP_ICMF_MESSAGE,
-                                    arrayOf(decodedHeader.gtvBlockchainRid, gtv(topic), body)
-                            )
-                    )
-                }
-            }
-        }
-
-        if (currentAnchorHeight > lastAnchorHeight) {
-            DatabaseAccess.of(bctx).apply {
-                val queryRunner = QueryRunner()
-                queryRunner.update(
-                        bctx.conn,
-                        "INSERT INTO ${tableAnchorHeight(bctx)} (cluster, height) VALUES (?, ?) ON CONFLICT (cluster) DO UPDATE SET height = ?",
-                        cluster.name,
-                        currentAnchorHeight,
-                        currentAnchorHeight
-                )
-            }
-        }
-
-        return ops
-    }
-*/
-    data class SignedBlockHeaderWithAnchorHeight(
-            val rawHeader: ByteArray,
-            val rawWitness: ByteArray,
-            val anchorHeight: Long
-    ) {
-        companion object {
-            fun fromGtv(gtv: Gtv) = SignedBlockHeaderWithAnchorHeight(
-                    gtv["block_header"]!!.asByteArray(),
-                    gtv["witness"]!!.asByteArray(),
-                    gtv["anchor_height"]!!.asInteger()
-            )
-        }
     }
 
     data class HeaderValidationInfo(
@@ -380,5 +238,9 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             }
         }
         return true
+    }
+
+    override fun shutdown() {
+        receiver.shutdown()
     }
 }
