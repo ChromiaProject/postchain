@@ -13,6 +13,7 @@ import org.http4k.core.Status
 import org.http4k.format.Gson.auto
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import kotlin.test.assertEquals
 
 internal class ConcretePostchainClientTest {
@@ -52,7 +53,7 @@ internal class ConcretePostchainClientTest {
             ConcretePostchainClient(PostchainClientConfig(
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),
-                statusPollInterval = 1,
+                statusPollInterval = Duration.ZERO,
                 failOverConfig = FailOverConfig(1)
             ), httpClient = httpClient),
             // If I didn't pass a max value, it defaults to RETRIEVE_TX_STATUS_ATTEMPTS = 20
@@ -66,7 +67,7 @@ internal class ConcretePostchainClientTest {
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),
                 statusPollCount = 10,
-                statusPollInterval = 1,
+                statusPollInterval = Duration.ZERO,
                 failOverConfig = FailOverConfig(1)
             ), httpClient = httpClient),
             // If I pass a custom max value, verify it uses it
@@ -112,7 +113,7 @@ internal class ConcretePostchainClientTest {
                 val txLens = Body.auto<TxStatus>().toLens()
                 fn(txLens(TxStatus("rejected", "Message!"), Response(Status.BAD_REQUEST)))
             }
-        }).awaitConfirmation(TxRid(""), 10, 1)
+        }).awaitConfirmation(TxRid(""), 10, Duration.ZERO)
         assertEquals(1, nCalls)
     }
 }

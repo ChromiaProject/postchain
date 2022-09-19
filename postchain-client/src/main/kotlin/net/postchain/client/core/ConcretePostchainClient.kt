@@ -27,6 +27,7 @@ import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.*
 import org.http4k.format.Gson.auto
 import java.lang.Thread.sleep
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.CompletionStage
@@ -72,7 +73,7 @@ class ConcretePostchainClient(
                     if (queryResult.status.code == 400) throw buildException(queryResult)
                     if (queryResult.status.code == 500) throw buildException(queryResult)
                     if (queryResult.status.code == 503) break@endpoint
-                    sleep(config.failOverConfig.attemptInterval)
+                    sleep(config.failOverConfig.attemptInterval.toMillis())
                 }
             }
             throw buildException(queryResult!!)
@@ -154,7 +155,7 @@ class ConcretePostchainClient(
                     if (result.httpStatusCode == 400) return result
                     if (result.httpStatusCode == 409) return result
                     if (result.httpStatusCode == 503) break@endpoint
-                    sleep(config.failOverConfig.attemptInterval)
+                    sleep(config.failOverConfig.attemptInterval.toMillis())
                 }
             }
             return result!!
@@ -189,7 +190,7 @@ class ConcretePostchainClient(
         return awaitConfirmation(resp.txRid, config.statusPollCount, config.statusPollInterval)
     }
 
-    override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {
+    override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Duration): TransactionResult {
         var lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected
         run poll@{
@@ -202,7 +203,7 @@ class ConcretePostchainClient(
                     logger.warn(e) { "Unable to poll for new block" }
                     lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
                 }
-                sleep(pollInterval)
+                sleep(pollInterval.toMillis())
             }
         }
         return lastKnownTxResult
