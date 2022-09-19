@@ -1,5 +1,6 @@
 package net.postchain.client.config
 
+import net.postchain.common.config.Config
 import net.postchain.common.config.getEnvOrIntProperty
 import net.postchain.common.config.getEnvOrLongProperty
 import org.apache.commons.configuration2.Configuration
@@ -10,7 +11,7 @@ val FAIL_OVER_INTERVAL: Duration = Duration.ofMillis(500)
 data class FailOverConfig(
     val attemptsPerEndpoint: Int = 5,
     val attemptInterval: Duration = FAIL_OVER_INTERVAL,
-) {
+) : Config {
     companion object {
         fun fromConfiguration(config: Configuration): FailOverConfig {
             return FailOverConfig(

@@ -1,7 +1,7 @@
 package net.postchain.api.rest.infra
 
 import net.postchain.config.app.AppConfig
-import net.postchain.config.app.Config
+import net.postchain.common.config.Config
 
 data class RestApiConfig(
         val basePath: String,

@@ -3,10 +3,7 @@ package net.postchain.client.config
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.PropertiesFileLoader
-import net.postchain.common.config.cryptoSystem
-import net.postchain.common.config.getEnvOrIntProperty
-import net.postchain.common.config.getEnvOrLongProperty
-import net.postchain.common.config.getEnvOrStringProperty
+import net.postchain.common.config.*
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -23,7 +20,7 @@ data class PostchainClientConfig(
     // Fail-over only applicable to synchronized requests
     val failOverConfig: FailOverConfig = FailOverConfig(),
     val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem()
-) {
+) : Config {
 
     companion object {
         @JvmStatic
