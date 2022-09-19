@@ -40,7 +40,6 @@
             <entry key="modules">
                 <array>
                     <string>net.postchain.integrationtest.ShutdownTestModule</string>
-                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>
             </entry>
         </dict>
