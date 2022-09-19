@@ -7,6 +7,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtx.Gtx
 import java.util.concurrent.CompletionStage
+import java.time.Duration
 
 interface PostchainClient {
     val config: PostchainClientConfig
@@ -39,7 +40,7 @@ interface PostchainClient {
     /**
      * Wait until the given [TxRid] is included in a block
      */
-    fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult
+    fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Duration): TransactionResult
 
     /**
      * Check the current status of a [TxRid]

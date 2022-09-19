@@ -1,7 +1,7 @@
 package net.postchain.ebft.heartbeat
 
 import net.postchain.config.app.AppConfig
-import net.postchain.config.app.Config
+import net.postchain.common.config.Config
 
 /**
  * Heartbeat and RemoteConfig
