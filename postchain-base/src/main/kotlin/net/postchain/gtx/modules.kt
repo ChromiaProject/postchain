@@ -7,6 +7,7 @@ import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
+import net.postchain.core.Shutdownable
 import net.postchain.core.Transactor
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.data.ExtOpData
@@ -15,7 +16,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 /**
  * The GTX Module is the basis of a "Dapp".
  */
-interface GTXModule {
+interface GTXModule : Shutdownable {
     fun makeTransactor(opData: ExtOpData): Transactor
     fun getOperations(): Set<String>
     fun getQueries(): Set<String>
@@ -68,6 +69,8 @@ abstract class SimpleGTXModule<ConfT>(
             return querymap[name]!!(conf, ctxt, args)
         } else throw UserMistake("Unknown query: $name")
     }
+
+    override fun shutdown() { }
 }
 
 class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule {
@@ -138,5 +141,11 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         ops = opmap.keys
         _queries = qmap.keys
         _specialTxExtensions = _stxs.toList()
+    }
+
+    override fun shutdown() {
+        for (module in modules) {
+            module.shutdown()
+        }
     }
 }
