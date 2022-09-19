@@ -13,8 +13,19 @@ import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
-import net.postchain.core.*
-import net.postchain.core.block.*
+import net.postchain.core.AfterCommitHandler
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainEngine
+import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionQueue
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
@@ -90,7 +101,7 @@ open class BaseBlockchainEngine(
 
     override fun shutdown() {
         closed = true
-        blockchainConfiguration.shutdown()
+        blockchainConfiguration.shutdownModules()
         storage.close()
     }
 

@@ -81,8 +81,8 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
         }
     }
 
-    override fun shutdown() {
+    override fun shutdownModules() {
         module.shutdown()
-        super.shutdown()
+        super.shutdownModules()
     }
 }

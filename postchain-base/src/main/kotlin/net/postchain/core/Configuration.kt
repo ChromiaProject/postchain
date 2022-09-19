@@ -5,7 +5,11 @@ package net.postchain.core
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.Storage
 import net.postchain.common.BlockchainRid
-import net.postchain.core.block.*
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockWitness
 import net.postchain.gtv.Gtv
 
 /**
@@ -13,7 +17,7 @@ import net.postchain.gtv.Gtv
  * This type is also able to use the configuration settings to construct some core domain objects on its own
  * (for example [BlockBuildingStrategy]).
  */
-interface BlockchainConfiguration : Shutdownable {
+interface BlockchainConfiguration {
     val blockchainContext: BlockchainContext
     val chainID: Long
     val blockchainRid: BlockchainRid
@@ -31,6 +35,7 @@ interface BlockchainConfiguration : Shutdownable {
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun initializeDB(ctx: EContext)
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
+    fun shutdownModules()
 }
 
 interface ConfigurationDataStore {

@@ -143,5 +143,5 @@ open class BaseBlockchainConfiguration(
         }
     }
 
-    override fun shutdown() { }
+    override fun shutdownModules() {}
 }
