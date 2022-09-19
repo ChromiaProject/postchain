@@ -8,6 +8,10 @@ interface IcmfPipe<RT : Route, IdT, PtrT> {
     val route: RT
     val id: IdT
     fun mightHaveNewPackets(): Boolean
-    fun fetchNext(currentPointer: PtrT): IcmfPacket?
+
+    /**
+     * Fetches next packets with pointer greater than currentPointer
+     */
+    fun fetchNext(currentPointer: PtrT): IcmfPackets<PtrT>?
     fun markTaken(currentPointer: PtrT, bctx: BlockEContext)
 }

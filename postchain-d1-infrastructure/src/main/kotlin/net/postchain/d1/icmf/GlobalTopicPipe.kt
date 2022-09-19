@@ -9,7 +9,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
         TODO("Not yet implemented")
     }
 
-    override fun fetchNext(currentPointer: Long): IcmfPacket? {
+    override fun fetchNext(currentPointer: Long): IcmfPackets<Long>? {
         TODO("Not yet implemented")
     }
 

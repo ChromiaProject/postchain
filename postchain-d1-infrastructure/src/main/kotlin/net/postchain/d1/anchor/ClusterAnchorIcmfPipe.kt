@@ -1,34 +1,32 @@
 // Copyright (c) 2022 ChromaWay AB. See README for license information.
 
-package net.postchain.d1.icmf
+package net.postchain.d1.anchor
 
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
+import net.postchain.d1.icmf.IcmfPacket
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
-import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvFactory
 import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 
 class ClusterAnchorIcmfPipe(
-        override val route: ClusterAnchorRoute,
-        override val id: BlockchainRid,
-        protected val storage: Storage,
-        protected val chainID: Long
-) : IcmfPipe<ClusterAnchorRoute, BlockchainRid, Long> {
+    val id: BlockchainRid,
+    protected val storage: Storage,
+    protected val chainID: Long
+) {
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
 
     // TODO: prefetch packet in dispatcher instead of just setting height
     fun setHighestSeenHeight(height: Long) = highestSeen.set(height)
 
-    override fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
+    fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
-    override fun fetchNext(currentPointer: Long): IcmfPacket? {
+    fun fetchNext(currentPointer: Long): IcmfPacket? {
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
 
@@ -41,18 +39,14 @@ class ClusterAnchorIcmfPipe(
                 val rawHeader = dba.getBlockHeader(eContext, blockRID)  // Note: expensive
                 val rawWitness = dba.getWitnessData(eContext, blockRID)
 
-                // Transform raw bytes to GTV
-                val gtvHeader: Gtv = GtvDecoder.decodeGtv(rawHeader)
-                val gtvWitness: Gtv = GtvFactory.gtv(rawWitness)  // This is a primitive GTV encoding, but all we have
-
-                IcmfPacket.build(currentPointer, gtvBlockRid, gtvHeader, gtvWitness)
+                IcmfPacket(currentPointer, gtvBlockRid, rawHeader, rawWitness, emptyList())
             } else {
                 null
             }
         }
     }
 
-    override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
+    fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
             lastCommitted.getAndUpdate { max(it, currentPointer) }
         }

@@ -7,12 +7,6 @@ import net.postchain.common.BlockchainRid
 sealed class Route
 
 /**
- * Routing rule for cluster anchoring chain.
- * meaning: import headers from all chains running on a cluster.
- */
-object ClusterAnchorRoute : Route()
-
-/**
  * Route messages from a specific topic of a specific chain.
  */
 data class SpecificChainRoute(

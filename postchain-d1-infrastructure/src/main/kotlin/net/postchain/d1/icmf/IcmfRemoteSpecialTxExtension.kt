@@ -59,16 +59,14 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
         val allOps = mutableListOf<OpData>()
         for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
-                var counter = 0
                 val clusterName = pipe.id
                 var currentHeight: Long = getLastAnchoredHeight(bctx, clusterName)
                 while (pipe.mightHaveNewPackets()) {
-                    val icmfPacket = pipe.fetchNext(-1)
-                    if (icmfPacket != null) {
-                        allOps.add(buildOpData(icmfPacket))
-                        pipe.markTaken(-1, bctx)
-                        currentHeight++ // Try next height
-                        counter++
+                    val icmfPackets = pipe.fetchNext(currentHeight)
+                    if (icmfPackets != null) {
+                        allOps.addAll(buildOpData(icmfPackets))
+                        pipe.markTaken(icmfPackets.currentPointer, bctx)
+                        currentHeight = icmfPackets.currentPointer
                     } else {
                         break // Nothing more to find
                     }
@@ -76,6 +74,18 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             }
         }
         return allOps
+    }
+
+    private fun buildOpData(icmfPackets: IcmfPackets<Long>): List<OpData> {
+        val operations = mutableListOf<OpData>()
+        for (packet in icmfPackets.packets) {
+            operations.add(OpData(OP_ICMF_HEADER, arrayOf(gtv(packet.rawHeader), gtv(packet.rawWitness))))
+
+            for (message in packet.messages) {
+                operations.add(OpData(OP_ICMF_MESSAGE, arrayOf(gtv(message.sender), gtv(message.topic), message.body)))
+            }
+        }
+        return operations
     }
 
     private fun getLastAnchoredHeight(bctx: BlockEContext, clusterName: String): Long = DatabaseAccess.of(bctx).let {
@@ -86,7 +96,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
                 clusterName
         ) ?: -1
     }
-
+/*
     private fun fetchMessagesFromCluster(
             cluster: D1ClusterInfo,
             bctx: BlockEContext
@@ -204,7 +214,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
         return ops
     }
-
+*/
     data class SignedBlockHeaderWithAnchorHeight(
             val rawHeader: ByteArray,
             val rawWitness: ByteArray,

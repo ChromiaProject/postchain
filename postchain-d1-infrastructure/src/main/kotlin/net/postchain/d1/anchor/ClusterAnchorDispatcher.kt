@@ -1,13 +1,13 @@
 // Copyright (c) 2022 ChromaWay AB. See README for license information.
 
-package net.postchain.d1.icmf
+package net.postchain.d1.anchor
 
 import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 
-class IcmfLocalDispatcher(val storage: Storage) {
+class ClusterAnchorDispatcher(val storage: Storage) {
     val receivers = mutableMapOf<Long, ClusterAnchorIcmfReceiver>()
     val chains = mutableMapOf<Long, BlockchainRid>()
 
@@ -16,7 +16,6 @@ class IcmfLocalDispatcher(val storage: Storage) {
         for ((c_chainID, brid) in chains) {
             if (c_chainID != chainID) {
                 receiver.localPipes[c_chainID] = ClusterAnchorIcmfPipe(
-                        ClusterAnchorRoute,
                         brid,
                         storage,
                         c_chainID
@@ -33,7 +32,6 @@ class IcmfLocalDispatcher(val storage: Storage) {
         for ((recID, rec) in receivers) {
             if ((recID != chainID) && (chainID !in rec.localPipes)) {
                 rec.localPipes[chainID] = ClusterAnchorIcmfPipe(
-                        ClusterAnchorRoute,
                         brid,
                         storage,
                         chainID

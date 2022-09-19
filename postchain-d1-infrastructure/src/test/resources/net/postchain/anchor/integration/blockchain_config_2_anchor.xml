@@ -40,8 +40,7 @@ This is a Anchor Chain configuration specifically for testing.
             <entry key="modules">
                 <array>
                     <!-- Note: we don't want GTXTestModule here, b/c we are not supposed to write any "normal" TXs -->
-                    <string>net.postchain.d1.anchor.AnchorGTXModule
-                    </string> <!-- This is the Anchor module: essential!  -->
+                    <string>net.postchain.d1.anchor.AnchorGTXModule</string> <!-- This is the Anchor module: essential!  -->
                     <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
                 </array>
             </entry>
