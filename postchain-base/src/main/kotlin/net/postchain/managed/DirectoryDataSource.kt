@@ -30,4 +30,6 @@ interface DirectoryDataSource : ManagedNodeDataSource {
 
     fun getAllClusters(): List<D1ClusterInfo>
 
+    fun getClusterInfo(clusterName: String): D1ClusterInfo
+
 }
