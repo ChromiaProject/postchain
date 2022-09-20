@@ -6,11 +6,12 @@ import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.block.BlockQueries
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.managed.directory1.D1ClusterInfo
+import net.postchain.managed.directory1.D1PeerInfo
 
 class BaseDirectoryDataSource(
         queries: BlockQueries,
@@ -77,41 +78,23 @@ class BaseDirectoryDataSource(
         TODO("Will not be used")
     }
 
-    override fun getAllClusters(): Gtv {
+    override fun getAllClusters(): List<D1ClusterInfo> {
         return if (containerNodeConfig?.testmode == true) {
             val cs = Secp256K1CryptoSystem()
 
-            val peer0 = gtv(
-                    "restApiUrl" to gtv("http://127.0.0.1:7740/"),
-                    "pubKey" to gtv(secp256k1_derivePubKey(cs.getRandomBytes(32)))
-            )
-            val peer1 = gtv(
-                    "restApiUrl" to gtv("http://127.0.0.1:7741/"),
-                    "pubKey" to gtv(secp256k1_derivePubKey(cs.getRandomBytes(32)))
-            )
-            val peer2 = gtv(
-                    "restApiUrl" to gtv("http://127.0.0.1:7742/"),
-                    "pubKey" to gtv(secp256k1_derivePubKey(cs.getRandomBytes(32)))
-            )
+            val peer0 = D1PeerInfo("http://127.0.0.1:7740/", PubKey(secp256k1_derivePubKey(cs.getRandomBytes(32))))
+            val peer1 = D1PeerInfo("http://127.0.0.1:7741/", PubKey(secp256k1_derivePubKey(cs.getRandomBytes(32))))
+            val peer2 = D1PeerInfo("http://127.0.0.1:7742/", PubKey(secp256k1_derivePubKey(cs.getRandomBytes(32))))
 
-            val s01 = gtv(
-                    "name" to gtv("s1"),
-                    "anchoringChain" to gtv(BlockchainRid.buildRepeat(1).data),
-                    "peers" to gtv(peer0, peer1)
+            listOf(
+                    D1ClusterInfo("s1", BlockchainRid.buildRepeat(1), setOf(peer0, peer1)),
+                    D1ClusterInfo("s2", BlockchainRid.buildRepeat(2), setOf(peer0, peer2)),
             )
-
-            val s02 = gtv(
-                    "name" to gtv("s1"),
-                    "anchoringChain" to gtv(BlockchainRid.buildRepeat(1).data),
-                    "peers" to gtv(peer0, peer2)
-            )
-
-            gtv(s01, s02)
 
         } else {
             // TODO: [POS-344]: Check NP_API or D1_API version here. We return an EMPTY for now.
             // if (nmApiVersion >= 3) { ... }
-            gtv(emptyList())
+            emptyList()
         }
     }
 }

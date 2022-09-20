@@ -2,8 +2,8 @@ package net.postchain.devtools.mminfra
 
 import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.gtv.Gtv
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.managed.directory1.D1ClusterInfo
 
 class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIndex), DirectoryDataSource {
 
@@ -27,7 +27,7 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
         TODO("Not yet implemented")
     }
 
-    override fun getAllClusters(): Gtv {
+    override fun getAllClusters(): List<D1ClusterInfo> {
         TODO("Not yet implemented")
     }
 }
