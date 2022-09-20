@@ -14,11 +14,14 @@ data class D1PeerInfo(
         other as D1PeerInfo
 
         if (restApiUrl != other.restApiUrl) return false
+        if (pubKey != other.pubKey) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        return restApiUrl.hashCode()
+        var result = restApiUrl.hashCode()
+        result = 31 * result + pubKey.hashCode()
+        return result
     }
 }
