@@ -16,7 +16,7 @@ import kotlin.time.Duration.Companion.minutes
 class GlobalTopicIcmfReceiver(topics: List<String>,
                               private val cryptoSystem: CryptoSystem) : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
     companion object : KLogging() {
-        val pollDuration = 1.minutes
+        val pollInterval = 1.minutes
     }
 
     private val route = GlobalTopicsRoute(topics)
@@ -30,7 +30,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
         }
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
             while (true) {
-                delay(pollDuration)
+                delay(pollInterval)
                 updateClusters()
             }
         }

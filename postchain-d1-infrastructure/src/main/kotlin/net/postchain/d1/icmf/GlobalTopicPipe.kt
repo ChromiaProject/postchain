@@ -23,19 +23,23 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Duration.Companion.seconds
 
 class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: String, private val cryptoSystem: CryptoSystem) : IcmfPipe<GlobalTopicsRoute, String, Long>, Shutdownable {
-    companion object : KLogging()
+    companion object : KLogging() {
+        val pollInterval = 10.seconds
+    }
 
     // TODO we need Storage here to be able to make DB operations from background process
 
     private val clusterName = id
     private val packets = ConcurrentSkipListMap<Long, IcmfPackets<Long>>() // TODO Set a maximum capacity?
     private val lastAnchorHeight = AtomicLong(loadLastAnchoredHeight(clusterName))
+
     private val job: Job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker")) {
         while (true) {
             backgroundFetch()
-            delay(1000)
+            delay(pollInterval)
         }
     }
 
