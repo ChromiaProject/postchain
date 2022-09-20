@@ -1,9 +1,10 @@
 package net.postchain.managed.directory1
 
 import net.postchain.common.BlockchainRid
+import net.postchain.gtv.mapper.Name
 
 data class D1ClusterInfo(
-        val name: String,
-        val anchoringChain: BlockchainRid,
-        val peers: Set<D1PeerInfo>
+        @Name("name") val name: String,
+        @Name("anchoring_chain") val anchoringChain: BlockchainRid,
+        @Name("peers") val peers: Set<D1PeerInfo>
 )

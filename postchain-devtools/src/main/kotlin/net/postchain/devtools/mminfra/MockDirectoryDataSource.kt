@@ -30,4 +30,9 @@ class MockDirectoryDataSource(nodeIndex: Int) : MockManagedNodeDataSource(nodeIn
     override fun getAllClusters(): List<D1ClusterInfo> {
         TODO("Not yet implemented")
     }
+
+    override fun getClusterInfo(clusterName: String): D1ClusterInfo {
+        TODO("Not yet implemented")
+    }
+
 }
