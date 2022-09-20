@@ -43,7 +43,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
             try {
                 backgroundFetch()
             } catch (e: Exception) {
-                logger.error("Background fetch failed: ${e.message}", e)
+                logger.error("Background fetch from cluster $clusterName failed: ${e.message}", e)
             }
             delay(pollInterval)
         }
@@ -82,8 +82,14 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                         )
                 ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
             } catch (e: Exception) {
-                logger.warn("Unable to query for messages with topic: $topic on anchor chain. ${e.message}", e)
-                return
+                when (e) {
+                    is UserMistake, is IOException -> {
+                        logger.warn("Unable to query for messages with topic: $topic on anchor chain. ${e.message}", e)
+                        return
+                    }
+
+                    else -> throw e
+                }
             }
 
             for (header in signedBlockHeaderWithAnchorHeights) {
@@ -131,6 +137,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                             // TODO Should we try again? Otherwise messages will be lost
                             continue
                         }
+
                         else -> throw e
                     }
                 }
