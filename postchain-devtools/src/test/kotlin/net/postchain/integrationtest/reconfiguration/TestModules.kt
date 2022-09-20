@@ -40,6 +40,8 @@ open class AbstractDummyModule : GTXModule {
     override fun query(ctxt: EContext, name: String, args: Gtv): Gtv = GtvNull
 
     override fun initializeDB(ctx: EContext) = Unit
+
+    override fun shutdown() { }
 }
 
 class DummyModule1 : AbstractDummyModule()

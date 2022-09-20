@@ -108,14 +108,14 @@ open class BaseBlockchainInfrastructure(
         val configuration = process.blockchainEngine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
         synchronizationInfrastructure.exitBlockchainProcess(process)
-        disconnectProcess(configuration, process)
+        disconnectProcess(configuration, process, true)
     }
 
     override fun restartBlockchainProcess(process: BlockchainProcess) {
         val configuration = process.blockchainEngine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
         synchronizationInfrastructure.restartBlockchainProcess(process)
-        disconnectProcess(configuration, process)
+        disconnectProcess(configuration, process, false)
     }
 
     private fun connectProcess(configuration: BlockchainConfiguration, process: BlockchainProcess) {
@@ -125,11 +125,15 @@ open class BaseBlockchainInfrastructure(
         apiInfrastructure.connectProcess(process)
     }
 
-    private fun disconnectProcess(configuration: BlockchainConfiguration, process: BlockchainProcess) {
+    private fun disconnectProcess(
+        configuration: BlockchainConfiguration,
+        process: BlockchainProcess,
+        disconnectApi: Boolean
+    ) {
         configuration.syncInfrastructureExtensionNames.forEach {
             getSynchronizationInfrastructureExtension(it).disconnectProcess(process)
         }
-        apiInfrastructure.disconnectProcess(process)
+        if (disconnectApi) apiInfrastructure.disconnectProcess(process)
     }
 
     private fun getSynchronizationInfrastructure(dynClassName: DynamicClassName?): SynchronizationInfrastructure {
