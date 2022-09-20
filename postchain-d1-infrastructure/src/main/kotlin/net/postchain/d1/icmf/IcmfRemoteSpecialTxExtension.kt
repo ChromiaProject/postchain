@@ -8,7 +8,6 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
-import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -19,7 +18,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
-class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val databaseOperations: DatabaseOperations) : GTXSpecialTxExtension, Shutdownable {
+class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         // operation __icmf_header(block_header: byte_array, witness: byte_array)
@@ -31,11 +30,10 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
 
     private val _relevantOps = setOf(OP_ICMF_HEADER, OP_ICMF_MESSAGE)
     private lateinit var cryptoSystem: CryptoSystem
-    private lateinit var receiver: GlobalTopicIcmfReceiver
+    lateinit var receiver: GlobalTopicIcmfReceiver
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
-        receiver = GlobalTopicIcmfReceiver(topics, cryptoSystem)
     }
 
     override fun getRelevantOps() = _relevantOps
@@ -55,7 +53,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
         for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
                 val clusterName = pipe.id
-                val lastAnchoredHeight = databaseOperations.loadLastAnchoredHeight(bctx, clusterName)
+                val lastAnchoredHeight = IcmfDatabaseOperations.loadLastAnchoredHeight(bctx, clusterName)
                 var currentHeight: Long = lastAnchoredHeight
                 while (pipe.mightHaveNewPackets()) {
                     val icmfPackets = pipe.fetchNext(currentHeight)
@@ -81,7 +79,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
                     }
                 }
                 if (currentHeight > lastAnchoredHeight) {
-                    databaseOperations.saveLastAnchoredHeight(bctx, clusterName, currentHeight)
+                    IcmfDatabaseOperations.saveLastAnchoredHeight(bctx, clusterName, currentHeight)
                 }
             }
         }
@@ -249,9 +247,5 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
             }
         }
         return true
-    }
-
-    override fun shutdown() {
-        receiver.shutdown()
     }
 }

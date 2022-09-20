@@ -7,6 +7,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mu.KLogging
+import net.postchain.base.Storage
+import net.postchain.base.withReadConnection
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
 import java.util.concurrent.ConcurrentHashMap
@@ -14,7 +16,9 @@ import java.util.concurrent.ConcurrentMap
 import kotlin.time.Duration.Companion.minutes
 
 class GlobalTopicIcmfReceiver(topics: List<String>,
-                              private val cryptoSystem: CryptoSystem) : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
+                              private val cryptoSystem: CryptoSystem,
+                              private val storage: Storage,
+                              private val chainID: Long) : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
     }
@@ -26,7 +30,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
     init {
         val clusters = lookupAllClustersInD1()
         for (clusterName in clusters) {
-            pipes[clusterName] = GlobalTopicPipe(route, clusterName, cryptoSystem)
+            pipes[clusterName] = createPipe(clusterName)
         }
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
             while (true) {
@@ -50,9 +54,17 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             pipes.remove(clusterName)?.shutdown()
         }
         for (clusterName in addedClusters) {
-            pipes[clusterName] = GlobalTopicPipe(route, clusterName, cryptoSystem)
+            pipes[clusterName] = createPipe(clusterName)
         }
         logger.info("Updated set of clusters")
+    }
+
+    private fun createPipe(clusterName: String): GlobalTopicPipe {
+        val lastAnchorHeight = withReadConnection(storage, chainID) {
+            IcmfDatabaseOperations.loadLastAnchoredHeight(it, clusterName)
+        }
+
+        return GlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight)
     }
 
     override fun getRelevantPipes(): List<GlobalTopicPipe> = pipes.values.toList()

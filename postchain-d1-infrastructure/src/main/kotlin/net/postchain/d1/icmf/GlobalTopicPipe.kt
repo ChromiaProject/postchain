@@ -27,16 +27,14 @@ import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
-class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: String, private val cryptoSystem: CryptoSystem) : IcmfPipe<GlobalTopicsRoute, String, Long>, Shutdownable {
+class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: String, private val cryptoSystem: CryptoSystem, lastAnchorHeight: Long) : IcmfPipe<GlobalTopicsRoute, String, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
     }
 
-    // TODO we need Storage here to be able to make DB operations from background process
-
     private val clusterName = id
     private val packets = ConcurrentSkipListMap<Long, IcmfPackets<Long>>() // TODO Set a maximum capacity?
-    private val lastAnchorHeight = AtomicLong(loadLastAnchoredHeight(clusterName))
+    private val lastAnchorHeight = AtomicLong(lastAnchorHeight)
 
     private val job: Job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker-cluster-$clusterName")) {
         while (true) {
@@ -48,8 +46,6 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
             delay(pollInterval)
         }
     }
-
-    private fun loadLastAnchoredHeight(clusterName: String): Long = TODO("loadLastAnchoredHeight")
 
     private fun backgroundFetch() {
         logger.info("Fetching messages from $clusterName")
