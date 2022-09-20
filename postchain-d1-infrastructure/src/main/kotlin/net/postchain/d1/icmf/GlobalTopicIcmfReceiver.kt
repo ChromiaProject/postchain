@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.Storage
 import net.postchain.base.withReadConnection
+import net.postchain.client.core.PostchainClientProvider
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
 import java.util.concurrent.ConcurrentHashMap
@@ -18,7 +19,8 @@ import kotlin.time.Duration.Companion.minutes
 class GlobalTopicIcmfReceiver(topics: List<String>,
                               private val cryptoSystem: CryptoSystem,
                               private val storage: Storage,
-                              private val chainID: Long) : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
+                              private val chainID: Long,
+                              private val postchainClientProvider: PostchainClientProvider) : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
     }
@@ -64,7 +66,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             IcmfDatabaseOperations.loadLastAnchoredHeight(it, clusterName)
         }
 
-        return GlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight)
+        return GlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider)
     }
 
     override fun getRelevantPipes(): List<GlobalTopicPipe> = pipes.values.toList()
@@ -76,5 +78,5 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
         }
     }
 
-    private fun lookupAllClustersInD1(): Set<String> = TODO("lookupAllClustersInD1")
+    private fun lookupAllClustersInD1(): Set<String> = setOf("cluster0") // TODO Implement
 }

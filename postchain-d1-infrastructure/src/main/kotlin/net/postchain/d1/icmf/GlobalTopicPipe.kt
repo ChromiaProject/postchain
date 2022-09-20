@@ -8,16 +8,21 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.BaseBlockWitness
+import net.postchain.base.BaseBlockWitnessBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.client.core.PostchainClientProvider
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
+import net.postchain.core.block.BlockHeader
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
+import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -27,7 +32,7 @@ import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
-class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: String, private val cryptoSystem: CryptoSystem, lastAnchorHeight: Long) : IcmfPipe<GlobalTopicsRoute, String, Long>, Shutdownable {
+class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: String, private val cryptoSystem: CryptoSystem, lastAnchorHeight: Long, private val postchainClientProvider: PostchainClientProvider) : IcmfPipe<GlobalTopicsRoute, String, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
     }
@@ -53,7 +58,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
         val cluster = fetchClusterInfoFromD1(clusterName)
 
         // TODO use net.postchain.client.chromia.ChromiaClientProvider
-        val anchoringClient = ConcretePostchainClientProvider().createClient(
+        val anchoringClient = postchainClientProvider.createClient(
                 PostchainClientConfig(
                         cluster.anchoringChain,
                         EndpointPool.default(cluster.peers.map { it.restApiUrl })
@@ -93,25 +98,25 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                 val witness = BaseBlockWitness.fromBytes(header.rawWitness)
                 val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
-                if (!witness.getSignatures().all { cryptoSystem.verifyDigest(blockRid, it) }) {
-                    logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                if (!validateBlockSignatures(decodedHeader.getPreviousBlockRid(), header.rawHeader, blockRid, cluster.peers.map { it.pubKey }, witness)) {
+                    logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                     return
                 }
 
                 val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
                 if (icmfHeaderData == null) {
-                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                     return
                 }
 
                 val topicData = icmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
                 if (topicData == null) {
-                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                     return
                 }
 
                 // TODO use net.postchain.client.chromia.ChromiaClientProvider
-                val client = ConcretePostchainClientProvider().createClient(
+                val client = postchainClientProvider.createClient(
                         PostchainClientConfig(
                                 BlockchainRid(decodedHeader.getBlockchainRid()),
                                 EndpointPool.default(cluster.peers.map { it.restApiUrl })
@@ -127,7 +132,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                     when (e) {
                         is UserMistake, is IOException -> {
                             logger.warn(
-                                    "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid()} for messages. ${e.message}",
+                                    "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} for messages. ${e.message}",
                                     e
                             )
                             // TODO Should we try again? Otherwise messages will be lost
@@ -157,7 +162,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                             )
                     )
                 } else {
-                    logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                    logger.warn("invalid messages hash for topic: $topic for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                     // TODO Should we retry fetching of messages from another node? Otherwise the messages are lost
                 }
             }
@@ -166,6 +171,27 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
         packets[currentAnchorHeight] = IcmfPackets(currentAnchorHeight, currentPackets)
 
         lastAnchorHeight.set(currentAnchorHeight)
+    }
+
+    private fun validateBlockSignatures(previousBlockRid: ByteArray, rawHeader: ByteArray, blockRid: Hash, peers: List<PubKey>, witness: BaseBlockWitness): Boolean {
+        val blockWitnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, object : BlockHeader {
+            override val prevBlockRID = previousBlockRid
+            override val rawData = rawHeader
+            override val blockRID = blockRid
+        }, peers.map { it.key }.toTypedArray(), getBFTRequiredSignatureCount(peers.size))
+
+        for (signature in witness.getSignatures()) {
+            try {
+                blockWitnessBuilder.applySignature(signature)
+            } catch (e: UserMistake) {
+                return false
+            }
+        }
+
+        if (!blockWitnessBuilder.isComplete()) {
+            return false
+        }
+        return true
     }
 
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
@@ -179,7 +205,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
         }
     }
 
-    private fun fetchClusterInfoFromD1(clusterName: String): D1ClusterInfo = TODO("fetchClusterInfoFromD1")
+    private fun fetchClusterInfoFromD1(clusterName: String): D1ClusterInfo = D1ClusterInfo(clusterName, BlockchainRid.buildRepeat(0), setOf(D1PeerInfo("", PubKey(ByteArray(33))))) // TODO Implement
 
     data class D1ClusterInfo(val name: String, val anchoringChain: BlockchainRid, val peers: Set<D1PeerInfo>)
 
@@ -215,6 +241,14 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                     gtv["witness"]!!.asByteArray(),
                     gtv["anchor_height"]!!.asInteger()
             )
+        }
+
+        fun toGtv(): Gtv {
+            return gtv(mapOf(
+                    "block_header" to gtv(rawHeader),
+                    "witness" to gtv(rawWitness),
+                    "anchor_height" to gtv(anchorHeight)
+            ))
         }
     }
 }
