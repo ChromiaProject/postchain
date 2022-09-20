@@ -50,6 +50,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
 
         val cluster = fetchClusterInfoFromD1(clusterName)
 
+        // TODO use net.postchain.client.chromia.ChromiaClientProvider
         val anchoringClient = ConcretePostchainClientProvider().createClient(
                 PostchainClientConfig(
                         cluster.anchoringChain,
@@ -107,6 +108,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                 ) return // TODO how to handle validation errors?
                  */
 
+                // TODO use net.postchain.client.chromia.ChromiaClientProvider
                 val client = ConcretePostchainClientProvider().createClient(
                         PostchainClientConfig(
                                 BlockchainRid(decodedHeader.getBlockchainRid()),
