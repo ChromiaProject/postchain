@@ -18,7 +18,7 @@ class IcmfReceiverGTXModule(private val topics: List<String>) : SimpleGTXModule<
         mapOf()
 ), DirectoryComponent {
 
-    private lateinit var directoryDataSource: DirectoryDataSource
+    override lateinit var directoryDataSource: DirectoryDataSource
 
     override fun initializeDB(ctx: EContext) {
         DatabaseAccess.of(ctx).apply {
@@ -40,11 +40,7 @@ class IcmfReceiverGTXModule(private val topics: List<String>) : SimpleGTXModule<
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
         return listOf(IcmfRemoteSpecialTxExtension(topics)).onEach { ext ->
-            if (ext is DirectoryComponent) ext.setDirectoryDataSource(directoryDataSource)
+            if (ext is DirectoryComponent) ext.directoryDataSource = directoryDataSource
         }
-    }
-
-    override fun setDirectoryDataSource(directoryDataSource: DirectoryDataSource) {
-        this.directoryDataSource = directoryDataSource
     }
 }

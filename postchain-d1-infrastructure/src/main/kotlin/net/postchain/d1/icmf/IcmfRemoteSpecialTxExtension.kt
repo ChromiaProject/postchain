@@ -37,7 +37,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
     private val _relevantOps = setOf(OP_ICMF_HEADER, OP_ICMF_MESSAGE)
     private lateinit var cryptoSystem: CryptoSystem
-    private lateinit var directoryDataSource: DirectoryDataSource
+    override lateinit var directoryDataSource: DirectoryDataSource
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
@@ -347,9 +347,5 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
             }
         }
         return true
-    }
-
-    override fun setDirectoryDataSource(directoryDataSource: DirectoryDataSource) {
-        this.directoryDataSource = directoryDataSource
     }
 }
