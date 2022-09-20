@@ -104,10 +104,10 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         val blockchainRid = pipe.id
         var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
         while (pipe.mightHaveNewPackets()) {
-            val icmfPacket = pipe.fetchNext(currentHeight)
-            if (icmfPacket != null) {
-                retList.add(buildOpData(icmfPacket))
-                pipe.markTaken(icmfPacket.height, bctx)
+            val clusterAnchorPacket = pipe.fetchNext(currentHeight)
+            if (clusterAnchorPacket != null) {
+                retList.add(buildOpData(clusterAnchorPacket))
+                pipe.markTaken(clusterAnchorPacket.height, bctx)
                 currentHeight++ // Try next height
                 counter++
             } else {
@@ -125,14 +125,14 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     /**
      * Transform to [IcmfPacket] to [OpData] put arguments in correct order
      *
-     * @param icmfPacket is what we get from ICMF
+     * @param clusterAnchorPacket is what we get from ICMF
      * @return is the [OpData] we can use to create a special TX.
      */
-    private fun buildOpData(icmfPacket: IcmfPacket): OpData {
-        val gtvHeader: Gtv = GtvDecoder.decodeGtv(icmfPacket.rawHeader)
-        val gtvWitness = GtvByteArray(icmfPacket.rawWitness)
+    private fun buildOpData(clusterAnchorPacket: ClusterAnchorPacket): OpData {
+        val gtvHeader: Gtv = GtvDecoder.decodeGtv(clusterAnchorPacket.rawHeader)
+        val gtvWitness = GtvByteArray(clusterAnchorPacket.rawWitness)
 
-        return OpData(OP_BLOCK_HEADER, arrayOf(gtv(icmfPacket.blockRid), gtvHeader, gtvWitness))
+        return OpData(OP_BLOCK_HEADER, arrayOf(gtv(clusterAnchorPacket.blockRid), gtvHeader, gtvWitness))
     }
 
     /**

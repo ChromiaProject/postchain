@@ -13,6 +13,7 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
@@ -21,6 +22,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import java.io.IOException
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
@@ -38,7 +40,11 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
 
     private val job: Job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker")) {
         while (true) {
-            backgroundFetch()
+            try {
+                backgroundFetch()
+            } catch (e: Exception) {
+                logger.error("Background fetch failed: ${e.message}", e)
+            }
             delay(pollInterval)
         }
     }
@@ -64,16 +70,21 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
 
         for (topic in route.topics) {
             // query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height>
-            val signedBlockHeaderWithAnchorHeights = anchoringClient.querySync(
-                    "icmf_get_headers_with_messages_between_heights",
-                    gtv(
-                            mapOf(
-                                    "topic" to gtv(topic),
-                                    "from_anchor_height" to gtv(lastAnchorHeight.get() + 1),
-                                    "to_anchor_height" to gtv(currentAnchorHeight)
-                            )
-                    )
-            ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
+            val signedBlockHeaderWithAnchorHeights = try {
+                anchoringClient.querySync(
+                        "icmf_get_headers_with_messages_between_heights",
+                        gtv(
+                                mapOf(
+                                        "topic" to gtv(topic),
+                                        "from_anchor_height" to gtv(lastAnchorHeight.get() + 1),
+                                        "to_anchor_height" to gtv(currentAnchorHeight)
+                                )
+                        )
+                ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
+            } catch (e: Exception) {
+                logger.warn("Unable to query for messages with topic: $topic on anchor chain. ${e.message}", e)
+                return
+            }
 
             for (header in signedBlockHeaderWithAnchorHeights) {
                 val decodedHeader = BlockHeaderData.fromBinary(header.rawHeader)
@@ -82,31 +93,20 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
 
                 if (!witness.getSignatures().all { cryptoSystem.verifyDigest(blockRid, it) }) {
                     logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return // TODO how to handle validation errors?
+                    return
                 }
 
                 val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
                 if (icmfHeaderData == null) {
                     logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return // TODO how to handle validation errors?
+                    return
                 }
 
                 val topicData = icmfHeaderData[topic]?.let { TopicHeaderData.fromGtv(it) }
                 if (topicData == null) {
                     logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return // TODO how to handle validation errors?
+                    return
                 }
-
-                /* TODO validatePrevMessageHeight
-                if (!validatePrevMessageHeight(
-                                bctx,
-                                decodedHeader.getBlockchainRid(),
-                                topic,
-                                topicData,
-                                decodedHeader.getHeight()
-                        )
-                ) return // TODO how to handle validation errors?
-                 */
 
                 // TODO use net.postchain.client.chromia.ChromiaClientProvider
                 val client = ConcretePostchainClientProvider().createClient(
@@ -116,22 +116,47 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                         )
                 )
                 // query icmf_get_messages(topic: text, height: integer): list<gtv>
-                val bodies = client.querySync(
-                        "icmf_get_messages",
-                        gtv(mapOf("topic" to gtv(topic), "height" to gtv(decodedHeader.getHeight())))
-                ).asArray()
+                val bodies = try {
+                    client.querySync(
+                            "icmf_get_messages",
+                            gtv(mapOf("topic" to gtv(topic), "height" to gtv(decodedHeader.getHeight())))
+                    ).asArray()
+                } catch (e: Exception) {
+                    when (e) {
+                        is UserMistake, is IOException -> {
+                            logger.warn(
+                                    "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid()} for messages. ${e.message}",
+                                    e
+                            )
+                            // TODO Should we try again? Otherwise messages will be lost
+                            continue
+                        }
+                        else -> throw e
+                    }
+                }
 
                 val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(it.asByteArray()) }
                         .fold(ByteArray(0)) { total, item ->
                             total.plus(item)
                         })
-                if (!topicData.hash.contentEquals(computedHash)) {
-                    logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
-                    return
-                }
 
-                currentPackets.add(IcmfPacket(decodedHeader.getHeight(), blockRid, header.rawHeader, header.rawWitness,
-                        bodies.map { IcmfMessage(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight(), topic, it) }))
+                if (topicData.hash.contentEquals(computedHash)) {
+                    currentPackets.add(
+                            IcmfPacket(
+                                    height = decodedHeader.getHeight(),
+                                    sender = BlockchainRid(decodedHeader.getBlockchainRid()),
+                                    topic = topic,
+                                    blockRid = blockRid,
+                                    rawHeader = header.rawHeader,
+                                    rawWitness = header.rawWitness,
+                                    prevMessageBlockHeight = topicData.prevMessageBlockHeight,
+                                    bodies = bodies.asList()
+                            )
+                    )
+                } else {
+                    logger.warn("invalid messages hash for topic: $topic for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                    // TODO Should we retry fetching of messages from another node? Otherwise the messages are lost
+                }
             }
         }
 

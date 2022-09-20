@@ -7,7 +7,6 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
-import net.postchain.d1.icmf.IcmfPacket
 import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 
@@ -24,7 +23,7 @@ class ClusterAnchorIcmfPipe(
 
     fun mightHaveNewPackets() = highestSeen.get() > lastCommitted.get()
 
-    fun fetchNext(currentPointer: Long): IcmfPacket? {
+    fun fetchNext(currentPointer: Long): ClusterAnchorPacket? {
         return withReadConnection(storage, chainID) { eContext ->
             val dba = DatabaseAccess.of(eContext)
 
@@ -35,7 +34,7 @@ class ClusterAnchorIcmfPipe(
                 val rawHeader = dba.getBlockHeader(eContext, blockRID)  // Note: expensive
                 val rawWitness = dba.getWitnessData(eContext, blockRID)
 
-                IcmfPacket(currentPointer, blockRID, rawHeader, rawWitness, emptyList())
+                ClusterAnchorPacket(currentPointer, blockRID, rawHeader, rawWitness)
             } else {
                 null
             }

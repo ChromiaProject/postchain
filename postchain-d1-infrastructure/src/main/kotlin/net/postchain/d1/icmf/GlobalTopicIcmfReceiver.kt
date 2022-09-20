@@ -31,7 +31,11 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
             while (true) {
                 delay(pollInterval)
-                updateClusters()
+                try {
+                    updateClusters()
+                } catch (e: Exception) {
+                    logger.error("Cluster update failed: ${e.message}", e)
+                }
             }
         }
     }

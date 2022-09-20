@@ -60,7 +60,20 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
                 while (pipe.mightHaveNewPackets()) {
                     val icmfPackets = pipe.fetchNext(currentHeight)
                     if (icmfPackets != null) {
-                        allOps.addAll(buildOpData(icmfPackets.packets))
+                        for (packet in icmfPackets.packets) {
+                            if (validatePrevMessageHeight(
+                                            bctx,
+                                            packet.sender.data,
+                                            packet.topic,
+                                            packet.prevMessageBlockHeight,
+                                            packet.height
+                                    )
+                            ) {
+                                allOps.addAll(buildOpData(packet))
+                            } else {
+                                // TODO What do we do if this validation fails?? Otherwise we will lose messages
+                            }
+                        }
                         pipe.markTaken(icmfPackets.currentPointer, bctx)
                         currentHeight = icmfPackets.currentPointer
                     } else {
@@ -75,14 +88,12 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
         return allOps
     }
 
-    private fun buildOpData(icmfPackets: List<IcmfPacket>): List<OpData> {
+    private fun buildOpData(icmfPacket: IcmfPacket): List<OpData> {
         val operations = mutableListOf<OpData>()
-        for (packet in icmfPackets) {
-            operations.add(OpData(OP_ICMF_HEADER, arrayOf(gtv(packet.rawHeader), gtv(packet.rawWitness))))
+        operations.add(OpData(OP_ICMF_HEADER, arrayOf(gtv(icmfPacket.rawHeader), gtv(icmfPacket.rawWitness))))
 
-            for (message in packet.messages) {
-                operations.add(OpData(OP_ICMF_MESSAGE, arrayOf(gtv(message.sender), gtv(message.topic), message.body)))
-            }
+        for (body in icmfPacket.bodies) {
+            operations.add(OpData(OP_ICMF_MESSAGE, arrayOf(gtv(icmfPacket.sender), gtv(icmfPacket.topic), body)))
         }
         return operations
     }
@@ -169,7 +180,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
                                 bctx,
                                 currentHeaderData.sender,
                                 topic,
-                                data,
+                                data.prevMessageBlockHeight,
                                 currentHeaderData.height
                         )
                 ) return false
@@ -182,12 +193,12 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
             bctx: BlockEContext,
             sender: ByteArray,
             topic: String,
-            topicData: TopicHeaderData,
+            prevMessageBlockHeight: Long,
             height: Long
     ): Boolean {
         DatabaseAccess.of(bctx).apply {
             val queryRunner = QueryRunner()
-            val prevMessageBlockHeight = queryRunner.query(
+            val currentPrevMessageBlockHeight = queryRunner.query(
                     bctx.conn,
                     "SELECT height FROM ${tableMessageHeight(bctx)} WHERE sender = ? AND topic = ?",
                     ScalarHandler<Long>(),
@@ -195,8 +206,8 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>, private val
                     topic
             )
 
-            if (topicData.prevMessageBlockHeight != prevMessageBlockHeight) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $prevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")
+            if (prevMessageBlockHeight != currentPrevMessageBlockHeight) {
+                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height $prevMessageBlockHeight, expected $prevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")
                 return false
             }
 
