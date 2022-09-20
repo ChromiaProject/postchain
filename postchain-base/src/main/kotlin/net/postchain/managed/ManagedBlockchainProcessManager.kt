@@ -305,7 +305,7 @@ open class ManagedBlockchainProcessManager(
     override fun buildModuleInitializer(): (GTXModule) -> Unit {
         return {
             if (it is DirectoryComponent) {
-                it.setDirectoryDataSource(directoryDataSource)
+                it.directoryDataSource = directoryDataSource
             }
         }
     }
