@@ -38,7 +38,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
     private val packets = ConcurrentSkipListMap<Long, IcmfPackets<Long>>() // TODO Set a maximum capacity?
     private val lastAnchorHeight = AtomicLong(loadLastAnchoredHeight(clusterName))
 
-    private val job: Job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker")) {
+    private val job: Job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker-cluster-$clusterName")) {
         while (true) {
             try {
                 backgroundFetch()
