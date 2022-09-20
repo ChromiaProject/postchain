@@ -12,7 +12,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
-import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -22,6 +21,7 @@ import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 import net.postchain.managed.DirectoryComponent
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.managed.directory1.D1ClusterInfo
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
@@ -182,39 +182,7 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
     }
 
     private fun lookupAllClustersInD1(): Set<D1ClusterInfo> {
-        return directoryDataSource.getAllClusters().asArray().map { cluster ->
-            // TODO: [POS-344]: Possibly ObjectMapper might be used here
-            val name = cluster["name"]!!.asString()
-            val anchorBrid = BlockchainRid(cluster["anchoringChain"]!!.asByteArray())
-            val peers = cluster["peers"]!!.asArray().map {
-                D1PeerInfo(
-                        it["restApiUrl"]!!.asString(),
-                        PubKey(it["pubKey"]!!.asByteArray())
-                )
-            }.toSet()
-
-            D1ClusterInfo(name, anchorBrid, peers)
-
-        }.toSet()
-    }
-
-    data class D1ClusterInfo(val name: String, val anchoringChain: BlockchainRid, val peers: Set<D1PeerInfo>)
-
-    data class D1PeerInfo(val restApiUrl: String, val pubKey: PubKey) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as D1PeerInfo
-
-            if (restApiUrl != other.restApiUrl) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return restApiUrl.hashCode()
-        }
+        return directoryDataSource.getAllClusters().toSet()
     }
 
     data class SignedBlockHeaderWithAnchorHeight(
