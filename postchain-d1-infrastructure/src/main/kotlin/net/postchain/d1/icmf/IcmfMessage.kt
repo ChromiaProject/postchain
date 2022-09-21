@@ -10,7 +10,7 @@ import net.postchain.gtv.Gtv
  */
 data class IcmfPacket(
         val height: Long, // Block height this package corresponds to
-        val sender: BlockchainRid, // Block height this package corresponds to
+        val sender: BlockchainRid,
         val topic: String,
         val blockRid: ByteArray, // The BlockRid that goes with the header (for the cases where we cannot calculate it from the header)
         val rawHeader: ByteArray, // Header of the block

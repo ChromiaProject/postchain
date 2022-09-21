@@ -125,7 +125,9 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                     val witness = BaseBlockWitness.fromBytes(rawWitness)
                     val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
-                    if (!witness.getSignatures().all { cryptoSystem.verifyDigest(blockRid, it) }) {
+                    val peers = fetchChainInfoFromD1(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
+
+                    if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), rawHeader, blockRid, peers.map { it.pubKey }, witness)) {
                         logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
                         return false
                     }

@@ -8,21 +8,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.BaseBlockWitness
-import net.postchain.base.BaseBlockWitnessBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
-import net.postchain.core.block.BlockHeader
 import net.postchain.crypto.CryptoSystem
-import net.postchain.crypto.PubKey
-import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -98,7 +93,9 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                 val witness = BaseBlockWitness.fromBytes(header.rawWitness)
                 val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
-                if (!validateBlockSignatures(decodedHeader.getPreviousBlockRid(), header.rawHeader, blockRid, cluster.peers.map { it.pubKey }, witness)) {
+                val chainPeers = fetchChainInfoFromD1(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
+
+                if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), header.rawHeader, blockRid, chainPeers.map { it.pubKey }, witness)) {
                     logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                     return
                 }
@@ -173,27 +170,6 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
         lastAnchorHeight.set(currentAnchorHeight)
     }
 
-    private fun validateBlockSignatures(previousBlockRid: ByteArray, rawHeader: ByteArray, blockRid: Hash, peers: List<PubKey>, witness: BaseBlockWitness): Boolean {
-        val blockWitnessBuilder = BaseBlockWitnessBuilder(cryptoSystem, object : BlockHeader {
-            override val prevBlockRID = previousBlockRid
-            override val rawData = rawHeader
-            override val blockRID = blockRid
-        }, peers.map { it.key }.toTypedArray(), getBFTRequiredSignatureCount(peers.size))
-
-        for (signature in witness.getSignatures()) {
-            try {
-                blockWitnessBuilder.applySignature(signature)
-            } catch (e: UserMistake) {
-                return false
-            }
-        }
-
-        if (!blockWitnessBuilder.isComplete()) {
-            return false
-        }
-        return true
-    }
-
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
 
     override fun fetchNext(currentPointer: Long): IcmfPackets<Long>? =
@@ -202,27 +178,6 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
             packets.remove(currentPointer)
-        }
-    }
-
-    private fun fetchClusterInfoFromD1(clusterName: String): D1ClusterInfo = D1ClusterInfo(clusterName, BlockchainRid.buildRepeat(0), setOf(D1PeerInfo("", PubKey(ByteArray(33))))) // TODO Implement
-
-    data class D1ClusterInfo(val name: String, val anchoringChain: BlockchainRid, val peers: Set<D1PeerInfo>)
-
-    data class D1PeerInfo(val restApiUrl: String, val pubKey: PubKey) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as D1PeerInfo
-
-            if (restApiUrl != other.restApiUrl) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return restApiUrl.hashCode()
         }
     }
 
