@@ -3,7 +3,6 @@ package net.postchain.d1.icmf
 import mu.KLogging
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
-import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
@@ -15,8 +14,6 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
-import org.apache.commons.dbutils.QueryRunner
-import org.apache.commons.dbutils.handlers.ScalarHandler
 
 class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
 
@@ -59,18 +56,12 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                     val icmfPackets = pipe.fetchNext(currentHeight)
                     if (icmfPackets != null) {
                         for (packet in icmfPackets.packets) {
-                            if (validatePrevMessageHeight(
-                                            bctx,
-                                            packet.sender.data,
-                                            packet.topic,
-                                            packet.prevMessageBlockHeight,
-                                            packet.height
-                                    )
-                            ) {
+                            val currentPrevMessageBlockHeight = IcmfDatabaseOperations.loadLastMessageHeight(bctx, packet.sender, packet.topic)
+                            if (packet.height > currentPrevMessageBlockHeight) {
+                                IcmfDatabaseOperations.saveLastMessageHeight(bctx, packet.sender, packet.topic, packet.height)
                                 allOps.addAll(buildOpData(packet))
-                            } else {
-                                // TODO What do we do if this validation fails?? Otherwise we will lose messages
                             }
+                            // else already processed in previous block, so skip it here
                         }
                         pipe.markTaken(icmfPackets.currentPointer, bctx)
                         currentHeight = icmfPackets.currentPointer
@@ -196,30 +187,15 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
             prevMessageBlockHeight: Long,
             height: Long
     ): Boolean {
-        DatabaseAccess.of(bctx).apply {
-            val queryRunner = QueryRunner()
-            val currentPrevMessageBlockHeight = queryRunner.query(
-                    bctx.conn,
-                    "SELECT height FROM ${tableMessageHeight(bctx)} WHERE sender = ? AND topic = ?",
-                    ScalarHandler<Long>(),
-                    sender,
-                    topic
-            )
+        val currentPrevMessageBlockHeight = IcmfDatabaseOperations.loadLastMessageHeight(bctx, BlockchainRid(sender), topic)
 
-            if (prevMessageBlockHeight != currentPrevMessageBlockHeight) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height $prevMessageBlockHeight, expected $prevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")
-                return false
-            }
-
-            queryRunner.update(
-                    bctx.conn,
-                    "INSERT INTO ${tableMessageHeight(bctx)} (sender, topic, height) VALUES (?, ?, ?) ON CONFLICT (sender, topic) DO UPDATE SET height = ?",
-                    sender,
-                    topic,
-                    height,
-                    height
-            )
+        if (prevMessageBlockHeight != currentPrevMessageBlockHeight) {
+            logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height $prevMessageBlockHeight, expected $prevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")
+            return false
         }
+
+        IcmfDatabaseOperations.saveLastMessageHeight(bctx, BlockchainRid(sender), topic, height)
+
         return true
     }
 

@@ -30,9 +30,13 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
     private val job: Job
 
     init {
+        val lastMessageHeights = withReadConnection(storage, chainID) {
+            IcmfDatabaseOperations.loadAllLastMessageHeights(it)
+        }
+
         val clusters = lookupAllClustersInD1()
         for (clusterName in clusters) {
-            pipes[clusterName] = createPipe(clusterName)
+            pipes[clusterName] = createPipe(clusterName, lastMessageHeights)
         }
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
             while (true) {
@@ -56,17 +60,17 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             pipes.remove(clusterName)?.shutdown()
         }
         for (clusterName in addedClusters) {
-            pipes[clusterName] = createPipe(clusterName)
+            pipes[clusterName] = createPipe(clusterName, listOf())
         }
         logger.info("Updated set of clusters")
     }
 
-    private fun createPipe(clusterName: String): GlobalTopicPipe {
+    private fun createPipe(clusterName: String, lastMessageHeights: List<MessageHeightForSender>): GlobalTopicPipe {
         val lastAnchorHeight = withReadConnection(storage, chainID) {
             IcmfDatabaseOperations.loadLastAnchoredHeight(it, clusterName)
         }
 
-        return GlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider)
+        return GlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider, lastMessageHeights)
     }
 
     override fun getRelevantPipes(): List<GlobalTopicPipe> = pipes.values.toList()

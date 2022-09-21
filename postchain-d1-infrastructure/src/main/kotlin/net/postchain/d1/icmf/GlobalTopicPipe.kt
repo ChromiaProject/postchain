@@ -23,11 +23,18 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
-class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: String, private val cryptoSystem: CryptoSystem, lastAnchorHeight: Long, private val postchainClientProvider: PostchainClientProvider) : IcmfPipe<GlobalTopicsRoute, String, Long>, Shutdownable {
+class GlobalTopicPipe(override val route: GlobalTopicsRoute,
+                      override val id: String,
+                      private val cryptoSystem: CryptoSystem,
+                      lastAnchorHeight: Long,
+                      private val postchainClientProvider: PostchainClientProvider,
+                      _lastMessageHeights: List<MessageHeightForSender>) : IcmfPipe<GlobalTopicsRoute, String, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
     }
@@ -35,6 +42,11 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
     private val clusterName = id
     private val packets = ConcurrentSkipListMap<Long, IcmfPackets<Long>>() // TODO Set a maximum capacity?
     private val lastAnchorHeight = AtomicLong(lastAnchorHeight)
+    private val lastMessageHeights: ConcurrentMap<Pair<BlockchainRid, String>, Long> = ConcurrentHashMap()
+
+    init {
+        _lastMessageHeights.forEach { lastMessageHeights[it.sender to it.topic] = it.height }
+    }
 
     private val job: Job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker-cluster-$clusterName")) {
         while (true) {
@@ -112,6 +124,15 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                     return
                 }
 
+                val currentPrevMessageBlockHeight = lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid()) to topic]
+                        ?: -1
+                if (decodedHeader.getHeight() <= currentPrevMessageBlockHeight) {
+                    continue // already processed in previous block, skip it here
+                } else if (topicData.prevMessageBlockHeight != currentPrevMessageBlockHeight) {
+                    logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for topic $topic for sender ${decodedHeader.getBlockchainRid().toHex()}")
+                    return
+                }
+
                 // TODO use net.postchain.client.chromia.ChromiaClientProvider
                 val client = postchainClientProvider.createClient(
                         PostchainClientConfig(
@@ -126,14 +147,14 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                             gtv(mapOf("topic" to gtv(topic), "height" to gtv(decodedHeader.getHeight())))
                     ).asArray()
                 } catch (e: Exception) {
+                    // TODO check if chain is permanently stopped
                     when (e) {
                         is UserMistake, is IOException -> {
                             logger.warn(
                                     "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} for messages. ${e.message}",
                                     e
                             )
-                            // TODO Should we try again? Otherwise messages will be lost
-                            continue
+                            return // TODO retry this and don't throw away stuff from other topics
                         }
 
                         else -> throw e
@@ -158,9 +179,10 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute, override val id: St
                                     bodies = bodies.asList()
                             )
                     )
+                    lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid()) to topic] = decodedHeader.getHeight()
                 } else {
                     logger.warn("invalid messages hash for topic: $topic for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
-                    // TODO Should we retry fetching of messages from another node? Otherwise the messages are lost
+                    return // TODO Should we retry fetching of messages from another node? Otherwise the messages are lost
                 }
             }
         }
