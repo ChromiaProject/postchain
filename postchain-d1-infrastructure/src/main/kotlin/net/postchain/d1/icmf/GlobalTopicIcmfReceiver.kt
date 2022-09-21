@@ -81,6 +81,4 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             pipe.shutdown()
         }
     }
-
-    private fun lookupAllClustersInD1(): Set<String> = setOf("cluster0") // TODO Implement
 }
