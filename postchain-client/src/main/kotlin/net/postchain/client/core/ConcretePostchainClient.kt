@@ -4,6 +4,7 @@ package net.postchain.client.core
 
 import mu.KLogging
 import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.request.Endpoint
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
@@ -23,12 +24,10 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
-import org.http4k.core.Body
-import org.http4k.core.Method
-import org.http4k.core.Request
-import org.http4k.core.Status
+import org.http4k.core.*
 import org.http4k.format.Gson.auto
 import java.lang.Thread.sleep
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.CompletionStage
@@ -62,51 +61,83 @@ class ConcretePostchainClient(
     )
 
 
+    override fun querySync(name: String, gtv: Gtv): Gtv {
+        try {
+            var queryResult: Response? = null
+            for (j in 1..config.endpointPool.size()) {
+                val endpoint = nextEndpoint()
+                val request = createQueryRequest(name, gtv, endpoint)
+                endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
+                    queryResult = queryTo(request, endpoint).toCompletableFuture().join()
+                    when (queryResult.status) {
+                        Status.OK -> return queryResponseToGtv(queryResult)
+                        Status.BAD_REQUEST -> throw buildException(queryResult)
+                        Status.INTERNAL_SERVER_ERROR -> throw buildException(queryResult)
+                        Status.UNKNOWN_HOST -> break@endpoint
+                    }
+                    sleep(config.failOverConfig.attemptInterval.toMillis())
+                }
+            }
+            throw buildException(queryResult!!)
+        } catch (e: CompletionException) {
+            throw e.cause ?: e
+        }
+    }
+
     override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {
+        val endpoint = nextEndpoint()
+        val request = createQueryRequest(name, gtv, endpoint)
+        return queryTo(request, endpoint).thenApply {
+            if (it.status != Status.OK) {
+                throw buildException(it)
+            }
+            queryResponseToGtv(it)
+        }
+    }
+
+    private fun queryResponseToGtv(response: Response): Gtv {
+        if (response.body == Body.EMPTY) return GtvNull
+        val respList = Body.auto<List<String>>().toLens()(response)
+        return GtvFactory.decodeGtv(respList.first().hexStringToByteArray())
+    }
+
+    private fun createQueryRequest(
+        name: String,
+        gtv: Gtv,
+        endpoint: Endpoint
+    ): Request {
         val queriesLens = Body.auto<Queries>().toLens()
         val gtxQuery = gtv(gtv(name), gtv)
         val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
-        val endpoint = nextEndpoint()
-        val request = queriesLens(
+        return queriesLens(
             Queries(listOf(encodedQuery)),
             Request(Method.POST, "${endpoint.url}/query_gtx/$blockchainRIDHex")
         )
+    }
 
-        val result = CompletableFuture<Gtv>()
+    private fun queryTo(request: Request, endpoint: Endpoint): CompletionStage<Response> {
+        val result = CompletableFuture<Response>()
         httpClient(request) { response ->
             if (response.status.code == 503) endpoint.setUnreachable()
-            if (response.status != Status.OK) {
-                val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
-                result.completeExceptionally(UserMistake("Can not make query_gtx api call: ${response.status} $msg"))
-                return@httpClient
-            }
-            if (response.body == Body.EMPTY) result.complete(GtvNull) && return@httpClient
-            val respList = Body.auto<List<String>>().toLens()(response)
-            result.complete(GtvFactory.decodeGtv(respList.first().hexStringToByteArray()))
+            result.complete(response)
         }
         return result
     }
 
-    override fun querySync(name: String, gtv: Gtv): Gtv = try {
-        query(name, gtv).toCompletableFuture().join()
-    } catch (e: CompletionException) {
-        throw e.cause ?: e
+    private fun buildException(response: Response): UserMistake {
+        val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
+        return UserMistake("Can not make query_gtx api call: ${response.status} $msg")
     }
+
 
     override fun currentBlockHeight(): CompletionStage<Long> {
         val currentBlockHeightLens = Body.auto<CurrentBlockHeight>().toLens()
         val endpoint = nextEndpoint()
-        val result = CompletableFuture<Long>()
-        httpClient(Request(Method.GET, "${endpoint.url}/node/$blockchainRIDHex/height")) { response ->
-            if (response.status.code == 503) endpoint.setUnreachable()
-            if (response.status != Status.OK) {
-                val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
-                result.completeExceptionally(UserMistake("Can not make node/height api call: ${response.status} $msg"))
-                return@httpClient
-            }
-            result.complete(currentBlockHeightLens(response).blockHeight)
+        val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDHex/height")
+        return queryTo(request, endpoint).thenApply {
+            if (it.status != Status.OK) throw buildException(it)
+            currentBlockHeightLens(it).blockHeight
         }
-        return result
     }
 
     override fun currentBlockHeightSync(): Long = try {
@@ -115,17 +146,34 @@ class ConcretePostchainClient(
         throw e.cause ?: e
     }
 
-    override fun postTransactionSync(tx: Gtx): TransactionResult = try {
-        postTransaction(tx).toCompletableFuture().join()
-    } catch (e: CompletionException) {
-        throw e.cause ?: e
+    override fun postTransactionSync(tx: Gtx): TransactionResult {
+        try {
+            var result: TransactionResult? = null
+            for (j in 1..config.endpointPool.size()) {
+                val endpoint = nextEndpoint()
+                endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
+                    result = postTransactionTo(tx, endpoint).toCompletableFuture().join()
+                    when (result.httpStatusCode) {
+                        200, 400, 404, 409 -> return result
+                        503 -> break@endpoint
+                    }
+                    sleep(config.failOverConfig.attemptInterval.toMillis())
+                }
+            }
+            return result!!
+        } catch (e: CompletionException) {
+            throw e.cause ?: e
+        }
     }
 
     override fun postTransaction(tx: Gtx): CompletionStage<TransactionResult> {
+        return postTransactionTo(tx, nextEndpoint())
+    }
+
+    private fun postTransactionTo(tx: Gtx, endpoint: Endpoint): CompletableFuture<TransactionResult> {
         val txLens = Body.auto<Tx>().toLens()
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
         val encodedTx = Tx(tx.encodeHex())
-        val endpoint = nextEndpoint()
         val request = txLens(encodedTx, Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
         httpClient(request) { response ->
@@ -144,10 +192,10 @@ class ConcretePostchainClient(
         return awaitConfirmation(resp.txRid, config.statusPollCount, config.statusPollInterval)
     }
 
-    override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Long): TransactionResult {
+    override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Duration): TransactionResult {
         var lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected
-        run poll@ {
+        run poll@{
             repeat(retries) {
                 try {
                     val deferredPollResult = checkTxStatus(txRid)
@@ -157,7 +205,7 @@ class ConcretePostchainClient(
                     logger.warn(e) { "Unable to poll for new block" }
                     lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
                 }
-                sleep(pollInterval)
+                sleep(pollInterval.toMillis())
             }
         }
         return lastKnownTxResult
@@ -167,19 +215,14 @@ class ConcretePostchainClient(
         val txStatusLens = Body.auto<TxStatus>().toLens()
         val endpoint = nextEndpoint()
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDHex/${txRid.rid}/status")
-        val result = CompletableFuture<TransactionResult>()
-        httpClient(validationRequest) { response ->
-            if (response.status.code == 503) endpoint.setUnreachable()
+        return queryTo(validationRequest, endpoint).thenApply { response ->
             val txStatus = txStatusLens(response)
-            result.complete(
                 TransactionResult(
                     txRid,
                     TransactionStatus.valueOf(txStatus.status?.uppercase() ?: "UNKNOWN"),
                     response.status.code,
                     txStatus.rejectReason
                 )
-            )
         }
-        return result
     }
 }
