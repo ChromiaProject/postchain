@@ -24,6 +24,8 @@ interface GTXModule : Shutdownable {
     fun initializeDB(ctx: EContext)
     fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension>
     fun getSpecialTxExtensions(): List<GTXSpecialTxExtension>
+
+    override fun shutdown() {}
 }
 
 interface GTXModuleFactory {
@@ -71,8 +73,6 @@ abstract class SimpleGTXModule<ConfT>(
             return querymap[name]!!(conf, ctxt, args)
         } else throw UserMistake("Unknown query: $name")
     }
-
-    override fun shutdown() { }
 }
 
 class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule {
