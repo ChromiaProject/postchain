@@ -8,6 +8,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
+import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -29,6 +30,7 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
     private val _relevantOps = setOf(OP_ICMF_HEADER, OP_ICMF_MESSAGE)
     private lateinit var cryptoSystem: CryptoSystem
     lateinit var receiver: GlobalTopicIcmfReceiver
+    lateinit var clusterManagement: ClusterManagement
 
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         cryptoSystem = cs
@@ -116,9 +118,9 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                     val witness = BaseBlockWitness.fromBytes(rawWitness)
                     val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
-                    val peers = fetchChainInfoFromD1(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
+                    val peers = clusterManagement.getBlockchainPeers(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
 
-                    if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), rawHeader, blockRid, peers.map { it.pubKey }, witness)) {
+                    if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), rawHeader, blockRid, peers.map { it.pubkey }, witness)) {
                         logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
                         return false
                     }
