@@ -12,16 +12,13 @@ import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.ValidationResult
 import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.icmf.ClusterAnchorRoute
-import net.postchain.d1.icmf.IcmfController
 import net.postchain.d1.icmf.IcmfPacket
-import net.postchain.d1.icmf.IcmfPipe
-import net.postchain.d1.icmf.IcmfReceiver
 import net.postchain.d1.icmf.IcmfSpecialTxExtension
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
-import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -44,7 +41,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     private var myChainID: Long? = null
 
     /** We must know the id of the anchor chain itself */
-    private var icmfReceiver: IcmfReceiver<ClusterAnchorRoute, Long>? = null
+    private var icmfReceiver: ClusterAnchorIcmfReceiver? = null
 
     /** This is for querying ourselves, i.e. the "anchor Rell app" */
     private lateinit var module: GTXModule
@@ -99,19 +96,18 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-            pipe: IcmfPipe<ClusterAnchorRoute, Long>,
-            retList: MutableList<OpData>,
-            bctx: BlockEContext
+        pipe: ClusterAnchorIcmfPipe,
+        retList: MutableList<OpData>,
+        bctx: BlockEContext
     ) {
-        if (pipe.id.route != ClusterAnchorRoute) return
         var counter = 0
-        val blockchainRid = pipe.id.brid
+        val blockchainRid = pipe.id
         var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
         while (pipe.mightHaveNewPackets()) {
-            val icmfPacket = pipe.fetchNext(currentHeight)
-            if (icmfPacket != null) {
-                retList.add(buildOpData(icmfPacket))
-                pipe.markTaken(icmfPacket.height, bctx)
+            val clusterAnchorPacket = pipe.fetchNext(currentHeight)
+            if (clusterAnchorPacket != null) {
+                retList.add(buildOpData(clusterAnchorPacket))
+                pipe.markTaken(clusterAnchorPacket.height, bctx)
                 currentHeight++ // Try next height
                 counter++
             } else {
@@ -129,20 +125,14 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     /**
      * Transform to [IcmfPacket] to [OpData] put arguments in correct order
      *
-     * @param icmfPacket is what we get from ICMF
+     * @param clusterAnchorPacket is what we get from ICMF
      * @return is the [OpData] we can use to create a special TX.
      */
-    private fun buildOpData(icmfPacket: IcmfPacket): OpData {
-        val gtvHeaderMsg = icmfPacket.blockHeader // We don't care about any messages, only the header
-        val headerMsg =
-                BlockHeaderData.fromGtv(gtvHeaderMsg) // Yes, a bit expensive going back and forth between GTV and Domain objects like this
-        val witnessBytes: ByteArray = icmfPacket.witness.asByteArray()
+    private fun buildOpData(clusterAnchorPacket: ClusterAnchorPacket): OpData {
+        val gtvHeader: Gtv = GtvDecoder.decodeGtv(clusterAnchorPacket.rawHeader)
+        val gtvWitness = GtvByteArray(clusterAnchorPacket.rawWitness)
 
-        val gtvBlockRid: Gtv = icmfPacket.blockRid
-        val gtvHeader: Gtv = headerMsg.toGtv()
-        val gtvWitness = GtvByteArray(witnessBytes)
-
-        return OpData(OP_BLOCK_HEADER, arrayOf(gtvBlockRid, gtvHeader, gtvWitness))
+        return OpData(OP_BLOCK_HEADER, arrayOf(gtv(clusterAnchorPacket.blockRid), gtvHeader, gtvWitness))
     }
 
     /**
@@ -279,13 +269,12 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
     // ------------------------ PUBLIC NON-INHERITED ----------------
 
-    override fun connectIcmfController(controller: IcmfController) {
+    override fun connectIcmfController(controller: ClusterAnchorIcmfReceiverFactory) {
         if (icmfReceiver != null)
             throw ProgrammerMistake("Setting receiver twice")
         icmfReceiver = controller.createReceiver(
-                myChainID!!,
-                ClusterAnchorRoute
-        ) as IcmfReceiver<ClusterAnchorRoute, Long>
+                myChainID!!
+        )
     }
 
     // ------------------------ PRIVATE ----------------

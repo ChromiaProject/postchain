@@ -4,23 +4,22 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
-import net.postchain.d1.icmf.IcmfController
 import net.postchain.gtx.GTXBlockchainConfiguration
 
 @Suppress("unused")
 class AnchorProcessManagerExtension(val postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
 
-    lateinit var icmfController: IcmfController
+    lateinit var clusterAnchorIcmfReceiverFactory: ClusterAnchorIcmfReceiverFactory
 
-    fun getIcmfController(process: BlockchainProcess): IcmfController {
-        if (!::icmfController.isInitialized) {
+    fun getIcmfController(process: BlockchainProcess): ClusterAnchorIcmfReceiverFactory {
+        if (!::clusterAnchorIcmfReceiverFactory.isInitialized) {
             // steal storage from blockchain engine
             // no, I'm not proud of it...
-            icmfController = IcmfController(
+            clusterAnchorIcmfReceiverFactory = ClusterAnchorIcmfReceiverFactory(
                     (process.blockchainEngine as BaseBlockchainEngine).storage
             )
         }
-        return icmfController
+        return clusterAnchorIcmfReceiverFactory
     }
 
     /**
@@ -44,8 +43,8 @@ class AnchorProcessManagerExtension(val postchainContext: PostchainContext) : Bl
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {
-        if (::icmfController.isInitialized) {
-            icmfController.localDispatcher.disconnectChain(
+        if (::clusterAnchorIcmfReceiverFactory.isInitialized) {
+            clusterAnchorIcmfReceiverFactory.localDispatcher.disconnectChain(
                     process.blockchainEngine.getConfiguration().chainID
             )
         }
@@ -53,8 +52,8 @@ class AnchorProcessManagerExtension(val postchainContext: PostchainContext) : Bl
 
     @Synchronized
     override fun afterCommit(process: BlockchainProcess, height: Long) {
-        if (::icmfController.isInitialized) {
-            icmfController.localDispatcher.afterCommit(
+        if (::clusterAnchorIcmfReceiverFactory.isInitialized) {
+            clusterAnchorIcmfReceiverFactory.localDispatcher.afterCommit(
                     process.blockchainEngine.getConfiguration().chainID,
                     height
             )
