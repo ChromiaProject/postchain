@@ -61,19 +61,21 @@ open class BaseBlockQueries(
      * on the query being run and logging them, and finally closing the connection
      */
     private fun <T> runDbOpAsync(operation: (EContext) -> T): Promise<T, Exception> {
-        return task(kctx) { runDbOp(operation) }
+        return task(kctx) {
+            val ctx = storage.openReadConnection(chainId)
+            try {
+                operation(ctx)
+            } catch (e: Exception) {
+                logger.trace(e) { "An error occurred" }
+                throw e
+            } finally {
+                storage.closeReadConnection(ctx)
+            }
+        }
     }
 
     protected fun <T> runDbOp(operation: (EContext) -> T): T {
-        val ctx = storage.openReadConnection(chainId)
-        return try {
-            operation(ctx)
-        } catch (e: Exception) {
-            logger.trace(e) { "An error occurred" }
-            throw e
-        } finally {
-            storage.closeReadConnection(ctx)
-        }
+        return runDbOpAsync(operation).get()
     }
 
     override fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception> {
