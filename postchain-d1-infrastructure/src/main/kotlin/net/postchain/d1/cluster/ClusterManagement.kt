@@ -1,7 +1,9 @@
 package net.postchain.d1.cluster
 
-interface ClusterManagement {
-    fun getAllClusterPeerInfo(): Collection<D1ClusterInfo>
+import net.postchain.common.BlockchainRid
 
+interface ClusterManagement {
     fun getClusterPeerInfo(clusterName: String): D1ClusterInfo
+    fun getAllClusters(): Collection<String>
+    fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long): Collection<D1PeerInfo>
 }
