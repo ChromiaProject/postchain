@@ -46,8 +46,8 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
     @Test
     fun happyAnchor() {
         val mapBcFiles: Map<Int, String> = mapOf(
-            DAPP_CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_1.xml",
-            ANCHOR_CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_2_anchor.xml"
+                DAPP_CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_1.xml",
+                ANCHOR_CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_2_anchor.xml"
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
@@ -98,9 +98,9 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
             val queryRunner = QueryRunner()
 
             val res = queryRunner.query(
-                it.conn,
-                "SELECT blockchain_rid, block_height FROM ${db.tableName(it, "anchor_block")}",
-                MapListHandler()
+                    it.conn,
+                    "SELECT blockchain_rid, block_height FROM ${db.tableName(it, "anchor_block")}",
+                    MapListHandler()
             )
             assertEquals(4, res.size)
             assertContentEquals(blockchainRID.data, res[0]["blockchain_rid"] as ByteArray)
@@ -113,18 +113,18 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
             assertEquals(3L, res[3]["block_height"])
 
             val headers =
-                query(
-                    nodes[0],
-                    it,
-                    "icmf_get_headers_with_messages_between_heights",
-                    gtv(
-                        mapOf(
-                            "topic" to gtv("my-topic"),
-                            "from_anchor_height" to gtv(0),
-                            "to_anchor_height" to gtv(1)
-                        )
-                    )
-                ).asArray()
+                    query(
+                            nodes[0],
+                            it,
+                            "icmf_get_headers_with_messages_between_heights",
+                            gtv(
+                                    mapOf(
+                                            "topic" to gtv("my-topic"),
+                                            "from_anchor_height" to gtv(0),
+                                            "to_anchor_height" to gtv(1)
+                                    )
+                            )
+                    ).asArray()
             assertEquals(4, headers.size)
             headers.forEachIndexed { index, header ->
                 val rawHeader = header["block_header"]!!.asByteArray()
@@ -143,6 +143,6 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
     }
 
     private fun query(node: PostchainTestNode, ctxt: EContext, name: String, args: Gtv): Gtv =
-        node.getModules(ANCHOR_CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!
-            .query(ctxt, name, args)
+            node.getModules(ANCHOR_CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!
+                    .query(ctxt, name, args)
 }
