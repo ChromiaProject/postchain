@@ -28,7 +28,7 @@ import nl.komponents.kovenant.task
 class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witness: BlockWitness, val proof: GtvMerkleProofTree)
 
 /**
- * A collection of methods for various blockchain-related queries. Each query is called with the wrapping method [runOp]
+ * A collection of methods for various blockchain-related queries. Each query is called with the wrapping method [runDbOpAsync]
  * which will handle connections and logging.
  *
  * @param blockchainConfiguration Configuration data for the blockchain
@@ -60,7 +60,7 @@ open class BaseBlockQueries(
      * Wrapper function for a supplied function with the goal of opening a new read-only connection, catching any exceptions
      * on the query being run and logging them, and finally closing the connection
      */
-    protected fun <T> runOp(operation: (EContext) -> T): Promise<T, Exception> {
+    private fun <T> runDbOpAsync(operation: (EContext) -> T): Promise<T, Exception> {
         return task(kctx) { runDbOp(operation) }
     }
 
@@ -77,7 +77,7 @@ open class BaseBlockQueries(
     }
 
     override fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception> {
-        return runOp { ctx ->
+        return runDbOpAsync { ctx ->
             val witnessData = blockStore.getWitnessData(ctx, blockRID)
             val witness = blockchainConfiguration.decodeWitness(witnessData) as MultiSigBlockWitness
             val signature = witness.getSignatures().find { it.subjectID.contentEquals(mySubjectId) }
@@ -86,13 +86,13 @@ open class BaseBlockQueries(
     }
 
     override fun getBestHeight(): Promise<Long, Exception> {
-        return runOp {
+        return runDbOpAsync {
             blockStore.getLastBlockHeight(it)
         }
     }
 
     override fun getLastBlockTimestamp(): Promise<Long, Exception> {
-        return runOp {
+        return runDbOpAsync {
             blockStore.getLastBlockTimestamp(it)
         }
     }
@@ -104,7 +104,7 @@ open class BaseBlockQueries(
      * @throws ProgrammerMistake [blockRID] could not be found
      */
     override fun getBlockTransactionRids(blockRID: ByteArray): Promise<List<ByteArray>, Exception> {
-        return runOp {
+        return runDbOpAsync {
             // Shouldn't this be UserMistake?
             val height = blockStore.getBlockHeightFromOwnBlockchain(it, blockRID)
                     ?: throw ProgrammerMistake("BlockRID does not exist")
@@ -113,7 +113,7 @@ open class BaseBlockQueries(
     }
 
     override fun getTransaction(txRID: ByteArray): Promise<Transaction?, Exception> {
-        return runOp {
+        return runDbOpAsync {
             val txBytes = blockStore.getTxBytes(it, txRID)
             if (txBytes == null)
                 null
@@ -123,37 +123,37 @@ open class BaseBlockQueries(
     }
 
     override fun getTransactionInfo(txRID: ByteArray): Promise<TransactionInfoExt?, Exception> {
-        return runOp {
+        return runDbOpAsync {
             blockStore.getTransactionInfo(it, txRID)
         }
     }
 
     override fun getTransactionsInfo(beforeTime: Long, limit: Int): Promise<List<TransactionInfoExt>, Exception> {
-        return runOp {
+        return runDbOpAsync {
             blockStore.getTransactionsInfo(it, beforeTime, limit)
         }
     }
 
     override fun getBlocks(beforeTime: Long, limit: Int, partialTx: Boolean): Promise<List<BlockDetail>, Exception> {
-        return runOp {
+        return runDbOpAsync {
             blockStore.getBlocks(it, beforeTime, limit, partialTx)
         }
     }
 
     override fun getBlock(blockRID: ByteArray, partialTx: Boolean): Promise<BlockDetail?, Exception> {
-        return runOp {
+        return runDbOpAsync {
             blockStore.getBlock(it, blockRID, partialTx)
         }
     }
 
     override fun getBlockRid(height: Long): Promise<ByteArray?, Exception> {
-        return runOp {
+        return runDbOpAsync {
             blockStore.getBlockRID(it, height)
         }
     }
 
     override fun isTransactionConfirmed(txRID: ByteArray): Promise<Boolean, Exception> {
-        return runOp {
+        return runDbOpAsync {
             blockStore.isTransactionConfirmed(it, txRID)
         }
     }
@@ -167,7 +167,7 @@ open class BaseBlockQueries(
     }
 
     fun getConfirmationProof(txRID: ByteArray): Promise<ConfirmationProof?, Exception> {
-        return runOp {
+        return runDbOpAsync {
             val material = blockStore.getConfirmationProofMaterial(it, txRID) as ConfirmationProofMaterial
             val decodedWitness = blockchainConfiguration.decodeWitness(material.witness)
             val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
@@ -178,7 +178,7 @@ open class BaseBlockQueries(
     }
 
     override fun getBlockHeader(blockRID: ByteArray): Promise<BlockHeader, Exception> {
-        return runOp {
+        return runDbOpAsync {
             val headerBytes = blockStore.getBlockHeader(it, blockRID)
             blockchainConfiguration.decodeBlockHeader(headerBytes)
         }
@@ -195,7 +195,7 @@ open class BaseBlockQueries(
      * @throws ProgrammerMistake Too many blocks (>1) found at the specified height
      */
     override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): Promise<BlockDataWithWitness?, Exception> {
-        return runOp {
+        return runDbOpAsync {
             val blockRID = blockStore.getBlockRID(it, height)
             if (blockRID == null) {
                 null
