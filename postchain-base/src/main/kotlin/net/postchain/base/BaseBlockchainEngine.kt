@@ -17,6 +17,7 @@ import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
@@ -45,12 +46,12 @@ const val LOG_STATS = true // Was this the reason this entire class was muted?
  * Usually we don't log single (successful) transactions, not even at trace level.
  */
 open class BaseBlockchainEngine(
-    private val processName: BlockchainProcessName,
-    private val blockchainConfiguration: BlockchainConfiguration,
-    val storage: Storage,
-    private val chainID: Long,
-    private val transactionQueue: TransactionQueue,
-    private val useParallelDecoding: Boolean = true
+        private val processName: BlockchainProcessName,
+        private val blockchainConfiguration: BlockchainConfiguration,
+        override val storage: Storage,
+        private val chainID: Long,
+        private val transactionQueue: TransactionQueue,
+        private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
     companion object : KLogging()
