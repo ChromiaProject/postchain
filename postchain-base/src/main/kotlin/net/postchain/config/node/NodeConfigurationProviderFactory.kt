@@ -3,13 +3,11 @@
 package net.postchain.config.node
 
 import mu.KotlinLogging
-import net.postchain.base.Storage
 import net.postchain.common.reflection.constructorOf
 import net.postchain.config.app.AppConfig
+import net.postchain.config.node.NodeConfigProviders.*
 import net.postchain.config.node.NodeConfigProviders.Companion.fromAlias
-import net.postchain.config.node.NodeConfigProviders.Managed
-import net.postchain.config.node.NodeConfigProviders.Manual
-import net.postchain.config.node.NodeConfigProviders.Properties
+import net.postchain.core.Storage
 
 object NodeConfigurationProviderFactory {
     /**

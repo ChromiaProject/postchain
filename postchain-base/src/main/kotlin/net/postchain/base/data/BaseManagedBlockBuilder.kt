@@ -3,7 +3,6 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.base.Storage
 import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed

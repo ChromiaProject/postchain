@@ -3,12 +3,12 @@
 package net.postchain.config.node
 
 import net.postchain.base.PeerInfo
-import net.postchain.base.Storage
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.ByteArrayKey
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
+import net.postchain.core.Storage
 import java.time.Instant.EPOCH
 
 class ManagedNodeConfigurationProvider(
