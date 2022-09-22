@@ -13,26 +13,26 @@ import net.postchain.managed.ManagedEBFTInfrastructureFactory
 
 class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
     lateinit var nodeConfig: NodeConfig
-    lateinit var dataSource: MockManagedNodeDataSource
+    lateinit var directoryDataSource: MockDirectoryDataSource
     override fun makeProcessManager(
             postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider): BlockchainProcessManager {
-        return TestManagedBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider, dataSource)
+        return TestManagedBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider, directoryDataSource)
     }
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
-            dataSource = appConfig.getProperty("infrastructure.datasource") as MockManagedNodeDataSource
+            directoryDataSource = appConfig.getProperty("infrastructure.datasource") as MockDirectoryDataSource
 
             val syncInfra = EBFTSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
             val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
-            return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)
+            return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, directoryDataSource)
         }
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return MockBlockchainConfigurationProvider(dataSource)
+        return MockBlockchainConfigurationProvider(directoryDataSource)
     }
 }

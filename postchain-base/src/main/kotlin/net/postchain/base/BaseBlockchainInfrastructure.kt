@@ -8,7 +8,6 @@ import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.common.reflection.constructorOf
-import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.*
 import net.postchain.core.block.*
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -58,12 +57,13 @@ open class BaseBlockchainInfrastructure(
             eContext: EContext,
             nodeId: Int,
             chainId: Long,
+            bcConfigurationFactory: (String) -> BlockchainConfigurationFactory
     ): BlockchainConfiguration {
 
         val blockConfData = BlockchainConfigurationData.fromRaw(
                 rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
 
-        val factory = newInstanceOf<BlockchainConfigurationFactory>(blockConfData.configurationFactory)
+        val factory = bcConfigurationFactory(blockConfData.configurationFactory)
         val config = factory.makeBlockchainConfiguration(blockConfData)
         config.initializeDB(eContext)
 
@@ -71,9 +71,9 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainEngine(
-        processName: BlockchainProcessName,
-        configuration: BlockchainConfiguration,
-        afterCommitHandler: AfterCommitHandler
+            processName: BlockchainProcessName,
+            configuration: BlockchainConfiguration,
+            afterCommitHandler: AfterCommitHandler
     ): BaseBlockchainEngine {
 
         // We create a new storage instance to open new db connections for each engine
@@ -91,9 +91,9 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
@@ -116,7 +116,7 @@ open class BaseBlockchainInfrastructure(
         disconnectProcess(configuration, process, false)
     }
 
-    private fun connectProcess(configuration: BlockchainConfiguration , process: BlockchainProcess) {
+    private fun connectProcess(configuration: BlockchainConfiguration, process: BlockchainProcess) {
         configuration.syncInfrastructureExtensionNames.forEach {
             getSynchronizationInfrastructureExtension(it).connectProcess(process)
         }
@@ -124,9 +124,9 @@ open class BaseBlockchainInfrastructure(
     }
 
     private fun disconnectProcess(
-        configuration: BlockchainConfiguration,
-        process: BlockchainProcess,
-        disconnectApi: Boolean
+            configuration: BlockchainConfiguration,
+            process: BlockchainProcess,
+            disconnectApi: Boolean
     ) {
         configuration.syncInfrastructureExtensionNames.forEach {
             getSynchronizationInfrastructureExtension(it).disconnectProcess(process)
