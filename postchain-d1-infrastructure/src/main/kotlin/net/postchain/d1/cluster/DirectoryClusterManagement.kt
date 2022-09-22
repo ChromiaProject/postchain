@@ -6,11 +6,11 @@ import net.postchain.gtv.mapper.toList
 import net.postchain.gtv.mapper.toObject
 
 class DirectoryClusterManagement(private val blockQueries: BlockQueries) : ClusterManagement {
-    override fun getAllClusterPeerInfo(): Collection<ClusterPeerInfo> {
+    override fun getAllClusterPeerInfo(): Collection<D1ClusterInfo> {
         return blockQueries.query("cm_get_all_clusters", gtv(mapOf())).get().toList()
     }
 
-    override fun getClusterPeerInfo(clusterName: String): ClusterPeerInfo {
+    override fun getClusterPeerInfo(clusterName: String): D1ClusterInfo {
         return blockQueries.query("cm_get_cluster_info", gtv(mapOf("name" to gtv(clusterName)))).get().toObject()
     }
 }

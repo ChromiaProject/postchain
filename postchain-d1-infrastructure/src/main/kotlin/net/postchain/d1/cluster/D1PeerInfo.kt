@@ -3,7 +3,7 @@ package net.postchain.d1.cluster
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.mapper.Name
 
-data class PeerApi(
+data class D1PeerInfo(
         @Name("api_url") val restApiUrl: String,
         @Name("pubkey") private val key: ByteArray
 ) {
@@ -13,7 +13,7 @@ data class PeerApi(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as PeerApi
+        other as D1PeerInfo
 
         if (restApiUrl != other.restApiUrl) return false
         if (!key.contentEquals(other.key)) return false

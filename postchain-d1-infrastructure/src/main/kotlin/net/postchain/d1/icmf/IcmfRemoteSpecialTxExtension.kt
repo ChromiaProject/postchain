@@ -1,10 +1,10 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
-import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
@@ -12,7 +12,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
-import net.postchain.crypto.PubKey
+import net.postchain.d1.cluster.D1ClusterInfo
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -180,24 +180,6 @@ class IcmfRemoteSpecialTxExtension(private val topics: List<String>) : GTXSpecia
 
     private fun lookupAllClustersInD1(): Set<D1ClusterInfo> = TODO("Not yet implemented")
 
-    data class D1ClusterInfo(val name: String, val anchoringChain: BlockchainRid, val peers: Set<D1PeerInfo>)
-
-    data class D1PeerInfo(val restApiUrl: String, val pubKey: PubKey) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as D1PeerInfo
-
-            if (restApiUrl != other.restApiUrl) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return restApiUrl.hashCode()
-        }
-    }
 
     data class SignedBlockHeaderWithAnchorHeight(
             val rawHeader: ByteArray,
