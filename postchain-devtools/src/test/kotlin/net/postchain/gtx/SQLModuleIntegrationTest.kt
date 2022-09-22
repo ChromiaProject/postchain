@@ -46,11 +46,11 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
 
         val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
         assertFailsWith<UserMistake> {
-            blockQueries.query("""{tdype: 'test_get_value'}""").get()
+            blockQueries.query("""{tdype: 'test_get_value'}""")
         }
 
         assertFailsWith<UserMistake> {
-            blockQueries.query("""{type: 'non-existing'}""").get()
+            blockQueries.query("""{type: 'non-existing'}""")
         }
 
         val gson = make_gtv_gson()
@@ -58,14 +58,14 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         // ------------------------------------------
         // Shouldn't find key "hello" in type "test_get_value"
         // ------------------------------------------
-        val result = blockQueries.query("""{type: 'test_get_value', q_key: 'hello'}""").get()
+        val result = blockQueries.query("""{type: 'test_get_value', q_key: 'hello'}""")
         val gtvResult = gson.fromJson<Gtv>(result, Gtv::class.java) as GtvCollection
         assertEquals(0, gtvResult.getSize())
 
         // ------------------------------------------
         // Should find 1 hit for key "k" in type "test_get_value"
         // ------------------------------------------
-        val result1 = blockQueries.query("""{type: 'test_get_value', q_key: 'k'}""").get()
+        val result1 = blockQueries.query("""{type: 'test_get_value', q_key: 'k'}""")
         val gtvArrRes1 = gson.fromJson<Gtv>(result1, Gtv::class.java) as GtvArray
         assertEquals(1, gtvArrRes1.getSize())
 
@@ -78,7 +78,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         // ------------------------------------------
         // Look for type "test_get_count"
         // ------------------------------------------
-        val result2 = blockQueries.query("""{type: 'test_get_count'}""").get()
+        val result2 = blockQueries.query("""{type: 'test_get_count'}""")
         val gtvArrRes2 = gson.fromJson<Gtv>(result2, Gtv::class.java) as GtvArray
         assertEquals(1, gtvArrRes2.getSize())
         assertEquals(1, gtvArrRes2[0]["nbigint"]!!.asInteger())
@@ -99,7 +99,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         verifyBlockchainTransactions(node)
         val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
         val gson = make_gtv_gson()
-        var result = blockQueries.query("""{type: 'test_get_value', q_key: 'k', q_value : 'v'}""").get()
+        var result = blockQueries.query("""{type: 'test_get_value', q_key: 'k', q_value : 'v'}""")
         var gtxResult = gson.fromJson<Gtv>(result, Gtv::class.java) as GtvArray
         assertEquals(1, gtxResult.getSize())
     }
@@ -116,7 +116,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         verifyBlockchainTransactions(node)
 
         val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
-        var result = blockQueries.query("""{type: 'test_null_value'}""").get()
+        var result = blockQueries.query("""{type: 'test_null_value'}""")
         val gson = make_gtv_gson()
         var gtxResult = gson.fromJson<Gtv>(result, Gtv::class.java)
 

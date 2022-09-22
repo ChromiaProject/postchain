@@ -66,8 +66,8 @@ interface BlockQueries {
     fun getTransaction(txRID: ByteArray): Promise<Transaction?, Exception>
     fun getTransactionInfo(txRID: ByteArray): Promise<TransactionInfoExt?, Exception>
     fun getTransactionsInfo(beforeTime: Long, limit: Int): Promise<List<TransactionInfoExt>, Exception>
-    fun query(query: String): Promise<String, Exception>
-    fun query(name: String, args: Gtv): Promise<Gtv, Exception>
+    fun query(query: String): String
+    fun query(name: String, args: Gtv): Gtv
     fun isTransactionConfirmed(txRID: ByteArray): Promise<Boolean, Exception>
 }
 
