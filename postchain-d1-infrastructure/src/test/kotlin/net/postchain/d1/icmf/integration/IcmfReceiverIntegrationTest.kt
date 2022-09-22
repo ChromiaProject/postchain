@@ -1,12 +1,15 @@
 package net.postchain.d1.icmf.integration
 
 import net.postchain.base.BaseBlockWitness
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.withReadConnection
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.icmf.GlobalTopicPipe
 import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
 import net.postchain.d1.icmf.TopicHeaderData
+import net.postchain.d1.icmf.integration.IcmfReceiverTestGTXModule.Companion.testMessageTable
 import net.postchain.d1.icmf.privKey
 import net.postchain.d1.icmf.pubKey
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
@@ -16,10 +19,14 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import org.apache.commons.dbutils.QueryRunner
+import org.apache.commons.dbutils.handlers.MapListHandler
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
 
 private const val CHAIN_ID = 1
 
@@ -36,6 +43,7 @@ class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
         val senderChainRid = BlockchainRid.buildRepeat(1)
 
         val messageBody = gtv("hej")
+        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
 
         val blockHeader = BlockHeaderData(
                 gtv(senderChainRid.data),
@@ -47,7 +55,7 @@ class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
                 gtv(mapOf(
                         ICMF_BLOCK_HEADER_EXTRA to gtv(
                                 "my-topic" to TopicHeaderData(
-                                        cryptoSystem.digest(cryptoSystem.digest(GtvEncoder.encodeGtv(messageBody))),
+                                        cryptoSystem.digest(cryptoSystem.digest(encodedMessageBody)),
                                         -1L).toGtv()
                         )
                 ))
@@ -72,7 +80,14 @@ class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
         }
         PostchainClientMocks.addMockClient(anchorChainRid, anchorClientMock)
 
-        val senderClientMock: PostchainClient = mock {}
+        val senderClientMock: PostchainClient = mock {
+            on {
+                querySync("icmf_get_messages", gtv(mapOf(
+                        "topic" to gtv("my-topic"),
+                        "height" to gtv(0)
+                )))
+            } doReturn gtv(listOf(messageBody))
+        }
         PostchainClientMocks.addMockClient(senderChainRid, senderClientMock)
 
         val mapBcFiles: Map<Int, String> = mapOf(
@@ -84,5 +99,22 @@ class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
         runXNodes(sysSetup)
 
         buildBlock(CHAIN_ID.toLong(), 0)
+        for (node in nodes) {
+            withReadConnection(node.postchainContext.storage, CHAIN_ID.toLong()) {
+                DatabaseAccess.of(it).apply {
+                    val messages = QueryRunner().query(
+                            it.conn,
+                            "SELECT * FROM ${tableName(it, testMessageTable)}",
+                            MapListHandler()
+                    )
+
+                    assertEquals(1, messages.size)
+                    val message = messages[0]
+                    assertContentEquals(senderChainRid.data, message["sender"] as ByteArray)
+                    assertEquals("my-topic", message["topic"] as String)
+                    assertContentEquals(encodedMessageBody, message["body"] as ByteArray)
+                }
+            }
+        }
     }
 }

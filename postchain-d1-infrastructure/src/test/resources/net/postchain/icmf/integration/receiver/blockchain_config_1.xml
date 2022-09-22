@@ -34,6 +34,7 @@
             <entry key="modules">
                 <array>
                     <string>net.postchain.d1.icmf.IcmfReceiverGTXModule</string>
+                    <string>net.postchain.d1.icmf.integration.IcmfReceiverTestGTXModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>
             </entry>

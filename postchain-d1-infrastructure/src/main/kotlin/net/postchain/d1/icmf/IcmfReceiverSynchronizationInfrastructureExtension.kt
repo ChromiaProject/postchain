@@ -14,10 +14,11 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
         val engine = process.blockchainEngine
         val configuration = engine.getConfiguration()
         if (configuration is GTXBlockchainConfiguration) {
-            val receiver = createReceiver(configuration, postchainContext.storage)
-            receivers[configuration.chainID] = receiver
-
-            getIcmfRemoteSpecialTxExtension(configuration)?.receiver = receiver
+            getIcmfRemoteSpecialTxExtension(configuration)?.apply {
+                val newReceiver = createReceiver(configuration, postchainContext.storage)
+                receivers[configuration.chainID] = newReceiver
+                receiver = newReceiver
+            }
         }
     }
 

@@ -19,6 +19,7 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -161,7 +162,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute,
                     }
                 }
 
-                val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(it.asByteArray()) }
+                val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(GtvEncoder.encodeGtv(it)) }
                         .fold(ByteArray(0)) { total, item ->
                             total.plus(item)
                         })

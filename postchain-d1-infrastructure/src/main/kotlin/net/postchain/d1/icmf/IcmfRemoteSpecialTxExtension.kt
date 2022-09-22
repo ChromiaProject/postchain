@@ -8,6 +8,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -58,7 +59,6 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                         for (packet in icmfPackets.packets) {
                             val currentPrevMessageBlockHeight = IcmfDatabaseOperations.loadLastMessageHeight(bctx, packet.sender, packet.topic)
                             if (packet.height > currentPrevMessageBlockHeight) {
-                                IcmfDatabaseOperations.saveLastMessageHeight(bctx, packet.sender, packet.topic, packet.height)
                                 allOps.addAll(buildOpData(packet))
                             }
                             // else already processed in previous block, so skip it here
@@ -152,7 +152,7 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                     }
 
                     messageHashes.computeIfAbsent(topic) { mutableListOf() }
-                            .add(cryptoSystem.digest(body.asByteArray()))
+                            .add(cryptoSystem.digest(GtvEncoder.encodeGtv(body)))
                 }
             }
         }
@@ -190,7 +190,7 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
         val currentPrevMessageBlockHeight = IcmfDatabaseOperations.loadLastMessageHeight(bctx, BlockchainRid(sender), topic)
 
         if (prevMessageBlockHeight != currentPrevMessageBlockHeight) {
-            logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height $prevMessageBlockHeight, expected $prevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")
+            logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height $prevMessageBlockHeight, expected $currentPrevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")
             return false
         }
 

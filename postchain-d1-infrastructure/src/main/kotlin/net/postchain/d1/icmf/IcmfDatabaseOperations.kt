@@ -67,7 +67,7 @@ object IcmfDatabaseOperations {
                 sender.data,
                 topic
         )
-    }
+    } ?: -1
 
     fun saveLastMessageHeight(ctx: EContext, sender: BlockchainRid, topic: String, height: Long) {
         DatabaseAccess.of(ctx).run {
