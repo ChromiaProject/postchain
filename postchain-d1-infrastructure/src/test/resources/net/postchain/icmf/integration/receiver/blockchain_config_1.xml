@@ -23,6 +23,19 @@
             <bytea>03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94</bytea>
         </array>
     </entry>
+    <entry key="icmf">
+        <dict>
+            <entry key="receiver">
+                <dict>
+                    <entry key="topics">
+                        <array>
+                            <string>my-topic</string>
+                        </array>
+                    </entry>
+                </dict>
+            </entry>
+        </dict>
+    </entry>
     <entry key="gtx">
         <!--
         If multiple GTX modules are used, allowoverrides will decide if query- and operation names of

@@ -1,17 +1,19 @@
 package net.postchain.d1.cluster
 
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
 
-class TestClusterManagement(cs: CryptoSystem) : ClusterManagement {
+class TestClusterManagement : ClusterManagement {
+    private val cryptoSystem = Secp256K1CryptoSystem()
+
     private val peers = listOf(
-            D1PeerInfo("http://127.0.0.1:7740/", secp256k1_derivePubKey(cs.getRandomBytes(32))),
-            D1PeerInfo("http://127.0.0.1:7741/", secp256k1_derivePubKey(cs.getRandomBytes(32))),
-            D1PeerInfo("http://127.0.0.1:7742/", secp256k1_derivePubKey(cs.getRandomBytes(32))),
+            D1PeerInfo("http://127.0.0.1:7740/", secp256k1_derivePubKey(cryptoSystem.getRandomBytes(32))),
+            D1PeerInfo("http://127.0.0.1:7741/", secp256k1_derivePubKey(cryptoSystem.getRandomBytes(32))),
+            D1PeerInfo("http://127.0.0.1:7742/", secp256k1_derivePubKey(cryptoSystem.getRandomBytes(32)))
     )
 
-    override fun getAllClusters() = listOf("c1", "c2")
+    override fun getAllClusters() = listOf("cluster1")
 
     override fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long) =
             when (blockchainRid) {

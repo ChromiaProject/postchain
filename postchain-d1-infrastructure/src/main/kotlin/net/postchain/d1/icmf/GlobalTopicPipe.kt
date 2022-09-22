@@ -18,6 +18,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
+import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -35,6 +36,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute,
                       private val cryptoSystem: CryptoSystem,
                       lastAnchorHeight: Long,
                       private val postchainClientProvider: PostchainClientProvider,
+                      private val clusterManagement: ClusterManagement,
                       _lastMessageHeights: List<MessageHeightForSender>) : IcmfPipe<GlobalTopicsRoute, String, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
@@ -63,7 +65,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute,
     private fun backgroundFetch() {
         logger.info("Fetching messages from $clusterName")
 
-        val cluster = fetchClusterInfoFromD1(clusterName)
+        val cluster = clusterManagement.getClusterInfo(clusterName)
 
         // TODO use net.postchain.client.chromia.ChromiaClientProvider
         val anchoringClient = postchainClientProvider.createClient(
@@ -106,9 +108,9 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute,
                 val witness = BaseBlockWitness.fromBytes(header.rawWitness)
                 val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
-                val chainPeers = fetchChainInfoFromD1(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
+                val chainPeers = clusterManagement.getBlockchainPeers(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
 
-                if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), header.rawHeader, blockRid, chainPeers.map { it.pubKey }, witness)) {
+                if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), header.rawHeader, blockRid, chainPeers.map { it.pubkey }, witness)) {
                     logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                     return
                 }

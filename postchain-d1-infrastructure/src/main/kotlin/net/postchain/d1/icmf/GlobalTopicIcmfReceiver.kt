@@ -12,6 +12,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
+import net.postchain.d1.cluster.ClusterManagement
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import kotlin.time.Duration.Companion.minutes
@@ -20,7 +21,9 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
                               private val cryptoSystem: CryptoSystem,
                               private val storage: Storage,
                               private val chainID: Long,
-                              private val postchainClientProvider: PostchainClientProvider) : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
+                              private val clusterManagement: ClusterManagement,
+                              private val postchainClientProvider: PostchainClientProvider)
+    : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
     }
@@ -34,7 +37,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             IcmfDatabaseOperations.loadAllLastMessageHeights(it)
         }
 
-        val clusters = lookupAllClustersInD1()
+        val clusters = clusterManagement.getAllClusters()
         for (clusterName in clusters) {
             pipes[clusterName] = createPipe(clusterName, lastMessageHeights)
         }
@@ -53,7 +56,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
     private fun updateClusters() {
         logger.info("Updating set of clusters")
         val currentClusters = pipes.keys
-        val updatedClusters = lookupAllClustersInD1()
+        val updatedClusters = clusterManagement.getAllClusters().toSet()
         val removedClusters = currentClusters - updatedClusters
         val addedClusters = updatedClusters - currentClusters
         for (clusterName in removedClusters) {
@@ -70,7 +73,9 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             IcmfDatabaseOperations.loadLastAnchoredHeight(it, clusterName)
         }
 
-        return GlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider, lastMessageHeights)
+        return GlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider,
+                clusterManagement,
+                lastMessageHeights)
     }
 
     override fun getRelevantPipes(): List<GlobalTopicPipe> = pipes.values.toList()
