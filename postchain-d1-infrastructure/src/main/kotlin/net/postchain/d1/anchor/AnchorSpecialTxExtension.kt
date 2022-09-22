@@ -269,7 +269,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
     // ------------------------ PUBLIC NON-INHERITED ----------------
 
-    override fun connectIcmfController(controller: ClusterAnchorIcmfReceiverFactory) {
+    override fun connectReceiverFactory(controller: ClusterAnchorIcmfReceiverFactory) {
         if (icmfReceiver != null)
             throw ProgrammerMistake("Setting receiver twice")
         icmfReceiver = controller.createReceiver(

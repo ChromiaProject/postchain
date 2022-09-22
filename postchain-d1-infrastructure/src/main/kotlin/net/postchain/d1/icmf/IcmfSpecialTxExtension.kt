@@ -5,5 +5,5 @@ package net.postchain.d1.icmf
 import net.postchain.d1.anchor.ClusterAnchorIcmfReceiverFactory
 
 interface IcmfSpecialTxExtension {
-    fun connectIcmfController(controller: ClusterAnchorIcmfReceiverFactory)
+    fun connectReceiverFactory(controller: ClusterAnchorIcmfReceiverFactory)
 }
