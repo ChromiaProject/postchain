@@ -5,7 +5,10 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
-import net.postchain.core.*
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.EContext
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.*
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
@@ -58,16 +61,18 @@ open class BaseBlockQueries(
      * on the query being run and logging them, and finally closing the connection
      */
     protected fun <T> runOp(operation: (EContext) -> T): Promise<T, Exception> {
-        return task(kctx) {
-            val ctx = storage.openReadConnection(chainId)
-            try {
-                operation(ctx)
-            } catch (e: Exception) {
-                logger.trace(e) { "An error occurred" }
-                throw e
-            } finally {
-                storage.closeReadConnection(ctx)
-            }
+        return task(kctx) { runDbOp(operation) }
+    }
+
+    protected fun <T> runDbOp(operation: (EContext) -> T): T {
+        val ctx = storage.openReadConnection(chainId)
+        return try {
+            operation(ctx)
+        } catch (e: Exception) {
+            logger.trace(e) { "An error occurred" }
+            throw e
+        } finally {
+            storage.closeReadConnection(ctx)
         }
     }
 
@@ -153,12 +158,12 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun query(query: String): Promise<String, Exception> {
-        return Promise.ofFail(UserMistake("Queries are not supported"))
+    override fun query(query: String): String {
+        throw NotImplementedError("Queries are not supported")
     }
 
-    override fun query(name: String, args: Gtv): Promise<Gtv, Exception> {
-        return Promise.ofFail(UserMistake("Queries are not supported"))
+    override fun query(name: String, args: Gtv): Gtv {
+        throw NotImplementedError("Queries are not supported")
     }
 
     fun getConfirmationProof(txRID: ByteArray): Promise<ConfirmationProof?, Exception> {

@@ -16,7 +16,9 @@ import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
-import net.postchain.common.tx.TransactionStatus.*
+import net.postchain.common.tx.TransactionStatus.CONFIRMED
+import net.postchain.common.tx.TransactionStatus.REJECTED
+import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
@@ -117,11 +119,11 @@ open class PostchainModel(
     }
 
     override fun query(query: Query): QueryResult {
-        return QueryResult(blockQueries.query(query.json).get())
+        return QueryResult(blockQueries.query(query.json))
     }
 
     override fun query(query: Gtv): Gtv {
-        return blockQueries.query(query[0].asString(), query[1]).get()
+        return blockQueries.query(query[0].asString(), query[1])
     }
 
     override fun nodeQuery(subQuery: String): String = throw NotSupported("NotSupported: $subQuery")

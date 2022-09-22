@@ -13,12 +13,12 @@ import java.time.Instant
 
 open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: AppConfig) : ManagedNodeDataSource {
 
-    protected val nmApiVersion = queries.query("nm_api_version", buildArgs()).get().asInteger().toInt()
+    protected val nmApiVersion = queries.query("nm_api_version", buildArgs()).asInteger().toInt()
 
     override fun getPeerInfos(): Array<PeerInfo> {
         // TODO: [POS-90]: Implement correct error processing
         val res = queries.query("nm_get_peer_infos", buildArgs())
-        return res.get().asArray()
+        return res.asArray()
                 .map {
                     val pia = it.asArray()
                     PeerInfo(
@@ -33,14 +33,14 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
 
     override fun getPeerListVersion(): Long {
         val res = queries.query("nm_get_peer_list_version", buildArgs())
-        return res.get().asInteger()
+        return res.asInteger()
     }
 
     override fun computeBlockchainList(): List<ByteArray> {
         val res = queries.query(
                 "nm_compute_blockchain_list",
                 buildArgs("node_id" to GtvFactory.gtv(appConfig.pubKeyByteArray))
-        ).get()
+        )
 
         return res.asArray().map { it.asByteArray() }
     }
@@ -51,7 +51,7 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
                 buildArgs(
                         "blockchain_rid" to GtvFactory.gtv(blockchainRidRaw),
                         "height" to GtvFactory.gtv(height))
-        ).get()
+        )
 
         return if (res.isNull()) null else res.asByteArray()
     }
@@ -62,7 +62,7 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
                 buildArgs(
                         "blockchain_rid" to GtvFactory.gtv(blockchainRidRaw),
                         "height" to GtvFactory.gtv(height))
-        ).get()
+        )
 
         return if (res.isNull()) null else res.asInteger()
     }
@@ -79,7 +79,7 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
                     buildArgs("blockchain_rids" to GtvFactory.gtv(
                             *(blockchains.map { GtvFactory.gtv(it) }.toTypedArray())
                     ))
-            ).get().asArray()
+            ).asArray()
 
             blockchains.mapIndexed { i, brid ->
                 BlockchainRid(brid) to if (i < heights.size) heights[i].asInteger() else -1
@@ -99,7 +99,7 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
                 buildArgs("blockchain_rids" to GtvFactory.gtv(
                         *(blockchains.map { GtvFactory.gtv(it) }.toTypedArray())
                 ))
-        ).get().asArray()
+        ).asArray()
 
         return blockchains.mapIndexed { i, brid ->
             BlockchainRid(brid) to if (i < replicas.size) {
@@ -114,7 +114,7 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
         val peersReplicas = queries.query(
                 "nm_get_node_replica_map",
                 buildArgs()
-        ).get().asArray()
+        ).asArray()
 
         return peersReplicas
                 .map(Gtv::asArray)

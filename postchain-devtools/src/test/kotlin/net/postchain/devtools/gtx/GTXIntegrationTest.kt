@@ -126,6 +126,6 @@ class GTXIntegrationTest : IntegrationTestSetup() {
 
         val value = node.getBlockchainInstance().blockchainEngine.getBlockQueries().query(
                 """{"type"="gtx_test_get_value", "txRID"="${validTx1.getRID().toHex()}"}""")
-       assertEquals("\"true\"", value.get())
+       assertEquals("\"true\"", value)
     }
 }

@@ -19,7 +19,7 @@ class BaseDirectoryDataSource(
         val res = queries.query(
                 "nm_get_containers",
                 buildArgs("pubkey" to GtvFactory.gtv(appConfig.pubKeyByteArray))
-        ).get()
+        )
 
         return res.asArray().map { it.asString() }
     }
@@ -28,7 +28,7 @@ class BaseDirectoryDataSource(
         val res = queries.query(
                 "nm_get_blockchains_for_container",
                 buildArgs("container_id" to GtvFactory.gtv(containerId))
-        ).get()
+        )
 
         return res.asArray().map { BlockchainRid(it.asByteArray()) }
     }
@@ -42,7 +42,7 @@ class BaseDirectoryDataSource(
                 queries.query(
                         "nm_get_container_for_blockchain",
                         buildArgs("blockchain_rid" to GtvFactory.gtv(brid.data))
-                ).get().asString()
+                ).asString()
             } else {
                 throw Exception("Directory1 v.{$nmApiVersion} doesn't support 'nm_get_container_for_blockchain' query")
             }
@@ -61,7 +61,7 @@ class BaseDirectoryDataSource(
             val resourceLimits = queries.query(
                     "nm_get_container_limits",
                     buildArgs("name" to GtvFactory.gtv(containerId))
-            ).get().asDict()
+            ).asDict()
                     .map { ResourceLimit.valueOf(it.key.uppercase()) to it.value.asInteger() }
                     .toMap()
 
