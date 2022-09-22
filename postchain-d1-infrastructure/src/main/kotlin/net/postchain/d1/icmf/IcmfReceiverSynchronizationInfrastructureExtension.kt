@@ -1,6 +1,7 @@
 package net.postchain.d1.icmf
 
 import net.postchain.PostchainContext
+import net.postchain.base.BaseBlockchainEngine
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.core.BlockchainProcess
@@ -20,8 +21,12 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
             getIcmfRemoteSpecialTxExtension(configuration)?.let { txExt ->
                 val topics = configuration.configData.rawConfig["icmf"]!!["receiver"]!!["topics"]!!.asArray().map { it.asString() }
                 val clusterManagement = createClusterManagement()
-                val receiver = GlobalTopicIcmfReceiver(topics, configuration.cryptoSystem, postchainContext.storage, configuration.chainID,
-                        clusterManagement, createClientProvider())
+                val receiver = GlobalTopicIcmfReceiver(topics,
+                        configuration.cryptoSystem,
+                        (engine as BaseBlockchainEngine).storage,
+                        configuration.chainID,
+                        clusterManagement,
+                        createClientProvider())
                 receivers[configuration.chainID] = receiver
                 txExt.receiver = receiver
                 txExt.clusterManagement = clusterManagement

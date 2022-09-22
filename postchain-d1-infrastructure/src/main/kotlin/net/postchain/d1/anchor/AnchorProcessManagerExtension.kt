@@ -1,26 +1,13 @@
 package net.postchain.d1.anchor
 
 import net.postchain.PostchainContext
-import net.postchain.base.BaseBlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.gtx.GTXBlockchainConfiguration
 
-@Suppress("unused")
-class AnchorProcessManagerExtension(val postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
+class AnchorProcessManagerExtension(postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
 
-    lateinit var clusterAnchorIcmfReceiverFactory: ClusterAnchorIcmfReceiverFactory
-
-    fun getIcmfController(process: BlockchainProcess): ClusterAnchorIcmfReceiverFactory {
-        if (!::clusterAnchorIcmfReceiverFactory.isInitialized) {
-            // steal storage from blockchain engine
-            // no, I'm not proud of it...
-            clusterAnchorIcmfReceiverFactory = ClusterAnchorIcmfReceiverFactory(
-                    (process.blockchainEngine as BaseBlockchainEngine).storage
-            )
-        }
-        return clusterAnchorIcmfReceiverFactory
-    }
+    private val clusterAnchorIcmfReceiverFactory = ClusterAnchorIcmfReceiverFactory(postchainContext.storage)
 
     /**
      * Connect process to ICMF:
@@ -34,34 +21,11 @@ class AnchorProcessManagerExtension(val postchainContext: PostchainContext) : Bl
 
         if (cfg is GTXBlockchainConfiguration) {
             // create receiver when blockchain has anchoring STE
-            getAnchorSpecialTxExtension(cfg)?.connectIcmfController(getIcmfController(process))
+            getAnchorSpecialTxExtension(cfg)?.connectReceiverFactory(clusterAnchorIcmfReceiverFactory)
 
             // connect process to local dispatcher
-            getIcmfController(process).localDispatcher.connectChain(cfg.chainID)
+            clusterAnchorIcmfReceiverFactory.localDispatcher.connectChain(cfg.chainID)
         }
-    }
-
-    @Synchronized
-    override fun disconnectProcess(process: BlockchainProcess) {
-        if (::clusterAnchorIcmfReceiverFactory.isInitialized) {
-            clusterAnchorIcmfReceiverFactory.localDispatcher.disconnectChain(
-                    process.blockchainEngine.getConfiguration().chainID
-            )
-        }
-    }
-
-    @Synchronized
-    override fun afterCommit(process: BlockchainProcess, height: Long) {
-        if (::clusterAnchorIcmfReceiverFactory.isInitialized) {
-            clusterAnchorIcmfReceiverFactory.localDispatcher.afterCommit(
-                    process.blockchainEngine.getConfiguration().chainID,
-                    height
-            )
-        }
-    }
-
-    @Synchronized
-    override fun shutdown() {
     }
 
     /**
@@ -73,5 +37,24 @@ class AnchorProcessManagerExtension(val postchainContext: PostchainContext) : Bl
         return cfg.module.getSpecialTxExtensions().firstOrNull { ext ->
             (ext is AnchorSpecialTxExtension)
         } as AnchorSpecialTxExtension?
+    }
+
+    @Synchronized
+    override fun disconnectProcess(process: BlockchainProcess) {
+        clusterAnchorIcmfReceiverFactory.localDispatcher.disconnectChain(
+                process.blockchainEngine.getConfiguration().chainID
+        )
+    }
+
+    @Synchronized
+    override fun afterCommit(process: BlockchainProcess, height: Long) {
+        clusterAnchorIcmfReceiverFactory.localDispatcher.afterCommit(
+                process.blockchainEngine.getConfiguration().chainID,
+                height
+        )
+    }
+
+    @Synchronized
+    override fun shutdown() {
     }
 }
