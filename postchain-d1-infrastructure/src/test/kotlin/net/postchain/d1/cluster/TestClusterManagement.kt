@@ -20,7 +20,7 @@ class TestClusterManagement(cs: CryptoSystem) : ClusterManagement {
                 else -> throw IllegalArgumentException("Brid not in any test cluster")
             }
 
-    override fun getClusterPeerInfo(clusterName: String) =
+    override fun getClusterInfo(clusterName: String) =
             when (clusterName) {
                 "c1" -> D1ClusterInfo(clusterName, BlockchainRid.buildRepeat(1), setOf(peers[0], peers[1]))
                 "c2" -> D1ClusterInfo(clusterName, BlockchainRid.buildRepeat(2), setOf(peers[1], peers[2]))

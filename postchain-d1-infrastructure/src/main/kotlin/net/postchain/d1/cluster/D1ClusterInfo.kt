@@ -6,5 +6,5 @@ import net.postchain.gtv.mapper.Name
 data class D1ClusterInfo(
         @Name("name") val name: String,
         @Name("anchoring_chain") val anchoringChain: BlockchainRid,
-        @Name("peers") val peers: Set<D1PeerInfo>
+        @Name("peers") val peers: Collection<D1PeerInfo>
 )
