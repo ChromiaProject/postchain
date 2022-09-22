@@ -10,8 +10,6 @@ import net.postchain.d1.icmf.GlobalTopicPipe
 import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
 import net.postchain.d1.icmf.TopicHeaderData
 import net.postchain.d1.icmf.integration.IcmfReceiverTestGTXModule.Companion.testMessageTable
-import net.postchain.d1.icmf.privKey
-import net.postchain.d1.icmf.pubKey
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtv.GtvEncoder
@@ -61,7 +59,8 @@ class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
                 ))
         ).toGtv()
         val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-        val rawWitness = BaseBlockWitness.fromSignatures(arrayOf(cryptoSystem.buildSigMaker(pubKey.key, privKey.key).signDigest(blockRid))).getRawData()
+        val rawWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))).getRawData()
         val queryResponse = GlobalTopicPipe.SignedBlockHeaderWithAnchorHeight(
                 GtvEncoder.encodeGtv(blockHeader),
                 rawWitness,
@@ -91,7 +90,7 @@ class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
         PostchainClientMocks.addMockClient(senderChainRid, senderClientMock)
 
         val mapBcFiles: Map<Int, String> = mapOf(
-                CHAIN_ID to "/net/postchain/icmf/integration/receiver/blockchain_config_1.xml",
+                CHAIN_ID to "/net/postchain/icmf/integration/receiver/blockchain_config_1.xml"
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
