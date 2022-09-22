@@ -48,7 +48,7 @@
                     <entry key="sources">
                         <dict>
                             <entry key="icmf/module.rell">
-                            <string><![CDATA[module;
+                                <string><![CDATA[module;
 
 @log
 entity sent_icmf_message {

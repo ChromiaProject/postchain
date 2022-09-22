@@ -6,8 +6,8 @@ import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 
 class IcmfTestBlockchainConfiguration(
-    configData: BlockchainConfigurationData,
-    module: GTXModule
+        configData: BlockchainConfigurationData,
+        module: GTXModule
 ) : TestBlockchainConfiguration(configData, module) {
     override fun initializeDB(ctx: EContext) {
         super.initializeDB(ctx)
