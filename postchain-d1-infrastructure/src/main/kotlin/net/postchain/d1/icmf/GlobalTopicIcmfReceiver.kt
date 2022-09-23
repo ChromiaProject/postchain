@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.withReadConnection
 import net.postchain.client.core.PostchainClientProvider
+import net.postchain.common.BlockchainRid
 import net.postchain.core.Shutdownable
 import net.postchain.core.Storage
 import net.postchain.crypto.CryptoSystem
@@ -18,19 +19,18 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import kotlin.time.Duration.Companion.minutes
 
-class GlobalTopicIcmfReceiver(topics: List<String>,
+class GlobalTopicIcmfReceiver(private val topics: List<String>,
                               private val cryptoSystem: CryptoSystem,
                               private val storage: Storage,
                               private val chainID: Long,
                               private val clusterManagement: ClusterManagement,
                               private val postchainClientProvider: PostchainClientProvider)
-    : IcmfReceiver<GlobalTopicsRoute, String, Long>, Shutdownable {
+    : IcmfReceiver<GlobalTopicRoute, String, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
     }
 
-    private val route = GlobalTopicsRoute(topics)
-    private val pipes: ConcurrentMap<String, GlobalTopicPipe> = ConcurrentHashMap()
+    private val pipes: ConcurrentMap<Pair<String, String>, GlobalTopicPipe> = ConcurrentHashMap()
     private val job: Job
 
     init {
@@ -40,7 +40,9 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
 
         val clusters = clusterManagement.getAllClusters()
         for (clusterName in clusters) {
-            pipes[clusterName] = createPipe(clusterName, lastMessageHeights)
+            for (topic in topics) {
+                pipes[clusterName to topic] = createPipe(clusterName, topic, lastMessageHeights.filter { it.topic == topic }.map { it.sender to it.height })
+            }
         }
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
             while (isActive) {
@@ -56,25 +58,29 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
 
     private fun updateClusters() {
         logger.info("Updating set of clusters")
-        val currentClusters = pipes.keys
+        val currentClusters = pipes.keys.map { it.first }.toSet()
         val updatedClusters = clusterManagement.getAllClusters().toSet()
         val removedClusters = currentClusters - updatedClusters
         val addedClusters = updatedClusters - currentClusters
         for (clusterName in removedClusters) {
-            pipes.remove(clusterName)?.shutdown()
+            for (topic in topics) {
+                pipes.remove(clusterName to topic)?.shutdown()
+            }
         }
         for (clusterName in addedClusters) {
-            pipes[clusterName] = createPipe(clusterName, listOf())
+            for (topic in topics) {
+                pipes[clusterName to topic] = createPipe(clusterName, topic, listOf())
+            }
         }
         logger.info("Updated set of clusters")
     }
 
-    private fun createPipe(clusterName: String, lastMessageHeights: List<MessageHeightForSender>): GlobalTopicPipe {
+    private fun createPipe(clusterName: String, topic: String, lastMessageHeights: List<Pair<BlockchainRid, Long>>): GlobalTopicPipe {
         val lastAnchorHeight = withReadConnection(storage, chainID) {
-            IcmfDatabaseOperations.loadLastAnchoredHeight(it, clusterName)
+            IcmfDatabaseOperations.loadLastAnchoredHeight(it, clusterName, topic)
         }
 
-        return GlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider,
+        return GlobalTopicPipe(GlobalTopicRoute(topic), clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider,
                 clusterManagement,
                 lastMessageHeights)
     }
