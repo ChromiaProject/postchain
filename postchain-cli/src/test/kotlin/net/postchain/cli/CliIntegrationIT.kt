@@ -4,13 +4,13 @@ import assertk.assert
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import net.postchain.StorageBuilder
-import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
+import net.postchain.core.Storage
 import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

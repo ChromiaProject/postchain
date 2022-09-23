@@ -26,6 +26,8 @@ interface Synchronizable {
  * - [BlockBuildingStrategy] knows HOW to build a block
  */
 interface BlockchainEngine : Shutdownable {
+    val storage: Storage
+
     fun isRunning(): Boolean
     fun initialize()
     fun setAfterCommitHandler(afterCommitHandler: AfterCommitHandler)

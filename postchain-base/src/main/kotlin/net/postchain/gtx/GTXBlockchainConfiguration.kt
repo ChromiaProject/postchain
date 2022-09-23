@@ -6,7 +6,6 @@ import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.SpecialTransactionHandler
-import net.postchain.base.Storage
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.common.exception.UserMistake
