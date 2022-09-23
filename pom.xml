@@ -633,8 +633,7 @@
                             </includes>
                             <systemPropertyVariables>
                                 <!--suppress UnresolvedMavenProperty -->
-                                <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml
-                                </log4j.configurationFile>
+                                <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml</log4j.configurationFile>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>
