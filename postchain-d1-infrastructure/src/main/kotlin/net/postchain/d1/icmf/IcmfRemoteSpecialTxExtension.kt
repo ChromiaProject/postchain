@@ -123,13 +123,13 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                     val peers = clusterManagement.getBlockchainPeers(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
 
                     if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), rawHeader, blockRid, peers.map { it.pubkey }, witness)) {
-                        logger.warn("Invalid block header signature for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                        logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                         return false
                     }
 
                     val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
                     if (icmfHeaderData == null) {
-                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: $blockRid for blockchain-rid: ${decodedHeader.getBlockchainRid()} at height: ${decodedHeader.getHeight()}")
+                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                         return false
                     }
 
