@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import kotlin.time.Duration.Companion.minutes
 
-class GlobalTopicIcmfReceiver(private val topics: List<String>,
+class GlobalTopicIcmfReceiver(topics: List<String>,
                               private val cryptoSystem: CryptoSystem,
                               private val storage: Storage,
                               private val chainID: Long,
@@ -30,7 +30,8 @@ class GlobalTopicIcmfReceiver(private val topics: List<String>,
         val pollInterval = 1.minutes
     }
 
-    private val pipes: ConcurrentMap<Pair<String, String>, GlobalTopicPipe> = ConcurrentHashMap()
+    private val routes = topics.map { GlobalTopicRoute(it) }
+    private val pipes: ConcurrentMap<Pair<String, GlobalTopicRoute>, ClusterGlobalTopicPipe> = ConcurrentHashMap()
     private val job: Job
 
     init {
@@ -40,8 +41,8 @@ class GlobalTopicIcmfReceiver(private val topics: List<String>,
 
         val clusters = clusterManagement.getAllClusters()
         for (clusterName in clusters) {
-            for (topic in topics) {
-                pipes[clusterName to topic] = createPipe(clusterName, topic, lastMessageHeights.filter { it.topic == topic }.map { it.sender to it.height })
+            for (route in routes) {
+                pipes[clusterName to route] = createPipe(clusterName, route, lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
             }
         }
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
@@ -63,29 +64,29 @@ class GlobalTopicIcmfReceiver(private val topics: List<String>,
         val removedClusters = currentClusters - updatedClusters
         val addedClusters = updatedClusters - currentClusters
         for (clusterName in removedClusters) {
-            for (topic in topics) {
-                pipes.remove(clusterName to topic)?.shutdown()
+            for (route in routes) {
+                pipes.remove(clusterName to route)?.shutdown()
             }
         }
         for (clusterName in addedClusters) {
-            for (topic in topics) {
-                pipes[clusterName to topic] = createPipe(clusterName, topic, listOf())
+            for (route in routes) {
+                pipes[clusterName to route] = createPipe(clusterName, route, listOf())
             }
         }
         logger.info("Updated set of clusters")
     }
 
-    private fun createPipe(clusterName: String, topic: String, lastMessageHeights: List<Pair<BlockchainRid, Long>>): GlobalTopicPipe {
+    private fun createPipe(clusterName: String, route: GlobalTopicRoute, lastMessageHeights: List<Pair<BlockchainRid, Long>>): ClusterGlobalTopicPipe {
         val lastAnchorHeight = withReadConnection(storage, chainID) {
-            IcmfDatabaseOperations.loadLastAnchoredHeight(it, clusterName, topic)
+            IcmfDatabaseOperations.loadLastAnchoredHeight(it, clusterName, route.topic)
         }
 
-        return GlobalTopicPipe(GlobalTopicRoute(topic), clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider,
+        return ClusterGlobalTopicPipe(route, clusterName, cryptoSystem, lastAnchorHeight, postchainClientProvider,
                 clusterManagement,
                 lastMessageHeights)
     }
 
-    override fun getRelevantPipes(): List<GlobalTopicPipe> = pipes.values.toList()
+    override fun getRelevantPipes(): List<ClusterGlobalTopicPipe> = pipes.values.toList()
 
     override fun shutdown() {
         job.cancel()

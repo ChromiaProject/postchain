@@ -6,7 +6,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
-import net.postchain.d1.icmf.GlobalTopicPipe
+import net.postchain.d1.icmf.ClusterGlobalTopicPipe
 import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
 import net.postchain.d1.icmf.TopicHeaderData
 import net.postchain.d1.icmf.integration.IcmfReceiverTestGTXModule.Companion.testMessageTable
@@ -61,7 +61,7 @@ class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
         val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))).getRawData()
-        val queryResponse = GlobalTopicPipe.SignedBlockHeaderWithAnchorHeight(
+        val queryResponse = ClusterGlobalTopicPipe.SignedBlockHeaderWithAnchorHeight(
                 GtvEncoder.encodeGtv(blockHeader),
                 rawWitness,
                 0
