@@ -59,14 +59,14 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
             try {
                 backgroundFetch()
             } catch (e: Exception) {
-                logger.error("Background fetch from cluster $clusterName topic ${route.topic} failed: ${e.message}", e)
+                logger.error("Background fetch from cluster failed: ${e.message}", e)
             }
             delay(pollInterval)
         }
     }
 
     private fun backgroundFetch() {
-        logger.info("Fetching messages from $clusterName topic ${route.topic}")
+        logger.info("Fetching messages")
 
         val cluster = clusterManagement.getClusterInfo(clusterName)
 
@@ -97,7 +97,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
         } catch (e: Exception) {
             when (e) {
                 is UserMistake, is IOException -> {
-                    logger.warn("Unable to query for messages with topic: ${route.topic} on anchor chain. ${e.message}", e)
+                    logger.warn("Unable to query for messages on anchor chain: ${e.message}", e)
                     return
                 }
 
@@ -134,7 +134,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
             if (decodedHeader.getHeight() <= currentPrevMessageBlockHeight) {
                 continue // already processed in previous block, skip it here
             } else if (topicData.prevMessageBlockHeight != currentPrevMessageBlockHeight) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for topic ${route.topic} for sender ${decodedHeader.getBlockchainRid().toHex()}")
+                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for sender ${decodedHeader.getBlockchainRid().toHex()}")
                 return
             }
 
@@ -186,7 +186,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                 )
                 lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid())] = decodedHeader.getHeight()
             } else {
-                logger.warn("invalid messages hash for topic: ${route.topic} for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
+                logger.warn("invalid messages hash for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                 return // TODO Should we retry fetching of messages from another node?
             }
         }
@@ -198,8 +198,10 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
 
             lastAnchorHeight.set(currentAnchorHeight)
         } else {
-            logger.info("pipe reached max capacity $maxQueueSizeBytes")
+            logger.info("pipe reached max capacity $maxQueueSizeBytes bytes")
         }
+
+        logger.info("Fetched messages")
     }
 
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
