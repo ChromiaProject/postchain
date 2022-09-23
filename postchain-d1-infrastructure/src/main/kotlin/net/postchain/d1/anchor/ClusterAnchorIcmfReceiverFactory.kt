@@ -2,7 +2,7 @@
 
 package net.postchain.d1.anchor
 
-import net.postchain.base.Storage
+import net.postchain.core.Storage
 
 class ClusterAnchorIcmfReceiverFactory(storage: Storage) {
     val localDispatcher = ClusterAnchorDispatcher(storage)
