@@ -1,5 +1,6 @@
 package net.postchain.d1.icmf
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +54,8 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
                     logger.info("Updating set of clusters")
                     updateClusters()
                     logger.info("Updated set of clusters")
+                } catch (e: CancellationException) {
+                    break
                 } catch (e: Exception) {
                     logger.error("Clusters update failed: ${e.message}", e)
                 }

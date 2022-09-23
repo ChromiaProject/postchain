@@ -1,5 +1,6 @@
 package net.postchain.d1.icmf
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,6 +61,8 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                     logger.info("Fetching messages")
                     fetchMessages()
                     logger.info("Fetched messages")
+                } catch (e: CancellationException) {
+                    break
                 } catch (e: Exception) {
                     logger.error("Message fetch failed: ${e.message}", e)
                 }
