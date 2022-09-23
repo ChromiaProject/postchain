@@ -6,6 +6,7 @@ import net.postchain.StorageBuilder
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
+import net.postchain.core.Storage
 
 fun <RT> Storage.withReadConnection(op: (AppContext) -> RT): RT {
     val ctx = openReadConnection()

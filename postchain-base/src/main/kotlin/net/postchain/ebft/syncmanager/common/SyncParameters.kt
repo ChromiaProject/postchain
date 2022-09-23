@@ -1,7 +1,7 @@
 package net.postchain.ebft.syncmanager.common
 
 import net.postchain.config.app.AppConfig
-import net.postchain.config.app.Config
+import net.postchain.common.config.Config
 
 /**
  * Tuning parameters for various sychronizers (used to load blocks from other nodes).

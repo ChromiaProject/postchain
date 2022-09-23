@@ -2,7 +2,7 @@ package net.postchain.containers.infra
 
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
-import net.postchain.config.app.Config
+import net.postchain.common.config.Config
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.server.config.PostchainServerConfig
 import org.apache.commons.configuration2.Configuration
