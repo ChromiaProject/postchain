@@ -7,10 +7,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mu.KLogging
-import net.postchain.base.Storage
 import net.postchain.base.withReadConnection
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.core.Shutdownable
+import net.postchain.core.Storage
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.cluster.ClusterManagement
 import java.util.concurrent.ConcurrentHashMap

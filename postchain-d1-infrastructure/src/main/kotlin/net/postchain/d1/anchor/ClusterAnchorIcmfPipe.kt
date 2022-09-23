@@ -2,11 +2,11 @@
 
 package net.postchain.d1.anchor
 
-import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
+import net.postchain.core.Storage
 import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 

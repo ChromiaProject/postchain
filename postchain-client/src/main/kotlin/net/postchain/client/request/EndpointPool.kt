@@ -1,6 +1,7 @@
 package net.postchain.client.request
 
 interface EndpointPool {
+    fun size(): Int
     fun next(): Endpoint
 
     companion object {

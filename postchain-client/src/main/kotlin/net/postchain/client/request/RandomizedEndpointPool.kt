@@ -11,6 +11,7 @@ class RandomizedEndpointPool(urls: List<String>) : EndpointPool {
         require(urls.isNotEmpty()) { "Must provide at least one url" }
     }
 
+    override fun size() = size
     override fun next(): Endpoint {
         if (size == 1) return endpoints.first()
         val reachableEndpoints = endpoints.filter { it.isReachable() }

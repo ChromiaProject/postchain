@@ -2,15 +2,19 @@ package net.postchain.ebft.heartbeat
 
 import mu.KLogging
 import net.postchain.base.BaseConfigurationDataStore
-import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.core.Storage
 import net.postchain.network.mastersub.MsMessageHandler
-import net.postchain.network.mastersub.protocol.*
+import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
+import net.postchain.network.mastersub.protocol.MsHeartbeatMessage
+import net.postchain.network.mastersub.protocol.MsMessage
+import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
+import net.postchain.network.mastersub.protocol.MsSubnodeStatusMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class RemoteConfigHeartbeatListener(

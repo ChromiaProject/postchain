@@ -2,10 +2,10 @@
 
 package net.postchain.d1.anchor
 
-import net.postchain.base.Storage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.core.Storage
 
 class ClusterAnchorDispatcher(val storage: Storage) {
     val receivers = mutableMapOf<Long, ClusterAnchorIcmfReceiver>()

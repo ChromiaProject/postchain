@@ -2,6 +2,7 @@
 
 package net.postchain.config.app
 
+import net.postchain.common.config.Config
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.Infrastructure
 import org.apache.commons.configuration2.Configuration
@@ -12,11 +13,6 @@ import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import java.io.FileWriter
 import java.io.PrintWriter
-
-/**
- * Marker interface for all kinds of configs
- */
-interface Config
 
 /**
  * Wrapper to the generic [Configuration]
