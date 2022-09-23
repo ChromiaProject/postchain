@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.BaseBlockWitness
@@ -52,7 +53,7 @@ class GlobalTopicPipe(override val route: GlobalTopicsRoute,
     }
 
     private val job: Job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker-cluster-$clusterName")) {
-        while (true) {
+        while (isActive) {
             try {
                 backgroundFetch()
             } catch (e: Exception) {

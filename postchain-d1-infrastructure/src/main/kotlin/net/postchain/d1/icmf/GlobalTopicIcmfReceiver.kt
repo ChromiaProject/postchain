@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.withReadConnection
@@ -42,7 +43,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
             pipes[clusterName] = createPipe(clusterName, lastMessageHeights)
         }
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
-            while (true) {
+            while (isActive) {
                 delay(pollInterval)
                 try {
                     updateClusters()
