@@ -46,8 +46,8 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
     @Test
     fun happyAnchor() {
         val mapBcFiles: Map<Int, String> = mapOf(
-                DAPP_CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_1.xml",
-                ANCHOR_CHAIN_ID to "/net/postchain/anchor/integration/blockchain_config_2_anchor.xml"
+                DAPP_CHAIN_ID to "/net/postchain/d1/anchor/integration/blockchain_config_1.xml",
+                ANCHOR_CHAIN_ID to "/net/postchain/d1/anchor/integration/blockchain_config_2_anchor.xml"
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)

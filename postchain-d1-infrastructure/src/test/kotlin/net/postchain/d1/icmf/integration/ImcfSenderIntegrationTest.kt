@@ -28,7 +28,7 @@ class ImcfSenderIntegrationTest : GtxTxIntegrationTestSetup() {
     @Test
     fun icmfHappyPath() {
         val mapBcFiles: Map<Int, String> = mapOf(
-                CHAIN_ID to "/net/postchain/icmf/integration/sender/blockchain_config_1.xml",
+                CHAIN_ID to "/net/postchain/d1/icmf/integration/sender/blockchain_config_1.xml",
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)

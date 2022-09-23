@@ -1,5 +1,6 @@
 package net.postchain.d1.icmf
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,20 +46,24 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
                 pipes[clusterName to route] = createPipe(clusterName, route, lastMessageHeights.filter { it.topic == route.topic }.map { it.sender to it.height })
             }
         }
+
         job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("clusters-updater")) {
             while (isActive) {
                 delay(pollInterval)
                 try {
+                    logger.info("Updating set of clusters")
                     updateClusters()
+                    logger.info("Updated set of clusters")
+                } catch (e: CancellationException) {
+                    break
                 } catch (e: Exception) {
-                    logger.error("Cluster update failed: ${e.message}", e)
+                    logger.error("Clusters update failed: ${e.message}", e)
                 }
             }
         }
     }
 
     private fun updateClusters() {
-        logger.info("Updating set of clusters")
         val currentClusters = pipes.keys.map { it.first }.toSet()
         val updatedClusters = clusterManagement.getAllClusters().toSet()
         val removedClusters = currentClusters - updatedClusters
@@ -73,7 +78,6 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
                 pipes[clusterName to route] = createPipe(clusterName, route, listOf())
             }
         }
-        logger.info("Updated set of clusters")
     }
 
     private fun createPipe(clusterName: String, route: GlobalTopicRoute, lastMessageHeights: List<Pair<BlockchainRid, Long>>): ClusterGlobalTopicPipe {
