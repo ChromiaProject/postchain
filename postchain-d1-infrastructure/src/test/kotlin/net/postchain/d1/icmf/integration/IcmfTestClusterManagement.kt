@@ -27,4 +27,7 @@ class IcmfTestClusterManagement : ClusterManagement {
 
     override fun getClusterInfo(clusterName: String) =
             D1ClusterInfo(clusterName, BlockchainRid.buildRepeat(0), peers)
+
+    override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> =
+            listOf(BlockchainRid.buildRepeat(0), BlockchainRid.buildRepeat(1))
 }

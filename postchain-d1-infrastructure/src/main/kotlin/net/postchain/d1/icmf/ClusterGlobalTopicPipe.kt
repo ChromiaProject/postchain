@@ -152,11 +152,15 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                         gtv(mapOf("topic" to gtv(route.topic), "height" to gtv(decodedHeader.getHeight())))
                 ).asArray()
             } catch (e: Exception) {
-                // TODO check if chain is permanently stopped
                 when (e) {
                     is UserMistake, is IOException -> {
+                        if (!clusterManagement.getActiveBlockchains(clusterName).contains(BlockchainRid(decodedHeader.getBlockchainRid()))) {
+                            // chain is permanently stopped
+                            logger.info("Blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} is permanently stopped: ${e.message}")
+                            continue
+                        }
                         logger.warn(
-                                "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} for messages. ${e.message}",
+                                "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} for messages: ${e.message}",
                                 e
                         )
                         return
