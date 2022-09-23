@@ -49,11 +49,13 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val pipes = receiver.getRelevantPipes()
 
+        val lastAnchoredHeights = IcmfDatabaseOperations.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
+
         val allOps = mutableListOf<OpData>()
         for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
                 val clusterName = pipe.id
-                val lastAnchoredHeight = IcmfDatabaseOperations.loadLastAnchoredHeight(bctx, clusterName)
+                val lastAnchoredHeight = lastAnchoredHeights[clusterName to pipe.route.topic] ?: -1
                 var currentHeight: Long = lastAnchoredHeight
                 while (pipe.mightHaveNewPackets()) {
                     val icmfPackets = pipe.fetchNext(currentHeight)
@@ -72,7 +74,7 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                     }
                 }
                 if (currentHeight > lastAnchoredHeight) {
-                    IcmfDatabaseOperations.saveLastAnchoredHeight(bctx, clusterName, currentHeight)
+                    IcmfDatabaseOperations.saveLastAnchoredHeight(bctx, clusterName, pipe.route.topic, currentHeight)
                 }
             }
         }

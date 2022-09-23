@@ -19,7 +19,7 @@ object IcmfDatabaseOperations {
                     ctx.conn,
                     "CREATE TABLE IF NOT EXISTS ${
                         tableAnchorHeight(ctx)
-                    } (cluster TEXT PRIMARY KEY, height BIGINT NOT NULL)"
+                    } (cluster TEXT, topic TEXT, height BIGINT NOT NULL, PRIMARY KEY (cluster, topic))"
             )
             queryRunner.update(
                     ctx.conn,
@@ -30,21 +30,31 @@ object IcmfDatabaseOperations {
         }
     }
 
-    fun loadLastAnchoredHeight(ctx: EContext, clusterName: String): Long = DatabaseAccess.of(ctx).run {
+    fun loadLastAnchoredHeight(ctx: EContext, clusterName: String, topic: String): Long = DatabaseAccess.of(ctx).run {
         QueryRunner().query(
                 ctx.conn,
-                "SELECT height FROM ${tableAnchorHeight(ctx)} WHERE cluster = ?",
+                "SELECT height FROM ${tableAnchorHeight(ctx)} WHERE cluster = ? AND topic = ?",
                 ScalarHandler(),
-                clusterName
-        ) ?: -1
-    }
+                clusterName,
+                topic
+        )
+    } ?: -1
 
-    fun saveLastAnchoredHeight(bctx: EContext, clusterName: String, anchorHeight: Long) {
+    fun loadLastAnchoredHeights(ctx: EContext): List<AnchorHeight> = DatabaseAccess.of(ctx).run {
+        QueryRunner().query(
+                ctx.conn,
+                "SELECT cluster, topic, height FROM ${tableAnchorHeight(ctx)}",
+                MapListHandler()
+        )
+    }.map { AnchorHeight(it["cluster"] as String, it["topic"] as String, it["height"] as Long) }
+
+    fun saveLastAnchoredHeight(bctx: EContext, clusterName: String, topic: String, anchorHeight: Long) {
         DatabaseAccess.of(bctx).run {
             QueryRunner().update(
                     bctx.conn,
-                    "INSERT INTO ${tableAnchorHeight(bctx)} (cluster, height) VALUES (?, ?) ON CONFLICT (cluster) DO UPDATE SET height = ?",
+                    "INSERT INTO ${tableAnchorHeight(bctx)} (cluster, topic, height) VALUES (?, ?, ?) ON CONFLICT (cluster, topic) DO UPDATE SET height = ?",
                     clusterName,
+                    topic,
                     anchorHeight,
                     anchorHeight
             )
@@ -82,6 +92,12 @@ object IcmfDatabaseOperations {
         }
     }
 }
+
+data class AnchorHeight(
+        val cluster: String,
+        val topic: String,
+        val height: Long
+)
 
 data class MessageHeightForSender(
         val sender: BlockchainRid,
