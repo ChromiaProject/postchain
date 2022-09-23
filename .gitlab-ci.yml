@@ -29,7 +29,7 @@ deploy:
     - master
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,all-tests deploy
 
 build:
   extends: .setup
@@ -40,7 +40,7 @@ build:
     - tags
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,quick-tests verify
 
 release:
   stage: release
