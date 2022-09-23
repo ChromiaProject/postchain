@@ -11,7 +11,7 @@ import net.postchain.gtv.GtvFactory
 class BaseDirectoryDataSource(
         queries: BlockQueries,
         appConfig: AppConfig,
-        private val containerNodeConfig: ContainerNodeConfig
+        private val containerNodeConfig: ContainerNodeConfig?
 ) : BaseManagedNodeDataSource(queries, appConfig),
         DirectoryDataSource {
 
@@ -34,7 +34,7 @@ class BaseDirectoryDataSource(
     }
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String {
-        return if (containerNodeConfig.testmode) {
+        return if (containerNodeConfig?.testmode == true) {
             val short = brid.toHex().uppercase().take(8)
             containerNodeConfig.testmodeDappsContainers[short] ?: "cont0"
         } else {
@@ -51,7 +51,7 @@ class BaseDirectoryDataSource(
 
     // TODO: [et]: directory vs containerId?
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
-        return if (containerNodeConfig.testmode) {
+        return if (containerNodeConfig?.testmode == true) {
             ContainerResourceLimits.fromValues(
                     containerNodeConfig.testmodeResourceLimitsRAM,
                     containerNodeConfig.testmodeResourceLimitsCPU,

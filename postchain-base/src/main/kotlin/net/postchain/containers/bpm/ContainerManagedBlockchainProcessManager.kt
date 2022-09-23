@@ -43,7 +43,6 @@ open class ContainerManagedBlockchainProcessManager(
 
     companion object : KLogging()
 
-    private val directoryDataSource: DirectoryDataSource by lazy { dataSource as DirectoryDataSource }
     private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
     private val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
@@ -81,7 +80,7 @@ open class ContainerManagedBlockchainProcessManager(
                     preloadChain0Configuration()
 
                     // Checking out the peer list changes
-                    val peerListVersion = dataSource.getPeerListVersion()
+                    val peerListVersion = directoryDataSource.getPeerListVersion()
                     val doReload = (this.peerListVersion != peerListVersion)
                     this.peerListVersion = peerListVersion
 
