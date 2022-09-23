@@ -90,7 +90,7 @@ class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
         PostchainClientMocks.addMockClient(senderChainRid, senderClientMock)
 
         val mapBcFiles: Map<Int, String> = mapOf(
-                CHAIN_ID to "/net/postchain/icmf/integration/receiver/blockchain_config_1.xml"
+                CHAIN_ID to "/net/postchain/d1/icmf/integration/receiver/blockchain_config_1.xml"
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
