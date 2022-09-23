@@ -3,7 +3,6 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainEngine
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.DatabaseAccess
@@ -21,8 +20,8 @@ import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
-import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
+import net.postchain.ebft.syncmanager.common.SyncParameters
 import nl.komponents.kovenant.Promise
 import java.lang.Thread.sleep
 import java.util.concurrent.atomic.AtomicBoolean
@@ -47,9 +46,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     private val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
 
     private var historicSynchronizer: FastSynchronizer? = null
-    private val storage = (workerContext.engine as BaseBlockchainEngine).storage
+    private val storage = workerContext.engine.storage
     private val blockDatabase = BaseBlockDatabase(
-        blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
+            blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
     private val fastSynchronizer = FastSynchronizer(
             workerContext, blockDatabase,
             SyncParameters.fromAppConfig(workerContext.appConfig),
