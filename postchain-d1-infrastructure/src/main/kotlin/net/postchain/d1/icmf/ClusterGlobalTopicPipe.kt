@@ -159,7 +159,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                                 "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} for messages. ${e.message}",
                                 e
                         )
-                        return // TODO retry this and don't throw away stuff from other topics
+                        return
                     }
 
                     else -> throw e
@@ -187,7 +187,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                 lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid())] = decodedHeader.getHeight()
             } else {
                 logger.warn("invalid messages hash for topic: ${route.topic} for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
-                return // TODO Should we retry fetching of messages from another node? Otherwise the messages are lost
+                return // TODO Should we retry fetching of messages from another node?
             }
         }
 
