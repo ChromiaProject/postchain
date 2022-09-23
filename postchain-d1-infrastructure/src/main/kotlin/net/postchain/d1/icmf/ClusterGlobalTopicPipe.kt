@@ -32,18 +32,17 @@ import java.util.concurrent.ConcurrentSkipListMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
-class GlobalTopicPipe(override val route: GlobalTopicRoute,
-                      override val id: String,
-                      private val cryptoSystem: CryptoSystem,
-                      lastAnchorHeight: Long,
-                      private val postchainClientProvider: PostchainClientProvider,
-                      private val clusterManagement: ClusterManagement,
-                      _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<GlobalTopicRoute, String, Long>, Shutdownable {
+class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
+                             val clusterName: String,
+                             private val cryptoSystem: CryptoSystem,
+                             lastAnchorHeight: Long,
+                             private val postchainClientProvider: PostchainClientProvider,
+                             private val clusterManagement: ClusterManagement,
+                             _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<GlobalTopicRoute, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
     }
 
-    private val clusterName = id
     private val packets = ConcurrentSkipListMap<Long, IcmfPackets<Long>>() // TODO Set a maximum capacity?
     private val lastAnchorHeight = AtomicLong(lastAnchorHeight)
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()

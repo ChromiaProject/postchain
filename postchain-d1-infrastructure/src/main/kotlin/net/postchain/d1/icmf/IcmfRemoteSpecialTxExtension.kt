@@ -54,7 +54,7 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
         val allOps = mutableListOf<OpData>()
         for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
-                val clusterName = pipe.id
+                val clusterName = pipe.clusterName
                 val lastAnchoredHeight = lastAnchoredHeights[clusterName to pipe.route.topic] ?: -1
                 var currentHeight: Long = lastAnchoredHeight
                 while (pipe.mightHaveNewPackets()) {
