@@ -49,25 +49,26 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
     private val currentQueueSizeBytes = AtomicInteger(0)
     private val lastAnchorHeight = AtomicLong(lastAnchorHeight)
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()
+    private val job: Job
 
     init {
         _lastMessageHeights.forEach { lastMessageHeights[it.first] = it.second }
-    }
 
-    private val job: Job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker-cluster-$clusterName-topic-${route.topic}")) {
-        while (isActive) {
-            try {
-                backgroundFetch()
-            } catch (e: Exception) {
-                logger.error("Background fetch from cluster failed: ${e.message}", e)
+        job = CoroutineScope(Dispatchers.IO).launch(CoroutineName("pipe-worker-cluster-$clusterName-topic-${route.topic}")) {
+            while (isActive) {
+                try {
+                    logger.info("Fetching messages")
+                    fetchMessages()
+                    logger.info("Fetched messages")
+                } catch (e: Exception) {
+                    logger.error("Message fetch failed: ${e.message}", e)
+                }
+                delay(pollInterval)
             }
-            delay(pollInterval)
         }
     }
 
-    private fun backgroundFetch() {
-        logger.info("Fetching messages")
-
+    private fun fetchMessages() {
         val cluster = clusterManagement.getClusterInfo(clusterName)
 
         // TODO use net.postchain.client.chromia.ChromiaClientProvider
@@ -204,8 +205,6 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
         } else {
             logger.info("pipe reached max capacity $maxQueueSizeBytes bytes")
         }
-
-        logger.info("Fetched messages")
     }
 
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
