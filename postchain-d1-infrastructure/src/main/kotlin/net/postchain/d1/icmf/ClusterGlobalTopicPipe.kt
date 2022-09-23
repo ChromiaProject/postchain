@@ -29,6 +29,7 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
@@ -41,9 +42,11 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                              _lastMessageHeights: List<Pair<BlockchainRid, Long>>) : IcmfPipe<GlobalTopicRoute, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 10.seconds
+        const val maxQueueSizeBytes = 10 * 1024 * 1024 // 10 MiB
     }
 
-    private val packets = ConcurrentSkipListMap<Long, IcmfPackets<Long>>() // TODO Set a maximum capacity?
+    private val packets = ConcurrentSkipListMap<Long, IcmfPackets<Long>>()
+    private val currentQueueSizeBytes = AtomicInteger(0)
     private val lastAnchorHeight = AtomicLong(lastAnchorHeight)
     private val lastMessageHeights: ConcurrentMap<BlockchainRid, Long> = ConcurrentHashMap()
 
@@ -56,14 +59,14 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
             try {
                 backgroundFetch()
             } catch (e: Exception) {
-                logger.error("Background fetch from cluster $clusterName topic ${route.topic} failed: ${e.message}", e)
+                logger.error("Background fetch from cluster failed: ${e.message}", e)
             }
             delay(pollInterval)
         }
     }
 
     private fun backgroundFetch() {
-        logger.info("Fetching messages from $clusterName topic ${route.topic}")
+        logger.info("Fetching messages")
 
         val cluster = clusterManagement.getClusterInfo(clusterName)
 
@@ -94,7 +97,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
         } catch (e: Exception) {
             when (e) {
                 is UserMistake, is IOException -> {
-                    logger.warn("Unable to query for messages with topic: ${route.topic} on anchor chain. ${e.message}", e)
+                    logger.warn("Unable to query for messages on anchor chain: ${e.message}", e)
                     return
                 }
 
@@ -131,7 +134,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
             if (decodedHeader.getHeight() <= currentPrevMessageBlockHeight) {
                 continue // already processed in previous block, skip it here
             } else if (topicData.prevMessageBlockHeight != currentPrevMessageBlockHeight) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for topic ${route.topic} for sender ${decodedHeader.getBlockchainRid().toHex()}")
+                logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height ${topicData.prevMessageBlockHeight}, expected $currentPrevMessageBlockHeight for sender ${decodedHeader.getBlockchainRid().toHex()}")
                 return
             }
 
@@ -149,14 +152,18 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                         gtv(mapOf("topic" to gtv(route.topic), "height" to gtv(decodedHeader.getHeight())))
                 ).asArray()
             } catch (e: Exception) {
-                // TODO check if chain is permanently stopped
                 when (e) {
                     is UserMistake, is IOException -> {
+                        if (!clusterManagement.getActiveBlockchains(clusterName).contains(BlockchainRid(decodedHeader.getBlockchainRid()))) {
+                            // chain is permanently stopped
+                            logger.info("Blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} is permanently stopped: ${e.message}")
+                            continue
+                        }
                         logger.warn(
-                                "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} for messages. ${e.message}",
+                                "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} for messages: ${e.message}",
                                 e
                         )
-                        return // TODO retry this and don't throw away stuff from other topics
+                        return
                     }
 
                     else -> throw e
@@ -183,14 +190,22 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                 )
                 lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid())] = decodedHeader.getHeight()
             } else {
-                logger.warn("invalid messages hash for topic: ${route.topic} for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
-                return // TODO Should we retry fetching of messages from another node? Otherwise the messages are lost
+                logger.warn("invalid messages hash for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
+                return // TODO Should we retry fetching of messages from another node?
             }
         }
 
-        packets[currentAnchorHeight] = IcmfPackets(currentAnchorHeight, currentPackets)
+        val packetsSizeBytes = currentPackets.sumOf { it.bodies.sumOf { body -> GtvEncoder.encodeGtv(body).size } }
+        if (packets.isEmpty() || currentQueueSizeBytes.get() + packetsSizeBytes <= maxQueueSizeBytes) {
+            packets[currentAnchorHeight] = IcmfPackets(currentAnchorHeight, currentPackets, packetsSizeBytes)
+            currentQueueSizeBytes.addAndGet(packetsSizeBytes)
 
-        lastAnchorHeight.set(currentAnchorHeight)
+            lastAnchorHeight.set(currentAnchorHeight)
+        } else {
+            logger.info("pipe reached max capacity $maxQueueSizeBytes bytes")
+        }
+
+        logger.info("Fetched messages")
     }
 
     override fun mightHaveNewPackets(): Boolean = packets.isNotEmpty()
@@ -200,7 +215,9 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
 
     override fun markTaken(currentPointer: Long, bctx: BlockEContext) {
         bctx.addAfterCommitHook {
-            packets.remove(currentPointer)
+            packets.remove(currentPointer)?.let {
+                currentQueueSizeBytes.addAndGet(-it.sizeBytes)
+            }
         }
     }
 

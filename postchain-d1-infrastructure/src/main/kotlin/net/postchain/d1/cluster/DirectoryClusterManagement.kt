@@ -22,4 +22,10 @@ class DirectoryClusterManagement(private val query: (String, Gtv) -> Gtv) : Clus
                 "height" to gtv(height)
         ))).toList()
     }
+
+    override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> {
+        return query("get_cluster_blockchains", gtv(mapOf(
+                "name" to gtv(clusterName)
+        ))).asArray().map { BlockchainRid(it.asByteArray()) }
+    }
 }
