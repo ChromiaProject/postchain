@@ -6,12 +6,19 @@ import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.block.BlockQueries
+import net.postchain.crypto.PubKey
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.mapper.toList
+import net.postchain.gtv.mapper.toObject
+import net.postchain.managed.directory1.D1ClusterInfo
+import net.postchain.managed.directory1.D1PeerInfo
 
 class BaseDirectoryDataSource(
         queries: BlockQueries,
         appConfig: AppConfig,
-        private val containerNodeConfig: ContainerNodeConfig
+        private val containerNodeConfig: ContainerNodeConfig?
 ) : BaseManagedNodeDataSource(queries, appConfig),
         DirectoryDataSource {
 
@@ -34,7 +41,7 @@ class BaseDirectoryDataSource(
     }
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String {
-        return if (containerNodeConfig.testmode) {
+        return if (containerNodeConfig?.testmode == true) {
             val short = brid.toHex().uppercase().take(8)
             containerNodeConfig.testmodeDappsContainers[short] ?: "cont0"
         } else {
@@ -49,9 +56,9 @@ class BaseDirectoryDataSource(
         }
     }
 
-    // TODO: [et]: directory vs containerId?
+    // TODO: [POS-344]: directory vs containerId?
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
-        return if (containerNodeConfig.testmode) {
+        return if (containerNodeConfig?.testmode == true) {
             ContainerResourceLimits.fromValues(
                     containerNodeConfig.testmodeResourceLimitsRAM,
                     containerNodeConfig.testmodeResourceLimitsCPU,
@@ -71,5 +78,37 @@ class BaseDirectoryDataSource(
 
     override fun setLimitsForContainer(containerId: String, ramLimit: Long, cpuQuota: Long) {
         TODO("Will not be used")
+    }
+
+    override fun getAllClusters(): List<D1ClusterInfo> {
+        return if (containerNodeConfig?.testmode == true) {
+            val peers = getTestD1PeerInfos()
+            listOf(
+                    D1ClusterInfo("s1", BlockchainRid.buildRepeat(1), setOf(peers[0], peers[1])),
+                    D1ClusterInfo("s2", BlockchainRid.buildRepeat(2), setOf(peers[1], peers[2])),
+            )
+        } else {
+            // TODO: [POS-344]: Check NP_API or D1_API version here. We return an EMPTY for now.
+            // if (nmApiVersion >= 3) { ... }
+            queries.query("get_all_clusters", buildArgs()).get().toList()
+        }
+    }
+
+    override fun getClusterInfo(clusterName: String): D1ClusterInfo {
+        return if (containerNodeConfig?.testmode == true) {
+            val peers = getTestD1PeerInfos()
+            D1ClusterInfo(clusterName, BlockchainRid.buildRepeat(1), setOf(peers[0], peers[1]))
+        } else {
+            queries.query("get_cluster_info", buildArgs()).get().toObject()
+        }
+    }
+
+    private fun getTestD1PeerInfos(): List<D1PeerInfo> {
+        val cs = Secp256K1CryptoSystem()
+        return listOf(
+                D1PeerInfo("http://127.0.0.1:7740/", PubKey(secp256k1_derivePubKey(cs.getRandomBytes(32)))),
+                D1PeerInfo("http://127.0.0.1:7741/", PubKey(secp256k1_derivePubKey(cs.getRandomBytes(32)))),
+                D1PeerInfo("http://127.0.0.1:7742/", PubKey(secp256k1_derivePubKey(cs.getRandomBytes(32)))),
+        )
     }
 }

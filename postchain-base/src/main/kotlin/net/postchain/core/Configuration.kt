@@ -10,6 +10,7 @@ import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockWitness
 import net.postchain.gtv.Gtv
+import net.postchain.gtx.ModuleInitializer
 
 /**
  * [BlockchainConfiguration] describes an individual blockchain instance (within Postchain system).
@@ -42,9 +43,9 @@ interface ConfigurationDataStore {
     fun getConfigurationData(context: EContext, height: Long): ByteArray?
     fun addConfigurationData(context: EContext, height: Long, binData: ByteArray)
     fun addConfigurationData(context: EContext, height: Long, gtvData: Gtv)
-    fun setMustSyncUntil(context: EContext, brid: BlockchainRid, height: Long) : Boolean
+    fun setMustSyncUntil(context: EContext, brid: BlockchainRid, height: Long): Boolean
 }
 
 interface BlockchainConfigurationFactory {
-    fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration
+    fun makeBlockchainConfiguration(configurationData: Any, moduleInitializer: ModuleInitializer): BlockchainConfiguration
 }

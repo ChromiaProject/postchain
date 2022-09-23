@@ -15,6 +15,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.gtx.ModuleInitializer
 
 open class BaseBlockchainInfrastructure(
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
@@ -58,22 +59,23 @@ open class BaseBlockchainInfrastructure(
             eContext: EContext,
             nodeId: Int,
             chainId: Long,
+            moduleInitializer: ModuleInitializer
     ): BlockchainConfiguration {
 
         val blockConfData = BlockchainConfigurationData.fromRaw(
                 rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
 
         val factory = newInstanceOf<BlockchainConfigurationFactory>(blockConfData.configurationFactory)
-        val config = factory.makeBlockchainConfiguration(blockConfData)
+        val config = factory.makeBlockchainConfiguration(blockConfData, moduleInitializer)
         config.initializeDB(eContext)
 
         return config
     }
 
     override fun makeBlockchainEngine(
-        processName: BlockchainProcessName,
-        configuration: BlockchainConfiguration,
-        afterCommitHandler: AfterCommitHandler
+            processName: BlockchainProcessName,
+            configuration: BlockchainConfiguration,
+            afterCommitHandler: AfterCommitHandler
     ): BaseBlockchainEngine {
 
         // We create a new storage instance to open new db connections for each engine
@@ -91,9 +93,9 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
@@ -116,7 +118,7 @@ open class BaseBlockchainInfrastructure(
         disconnectProcess(configuration, process, false)
     }
 
-    private fun connectProcess(configuration: BlockchainConfiguration , process: BlockchainProcess) {
+    private fun connectProcess(configuration: BlockchainConfiguration, process: BlockchainProcess) {
         configuration.syncInfrastructureExtensionNames.forEach {
             getSynchronizationInfrastructureExtension(it).connectProcess(process)
         }

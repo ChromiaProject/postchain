@@ -1,7 +1,8 @@
 package net.postchain.managed
 
-import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.common.BlockchainRid
+import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.managed.directory1.D1ClusterInfo
 
 interface DirectoryDataSource : ManagedNodeDataSource {
 
@@ -26,5 +27,9 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits
 
     fun setLimitsForContainer(containerId: String, ramLimit: Long, cpuQuota: Long)
+
+    fun getAllClusters(): List<D1ClusterInfo>
+
+    fun getClusterInfo(clusterName: String): D1ClusterInfo
 
 }
