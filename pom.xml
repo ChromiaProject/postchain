@@ -523,6 +523,25 @@
             </plugin>
 
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${maven.failsafe.plugin.version}</version>
+                <configuration>
+                    <includes>
+                        <include>**/*IT.java</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
                 <version>2.5</version>
@@ -586,40 +605,21 @@
                             </systemPropertyVariables>
                         </configuration>
                     </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>quick-tests</id>
-            <build>
-                <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>${maven.failsafe.plugin.version}</version>
                         <configuration>
-                            <includes>
-                                <include>**/*IT.java</include>
-                            </includes>
                             <systemPropertyVariables>
                                 <!--suppress UnresolvedMavenProperty -->
                                 <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml</log4j.configurationFile>
                             </systemPropertyVariables>
                         </configuration>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>integration-test</goal>
-                                    <goal>verify</goal>
-                                </goals>
-                            </execution>
-                        </executions>
                     </plugin>
                 </plugins>
             </build>
         </profile>
         <profile>
-            <id>all-tests</id>
+            <id>nightly</id>
             <build>
                 <plugins>
                     <plugin>
@@ -631,10 +631,6 @@
                                 <include>**/*IT.java</include>
                                 <include>**/*Nightly.java</include>
                             </includes>
-                            <systemPropertyVariables>
-                                <!--suppress UnresolvedMavenProperty -->
-                                <log4j.configurationFile>${maven.multiModuleProjectDirectory}/.gitlab-log4j2.yml</log4j.configurationFile>
-                            </systemPropertyVariables>
                         </configuration>
                         <executions>
                             <execution>
