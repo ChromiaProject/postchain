@@ -11,8 +11,6 @@ import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.ValidationResult
 import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.icmf.IcmfPacket
-import net.postchain.d1.icmf.IcmfSpecialTxExtension
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
@@ -25,7 +23,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 /**
  * When anchoring a block header we must fill the block of the anchoring BC with "__anchor_block_header" operations.
  */
-class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
+class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         const val OP_BLOCK_HEADER = "__anchor_block_header"
@@ -33,7 +31,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
-    override val icmfReceiver = ClusterAnchorReceiver()
+    val icmfReceiver = ClusterAnchorReceiver()
 
     /** This is for querying ourselves, i.e. the "anchor Rell app" */
     private lateinit var module: GTXModule
@@ -112,7 +110,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             getLastAnchoredBlock(ctxt, blockchainRID)?.height ?: -1
 
     /**
-     * Transform to [IcmfPacket] to [OpData] put arguments in correct order
+     * Transform to [ClusterAnchorPacket] to [OpData] put arguments in correct order
      *
      * @param clusterAnchorPacket is what we get from ICMF
      * @return is the [OpData] we can use to create a special TX.

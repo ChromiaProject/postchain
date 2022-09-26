@@ -1,6 +1,7 @@
 package net.postchain.gtv.mapper
 
 import assertk.assert
+import assertk.assertions.containsAll
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
@@ -53,7 +54,7 @@ internal class GtvObjectMapperTest {
         val e = assertThrows<IllegalArgumentException> {
             GtvObjectMapper.fromGtv(gtv(mapOf()), SimpleNullable::class)
         }
-        assert(e.message).isEqualTo("Constructor for parameters [null] not found")
+        assert(e.message).isEqualTo("Constructor for ${SimpleNullable::class.simpleName} with parameters [null] not found")
     }
 
     @Test
@@ -100,12 +101,19 @@ internal class GtvObjectMapperTest {
     }
 
     @Test
-    fun testListType() {
+    fun testCollectionTypes() {
         data class BasicWithList(@Name("list") val l: List<Long>) // Do not run isEqualTo
+        data class BasicWithSet(@Name("list") val l: Set<Long>) // Do not run isEqualTo
+        data class BasicWithCollection(@Name("list") val l: Collection<Long>) // Do not run isEqualTo
 
-        val actual = gtv(mapOf("list" to gtv(gtv(1))))
-                .toObject<BasicWithList>()
-        assert(actual.l).containsExactly(1L)
+        assert(gtv(mapOf("list" to gtv(gtv(1))))
+                .toObject<BasicWithList>().l).containsExactly(1L)
+
+        assert(gtv(mapOf("list" to gtv(gtv(1))))
+                .toObject<BasicWithCollection>().l).containsAll(1L)
+
+        assert(gtv(mapOf("list" to gtv(gtv(1))))
+                .toObject<BasicWithSet>().l).containsAll(1L)
     }
 
     @Test

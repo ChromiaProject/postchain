@@ -47,7 +47,7 @@
             <entry key="modules">
                 <array>
                     <string>net.postchain.d1.icmf.IcmfReceiverGTXModule</string>
-                    <string>net.postchain.d1.icmf.integration.IcmfReceiverTestGTXModule</string>
+                    <string>net.postchain.d1.icmf.IcmfReceiverTestGTXModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>
             </entry>
@@ -55,7 +55,7 @@
     </entry>
     <entry key="sync_ext">
         <array>
-            <string>net.postchain.d1.icmf.integration.IcmfReceiverTestSynchronizationInfrastructureExtension</string>
+            <string>net.postchain.d1.icmf.IcmfReceiverTestSynchronizationInfrastructureExtension</string>
         </array>
     </entry>
 </dict>

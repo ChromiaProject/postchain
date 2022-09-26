@@ -5,8 +5,12 @@ package net.postchain.integrationtest.reconfiguration
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
 import assertk.assertions.isTrue
-import net.postchain.devtools.*
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
+import net.postchain.devtools.assertChainStarted
+import net.postchain.devtools.enqueueTxs
+import net.postchain.devtools.enqueueTxsAndAwaitBuiltBlock
+import net.postchain.devtools.getModules
+import net.postchain.devtools.query
 import net.postchain.integrationtest.reconfiguration.TxChartHelper.buildTxChart
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
@@ -17,7 +21,7 @@ import org.skyscreamer.jsonassert.JSONCompareMode
 import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.timer
 
-class FourPeersReconfigurationTest : ReconfigurationTest() {
+class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
 
     @Test
     fun reconfigurationAtHeight_isSuccessful() {

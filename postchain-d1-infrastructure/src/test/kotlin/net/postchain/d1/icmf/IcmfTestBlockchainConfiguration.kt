@@ -1,4 +1,4 @@
-package net.postchain.d1.icmf.integration
+package net.postchain.d1.icmf
 
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.EContext
