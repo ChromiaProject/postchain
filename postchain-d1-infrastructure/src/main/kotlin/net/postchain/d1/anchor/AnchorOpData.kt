@@ -2,6 +2,7 @@ package net.postchain.d1.anchor
 
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.common.BlockchainRid
 import net.postchain.gtx.data.OpData
 
 /**
@@ -37,6 +38,14 @@ data class AnchorOpData(
                 val blockRid = op.args[0].asByteArray()
                 val header = BlockHeaderData.fromGtv(op.args[1])
                 val rawWitness = op.args[2].asByteArray()
+
+                if (header.getHeight() < 0) { // Ok, pretty stupid check, but why not
+                    logger.error(
+                            "Someone is trying to anchor a block for blockchain: " +
+                                    "${BlockchainRid(header.getBlockchainRid()).toHex()} at height = ${header.getHeight()} (which is impossible!). "
+                    )
+                    return null
+                }
 
                 AnchorOpData(blockRid, header, rawWitness)
             } catch (e: RuntimeException) {

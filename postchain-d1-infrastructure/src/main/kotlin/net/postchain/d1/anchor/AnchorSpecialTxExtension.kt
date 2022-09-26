@@ -4,7 +4,6 @@ import mu.KLogging
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
-import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
@@ -130,11 +129,13 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             bctx: BlockEContext,
             ops: List<OpData>
     ): Boolean {
-        // TODO refactor this to avoid passing around mutable data so much
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
-        val valid = ops.all { isOpValidAndFillTheMinimalHeaderMap(it, chainHeadersMap) }
-        if (!valid) {
-            return false // Usually meaning the actual format of a header is broken
+
+        for (op in ops) {
+            val anchorOpData = AnchorOpData.validateAndDecodeOpData(op) ?: return false
+            if (!updateChainHeightMap(anchorOpData, chainHeadersMap)) {
+                return false
+            }
         }
 
         // Go through it chain by chain
@@ -153,53 +154,22 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     }
 
     /**
-     * Checks a single operation for validity, which means go through the header and verify it.
-     */
-    private fun isOpValidAndFillTheMinimalHeaderMap(
-            op: OpData,
-            chainMinimalHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
-    ): Boolean {
-        val anchorOpData = AnchorOpData.validateAndDecodeOpData(op) ?: return false
-
-        val header: BlockHeaderData = anchorOpData.headerData
-        val bcRid = BlockchainRid(header.getBlockchainRid())
-
-        val newHeight = header.getHeight()
-        if (newHeight < 0) { // Ok, pretty stupid check, but why not
-            logger.error(
-                    "Someone is trying to anchor a block for blockchain: " +
-                            "${bcRid.toHex()} at height = $newHeight (which is impossible!). "
-            )
-            return false
-        }
-
-        val headerBlockRid =
-                BlockRid(anchorOpData.blockRid) // Another way to get BlockRid is to calculate it from the header
-        val headerPrevBlockRid = BlockRid(header.getPreviousBlockRid())
-        val newBlockHeight = header.getHeight()
-
-        if (!updateChainHeightMap(
-                        bcRid,
-                        MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight),
-                        chainMinimalHeadersMap
-                )) {
-            return false
-        }
-
-        return true
-    }
-
-    /**
      * Add the height to the map
      */
     private fun updateChainHeightMap(
-            bcRid: BlockchainRid,
-            newInfo: MinimalBlockHeaderInfo,
-            chainHeightMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
+            anchorOpData: AnchorOpData,
+            chainHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
     ): Boolean {
-        val headers = chainHeightMap[bcRid]
+        val bcRid = BlockchainRid(anchorOpData.headerData.getBlockchainRid())
+        val headerBlockRid =
+                BlockRid(anchorOpData.blockRid) // Another way to get BlockRid is to calculate it from the header
+        val headerPrevBlockRid = BlockRid(anchorOpData.headerData.getPreviousBlockRid())
+        val newBlockHeight = anchorOpData.headerData.getHeight()
+        val newInfo = MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight)
+
+        val headers = chainHeadersMap[bcRid]
         if (headers == null) {
-            chainHeightMap[bcRid] = mutableSetOf(newInfo)
+            chainHeadersMap[bcRid] = mutableSetOf(newInfo)
         } else {
             if (headers.all { header -> header.headerHeight != newInfo.headerHeight }) { // Rather primitive, but should be enough
                 headers.add(newInfo)

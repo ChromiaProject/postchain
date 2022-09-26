@@ -94,6 +94,24 @@ class AnchorValidationTest {
     }
 
     @Test
+    fun negativeHeight() {
+        val txExtension = AnchorSpecialTxExtension()
+        txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
+
+        val blockHeader = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), -1)
+        val blockRid = blockHeader.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val rawWitness = ByteArray(0)
+
+        assertFalse(txExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext,
+                listOf(
+                        OpData(AnchorSpecialTxExtension.OP_BLOCK_HEADER, arrayOf(
+                                gtv(blockRid),
+                                blockHeader,
+                                gtv(rawWitness)))
+                )))
+    }
+
+    @Test
     fun unchainedHeaders() {
         val txExtension = AnchorSpecialTxExtension()
         txExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
