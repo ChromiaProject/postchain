@@ -7,20 +7,18 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.Storage
 
-class ClusterAnchorDispatcher(val storage: Storage) {
-    val receivers = mutableMapOf<Long, ClusterAnchorIcmfReceiver>()
-    val chains = mutableMapOf<Long, BlockchainRid>()
+class ClusterAnchorDispatcher(private val storage: Storage) {
+    private val receivers = mutableMapOf<Long, ClusterAnchorReceiver>()
+    private val chains = mutableMapOf<Long, BlockchainRid>()
 
-    fun connectReceiver(chainID: Long, receiver: ClusterAnchorIcmfReceiver) {
+    fun connectReceiver(chainID: Long, receiver: ClusterAnchorReceiver) {
         receivers[chainID] = receiver
-        for ((c_chainID, brid) in chains) {
-            if (c_chainID != chainID) {
-                receiver.localPipes[c_chainID] = ClusterAnchorIcmfPipe(
-                        brid,
-                        storage,
-                        c_chainID
-                )
-            }
+        chains.filterKeys { it != chainID }.forEach { (currentChainID, brid) ->
+            receiver.localPipes[currentChainID] = ClusterAnchorPipe(
+                    brid,
+                    storage,
+                    currentChainID
+            )
         }
     }
 
@@ -29,14 +27,12 @@ class ClusterAnchorDispatcher(val storage: Storage) {
             DatabaseAccess.of(it).getBlockchainRid(it)!!
         }
 
-        for ((recID, rec) in receivers) {
-            if ((recID != chainID) && (chainID !in rec.localPipes)) {
-                rec.localPipes[chainID] = ClusterAnchorIcmfPipe(
-                        brid,
-                        storage,
-                        chainID
-                )
-            }
+        receivers.filter { it.key != chainID && (chainID !in it.value.localPipes) }.values.forEach {
+            it.localPipes[chainID] = ClusterAnchorPipe(
+                    brid,
+                    storage,
+                    chainID
+            )
         }
 
         chains[chainID] = brid
@@ -44,18 +40,16 @@ class ClusterAnchorDispatcher(val storage: Storage) {
 
     fun disconnectChain(chainID: Long) {
         receivers.remove(chainID)
-        for (r in receivers.values) {
-            if (chainID in r.localPipes)
-                r.localPipes.remove(chainID)
+        receivers.values.forEach {
+            it.localPipes.remove(chainID)
         }
         chains.remove(chainID)
     }
 
     fun afterCommit(chainID: Long, height: Long) {
         // TODO: prefetch packet
-        for (r in receivers.values) {
-            r.localPipes[chainID]?.setHighestSeenHeight(height)
+        receivers.values.forEach {
+            it.localPipes[chainID]?.setHighestSeenHeight(height)
         }
     }
-
 }
