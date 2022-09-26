@@ -2,8 +2,8 @@
 
 package net.postchain.d1.icmf
 
-import net.postchain.d1.anchor.ClusterAnchorIcmfReceiver
+import net.postchain.d1.anchor.ClusterAnchorReceiver
 
 interface IcmfSpecialTxExtension {
-    val icmfReceiver: ClusterAnchorIcmfReceiver
+    val icmfReceiver: ClusterAnchorReceiver
 }

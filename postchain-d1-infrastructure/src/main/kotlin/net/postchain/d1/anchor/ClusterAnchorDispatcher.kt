@@ -8,13 +8,13 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.Storage
 
 class ClusterAnchorDispatcher(private val storage: Storage) {
-    private val receivers = mutableMapOf<Long, ClusterAnchorIcmfReceiver>()
+    private val receivers = mutableMapOf<Long, ClusterAnchorReceiver>()
     private val chains = mutableMapOf<Long, BlockchainRid>()
 
-    fun connectReceiver(chainID: Long, receiver: ClusterAnchorIcmfReceiver) {
+    fun connectReceiver(chainID: Long, receiver: ClusterAnchorReceiver) {
         receivers[chainID] = receiver
         chains.filterKeys { it != chainID }.forEach { (currentChainID, brid) ->
-            receiver.localPipes[currentChainID] = ClusterAnchorIcmfPipe(
+            receiver.localPipes[currentChainID] = ClusterAnchorPipe(
                     brid,
                     storage,
                     currentChainID
@@ -28,7 +28,7 @@ class ClusterAnchorDispatcher(private val storage: Storage) {
         }
 
         receivers.filter { it.key != chainID && (chainID !in it.value.localPipes) }.values.forEach {
-            it.localPipes[chainID] = ClusterAnchorIcmfPipe(
+            it.localPipes[chainID] = ClusterAnchorPipe(
                     brid,
                     storage,
                     chainID

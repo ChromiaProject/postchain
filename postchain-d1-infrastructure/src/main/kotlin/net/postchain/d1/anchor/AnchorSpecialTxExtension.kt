@@ -33,7 +33,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
-    override val icmfReceiver = ClusterAnchorIcmfReceiver()
+    override val icmfReceiver = ClusterAnchorReceiver()
 
     /** This is for querying ourselves, i.e. the "anchor Rell app" */
     private lateinit var module: GTXModule
@@ -85,7 +85,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-            pipe: ClusterAnchorIcmfPipe,
+            pipe: ClusterAnchorPipe,
             retList: MutableList<OpData>,
             bctx: BlockEContext
     ) {
