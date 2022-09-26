@@ -1,4 +1,4 @@
-package net.postchain.d1.icmf.integration
+package net.postchain.d1.icmf
 
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.PrivKey

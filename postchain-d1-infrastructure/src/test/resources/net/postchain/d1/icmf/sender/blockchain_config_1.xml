@@ -11,7 +11,7 @@
         </dict>
     </entry>
     <entry key="configurationfactory">
-        <string>net.postchain.d1.icmf.integration.IcmfTestBlockchainConfigurationFactory</string>
+        <string>net.postchain.d1.icmf.IcmfTestBlockchainConfigurationFactory</string>
     </entry>
     <entry key="signers">
         <array>

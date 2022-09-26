@@ -1,4 +1,4 @@
-package net.postchain.d1.icmf.integration
+package net.postchain.d1.icmf
 
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
@@ -6,10 +6,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
-import net.postchain.d1.icmf.ClusterGlobalTopicPipe
-import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
-import net.postchain.d1.icmf.TopicHeaderData
-import net.postchain.d1.icmf.integration.IcmfReceiverTestGTXModule.Companion.testMessageTable
+import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtv.GtvEncoder
@@ -28,7 +25,7 @@ import kotlin.test.assertEquals
 
 private const val CHAIN_ID = 1
 
-class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
+class IcmfReceiverIT : GtxTxIntegrationTestSetup() {
 
     @BeforeEach
     fun setup() {
@@ -90,7 +87,7 @@ class IcmfReceiverIntegrationTest : GtxTxIntegrationTestSetup() {
         PostchainClientMocks.addMockClient(senderChainRid, senderClientMock)
 
         val mapBcFiles: Map<Int, String> = mapOf(
-                CHAIN_ID to "/net/postchain/d1/icmf/integration/receiver/blockchain_config_1.xml"
+                CHAIN_ID to "/net/postchain/d1/icmf/receiver/blockchain_config_1.xml"
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)

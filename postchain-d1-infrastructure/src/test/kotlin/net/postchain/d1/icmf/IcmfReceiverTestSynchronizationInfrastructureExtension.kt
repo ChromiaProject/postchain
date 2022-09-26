@@ -1,7 +1,6 @@
-package net.postchain.d1.icmf.integration
+package net.postchain.d1.icmf
 
 import net.postchain.PostchainContext
-import net.postchain.d1.icmf.IcmfReceiverSynchronizationInfrastructureExtension
 
 class IcmfReceiverTestSynchronizationInfrastructureExtension(postchainContext: PostchainContext) :
         IcmfReceiverSynchronizationInfrastructureExtension(postchainContext) {
