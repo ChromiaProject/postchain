@@ -5,8 +5,8 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
-import net.postchain.devtools.AbstractSyncTest
 import net.postchain.core.AppContext
+import net.postchain.devtools.AbstractSyncTest
 import org.awaitility.Awaitility
 import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.Test
@@ -16,11 +16,11 @@ import java.util.concurrent.TimeUnit
 /* One signer, two replica nodes. After one block, node 0 (signer is turned off).
  * Node 1 (a replica) is wiped. Need node 2 (the other replica) to be able to sync.
  */
-class ReplicaSyncTest : AbstractSyncTest() {
+class ReplicaSyncTestNightly : AbstractSyncTest() {
 
-    private companion object: KLogging()
+    private companion object : KLogging()
+
     private var addReplica = false
-
 
 
     /**

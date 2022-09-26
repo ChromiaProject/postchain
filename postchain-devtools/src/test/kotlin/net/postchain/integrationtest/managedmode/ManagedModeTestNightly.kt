@@ -16,7 +16,7 @@ import org.awaitility.Duration
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
-class ManagedModeTest : ConfigFileBasedIntegrationTest() {
+class ManagedModeTestNightly : ConfigFileBasedIntegrationTest() {
 
     @Test
     fun singlePeer_loadsBlockchain0Configuration_fromManagedDataSource_and_reconfigures() {
