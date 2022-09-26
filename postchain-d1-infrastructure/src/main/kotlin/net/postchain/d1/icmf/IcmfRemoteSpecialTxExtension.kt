@@ -110,11 +110,15 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
         for (op in ops) {
             when (op.opName) {
                 OP_ICMF_HEADER -> {
-                    if (!validateMessages(messageHashes, currentHeaderData, bctx)) return false
-                    messageHashes.clear()
-
+                    if (op.args.size != 2) {
+                        logger.warn("Got $OP_ICMF_HEADER operation with wrong number of arguments: ${op.args.size}")
+                        return false
+                    }
                     val rawHeader = op.args[0].asByteArray()
                     val rawWitness = op.args[1].asByteArray()
+
+                    if (!validateMessages(messageHashes, currentHeaderData, bctx)) return false
+                    messageHashes.clear()
 
                     val decodedHeader = BlockHeaderData.fromBinary(rawHeader)
                     val witness = BaseBlockWitness.fromBytes(rawWitness)
@@ -140,6 +144,10 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                 }
 
                 OP_ICMF_MESSAGE -> {
+                    if (op.args.size != 3) {
+                        logger.warn("Got $OP_ICMF_MESSAGE operation with wrong number of arguments: ${op.args.size}")
+                        return false
+                    }
                     val sender = op.args[0].asByteArray()
                     val topic = op.args[1].asString()
                     val body = op.args[2]
@@ -157,6 +165,11 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
 
                     messageHashes.computeIfAbsent(topic) { mutableListOf() }
                             .add(cryptoSystem.digest(GtvEncoder.encodeGtv(body)))
+                }
+
+                else -> {
+                    logger.warn("Got unexpected special operation: ${op.opName}")
+                    return false
                 }
             }
         }
