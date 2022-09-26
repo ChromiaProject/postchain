@@ -152,6 +152,65 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         return true
     }
 
+    /**
+     * Checks a single operation for validity, which means go through the header and verify it.
+     */
+    private fun isOpValidAndFillTheMinimalHeaderMap(
+            op: OpData,
+            chainMinimalHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
+    ): Boolean {
+        val anchorOpData = AnchorOpData.validateAndDecodeOpData(op) ?: return false
+
+        val header: BlockHeaderData = anchorOpData.headerData
+        val bcRid = BlockchainRid(header.getBlockchainRid())
+
+        val newHeight = header.getHeight()
+        if (newHeight < 0) { // Ok, pretty stupid check, but why not
+            logger.error(
+                    "Someone is trying to anchor a block for blockchain: " +
+                            "${bcRid.toHex()} at height = $newHeight (which is impossible!). "
+            )
+            return false
+        }
+
+        val headerBlockRid =
+                BlockRid(anchorOpData.blockRid) // Another way to get BlockRid is to calculate it from the header
+        val headerPrevBlockRid = BlockRid(header.getPreviousBlockRid())
+        val newBlockHeight = header.getHeight()
+
+        if (!updateChainHeightMap(
+                        bcRid,
+                        MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight),
+                        chainMinimalHeadersMap
+                )) {
+            return false
+        }
+
+        return true
+    }
+
+    /**
+     * Add the height to the map
+     */
+    private fun updateChainHeightMap(
+            bcRid: BlockchainRid,
+            newInfo: MinimalBlockHeaderInfo,
+            chainHeightMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
+    ): Boolean {
+        val headers = chainHeightMap[bcRid]
+        if (headers == null) {
+            chainHeightMap[bcRid] = mutableSetOf(newInfo)
+        } else {
+            if (headers.all { header -> header.headerHeight != newInfo.headerHeight }) { // Rather primitive, but should be enough
+                headers.add(newInfo)
+            } else {
+                logger.warn("Adding the same header twice, bc RID: ${bcRid.toHex()}, height ${newInfo.headerHeight}. New block: $newInfo")
+                return false
+            }
+        }
+        return true
+    }
+
     // TODO witness check
     // 1. Save time:
     //    When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
@@ -209,65 +268,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
                         it.height
                 ) // Don't care about the prev block here
             }
-
-    /**
-     * Add the height to the map
-     */
-    private fun updateChainHeightMap(
-            bcRid: BlockchainRid,
-            newInfo: MinimalBlockHeaderInfo,
-            chainHeightMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
-    ): Boolean {
-        val headers = chainHeightMap[bcRid]
-        if (headers == null) {
-            chainHeightMap[bcRid] = mutableSetOf(newInfo)
-        } else {
-            if (headers.all { header -> header.headerHeight != newInfo.headerHeight }) { // Rather primitive, but should be enough
-                headers.add(newInfo)
-            } else {
-                logger.warn("Adding the same header twice, bc RID: ${bcRid.toHex()}, height ${newInfo.headerHeight}. New block: $newInfo")
-                return false
-            }
-        }
-        return true
-    }
-
-    /**
-     * Checks a single operation for validity, which means go through the header and verify it.
-     */
-    private fun isOpValidAndFillTheMinimalHeaderMap(
-            op: OpData,
-            chainMinimalHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
-    ): Boolean {
-        val anchorOpData = AnchorOpData.validateAndDecodeOpData(op) ?: return false
-
-        val header: BlockHeaderData = anchorOpData.headerData
-        val bcRid = BlockchainRid(header.getBlockchainRid())
-
-        val newHeight = header.getHeight()
-        if (newHeight < 0) { // Ok, pretty stupid check, but why not
-            logger.error(
-                    "Someone is trying to anchor a block for blockchain: " +
-                            "${bcRid.toHex()} at height = $newHeight (which is impossible!). "
-            )
-            return false
-        }
-
-        val headerBlockRid =
-                BlockRid(anchorOpData.blockRid) // Another way to get BlockRid is to calculate it from the header
-        val headerPrevBlockRid = BlockRid(header.getPreviousBlockRid())
-        val newBlockHeight = header.getHeight()
-
-        if (!updateChainHeightMap(
-                        bcRid,
-                        MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight),
-                        chainMinimalHeadersMap
-                )) {
-            return false
-        }
-
-        return true
-    }
 
     /**
      * Ask the Anchor Module for last anchored block
