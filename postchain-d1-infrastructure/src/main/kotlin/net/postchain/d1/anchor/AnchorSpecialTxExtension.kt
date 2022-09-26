@@ -34,14 +34,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
-    /** We must know the id of the anchor chain itself */
-    private var myChainRid: BlockchainRid? = null
-
-    /** We must know the id of the anchor chain itself */
-    private var myChainID: Long? = null
-
-    /** We must know the id of the anchor chain itself */
-    private var icmfReceiver: ClusterAnchorIcmfReceiver? = null
+    override val icmfReceiver = ClusterAnchorIcmfReceiver()
 
     /** This is for querying ourselves, i.e. the "anchor Rell app" */
     private lateinit var module: GTXModule
@@ -54,8 +47,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             blockchainRID: BlockchainRid,
             cs: CryptoSystem
     ) {
-        myChainID = chainID
-        myChainRid = blockchainRID
         this.module = module
     }
 
@@ -79,8 +70,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @param bctx is the context of the anchor chain (but without BC RID)
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        verifySameChainId(bctx, myChainRid!!)
-        val pipes = this.icmfReceiver!!.getRelevantPipes()
+        val pipes = this.icmfReceiver.getRelevantPipes()
 
         // Extract all packages from all pipes
         val retList = mutableListOf<OpData>()
@@ -96,9 +86,9 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-        pipe: ClusterAnchorIcmfPipe,
-        retList: MutableList<OpData>,
-        bctx: BlockEContext
+            pipe: ClusterAnchorIcmfPipe,
+            retList: MutableList<OpData>,
+            bctx: BlockEContext
     ) {
         var counter = 0
         val blockchainRid = pipe.id
@@ -267,38 +257,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         }
     }
 
-    // ------------------------ PUBLIC NON-INHERITED ----------------
-
-    override fun connectReceiverFactory(controller: ClusterAnchorIcmfReceiverFactory) {
-        if (icmfReceiver != null)
-            throw ProgrammerMistake("Setting receiver twice")
-        icmfReceiver = controller.createReceiver(
-                myChainID!!
-        )
-    }
-
     // ------------------------ PRIVATE ----------------
-
-    /**
-     * Save the chainID coming from [BlockEContext] into local state variable (myChainIid)
-     * and verify it doesn't change.
-     */
-    private fun verifySameChainId(bctx: BlockEContext, blockchainRID: BlockchainRid) {
-        if (this.myChainID == null) {
-            this.myChainID = bctx.chainID
-        } else {
-            if (this.myChainID != bctx.chainID) { // Possibly useless check, but I'm paranoid
-                throw IllegalStateException("Did anchor chain change chainID? Now: ${bctx.chainID}, before: $myChainID")
-            }
-        }
-        if (this.myChainRid == null) {
-            this.myChainRid = blockchainRID
-        } else {
-            if (this.myChainRid != blockchainRID) { // Possibly useless check, but I'm paranoid
-                throw IllegalStateException("Did anchor chain change chain RID? Now: ${blockchainRID}, before: $myChainRid")
-            }
-        }
-    }
 
     /**
      * Checks a single operation for validity, which means go through the header and verify it.
