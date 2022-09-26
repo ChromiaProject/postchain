@@ -1,4 +1,4 @@
-package net.postchain.d1.icmf.integration
+package net.postchain.d1.icmf
 
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient

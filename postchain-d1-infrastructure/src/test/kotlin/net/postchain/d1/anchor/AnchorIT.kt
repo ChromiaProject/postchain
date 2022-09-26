@@ -1,4 +1,4 @@
-package net.postchain.d1.anchor.integration
+package net.postchain.d1.anchor
 
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
@@ -12,7 +12,7 @@ import net.postchain.devtools.getModules
 import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import org.apache.commons.dbutils.QueryRunner
@@ -33,7 +33,7 @@ private const val ANCHOR_CHAIN_ID = 2 // Only for this test, we don't have a har
  * Produce blocks containing Special transactions using the simplest possible setup, but as a minimum we need a new
  * custom test module to give us the "__xxx" operations needed.
  */
-class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
+class AnchorIT : GtxTxIntegrationTestSetup() {
     companion object {
         val messagesHash = ByteArray(32) { i -> i.toByte() }
     }
@@ -46,12 +46,12 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
     @Test
     fun happyAnchor() {
         val mapBcFiles: Map<Int, String> = mapOf(
-                DAPP_CHAIN_ID to "/net/postchain/d1/anchor/integration/blockchain_config_1.xml",
-                ANCHOR_CHAIN_ID to "/net/postchain/d1/anchor/integration/blockchain_config_2_anchor.xml"
+                DAPP_CHAIN_ID to "/net/postchain/d1/anchor/blockchain_config_1.xml",
+                ANCHOR_CHAIN_ID to "/net/postchain/d1/anchor/blockchain_config_2_anchor.xml"
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
-        sysSetup.confInfrastructure = net.postchain.d1.anchor.D1TestInfrastructureFactory::class.java.name
+        sysSetup.confInfrastructure = D1TestInfrastructureFactory::class.java.name
 
         // -----------------------------
         // Important!! We don't want to create any regular test transactions for the Anchor chain
@@ -117,11 +117,11 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
                             nodes[0],
                             it,
                             "icmf_get_headers_with_messages_between_heights",
-                            gtv(
+                            GtvFactory.gtv(
                                     mapOf(
-                                            "topic" to gtv("my-topic"),
-                                            "from_anchor_height" to gtv(0),
-                                            "to_anchor_height" to gtv(1)
+                                            "topic" to GtvFactory.gtv("my-topic"),
+                                            "from_anchor_height" to GtvFactory.gtv(0),
+                                            "to_anchor_height" to GtvFactory.gtv(1)
                                     )
                             )
                     ).asArray()
@@ -133,7 +133,7 @@ class AnchorIntegrationTest : GtxTxIntegrationTestSetup() {
                 assertEquals(index.toLong(), decodedHeader.getHeight())
                 assertContentEquals(messagesHash, decodedHeader.getExtra()["icmf_send"]!!["my-topic"]!!["hash"]!!.asByteArray())
 
-                val witness = BaseBlockWitness.Factory.fromBytes(header["witness"]!!.asByteArray())
+                val witness = BaseBlockWitness.fromBytes(header["witness"]!!.asByteArray())
                 val digest = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
                 witness.getSignatures().forEach { signature ->
                     assertTrue(cryptoSystem.verifyDigest(digest, signature))

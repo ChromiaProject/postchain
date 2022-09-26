@@ -1,11 +1,10 @@
-package net.postchain.d1.icmf.integration
+package net.postchain.d1.icmf
 
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
-import net.postchain.d1.icmf.ICMF_BLOCK_HEADER_EXTRA
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
 import net.postchain.devtools.testinfra.TestTransaction
@@ -23,12 +22,12 @@ import kotlin.test.assertEquals
 
 private const val CHAIN_ID = 1
 
-class ImcfSenderIntegrationTest : GtxTxIntegrationTestSetup() {
+class IcmfSenderIT : GtxTxIntegrationTestSetup() {
 
     @Test
     fun icmfHappyPath() {
         val mapBcFiles: Map<Int, String> = mapOf(
-                CHAIN_ID to "/net/postchain/d1/icmf/integration/sender/blockchain_config_1.xml",
+                CHAIN_ID to "/net/postchain/d1/icmf/sender/blockchain_config_1.xml",
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
