@@ -18,6 +18,7 @@ image: maven:3.8.4-jdk-11
 
 stages:
   - build
+  - nightly-tests
   - deploy
   - release
 
@@ -29,7 +30,7 @@ deploy:
     - master
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly deploy
 
 build:
   extends: .setup
@@ -41,6 +42,18 @@ build:
     - /^support\/.*$/
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
+
+nightly-tests:
+  extends: .setup
+  stage: nightly-tests
+  except:
+    - dev
+    - master
+    - tags
+    - /^support\/.*$/
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
+  when: manual
 
 release:
   stage: release
