@@ -18,7 +18,7 @@ image: maven:3.8.4-jdk-11
 
 stages:
   - build
-  - build-with-tests
+  - nightly-tests
   - deploy
   - release
 
@@ -43,13 +43,17 @@ build:
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
-build-with-tests:
+nightly-tests:
   extends: .setup
-  stage: build-with-tests
-  only:
-    - /^testme-\/.*$/
+  stage: nightly-tests
+  except:
+    - dev
+    - master
+    - tags
+    - /^support\/.*$/
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
+  when: manual
 
 release:
   stage: release
