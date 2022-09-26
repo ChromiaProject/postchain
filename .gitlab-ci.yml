@@ -18,6 +18,7 @@ image: maven:3.8.4-jdk-11
 
 stages:
   - build
+  - build-with-tests
   - deploy
   - release
 
@@ -41,6 +42,14 @@ build:
     - /^support\/.*$/
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,quick-tests verify
+
+build-with-tests:
+  extends: .setup
+  stage: build-with-tests
+  only:
+    - /^testme-\/.*$/
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,all-tests verify
 
 release:
   stage: release
