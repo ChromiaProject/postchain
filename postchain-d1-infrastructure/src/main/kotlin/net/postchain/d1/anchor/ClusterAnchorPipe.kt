@@ -10,10 +10,10 @@ import net.postchain.core.Storage
 import java.lang.Long.max
 import java.util.concurrent.atomic.AtomicLong
 
-class ClusterAnchorIcmfPipe(
-    val id: BlockchainRid,
-    protected val storage: Storage,
-    protected val chainID: Long
+class ClusterAnchorPipe(
+        val id: BlockchainRid,
+        private val storage: Storage,
+        private val chainID: Long
 ) {
     private val highestSeen = AtomicLong(-1L)
     private val lastCommitted = AtomicLong(-1L)
@@ -31,7 +31,7 @@ class ClusterAnchorIcmfPipe(
             if (blockRID != null) {
                 highestSeen.getAndUpdate { max(it, currentPointer + 1) }
                 // Get raw data
-                val rawHeader = dba.getBlockHeader(eContext, blockRID)  // Note: expensive
+                val rawHeader = dba.getBlockHeader(eContext, blockRID)
                 val rawWitness = dba.getWitnessData(eContext, blockRID)
 
                 ClusterAnchorPacket(currentPointer, blockRID, rawHeader, rawWitness)
@@ -46,5 +46,4 @@ class ClusterAnchorIcmfPipe(
             lastCommitted.getAndUpdate { max(it, currentPointer) }
         }
     }
-
 }

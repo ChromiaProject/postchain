@@ -7,7 +7,7 @@ import net.postchain.gtx.GTXBlockchainConfiguration
 
 class AnchorProcessManagerExtension(postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
 
-    private val clusterAnchorIcmfReceiverFactory = ClusterAnchorIcmfReceiverFactory(postchainContext.storage)
+    private val localDispatcher = ClusterAnchorDispatcher(postchainContext.storage)
 
     /**
      * Connect process to ICMF:
@@ -21,10 +21,12 @@ class AnchorProcessManagerExtension(postchainContext: PostchainContext) : Blockc
 
         if (cfg is GTXBlockchainConfiguration) {
             // create receiver when blockchain has anchoring STE
-            getAnchorSpecialTxExtension(cfg)?.connectReceiverFactory(clusterAnchorIcmfReceiverFactory)
+            getAnchorSpecialTxExtension(cfg)?.let {
+                localDispatcher.connectReceiver(cfg.chainID, it.icmfReceiver)
+            }
 
             // connect process to local dispatcher
-            clusterAnchorIcmfReceiverFactory.localDispatcher.connectChain(cfg.chainID)
+            localDispatcher.connectChain(cfg.chainID)
         }
     }
 
@@ -41,14 +43,14 @@ class AnchorProcessManagerExtension(postchainContext: PostchainContext) : Blockc
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {
-        clusterAnchorIcmfReceiverFactory.localDispatcher.disconnectChain(
+        localDispatcher.disconnectChain(
                 process.blockchainEngine.getConfiguration().chainID
         )
     }
 
     @Synchronized
     override fun afterCommit(process: BlockchainProcess, height: Long) {
-        clusterAnchorIcmfReceiverFactory.localDispatcher.afterCommit(
+        localDispatcher.afterCommit(
                 process.blockchainEngine.getConfiguration().chainID,
                 height
         )

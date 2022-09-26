@@ -6,7 +6,6 @@ import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.core.EContext
@@ -34,14 +33,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
 
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
-    /** We must know the id of the anchor chain itself */
-    private var myChainRid: BlockchainRid? = null
-
-    /** We must know the id of the anchor chain itself */
-    private var myChainID: Long? = null
-
-    /** We must know the id of the anchor chain itself */
-    private var icmfReceiver: ClusterAnchorIcmfReceiver? = null
+    override val icmfReceiver = ClusterAnchorReceiver()
 
     /** This is for querying ourselves, i.e. the "anchor Rell app" */
     private lateinit var module: GTXModule
@@ -54,8 +46,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             blockchainRID: BlockchainRid,
             cs: CryptoSystem
     ) {
-        myChainID = chainID
-        myChainRid = blockchainRID
         this.module = module
     }
 
@@ -79,8 +69,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * @param bctx is the context of the anchor chain (but without BC RID)
      */
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
-        verifySameChainId(bctx, myChainRid!!)
-        val pipes = this.icmfReceiver!!.getRelevantPipes()
+        val pipes = icmfReceiver.getRelevantPipes()
 
         // Extract all packages from all pipes
         val retList = mutableListOf<OpData>()
@@ -96,9 +85,9 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      * Loop all messages for the pipe
      */
     private fun handlePipe(
-        pipe: ClusterAnchorIcmfPipe,
-        retList: MutableList<OpData>,
-        bctx: BlockEContext
+            pipe: ClusterAnchorPipe,
+            retList: MutableList<OpData>,
+            bctx: BlockEContext
     ) {
         var counter = 0
         val blockchainRid = pipe.id
@@ -143,6 +132,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             bctx: BlockEContext,
             ops: List<OpData>
     ): Boolean {
+        // TODO refactor this to avoid passing around mutable data so much
         val chainHeadersMap = mutableMapOf<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>()
         val valid = ops.all { isOpValidAndFillTheMinimalHeaderMap(it, chainHeadersMap) }
         if (!valid) {
@@ -150,27 +140,32 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         }
 
         // Go through it chain by chain
-        for (bcRid in chainHeadersMap.keys) {
+        for ((bcRid, minimalHeaders) in chainHeadersMap) {
             // Each chain must be validated by itself b/c we must now look for gaps in the blocks etc.
             // and we pass that task to the [GenericBlockHeaderValidator]
-            val minimalHeaders = chainHeadersMap[bcRid]
-            if (minimalHeaders != null) {
-                if (chainValidation(bctx, bcRid, minimalHeaders).result != ValidationResult.Result.OK) {
-                    logger.error(
-                            "Failing to anchor a block for blockchain ${bcRid.toHex()}. ${
-                                chainValidation(
-                                        bctx,
-                                        bcRid,
-                                        minimalHeaders
-                                ).message
-                            }"
-                    )
-                    return false
-                }
+            val validationResult = chainValidation(bctx, bcRid, minimalHeaders)
+            if (validationResult.result != ValidationResult.Result.OK) {
+                logger.error(
+                        "Failing to anchor a block for blockchain ${bcRid.toHex()}. ${validationResult.message}"
+                )
+                return false
             }
         }
         return true
     }
+
+    // TODO witness check
+    // 1. Save time:
+    //    When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
+    //    (But when we are copying finished anchor block from another node we actually should validate,
+    //    but that's not here).
+    // 2. Tech issues:
+    //    The witness check is tricky b/c every chain we will validate must have its own instance of the
+    //    [BlockHeaderValidator], specific for the chain in question (b/c we cannot be certain of what signers
+    //    are relevant for the chain). ALSO!! We cannot just pick the latest configuration to get the signer list,
+    //    but we must take the configuration for the height in question!
+    // 3. In theory we cannot be certain about what [CryptoSystem] is used by the chain, so it should be taken from the
+    //    config too.
 
     /**
      * Checks all headers we have for specific chain
@@ -180,21 +175,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
      *   However, we might anchor multiple headers from one chain at the same time, so there is some sorting to
      *   do if we intend to discover gaps.
      *
-     * Discussion1: crypto system
-     *   In theory we cannot be certain about what [CryptoSystem] is used by the chain, so it should be taken from the
-     *   config too.
-     *
-     * Discussion2: Why no witness check here?
-     *    1. Save time:
-     *      When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
-     *      (But when we are copying finished anchor block from another node we actually should validate,
-     *      but that's not here).
-     *    2. Tech issues:
-     *      The witness check is tricky b/c every chain we will validate must have its own instance of the
-     *      [BlockHeaderValidator], specific for the chain in question (b/c we cannot be certain of what signers
-     *      are relevant for the chain). ALSO!! We cannot just pick the latest configuration to get the signer list,
-     *      but we must take the configuration for the height in question!
-     *
      * @param bcRid is the chain we intend to validate
      * @param minimalHeaders is a very small data set for each header (that we use for basic validation)
      * @return the result of the validation
@@ -202,50 +182,35 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
     private fun chainValidation(
             ctxt: EContext,
             bcRid: BlockchainRid,
-            minimalHeaders: MutableSet<MinimalBlockHeaderInfo>
+            minimalHeaders: Set<MinimalBlockHeaderInfo>
     ): ValidationResult {
-        /**
-         * NOTE: We declare this as an inner function to access BC RID.
-         *
-         * @return the block RID at a certain height
-         */
-        fun getBlockRidAtHeight(height: Long): ByteArray? = getAnchoredBlockAtHeight(ctxt, bcRid, height)?.blockRid?.data
-
         // Restructure to the format the Validator needs
-        val myMap: MutableMap<Long, MinimalBlockHeaderInfo> = mutableMapOf()
+        val myHeaderMap: MutableMap<Long, MinimalBlockHeaderInfo> = mutableMapOf()
         for (minimalHeader in minimalHeaders) {
-            myMap[minimalHeader.headerHeight] = minimalHeader
+            myHeaderMap[minimalHeader.headerHeight] = minimalHeader
         }
-
-        // Get the expected data
-        val expected = getExpectedData(ctxt, bcRid)
 
         // Run the validator
         return GenericBlockHeaderValidator.multiValidationAgainstKnownBlocks(
                 bcRid,
-                myMap,
-                expected,
-                ::getBlockRidAtHeight // Using a locally defined function, and a closure here to use the bc RID
-        )
+                myHeaderMap,
+                getExpectedData(ctxt, bcRid)
+        ) { getAnchoredBlockAtHeight(ctxt, bcRid, it)?.blockRid?.data }
     }
 
     /**
-     * @return the data we expect to find, fetched from Anchor module's own tables
+     * @return the data we expect to find, fetched from Anchor module's own tables,
+     *         or null if we've never anchored any block for this chain before.
      */
-    private fun getExpectedData(ctxt: EContext, bcRid: BlockchainRid): MinimalBlockHeaderInfo? {
-        val tmpBlockInfo = getLastAnchoredBlock(ctxt, bcRid)
-        return if (tmpBlockInfo == null) {
-            // We've never anchored any block for this chain before.
-            null
-        } else {
-            // We found something, return it
-            MinimalBlockHeaderInfo(
-                    tmpBlockInfo.blockRid,
-                    null,
-                    tmpBlockInfo.height
-            ) // Don't care about the prev block here
-        }
-    }
+    private fun getExpectedData(ctxt: EContext, bcRid: BlockchainRid): MinimalBlockHeaderInfo? =
+            getLastAnchoredBlock(ctxt, bcRid)?.let {
+                // We found something, return it
+                MinimalBlockHeaderInfo(
+                        it.blockRid,
+                        null,
+                        it.height
+                ) // Don't care about the prev block here
+            }
 
     /**
      * Add the height to the map
@@ -254,7 +219,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             bcRid: BlockchainRid,
             newInfo: MinimalBlockHeaderInfo,
             chainHeightMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
-    ) {
+    ): Boolean {
         val headers = chainHeightMap[bcRid]
         if (headers == null) {
             chainHeightMap[bcRid] = mutableSetOf(newInfo)
@@ -262,42 +227,11 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             if (headers.all { header -> header.headerHeight != newInfo.headerHeight }) { // Rather primitive, but should be enough
                 headers.add(newInfo)
             } else {
-                ProgrammerMistake("Adding the same header twice, bc RID: ${bcRid.toHex()}, height ${newInfo.headerHeight}. New block: $newInfo")
+                logger.warn("Adding the same header twice, bc RID: ${bcRid.toHex()}, height ${newInfo.headerHeight}. New block: $newInfo")
+                return false
             }
         }
-    }
-
-    // ------------------------ PUBLIC NON-INHERITED ----------------
-
-    override fun connectReceiverFactory(controller: ClusterAnchorIcmfReceiverFactory) {
-        if (icmfReceiver != null)
-            throw ProgrammerMistake("Setting receiver twice")
-        icmfReceiver = controller.createReceiver(
-                myChainID!!
-        )
-    }
-
-    // ------------------------ PRIVATE ----------------
-
-    /**
-     * Save the chainID coming from [BlockEContext] into local state variable (myChainIid)
-     * and verify it doesn't change.
-     */
-    private fun verifySameChainId(bctx: BlockEContext, blockchainRID: BlockchainRid) {
-        if (this.myChainID == null) {
-            this.myChainID = bctx.chainID
-        } else {
-            if (this.myChainID != bctx.chainID) { // Possibly useless check, but I'm paranoid
-                throw IllegalStateException("Did anchor chain change chainID? Now: ${bctx.chainID}, before: $myChainID")
-            }
-        }
-        if (this.myChainRid == null) {
-            this.myChainRid = blockchainRID
-        } else {
-            if (this.myChainRid != blockchainRID) { // Possibly useless check, but I'm paranoid
-                throw IllegalStateException("Did anchor chain change chain RID? Now: ${blockchainRID}, before: $myChainRid")
-            }
-        }
+        return true
     }
 
     /**
@@ -307,9 +241,9 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
             op: OpData,
             chainMinimalHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
     ): Boolean {
-        val anchorObj = AnchorOpDataObject.validateAndDecodeOpData(op) ?: return false
+        val anchorOpData = AnchorOpData.validateAndDecodeOpData(op) ?: return false
 
-        val header: BlockHeaderData = anchorObj.headerData
+        val header: BlockHeaderData = anchorOpData.headerData
         val bcRid = BlockchainRid(header.getBlockchainRid())
 
         val newHeight = header.getHeight()
@@ -322,15 +256,17 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension, IcmfSpecialTxExtension {
         }
 
         val headerBlockRid =
-                BlockRid(anchorObj.blockRid) // Another way to get BlockRid is to calculate it from the header
+                BlockRid(anchorOpData.blockRid) // Another way to get BlockRid is to calculate it from the header
         val headerPrevBlockRid = BlockRid(header.getPreviousBlockRid())
         val newBlockHeight = header.getHeight()
 
-        updateChainHeightMap(
-                bcRid,
-                MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight),
-                chainMinimalHeadersMap
-        )
+        if (!updateChainHeightMap(
+                        bcRid,
+                        MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight),
+                        chainMinimalHeadersMap
+                )) {
+            return false
+        }
 
         return true
     }
