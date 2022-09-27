@@ -1,4 +1,4 @@
-package net.postchain.d1.icmf
+package net.postchain.d1
 
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.BaseBlockWitnessBuilder

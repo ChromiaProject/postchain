@@ -42,7 +42,7 @@ data class AnchorOpData(
                 val rawWitness = op.args[2].asByteArray()
 
                 if (header.getHeight() < 0) { // Ok, pretty stupid check, but why not
-                    logger.error(
+                    logger.warn(
                             "Someone is trying to anchor a block for blockchain: " +
                                     "${BlockchainRid(header.getBlockchainRid()).toHex()} at height = ${header.getHeight()} (which is impossible!). "
                     )
@@ -51,7 +51,7 @@ data class AnchorOpData(
 
                 AnchorOpData(blockRid, header, rawWitness)
             } catch (e: RuntimeException) {
-                logger.info("Invalid spcl operation: Error: ${e.message}")
+                logger.warn("Invalid spcl operation: Error: ${e.message}")
                 null // We don't really care what's wrong, just log it and return null
             }
         }

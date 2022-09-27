@@ -44,17 +44,13 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
                 .groupBy { it.topic }
         val hashByTopic = hashesByTopic
                 .mapValues {
-                    TopicHeaderData(cryptoSystem.digest(it.value.map { message ->
+                    TopicHeaderData.fromMessageHashes(it.value.map { message ->
                         cryptoSystem.digest(
                                 GtvEncoder.encodeGtv(
                                         message.body
                                 )
                         )
-                    }.fold(ByteArray(0)) { total, item ->
-                        total.plus(
-                                item
-                        )
-                    }), it.value.first().previousMessageBlockHeight).toGtv()
+                    }, cryptoSystem, it.value.first().previousMessageBlockHeight).toGtv()
                 }
         return mapOf(ICMF_BLOCK_HEADER_EXTRA to gtv(hashByTopic))
     }
