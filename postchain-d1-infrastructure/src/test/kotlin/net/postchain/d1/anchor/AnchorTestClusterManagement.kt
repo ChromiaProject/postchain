@@ -8,11 +8,11 @@ import net.postchain.d1.cluster.D1PeerInfo
 
 class AnchorTestClusterManagement : ClusterManagement {
     override fun getClusterInfo(clusterName: String): D1ClusterInfo {
-        TODO("Not yet implemented")
+        throw NotImplementedError("Not yet implemented")
     }
 
     override fun getAllClusters(): Collection<String> {
-        TODO("Not yet implemented")
+        throw NotImplementedError("Not yet implemented")
     }
 
     override fun getBlockchainPeers(blockchainRid: BlockchainRid, height: Long): Collection<D1PeerInfo> {
@@ -24,6 +24,6 @@ class AnchorTestClusterManagement : ClusterManagement {
     }
 
     override fun getActiveBlockchains(clusterName: String): Collection<BlockchainRid> {
-        TODO("Not yet implemented")
+        throw NotImplementedError("Not yet implemented")
     }
 }

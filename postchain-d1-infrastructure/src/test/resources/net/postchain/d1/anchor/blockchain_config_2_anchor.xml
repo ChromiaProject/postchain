@@ -5,7 +5,7 @@
 This is a Anchor Chain configuration specifically for testing.
 
  1. On demand block building Strategy (enables us to tell the test when to build a new block)
- 2. GTX BC config factory (must handle GTX TXs) // TODO: Olle don't know if really needed?
+ 2. GTX BC config factory (must handle GTX TXs)
  3. Anchor module, which does everything we need around anchoring.
 ================================================================================= -->
 <dict>
@@ -20,10 +20,6 @@ This is a Anchor Chain configuration specifically for testing.
     <entry key="configurationfactory">
         <!-- Must use GTX since we need it -->
         <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
-    </entry>
-    <entry key="icmflistener">
-        <string>10
-        </string> <!-- Anchor chain listens to messages from all chains with no number or lower number. This only works for managed mode, manual don't know about other chains. -->
     </entry>
     <entry key="signers">
         <array>
