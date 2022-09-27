@@ -128,7 +128,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     }
 
 
-    // TODO
+    // TODO Validation discussions
     // 1. Save time:
     //    When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
     //    (But when we are copying finished anchor block from another node we actually should validate)

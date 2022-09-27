@@ -9,7 +9,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KLogging
-import net.postchain.base.BaseBlockWitness
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClientProvider
@@ -20,7 +19,6 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
-import net.postchain.d1.Validation
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
@@ -112,23 +110,11 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
 
         for (header in signedBlockHeaderWithAnchorHeights) {
             val decodedHeader = BlockHeaderData.fromBinary(header.rawHeader)
-            val witness = BaseBlockWitness.fromBytes(header.rawWitness)
-            val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            val topicHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, header.rawHeader, header.rawWitness, blockRid, cryptoSystem, clusterManagement)
+                    ?: return
 
-            val chainPeers = clusterManagement.getBlockchainPeers(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
-
-            if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), header.rawHeader, blockRid, chainPeers.map { it.pubkey }, witness)) {
-                logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
-                return
-            }
-
-            val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
-            if (icmfHeaderData == null) {
-                logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
-                return
-            }
-
-            val topicData = icmfHeaderData[route.topic]?.let { TopicHeaderData.fromGtv(it) }
+            val topicData = topicHeaderData[route.topic]
             if (topicData == null) {
                 logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic ${route.topic} for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                 return
@@ -175,10 +161,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                 }
             }
 
-            val computedHash = cryptoSystem.digest(bodies.map { cryptoSystem.digest(GtvEncoder.encodeGtv(it)) }
-                    .fold(ByteArray(0)) { total, item ->
-                        total.plus(item)
-                    })
+            val computedHash = TopicHeaderData.calculateMessagesHash(bodies.map { cryptoSystem.digest(GtvEncoder.encodeGtv(it)) }, cryptoSystem)
 
             if (topicData.hash.contentEquals(computedHash)) {
                 currentPackets.add(
