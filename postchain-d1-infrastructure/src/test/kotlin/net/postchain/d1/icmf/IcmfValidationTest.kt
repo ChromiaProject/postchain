@@ -217,6 +217,33 @@ class IcmfValidationTest {
     }
 
     @Test
+    fun injectMessage() {
+        val icmfRemoteSpecialTxExtension = IcmfRemoteSpecialTxExtension(dbMock)
+        icmfRemoteSpecialTxExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
+        icmfRemoteSpecialTxExtension.clusterManagement = IcmfTestClusterManagement()
+
+        val messageBody = gtv("hej")
+        val encodedMessageBody = GtvEncoder.encodeGtv(messageBody)
+        val injectedMessageBody = gtv("hej2")
+
+        val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
+                ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
+                        topic to TopicHeaderData(cryptoSystem.digest(cryptoSystem.digest(encodedMessageBody)), -1).toGtv()
+                ))
+        ))
+        val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val rawWitness = BaseBlockWitness.fromSignatures(
+                arrayOf(cryptoSystem.buildSigMaker(IcmfTestClusterManagement.pubKey.key, IcmfTestClusterManagement.privKey.key).signDigest(blockRid))
+        ).getRawData()
+        val headerOp = IcmfRemoteSpecialTxExtension.HeaderOp(GtvEncoder.encodeGtv(header.toGtv()), rawWitness).toOpData()
+
+        val messageOp0 = IcmfRemoteSpecialTxExtension.MessageOp(blockchainRID, topic, messageBody).toOpData()
+        val messageOp1 = IcmfRemoteSpecialTxExtension.MessageOp(blockchainRID, topic, injectedMessageBody).toOpData()
+
+        assertFalse(icmfRemoteSpecialTxExtension.validateSpecialOperations(SpecialTransactionPosition.Begin, mockContext, listOf(headerOp, messageOp0, messageOp1)))
+    }
+
+    @Test
     fun invalidPreviousMessageHeight() {
         val icmfRemoteSpecialTxExtension = IcmfRemoteSpecialTxExtension(dbMock)
         icmfRemoteSpecialTxExtension.init(mockModule, chainID, blockchainRID, cryptoSystem)
