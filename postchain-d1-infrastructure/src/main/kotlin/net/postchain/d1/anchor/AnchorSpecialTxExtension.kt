@@ -133,7 +133,14 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
         for (op in ops) {
             val anchorOpData = AnchorOpData.validateAndDecodeOpData(op) ?: return false
-            if (!updateChainHeightMap(anchorOpData, chainHeadersMap)) {
+            val bcRid = BlockchainRid(anchorOpData.headerData.getBlockchainRid())
+            val newInfo = anchorOpData.toMinimalBlockHeaderInfo()
+
+            val headers = chainHeadersMap.computeIfAbsent(bcRid) { mutableSetOf() }
+            if (headers.all { header -> header.headerHeight != newInfo.headerHeight }) { // Rather primitive, but should be enough
+                headers.add(newInfo)
+            } else {
+                logger.warn("Adding the same header twice, bc RID: ${bcRid.toHex()}, height ${newInfo.headerHeight}. New block: $newInfo")
                 return false
             }
         }
@@ -147,34 +154,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
                 logger.error(
                         "Failing to anchor a block for blockchain ${bcRid.toHex()}. ${validationResult.message}"
                 )
-                return false
-            }
-        }
-        return true
-    }
-
-    /**
-     * Add the height to the map
-     */
-    private fun updateChainHeightMap(
-            anchorOpData: AnchorOpData,
-            chainHeadersMap: MutableMap<BlockchainRid, MutableSet<MinimalBlockHeaderInfo>>
-    ): Boolean {
-        val bcRid = BlockchainRid(anchorOpData.headerData.getBlockchainRid())
-        val headerBlockRid =
-                BlockRid(anchorOpData.blockRid) // Another way to get BlockRid is to calculate it from the header
-        val headerPrevBlockRid = BlockRid(anchorOpData.headerData.getPreviousBlockRid())
-        val newBlockHeight = anchorOpData.headerData.getHeight()
-        val newInfo = MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight)
-
-        val headers = chainHeadersMap[bcRid]
-        if (headers == null) {
-            chainHeadersMap[bcRid] = mutableSetOf(newInfo)
-        } else {
-            if (headers.all { header -> header.headerHeight != newInfo.headerHeight }) { // Rather primitive, but should be enough
-                headers.add(newInfo)
-            } else {
-                logger.warn("Adding the same header twice, bc RID: ${bcRid.toHex()}, height ${newInfo.headerHeight}. New block: $newInfo")
                 return false
             }
         }
