@@ -5,10 +5,12 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -19,15 +21,9 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 
 class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperations) : GTXSpecialTxExtension {
 
-    companion object : KLogging() {
-        // operation __icmf_header(block_header: byte_array, witness: byte_array)
-        const val OP_ICMF_HEADER = "__icmf_header"
+    companion object : KLogging()
 
-        // operation __icmf_message(sender: byte_array, topic: text, body: gtv)
-        const val OP_ICMF_MESSAGE = "__icmf_message"
-    }
-
-    private val _relevantOps = setOf(OP_ICMF_HEADER, OP_ICMF_MESSAGE)
+    private val _relevantOps = setOf(HeaderOp.OP_NAME, MessageOp.OP_NAME)
     private lateinit var cryptoSystem: CryptoSystem
     lateinit var receiver: GlobalTopicIcmfReceiver
     lateinit var clusterManagement: ClusterManagement
@@ -83,19 +79,13 @@ class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperati
 
     private fun buildOpData(icmfPacket: IcmfPacket): List<OpData> {
         val operations = mutableListOf<OpData>()
-        operations.add(OpData(OP_ICMF_HEADER, arrayOf(gtv(icmfPacket.rawHeader), gtv(icmfPacket.rawWitness))))
+        operations.add(HeaderOp(icmfPacket.rawHeader, icmfPacket.rawWitness).toOpData())
 
         for (body in icmfPacket.bodies) {
-            operations.add(OpData(OP_ICMF_MESSAGE, arrayOf(gtv(icmfPacket.sender), gtv(icmfPacket.topic), body)))
+            operations.add(MessageOp(icmfPacket.sender, icmfPacket.topic, body).toOpData())
         }
         return operations
     }
-
-    data class HeaderValidationInfo(
-            val height: Long,
-            val sender: ByteArray,
-            val icmfHeaderData: Map<String, TopicHeaderData>
-    )
 
     /**
      * I am validator, validate messages.
@@ -109,24 +99,19 @@ class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperati
         val messageHashes: MutableMap<String, MutableList<ByteArray>> = mutableMapOf()
         for (op in ops) {
             when (op.opName) {
-                OP_ICMF_HEADER -> {
-                    if (op.args.size != 2) {
-                        logger.warn("Got $OP_ICMF_HEADER operation with wrong number of arguments: ${op.args.size}")
-                        return false
-                    }
-                    val rawHeader = op.args[0].asByteArray()
-                    val rawWitness = op.args[1].asByteArray()
+                HeaderOp.OP_NAME -> {
+                    val headerOp = HeaderOp.fromOpData(op) ?: return false
 
                     if (!validateMessages(messageHashes, currentHeaderData, bctx)) return false
                     messageHashes.clear()
 
-                    val decodedHeader = BlockHeaderData.fromBinary(rawHeader)
-                    val witness = BaseBlockWitness.fromBytes(rawWitness)
+                    val decodedHeader = BlockHeaderData.fromBinary(headerOp.rawHeader)
+                    val witness = BaseBlockWitness.fromBytes(headerOp.rawWitness)
                     val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
                     val peers = clusterManagement.getBlockchainPeers(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
 
-                    if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), rawHeader, blockRid, peers.map { it.pubkey }, witness)) {
+                    if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), headerOp.rawHeader, blockRid, peers.map { it.pubkey }, witness)) {
                         logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
                         return false
                     }
@@ -143,28 +128,22 @@ class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperati
                             icmfHeaderData.asDict().mapValues { TopicHeaderData.fromGtv(it.value) })
                 }
 
-                OP_ICMF_MESSAGE -> {
-                    if (op.args.size != 3) {
-                        logger.warn("Got $OP_ICMF_MESSAGE operation with wrong number of arguments: ${op.args.size}")
-                        return false
-                    }
-                    val sender = op.args[0].asByteArray()
-                    val topic = op.args[1].asString()
-                    val body = op.args[2]
+                MessageOp.OP_NAME -> {
+                    val messageOp = MessageOp.fromOpData(op) ?: return false
 
                     if (currentHeaderData == null) {
-                        logger.warn("got $OP_ICMF_MESSAGE before any $OP_ICMF_HEADER")
+                        logger.warn("got ${MessageOp.OP_NAME} before any ${HeaderOp.OP_NAME}")
                         return false
                     }
 
-                    val topicData = currentHeaderData.icmfHeaderData[topic]
+                    val topicData = currentHeaderData.icmfHeaderData[messageOp.topic]
                     if (topicData == null) {
-                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $topic for sender ${sender.toHex()}")
+                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra data missing topic $messageOp.topic for sender ${messageOp.sender.toHex()}")
                         return false
                     }
 
-                    messageHashes.computeIfAbsent(topic) { mutableListOf() }
-                            .add(cryptoSystem.digest(GtvEncoder.encodeGtv(body)))
+                    messageHashes.computeIfAbsent(messageOp.topic) { mutableListOf() }
+                            .add(cryptoSystem.digest(GtvEncoder.encodeGtv(messageOp.body)))
                 }
 
                 else -> {
@@ -222,7 +201,7 @@ class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperati
     ): Boolean {
         for ((topic, hashes) in messageHashes) {
             if (headerData == null) {
-                logger.error("got $OP_ICMF_MESSAGE before any $OP_ICMF_HEADER")
+                logger.error("got ${MessageOp.OP_NAME} before any ${HeaderOp.OP_NAME}")
                 return false
             }
 
@@ -242,5 +221,66 @@ class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperati
             }
         }
         return true
+    }
+
+    data class HeaderValidationInfo(
+            val height: Long,
+            val sender: ByteArray,
+            val icmfHeaderData: Map<String, TopicHeaderData>
+    )
+
+    data class HeaderOp(
+            val rawHeader: ByteArray,
+            val rawWitness: ByteArray
+    ) {
+        companion object {
+            // operation __icmf_header(block_header: byte_array, witness: byte_array)
+            const val OP_NAME = "__icmf_header"
+
+            fun fromOpData(opData: OpData): HeaderOp? {
+                if (opData.opName != OP_NAME) return null
+                if (opData.args.size != 2) {
+                    logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
+                    return null
+                }
+
+                return try {
+                    HeaderOp(opData.args[0].asByteArray(), opData.args[1].asByteArray())
+                } catch (e: UserMistake) {
+                    logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
+                    null
+                }
+            }
+        }
+
+        fun toOpData() = OpData(OP_NAME, arrayOf(gtv(rawHeader), gtv(rawWitness)))
+    }
+
+    data class MessageOp(
+            val sender: BlockchainRid,
+            val topic: String,
+            val body: Gtv
+    ) {
+        companion object {
+            // operation __icmf_message(sender: byte_array, topic: text, body: gtv)
+            const val OP_NAME = "__icmf_message"
+
+            fun fromOpData(opData: OpData): MessageOp? {
+                if (opData.opName != OP_NAME) return null
+                if (opData.args.size != 3) {
+                    logger.warn("Got $OP_NAME operation with wrong number of arguments: ${opData.args.size}")
+                    return null
+                }
+
+                return try {
+                    MessageOp(BlockchainRid(opData.args[0].asByteArray()), opData.args[1].asString(), opData.args[2])
+                } catch (e: UserMistake) {
+                    logger.warn("Got $OP_NAME operation with invalid argument types: ${e.message}")
+                    null
+                }
+            }
+        }
+
+        fun toOpData() = OpData(OP_NAME, arrayOf(gtv(sender), gtv(topic), body))
     }
 }
