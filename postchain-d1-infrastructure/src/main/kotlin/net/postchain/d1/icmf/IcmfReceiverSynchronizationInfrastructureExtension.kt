@@ -12,6 +12,7 @@ import net.postchain.gtx.GTXBlockchainConfiguration
 
 open class IcmfReceiverSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
     private val receivers = mutableMapOf<Long, GlobalTopicIcmfReceiver>()
+    private val dbOperations = IcmfDatabaseOperationsImpl()
 
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
@@ -25,7 +26,9 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
                         engine.storage,
                         configuration.chainID,
                         clusterManagement,
-                        createClientProvider())
+                        createClientProvider(),
+                        dbOperations
+                )
                 receivers[configuration.chainID] = receiver
                 txExt.receiver = receiver
                 txExt.clusterManagement = clusterManagement

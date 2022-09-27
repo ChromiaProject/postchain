@@ -18,11 +18,12 @@ class IcmfReceiverGTXModule : SimpleGTXModule<Unit>(
         }),
         mapOf()
 ) {
-    private val specialTxExtension = IcmfRemoteSpecialTxExtension()
+    private val dbOperations = IcmfDatabaseOperationsImpl()
+    private val specialTxExtension = IcmfRemoteSpecialTxExtension(dbOperations)
     private val _specialTxExtensions = listOf(specialTxExtension)
 
     override fun initializeDB(ctx: EContext) {
-        IcmfDatabaseOperations.initialize(ctx)
+        dbOperations.initialize(ctx)
     }
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = _specialTxExtensions

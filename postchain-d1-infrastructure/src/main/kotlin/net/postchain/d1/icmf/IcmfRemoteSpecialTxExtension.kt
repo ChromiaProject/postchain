@@ -17,7 +17,7 @@ import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
-class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
+class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperations) : GTXSpecialTxExtension {
 
     companion object : KLogging() {
         // operation __icmf_header(block_header: byte_array, witness: byte_array)
@@ -49,7 +49,7 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
     override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
         val pipes = receiver.getRelevantPipes()
 
-        val lastAnchoredHeights = IcmfDatabaseOperations.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
+        val lastAnchoredHeights = dbOperations.loadLastAnchoredHeights(bctx).associate { (it.cluster to it.topic) to it.height }
 
         val allOps = mutableListOf<OpData>()
         for (pipe in pipes) {
@@ -61,7 +61,7 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                     val icmfPackets = pipe.fetchNext(currentHeight)
                     if (icmfPackets != null) {
                         for (packet in icmfPackets.packets) {
-                            val currentPrevMessageBlockHeight = IcmfDatabaseOperations.loadLastMessageHeight(bctx, packet.sender, packet.topic)
+                            val currentPrevMessageBlockHeight = dbOperations.loadLastMessageHeight(bctx, packet.sender, packet.topic)
                             if (packet.height > currentPrevMessageBlockHeight) {
                                 allOps.addAll(buildOpData(packet))
                             }
@@ -74,7 +74,7 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
                     }
                 }
                 if (currentHeight > lastAnchoredHeight) {
-                    IcmfDatabaseOperations.saveLastAnchoredHeight(bctx, clusterName, pipe.route.topic, currentHeight)
+                    dbOperations.saveLastAnchoredHeight(bctx, clusterName, pipe.route.topic, currentHeight)
                 }
             }
         }
@@ -204,14 +204,14 @@ class IcmfRemoteSpecialTxExtension : GTXSpecialTxExtension {
             prevMessageBlockHeight: Long,
             height: Long
     ): Boolean {
-        val currentPrevMessageBlockHeight = IcmfDatabaseOperations.loadLastMessageHeight(bctx, BlockchainRid(sender), topic)
+        val currentPrevMessageBlockHeight = dbOperations.loadLastMessageHeight(bctx, BlockchainRid(sender), topic)
 
         if (prevMessageBlockHeight != currentPrevMessageBlockHeight) {
             logger.warn("$ICMF_BLOCK_HEADER_EXTRA header extra has incorrect previous message height $prevMessageBlockHeight, expected $currentPrevMessageBlockHeight for topic $topic for sender ${sender.toHex()}")
             return false
         }
 
-        IcmfDatabaseOperations.saveLastMessageHeight(bctx, BlockchainRid(sender), topic, height)
+        dbOperations.saveLastMessageHeight(bctx, BlockchainRid(sender), topic, height)
 
         return true
     }
