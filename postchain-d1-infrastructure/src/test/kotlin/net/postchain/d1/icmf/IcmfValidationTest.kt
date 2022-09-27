@@ -110,9 +110,9 @@ class IcmfValidationTest {
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf())
         ))
 
+        val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val invalidSignerPrivKey = PrivKey(cryptoSystem.getRandomBytes(32))
         val invalidSignerPubKey = PubKey(secp256k1_derivePubKey(invalidSignerPrivKey.key))
-        val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(invalidSignerPubKey.key, invalidSignerPrivKey.key).signDigest(blockRid))
         ).getRawData()
