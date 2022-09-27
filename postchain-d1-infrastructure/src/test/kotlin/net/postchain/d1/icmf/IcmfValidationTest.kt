@@ -47,7 +47,10 @@ class IcmfValidationTest {
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData(cryptoSystem.digest(cryptoSystem.digest(encodedMessageBody)), -1).toGtv()
+                        topic to TopicHeaderData.fromMessageHashes(
+                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                                cryptoSystem,
+                                -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
@@ -86,7 +89,10 @@ class IcmfValidationTest {
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData(cryptoSystem.digest(cryptoSystem.digest(encodedMessageBody)), -1).toGtv()
+                        topic to TopicHeaderData.fromMessageHashes(
+                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                                cryptoSystem,
+                                -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
@@ -110,9 +116,9 @@ class IcmfValidationTest {
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf())
         ))
 
+        val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val invalidSignerPrivKey = PrivKey(cryptoSystem.getRandomBytes(32))
         val invalidSignerPubKey = PubKey(secp256k1_derivePubKey(invalidSignerPrivKey.key))
-        val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         val rawWitness = BaseBlockWitness.fromSignatures(
                 arrayOf(cryptoSystem.buildSigMaker(invalidSignerPubKey.key, invalidSignerPrivKey.key).signDigest(blockRid))
         ).getRawData()
@@ -172,7 +178,10 @@ class IcmfValidationTest {
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData(cryptoSystem.digest(cryptoSystem.digest(encodedMessageBody)), -1).toGtv()
+                        topic to TopicHeaderData.fromMessageHashes(
+                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                                cryptoSystem,
+                                -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
@@ -199,10 +208,10 @@ class IcmfValidationTest {
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData(
-                                cryptoSystem.digest(cryptoSystem.digest(encodedMessageBody0).plus(cryptoSystem.digest(encodedMessageBody1))),
-                                -1
-                        ).toGtv()
+                        topic to TopicHeaderData.fromMessageHashes(
+                                listOf(cryptoSystem.digest(encodedMessageBody0), cryptoSystem.digest(encodedMessageBody1)),
+                                cryptoSystem,
+                                -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
@@ -228,7 +237,10 @@ class IcmfValidationTest {
 
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 0, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData(cryptoSystem.digest(cryptoSystem.digest(encodedMessageBody)), -1).toGtv()
+                        topic to TopicHeaderData.fromMessageHashes(
+                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                                cryptoSystem,
+                                -1L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
@@ -255,7 +267,10 @@ class IcmfValidationTest {
         // Header data indicates that primary is trying to skip messages from block 0
         val header = makeBlockHeader(blockchainRID, BlockRid(blockchainRID.data), 1, mapOf(
                 ICMF_BLOCK_HEADER_EXTRA to gtv(mapOf(
-                        topic to TopicHeaderData(cryptoSystem.digest(cryptoSystem.digest(encodedMessageBody)), 0).toGtv()
+                        topic to TopicHeaderData.fromMessageHashes(
+                                listOf(cryptoSystem.digest(encodedMessageBody)),
+                                cryptoSystem,
+                                0L).toGtv()
                 ))
         ))
         val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))

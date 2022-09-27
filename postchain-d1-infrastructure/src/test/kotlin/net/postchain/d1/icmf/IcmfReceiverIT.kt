@@ -49,8 +49,9 @@ class IcmfReceiverIT : GtxTxIntegrationTestSetup() {
                 GtvNull,
                 gtv(mapOf(
                         ICMF_BLOCK_HEADER_EXTRA to gtv(
-                                "my-topic" to TopicHeaderData(
-                                        cryptoSystem.digest(cryptoSystem.digest(encodedMessageBody)),
+                                "my-topic" to TopicHeaderData.fromMessageHashes(
+                                        listOf(cryptoSystem.digest(encodedMessageBody)),
+                                        cryptoSystem,
                                         -1L).toGtv()
                         )
                 ))

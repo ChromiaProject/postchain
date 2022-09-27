@@ -1,7 +1,6 @@
 package net.postchain.d1.icmf
 
 import mu.KLogging
-import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
@@ -106,26 +105,15 @@ class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperati
                     messageHashes.clear()
 
                     val decodedHeader = BlockHeaderData.fromBinary(headerOp.rawHeader)
-                    val witness = BaseBlockWitness.fromBytes(headerOp.rawWitness)
                     val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
-
-                    val peers = clusterManagement.getBlockchainPeers(BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight())
-
-                    if (!Validation.validateBlockSignatures(cryptoSystem, decodedHeader.getPreviousBlockRid(), headerOp.rawHeader, blockRid, peers.map { it.pubkey }, witness)) {
-                        logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
-                        return false
-                    }
-
-                    val icmfHeaderData = decodedHeader.getExtra()[ICMF_BLOCK_HEADER_EXTRA]
-                    if (icmfHeaderData == null) {
-                        logger.warn("$ICMF_BLOCK_HEADER_EXTRA block header extra data missing for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
-                        return false
-                    }
+                    val topicData = TopicHeaderData.extractTopicHeaderData(decodedHeader, headerOp.rawHeader, headerOp.rawWitness, blockRid, cryptoSystem, clusterManagement)
+                            ?: return false
 
                     currentHeaderData = HeaderValidationInfo(
                             decodedHeader.getHeight(),
                             decodedHeader.getBlockchainRid(),
-                            icmfHeaderData.asDict().mapValues { TopicHeaderData.fromGtv(it.value) })
+                            topicData
+                    )
                 }
 
                 MessageOp.OP_NAME -> {
@@ -211,10 +199,7 @@ class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperati
                 return false
             }
 
-            val computedHash = cryptoSystem.digest(hashes
-                    .fold(ByteArray(0)) { total, item ->
-                        total.plus(item)
-                    })
+            val computedHash = TopicHeaderData.calculateMessagesHash(hashes, cryptoSystem)
             if (!topicData.hash.contentEquals(computedHash)) {
                 logger.warn("invalid messages hash for topic: $topic")
                 return false

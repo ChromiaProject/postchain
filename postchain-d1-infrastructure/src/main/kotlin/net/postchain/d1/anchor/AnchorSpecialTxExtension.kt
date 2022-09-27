@@ -1,20 +1,22 @@
 package net.postchain.d1.anchor
 
 import mu.KLogging
+import net.postchain.base.BaseBlockWitness
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.ValidationResult
 import net.postchain.crypto.CryptoSystem
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvByteArray
-import net.postchain.gtv.GtvDecoder
+import net.postchain.d1.Validation
+import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -31,9 +33,12 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
     private val _relevantOps = setOf(OP_BLOCK_HEADER)
 
     val icmfReceiver = ClusterAnchorReceiver()
+    lateinit var clusterManagement: ClusterManagement
 
     /** This is for querying ourselves, i.e. the "anchor Rell app" */
     private lateinit var module: GTXModule
+
+    private lateinit var cryptoSystem: CryptoSystem
 
     override fun getRelevantOps() = _relevantOps
 
@@ -44,6 +49,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             cs: CryptoSystem
     ) {
         this.module = module
+        cryptoSystem = cs
     }
 
     /**
@@ -121,6 +127,14 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         return OpData(OP_BLOCK_HEADER, arrayOf(gtv(clusterAnchorPacket.blockRid), gtvHeader, gtvWitness))
     }
 
+
+    // TODO Validation discussions
+    // 1. Save time:
+    //    When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
+    //    (But when we are copying finished anchor block from another node we actually should validate)
+    // 2. In theory we cannot be certain about what [CryptoSystem] is used by the chain, so it should be taken from the
+    //    config too.
+
     /**
      * We look at the content of all operations (to check if the block headers are ok and nothing is missing)
      */
@@ -133,7 +147,22 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
 
         for (op in ops) {
             val anchorOpData = AnchorOpData.validateAndDecodeOpData(op) ?: return false
-            val bcRid = BlockchainRid(anchorOpData.headerData.getBlockchainRid())
+
+            val headerData = anchorOpData.headerData
+            val blockRid = headerData.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            if (!blockRid.contentEquals(anchorOpData.blockRid)) {
+                logger.warn("Invalid block-rid: ${anchorOpData.blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}, expected: ${blockRid.toHex()}")
+                return false
+            }
+
+            val witness = BaseBlockWitness.fromBytes(anchorOpData.witness)
+            val peers = clusterManagement.getBlockchainPeers(BlockchainRid(headerData.getBlockchainRid()), headerData.getHeight())
+            if (!Validation.validateBlockSignatures(cryptoSystem, headerData.getPreviousBlockRid(), GtvEncoder.encodeGtv(headerData.toGtv()), blockRid, peers.map { it.pubkey }, witness)) {
+                logger.warn("Invalid block header signature for block-rid: ${blockRid.toHex()} for blockchain-rid: ${headerData.getBlockchainRid().toHex()} at height: ${headerData.getHeight()}")
+                return false
+            }
+
+            val bcRid = BlockchainRid(headerData.getBlockchainRid())
             val newInfo = anchorOpData.toMinimalBlockHeaderInfo()
 
             val headers = chainHeadersMap.computeIfAbsent(bcRid) { mutableSetOf() }
@@ -151,7 +180,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             // and we pass that task to the [GenericBlockHeaderValidator]
             val validationResult = chainValidation(bctx, bcRid, minimalHeaders)
             if (validationResult.result != ValidationResult.Result.OK) {
-                logger.error(
+                logger.warn(
                         "Failing to anchor a block for blockchain ${bcRid.toHex()}. ${validationResult.message}"
                 )
                 return false
@@ -159,19 +188,6 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         }
         return true
     }
-
-    // TODO witness check
-    // 1. Save time:
-    //    When we are the primary, we are getting headers from our local machine, shouldn't need to check it (again).
-    //    (But when we are copying finished anchor block from another node we actually should validate,
-    //    but that's not here).
-    // 2. Tech issues:
-    //    The witness check is tricky b/c every chain we will validate must have its own instance of the
-    //    [BlockHeaderValidator], specific for the chain in question (b/c we cannot be certain of what signers
-    //    are relevant for the chain). ALSO!! We cannot just pick the latest configuration to get the signer list,
-    //    but we must take the configuration for the height in question!
-    // 3. In theory we cannot be certain about what [CryptoSystem] is used by the chain, so it should be taken from the
-    //    config too.
 
     /**
      * Checks all headers we have for specific chain
