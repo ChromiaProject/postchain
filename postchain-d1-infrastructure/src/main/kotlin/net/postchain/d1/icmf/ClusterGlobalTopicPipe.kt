@@ -110,7 +110,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
 
         for (header in signedBlockHeaderWithAnchorHeights) {
             val decodedHeader = BlockHeaderData.fromBinary(header.rawHeader)
-            val blockRid = header.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            val blockRid = decodedHeader.toGtv().merkleHash(GtvMerkleHashCalculator(cryptoSystem))
             val topicHeaderData = TopicHeaderData.extractTopicHeaderData(decodedHeader, header.rawHeader, header.rawWitness, blockRid, cryptoSystem, clusterManagement)
                     ?: return
 
