@@ -4,7 +4,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
-import net.postchain.d1.icmf.IcmfRemoteSpecialTxExtension.Companion.OP_ICMF_MESSAGE
+import net.postchain.d1.icmf.IcmfRemoteSpecialTxExtension.MessageOp
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.SimpleGTXModule
@@ -13,7 +13,7 @@ import org.apache.commons.dbutils.QueryRunner
 
 class IcmfReceiverTestGTXModule : SimpleGTXModule<Unit>(
         Unit,
-        mapOf(OP_ICMF_MESSAGE to ::IcmfMessageOp),
+        mapOf(MessageOp.OP_NAME to ::IcmfMessageOp),
         mapOf()
 ) {
 

@@ -1,8 +1,10 @@
 package net.postchain.d1.anchor
 
 import mu.KLogging
+import net.postchain.base.data.MinimalBlockHeaderInfo
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
+import net.postchain.core.BlockRid
 import net.postchain.gtx.data.OpData
 
 /**
@@ -53,5 +55,13 @@ data class AnchorOpData(
                 null // We don't really care what's wrong, just log it and return null
             }
         }
+
+    }
+
+    fun toMinimalBlockHeaderInfo(): MinimalBlockHeaderInfo {
+        val headerBlockRid = BlockRid(blockRid) // Another way to get BlockRid is to calculate it from the header
+        val headerPrevBlockRid = BlockRid(headerData.getPreviousBlockRid())
+        val newBlockHeight = headerData.getHeight()
+        return MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight)
     }
 }
