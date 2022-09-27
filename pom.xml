@@ -13,6 +13,7 @@
         <module>postchain-base</module>
         <module>postchain-devtools</module>
         <module>postchain-client</module>
+        <module>postchain-d1-infrastructure</module>
         <module>postchain-client-cli</module>
         <module>postchain-cli</module>
         <module>postchain-admin-service</module>

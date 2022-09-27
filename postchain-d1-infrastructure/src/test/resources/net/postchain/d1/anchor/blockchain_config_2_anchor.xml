@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Copyright (c) 2020 ChromaWay AB. See README for license information. -->
+
+<!--  =================================================================================
+This is a Anchor Chain configuration specifically for testing.
+
+ 1. On demand block building Strategy (enables us to tell the test when to build a new block)
+ 2. GTX BC config factory (must handle GTX TXs) // TODO: Olle don't know if really needed?
+ 3. Anchor module, which does everything we need around anchoring.
+================================================================================= -->
+<dict>
+    <entry key="blockstrategy">
+        <dict>
+            <entry key="name">
+                <!-- Needed for testing -->
+                <string>net.postchain.devtools.OnDemandBlockBuildingStrategy</string>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="configurationfactory">
+        <!-- Must use GTX since we need it -->
+        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+    </entry>
+    <entry key="icmflistener">
+        <string>10
+        </string> <!-- Anchor chain listens to messages from all chains with no number or lower number. This only works for managed mode, manual don't know about other chains. -->
+    </entry>
+    <entry key="signers">
+        <array>
+            <!-- Key0 -->
+            <bytea>03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070</bytea>
+            <!-- Key1 -->
+            <bytea>031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F</bytea>
+            <!-- Key2 -->
+            <bytea>03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94</bytea>
+        </array>
+    </entry>
+    <entry key="gtx">
+        <dict>
+            <entry key="modules">
+                <array>
+                    <!-- Note: we don't want GTXTestModule here, b/c we are not supposed to write any "normal" TXs -->
+                    <string>net.postchain.d1.anchor.AnchorGTXModule</string>
+                    <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
+                </array>
+            </entry>
+            <entry key="rell">
+                <dict>
+                    <entry key="modules">
+                        <array>
+                            <string>anchor</string>
+                        </array>
+                    </entry>
+                    <entry key="sources">
+                        <dict>
+                            <entry key="anchor/module.rell">
+                                <string><![CDATA[module;
+
+entity anchor_block {
+    key blockchain_rid: byte_array,
+        block_height: integer;
+    block_rid: byte_array;
+    block_header: byte_array;
+    witness: byte_array;
+}
+
+struct block_header {
+    blockchain_rid: byte_array;
+    previous_block_rid: byte_array;
+    merkle_root_hash: byte_array;
+    timestamp: integer;
+    height: integer;
+    dependencies: gtv; // Can be either GtvNull or GtvArray
+    extra: map<text,gtv>;
+}
+
+operation __anchor_block_header(block_rid: byte_array, header: gtv, witness: byte_array) {
+    val decoded_header = block_header.from_gtv(header);
+    create anchor_block(blockchain_rid = decoded_header.blockchain_rid, block_height = decoded_header.height, block_rid = block_rid, block_header = header.to_bytes(), witness = witness);
+
+    process_icmf(decoded_header);
+}
+
+query get_last_anchored_block(blockchain_rid: byte_array): struct<anchor_block>? {
+    return anchor_block @? { blockchain_rid } (@omit @sort_desc .block_height, $.to_struct()) limit 1;
+}
+
+query get_anchored_block_at_height(blockchain_rid: byte_array, height: integer): struct<anchor_block>? {
+    return anchor_block @? { blockchain_rid, .block_height == height } ($.to_struct());
+}
+
+entity icmf_messages_height {
+    key topic: text,
+        sender: byte_array,
+        sender_height: integer;
+    anchor_height: integer;
+    index topic, anchor_height;
+}
+
+struct signed_block_header_with_anchor_height {
+    block_header: byte_array;
+    witness: byte_array;
+    anchor_height: integer;
+}
+
+function process_icmf(header: block_header) {
+    val icmf_data = map<text,gtv>.from_gtv_pretty(header.extra["icmf_send"]);
+    for (topic in icmf_data.keys()) {
+        create icmf_messages_height(
+            topic = topic,
+            sender = header.blockchain_rid,
+            sender_height = header.height,
+            anchor_height = op_context.block_height
+        );
+    }
+}
+
+query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height> {
+    return (m: icmf_messages_height, a: anchor_block) @*
+        { a.blockchain_rid == m.sender, a.block_height == m.sender_height, topic, .anchor_height >= from_anchor_height, .anchor_height <= to_anchor_height }
+        (signed_block_header_with_anchor_height(block_header = a.block_header, witness = a.witness, anchor_height = m.anchor_height), @omit @sort m.rowid);
+}
+]]></string>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="version">
+                        <string>0.10.11</string>
+                    </entry>
+                </dict>
+            </entry>
+        </dict>
+    </entry>
+</dict>

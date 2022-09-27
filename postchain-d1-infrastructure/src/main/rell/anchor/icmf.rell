@@ -1,0 +1,31 @@
+entity icmf_messages_height {
+    key topic: text,
+        sender: byte_array,
+        sender_height: integer;
+    anchor_height: integer;
+    index topic, anchor_height;
+}
+
+struct signed_block_header_with_anchor_height {
+    block_header: byte_array;
+    witness: byte_array;
+    anchor_height: integer;
+}
+
+function process_icmf(header: block_header) {
+    val icmf_data = map<text,gtv>.from_gtv_pretty(header.extra["icmf_send"]);
+    for (topic in icmf_data.keys()) {
+        create icmf_messages_height(
+            topic = topic,
+            sender = header.blockchain_rid,
+            sender_height = header.height,
+            anchor_height = op_context.block_height
+        );
+    }
+}
+
+query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height> {
+    return (m: icmf_messages_height, a: anchor_block) @*
+        { a.blockchain_rid == m.sender, a.block_height == m.sender_height, topic, .anchor_height >= from_anchor_height, .anchor_height <= to_anchor_height }
+        (signed_block_header_with_anchor_height(block_header = a.block_header, witness = a.witness, anchor_height = m.anchor_height), @omit @sort m.rowid);
+}

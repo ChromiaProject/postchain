@@ -1,0 +1,28 @@
+module;
+
+@log
+entity sent_icmf_message {
+    topic: text;
+    block_height: integer;
+    body: byte_array;
+    index topic, block_height;
+}
+
+query icmf_get_all_messages(topic: text, height: integer): list<gtv> {
+    return sent_icmf_message @* { topic, .block_height >= height } ( gtv.from_bytes(.body), @omit @sort .rowid );
+}
+
+query icmf_get_messages(topic: text, height: integer): list<gtv> {
+    return sent_icmf_message @* { topic, .block_height == height } ( gtv.from_bytes(.body), @omit @sort .rowid );
+}
+
+function send_message(topic: text, body: gtv) {
+    create sent_icmf_message(
+        topic = topic,
+        block_height = op_context.block_height,
+        body = body.to_bytes()
+    );
+
+    val previous_message_block_height = sent_icmf_message @? { topic, .block_height < op_context.block_height } ( @max .block_height ) ?: -1;
+    op_context.emit_event("icmf_message", (topic = topic, body = body, previous_message_block_height = previous_message_block_height).to_gtv_pretty());
+}
