@@ -10,6 +10,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientProvider
@@ -21,12 +22,14 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.CryptoSystem
 import net.postchain.d1.cluster.ClusterManagement
+import net.postchain.d1.cluster.D1PeerInfo
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.io.IOException
+import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ConcurrentSkipListMap
@@ -71,14 +74,15 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
         }
     }
 
-    private fun fetchMessages() {
+    private suspend fun fetchMessages() {
         val cluster = clusterManagement.getClusterInfo(clusterName)
 
         // TODO use net.postchain.client.chromia.ChromiaClientProvider
         val anchoringClient = postchainClientProvider.createClient(
                 PostchainClientConfig(
-                        cluster.anchoringChain,
-                        EndpointPool.default(cluster.peers.map { it.restApiUrl })
+                        blockchainRid = cluster.anchoringChain,
+                        endpointPool = EndpointPool.default(cluster.peers.map { it.restApiUrl }),
+                        failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO)
                 )
         )
 
@@ -120,37 +124,9 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                 return
             }
 
-            // TODO use net.postchain.client.chromia.ChromiaClientProvider
-            val client = postchainClientProvider.createClient(
-                    PostchainClientConfig(
-                            BlockchainRid(decodedHeader.getBlockchainRid()),
-                            EndpointPool.default(cluster.peers.map { it.restApiUrl })
-                    )
-            )
-            val bodies = try {
-                client.getMessages(route.topic, decodedHeader.getHeight())
-            } catch (e: Exception) {
-                when (e) {
-                    is UserMistake, is IOException -> {
-                        if (!clusterManagement.getActiveBlockchains(clusterName).contains(BlockchainRid(decodedHeader.getBlockchainRid()))) {
-                            // chain is permanently stopped
-                            logger.info("Blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} is permanently stopped: ${e.message}")
-                            continue
-                        }
-                        logger.warn(
-                                "Unable to query blockchain with blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} for messages: ${e.message}",
-                                e
-                        )
-                        return
-                    }
+            val bodies = fetchMessageBodies(cluster.peers, BlockchainRid(decodedHeader.getBlockchainRid()), decodedHeader.getHeight(), topicData.hash)
 
-                    else -> throw e
-                }
-            }
-
-            val computedHash = TopicHeaderData.calculateMessagesHash(bodies.map { cryptoSystem.digest(GtvEncoder.encodeGtv(it)) }, cryptoSystem)
-
-            if (topicData.hash.contentEquals(computedHash)) {
+            if (bodies.isNotEmpty()) {
                 currentPackets.add(
                         IcmfPacket(
                                 height = decodedHeader.getHeight(),
@@ -163,11 +139,8 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                                 bodies = bodies
                         )
                 )
-                lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid())] = decodedHeader.getHeight()
-            } else {
-                logger.warn("invalid messages hash for block-rid: ${blockRid.toHex()} for blockchain-rid: ${decodedHeader.getBlockchainRid().toHex()} at height: ${decodedHeader.getHeight()}")
-                return // TODO Should we retry fetching of messages from another node?
             }
+            lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid())] = decodedHeader.getHeight()
         }
 
         val packetsSizeBytes = currentPackets.sumOf { it.bodies.sumOf { body -> GtvEncoder.encodeGtv(body).size } }
@@ -178,6 +151,51 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
             lastAnchorHeight.set(currentAnchorHeight)
         } else {
             logger.info("pipe reached max capacity $maxQueueSizeBytes bytes")
+        }
+    }
+
+    private suspend fun fetchMessageBodies(peers: Collection<D1PeerInfo>, blockchainRid: BlockchainRid, height: Long, expectedMessagesHash: ByteArray): List<Gtv> {
+        // TODO use net.postchain.client.chromia.ChromiaClientProvider
+        val client = postchainClientProvider.createClient(
+                PostchainClientConfig(
+                        blockchainRid = blockchainRid,
+                        endpointPool = EndpointPool.default(peers.map { it.restApiUrl }),
+                        failOverConfig = FailOverConfig(attemptsPerEndpoint = 1, attemptInterval = Duration.ZERO)
+                )
+        )
+
+        while (true) {
+            logger.info("Fetching messages from ${blockchainRid.toHex()} at height $height")
+            val bodies = try {
+                client.getMessages(route.topic, height)
+            } catch (e: Exception) {
+                when (e) {
+                    is UserMistake, is IOException -> {
+                        if (!clusterManagement.getActiveBlockchains(clusterName).contains(blockchainRid)) {
+                            // chain is permanently stopped
+                            logger.info("Blockchain with blockchain-rid: ${blockchainRid.toHex()} is permanently stopped: ${e.message}")
+                            return emptyList()
+                        }
+                        logger.warn(
+                                "Unable to query blockchain with blockchain-rid: ${blockchainRid.toHex()} for messages: ${e.message}, will retry after $pollInterval",
+                                e
+                        )
+                        delay(pollInterval)
+                        continue
+                    }
+
+                    else -> throw e
+                }
+            }
+
+            val computedHash = TopicHeaderData.calculateMessagesHash(bodies.map { cryptoSystem.digest(GtvEncoder.encodeGtv(it)) }, cryptoSystem)
+
+            if (!expectedMessagesHash.contentEquals(computedHash)) {
+                logger.warn("invalid messages hash for blockchain-rid: ${blockchainRid.toHex()} at height: $height, will retry after $pollInterval")
+                delay(pollInterval)
+            } else {
+                return bodies
+            }
         }
     }
 
