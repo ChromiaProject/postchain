@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import mu.KLogging
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
@@ -85,18 +86,8 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
 
         val currentPackets = mutableListOf<IcmfPacket>()
 
-        // query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height>
         val signedBlockHeaderWithAnchorHeights = try {
-            anchoringClient.querySync(
-                    "icmf_get_headers_with_messages_between_heights",
-                    gtv(
-                            mapOf(
-                                    "topic" to gtv(route.topic),
-                                    "from_anchor_height" to gtv(lastAnchorHeight.get() + 1),
-                                    "to_anchor_height" to gtv(currentAnchorHeight)
-                            )
-                    )
-            ).asArray().map { SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
+            anchoringClient.getHeadersWithMessagesBetweenHeights(route.topic, lastAnchorHeight.get() + 1, currentAnchorHeight)
         } catch (e: Exception) {
             when (e) {
                 is UserMistake, is IOException -> {
@@ -136,12 +127,8 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                             EndpointPool.default(cluster.peers.map { it.restApiUrl })
                     )
             )
-            // query icmf_get_messages(topic: text, height: integer): list<gtv>
             val bodies = try {
-                client.querySync(
-                        "icmf_get_messages",
-                        gtv(mapOf("topic" to gtv(route.topic), "height" to gtv(decodedHeader.getHeight())))
-                ).asArray()
+                client.getMessages(route.topic, decodedHeader.getHeight())
             } catch (e: Exception) {
                 when (e) {
                     is UserMistake, is IOException -> {
@@ -173,7 +160,7 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
                                 rawHeader = header.rawHeader,
                                 rawWitness = header.rawWitness,
                                 prevMessageBlockHeight = topicData.prevMessageBlockHeight,
-                                bodies = bodies.asList()
+                                bodies = bodies
                         )
                 )
                 lastMessageHeights[BlockchainRid(decodedHeader.getPreviousBlockRid())] = decodedHeader.getHeight()
@@ -233,3 +220,27 @@ class ClusterGlobalTopicPipe(override val route: GlobalTopicRoute,
         }
     }
 }
+
+/**
+ * query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height>
+ */
+fun PostchainClient.getHeadersWithMessagesBetweenHeights(topic: String, fromAnchorHeight: Long, toAnchorHeight: Long): List<ClusterGlobalTopicPipe.SignedBlockHeaderWithAnchorHeight> =
+        querySync(
+                "icmf_get_headers_with_messages_between_heights",
+                gtv(
+                        mapOf(
+                                "topic" to gtv(topic),
+                                "from_anchor_height" to gtv(fromAnchorHeight),
+                                "to_anchor_height" to gtv(toAnchorHeight)
+                        )
+                )
+        ).asArray().map { ClusterGlobalTopicPipe.SignedBlockHeaderWithAnchorHeight.fromGtv(it) }
+
+/**
+ * query icmf_get_messages(topic: text, height: integer): list<gtv>
+ */
+fun PostchainClient.getMessages(topic: String, height: Long): List<Gtv> =
+        querySync(
+                "icmf_get_messages",
+                gtv(mapOf("topic" to gtv(topic), "height" to gtv(height)))
+        ).asArray().toList()
