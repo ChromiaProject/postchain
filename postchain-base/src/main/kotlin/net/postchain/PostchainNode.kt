@@ -19,7 +19,6 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.gtv.Gtv
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import net.postchain.metrics.initMetrics
@@ -52,10 +51,10 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
 
-        val chain0QueryProvider = object : () -> ((String, Gtv) -> Gtv)?, BlockchainProcessManagerHolder {
+        val chain0QueryProvider = object : () -> Query?, BlockchainProcessManagerHolder {
             override lateinit var myProcessManager: BlockchainProcessManager
 
-            override operator fun invoke(): ((String, Gtv) -> Gtv)? {
+            override operator fun invoke(): Query? {
                 val blockQueries = myProcessManager.retrieveChain0()?.blockchainEngine?.getBlockQueries()
                 return if (blockQueries != null) {
                     { name, args -> blockQueries.query(name, args).get() }
