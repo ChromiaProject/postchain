@@ -453,4 +453,6 @@ open class ManagedBlockchainProcessManager(
             logger.debug("retrieveBlockchainsToLaunch() -- $str ")
         }
     }
+
+    override fun retrieveChain0(): BlockchainProcess? = retrieveBlockchain(CHAIN0)
 }

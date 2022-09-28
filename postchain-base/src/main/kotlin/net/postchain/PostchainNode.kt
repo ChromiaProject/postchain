@@ -19,6 +19,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.gtv.Gtv
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import net.postchain.metrics.initMetrics
@@ -51,16 +52,30 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
 
+        val chain0QueryProvider = object : () -> ((String, Gtv) -> Gtv)?, BlockchainProcessManagerHolder {
+            override lateinit var myProcessManager: BlockchainProcessManager
+
+            override operator fun invoke(): ((String, Gtv) -> Gtv)? {
+                val blockQueries = myProcessManager.retrieveChain0()?.blockchainEngine?.getBlockQueries()
+                return if (blockQueries != null) {
+                    { name, args -> blockQueries.query(name, args).get() }
+                } else {
+                    null
+                }
+            }
+        }
         postchainContext = PostchainContext(
                 appConfig,
                 NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
-                if (debug) DefaultNodeDiagnosticContext() else null
+                if (debug) DefaultNodeDiagnosticContext() else null,
+                chain0QueryProvider
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
+        chain0QueryProvider.myProcessManager = processManager
 
         postchainContext.nodeDiagnosticContext?.apply {
             addProperty(DiagnosticProperty.VERSION, getVersion())
@@ -142,5 +157,9 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
 
     private fun getVersion(): String {
         return javaClass.getPackage()?.implementationVersion ?: "null"
+    }
+
+    interface BlockchainProcessManagerHolder {
+        var myProcessManager: BlockchainProcessManager
     }
 }

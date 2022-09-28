@@ -191,6 +191,8 @@ open class BaseBlockchainProcessManager(
         return blockchainProcesses[chainId]
     }
 
+    override fun retrieveChain0(): BlockchainProcess? = null
+
     /**
      * Will call "shutdown()" on the [BlockchainProcess] and remove it from the list.
      *
