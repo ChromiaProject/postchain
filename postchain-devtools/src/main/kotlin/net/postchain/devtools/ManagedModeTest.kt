@@ -4,7 +4,9 @@ import mu.KLogging
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.*
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.NODE_ID_AUTO
+import net.postchain.crypto.SigMaker
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.mminfra.*
 import net.postchain.devtools.utils.ChainUtil
@@ -14,6 +16,7 @@ import net.postchain.gtv.*
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
+import net.postchain.managed.ManagedBlockchainConfigurationFactory
 import java.lang.Thread.sleep
 
 /**
@@ -83,21 +86,9 @@ open class ManagedModeTest : AbstractSyncTest() {
                     GtvString(StandardOpsGTXModule::class.java.name))
             ))
             data.setValue(KEY_GTX, GtvFactory.gtv(gtx))
-
-            val pubkey = if (nodeSet.chain == 0L) {
-                if (it.key < nodeSet.signers.size) {
-                    KeyPairHelper.pubKey(it.key)
-                } else {
-                    KeyPairHelper.pubKey(-1 - it.key)
-                }
-            } else {
-                nodes[it.key].pubKey.hexStringToByteArray()
-            }
+            val (pubkey, sigMaker) = createSigMaker(nodeSet, it.key)
 
             val context = BaseBlockchainContext(brid, NODE_ID_AUTO, nodeSet.chain, pubkey)
-
-            val privkey = KeyPairHelper.privKey(pubkey)
-            val sigMaker = cryptoSystem.buildSigMaker(pubkey, privkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>(mapOf("partialContext" to context, "sigmaker" to sigMaker))
             val bcConf = TestBlockchainConfiguration(confData)
             it.value.addConf(brid, height, bcConf, nodeSet, GtvEncoder.encodeGtv(data.getDict()))
@@ -117,13 +108,6 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     open fun createMockDataSource(nodeIndex: Int): MockManagedNodeDataSource {
         return MockManagedNodeDataSource(nodeIndex)
-    }
-
-    fun newBlockchainConfiguration(nodeSet: NodeSet, historicChain: Long?, height: Long, excludeChain0Nodes: Set<Int> = setOf()) {
-        addBlockchainConfiguration(nodeSet, historicChain, height)
-        // We need to build a block on c0 to trigger c0's restartHandler, otherwise
-        // the node manager won't become aware of the new configuration
-        buildBlock(c0.remove(excludeChain0Nodes))
     }
 
     protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
@@ -190,7 +174,9 @@ open class ManagedModeTest : AbstractSyncTest() {
             replicas: Set<Int>,
             historicChain: Long? = null,
             excludeChain0Nodes: Set<Int> = setOf(),
-            waitForRestart: Boolean = true
+            waitForRestart: Boolean = true,
+            rawBlockchainConfiguration: ByteArray? = null,
+            blockchainConfigurationFactory: BlockchainConfigurationFactory? = null
     ): NodeSet {
         if (signers.intersect(replicas).isNotEmpty()) throw IllegalArgumentException("a node cannot be both signer and replica")
         val maxIndex = c0.all().size
@@ -201,11 +187,41 @@ open class ManagedModeTest : AbstractSyncTest() {
             if (it >= maxIndex) throw IllegalArgumentException("bad replica index")
         }
         val c = NodeSet(chainId++, signers, replicas)
-        newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
+        if (rawBlockchainConfiguration != null) {
+            val brid = ChainUtil.ridOf(c.chain)
+            mockDataSources.forEach { (nodeId, dataSource) ->
+                val (pubkey, sigMaker) = createSigMaker(c, nodeId)
+
+                val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, c.chain, pubkey, sigMaker)
+                val bcFactory = blockchainConfigurationFactory ?: ManagedBlockchainConfigurationFactory(dataSource)
+                dataSource.addConf(brid, 0, bcFactory.makeBlockchainConfiguration(bcConf), c, rawBlockchainConfiguration)
+            }
+        } else {
+            addBlockchainConfiguration(c, historicChain, 0)
+        }
+        // We need to build a block on c0 to trigger c0's restartHandler, otherwise
+        // the node manager won't become aware of the new configuration
+        buildBlock(c0.remove(excludeChain0Nodes))
         // Await blockchain started on all relevant nodes
         if (waitForRestart)
             awaitChainRestarted(c, -1)
         return c
+    }
+
+    private fun createSigMaker(c: NodeSet, nodeId: Int): Pair<ByteArray, SigMaker> {
+        val pubkey = if (c.chain == 0L) {
+            if (nodeId < c.signers.size) {
+                KeyPairHelper.pubKey(nodeId)
+            } else {
+                KeyPairHelper.pubKey(-1 - nodeId)
+            }
+        } else {
+            nodes[nodeId].pubKey.hexStringToByteArray()
+        }
+
+        val privkey = KeyPairHelper.privKey(pubkey)
+        val sigMaker = cryptoSystem.buildSigMaker(pubkey, privkey)
+        return Pair(pubkey, sigMaker)
     }
 }
 

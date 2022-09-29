@@ -5,14 +5,15 @@ import net.postchain.base.withReadConnection
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
+import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
 import net.postchain.devtools.testinfra.TestTransaction
-import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
-import net.postchain.devtools.utils.configuration.SystemSetup
+import net.postchain.devtools.utils.ChainUtil
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
@@ -20,28 +21,27 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-private const val CHAIN_ID = 1
-
-class IcmfSenderIT : GtxTxIntegrationTestSetup() {
+class IcmfSenderIT : ManagedModeTest() {
 
     @Test
     fun icmfHappyPath() {
-        val mapBcFiles: Map<Int, String> = mapOf(
-                CHAIN_ID to "/net/postchain/d1/icmf/sender/blockchain_config_1.xml",
-        )
+        startManagedSystem(3, 0)
 
-        val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText())
 
-        runXNodes(sysSetup)
+        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
+                blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
 
         buildBlock(
-                CHAIN_ID.toLong(), 0, makeTransaction(nodes[0], 0, GtxOp("test_message", gtv("test0"))),
-                makeTransaction(nodes[0], 1, GtxOp("test_message", gtv("test1")))
+                dappChain.chain, 0, makeTransaction(dappChain.nodes()[0], dappChain.chain, 0, GtxOp("test_message", gtv("test0"))),
+                makeTransaction(dappChain.nodes()[0], dappChain.chain, 1, GtxOp("test_message", gtv("test1")))
         )
 
-        for (node in nodes) {
-            withReadConnection(node.postchainContext.storage, CHAIN_ID.toLong()) {
-                val blockQueries = node.getBlockchainInstance(CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
+        for (node in dappChain.nodes()) {
+            withReadConnection(node.postchainContext.storage, dappChain.chain) {
+                val blockQueries = node.getBlockchainInstance(dappChain.chain).blockchainEngine.getBlockQueries()
                 val blockRid = blockQueries.getBlockRid(0).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
                 val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
@@ -60,13 +60,13 @@ class IcmfSenderIT : GtxTxIntegrationTestSetup() {
                 assertEquals(-1, topicHeader["prev_message_block_height"]!!.asInteger())
 
                 val allMessages =
-                        query(node, it, "icmf_get_all_messages", gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
+                        query(node, it, dappChain.chain, "icmf_get_all_messages", gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
                 assertEquals(2, allMessages.asArray().size)
                 assertEquals("test0", allMessages.asArray()[0].asString())
                 assertEquals("test1", allMessages.asArray()[1].asString())
 
                 val messages =
-                        query(node, it, "icmf_get_messages", gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
+                        query(node, it, dappChain.chain, "icmf_get_messages", gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
                 assertEquals(2, messages.asArray().size)
                 assertEquals("test0", messages.asArray()[0].asString())
                 assertEquals("test1", messages.asArray()[1].asString())
@@ -74,17 +74,17 @@ class IcmfSenderIT : GtxTxIntegrationTestSetup() {
         }
     }
 
-    private fun query(node: PostchainTestNode, ctxt: EContext, name: String, args: Gtv): Gtv =
-            node.getModules(CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!.query(ctxt, name, args)
+    private fun query(node: PostchainTestNode, ctxt: EContext, chainId: Long, name: String, args: Gtv): Gtv =
+            node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.query(ctxt, name, args)
 
-    private fun makeTransaction(node: PostchainTestNode, id: Int, op: GtxOp) =
+    private fun makeTransaction(node: PostchainTestNode, chainId: Long, id: Int, op: GtxOp) =
             IcmfTestTransaction(
                     id,
-                    node.getModules(CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
+                    node.getModules(chainId).find { it.javaClass.simpleName.startsWith("Rell") }!!.makeTransactor(
                             ExtOpData.build(
                                     op,
                                     0,
-                                    GtxBody(node.getBlockchainRid(CHAIN_ID.toLong())!!, arrayOf(op), arrayOf())
+                                    GtxBody(ChainUtil.ridOf(chainId), arrayOf(op), arrayOf())
                             )
                     )
             )

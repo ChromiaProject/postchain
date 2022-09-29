@@ -11,7 +11,7 @@
         </dict>
     </entry>
     <entry key="configurationfactory">
-        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+        <string>NOT_USED</string>
     </entry>
     <entry key="signers">
         <array>

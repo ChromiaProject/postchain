@@ -11,7 +11,7 @@ import net.postchain.devtools.MockBlockchainConfigurationProvider
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 
-class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
+open class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
     lateinit var nodeConfig: NodeConfig
     lateinit var dataSource: MockManagedNodeDataSource
     override fun makeProcessManager(

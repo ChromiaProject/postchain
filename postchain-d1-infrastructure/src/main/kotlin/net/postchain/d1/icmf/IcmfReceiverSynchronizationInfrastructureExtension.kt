@@ -7,8 +7,8 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.DirectoryClusterManagement
-import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXBlockchainConfiguration
+import net.postchain.managed.ManagedBlockchainConfiguration
 
 open class IcmfReceiverSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
     private val receivers = mutableMapOf<Long, GlobalTopicIcmfReceiver>()
@@ -17,10 +17,10 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
         val configuration = engine.getConfiguration()
-        if (configuration is GTXBlockchainConfiguration) {
+        if (configuration is ManagedBlockchainConfiguration) {
             getIcmfRemoteSpecialTxExtension(configuration)?.let { txExt ->
                 val topics = configuration.configData.rawConfig["icmf"]!!["receiver"]!!["topics"]!!.asArray().map { it.asString() }
-                val clusterManagement = createClusterManagement()
+                val clusterManagement = createClusterManagement(configuration)
                 val receiver = GlobalTopicIcmfReceiver(topics,
                         configuration.cryptoSystem,
                         engine.storage,
@@ -38,7 +38,8 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
     open fun createClientProvider(): PostchainClientProvider = ConcretePostchainClientProvider()
 
-    open fun createClusterManagement(): ClusterManagement = DirectoryClusterManagement { name, args -> GtvNull } // TODO createClusterManagement
+    open fun createClusterManagement(configuration: ManagedBlockchainConfiguration): ClusterManagement =
+            DirectoryClusterManagement(configuration.dataSource::query)
 
     override fun disconnectProcess(process: BlockchainProcess) {
         receivers.remove(process.blockchainEngine.getConfiguration().chainID)?.shutdown()
