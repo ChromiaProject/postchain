@@ -1,4 +1,4 @@
-package net.postchain.managed.bcconfig
+package net.postchain.managed.config
 
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.config.app.AppConfig

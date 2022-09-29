@@ -7,14 +7,15 @@ import net.postchain.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
-import net.postchain.managed.bcconfig.Chain0BlockchainConfigurationFactory
-import net.postchain.managed.bcconfig.ManagedBlockchainConfiguration
-import net.postchain.managed.bcconfig.ManagedBlockchainConfigurationFactory
+import net.postchain.managed.config.Chain0BlockchainConfiguration
+import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
+import net.postchain.managed.config.ManagedBlockchainConfigurationFactory
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -71,11 +72,13 @@ open class ManagedBlockchainProcessManager(
 
     override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
         return super.makeBlockchainConfiguration(chainId).also {
-            initManagedEnvironment(it as ManagedBlockchainConfiguration)
+            if (chainId == CHAIN0) {
+                initManagedEnvironment(it as Chain0BlockchainConfiguration)
+            }
         }
     }
 
-    protected open fun initManagedEnvironment(blockchainConfig: ManagedBlockchainConfiguration) {
+    protected open fun initManagedEnvironment(blockchainConfig: Chain0BlockchainConfiguration) {
         dataSource = blockchainConfig.dataSource
         peerListVersion = dataSource.getPeerListVersion()
 
@@ -97,7 +100,11 @@ open class ManagedBlockchainProcessManager(
                     Chain0BlockchainConfigurationFactory(appConfig)
                 chainId != CHAIN0 && factoryName == ManagedBlockchainConfigurationFactory::class.qualifiedName ->
                     ManagedBlockchainConfigurationFactory(dataSource)
-                else -> super.getBlockchainConfigurationFactory(chainId)(factoryName)
+                else -> {
+                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                            "due to configuration is wrong. Check /configurationfactory value: $factoryName")
+                }
+//                else -> super.getBlockchainConfigurationFactory(chainId)(factoryName)
             }
         }
     }
