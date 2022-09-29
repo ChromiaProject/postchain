@@ -96,7 +96,7 @@ open class ManagedBlockchainProcessManager(
 
         } catch (e: Exception) {
             // TODO: [POS-90]: Improve error handling here
-            logger.error { e.message }
+            logger.error(e.message, e)
         }
     }
 

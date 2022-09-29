@@ -35,7 +35,6 @@
                 <array>
                     <string>net.postchain.configurations.GTXTestModule</string> <!-- Normal GTX test TXs will do -->
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
-                    <string>net.postchain.d1.anchor.AnchorSenderTestGTXModule</string>
                 </array>
             </entry>
         </dict>

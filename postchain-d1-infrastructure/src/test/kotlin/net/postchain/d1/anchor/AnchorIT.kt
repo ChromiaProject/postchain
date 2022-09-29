@@ -46,6 +46,7 @@ class AnchorIT : GtxTxIntegrationTestSetup() {
     @Test
     fun happyAnchor() {
         val mapBcFiles: Map<Int, String> = mapOf(
+                0 to "/net/postchain/d1/blockchain_config_0.xml",
                 DAPP_CHAIN_ID to "/net/postchain/d1/anchor/blockchain_config_1.xml",
                 ANCHOR_CHAIN_ID to "/net/postchain/d1/anchor/blockchain_config_2_anchor.xml"
         )

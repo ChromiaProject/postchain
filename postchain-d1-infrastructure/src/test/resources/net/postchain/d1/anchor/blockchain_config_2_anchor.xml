@@ -18,8 +18,7 @@ This is a Anchor Chain configuration specifically for testing.
         </dict>
     </entry>
     <entry key="configurationfactory">
-        <!-- Must use GTX since we need it -->
-        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+        <string>net.postchain.managed.ManagedBlockchainConfigurationFactory</string>
     </entry>
     <entry key="signers">
         <array>
