@@ -30,7 +30,9 @@ class IcmfSenderIT : ManagedModeTest() {
         val dappGtvConfig = GtvMLParser.parseGtvML(
                 javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText())
 
-        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig), blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
+        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(),
+                rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
+                blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
 
         buildBlock(
                 dappChain.chain, 0, makeTransaction(dappChain.nodes()[0], dappChain.chain, 0, GtxOp("test_message", gtv("test0"))),
