@@ -12,9 +12,10 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
+import net.postchain.gtx.GTXBlockchainConfiguration
+import net.postchain.gtx.GTXModule
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -105,7 +106,7 @@ open class ManagedBlockchainProcessManager(
         val storage = StorageBuilder.buildStorage(
                 postchainContext.appConfig)
 
-        val blockQueries = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
+        val gtxModule = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
             val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(ctx0, CHAIN0)
                     ?: throw ProgrammerMistake("chain0 configuration not found")
 
@@ -113,14 +114,14 @@ open class ManagedBlockchainProcessManager(
                     configuration, ctx0, NODE_ID_AUTO, CHAIN0, getBlockchainConfigurationFactory()
             )
 
-            blockchainConfig.makeBlockQueries(storage)
+            (blockchainConfig as GTXBlockchainConfiguration).module
         }
 
-        return createDataSource(blockQueries)
+        return createDataSource(gtxModule)
     }
 
-    protected open fun createDataSource(blockQueries: BlockQueries) =
-            BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
+    protected open fun createDataSource(gtxModule: GTXModule) =
+            BaseManagedNodeDataSource(gtxModule, postchainContext.appConfig)
 
     override fun getBlockchainConfigurationFactory(): (String) -> BlockchainConfigurationFactory {
         return { factoryName ->

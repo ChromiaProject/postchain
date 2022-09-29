@@ -23,10 +23,10 @@ import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
-import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.gtx.GTXModule
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
@@ -58,7 +58,8 @@ open class ContainerManagedBlockchainProcessManager(
         stopRunningContainersIfExist()
     }
 
-    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, appConfig, containerNodeConfig)
+    override fun createDataSource(gtxModule: GTXModule) =
+            BaseDirectoryDataSource(gtxModule, appConfig, containerNodeConfig)
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         return { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
