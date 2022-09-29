@@ -110,7 +110,8 @@ open class ManagedBlockchainProcessManager(
                     ?: throw ProgrammerMistake("chain0 configuration not found")
 
             val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                    configuration, ctx0, NODE_ID_AUTO, CHAIN0)
+                    configuration, ctx0, NODE_ID_AUTO, CHAIN0, getBlockchainConfigurationFactory()
+            )
 
             blockchainConfig.makeBlockQueries(storage)
         }
@@ -120,6 +121,16 @@ open class ManagedBlockchainProcessManager(
 
     protected open fun createDataSource(blockQueries: BlockQueries) =
             BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
+
+    override fun getBlockchainConfigurationFactory(): (String) -> BlockchainConfigurationFactory {
+        return { factoryName ->
+            if (factoryName == ManagedBlockchainConfigurationFactory::class.qualifiedName) {
+                ManagedBlockchainConfigurationFactory(dataSource)
+            } else {
+                super.getBlockchainConfigurationFactory()(factoryName)
+            }
+        }
+    }
 
     override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
         return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {
