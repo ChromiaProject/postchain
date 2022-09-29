@@ -15,7 +15,6 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
-import net.postchain.managed.gtx.ManagedBlockchainConfigurationFactory
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically

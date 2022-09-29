@@ -1,9 +1,8 @@
-package net.postchain.managed.gtx
+package net.postchain.managed
 
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
-import net.postchain.managed.ManagedNodeDataSource
 
 class ManagedBlockchainConfigurationFactory(val managedDataSource: ManagedNodeDataSource) : GTXBlockchainConfigurationFactory() {
 
