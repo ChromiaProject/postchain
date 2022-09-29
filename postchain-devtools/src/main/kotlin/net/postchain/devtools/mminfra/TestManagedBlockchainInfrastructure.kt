@@ -17,6 +17,6 @@ class TestManagedBlockchainInfrastructure(
             chainId: Long,
             bcConfigurationFactory: (String) -> BlockchainConfigurationFactory,
     ): BlockchainConfiguration {
-        return mockDataSource.getBuiltConfiguration(chainId, rawConfigurationData)
+        return mockDataSource.getBuiltConfiguration(chainId, rawConfigurationData).apply { initializeDB(eContext) }
     }
 }
