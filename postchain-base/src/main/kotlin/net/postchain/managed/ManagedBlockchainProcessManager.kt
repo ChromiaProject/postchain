@@ -95,16 +95,20 @@ open class ManagedBlockchainProcessManager(
 
     override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
         return { factoryName ->
+
+            val chain0BcCfgFactory = Chain0BlockchainConfigurationFactory::class.qualifiedName
+            val chainXBcCfgFactory = ManagedBlockchainConfigurationFactory::class.qualifiedName
+
             when {
-                chainId == CHAIN0 && factoryName == Chain0BlockchainConfigurationFactory::class.qualifiedName ->
+                chainId == CHAIN0 && factoryName == chain0BcCfgFactory ->
                     Chain0BlockchainConfigurationFactory(appConfig)
-                chainId != CHAIN0 && factoryName == ManagedBlockchainConfigurationFactory::class.qualifiedName ->
+                chainId != CHAIN0 && factoryName == chainXBcCfgFactory ->
                     ManagedBlockchainConfigurationFactory(dataSource)
                 else -> {
                     throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
-                            "due to configuration is wrong. Check /configurationfactory value: $factoryName")
+                            "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
+                            "Use $chain0BcCfgFactory for chain0 and $chainXBcCfgFactory for other chains.")
                 }
-//                else -> super.getBlockchainConfigurationFactory(chainId)(factoryName)
             }
         }
     }

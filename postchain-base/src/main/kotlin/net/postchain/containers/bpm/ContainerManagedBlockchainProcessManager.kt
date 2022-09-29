@@ -8,6 +8,7 @@ import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
@@ -59,10 +60,15 @@ open class ContainerManagedBlockchainProcessManager(
 
     override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
         return { factoryName ->
+            val chain0BcCfgFactory = ContainerChain0BlockchainConfigurationFactory::class.qualifiedName
             when {
-                chainId == CHAIN0 && factoryName == ContainerChain0BlockchainConfigurationFactory::class.qualifiedName ->
+                chainId == CHAIN0 && factoryName == chain0BcCfgFactory ->
                     ContainerChain0BlockchainConfigurationFactory(appConfig, containerNodeConfig)
-                else -> super.getBlockchainConfigurationFactory(chainId)(factoryName)
+                else -> {
+                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                            "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
+                            "Use $chain0BcCfgFactory for chain0.")
+                }
             }
         }
     }
