@@ -11,6 +11,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
+import net.postchain.containers.bpm.bcconfig.ContainerChain0BlockchainConfigurationFactory
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.docker.DockerTools.containerName
 import net.postchain.containers.bpm.docker.DockerTools.findHostPorts
@@ -23,11 +24,10 @@ import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
+import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.gtx.GTXModule
-import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
 
@@ -53,13 +53,19 @@ open class ContainerManagedBlockchainProcessManager(
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
 
-    override fun initManagedEnvironment() {
-        super.initManagedEnvironment()
+    init {
         stopRunningContainersIfExist()
     }
 
-    override fun createDataSource(gtxModule: GTXModule) =
-            BaseDirectoryDataSource(gtxModule, appConfig, containerNodeConfig)
+    override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
+        return { factoryName ->
+            when {
+                chainId == CHAIN0 && factoryName == ContainerChain0BlockchainConfigurationFactory::class.qualifiedName ->
+                    ContainerChain0BlockchainConfigurationFactory(appConfig, containerNodeConfig)
+                else -> super.getBlockchainConfigurationFactory(chainId)(factoryName)
+            }
+        }
+    }
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         return { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
