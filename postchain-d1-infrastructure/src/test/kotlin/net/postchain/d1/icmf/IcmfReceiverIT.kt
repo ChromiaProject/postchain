@@ -7,11 +7,11 @@ import net.postchain.base.withReadConnection
 import net.postchain.client.core.PostchainClient
 import net.postchain.common.BlockchainRid
 import net.postchain.d1.icmf.IcmfReceiverTestGTXModule.Companion.testMessageTable
-import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
-import net.postchain.devtools.utils.configuration.SystemSetup
+import net.postchain.devtools.ManagedModeTest
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import org.apache.commons.dbutils.QueryRunner
@@ -23,9 +23,7 @@ import org.mockito.kotlin.mock
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-private const val CHAIN_ID = 1
-
-class IcmfReceiverIT : GtxTxIntegrationTestSetup() {
+class IcmfReceiverIT : ManagedModeTest() {
 
     @BeforeEach
     fun setup() {
@@ -87,17 +85,16 @@ class IcmfReceiverIT : GtxTxIntegrationTestSetup() {
         }
         PostchainClientMocks.addMockClient(senderChainRid, senderClientMock)
 
-        val mapBcFiles: Map<Int, String> = mapOf(
-                CHAIN_ID to "/net/postchain/d1/icmf/receiver/blockchain_config_1.xml"
-        )
+        startManagedSystem(3, 0)
 
-        val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/icmf/receiver/blockchain_config_1.xml")!!.readText())
 
-        runXNodes(sysSetup)
+        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
 
-        buildBlock(CHAIN_ID.toLong(), 0)
-        for (node in nodes) {
-            withReadConnection(node.postchainContext.storage, CHAIN_ID.toLong()) {
+        buildBlock(dappChain, 0)
+        for (node in dappChain.nodes()) {
+            withReadConnection(node.postchainContext.storage, dappChain.chain) {
                 DatabaseAccess.of(it).apply {
                     val messages = QueryRunner().query(
                             it.conn,

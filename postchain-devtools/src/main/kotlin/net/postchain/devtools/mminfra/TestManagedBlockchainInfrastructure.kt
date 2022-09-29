@@ -2,10 +2,7 @@ package net.postchain.devtools.mminfra
 
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainInfrastructure
-import net.postchain.core.ApiInfrastructure
-import net.postchain.core.BlockchainConfiguration
-import net.postchain.core.EContext
-import net.postchain.core.SynchronizationInfrastructure
+import net.postchain.core.*
 
 class TestManagedBlockchainInfrastructure(
         postchainContext: PostchainContext,
@@ -18,7 +15,8 @@ class TestManagedBlockchainInfrastructure(
             eContext: EContext,
             nodeId: Int,
             chainId: Long,
+            bcConfigurationFactory: (String) -> BlockchainConfigurationFactory,
     ): BlockchainConfiguration {
-        return mockDataSource.getBuiltConfiguration(chainId, rawConfigurationData)
+        return mockDataSource.getBuiltConfiguration(chainId, rawConfigurationData).apply { initializeDB(eContext) }
     }
 }

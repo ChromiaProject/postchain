@@ -67,6 +67,10 @@ open class BaseManagedNodeDataSource(val queries: BlockQueries, val appConfig: A
         return if (res.isNull()) null else res.asInteger()
     }
 
+    override fun query(name: String, args: Gtv): Gtv {
+        return queries.query(name, args).get()
+    }
+
     fun buildArgs(vararg args: Pair<String, Gtv>): Gtv {
         return GtvFactory.gtv(*args)
     }
