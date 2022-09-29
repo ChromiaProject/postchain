@@ -14,6 +14,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import net.postchain.managed.ManagedEBFTInfrastructureFactory
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.junit.jupiter.api.BeforeEach
@@ -88,10 +89,12 @@ class IcmfReceiverIT : GtxTxIntegrationTestSetup() {
         PostchainClientMocks.addMockClient(senderChainRid, senderClientMock)
 
         val mapBcFiles: Map<Int, String> = mapOf(
+                0 to "/net/postchain/d1/blockchain_config_0.xml",
                 CHAIN_ID to "/net/postchain/d1/icmf/receiver/blockchain_config_1.xml"
         )
 
         val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
+        sysSetup.confInfrastructure = ManagedEBFTInfrastructureFactory::class.java.name
 
         runXNodes(sysSetup)
 
