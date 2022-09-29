@@ -35,6 +35,7 @@
                 <array>
                     <string>net.postchain.configurations.GTXTestModule</string> <!-- Normal GTX test TXs will do -->
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                    <string>net.postchain.d1.Chain0TestGTXModule</string>
                 </array>
             </entry>
         </dict>
