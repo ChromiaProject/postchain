@@ -51,16 +51,30 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
 
+        val chain0QueryProvider = object : () -> Query?, BlockchainProcessManagerHolder {
+            override lateinit var myProcessManager: BlockchainProcessManager
+
+            override operator fun invoke(): Query? {
+                val blockQueries = myProcessManager.retrieveChain0()?.blockchainEngine?.getBlockQueries()
+                return if (blockQueries != null) {
+                    { name, args -> blockQueries.query(name, args).get() }
+                } else {
+                    null
+                }
+            }
+        }
         postchainContext = PostchainContext(
                 appConfig,
                 NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
-                if (debug) DefaultNodeDiagnosticContext() else null
+                if (debug) DefaultNodeDiagnosticContext() else null,
+                chain0QueryProvider
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
+        chain0QueryProvider.myProcessManager = processManager
 
         postchainContext.nodeDiagnosticContext?.apply {
             addProperty(DiagnosticProperty.VERSION, getVersion())
@@ -142,5 +156,9 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
 
     private fun getVersion(): String {
         return javaClass.getPackage()?.implementationVersion ?: "null"
+    }
+
+    interface BlockchainProcessManagerHolder {
+        var myProcessManager: BlockchainProcessManager
     }
 }
