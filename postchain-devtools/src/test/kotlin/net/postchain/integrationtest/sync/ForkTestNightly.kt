@@ -442,7 +442,9 @@ class ForkTestNightly : ManagedModeTest() {
     fun addBlockchainConfiguration(chain: NodeSet, atHeight: Long, signers: Set<Int>, replicas: Set<Int>,
                                    historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf()): NodeSet {
         val newChain = NodeSet(chain.chain, signers, replicas)
-        newBlockchainConfiguration(newChain, historicChain, atHeight, excludeChain0Nodes)
+        addBlockchainConfiguration(newChain, historicChain, atHeight)
+        // Build block to trigger changes
+        buildBlock(c0.remove(excludeChain0Nodes))
         return newChain
     }
 
