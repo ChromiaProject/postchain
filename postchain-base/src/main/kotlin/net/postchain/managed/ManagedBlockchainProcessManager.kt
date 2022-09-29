@@ -15,6 +15,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
 import net.postchain.managed.config.Chain0BlockchainConfiguration
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
+import net.postchain.managed.config.Chain0BlockchainConfigurationInterface
 import net.postchain.managed.config.ManagedBlockchainConfigurationFactory
 
 /**
@@ -72,13 +73,13 @@ open class ManagedBlockchainProcessManager(
 
     override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
         return super.makeBlockchainConfiguration(chainId).also {
-            if (chainId == CHAIN0) {
-                initManagedEnvironment(it as Chain0BlockchainConfiguration)
+            if (it is Chain0BlockchainConfigurationInterface) {
+                initManagedEnvironment(it)
             }
         }
     }
 
-    protected open fun initManagedEnvironment(blockchainConfig: Chain0BlockchainConfiguration) {
+    protected open fun initManagedEnvironment(blockchainConfig: Chain0BlockchainConfigurationInterface) {
         dataSource = blockchainConfig.dataSource
         peerListVersion = dataSource.getPeerListVersion()
 
