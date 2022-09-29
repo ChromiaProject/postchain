@@ -3,6 +3,7 @@
 package net.postchain.managed
 
 import net.postchain.config.node.PeerInfoDataSource
+import net.postchain.gtv.Gtv
 
 interface ManagedNodeDataSource : PeerInfoDataSource {
     fun getPeerListVersion(): Long
@@ -14,4 +15,7 @@ interface ManagedNodeDataSource : PeerInfoDataSource {
      * null if no future configurations found or if blockchain doesn't exist.
      */
     fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
+
+    fun query(name: String, args: Gtv): Gtv
+
 }
