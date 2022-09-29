@@ -6,13 +6,15 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.EContext
+import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.PostchainTestNode
-import net.postchain.devtools.TxCache
 import net.postchain.devtools.getModules
-import net.postchain.devtools.utils.GtxTxIntegrationTestSetup
-import net.postchain.devtools.utils.configuration.SystemSetup
+import net.postchain.devtools.utils.ChainUtil
+import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import org.apache.commons.dbutils.QueryRunner
@@ -22,9 +24,6 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-private const val DAPP_CHAIN_ID = 1
-private const val ANCHOR_CHAIN_ID = 2 // Only for this test, we don't have a hard ID for anchoring.
-
 /**
  * Main idea is to have one "source" blockchain that generates block, so that these blocks can be anchored by another
  * "anchor" blockchain. If this work the golden path of anchoring should work.
@@ -33,7 +32,7 @@ private const val ANCHOR_CHAIN_ID = 2 // Only for this test, we don't have a har
  * Produce blocks containing Special transactions using the simplest possible setup, but as a minimum we need a new
  * custom test module to give us the "__xxx" operations needed.
  */
-class AnchorIT : GtxTxIntegrationTestSetup() {
+class AnchorIT : ManagedModeTest() {
     companion object {
         val messagesHash = ByteArray(32) { i -> i.toByte() }
     }
@@ -45,56 +44,48 @@ class AnchorIT : GtxTxIntegrationTestSetup() {
      */
     @Test
     fun happyAnchor() {
-        val mapBcFiles: Map<Int, String> = mapOf(
-                0 to "/net/postchain/d1/blockchain_config_0.xml",
-                DAPP_CHAIN_ID to "/net/postchain/d1/anchor/blockchain_config_1.xml",
-                ANCHOR_CHAIN_ID to "/net/postchain/d1/anchor/blockchain_config_2_anchor.xml"
-        )
+        startManagedSystem(3, 0)
 
-        val sysSetup = SystemSetup.buildComplexSetup(mapBcFiles)
-        sysSetup.confInfrastructure = D1TestInfrastructureFactory::class.java.name
+        val dappGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchor/blockchain_config_1.xml")!!.readText())
 
-        // -----------------------------
-        // Important!! We don't want to create any regular test transactions for the Anchor chain
-        // -----------------------------
-        sysSetup.blockchainMap[ANCHOR_CHAIN_ID]!!.setShouldHaveNormalTx(false)
-        //sysSetup.blockchainMap[ANCHOR_CHAIN_ID]!!.setListenerChainLevel(LevelConnectionChecker.HIGH_LEVEL) // The usual Anchor level
+        val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
 
-        runXNodes(sysSetup) // Starts all chains on all nodes
+        val anchorGtvConfig = GtvMLParser.parseGtvML(
+                javaClass.getResource("/net/postchain/d1/anchor/blockchain_config_2_anchor.xml")!!.readText())
+
+        val anchorChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
 
         // --------------------
-        // ChainId = 1: Create all blocks
+        // Dapp chain: Build 4 blocks
         // --------------------
-        val txCache = TxCache(mutableMapOf())
+        for (height in 0..3) {
+            buildBlock(dappChain, height.toLong())
+        }
 
-        // Only for chain 1 see "shouldHaveNormalTx" setting
-        runXNodesWithYTxPerBlock(4, 5, sysSetup, txCache) // This is waiting for blocks to finish too
-        // Only for chain 1 see "shouldHaveNormalTx" setting
-        runXNodesAssertions(4, 5, sysSetup, txCache)
-
-        val blockchainRID: BlockchainRid = sysSetup.blockchainMap[DAPP_CHAIN_ID]!!.rid
+        val blockchainRID: BlockchainRid = ChainUtil.ridOf(dappChain.chain)
 
         // --------------------
-        // ChainId = 2: Check that we begin with nothing
+        // Anchor chain: Check that we begin with nothing
         // --------------------
-        val blockQueries = nodes[0].getBlockchainInstance(ANCHOR_CHAIN_ID.toLong()).blockchainEngine.getBlockQueries()
+        val blockQueries = anchorChain.nodes()[0].getBlockchainInstance(anchorChain.chain).blockchainEngine.getBlockQueries()
 
         // --------------------
-        // ChainId = 2: Build first anchor block
+        // Anchor chain: Build first anchor block
         // --------------------
 
         val heightZero = 0
-        buildBlocks(0, ANCHOR_CHAIN_ID.toLong(), heightZero)
+        buildBlock(anchorChain, 0)
 
         // --------------------
-        // ChainId = 2: Actual test
+        // Anchor chain: Actual test
         // --------------------
         val expectedNumberOfTxs = 1  // Only the first TX
 
         val blockDataFull = blockQueries.getBlockAtHeight(heightZero.toLong()).get()!!
         assertEquals(expectedNumberOfTxs, blockDataFull.transactions.size)
 
-        withReadConnection(nodes[0].postchainContext.storage, ANCHOR_CHAIN_ID.toLong()) {
+        withReadConnection(anchorChain.nodes()[0].postchainContext.storage, anchorChain.chain) {
             val db = DatabaseAccess.of(it)
             val queryRunner = QueryRunner()
 
@@ -115,7 +106,7 @@ class AnchorIT : GtxTxIntegrationTestSetup() {
 
             val headers =
                     query(
-                            nodes[0],
+                            anchorChain.nodes()[0],
                             it,
                             "icmf_get_headers_with_messages_between_heights",
                             GtvFactory.gtv(
@@ -124,7 +115,8 @@ class AnchorIT : GtxTxIntegrationTestSetup() {
                                             "from_anchor_height" to GtvFactory.gtv(0),
                                             "to_anchor_height" to GtvFactory.gtv(1)
                                     )
-                            )
+                            ),
+                            anchorChain.chain
                     ).asArray()
             assertEquals(4, headers.size)
             headers.forEachIndexed { index, header ->
@@ -143,7 +135,12 @@ class AnchorIT : GtxTxIntegrationTestSetup() {
         }
     }
 
-    private fun query(node: PostchainTestNode, ctxt: EContext, name: String, args: Gtv): Gtv =
-            node.getModules(ANCHOR_CHAIN_ID.toLong()).find { it.javaClass.simpleName.startsWith("Rell") }!!
+    override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+        super.addNodeConfigurationOverrides(nodeSetup)
+        nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", D1TestInfrastructureFactory::class.qualifiedName)
+    }
+
+    private fun query(node: PostchainTestNode, ctxt: EContext, name: String, args: Gtv, anchorChainId: Long): Gtv =
+            node.getModules(anchorChainId).find { it.javaClass.simpleName.startsWith("Rell") }!!
                     .query(ctxt, name, args)
 }

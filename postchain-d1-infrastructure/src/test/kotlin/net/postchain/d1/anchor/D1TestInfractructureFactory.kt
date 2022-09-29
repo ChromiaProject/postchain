@@ -6,15 +6,16 @@ import net.postchain.PostchainContext
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
-import net.postchain.managed.ManagedBlockchainProcessManager
-import net.postchain.managed.ManagedEBFTInfrastructureFactory
+import net.postchain.devtools.mminfra.TestManagedBlockchainProcessManager
+import net.postchain.devtools.mminfra.TestManagedEBFTInfrastructureFactory
 
 // This is only used in tests, real D1 uses managed mode + containers
-class D1TestInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
+class D1TestInfrastructureFactory : TestManagedEBFTInfrastructureFactory() {
     override fun makeProcessManager(postchainContext: PostchainContext, blockchainInfrastructure: BlockchainInfrastructure, blockchainConfigurationProvider: BlockchainConfigurationProvider): BlockchainProcessManager {
-        return ManagedBlockchainProcessManager(postchainContext,
+        return TestManagedBlockchainProcessManager(postchainContext,
                 blockchainInfrastructure,
                 blockchainConfigurationProvider,
+                dataSource,
                 listOf(AnchorTestProcessManagerExtension(postchainContext))
         )
     }
