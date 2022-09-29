@@ -3,12 +3,13 @@ package net.postchain.d1.icmf
 import net.postchain.PostchainContext
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.PostchainClientProvider
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.DirectoryClusterManagement
-import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXBlockchainConfiguration
+import net.postchain.managed.ManagedBlockchainConfiguration
 
 open class IcmfReceiverSynchronizationInfrastructureExtension(private val postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
     private val receivers = mutableMapOf<Long, GlobalTopicIcmfReceiver>()
@@ -20,7 +21,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
         if (configuration is GTXBlockchainConfiguration) {
             getIcmfRemoteSpecialTxExtension(configuration)?.let { txExt ->
                 val topics = configuration.configData.rawConfig["icmf"]!!["receiver"]!!["topics"]!!.asArray().map { it.asString() }
-                val clusterManagement = createClusterManagement()
+                val clusterManagement = createClusterManagement(configuration)
                 val receiver = GlobalTopicIcmfReceiver(topics,
                         configuration.cryptoSystem,
                         engine.storage,
@@ -38,7 +39,10 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
     open fun createClientProvider(): PostchainClientProvider = ConcretePostchainClientProvider()
 
-    open fun createClusterManagement(): ClusterManagement = DirectoryClusterManagement { name, args -> GtvNull } // TODO createClusterManagement
+    open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement {
+        val dataSource = (configuration as ManagedBlockchainConfiguration).dataSource
+        return DirectoryClusterManagement(dataSource::query)
+    }
 
     override fun disconnectProcess(process: BlockchainProcess) {
         receivers.remove(process.blockchainEngine.getConfiguration().chainID)?.shutdown()

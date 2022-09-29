@@ -1,12 +1,13 @@
 package net.postchain.d1.anchor
 
 import net.postchain.PostchainContext
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.DirectoryClusterManagement
-import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXBlockchainConfiguration
+import net.postchain.managed.ManagedBlockchainConfiguration
 
 open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
 
@@ -26,7 +27,7 @@ open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : B
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg)?.let {
                 localDispatcher.connectReceiver(cfg.chainID, it.icmfReceiver)
-                it.clusterManagement = createClusterManagement()
+                it.clusterManagement = createClusterManagement(cfg)
             }
 
             // connect process to local dispatcher
@@ -45,7 +46,10 @@ open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : B
         } as AnchorSpecialTxExtension?
     }
 
-    open fun createClusterManagement(): ClusterManagement = DirectoryClusterManagement { name, args -> GtvNull } // TODO createClusterManagement
+    open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement {
+        val dataSource = (configuration as ManagedBlockchainConfiguration).dataSource
+        return DirectoryClusterManagement(dataSource::query)
+    }
 
     @Synchronized
     override fun disconnectProcess(process: BlockchainProcess) {
