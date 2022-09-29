@@ -129,7 +129,7 @@ open class BaseBlockchainProcessManager(
                             val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
                             if (configuration != null) {
                                 blockchainInfrastructure.makeBlockchainConfiguration(
-                                    configuration, eContext, NODE_ID_AUTO, chainId
+                                        configuration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory()
                                 )
                             } else {
                                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
@@ -169,6 +169,9 @@ open class BaseBlockchainProcessManager(
             }
         }
     }
+
+    protected open fun getBlockchainConfigurationFactory(): (String) -> BlockchainConfigurationFactory =
+            DefaultBlockchainConfigurationFactory()
 
     protected open fun createAndRegisterBlockchainProcess(
             chainId: Long,
@@ -321,7 +324,7 @@ open class BaseBlockchainProcessManager(
 
     protected fun tryAcquireChainLock(chainId: Long): Boolean {
         return chainSynchronizers[chainId]?.tryLock()
-            ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
+                ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
     }
 
     protected fun releaseChainLock(chainId: Long) {
