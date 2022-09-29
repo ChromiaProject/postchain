@@ -3,7 +3,6 @@ package net.postchain.d1.icmf
 import net.postchain.PostchainContext
 import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.PostchainClientProvider
-import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.d1.cluster.ClusterManagement
@@ -18,7 +17,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
     override fun connectProcess(process: BlockchainProcess) {
         val engine = process.blockchainEngine
         val configuration = engine.getConfiguration()
-        if (configuration is GTXBlockchainConfiguration) {
+        if (configuration is ManagedBlockchainConfiguration) {
             getIcmfRemoteSpecialTxExtension(configuration)?.let { txExt ->
                 val topics = configuration.configData.rawConfig["icmf"]!!["receiver"]!!["topics"]!!.asArray().map { it.asString() }
                 val clusterManagement = createClusterManagement(configuration)
@@ -39,10 +38,8 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
 
     open fun createClientProvider(): PostchainClientProvider = ConcretePostchainClientProvider()
 
-    open fun createClusterManagement(configuration: BlockchainConfiguration): ClusterManagement {
-        val dataSource = (configuration as ManagedBlockchainConfiguration).dataSource
-        return DirectoryClusterManagement(dataSource::query)
-    }
+    open fun createClusterManagement(configuration: ManagedBlockchainConfiguration): ClusterManagement =
+            DirectoryClusterManagement(configuration.dataSource::query)
 
     override fun disconnectProcess(process: BlockchainProcess) {
         receivers.remove(process.blockchainEngine.getConfiguration().chainID)?.shutdown()
