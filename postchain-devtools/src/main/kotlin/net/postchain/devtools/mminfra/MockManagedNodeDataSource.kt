@@ -8,6 +8,7 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
+import net.postchain.gtv.Gtv
 import net.postchain.managed.ManagedNodeDataSource
 
 open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
@@ -45,6 +46,10 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
             }
         }
         return null
+    }
+
+    override fun query(name: String, args: Gtv): Gtv {
+        TODO("Not yet implemented")
     }
 
     override fun getPeerInfos(): Array<PeerInfo> {
