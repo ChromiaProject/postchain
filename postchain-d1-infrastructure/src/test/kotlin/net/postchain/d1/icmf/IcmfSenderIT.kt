@@ -28,7 +28,7 @@ class IcmfSenderIT : ManagedModeTest() {
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
 
-        val rellCode = File("postchain-d1-infrastructure/src/main/rell/icmf/module.rell").readText() +
+        val rellCode = File("src/main/rell/icmf/module.rell").readText() +
                 """
                     operation test_message(text) {
                         send_message("my-topic", text.to_gtv());
