@@ -8,13 +8,13 @@ import net.postchain.gtx.GTXModule
 import net.postchain.managed.BaseManagedNodeDataSource
 import net.postchain.managed.ManagedNodeDataSource
 
-class Chain0BlockchainConfiguration(
+open class Chain0BlockchainConfiguration(
         configData: BlockchainConfigurationData,
         module: GTXModule,
         val appConfig: AppConfig
 ) : GTXBlockchainConfiguration(configData, module), ManagedDataSourceAwareness {
 
-    private lateinit var dataSource0: ManagedNodeDataSource
+    protected lateinit var dataSource0: ManagedNodeDataSource
 
     override val dataSource: ManagedNodeDataSource
         get() = dataSource0

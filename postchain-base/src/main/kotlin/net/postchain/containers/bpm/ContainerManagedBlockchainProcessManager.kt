@@ -12,7 +12,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
-import net.postchain.containers.bpm.bcconfig.ContainerChain0BlockchainConfigurationFactory
+import net.postchain.containers.bpm.config.ContainerChain0BlockchainConfigurationFactory
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.docker.DockerTools.containerName
 import net.postchain.containers.bpm.docker.DockerTools.findHostPorts

@@ -1,15 +1,15 @@
-package net.postchain.containers.bpm.bcconfig
+package net.postchain.containers.bpm.config
 
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 
 class ContainerChain0BlockchainConfigurationFactory(
-        val appConfig: AppConfig,
+        appConfig: AppConfig,
         val containerNodeConfig: ContainerNodeConfig
-) : GTXBlockchainConfigurationFactory() {
+) : Chain0BlockchainConfigurationFactory(appConfig) {
 
     override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
         val configData = configurationData as BlockchainConfigurationData

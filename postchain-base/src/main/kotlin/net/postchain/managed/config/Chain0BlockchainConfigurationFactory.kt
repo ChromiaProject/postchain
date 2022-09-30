@@ -5,7 +5,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
-class Chain0BlockchainConfigurationFactory(val appConfig: AppConfig) : GTXBlockchainConfigurationFactory() {
+open class Chain0BlockchainConfigurationFactory(val appConfig: AppConfig) : GTXBlockchainConfigurationFactory() {
 
     override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
         val configData = configurationData as BlockchainConfigurationData
