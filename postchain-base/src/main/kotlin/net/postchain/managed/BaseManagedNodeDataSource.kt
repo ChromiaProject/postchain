@@ -14,7 +14,6 @@ import net.postchain.gtx.GTXModule
 import net.postchain.utils.KovenantHelper
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
-import java.time.Instant
 
 open class BaseManagedNodeDataSource(val module: GTXModule, val appConfig: AppConfig) : ManagedNodeDataSource {
 
@@ -30,17 +29,7 @@ open class BaseManagedNodeDataSource(val module: GTXModule, val appConfig: AppCo
     override fun getPeerInfos(): Array<PeerInfo> {
         // TODO: [POS-90]: Implement correct error processing
         val res = query("nm_get_peer_infos", buildArgs())
-        return res.asArray()
-                .map {
-                    val pia = it.asArray()
-                    PeerInfo(
-                            pia[0].asString(),
-                            pia[1].asInteger().toInt(),
-                            pia[2].asByteArray(),
-                            Instant.ofEpochMilli(if (pia.size < 4) 0L else pia[3].asInteger())
-                    )
-                }
-                .toTypedArray()
+        return res.asArray().map { PeerInfo.fromGtv(it) }.toTypedArray()
     }
 
     override fun getPeerListVersion(): Long {
