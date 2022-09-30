@@ -13,13 +13,14 @@ import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.junit.jupiter.api.Test
+import java.io.File
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -51,8 +52,11 @@ class AnchorIT : ManagedModeTest() {
 
         val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig))
 
+        val moduleRellCode = File("src/main/rell/anchor/module.rell").readText()
+        val icmfRellCode = File("src/main/rell/anchor/icmf.rell").readText()
         val anchorGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/anchor/blockchain_config_2_anchor.xml")!!.readText())
+                javaClass.getResource("/net/postchain/d1/anchor/blockchain_config_2_anchor.xml")!!.readText(),
+                mapOf("rell" to gtv(moduleRellCode + icmfRellCode)))
 
         val anchorChain = startNewBlockchain(setOf(0, 1, 2), setOf(), rawBlockchainConfiguration = GtvEncoder.encodeGtv(anchorGtvConfig))
 
@@ -109,11 +113,11 @@ class AnchorIT : ManagedModeTest() {
                             anchorChain.nodes()[0],
                             it,
                             "icmf_get_headers_with_messages_between_heights",
-                            GtvFactory.gtv(
+                            gtv(
                                     mapOf(
-                                            "topic" to GtvFactory.gtv("my-topic"),
-                                            "from_anchor_height" to GtvFactory.gtv(0),
-                                            "to_anchor_height" to GtvFactory.gtv(1)
+                                            "topic" to gtv("my-topic"),
+                                            "from_anchor_height" to gtv(0),
+                                            "to_anchor_height" to gtv(1)
                                     )
                             ),
                             anchorChain.chain
