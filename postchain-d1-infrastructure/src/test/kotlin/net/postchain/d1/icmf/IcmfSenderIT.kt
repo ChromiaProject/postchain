@@ -42,42 +42,67 @@ class IcmfSenderIT : ManagedModeTest() {
                 rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
                 blockchainConfigurationFactory = IcmfTestBlockchainConfigurationFactory())
 
-        buildBlock(
-                dappChain.chain, 0, makeTransaction(dappChain.nodes()[0], dappChain.chain, 0, GtxOp("test_message", gtv("test0"))),
-                makeTransaction(dappChain.nodes()[0], dappChain.chain, 1, GtxOp("test_message", gtv("test1")))
-        )
+        // Messages in block 0
+        val block0Messages = listOf("test0", "test1")
+        val block0Txs = block0Messages.mapIndexed { index, message ->
+            makeTransaction(dappChain.nodes()[0], dappChain.chain, index, GtxOp("test_message", gtv(message)))
+        }
+        buildBlock(dappChain.chain, 0, *block0Txs.toTypedArray())
 
+        verifyMessages(dappChain, 0, "my-topic", -1, block0Messages, block0Messages)
+
+        // No messages in block 1
+        buildBlock(dappChain, 1)
+
+        // Messages in block 2
+        val block2Messages = listOf("test2", "test3")
+        val block2Txs = block2Messages.mapIndexed { index, message ->
+            makeTransaction(dappChain.nodes()[0], dappChain.chain, block0Messages.size + index, GtxOp("test_message", gtv(message)))
+        }
+        buildBlock(dappChain.chain, 2, *block2Txs.toTypedArray())
+
+        // Expecting previous height to be 0
+        verifyMessages(dappChain, 2, "my-topic", 0, block2Messages, block0Messages + block2Messages)
+    }
+
+    private fun verifyMessages(dappChain: NodeSet,
+                               height: Long,
+                               topic: String,
+                               expectedPreviousMessageBlockHeight: Long,
+                               expectedMessages: List<String>,
+                               expectedAllMessages: List<String>
+    ) {
         for (node in dappChain.nodes()) {
             withReadConnection(node.postchainContext.storage, dappChain.chain) {
                 val blockQueries = node.getBlockchainInstance(dappChain.chain).blockchainEngine.getBlockQueries()
-                val blockRid = blockQueries.getBlockRid(0).get()
+                val blockRid = blockQueries.getBlockRid(height).get()
                 val blockHeader = blockQueries.getBlockHeader(blockRid!!).get()
                 val decodedHeader = BlockHeaderData.fromBinary(blockHeader.rawData)
-                val expectedHash = cryptoSystem.digest(
-                        cryptoSystem.digest(GtvEncoder.encodeGtv(gtv("test0")))
-                                + cryptoSystem.digest(
-                                GtvEncoder.encodeGtv(gtv("test1"))
-                        )
+                val expectedHash = TopicHeaderData.calculateMessagesHash(
+                        expectedMessages.map { message -> cryptoSystem.digest(GtvEncoder.encodeGtv(gtv(message))) },
+                        cryptoSystem
                 )
-                val topicHeader = decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()["my-topic"]!!.asDict()
+                val topicHeader = decodedHeader.gtvExtra[ICMF_BLOCK_HEADER_EXTRA]!!.asDict()[topic]!!.asDict()
                 assertContentEquals(
                         expectedHash,
                         topicHeader["hash"]!!.asByteArray()
                 )
-                // TODO test other values for previous height
-                assertEquals(-1, topicHeader["prev_message_block_height"]!!.asInteger())
+
+                assertEquals(expectedPreviousMessageBlockHeight, topicHeader["prev_message_block_height"]!!.asInteger())
 
                 val allMessages =
-                        query(node, it, dappChain.chain, "icmf_get_all_messages", gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
-                assertEquals(2, allMessages.asArray().size)
-                assertEquals("test0", allMessages.asArray()[0].asString())
-                assertEquals("test1", allMessages.asArray()[1].asString())
+                        query(node, it, dappChain.chain, "icmf_get_all_messages", gtv(mapOf("topic" to gtv(topic), "height" to gtv(0))))
+                assertEquals(expectedAllMessages.size, allMessages.asArray().size)
+                expectedAllMessages.forEachIndexed { index, expectedMessage ->
+                    assertEquals(expectedMessage, allMessages.asArray()[index].asString())
+                }
 
                 val messages =
-                        query(node, it, dappChain.chain, "icmf_get_messages", gtv(mapOf("topic" to gtv("my-topic"), "height" to gtv(0))))
-                assertEquals(2, messages.asArray().size)
-                assertEquals("test0", messages.asArray()[0].asString())
-                assertEquals("test1", messages.asArray()[1].asString())
+                        query(node, it, dappChain.chain, "icmf_get_messages", gtv(mapOf("topic" to gtv(topic), "height" to gtv(height))))
+                assertEquals(expectedMessages.size, messages.asArray().size)
+                expectedMessages.forEachIndexed { index, expectedMessage ->
+                    assertEquals(expectedMessage, messages.asArray()[index].asString())
+                }
             }
         }
     }
