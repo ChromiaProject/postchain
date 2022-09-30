@@ -12,7 +12,7 @@ class PeerInfoTest {
     @Test
     fun createFromGtvArray() {
         val peerInfo = PeerInfo("localhost", 5555, byteArrayOf(1), Instant.ofEpochMilli(123))
-        val gtv = gtv(gtv(peerInfo.host), gtv(peerInfo.port.toLong()), gtv(peerInfo.pubKey), gtv(peerInfo.timestamp!!.toEpochMilli()))
+        val gtv = gtv(gtv(peerInfo.host), gtv(peerInfo.port.toLong()), gtv(peerInfo.pubKey), gtv(peerInfo.lastUpdated!!.toEpochMilli()))
         val actual = PeerInfo.fromGtv(gtv)
         assertEquals(peerInfo, actual)
     }
@@ -40,7 +40,7 @@ class PeerInfoTest {
                 "host" to gtv(peerInfo.host),
                 "port" to gtv(peerInfo.port.toLong()),
                 "pubkey" to gtv(peerInfo.pubKey),
-                "last_updated" to gtv(peerInfo.timestamp!!.toEpochMilli()))
+                "last_updated" to gtv(peerInfo.lastUpdated!!.toEpochMilli()))
         val actual = PeerInfo.fromGtv(gtv)
         assertEquals(peerInfo, actual)
     }
@@ -52,7 +52,7 @@ class PeerInfoTest {
                 "host" to gtv(peerInfo.host),
                 "port" to gtv(peerInfo.port.toLong()),
                 "pubkey" to gtv(peerInfo.pubKey),
-                "last_updated" to gtv(peerInfo.timestamp!!.toEpochMilli()),
+                "last_updated" to gtv(peerInfo.lastUpdated!!.toEpochMilli()),
                 "extra_filed" to gtv("extra value")
         )
         val actual = PeerInfo.fromGtv(gtv)

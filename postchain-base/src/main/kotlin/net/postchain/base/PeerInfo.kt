@@ -7,8 +7,6 @@ import net.postchain.core.NodeRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
-import net.postchain.gtv.mapper.Name
-import net.postchain.gtv.mapper.Nullable
 import java.time.Instant
 import java.time.Instant.ofEpochMilli
 
@@ -23,19 +21,7 @@ typealias PeerID = ByteArray
  * 1. a block producer/signer who takes part in the consensus discussion.
  * 2. a read-only node (=replica)
  */
-class PeerInfo(
-        @Name("host")
-        val host: String,
-        // Annotations added but ObjectMapper is not applicable b/c it can't convert Long to Int
-        @Name("port")
-        val port: Int,
-        @Name("pubkey")
-        val pubKey: ByteArray,
-        // Annotations added but ObjectMapper is not applicable b/c default value for Instant
-        @Name("last_updated")
-        @Nullable
-        val timestamp: Instant? = null
-) {
+class PeerInfo(val host: String, val port: Int, val pubKey: ByteArray, val lastUpdated: Instant? = null) {
 
     companion object {
         @JvmStatic
@@ -54,9 +40,6 @@ class PeerInfo(
                 }
 
                 is GtvDictionary -> {
-                    // Have tried to do gtv.toObject(emptyMap())
-                    // But ObjectMapper can't convert Long to Int, etc.
-
                     val gtv0 = gtv.asDict()
 
                     val host = gtv0["host"]?.asString()
@@ -87,7 +70,7 @@ class PeerInfo(
         if (host != other.host) return false
         if (port != other.port) return false
         if (!pubKey.contentEquals(other.pubKey)) return false
-        if (timestamp != other.timestamp) return false
+        if (lastUpdated != other.lastUpdated) return false
 
         return true
     }
@@ -96,7 +79,7 @@ class PeerInfo(
         var result = host.hashCode()
         result = 31 * result + port
         result = 31 * result + pubKey.contentHashCode()
-        result = 31 * result + (timestamp?.hashCode() ?: 0)
+        result = 31 * result + (lastUpdated?.hashCode() ?: 0)
         return result
     }
 
