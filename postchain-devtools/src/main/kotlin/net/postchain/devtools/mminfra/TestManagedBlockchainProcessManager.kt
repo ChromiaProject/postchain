@@ -7,6 +7,7 @@ import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.block.BlockTrace
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
@@ -20,11 +21,14 @@ class TestManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
         blockchainConfigProvider: BlockchainConfigurationProvider,
-        val testDataSource: ManagedNodeDataSource)
+        val testDataSource: ManagedNodeDataSource,
+        bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
+)
     : ManagedBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
-        blockchainConfigProvider
+        blockchainConfigProvider,
+        bpmExtensions
 ) {
 
     companion object : KLogging()
