@@ -18,12 +18,10 @@ class IcmfBlockBuilderExtension : BaseBlockBuilderExtension, TxEventSink {
     companion object : KLogging()
 
     private lateinit var cryptoSystem: CryptoSystem
-    private lateinit var blockEContext: BlockEContext
 
     private val queuedEvents = mutableListOf<SentIcmfMessage>()
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
-        this.blockEContext = blockEContext
         cryptoSystem = baseBB.cryptoSystem
         baseBB.installEventProcessor(ICMF_MESSAGE_TYPE, this)
     }

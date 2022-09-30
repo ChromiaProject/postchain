@@ -75,13 +75,13 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         val pipes = icmfReceiver.getRelevantPipes()
 
         // Extract all packages from all pipes
-        val retList = mutableListOf<OpData>()
+        val ops = mutableListOf<OpData>()
         for (pipe in pipes) {
             if (pipe.mightHaveNewPackets()) {
-                handlePipe(pipe, retList, bctx)
+                ops.addAll(handlePipe(pipe, bctx).map { buildOpData(it) })
             }
         }
-        return retList
+        return ops
     }
 
     /**
@@ -89,26 +89,25 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
      */
     private fun handlePipe(
             pipe: ClusterAnchorPipe,
-            retList: MutableList<OpData>,
             bctx: BlockEContext
-    ) {
-        var counter = 0
+    ): List<ClusterAnchorPacket> {
+        val packets = mutableListOf<ClusterAnchorPacket>()
         val blockchainRid = pipe.id
         var currentHeight: Long = getLastAnchoredHeight(bctx, blockchainRid)
         while (pipe.mightHaveNewPackets()) {
             val clusterAnchorPacket = pipe.fetchNext(currentHeight)
             if (clusterAnchorPacket != null) {
-                retList.add(buildOpData(clusterAnchorPacket))
+                packets.add(clusterAnchorPacket)
                 pipe.markTaken(clusterAnchorPacket.height, bctx)
                 currentHeight++ // Try next height
-                counter++
             } else {
                 break // Nothing more to find
             }
         }
         if (logger.isDebugEnabled) {
-            logger.debug("Pulled $counter messages from pipeId: ${pipe.id}")
+            logger.debug("Pulled ${packets.size} messages from pipeId: ${pipe.id}")
         }
+        return packets
     }
 
     private fun getLastAnchoredHeight(ctxt: EContext, blockchainRID: BlockchainRid): Long =
@@ -207,10 +206,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
             minimalHeaders: Set<MinimalBlockHeaderInfo>
     ): ValidationResult {
         // Restructure to the format the Validator needs
-        val myHeaderMap: MutableMap<Long, MinimalBlockHeaderInfo> = mutableMapOf()
-        for (minimalHeader in minimalHeaders) {
-            myHeaderMap[minimalHeader.headerHeight] = minimalHeader
-        }
+        val myHeaderMap = minimalHeaders.associateBy { it.headerHeight }
 
         // Run the validator
         return GenericBlockHeaderValidator.multiValidationAgainstKnownBlocks(
@@ -249,7 +245,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         return if (block == GtvNull) {
             null
         } else {
-            TempBlockInfo.fromBlock(block, bcRid)
+            TempBlockInfo.fromBlock(block)
         }
     }
 
@@ -270,7 +266,7 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
         return if (block == GtvNull) {
             null
         } else {
-            TempBlockInfo.fromBlock(block, bcRid)
+            TempBlockInfo.fromBlock(block)
         }
     }
 
@@ -280,20 +276,14 @@ class AnchorSpecialTxExtension : GTXSpecialTxExtension {
      * Not really a domain object, just used to return some data
      */
     data class TempBlockInfo(
-            val bcRid: BlockchainRid,
             val blockRid: BlockRid,
             val height: Long
     ) {
         companion object {
-            fun fromBlock(
-                    block: Gtv,
-                    bcRid: BlockchainRid
-            ): TempBlockInfo {
-                val gtvDict = block.asDict()
+            fun fromBlock(block: Gtv): TempBlockInfo {
                 return TempBlockInfo(
-                        bcRid,
-                        BlockRid(gtvDict["block_rid"]!!.asByteArray()),
-                        gtvDict["block_height"]!!.asInteger()
+                        BlockRid(block["block_rid"]!!.asByteArray()),
+                        block["block_height"]!!.asInteger()
                 )
             }
         }

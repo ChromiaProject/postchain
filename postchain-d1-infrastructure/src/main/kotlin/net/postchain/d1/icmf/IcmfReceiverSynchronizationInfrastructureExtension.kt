@@ -18,7 +18,7 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
         val engine = process.blockchainEngine
         val configuration = engine.getConfiguration()
         if (configuration is ManagedBlockchainConfiguration) {
-            getIcmfRemoteSpecialTxExtension(configuration)?.let { txExt ->
+            getIcmfReceiverSpecialTxExtension(configuration)?.let { txExt ->
                 val topics = configuration.configData.rawConfig["icmf"]!!["receiver"]!!["topics"]!!.asArray().map { it.asString() }
                 val clusterManagement = createClusterManagement(configuration)
                 val receiver = GlobalTopicIcmfReceiver(topics,
@@ -49,9 +49,9 @@ open class IcmfReceiverSynchronizationInfrastructureExtension(private val postch
         receivers.values.forEach { it.shutdown() }
     }
 
-    private fun getIcmfRemoteSpecialTxExtension(cfg: GTXBlockchainConfiguration): IcmfRemoteSpecialTxExtension? {
+    private fun getIcmfReceiverSpecialTxExtension(cfg: GTXBlockchainConfiguration): IcmfReceiverSpecialTxExtension? {
         return cfg.module.getSpecialTxExtensions().firstOrNull { ext ->
-            (ext is IcmfRemoteSpecialTxExtension)
-        } as IcmfRemoteSpecialTxExtension?
+            (ext is IcmfReceiverSpecialTxExtension)
+        } as IcmfReceiverSpecialTxExtension?
     }
 }

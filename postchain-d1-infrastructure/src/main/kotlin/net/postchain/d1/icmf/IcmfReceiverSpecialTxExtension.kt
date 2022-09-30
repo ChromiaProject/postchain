@@ -18,7 +18,7 @@ import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
-class IcmfRemoteSpecialTxExtension(private val dbOperations: IcmfDatabaseOperations) : GTXSpecialTxExtension {
+class IcmfReceiverSpecialTxExtension(private val dbOperations: IcmfDatabaseOperations) : GTXSpecialTxExtension {
 
     companion object : KLogging()
 
