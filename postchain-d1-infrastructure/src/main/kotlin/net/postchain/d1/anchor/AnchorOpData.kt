@@ -59,7 +59,7 @@ data class AnchorOpData(
     }
 
     fun toMinimalBlockHeaderInfo(): MinimalBlockHeaderInfo {
-        val headerBlockRid = BlockRid(blockRid) // Another way to get BlockRid is to calculate it from the header
+        val headerBlockRid = BlockRid(blockRid)
         val headerPrevBlockRid = BlockRid(headerData.getPreviousBlockRid())
         val newBlockHeight = headerData.getHeight()
         return MinimalBlockHeaderInfo(headerBlockRid, headerPrevBlockRid, newBlockHeight)

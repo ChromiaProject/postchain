@@ -13,8 +13,8 @@ class IcmfDatabaseOperationsImpl : IcmfDatabaseOperations {
         const val PREFIX: String = "sys.x.icmf" // This name should not clash with Rell
     }
 
-    fun DatabaseAccess.tableAnchorHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.anchor_height")
-    fun DatabaseAccess.tableMessageHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.message_height")
+    private fun DatabaseAccess.tableAnchorHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.anchor_height")
+    private fun DatabaseAccess.tableMessageHeight(ctx: EContext) = tableName(ctx, "${PREFIX}.message_height")
 
     override fun initialize(ctx: EContext) {
         DatabaseAccess.of(ctx).apply {

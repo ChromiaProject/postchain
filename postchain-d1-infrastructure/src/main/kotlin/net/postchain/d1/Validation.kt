@@ -30,9 +30,6 @@ object Validation {
             }
         }
 
-        if (!blockWitnessBuilder.isComplete()) {
-            return false
-        }
-        return true
+        return blockWitnessBuilder.isComplete()
     }
 }

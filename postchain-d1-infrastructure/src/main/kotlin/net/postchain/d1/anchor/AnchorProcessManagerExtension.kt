@@ -6,7 +6,7 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.d1.cluster.ClusterManagement
 import net.postchain.d1.cluster.DirectoryClusterManagement
 import net.postchain.gtx.GTXBlockchainConfiguration
-import net.postchain.managed.ManagedBlockchainConfiguration
+import net.postchain.managed.config.DappBlockchainConfiguration
 
 open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
 
@@ -22,7 +22,7 @@ open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : B
         val engine = process.blockchainEngine
         val cfg = engine.getConfiguration()
 
-        if (cfg is ManagedBlockchainConfiguration) {
+        if (cfg is DappBlockchainConfiguration) {
             // create receiver when blockchain has anchoring STE
             getAnchorSpecialTxExtension(cfg)?.let {
                 localDispatcher.connectReceiver(cfg.chainID, it.icmfReceiver)
@@ -45,7 +45,7 @@ open class AnchorProcessManagerExtension(postchainContext: PostchainContext) : B
         } as AnchorSpecialTxExtension?
     }
 
-    open fun createClusterManagement(configuration: ManagedBlockchainConfiguration): ClusterManagement =
+    open fun createClusterManagement(configuration: DappBlockchainConfiguration): ClusterManagement =
             DirectoryClusterManagement(configuration.dataSource::query)
 
     @Synchronized

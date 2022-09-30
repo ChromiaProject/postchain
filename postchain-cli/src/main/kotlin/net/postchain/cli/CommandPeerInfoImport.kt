@@ -50,7 +50,7 @@ class CommandPeerInfoImport : CliktCommand(name = "peerinfo-import", help = "Imp
 
                     if (noHostPort && noPubKey) {
                         val added = db.addPeerInfo(
-                                ctx, peerInfo.host, peerInfo.port, peerInfo.pubKey.toHex(), peerInfo.timestamp)
+                                ctx, peerInfo.host, peerInfo.port, peerInfo.pubKey.toHex(), peerInfo.lastUpdated)
 
                         if (added) {
                             imported.add(peerInfo)

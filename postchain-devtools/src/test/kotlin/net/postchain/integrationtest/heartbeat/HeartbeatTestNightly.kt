@@ -7,10 +7,12 @@ import net.postchain.devtools.ManagedModeTest
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.timer
 
+@Disabled // ICMF is coming. Heartbeat will be removed soon.
 class HeartbeatTestNightly : ManagedModeTest() {
 
     private val maxBlockTime = 500L

@@ -27,7 +27,7 @@ class GlobalTopicIcmfReceiver(topics: List<String>,
                               private val clusterManagement: ClusterManagement,
                               private val postchainClientProvider: PostchainClientProvider,
                               private val dbOperations: IcmfDatabaseOperations)
-    : IcmfReceiver<GlobalTopicRoute, String, Long>, Shutdownable {
+    : IcmfReceiver<GlobalTopicRoute, Long>, Shutdownable {
     companion object : KLogging() {
         val pollInterval = 1.minutes
     }

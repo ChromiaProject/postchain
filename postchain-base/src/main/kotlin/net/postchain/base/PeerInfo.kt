@@ -2,10 +2,13 @@
 
 package net.postchain.base
 
-import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDictionary
 import java.time.Instant
+import java.time.Instant.ofEpochMilli
 
 // TODO: Will be replaced by NodeRid
 typealias PeerID = ByteArray
@@ -18,9 +21,43 @@ typealias PeerID = ByteArray
  * 1. a block producer/signer who takes part in the consensus discussion.
  * 2. a read-only node (=replica)
  */
-open class PeerInfo(val host: String, val port: Int, val pubKey: ByteArray, val timestamp: Instant? = null) {
+class PeerInfo(val host: String, val port: Int, val pubKey: ByteArray, val lastUpdated: Instant? = null) {
 
-    constructor(host: String, port: Int, pubKey: ByteArrayKey, timestamp: Instant? = null) : this(host, port, pubKey.byteArray, timestamp)
+    companion object {
+        @JvmStatic
+        fun fromGtv(gtv: Gtv): PeerInfo {
+            return when (gtv) {
+                is GtvArray -> {
+                    val gtv0 = gtv.asArray()
+
+                    if (gtv0.size < 3 || gtv0.size > 4) {
+                        throw IllegalArgumentException("Can't create PeerInfo object from gtv: $gtv")
+                    }
+
+                    val lastUpdated = if (gtv0.size == 4) ofEpochMilli(gtv0[3].asInteger()) else null
+
+                    PeerInfo(gtv0[0].asString(), gtv0[1].asInteger().toInt(), gtv0[2].asByteArray(), lastUpdated)
+                }
+
+                is GtvDictionary -> {
+                    val gtv0 = gtv.asDict()
+
+                    val host = gtv0["host"]?.asString()
+                    val port = gtv0["port"]?.asInteger()?.toInt()
+                    val pubkey = gtv0["pubkey"]?.asByteArray()
+                    val lastUpdated = gtv0["last_updated"]?.asInteger()?.let { ofEpochMilli(it) }
+
+                    if (host == null || port == null || pubkey == null) {
+                        throw IllegalArgumentException("Can't create PeerInfo object from gtv: $gtv")
+                    }
+
+                    PeerInfo(host, port, pubkey, lastUpdated)
+                }
+
+                else -> throw IllegalArgumentException("Can't create PeerInfo object from gtv: $gtv")
+            }
+        }
+    }
 
     fun getNodeRid() = NodeRid(pubKey)
 
@@ -33,7 +70,7 @@ open class PeerInfo(val host: String, val port: Int, val pubKey: ByteArray, val 
         if (host != other.host) return false
         if (port != other.port) return false
         if (!pubKey.contentEquals(other.pubKey)) return false
-        if (timestamp != other.timestamp) return false
+        if (lastUpdated != other.lastUpdated) return false
 
         return true
     }
@@ -42,7 +79,7 @@ open class PeerInfo(val host: String, val port: Int, val pubKey: ByteArray, val 
         var result = host.hashCode()
         result = 31 * result + port
         result = 31 * result + pubKey.contentHashCode()
-        result = 31 * result + (timestamp?.hashCode() ?: 0)
+        result = 31 * result + (lastUpdated?.hashCode() ?: 0)
         return result
     }
 

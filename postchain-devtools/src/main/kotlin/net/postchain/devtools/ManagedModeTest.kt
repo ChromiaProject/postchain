@@ -14,9 +14,9 @@ import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtv.*
 import net.postchain.gtv.mapper.toObject
-import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
-import net.postchain.managed.ManagedBlockchainConfigurationFactory
+import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import java.lang.Thread.sleep
 
 /**
@@ -75,7 +75,10 @@ open class ManagedModeTest : AbstractSyncTest() {
             }
 
             data.setValue(KEY_CONFIGURATIONFACTORY, GtvString(
-                    GTXBlockchainConfigurationFactory::class.java.name
+                    when (nodeSet.chain) {
+                        0L -> Chain0BlockchainConfigurationFactory::class.java.name
+                        else -> DappBlockchainConfigurationFactory::class.java.name
+                    }
             ))
 
             data.setValue(KEY_BLOCKSTRATEGY, GtvDictionary.build(mapOf(
@@ -90,7 +93,7 @@ open class ManagedModeTest : AbstractSyncTest() {
 
             val context = BaseBlockchainContext(brid, NODE_ID_AUTO, nodeSet.chain, pubkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>(mapOf("partialContext" to context, "sigmaker" to sigMaker))
-            val bcConf = TestBlockchainConfiguration(confData)
+            val bcConf = TestBlockchainConfiguration(confData, it.value)
             it.value.addConf(brid, height, bcConf, nodeSet, GtvEncoder.encodeGtv(data.getDict()))
         }
     }
@@ -101,7 +104,7 @@ open class ManagedModeTest : AbstractSyncTest() {
                 throw IllegalStateException("We don't have node nr: $i")
             }
             val dataSource = createMockDataSource(i)
-            mockDataSources.put(i, dataSource)
+            mockDataSources[i] = dataSource
         }
         addBlockchainConfiguration(nodeSet, null, 0)
     }
@@ -193,7 +196,10 @@ open class ManagedModeTest : AbstractSyncTest() {
                 val (pubkey, sigMaker) = createSigMaker(c, nodeId)
 
                 val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, c.chain, pubkey, sigMaker)
-                val bcFactory = blockchainConfigurationFactory ?: ManagedBlockchainConfigurationFactory(dataSource)
+                val bcFactory = blockchainConfigurationFactory ?: when (chainId) {
+                    0L -> Chain0BlockchainConfigurationFactory(c.nodes()[nodeId].appConfig)
+                    else -> DappBlockchainConfigurationFactory(dataSource)
+                }
                 dataSource.addConf(brid, 0, bcFactory.makeBlockchainConfiguration(bcConf), c, rawBlockchainConfiguration)
             }
         } else {

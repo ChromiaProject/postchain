@@ -118,7 +118,7 @@ data class SystemSetup(
         val peerInfos = mutableListOf<PeerInfo>()
         for (node in this. nodeMap.values) {
             val key = ByteArrayKey(node.pubKeyHex.hexStringToByteArray())
-            val pi = PeerInfo("localhost", node.getPortNumber(), key)
+            val pi = PeerInfo("localhost", node.getPortNumber(), key.byteArray)
             peerInfos.add(pi)
         }
 
