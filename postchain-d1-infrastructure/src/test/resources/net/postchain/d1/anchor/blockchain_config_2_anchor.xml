@@ -49,73 +49,7 @@ This is a Anchor Chain configuration specifically for testing.
                     <entry key="sources">
                         <dict>
                             <entry key="anchor/module.rell">
-                                <string><![CDATA[module;
-
-entity anchor_block {
-    key blockchain_rid: byte_array,
-        block_height: integer;
-    block_rid: byte_array;
-    block_header: byte_array;
-    witness: byte_array;
-}
-
-struct block_header {
-    blockchain_rid: byte_array;
-    previous_block_rid: byte_array;
-    merkle_root_hash: byte_array;
-    timestamp: integer;
-    height: integer;
-    dependencies: gtv; // Can be either GtvNull or GtvArray
-    extra: map<text,gtv>;
-}
-
-operation __anchor_block_header(block_rid: byte_array, header: gtv, witness: byte_array) {
-    val decoded_header = block_header.from_gtv(header);
-    create anchor_block(blockchain_rid = decoded_header.blockchain_rid, block_height = decoded_header.height, block_rid = block_rid, block_header = header.to_bytes(), witness = witness);
-
-    process_icmf(decoded_header);
-}
-
-query get_last_anchored_block(blockchain_rid: byte_array): struct<anchor_block>? {
-    return anchor_block @? { blockchain_rid } (@omit @sort_desc .block_height, $.to_struct()) limit 1;
-}
-
-query get_anchored_block_at_height(blockchain_rid: byte_array, height: integer): struct<anchor_block>? {
-    return anchor_block @? { blockchain_rid, .block_height == height } ($.to_struct());
-}
-
-entity icmf_messages_height {
-    key topic: text,
-        sender: byte_array,
-        sender_height: integer;
-    anchor_height: integer;
-    index topic, anchor_height;
-}
-
-struct signed_block_header_with_anchor_height {
-    block_header: byte_array;
-    witness: byte_array;
-    anchor_height: integer;
-}
-
-function process_icmf(header: block_header) {
-    val icmf_data = map<text,gtv>.from_gtv_pretty(header.extra["icmf_send"]);
-    for (topic in icmf_data.keys()) {
-        create icmf_messages_height(
-            topic = topic,
-            sender = header.blockchain_rid,
-            sender_height = header.height,
-            anchor_height = op_context.block_height
-        );
-    }
-}
-
-query icmf_get_headers_with_messages_between_heights(topic: text, from_anchor_height: integer, to_anchor_height: integer): list<signed_block_header_with_anchor_height> {
-    return (m: icmf_messages_height, a: anchor_block) @*
-        { a.blockchain_rid == m.sender, a.block_height == m.sender_height, topic, .anchor_height >= from_anchor_height, .anchor_height <= to_anchor_height }
-        (signed_block_header_with_anchor_height(block_header = a.block_header, witness = a.witness, anchor_height = m.anchor_height), @omit @sort m.rowid);
-}
-]]></string>
+                                <param key="rell" type="string"/>
                             </entry>
                         </dict>
                     </entry>

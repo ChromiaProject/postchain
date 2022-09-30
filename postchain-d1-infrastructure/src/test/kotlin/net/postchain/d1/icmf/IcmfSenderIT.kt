@@ -18,6 +18,7 @@ import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.Test
+import java.io.File
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
@@ -27,8 +28,15 @@ class IcmfSenderIT : ManagedModeTest() {
     fun icmfHappyPath() {
         startManagedSystem(3, 0)
 
+        val rellCode = File("postchain-d1-infrastructure/src/main/rell/icmf/module.rell").readText() +
+                """
+                    operation test_message(text) {
+                        send_message("my-topic", text.to_gtv());
+                    }
+                """
         val dappGtvConfig = GtvMLParser.parseGtvML(
-                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText())
+                javaClass.getResource("/net/postchain/d1/icmf/sender/blockchain_config_1.xml")!!.readText(),
+                mapOf("rell" to gtv(rellCode)))
 
         val dappChain = startNewBlockchain(setOf(0, 1, 2), setOf(),
                 rawBlockchainConfiguration = GtvEncoder.encodeGtv(dappGtvConfig),
