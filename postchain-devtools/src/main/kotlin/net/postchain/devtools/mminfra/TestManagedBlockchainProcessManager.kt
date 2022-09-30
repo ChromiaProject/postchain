@@ -35,10 +35,6 @@ class TestManagedBlockchainProcessManager(
 
     private val blockchainStarts = ConcurrentHashMap<Long, BlockingQueue<Long>>()
 
-    override fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
-        return testDataSource
-    }
-
     /**
      * Overriding the original method, so that we now, instead of checking the DB for what
      * BCs to launch we instead

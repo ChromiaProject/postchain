@@ -10,7 +10,7 @@ import net.postchain.core.block.*
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
-import nl.komponents.kovenant.Kovenant
+import net.postchain.utils.KovenantHelper
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
 
@@ -35,23 +35,17 @@ class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witnes
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
 open class BaseBlockQueries(
-    private val blockchainConfiguration: BlockchainConfiguration,
-    private val storage: Storage,
-    private val blockStore: BlockStore,
-    private val chainId: Long,
-    private val mySubjectId: ByteArray
+        private val blockchainConfiguration: BlockchainConfiguration,
+        private val storage: Storage,
+        private val blockStore: BlockStore,
+        private val chainId: Long,
+        private val mySubjectId: ByteArray
 ) : BlockQueries {
 
     companion object : KLogging()
 
-    // create a separate Kovenant context to make sure
-    // other tasks do not compete with BlockQueries
-    val kctx = Kovenant.createContext {
-        workerContext.dispatcher {
-            name = "BlockQueries"
-            concurrentTasks = storage.readConcurrency
-        }
-    }
+    // Create a separate Kovenant context to make sure other tasks do not compete with BlockQueries
+    val kctx = KovenantHelper.createContext("BlockQueries", storage.readConcurrency)
 
     /**
      * Wrapper function for a supplied function with the goal of opening a new read-only connection, catching any exceptions

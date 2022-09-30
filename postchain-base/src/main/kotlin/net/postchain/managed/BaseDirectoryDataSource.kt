@@ -5,30 +5,29 @@ import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
 import net.postchain.containers.infra.ContainerNodeConfig
-import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtx.GTXModule
 
 class BaseDirectoryDataSource(
-        queries: BlockQueries,
+        module: GTXModule,
         appConfig: AppConfig,
         private val containerNodeConfig: ContainerNodeConfig
-) : BaseManagedNodeDataSource(queries, appConfig),
-        DirectoryDataSource {
+) : BaseManagedNodeDataSource(module, appConfig), DirectoryDataSource {
 
     override fun getContainersToRun(): List<String>? {
-        val res = queries.query(
+        val res = query(
                 "nm_get_containers",
                 buildArgs("pubkey" to GtvFactory.gtv(appConfig.pubKeyByteArray))
-        ).get()
+        )
 
         return res.asArray().map { it.asString() }
     }
 
     override fun getBlockchainsForContainer(containerId: String): List<BlockchainRid>? {
-        val res = queries.query(
+        val res = query(
                 "nm_get_blockchains_for_container",
                 buildArgs("container_id" to GtvFactory.gtv(containerId))
-        ).get()
+        )
 
         return res.asArray().map { BlockchainRid(it.asByteArray()) }
     }
@@ -39,10 +38,10 @@ class BaseDirectoryDataSource(
             containerNodeConfig.testmodeDappsContainers[short] ?: "cont0"
         } else {
             if (nmApiVersion >= 3) {
-                queries.query(
+                query(
                         "nm_get_container_for_blockchain",
                         buildArgs("blockchain_rid" to GtvFactory.gtv(brid.data))
-                ).get().asString()
+                ).asString()
             } else {
                 throw Exception("Directory1 v.{$nmApiVersion} doesn't support 'nm_get_container_for_blockchain' query")
             }
@@ -58,10 +57,10 @@ class BaseDirectoryDataSource(
                     containerNodeConfig.testmodeResourceLimitsSTORAGE
             )
         } else {
-            val resourceLimits = queries.query(
+            val resourceLimits = query(
                     "nm_get_container_limits",
                     buildArgs("name" to GtvFactory.gtv(containerId))
-            ).get().asDict()
+            ).asDict()
                     .map { ResourceLimit.valueOf(it.key.uppercase()) to it.value.asInteger() }
                     .toMap()
 
