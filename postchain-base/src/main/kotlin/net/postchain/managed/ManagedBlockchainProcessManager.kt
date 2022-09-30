@@ -8,6 +8,8 @@ import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.reflection.constructorOf
+import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
@@ -95,20 +97,19 @@ open class ManagedBlockchainProcessManager(
 
     override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
         return { factoryName ->
-
-            val chain0BcCfgFactory = Chain0BlockchainConfigurationFactory::class.qualifiedName
-            val chainXBcCfgFactory = DappBlockchainConfigurationFactory::class.qualifiedName
-
-            when {
-                chainId == CHAIN0 && factoryName == chain0BcCfgFactory ->
-                    Chain0BlockchainConfigurationFactory(appConfig)
-                chainId != CHAIN0 && factoryName == chainXBcCfgFactory ->
-                    DappBlockchainConfigurationFactory(dataSource)
-                else -> {
-                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
-                            "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
-                            "Use $chain0BcCfgFactory for chain0 and $chainXBcCfgFactory for other chains.")
+            try {
+                if (chainId == CHAIN0) {
+                    constructorOf<Chain0BlockchainConfigurationFactory>(factoryName, AppConfig::class.java)
+                            .newInstance(appConfig)
+                } else {
+                    constructorOf<DappBlockchainConfigurationFactory>(factoryName, ManagedNodeDataSource::class.java)
+                            .newInstance(dataSource)
                 }
+            } catch (e: Exception) {
+                throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                        "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
+                        "Use ${Chain0BlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0 " +
+                        "and ${DappBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for other chains.")
             }
         }
     }
