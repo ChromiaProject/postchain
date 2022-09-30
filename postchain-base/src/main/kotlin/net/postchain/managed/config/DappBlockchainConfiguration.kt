@@ -5,7 +5,7 @@ import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 import net.postchain.managed.ManagedNodeDataSource
 
-class ManagedBlockchainConfiguration(
+class DappBlockchainConfiguration(
         configData: BlockchainConfigurationData,
         module: GTXModule,
         override val dataSource: ManagedNodeDataSource

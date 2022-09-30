@@ -14,7 +14,7 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
-import net.postchain.managed.config.ManagedBlockchainConfigurationFactory
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAwareness
 
 /**
@@ -97,13 +97,13 @@ open class ManagedBlockchainProcessManager(
         return { factoryName ->
 
             val chain0BcCfgFactory = Chain0BlockchainConfigurationFactory::class.qualifiedName
-            val chainXBcCfgFactory = ManagedBlockchainConfigurationFactory::class.qualifiedName
+            val chainXBcCfgFactory = DappBlockchainConfigurationFactory::class.qualifiedName
 
             when {
                 chainId == CHAIN0 && factoryName == chain0BcCfgFactory ->
                     Chain0BlockchainConfigurationFactory(appConfig)
                 chainId != CHAIN0 && factoryName == chainXBcCfgFactory ->
-                    ManagedBlockchainConfigurationFactory(dataSource)
+                    DappBlockchainConfigurationFactory(dataSource)
                 else -> {
                     throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
                             "due to configuration is wrong. Check /configurationfactory value: $factoryName." +

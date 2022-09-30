@@ -14,7 +14,7 @@ import net.postchain.gtv.*
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
-import net.postchain.managed.config.ManagedBlockchainConfigurationFactory
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import java.lang.Thread.sleep
 
 /**
@@ -75,7 +75,7 @@ open class ManagedModeTest : AbstractSyncTest() {
             data.setValue(KEY_CONFIGURATIONFACTORY, GtvString(
                     when (nodeSet.chain) {
                         0L -> Chain0BlockchainConfigurationFactory::class.java.name
-                        else -> ManagedBlockchainConfigurationFactory::class.java.name
+                        else -> DappBlockchainConfigurationFactory::class.java.name
                     }
             ))
 
