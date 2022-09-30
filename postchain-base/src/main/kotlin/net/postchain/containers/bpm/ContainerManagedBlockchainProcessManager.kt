@@ -8,9 +8,11 @@ import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
+import net.postchain.containers.bpm.config.ContainerChain0BlockchainConfigurationFactory
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.docker.DockerTools.containerName
 import net.postchain.containers.bpm.docker.DockerTools.findHostPorts
@@ -23,11 +25,10 @@ import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
-import net.postchain.core.block.BlockQueries
+import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
 
@@ -53,12 +54,24 @@ open class ContainerManagedBlockchainProcessManager(
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
 
-    override fun initManagedEnvironment() {
-        super.initManagedEnvironment()
+    init {
         stopRunningContainersIfExist()
     }
 
-    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, appConfig, containerNodeConfig)
+    override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
+        return { factoryName ->
+            val chain0BcCfgFactory = ContainerChain0BlockchainConfigurationFactory::class.qualifiedName
+            when {
+                chainId == CHAIN0 && factoryName == chain0BcCfgFactory ->
+                    ContainerChain0BlockchainConfigurationFactory(appConfig, containerNodeConfig)
+                else -> {
+                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                            "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
+                            "Use $chain0BcCfgFactory for chain0.")
+                }
+            }
+        }
+    }
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         return { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
