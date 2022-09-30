@@ -19,6 +19,7 @@ data class BlockchainRid(val data: ByteArray) {
 
         val ZERO_RID = BlockchainRid(ByteArray(32))
 
+        @JvmStatic
         fun buildFromHex(str: String) = BlockchainRid(str.hexStringToByteArray())
 
         /**

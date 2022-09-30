@@ -3,7 +3,11 @@ package net.postchain.client.config
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.PropertiesFileLoader
-import net.postchain.common.config.*
+import net.postchain.common.config.Config
+import net.postchain.common.config.cryptoSystem
+import net.postchain.common.config.getEnvOrIntProperty
+import net.postchain.common.config.getEnvOrLongProperty
+import net.postchain.common.config.getEnvOrStringProperty
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -11,15 +15,16 @@ import java.time.Duration
 
 const val STATUS_POLL_COUNT = 20
 val STATUS_POLL_INTERVAL: Duration = Duration.ofMillis(500)
-data class PostchainClientConfig(
-    val blockchainRid: BlockchainRid,
-    val endpointPool: EndpointPool,
-    val signers: List<KeyPair> = listOf(),
-    val statusPollCount: Int = STATUS_POLL_COUNT,
-    val statusPollInterval: Duration = STATUS_POLL_INTERVAL,
-    // Fail-over only applicable to synchronized requests
-    val failOverConfig: FailOverConfig = FailOverConfig(),
-    val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem()
+
+data class PostchainClientConfig @JvmOverloads constructor(
+        val blockchainRid: BlockchainRid,
+        val endpointPool: EndpointPool,
+        val signers: List<KeyPair> = listOf(),
+        val statusPollCount: Int = STATUS_POLL_COUNT,
+        val statusPollInterval: Duration = STATUS_POLL_INTERVAL,
+        // Fail-over only applicable to synchronized requests
+        val failOverConfig: FailOverConfig = FailOverConfig(),
+        val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem()
 ) : Config {
 
     companion object {
