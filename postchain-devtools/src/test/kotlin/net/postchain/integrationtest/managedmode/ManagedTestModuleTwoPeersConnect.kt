@@ -18,6 +18,7 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
         node,
         mapOf(),
         mapOf(
+                "nm_api_version" to ::queryApiVersion,
                 "nm_get_peer_infos" to ::queryGetPeerInfos,
                 "nm_get_peer_list_version" to ::queryGetPeerListVersion,
                 "nm_compute_blockchain_list" to ::queryComputeBlockchainList,
@@ -46,6 +47,8 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
 
         private val stage0 = -1 until 15
         private val stage1 = 15 until 30
+
+        fun queryApiVersion(node: Nodes, eContext: EContext, args: Gtv) = GtvFactory.gtv(1)
 
         fun queryGetPeerInfos(node: Nodes, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_get_peer_infos" }

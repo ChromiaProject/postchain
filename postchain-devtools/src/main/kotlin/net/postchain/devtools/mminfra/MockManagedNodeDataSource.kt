@@ -10,6 +10,7 @@ import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.gtv.Gtv
 import net.postchain.managed.ManagedNodeDataSource
+import nl.komponents.kovenant.Promise
 
 open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
     // Brid -> (height -> Pair(BlockchainConfiguration, binaryBlockchainConfig)
@@ -49,6 +50,10 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
     }
 
     override fun query(name: String, args: Gtv): Gtv {
+        TODO("Not yet implemented")
+    }
+
+    override fun queryAsync(name: String, args: Gtv): Promise<Gtv, Exception> {
         TODO("Not yet implemented")
     }
 

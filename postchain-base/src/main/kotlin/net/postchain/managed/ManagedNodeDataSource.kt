@@ -4,6 +4,7 @@ package net.postchain.managed
 
 import net.postchain.config.node.PeerInfoDataSource
 import net.postchain.gtv.Gtv
+import nl.komponents.kovenant.Promise
 
 interface ManagedNodeDataSource : PeerInfoDataSource {
     fun getPeerListVersion(): Long
@@ -17,5 +18,7 @@ interface ManagedNodeDataSource : PeerInfoDataSource {
     fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
 
     fun query(name: String, args: Gtv): Gtv
+
+    fun queryAsync(name: String, args: Gtv): Promise<Gtv, Exception>
 
 }

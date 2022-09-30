@@ -125,16 +125,7 @@ open class BaseBlockchainProcessManager(
                         stopBlockchain(chainId, bTrace, true)
 
                         startInfo("Starting of blockchain", chainId)
-                        val blockchainConfig = withReadWriteConnection(storage, chainId) { eContext ->
-                            val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
-                            if (configuration != null) {
-                                blockchainInfrastructure.makeBlockchainConfiguration(
-                                        configuration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory()
-                                )
-                            } else {
-                                throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
-                            }
-                        }
+                        val blockchainConfig = makeBlockchainConfiguration(chainId)
 
                         withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
                             val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
@@ -170,7 +161,20 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected open fun getBlockchainConfigurationFactory(): (String) -> BlockchainConfigurationFactory =
+    protected open fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
+        return withReadWriteConnection(storage, chainId) { eContext ->
+            val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
+            if (configuration != null) {
+                blockchainInfrastructure.makeBlockchainConfiguration(
+                        configuration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
+                )
+            } else {
+                throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
+            }
+        }
+    }
+
+    protected open fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory =
             DefaultBlockchainConfigurationFactory()
 
     protected open fun createAndRegisterBlockchainProcess(
