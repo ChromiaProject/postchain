@@ -9,12 +9,12 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.managed.config.Chain0BlockchainConfigurationInterface
+import net.postchain.managed.config.ManagedDataSourceAwareness
 
 class TestBlockchainConfiguration(
         data: BlockchainConfigurationData,
         override var dataSource: ManagedNodeDataSource
-) : BaseBlockchainConfiguration(data), Chain0BlockchainConfigurationInterface {
+) : BaseBlockchainConfiguration(data), ManagedDataSourceAwareness {
 
     override fun getTransactionFactory(): TransactionFactory {
         return TestTransactionFactory()

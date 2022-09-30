@@ -12,13 +12,15 @@ class Chain0BlockchainConfiguration(
         configData: BlockchainConfigurationData,
         module: GTXModule,
         val appConfig: AppConfig
-) : GTXBlockchainConfiguration(configData, module), Chain0BlockchainConfigurationInterface {
+) : GTXBlockchainConfiguration(configData, module), ManagedDataSourceAwareness {
 
-    override lateinit var dataSource: ManagedNodeDataSource
+    private lateinit var dataSource0: ManagedNodeDataSource
+
+    override val dataSource: ManagedNodeDataSource
+        get() = dataSource0
 
     override fun initializeDB(ctx: EContext) {
         super.initializeDB(ctx)
-        dataSource = BaseManagedNodeDataSource(module, appConfig)
+        dataSource0 = BaseManagedNodeDataSource(module, appConfig)
     }
-
 }

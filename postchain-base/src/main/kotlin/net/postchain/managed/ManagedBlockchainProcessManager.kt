@@ -13,10 +13,9 @@ import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
-import net.postchain.managed.config.Chain0BlockchainConfiguration
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
-import net.postchain.managed.config.Chain0BlockchainConfigurationInterface
 import net.postchain.managed.config.ManagedBlockchainConfigurationFactory
+import net.postchain.managed.config.ManagedDataSourceAwareness
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -73,13 +72,13 @@ open class ManagedBlockchainProcessManager(
 
     override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
         return super.makeBlockchainConfiguration(chainId).also {
-            if (it is Chain0BlockchainConfigurationInterface) {
+            if (chainId == CHAIN0 && it is ManagedDataSourceAwareness) {
                 initManagedEnvironment(it)
             }
         }
     }
 
-    protected open fun initManagedEnvironment(blockchainConfig: Chain0BlockchainConfigurationInterface) {
+    protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAwareness) {
         dataSource = blockchainConfig.dataSource
         peerListVersion = dataSource.getPeerListVersion()
 
