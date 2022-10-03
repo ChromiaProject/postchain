@@ -4,16 +4,15 @@ package net.postchain.devtools.testinfra
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
-import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.TransactionFactory
+import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
-import net.postchain.gtx.GTXModuleAwareness
 
 open class TestBlockchainConfiguration(
         configData: BlockchainConfigurationData,
         override val module: GTXModule
-) : BaseBlockchainConfiguration(configData), GTXModuleAwareness {
+) : GTXBlockchainConfiguration(configData, module) {
 
     open val transactionFactory = TestTransactionFactory()
 
