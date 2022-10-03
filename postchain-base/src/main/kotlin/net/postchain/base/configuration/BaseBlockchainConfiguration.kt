@@ -45,10 +45,14 @@ open class BaseBlockchainConfiguration(
 
     // Infrastructure settings
     override val syncInfrastructureName = DynamicClassName.build(configData.synchronizationInfrastructure)
-    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.synchronizationInfrastructureExtension ?: listOf())
+    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.synchronizationInfrastructureExtension
+            ?: listOf())
 
     // Only GTX config can have special TX, this is just "Base" so we settle for null
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
+
+    override val txQueueSize: Long
+        get() = configData.txQueueSize
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
         return BaseBlockHeader(rawBlockHeader, cryptoSystem)

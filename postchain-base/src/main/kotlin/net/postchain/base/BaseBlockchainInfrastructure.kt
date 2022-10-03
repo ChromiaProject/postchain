@@ -4,7 +4,6 @@ package net.postchain.base
 
 import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
-import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.common.reflection.constructorOf
@@ -77,9 +76,7 @@ open class BaseBlockchainInfrastructure(
         // We create a new storage instance to open new db connections for each engine
         val storage = StorageBuilder.buildStorage(postchainContext.appConfig)
 
-        val transactionQueue = BaseTransactionQueue(
-                (configuration as BaseBlockchainConfiguration) // TODO: Olle: Is this conversion harmless?
-                        .configData.txQueueSize.toInt())
+        val transactionQueue = BaseTransactionQueue(configuration.txQueueSize.toInt())
 
         return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue)
                 .apply {
