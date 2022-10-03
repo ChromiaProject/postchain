@@ -8,12 +8,11 @@ import net.postchain.core.Transaction
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.crypto.Signature
-import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.CompositeGTXModule
-import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GTXModuleAwareness
 import nl.komponents.kovenant.Promise
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -97,8 +96,7 @@ fun PostchainTestNode.getModules(chainId: Long = PostchainTestNode.DEFAULT_CHAIN
             ?.getConfiguration()
 
     return when (configuration) {
-        is GTXBlockchainConfiguration -> collectModules(configuration.module)
-        is TestBlockchainConfiguration -> collectModules(configuration.module)
+        is GTXModuleAwareness -> collectModules(configuration.module)
         else -> emptyArray()
     }
 }
