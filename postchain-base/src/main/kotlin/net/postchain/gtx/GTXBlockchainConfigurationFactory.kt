@@ -1,7 +1,6 @@
 package net.postchain.gtx
 
 import net.postchain.base.configuration.BlockchainConfigurationData
-import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
@@ -18,7 +17,6 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
     override fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext): BlockchainConfiguration {
         val cfData = configurationData as BlockchainConfigurationData
         val effectiveBRID = cfData.historicBrid ?: configurationData.context.blockchainRID
-        DependenciesValidator.validateBlockchainRids(eContext, configurationData.blockchainDependencies)
         return GTXBlockchainConfiguration(
             cfData,
             createGtxModule(effectiveBRID, configurationData, eContext)
