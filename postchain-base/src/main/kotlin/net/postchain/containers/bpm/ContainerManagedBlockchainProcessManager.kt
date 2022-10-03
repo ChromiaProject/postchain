@@ -31,6 +31,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 
 open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -60,7 +61,7 @@ open class ContainerManagedBlockchainProcessManager(
 
     override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
         return { factoryName ->
-            val chain0BcCfgFactory = ContainerChain0BlockchainConfigurationFactory::class.qualifiedName
+            val chain0BcCfgFactory = Chain0BlockchainConfigurationFactory::class.qualifiedName
             when {
                 chainId == CHAIN0 && factoryName == chain0BcCfgFactory ->
                     ContainerChain0BlockchainConfigurationFactory(appConfig, containerNodeConfig)
