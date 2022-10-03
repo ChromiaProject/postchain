@@ -4,7 +4,10 @@ package net.postchain.base.configuration
 
 import mu.KLogging
 import net.postchain.base.*
-import net.postchain.base.data.*
+import net.postchain.base.data.BaseBlockBuilder
+import net.postchain.base.data.BaseBlockStore
+import net.postchain.base.data.BaseBlockWitnessProvider
+import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
@@ -25,10 +28,10 @@ open class BaseBlockchainConfiguration(
     override val traits = setOf<String>()
     val cryptoSystem = Secp256K1CryptoSystem()
     val blockStore = BaseBlockStore()
-    override val chainID = configData.context.chainID
-    override val blockchainRid = configData.context.blockchainRID
-    override val effectiveBlockchainRID = configData.historicBrid ?: configData.context.blockchainRID
-    override val signers = configData.signers
+    final override val chainID get() = configData.context.chainID
+    final override val blockchainRid get() = configData.context.blockchainRID
+    final override val effectiveBlockchainRID = configData.historicBrid ?: configData.context.blockchainRID
+    final override val signers get() = configData.signers
 
     protected val blockStrategyConfig = configData.blockStrategy?.toObject() ?: BaseBlockBuildingStrategyConfigurationData.default
 
@@ -38,7 +41,7 @@ open class BaseBlockchainConfiguration(
             signers.toTypedArray()
     )
 
-    val bcRelatedInfosDependencyList: List<BlockchainRelatedInfo> = configData.blockchainDependencies
+    override val blockchainDependencies: List<BlockchainRelatedInfo> get() = configData.blockchainDependencies
 
     // Infrastructure settings
     override val syncInfrastructureName = DynamicClassName.build(configData.synchronizationInfrastructure)
@@ -85,7 +88,7 @@ open class BaseBlockchainConfiguration(
                 signers.toTypedArray(),
                 configData.blockSigMaker,
                 blockWitnessProvider,
-                bcRelatedInfosDependencyList,
+                blockchainDependencies,
                 makeBBExtensions(),
                 effectiveBlockchainRID != blockchainRid,
                 blockStrategyConfig.maxBlockSize,
@@ -101,12 +104,12 @@ open class BaseBlockchainConfiguration(
      */
     @Synchronized
     private fun addChainIDToDependencies(ctx: EContext) {
-        if (bcRelatedInfosDependencyList.isNotEmpty()) {
+        if (blockchainDependencies.isNotEmpty()) {
             // Check if we have added ChainId's already
-            val first = bcRelatedInfosDependencyList.first()
+            val first = blockchainDependencies.first()
             if (first.chainId == null) {
                 // We have to fill up the cache of ChainIDs
-                for (bcInfo in bcRelatedInfosDependencyList) {
+                for (bcInfo in blockchainDependencies) {
                     val depChainId = blockStore.getChainId(ctx, bcInfo.blockchainRid)
                     bcInfo.chainId = depChainId ?: throw BadDataMistake(BadDataType.BAD_CONFIGURATION,
                             "The blockchain configuration claims we depend on: $bcInfo so this BC must exist in DB"
@@ -119,10 +122,6 @@ open class BaseBlockchainConfiguration(
     override fun makeBlockQueries(storage: Storage): BlockQueries {
         return BaseBlockQueries(
                 this, storage, blockStore, chainID, configData.context.nodeRID!!)
-    }
-
-    override fun initializeDB(ctx: EContext) {
-        DependenciesValidator.validateBlockchainRids(ctx, bcRelatedInfosDependencyList)
     }
 
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {

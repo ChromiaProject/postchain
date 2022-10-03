@@ -64,10 +64,8 @@ open class BaseBlockchainInfrastructure(
                 rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
 
         val factory = bcConfigurationFactory(blockConfData.configurationFactory)
-        val config = factory.makeBlockchainConfiguration(blockConfData)
-        config.initializeDB(eContext)
 
-        return config
+        return factory.makeBlockchainConfiguration(blockConfData, eContext)
     }
 
     override fun makeBlockchainEngine(
