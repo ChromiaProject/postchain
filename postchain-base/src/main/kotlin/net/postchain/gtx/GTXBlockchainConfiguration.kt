@@ -49,7 +49,6 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
     override fun initializeDB(ctx: EContext) {
         super.initializeDB(ctx)
         logger.debug("Running initialize DB of class GTXBlockchainConfiguration using ctx chainIid: ${ctx.chainID}, BC RID: ${effectiveBlockchainRID.toShortHex()}")
-        GTXSchemaManager.initializeDB(ctx)
         specTxHandler = GTXSpecialTxHandler(
                 module,
                 this.chainID,

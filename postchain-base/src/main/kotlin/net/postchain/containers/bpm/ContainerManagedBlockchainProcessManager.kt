@@ -9,6 +9,8 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.reflection.constructorOf
+import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
@@ -63,8 +65,10 @@ open class ContainerManagedBlockchainProcessManager(
         return { factoryName ->
             val chain0BcCfgFactory = Chain0BlockchainConfigurationFactory::class.qualifiedName
             when {
-                chainId == CHAIN0 && factoryName == chain0BcCfgFactory ->
-                    ContainerChain0BlockchainConfigurationFactory(appConfig, containerNodeConfig)
+                chainId == CHAIN0 && factoryName == chain0BcCfgFactory -> {
+                    val factory = constructorOf<Chain0BlockchainConfigurationFactory>(factoryName, AppConfig::class.java).newInstance(appConfig)
+                    ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig)
+                }
                 else -> {
                     throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
                             "due to configuration is wrong. Check /configurationfactory value: $factoryName." +

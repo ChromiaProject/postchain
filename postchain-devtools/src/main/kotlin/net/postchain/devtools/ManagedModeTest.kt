@@ -3,6 +3,7 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.*
+import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.NODE_ID_AUTO
@@ -200,7 +201,10 @@ open class ManagedModeTest : AbstractSyncTest() {
                     0L -> Chain0BlockchainConfigurationFactory(c.nodes()[nodeId].appConfig)
                     else -> DappBlockchainConfigurationFactory(dataSource)
                 }
-                dataSource.addConf(brid, 0, bcFactory.makeBlockchainConfiguration(bcConf), c, rawBlockchainConfiguration)
+                withWriteConnection(nodes[nodeId].postchainContext.storage, c.chain) {
+                    dataSource.addConf(brid, 0, bcFactory.makeBlockchainConfiguration(bcConf, it), c, rawBlockchainConfiguration)
+                    true
+                }
             }
         } else {
             addBlockchainConfiguration(c, historicChain, 0)

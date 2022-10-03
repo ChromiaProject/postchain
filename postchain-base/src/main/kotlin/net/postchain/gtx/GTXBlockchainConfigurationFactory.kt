@@ -46,6 +46,9 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         } else {
             val moduleList = list.map(::makeModule)
             CompositeGTXModule(moduleList.toTypedArray(), gtxConfig.allowOverrides)
-        }.apply { initializeDB(eContext) }
+        }.apply {
+            GTXSchemaManager.initializeDB(eContext)
+            initializeDB(eContext)
+        }
     }
 }
