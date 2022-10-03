@@ -8,11 +8,12 @@ import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.TransactionFactory
 import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GTXModuleAwareness
 
 open class TestBlockchainConfiguration(
         configData: BlockchainConfigurationData,
-        val module: GTXModule
-) : BaseBlockchainConfiguration(configData) {
+        override val module: GTXModule
+) : BaseBlockchainConfiguration(configData), GTXModuleAwareness {
 
     open val transactionFactory = TestTransactionFactory()
 
