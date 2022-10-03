@@ -5,6 +5,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactory
+import net.postchain.core.EContext
 import net.postchain.gtv.mapper.toObject
 
 /**
@@ -13,16 +14,16 @@ import net.postchain.gtv.mapper.toObject
  */
 open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
-    override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
+    override fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext): BlockchainConfiguration {
         val cfData = configurationData as BlockchainConfigurationData
         val effectiveBRID = cfData.historicBrid ?: configurationData.context.blockchainRID
         return GTXBlockchainConfiguration(
             cfData,
-            createGtxModule(effectiveBRID, configurationData)
-        )
+            createGtxModule(effectiveBRID, configurationData, eContext)
+        ).apply { initializeDB(eContext) }
     }
 
-    open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
+    open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData, eContext: EContext): GTXModule {
 
         val gtxConfig = data.gtx?.toObject() ?: GtxConfigurationData.default
         val list = gtxConfig.modules
@@ -45,6 +46,6 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         } else {
             val moduleList = list.map(::makeModule)
             CompositeGTXModule(moduleList.toTypedArray(), gtxConfig.allowOverrides)
-        }
+        }.apply { initializeDB(eContext) }
     }
 }

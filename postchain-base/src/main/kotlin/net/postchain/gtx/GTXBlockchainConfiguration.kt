@@ -9,7 +9,9 @@ import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.common.exception.UserMistake
-import net.postchain.core.*
+import net.postchain.core.EContext
+import net.postchain.core.Storage
+import net.postchain.core.TransactionFactory
 import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvToJSON
@@ -48,7 +50,6 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
         super.initializeDB(ctx)
         logger.debug("Running initialize DB of class GTXBlockchainConfiguration using ctx chainIid: ${ctx.chainID}, BC RID: ${effectiveBlockchainRID.toShortHex()}")
         GTXSchemaManager.initializeDB(ctx)
-        module.initializeDB(ctx)
         specTxHandler = GTXSpecialTxHandler(
                 module,
                 this.chainID,
