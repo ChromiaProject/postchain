@@ -67,7 +67,7 @@ open class ContainerManagedBlockchainProcessManager(
             } catch (e: Exception) {
                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
                         "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
-                        "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.")
+                        "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.", e)
             }
             if (chainId == CHAIN0) {
                 Chain0BlockchainConfigurationFactory(factory, appConfig)

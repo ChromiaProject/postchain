@@ -107,7 +107,7 @@ open class ManagedBlockchainProcessManager(
             } catch (e: Exception) {
                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
                         "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
-                        "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)")
+                        "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)", e)
             }
         }
     }
