@@ -9,12 +9,10 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.reflection.constructorOf
-import net.postchain.config.app.AppConfig
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
-import net.postchain.containers.bpm.config.ContainerChain0BlockchainConfigurationFactory
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.docker.DockerTools.containerName
 import net.postchain.containers.bpm.docker.DockerTools.findHostPorts
@@ -31,6 +29,7 @@ import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
@@ -63,17 +62,17 @@ open class ContainerManagedBlockchainProcessManager(
 
     override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
         return { factoryName ->
-            val chain0BcCfgFactory = Chain0BlockchainConfigurationFactory::class.qualifiedName
-            when {
-                chainId == CHAIN0 && factoryName == chain0BcCfgFactory -> {
-                    val factory = constructorOf<Chain0BlockchainConfigurationFactory>(factoryName, AppConfig::class.java).newInstance(appConfig)
-                    ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig)
-                }
-                else -> {
-                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
-                            "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
-                            "Use $chain0BcCfgFactory for chain0.")
-                }
+            val factory = try {
+                newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
+            } catch (e: Exception) {
+                throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                        "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
+                        "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.")
+            }
+            if (chainId == CHAIN0) {
+                Chain0BlockchainConfigurationFactory(factory, appConfig)
+            } else {
+                throw UserMistake("Unexpected chain id. This factory should only be used by chain 0.")
             }
         }
     }

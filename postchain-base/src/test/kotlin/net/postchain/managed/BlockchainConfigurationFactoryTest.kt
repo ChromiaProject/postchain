@@ -3,6 +3,7 @@ package net.postchain.managed
 import net.postchain.PostchainContext
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import org.junit.jupiter.api.Test
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
+import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 
 class BlockchainConfigurationFactoryTest {
@@ -26,17 +28,17 @@ class BlockchainConfigurationFactoryTest {
 
     @Test
     fun `bcConfig for chain0 when correct chain0 factory specified`() {
-        expectSuccess(0L, Chain0BlockchainConfigurationFactory::class.qualifiedName!!)
+        expectSuccess(0L, GTXBlockchainConfigurationFactory::class, Chain0BlockchainConfigurationFactory::class)
     }
 
     @Test
     fun `bcConfig for chain0 when incorrect dapp factory specified`() {
-        expectFailure(0L, DappBlockchainConfigurationFactory::class.qualifiedName!!)
+        expectFailure(0L, AnyBlockchainConfigFactory::class.qualifiedName!!)
     }
 
     @Test
     fun `bcConfig for chain0 when correct extended chain0 factory specified`() {
-        expectSuccess(0L, ExtendedChain0BcCfgFactory::class.qualifiedName!!)
+        expectSuccess(0L, ExtendedBcConfigFactory::class, Chain0BlockchainConfigurationFactory::class)
     }
 
     @Test
@@ -46,17 +48,17 @@ class BlockchainConfigurationFactoryTest {
 
     @Test
     fun `bcConfig for dapp chain when correct dapp factory specified`() {
-        expectSuccess(1L, DappBlockchainConfigurationFactory::class.qualifiedName!!)
+        expectSuccess(1L, GTXBlockchainConfigurationFactory::class, DappBlockchainConfigurationFactory::class)
     }
 
     @Test
     fun `bcConfig for dapp chain when incorrect chain0 factory specified`() {
-        expectFailure(1L, Chain0BlockchainConfigurationFactory::class.qualifiedName!!)
+        expectFailure(1L, AnyBlockchainConfigFactory::class.qualifiedName!!)
     }
 
     @Test
     fun `bcConfig for dapp chain when correct extended dapp factory specified`() {
-        expectSuccess(1L, ExtendedDappBcCfgFactory::class.qualifiedName!!)
+        expectSuccess(1L, ExtendedBcConfigFactory::class, DappBlockchainConfigurationFactory::class)
     }
 
     @Test
@@ -64,13 +66,13 @@ class BlockchainConfigurationFactoryTest {
         expectFailure(1L, "com.package.MyFactory")
     }
 
-    private fun expectSuccess(chainId: Long, factoryName: String) {
+    private fun expectSuccess(chainId: Long, factory: KClass<*>, expectedClass: KClass<*>) {
         val factorySupplier = bpm.getBlockchainConfigurationFactory(chainId)
-        val factory = factorySupplier(factoryName)
+        val factoryInstance = factorySupplier(factory.qualifiedName!!)
 
         assertEquals(
-                factoryName,
-                factory.javaClass.kotlin.qualifiedName)
+                expectedClass.qualifiedName,
+                factoryInstance.javaClass.kotlin.qualifiedName)
     }
 
     private fun expectFailure(chainId: Long, factoryName: String) {

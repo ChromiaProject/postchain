@@ -1,22 +1,19 @@
 package net.postchain.managed.config
 
-import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.EContext
+import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.ManagedNodeDataSource
 
 open class DappBlockchainConfigurationFactory(
+        val factory: GTXBlockchainConfigurationFactory,
         val dataSource: ManagedNodeDataSource
-) : GTXBlockchainConfigurationFactory() {
+) : BlockchainConfigurationFactory by factory {
 
     override fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext): BlockchainConfiguration {
-        val configData = configurationData as BlockchainConfigurationData
-        val effectiveBrid = configData.historicBrid ?: configurationData.context.blockchainRID
-        return DappBlockchainConfiguration(
-                configData,
-                createGtxModule(effectiveBrid, configurationData, eContext),
-                dataSource
-        )
+        val conf = factory.makeBlockchainConfiguration(configurationData, eContext) as GTXBlockchainConfiguration
+        return DappBlockchainConfiguration(conf, dataSource)
     }
 }

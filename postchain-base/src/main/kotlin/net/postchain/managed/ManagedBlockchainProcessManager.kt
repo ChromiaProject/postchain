@@ -8,13 +8,13 @@ import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.reflection.constructorOf
-import net.postchain.config.app.AppConfig
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAwareness
@@ -98,18 +98,16 @@ open class ManagedBlockchainProcessManager(
     override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
         return { factoryName ->
             try {
+                val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
                 if (chainId == CHAIN0) {
-                    constructorOf<Chain0BlockchainConfigurationFactory>(factoryName, AppConfig::class.java)
-                            .newInstance(appConfig)
+                    Chain0BlockchainConfigurationFactory(factory, appConfig)
                 } else {
-                    constructorOf<DappBlockchainConfigurationFactory>(factoryName, ManagedNodeDataSource::class.java)
-                            .newInstance(dataSource)
+                    DappBlockchainConfigurationFactory(factory, dataSource)
                 }
             } catch (e: Exception) {
                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
                         "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
-                        "Use ${Chain0BlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0 " +
-                        "and ${DappBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for other chains.")
+                        "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)")
             }
         }
     }
