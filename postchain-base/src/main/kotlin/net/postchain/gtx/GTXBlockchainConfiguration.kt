@@ -20,9 +20,9 @@ import net.postchain.gtx.special.GTXSpecialTxHandler
 import nl.komponents.kovenant.Promise
 
 open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
-                                      val module: GTXModule
+                                      override val module: GTXModule
 )
-    : BaseBlockchainConfiguration(configData) {
+    : BaseBlockchainConfiguration(configData), GTXModuleAwareness {
 
     private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
 
