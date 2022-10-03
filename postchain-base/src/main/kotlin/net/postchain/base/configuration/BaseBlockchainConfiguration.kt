@@ -32,6 +32,8 @@ open class BaseBlockchainConfiguration(
     final override val blockchainRid get() = configData.context.blockchainRID
     final override val effectiveBlockchainRID = configData.historicBrid ?: configData.context.blockchainRID
     final override val signers get() = configData.signers
+    final override val transactionQueueSize: Int
+        get() = configData.txQueueSize.toInt()
 
     protected val blockStrategyConfig = configData.blockStrategy?.toObject() ?: BaseBlockBuildingStrategyConfigurationData.default
 
