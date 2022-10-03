@@ -23,6 +23,7 @@ interface BlockchainConfiguration {
     val traits: Set<String>
     val syncInfrastructureName: DynamicClassName?
     val syncInfrastructureExtensionNames: List<DynamicClassName>
+    val transactionQueueSize: Int
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader
     fun decodeWitness(rawWitness: ByteArray): BlockWitness
