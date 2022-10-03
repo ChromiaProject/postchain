@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
+import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -170,7 +171,7 @@ open class BaseBlockchainProcessManager(
                 )
             } else {
                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
-            }
+            }.also { DependenciesValidator.validateBlockchainRids(eContext, it.blockchainDependencies) }
         }
     }
 

@@ -3,6 +3,7 @@
 package net.postchain.core
 
 import net.postchain.base.BlockWitnessProvider
+import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.core.block.*
 import net.postchain.gtv.Gtv
@@ -16,6 +17,7 @@ interface BlockchainConfiguration {
     val blockchainContext: BlockchainContext
     val chainID: Long
     val blockchainRid: BlockchainRid
+    val blockchainDependencies: List<BlockchainRelatedInfo>
     val signers: List<ByteArray>
     val effectiveBlockchainRID: BlockchainRid
     val traits: Set<String>
@@ -28,7 +30,6 @@ interface BlockchainConfiguration {
     fun getTransactionFactory(): TransactionFactory
     fun makeBlockBuilder(ctx: EContext): BlockBuilder
     fun makeBlockQueries(storage: Storage): BlockQueries
-    fun initializeDB(ctx: EContext)
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
     fun shutdownModules()
 }
