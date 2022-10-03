@@ -1,10 +1,15 @@
 package net.postchain.managed
 
-import net.postchain.config.app.AppConfig
-import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
-import net.postchain.managed.config.DappBlockchainConfigurationFactory
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainConfigurationFactory
+import net.postchain.core.EContext
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
-class ExtendedChain0BcCfgFactory(appConfig: AppConfig) : Chain0BlockchainConfigurationFactory(appConfig)
 
-class ExtendedDappBcCfgFactory(dataSource: ManagedNodeDataSource) : DappBlockchainConfigurationFactory(dataSource)
+class AnyBlockchainConfigFactory : BlockchainConfigurationFactory {
+    override fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext): BlockchainConfiguration {
+        TODO("Not yet implemented")
+    }
+}
+class ExtendedBcConfigFactory() : GTXBlockchainConfigurationFactory()
 

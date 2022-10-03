@@ -1,10 +1,12 @@
 package net.postchain.gtx
 
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactory
+import net.postchain.core.EContext
 import net.postchain.gtv.mapper.toObject
 
 /**
@@ -13,16 +15,17 @@ import net.postchain.gtv.mapper.toObject
  */
 open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
-    override fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration {
+    override fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext): BlockchainConfiguration {
         val cfData = configurationData as BlockchainConfigurationData
         val effectiveBRID = cfData.historicBrid ?: configurationData.context.blockchainRID
+        DependenciesValidator.validateBlockchainRids(eContext, configurationData.blockchainDependencies)
         return GTXBlockchainConfiguration(
             cfData,
-            createGtxModule(effectiveBRID, configurationData)
+            createGtxModule(effectiveBRID, configurationData, eContext)
         )
     }
 
-    open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
+    open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData, eContext: EContext): GTXModule {
 
         val gtxConfig = data.gtx?.toObject() ?: GtxConfigurationData.default
         val list = gtxConfig.modules
@@ -31,9 +34,8 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         }
 
         fun makeModule(name: String): GTXModule {
-            val moduleClass = Class.forName(name)
-            val instance = moduleClass.newInstance()
-            return when (instance) {
+            val moduleClass = Class.forName(name).getConstructor()
+            return when (val instance = moduleClass.newInstance()) {
                 is GTXModule -> instance
                 is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID) //TODO
                 else -> throw UserMistake("Module class not recognized")
@@ -45,6 +47,9 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         } else {
             val moduleList = list.map(::makeModule)
             CompositeGTXModule(moduleList.toTypedArray(), gtxConfig.allowOverrides)
+        }.apply {
+            GTXSchemaManager.initializeDB(eContext)
+            initializeDB(eContext)
         }
     }
 }

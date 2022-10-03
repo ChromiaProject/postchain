@@ -3,6 +3,7 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.*
+import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.NODE_ID_AUTO
@@ -14,9 +15,8 @@ import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtv.*
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
-import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
-import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import java.lang.Thread.sleep
 
 /**
@@ -74,12 +74,7 @@ open class ManagedModeTest : AbstractSyncTest() {
                 data.setValue(KEY_HISTORIC_BRID, GtvByteArray(ChainUtil.ridOf(historicChain).data))
             }
 
-            data.setValue(KEY_CONFIGURATIONFACTORY, GtvString(
-                    when (nodeSet.chain) {
-                        0L -> Chain0BlockchainConfigurationFactory::class.java.name
-                        else -> DappBlockchainConfigurationFactory::class.java.name
-                    }
-            ))
+            data.setValue(KEY_CONFIGURATIONFACTORY, GtvString(GTXBlockchainConfigurationFactory::class.java.name))
 
             data.setValue(KEY_BLOCKSTRATEGY, GtvDictionary.build(mapOf(
                     KEY_BLOCKSTRATEGY_MAXBLOCKTIME to GtvInteger(2_000)
@@ -196,11 +191,11 @@ open class ManagedModeTest : AbstractSyncTest() {
                 val (pubkey, sigMaker) = createSigMaker(c, nodeId)
 
                 val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, c.chain, pubkey, sigMaker)
-                val bcFactory = blockchainConfigurationFactory ?: when (chainId) {
-                    0L -> Chain0BlockchainConfigurationFactory(c.nodes()[nodeId].appConfig)
-                    else -> DappBlockchainConfigurationFactory(dataSource)
+                val bcFactory = blockchainConfigurationFactory ?: GTXBlockchainConfigurationFactory()
+                withWriteConnection(nodes[nodeId].postchainContext.storage, c.chain) {
+                    dataSource.addConf(brid, 0, bcFactory.makeBlockchainConfiguration(bcConf, it), c, rawBlockchainConfiguration)
+                    true
                 }
-                dataSource.addConf(brid, 0, bcFactory.makeBlockchainConfiguration(bcConf), c, rawBlockchainConfiguration)
             }
         } else {
             addBlockchainConfiguration(c, historicChain, 0)
