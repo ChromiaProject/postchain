@@ -13,6 +13,7 @@ import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
+import net.postchain.containers.bpm.config.ContainerChain0BlockchainConfigurationFactory
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.docker.DockerTools.containerName
 import net.postchain.containers.bpm.docker.DockerTools.findHostPorts
@@ -70,7 +71,7 @@ open class ContainerManagedBlockchainProcessManager(
                         "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.", e)
             }
             if (chainId == CHAIN0) {
-                Chain0BlockchainConfigurationFactory(factory, appConfig)
+                ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig)
             } else {
                 throw UserMistake("Unexpected chain id. This factory should only be used by chain 0.")
             }
