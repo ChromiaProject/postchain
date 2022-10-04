@@ -26,16 +26,20 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
 
     private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
 
-    private val txFactory = GTXTransactionFactory(
-        effectiveBlockchainRID, module, cryptoSystem, gtxConfig.maxTxSize
-    )
+    private val txFactory by lazy {
+        GTXTransactionFactory(
+                effectiveBlockchainRID, module, cryptoSystem, gtxConfig.maxTxSize
+        )
+    }
     private val specTxHandler: GTXSpecialTxHandler // Note: this is NOT the same as the variable in Base.
-     = GTXSpecialTxHandler(
-            module,
-            this.chainID,
-            effectiveBlockchainRID,
-            cryptoSystem,
-            txFactory)
+            by lazy {
+                GTXSpecialTxHandler(
+                        module,
+                        this.chainID,
+                        effectiveBlockchainRID,
+                        cryptoSystem,
+                        txFactory)
+            }
 
     companion object : KLogging()
 
