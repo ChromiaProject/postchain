@@ -48,7 +48,7 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
             eContext: EContext,
             nodeId: Int,
             chainId: Long,
-            bcConfigurationFactory: (String) -> BlockchainConfigurationFactory,
+            bcConfigurationFactory: BlockchainConfigurationFactorySupplier,
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(

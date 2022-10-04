@@ -26,14 +26,13 @@ import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
-import net.postchain.core.BlockchainConfigurationFactory
+import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
-import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 
 open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -61,22 +60,21 @@ open class ContainerManagedBlockchainProcessManager(
         stopRunningContainersIfExist()
     }
 
-    override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
-        return { factoryName ->
-            val factory = try {
-                newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
-            } catch (e: Exception) {
-                throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
-                        "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
-                        "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.", e)
+    override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
+            BlockchainConfigurationFactorySupplier { factoryName: String ->
+                val factory = try {
+                    newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
+                } catch (e: Exception) {
+                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                            "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
+                            "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.", e)
+                }
+                if (chainId == CHAIN0) {
+                    ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig)
+                } else {
+                    throw UserMistake("Unexpected chain id. This factory should only be used by chain 0.")
+                }
             }
-            if (chainId == CHAIN0) {
-                ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig)
-            } else {
-                throw UserMistake("Unexpected chain id. This factory should only be used by chain 0.")
-            }
-        }
-    }
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         return { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->

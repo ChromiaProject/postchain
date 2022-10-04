@@ -95,22 +95,21 @@ open class ManagedBlockchainProcessManager(
                 ?: logger.warn { "Blockchain config is not managed" }
     }
 
-    override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
-        return { factoryName ->
-            try {
-                val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
-                if (chainId == CHAIN0) {
-                    Chain0BlockchainConfigurationFactory(factory, appConfig)
-                } else {
-                    DappBlockchainConfigurationFactory(factory, dataSource)
+    override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
+            BlockchainConfigurationFactorySupplier { factoryName: String ->
+                try {
+                    val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
+                    if (chainId == CHAIN0) {
+                        Chain0BlockchainConfigurationFactory(factory, appConfig)
+                    } else {
+                        DappBlockchainConfigurationFactory(factory, dataSource)
+                    }
+                } catch (e: Exception) {
+                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                            "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
+                            "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)", e)
                 }
-            } catch (e: Exception) {
-                throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
-                        "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
-                        "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)", e)
             }
-        }
-    }
 
     override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
         return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {

@@ -175,7 +175,7 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected open fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory =
+    protected open fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
             DefaultBlockchainConfigurationFactory()
 
     protected open fun createAndRegisterBlockchainProcess(

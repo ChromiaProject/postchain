@@ -68,7 +68,7 @@ class BlockchainConfigurationFactoryTest {
 
     private fun expectSuccess(chainId: Long, factory: KClass<*>, expectedClass: KClass<*>) {
         val factorySupplier = bpm.getBlockchainConfigurationFactory(chainId)
-        val factoryInstance = factorySupplier(factory.qualifiedName!!)
+        val factoryInstance = factorySupplier.supply(factory.qualifiedName!!)
 
         assertEquals(
                 expectedClass.qualifiedName,
@@ -79,7 +79,7 @@ class BlockchainConfigurationFactoryTest {
         val factorySupplier = bpm.getBlockchainConfigurationFactory(chainId)
 
         assertThrows<UserMistake> {
-            factorySupplier(factoryName)
+            factorySupplier.supply(factoryName)
         }
     }
 }
