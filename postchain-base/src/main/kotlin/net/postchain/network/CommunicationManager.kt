@@ -18,8 +18,8 @@ interface CommunicationManager<PacketType> {
      * @param amongPeers consider only these peers. The random choice will thus be made from the intersection of
      * amongPeers and connected peers.
      * @return the selected peer that the packet was sent to. If there
-     * were no peers available, null is returned.
+     * were no peers available, null is returned. Also, a set of the supplied peers that were actually connected
      */
-    fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): NodeRid?
+    fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): Pair<NodeRid?, Set<NodeRid>>
     fun shutdown()
 }

@@ -54,6 +54,7 @@ data class SyncParameters(
     var loopInterval: Long = 100,
     var mustSyncUntilHeight: Long = -1,
     var maxErrorsBeforeBlacklisting: Int = 10,
+    val disconnectTimeout: Long = 1000,
     /**
      * 10 minutes in milliseconds
      */

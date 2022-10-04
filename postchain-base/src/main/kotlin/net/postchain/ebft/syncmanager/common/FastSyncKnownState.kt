@@ -43,7 +43,7 @@ class FastSyncKnownState(prms: SyncParameters) : KnownState(prms)  {
         }
     }
 
-    override fun isSyncable(h: Long) = state == State.SYNCABLE || state == State.DRAINED && drainedHeight >= h
+    override fun isSyncable(h: Long) = isConnected() && (state == State.SYNCABLE || state == State.DRAINED && drainedHeight >= h)
 
     fun headerReceived(height: Long) {
         if (state == State.DRAINED && height > drainedHeight) {

@@ -330,15 +330,22 @@ class FastSynchronizer(
     private fun sendLegacyRequest(height: Long): NodeRid? {
         val peers = peerStatuses.getLegacyPeers(height).intersect(configuredPeers)
         if (peers.isEmpty()) return null
-        return communicationManager.sendToRandomPeer(GetBlockAtHeight(height), peers)
+        return sendMessageAndUpdateConnectionStatuses(GetBlockAtHeight(height), peers)
     }
 
     private fun sendRequest(height: Long): NodeRid? {
         val now = System.currentTimeMillis()
         val excludedPeers = peerStatuses.exclNonSyncable(height, now)
         val peers = configuredPeers.minus(excludedPeers)
+        return sendMessageAndUpdateConnectionStatuses(GetBlockHeaderAndBlock(height), peers)
+    }
+
+    private fun sendMessageAndUpdateConnectionStatuses(message: EbftMessage, peers: Set<NodeRid>): NodeRid? {
         if (peers.isEmpty()) return null
-        return communicationManager.sendToRandomPeer(GetBlockHeaderAndBlock(height), peers)
+        val (selectedPeer, connectedPeers) = communicationManager.sendToRandomPeer(message, peers)
+        peerStatuses.markConnected(connectedPeers)
+        peerStatuses.markDisconnected(peers.minus(connectedPeers))
+        return selectedPeer
     }
 
     private fun startJob(height: Long): Boolean {
