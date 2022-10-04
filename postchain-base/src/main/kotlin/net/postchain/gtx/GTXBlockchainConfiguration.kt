@@ -20,26 +20,23 @@ import net.postchain.gtx.special.GTXSpecialTxHandler
 import nl.komponents.kovenant.Promise
 
 open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
-                                      override val module: GTXModule
-)
-    : BaseBlockchainConfiguration(configData), GTXModuleAwareness {
+                                      final override val module: GTXModule
+) : BaseBlockchainConfiguration(configData), GTXModuleAwareness {
 
     private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
 
-    private val txFactory by lazy {
-        GTXTransactionFactory(
-                effectiveBlockchainRID, module, cryptoSystem, gtxConfig.maxTxSize
-        )
-    }
+    private val txFactory = GTXTransactionFactory(
+            effectiveBlockchainRID, module, cryptoSystem, gtxConfig.maxTxSize
+    )
+
     private val specTxHandler: GTXSpecialTxHandler // Note: this is NOT the same as the variable in Base.
-            by lazy {
-                GTXSpecialTxHandler(
-                        module,
-                        this.chainID,
-                        effectiveBlockchainRID,
-                        cryptoSystem,
-                        txFactory)
-            }
+            = GTXSpecialTxHandler(
+            module,
+            this.chainID,
+            effectiveBlockchainRID,
+            cryptoSystem,
+            txFactory)
+
 
     companion object : KLogging()
 
