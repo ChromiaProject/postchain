@@ -56,13 +56,13 @@ open class BaseBlockchainInfrastructure(
             eContext: EContext,
             nodeId: Int,
             chainId: Long,
-            bcConfigurationFactory: (String) -> BlockchainConfigurationFactory,
+            bcConfigurationFactory: BlockchainConfigurationFactorySupplier,
     ): BlockchainConfiguration {
 
         val blockConfData = BlockchainConfigurationData.fromRaw(
                 rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
 
-        val factory = bcConfigurationFactory(blockConfData.configurationFactory)
+        val factory = bcConfigurationFactory.supply(blockConfData.configurationFactory)
 
         return factory.makeBlockchainConfiguration(blockConfData, eContext)
     }

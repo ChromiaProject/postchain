@@ -2,10 +2,10 @@ package net.postchain.core
 
 import net.postchain.common.reflection.newInstanceOf
 
-class DefaultBlockchainConfigurationFactory : (String) -> BlockchainConfigurationFactory {
+class DefaultBlockchainConfigurationFactory : BlockchainConfigurationFactorySupplier {
 
-    override fun invoke(configurationFactoryName: String): BlockchainConfigurationFactory {
-        return newInstanceOf(configurationFactoryName)
+    override fun supply(factoryName: String): BlockchainConfigurationFactory {
+        return newInstanceOf(factoryName)
     }
 
 }

@@ -1,7 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.PostchainContext
-import net.postchain.core.BlockchainConfigurationFactory
+import net.postchain.core.BlockchainConfigurationFactorySupplier
 import org.mockito.kotlin.mock
 
 class ManagedBlockchainProcessManagerMock(postchainContext: PostchainContext) : ManagedBlockchainProcessManager(
@@ -9,7 +9,7 @@ class ManagedBlockchainProcessManagerMock(postchainContext: PostchainContext) : 
 ) {
     override var dataSource: ManagedNodeDataSource = mock()
 
-    public override fun getBlockchainConfigurationFactory(chainId: Long): (String) -> BlockchainConfigurationFactory {
+    public override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier {
         return super.getBlockchainConfigurationFactory(chainId)
     }
 }
