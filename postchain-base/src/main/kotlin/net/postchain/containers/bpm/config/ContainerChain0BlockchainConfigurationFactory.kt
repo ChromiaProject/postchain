@@ -4,11 +4,11 @@ import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.EContext
-import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
 class ContainerChain0BlockchainConfigurationFactory(
         val appConfig: AppConfig,
-        val factory: Chain0BlockchainConfigurationFactory,
+        val factory: GTXBlockchainConfigurationFactory,
         val containerNodeConfig: ContainerNodeConfig
 ) : BlockchainConfigurationFactory by factory {
 
