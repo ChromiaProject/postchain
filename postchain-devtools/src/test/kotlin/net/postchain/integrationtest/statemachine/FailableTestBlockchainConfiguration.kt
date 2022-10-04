@@ -7,8 +7,8 @@ import net.postchain.gtx.GTXModule
 
 class FailableTestBlockchainConfiguration(
         configData: BlockchainConfigurationData,
-        _module: GTXModule
-) : TestBlockchainConfiguration(configData, _module) {
+        module: GTXModule
+) : TestBlockchainConfiguration(configData, module) {
 
     override fun getTransactionFactory(): TransactionFactory = FailedTestTransactionFactory()
 //    override fun getTransactionFactory(): TransactionFactory = NotFailedTestTransactionFactory()

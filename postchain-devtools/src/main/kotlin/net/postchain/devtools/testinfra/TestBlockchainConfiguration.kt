@@ -11,8 +11,8 @@ import net.postchain.gtx.GTXModule
 
 open class TestBlockchainConfiguration(
         configData: BlockchainConfigurationData,
-        _module: GTXModule
-) : GTXBlockchainConfiguration(configData, _module) {
+        module: GTXModule
+) : GTXBlockchainConfiguration(configData, module) {
 
     open val transactionFactory = TestTransactionFactory()
 
