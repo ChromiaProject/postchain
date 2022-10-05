@@ -16,6 +16,7 @@ import net.postchain.gtv.Gtv
  * (for example [BlockBuildingStrategy]).
  */
 interface BlockchainConfiguration {
+    val rawConfig: Gtv
     val blockchainContext: BlockchainContext
     val chainID: Long
     val blockchainRid: BlockchainRid
