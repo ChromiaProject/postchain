@@ -131,7 +131,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
                 _opmap[op] = m
             }
             for (q in m.getQueries()) {
-                if (!allowOverrides && q in _qmap) throw UserMistake("Duplicated operation")
+                if (!allowOverrides && q in _qmap) throw UserMistake("Duplicated query")
                 _qmap[q] = m
             }
             _stxs.addAll(m.getSpecialTxExtensions())
