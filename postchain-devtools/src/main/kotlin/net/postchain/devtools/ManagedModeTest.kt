@@ -3,9 +3,9 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.*
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
-import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.devtools.KeyPairHelper
@@ -17,6 +17,7 @@ import net.postchain.gtv.*
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import java.lang.Thread.sleep
 
 /**
@@ -174,7 +175,7 @@ open class ManagedModeTest : AbstractSyncTest() {
             excludeChain0Nodes: Set<Int> = setOf(),
             waitForRestart: Boolean = true,
             rawBlockchainConfiguration: ByteArray? = null,
-            blockchainConfigurationFactory: BlockchainConfigurationFactory? = null
+            blockchainConfigurationFactory: GTXBlockchainConfigurationFactory? = null
     ): NodeSet {
         if (signers.intersect(replicas).isNotEmpty()) throw IllegalArgumentException("a node cannot be both signer and replica")
         val maxIndex = c0.all().size
@@ -192,9 +193,12 @@ open class ManagedModeTest : AbstractSyncTest() {
 
                 val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, c.chain, pubkey, sigMaker)
                 val bcFactory = blockchainConfigurationFactory ?: GTXBlockchainConfigurationFactory()
+                val dappBcFactory = DappBlockchainConfigurationFactory(bcFactory, dataSource)
                 val postchainContext = nodes[nodeId].postchainContext
                 withWriteConnection(postchainContext.storage, c.chain) {
-                    dataSource.addConf(brid, 0, bcFactory.makeBlockchainConfiguration(bcConf, it, postchainContext.cryptoSystem), c, rawBlockchainConfiguration)
+                    val db = DatabaseAccess.of(it)
+                    db.initializeBlockchain(it, brid)
+                    dataSource.addConf(brid, 0, dappBcFactory.makeBlockchainConfiguration(bcConf, it, postchainContext.cryptoSystem), c, rawBlockchainConfiguration)
                     true
                 }
             }
