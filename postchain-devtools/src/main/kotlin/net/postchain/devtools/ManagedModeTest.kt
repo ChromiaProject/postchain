@@ -192,8 +192,9 @@ open class ManagedModeTest : AbstractSyncTest() {
 
                 val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, c.chain, pubkey, sigMaker)
                 val bcFactory = blockchainConfigurationFactory ?: GTXBlockchainConfigurationFactory()
-                withWriteConnection(nodes[nodeId].postchainContext.storage, c.chain) {
-                    dataSource.addConf(brid, 0, bcFactory.makeBlockchainConfiguration(bcConf, it), c, rawBlockchainConfiguration)
+                val postchainContext = nodes[nodeId].postchainContext
+                withWriteConnection(postchainContext.storage, c.chain) {
+                    dataSource.addConf(brid, 0, bcFactory.makeBlockchainConfiguration(bcConf, it, postchainContext.cryptoSystem), c, rawBlockchainConfiguration)
                     true
                 }
             }

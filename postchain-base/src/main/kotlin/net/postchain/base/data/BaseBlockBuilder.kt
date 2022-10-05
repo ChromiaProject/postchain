@@ -141,7 +141,7 @@ open class BaseBlockBuilder(
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, finalizeExtensions())
+        return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, timestamp, finalizeExtensions())
     }
 
     /**

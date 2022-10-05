@@ -9,7 +9,6 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.InitialBlockData
-import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -26,7 +25,7 @@ import net.postchain.gtv.merkleHash
  * @property timestamp  Specifies the time that a block was created as the number
  *                      of milliseconds since midnight January 1st 1970 UTC
  */
-class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem: CryptoSystem) : BlockHeader {
+class BaseBlockHeader(override val rawData: ByteArray, private val merkleHashCalculator: GtvMerkleHashCalculator) : BlockHeader {
     override val prevBlockRID: ByteArray
     override val blockRID: ByteArray
     val blockHeightDependencyArray: Array<Hash?>
@@ -36,7 +35,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
 
     init {
         prevBlockRID = blockHeaderRec.getPreviousBlockRid()
-        blockRID = blockHeaderRec.toGtv().merkleHash(  GtvMerkleHashCalculator(cryptoSystem) )
+        blockRID = blockHeaderRec.toGtv().merkleHash(merkleHashCalculator)
         blockHeightDependencyArray = blockHeaderRec.getBlockHeightDependencyArray()
         extraData = blockHeaderRec.getExtra()
     }
@@ -67,7 +66,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
          */
         @JvmStatic
         fun make(
-            cryptoSystem: CryptoSystem,
+            merkleHashCalculator: GtvMerkleHashCalculator,
             iBlockData: InitialBlockData,
             rootHash: ByteArray,
             timestamp: Long,
@@ -76,7 +75,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
             val gtvBhd = BlockHeaderData.fromDomainObjects(iBlockData, rootHash, timestamp, extraData)
 
             val raw = GtvEncoder.encodeGtv(gtvBhd.toGtv())
-            return BaseBlockHeader(raw, cryptoSystem)
+            return BaseBlockHeader(raw, merkleHashCalculator)
         }
     }
 
@@ -94,8 +93,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val cryptoSystem:
             throw UserMistake("We cannot prove this transaction (hash: ${txHash.byteArray.toHex()}), because it is not in the block")
         }
         val gtvArray = gtv(txHashes.map { gtv(it.byteArray)})
-        val calculator = GtvMerkleHashCalculator(cryptoSystem)
-        return gtvArray.generateProof(listOf(positionOfOurTxToProve), calculator)
+        return gtvArray.generateProof(listOf(positionOfOurTxToProve), merkleHashCalculator)
     }
 
     /**

@@ -101,7 +101,7 @@ data class BlockchainConfigurationData(
                     nodeId,
                     chainId,
                     subjectID,
-                    blockSigMaker
+                    blockSigMaker,
             )
         }
 
@@ -116,8 +116,10 @@ data class BlockchainConfigurationData(
         ): BlockchainConfigurationData {
             val gtvData = GtvFactory.decodeGtv(rawConfigurationData)
             val context = BaseBlockchainContext(brid, nodeId, chainId, subjectID)
-            return gtvData.toObject(mapOf("sigmaker" to blockSigMaker,
-                    "partialContext" to context))
+            return gtvData.toObject(mapOf(
+                    "sigmaker" to blockSigMaker,
+                    "partialContext" to context,
+            ))
         }
     }
 }

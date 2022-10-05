@@ -13,12 +13,14 @@ import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import kotlin.test.assertEquals
 
 class BaseBlockBuilderTest {
     val cryptoSystem = MockCryptoSystem()
+    val merkeHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     var bbs = BaseBlockStore()
     val tf = BaseTransactionFactory()
     val db: DatabaseAccess = mock {}
@@ -45,7 +47,7 @@ class BaseBlockBuilderTest {
     fun invalidMonotoneTimestamp() {
         val timestamp = 1L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
         assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
@@ -55,7 +57,7 @@ class BaseBlockBuilderTest {
     fun invalidMonotoneTimestampEquals() {
         val timestamp = 10L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
         assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
@@ -65,7 +67,7 @@ class BaseBlockBuilderTest {
     fun validMonotoneTimestamp() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, blockData, myMerkleRootHash, timestamp, mapOf())
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf())
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
         assertEquals(OK, bbb.validateBlockHeader(header).result)

@@ -65,7 +65,7 @@ object CliExecution : KLogging() {
             val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
             val keyString = "brid.chainid." + chainId.toString()
             val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
-                GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+                GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
             return brid
         }
 
