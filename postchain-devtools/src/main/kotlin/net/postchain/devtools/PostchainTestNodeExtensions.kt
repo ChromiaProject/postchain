@@ -16,6 +16,8 @@ import net.postchain.gtx.GTXModuleAwareness
 import nl.komponents.kovenant.Promise
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
 fun PostchainTestNode.addBlockchainAndStart(chainId: Long, blockchainConfig: Gtv) {
     val bcRid = addBlockchain(chainId, blockchainConfig)
@@ -64,15 +66,27 @@ fun PostchainTestNode.buildBlocksUpTo(chainId: Long, height: Long) {
 private fun PostchainTestNode.strategy(chainId: Long) =
         blockBuildingStrategy(chainId) as OnDemandBlockBuildingStrategy
 
-fun PostchainTestNode.awaitBuiltBlock(chainId: Long, height: Long) {
+/**
+ *
+ * @param timeout  time to wait for each block
+ *
+ * @throws TimeoutException if timeout
+ */
+fun PostchainTestNode.awaitBuiltBlock(chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
     val strategy = strategy(chainId)
 
     strategy.buildBlocksUpTo(height)
-    strategy.awaitCommitted(height.toInt())
+    strategy.awaitCommitted(height.toInt(), timeout)
 }
 
-fun PostchainTestNode.awaitHeight(chainId: Long, height: Long) {
-    strategy(chainId).awaitCommitted(height.toInt())
+/**
+ *
+ * @param timeout  time to wait for each block
+ *
+ * @throws TimeoutException if timeout
+ */
+fun PostchainTestNode.awaitHeight(chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
+    strategy(chainId).awaitCommitted(height.toInt(), timeout)
 }
 
 fun PostchainTestNode.enqueueTxs(chainId: Long, vararg txs: Transaction): Boolean {

@@ -11,6 +11,9 @@ import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
 /**
  * This block building strategy is very useful for tests.
@@ -51,12 +54,23 @@ class OnDemandBlockBuildingStrategy(
         blocks.add(blockData)
     }
 
-    fun awaitCommitted(height: Int) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    fun awaitCommitted(height: Int, timeout: Duration = Duration.INFINITE) {
         if (logger.isTraceEnabled) {
             logger.trace("awaitCommitted() - start: height: $height, committedHeight: $committedHeight")
         }
         while (committedHeight < height) {
-            blocks.take()
+            if (timeout.isInfinite()) {
+                blocks.take()
+            } else {
+                blocks.poll(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+                        ?: throw TimeoutException("Timeout waiting for block")
+            }
             logger.debug { "awaitCommitted() - took a block height: $height, committedHeight: $committedHeight" }
         }
         var x = -2

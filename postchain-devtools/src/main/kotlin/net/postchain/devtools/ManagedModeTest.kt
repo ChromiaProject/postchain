@@ -19,6 +19,8 @@ import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import java.lang.Thread.sleep
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
 /**
  * This is still somewhat not in line with the [SystemSetup] architecture, defined in the parent class.
@@ -119,18 +121,36 @@ open class ManagedModeTest : AbstractSyncTest() {
         awaitChainRunning(index, nodeSet.chain, atLeastHeight)
     }
 
-    fun buildBlock(nodeSet: NodeSet, toHeight: Long) {
-        buildBlock(nodes.filterIndexed { i, _ -> nodeSet.contains(i) }, nodeSet.chain, toHeight)
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    fun buildBlock(nodeSet: NodeSet, toHeight: Long, timeout: Duration = Duration.INFINITE) {
+        buildBlock(nodes.filterIndexed { i, _ -> nodeSet.contains(i) }, nodeSet.chain, toHeight, timeout = timeout)
     }
 
-    fun buildBlock(nodeSet: NodeSet) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    fun buildBlock(nodeSet: NodeSet, timeout: Duration = Duration.INFINITE) {
         val currentHeight = nodeSet.nodes()[0].currentHeight(nodeSet.chain)
-        buildBlock(nodeSet, currentHeight + 1)
+        buildBlock(nodeSet, currentHeight + 1, timeout)
     }
 
-    fun awaitHeight(nodeSet: NodeSet, height: Long) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    fun awaitHeight(nodeSet: NodeSet, height: Long, timeout: Duration = Duration.INFINITE) {
         awaitLog("========= AWAIT ALL ${nodeSet.size} NODES chain:  ${nodeSet.chain}, height:  $height")
-        awaitHeight(nodeSet.nodes(), nodeSet.chain, height)
+        awaitHeight(nodeSet.nodes(), nodeSet.chain, height, timeout)
         awaitLog("========= DONE AWAIT ALL ${nodeSet.size} NODES chain: ${nodeSet.chain}, height: $height")
     }
 
