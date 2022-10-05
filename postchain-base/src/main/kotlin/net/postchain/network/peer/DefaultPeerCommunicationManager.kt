@@ -79,13 +79,6 @@ class DefaultPeerCommunicationManager<PacketType>(
         )
     }
 
-    /**
-     * Sends the packet to a peer selected by random.
-     *
-     * @param packet is the data to send
-     * @param amongPeers is the set of nodes acceptable to send to
-     * @return a randomly picked peer from the give set that has an open connection, or "null" if none found.
-     */
     override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): Pair<NodeRid?, Set<NodeRid>> {
         val possiblePeers = connectionManager.getConnectedNodes(chainId).intersect(amongPeers)
         if (possiblePeers.isEmpty()) {
