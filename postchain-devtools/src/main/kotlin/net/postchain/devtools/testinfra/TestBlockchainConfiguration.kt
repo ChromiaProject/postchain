@@ -6,13 +6,15 @@ import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.core.TransactionFactory
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 
 open class TestBlockchainConfiguration(
         configData: BlockchainConfigurationData,
+        cryptoSystem: CryptoSystem,
         module: GTXModule
-) : GTXBlockchainConfiguration(configData, module) {
+) : GTXBlockchainConfiguration(configData, cryptoSystem, module) {
 
     open val transactionFactory = TestTransactionFactory()
 

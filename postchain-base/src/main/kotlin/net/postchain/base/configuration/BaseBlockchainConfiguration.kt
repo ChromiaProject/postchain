@@ -13,12 +13,14 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
 import net.postchain.core.block.*
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 
 open class BaseBlockchainConfiguration(
         val configData: BlockchainConfigurationData,
+        val cryptoSystem: CryptoSystem,
 ) : BlockchainConfiguration {
 
     companion object : KLogging()
@@ -29,7 +31,6 @@ open class BaseBlockchainConfiguration(
         get() = configData.context
 
     override val traits = setOf<String>()
-    val cryptoSystem = Secp256K1CryptoSystem()
     val blockStore = BaseBlockStore()
     final override val chainID get() = configData.context.chainID
     final override val blockchainRid get() = configData.context.blockchainRID
@@ -56,7 +57,7 @@ open class BaseBlockchainConfiguration(
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
-        return BaseBlockHeader(rawBlockHeader, cryptoSystem)
+        return BaseBlockHeader(rawBlockHeader, GtvMerkleHashCalculator(cryptoSystem))
     }
 
     override fun decodeWitness(rawWitness: ByteArray): BlockWitness {

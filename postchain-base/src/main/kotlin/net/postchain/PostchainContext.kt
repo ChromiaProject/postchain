@@ -13,6 +13,7 @@ data class PostchainContext(
         val connectionManager: ConnectionManager,
         val nodeDiagnosticContext: NodeDiagnosticContext?
 ) {
+    val cryptoSystem get() = appConfig.cryptoSystem
 
     fun shutDown() {
         connectionManager.shutdown()
