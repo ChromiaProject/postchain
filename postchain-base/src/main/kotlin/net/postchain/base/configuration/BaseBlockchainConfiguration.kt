@@ -13,6 +13,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
 import net.postchain.core.block.*
+import net.postchain.gtv.Gtv
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -24,6 +25,8 @@ open class BaseBlockchainConfiguration(
 
     companion object : KLogging()
 
+    final override val rawConfig: Gtv
+        get() = configData.rawConfig
     override val blockchainContext: BlockchainContext
         get() = configData.context
 
