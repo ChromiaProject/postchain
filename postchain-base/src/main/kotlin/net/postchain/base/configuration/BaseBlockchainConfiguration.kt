@@ -14,6 +14,7 @@ import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
 import net.postchain.core.block.*
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.toObject
 
 open class BaseBlockchainConfiguration(
@@ -22,6 +23,8 @@ open class BaseBlockchainConfiguration(
 
     companion object : KLogging()
 
+    final override val rawConfig: Gtv
+        get() = configData.rawConfig
     override val blockchainContext: BlockchainContext
         get() = configData.context
 

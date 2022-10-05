@@ -5,11 +5,7 @@ package net.postchain.core
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.common.BlockchainRid
-import net.postchain.core.block.BlockBuilder
-import net.postchain.core.block.BlockBuildingStrategy
-import net.postchain.core.block.BlockHeader
-import net.postchain.core.block.BlockQueries
-import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.*
 import net.postchain.gtv.Gtv
 
 /**
@@ -18,6 +14,7 @@ import net.postchain.gtv.Gtv
  * (for example [BlockBuildingStrategy]).
  */
 interface BlockchainConfiguration {
+    val rawConfig: Gtv
     val blockchainContext: BlockchainContext
     val chainID: Long
     val blockchainRid: BlockchainRid
