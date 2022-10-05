@@ -40,7 +40,7 @@ class PostchainService(private val postchainNode: PostchainNode) {
                 throw AlreadyExists("Blockchain already exists")
             }
 
-            val brid = maybeBrid ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config)
+            val brid = maybeBrid ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
 
             db.initializeBlockchain(ctx, brid)
             DependenciesValidator.validateBlockchainRids(ctx, listOf())

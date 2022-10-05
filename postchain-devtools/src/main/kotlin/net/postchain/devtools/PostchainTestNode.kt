@@ -74,7 +74,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
-            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
                 NODE_PUBKEY_TAG to appConfig.pubKey,
                 CHAIN_IID_TAG to chainId.toString(),
@@ -92,7 +92,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
-            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
                 NODE_PUBKEY_TAG to appConfig.pubKey,
                 CHAIN_IID_TAG to chainId.toString(),
