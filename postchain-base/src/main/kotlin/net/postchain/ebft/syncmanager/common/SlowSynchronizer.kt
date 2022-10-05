@@ -93,7 +93,7 @@ class SlowSynchronizer(
         } else {
             peers
         }
-        val pickedPeerId = communicationManager.sendToRandomPeer(GetBlockRange(startAtHeight), usePeers)
+        val pickedPeerId = communicationManager.sendToRandomPeer(GetBlockRange(startAtHeight), usePeers).first
 
         if (pickedPeerId != null) {
             slowSyncStateMachine.updateToWaitForReply(pickedPeerId, startAtHeight, now)

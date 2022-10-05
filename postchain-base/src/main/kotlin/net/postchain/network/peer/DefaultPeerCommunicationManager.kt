@@ -79,29 +79,21 @@ class DefaultPeerCommunicationManager<PacketType>(
         )
     }
 
-    /**
-     * Sends the packet to a peer selected by random.
-     *
-     * @param packet is the data to send
-     * @param amongPeers is the set of nodes acceptable to send to
-     * @return a randomly picked peer from the give set that has an open connection, or "null" if none found.
-     */
-    override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): NodeRid? {
-        var peer: NodeRid? = null
+    override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): Pair<NodeRid?, Set<NodeRid>> {
+        val possiblePeers = connectionManager.getConnectedNodes(chainId).intersect(amongPeers)
+        if (possiblePeers.isEmpty()) {
+            return null to possiblePeers // We don't want to apply random to an empty list b/c throwing exception is too expensive.
+        }
+        val peer = possiblePeers.random()
+        if (logger.isTraceEnabled) {
+            logger.trace("$processName: sendToRandomPeer($packet, ${peerName(peer.toString())})")
+        }
         return try {
-            val possiblePeers = connectionManager.getConnectedNodes(chainId).intersect(amongPeers)
-            if (possiblePeers.isEmpty()) {
-                return null // We don't want to apply random to an empty list b/c throwing exception is too expensive.
-            }
-            peer = possiblePeers.random()
-            if (logger.isTraceEnabled) {
-                logger.trace("$processName: sendToRandomPeer($packet, ${peerName(peer.toString())})")
-            }
             sendPacket(packet, peer)
-            peer
+            peer to possiblePeers
         } catch (e: Exception) {
-            logger.error("Could not send package to random peer: ${peer?.let { peerName(it) }} because: ${e.message}", e)
-            null
+            logger.error("Could not send package to random peer: ${peerName(peer)} because: ${e.message}", e)
+            null to possiblePeers - peer
         }
     }
 
