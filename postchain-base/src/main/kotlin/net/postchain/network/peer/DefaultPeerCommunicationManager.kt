@@ -100,7 +100,7 @@ class DefaultPeerCommunicationManager<PacketType>(
             peer to possiblePeers
         } catch (e: Exception) {
             logger.error("Could not send package to random peer: ${peerName(peer)} because: ${e.message}", e)
-            null to possiblePeers
+            null to possiblePeers - peer
         }
     }
 

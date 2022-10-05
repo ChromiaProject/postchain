@@ -344,7 +344,7 @@ class FastSynchronizer(
         if (peers.isEmpty()) return null
         val (selectedPeer, connectedPeers) = communicationManager.sendToRandomPeer(message, peers)
         peerStatuses.markConnected(connectedPeers)
-        peerStatuses.markDisconnected(peers.minus(connectedPeers))
+        peerStatuses.markDisconnected(peers - connectedPeers)
         return selectedPeer
     }
 
