@@ -42,6 +42,8 @@ open class KnownState(val params: SyncParameters) {
     private var errorCount = 0
     private var timeOfLastError: Long = 0
 
+    private var disconnectedSince: Long = 0
+
     fun isBlacklisted() = isBlacklisted(System.currentTimeMillis())
     fun isBlacklisted(now: Long): Boolean {
         if (state == State.BLACKLISTED && (now > timeOfLastError + params.blacklistingTimeoutMs)) {
@@ -123,6 +125,20 @@ open class KnownState(val params: SyncParameters) {
                 this.timeOfLastError = now
             }
         }
+    }
+
+    fun disconnected(now: Long) {
+        if (disconnectedSince == 0L) {
+            disconnectedSince = now
+        }
+    }
+
+    fun connected() {
+        disconnectedSince = 0
+    }
+
+    protected fun isConnected(): Boolean {
+        return disconnectedSince == 0L || System.currentTimeMillis() - disconnectedSince < params.disconnectTimeout
     }
 
     open fun resurrect(now: Long) {

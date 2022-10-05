@@ -106,7 +106,16 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
     }
 
     fun getSyncable(height: Long): Set<NodeRid> {
-        return statuses.filterValues { it.isSyncable(height) }.map {it.key}.toSet()
+        return statuses.filterValues { it.isSyncable(height) }.map { it.key }.toSet()
+    }
+
+    fun markConnected(peerIds: Set<NodeRid>) {
+        peerIds.forEach { stateOf(it).connected() }
+    }
+
+    fun markDisconnected(peerIds: Set<NodeRid>) {
+        val now = System.currentTimeMillis()
+        peerIds.forEach { stateOf(it).disconnected(now) }
     }
 
     fun clear() {
