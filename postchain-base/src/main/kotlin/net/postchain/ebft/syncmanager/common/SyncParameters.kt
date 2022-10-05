@@ -54,7 +54,7 @@ data class SyncParameters(
     var loopInterval: Long = 100,
     var mustSyncUntilHeight: Long = -1,
     var maxErrorsBeforeBlacklisting: Int = 10,
-    val disconnectTimeout: Long = 1000,
+    val disconnectTimeout: Long = 10000,
     /**
      * 10 minutes in milliseconds
      */
@@ -63,8 +63,9 @@ data class SyncParameters(
         @JvmStatic
         fun fromAppConfig(config: AppConfig, init: (SyncParameters) -> Unit = {}): SyncParameters {
             return SyncParameters(
-                exitDelay = config.getLong("fastsync.exit_delay", 60000),
-                jobTimeout = config.getLong("fastsync.job_timeout", 10000)
+                    exitDelay = config.getLong("fastsync.exit_delay", 60000),
+                    jobTimeout = config.getLong("fastsync.job_timeout", 10000),
+                    disconnectTimeout = config.getLong("fastsync.disconnect_timeout", 10000)
             ).also(init)
         }
     }
