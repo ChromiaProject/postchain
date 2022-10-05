@@ -5,6 +5,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.EContext
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.mapper.toObject
 
 /**
@@ -13,11 +14,12 @@ import net.postchain.gtv.mapper.toObject
  */
 open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
-    override fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext): GTXBlockchainConfiguration {
+    override fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext, cryptoSystem: CryptoSystem): GTXBlockchainConfiguration {
         val cfData = configurationData as BlockchainConfigurationData
         val effectiveBRID = cfData.historicBrid ?: configurationData.context.blockchainRID
         return GTXBlockchainConfiguration(
                 cfData,
+                cryptoSystem,
                 createGtxModule(effectiveBRID, configurationData, eContext)
         )
     }

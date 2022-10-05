@@ -5,11 +5,9 @@ package net.postchain.core
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.common.BlockchainRid
-import net.postchain.core.block.BlockBuilder
-import net.postchain.core.block.BlockBuildingStrategy
-import net.postchain.core.block.BlockHeader
-import net.postchain.core.block.BlockQueries
-import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.*
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
 
 /**
@@ -52,5 +50,5 @@ fun interface BlockchainConfigurationFactorySupplier {
 }
 
 interface BlockchainConfigurationFactory {
-    fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext): BlockchainConfiguration
+    fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext, cryptoSystem: CryptoSystem = Secp256K1CryptoSystem()): BlockchainConfiguration
 }

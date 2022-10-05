@@ -12,6 +12,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.block.BlockQueries
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
@@ -20,8 +21,9 @@ import net.postchain.gtx.special.GTXSpecialTxHandler
 import nl.komponents.kovenant.Promise
 
 open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
+                                      cryptoSystem: CryptoSystem,
                                       final override val module: GTXModule
-) : BaseBlockchainConfiguration(configData), GTXModuleAwareness {
+) : BaseBlockchainConfiguration(configData, cryptoSystem), GTXModuleAwareness {
 
     private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
 

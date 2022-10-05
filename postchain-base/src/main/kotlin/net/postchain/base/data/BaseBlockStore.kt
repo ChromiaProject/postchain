@@ -3,9 +3,9 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseTxEContext
 import net.postchain.base.ConfirmationProofMaterial
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.data.Hash
@@ -13,7 +13,6 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.*
 import net.postchain.core.block.*
-import net.postchain.crypto.Secp256K1CryptoSystem
 
 /**
  * Provides database access to the location where the blockchain with related metadata and transactions
@@ -107,10 +106,10 @@ class BaseBlockStore : BlockStore {
         val blockInfo = db.getBlock(ctx, blockRID) ?: return null
         val txDetails = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
         // TODO can I do this on the node or is it too computational expensive
-        val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, Secp256K1CryptoSystem())
+        val headerRec = BlockHeaderData.fromBinary(blockInfo.blockHeader)
         return BlockDetail(
                 blockInfo.blockRid,
-                blockHeaderDecoded.prevBlockRID,
+                headerRec.getPreviousBlockRid(),
                 blockInfo.blockHeader,
                 blockInfo.blockHeight,
                 txDetails,
@@ -125,11 +124,10 @@ class BaseBlockStore : BlockStore {
             val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
 
             // Decode block header
-            val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, Secp256K1CryptoSystem())
-
+            val headerRec = BlockHeaderData.fromBinary(blockInfo.blockHeader)
             BlockDetail(
                     blockInfo.blockRid,
-                    blockHeaderDecoded.prevBlockRID,
+                    headerRec.getPreviousBlockRid(),
                     blockInfo.blockHeader,
                     blockInfo.blockHeight,
                     txs,

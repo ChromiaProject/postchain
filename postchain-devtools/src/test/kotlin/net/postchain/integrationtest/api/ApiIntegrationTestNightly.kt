@@ -419,7 +419,7 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
 
         // Assert signatures
         val blockHeaderRaw = (actualMap["blockHeader"] as String).hexStringToByteArray()
-        val blockHeader = BaseBlockHeader(blockHeaderRaw, cryptoSystem)
+        val blockHeader = BaseBlockHeader(blockHeaderRaw, GtvMerkleHashCalculator(cryptoSystem))
         val blockRid = blockHeader.blockRID
 
         val signatures = actualMap["signatures"] as List<Map<String, String>>

@@ -9,7 +9,6 @@ import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
 import net.postchain.core.block.*
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.debug.BlockchainProcessName
@@ -20,7 +19,6 @@ open class BaseBlockchainInfrastructure(
         private val postchainContext: PostchainContext
 ) : BlockchainInfrastructure {
 
-    val cryptoSystem = Secp256K1CryptoSystem()
     val blockSigMaker: SigMaker
     val subjectID: ByteArray
 
@@ -30,7 +28,7 @@ open class BaseBlockchainInfrastructure(
     init {
         val privKey = postchainContext.appConfig.privKeyByteArray
         val pubKey = secp256k1_derivePubKey(privKey)
-        blockSigMaker = cryptoSystem.buildSigMaker(pubKey, privKey)
+        blockSigMaker = postchainContext.cryptoSystem.buildSigMaker(pubKey, privKey)
         subjectID = pubKey
         syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
     }
@@ -64,7 +62,7 @@ open class BaseBlockchainInfrastructure(
 
         val factory = bcConfigurationFactory.supply(blockConfData.configurationFactory)
 
-        return factory.makeBlockchainConfiguration(blockConfData, eContext)
+        return factory.makeBlockchainConfiguration(blockConfData, eContext, postchainContext.cryptoSystem)
     }
 
     override fun makeBlockchainEngine(
