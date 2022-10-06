@@ -293,7 +293,6 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         }
 
         baseConfig.setProperty("fastsync.exit_delay", if (nodeCount == 1) 0 else 1000)
-        baseConfig.setProperty("fastsync.disconnect_timeout", 1000)
         baseConfig.setProperty("heartbeat.enabled", false)
 
         val appConfig = CompositeConfiguration().apply {
