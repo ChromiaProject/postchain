@@ -29,7 +29,7 @@ open class DefaultMasterSyncInfra(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
-            targetContainer: PostchainContainer
+            targetContainer: PostchainContainer,
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -47,10 +47,11 @@ open class DefaultMasterSyncInfra(
 
         return DefaultContainerBlockchainProcess(
                 nodeConfig,
+                containerNodeConfig,
+                targetContainer.containerPorts.hostRestApiPort,
                 processName,
                 chainId,
                 blockchainRid,
-                targetContainer.containerPorts.hostRestApiPort,
                 communicationManager
         )
     }

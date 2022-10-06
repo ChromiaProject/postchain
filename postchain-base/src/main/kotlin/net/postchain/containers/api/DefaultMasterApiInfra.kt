@@ -4,14 +4,11 @@ import net.postchain.api.rest.controller.HttpExternalModel
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.containers.bpm.ContainerBlockchainProcess
-import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.debug.NodeDiagnosticContext
-import java.net.URL
 
 class DefaultMasterApiInfra(
-    restApiConfig: RestApiConfig,
-    nodeDiagnosticContext: NodeDiagnosticContext?,
-    private val containerNodeConfig: ContainerNodeConfig
+        restApiConfig: RestApiConfig,
+        nodeDiagnosticContext: NodeDiagnosticContext?,
 ) : BaseApiInfrastructure(
         restApiConfig,
         nodeDiagnosticContext
@@ -19,13 +16,7 @@ class DefaultMasterApiInfra(
 
     override fun connectContainerProcess(process: ContainerBlockchainProcess) {
         if (restApi != null) {
-            val path = URL("http",
-                    containerNodeConfig.subnodeHost,
-                    process.restApiPort,
-                    restApiConfig.basePath
-            ).toString()
-
-            val model = HttpExternalModel(path, process.chainId)
+            val model = HttpExternalModel(process.restApiUrl, process.chainId)
             restApi.attachModel(process.blockchainRid.toHex(), model)
         }
     }

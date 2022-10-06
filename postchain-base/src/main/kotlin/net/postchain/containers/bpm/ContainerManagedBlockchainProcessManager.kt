@@ -27,6 +27,7 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfigurationFactorySupplier
+import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
@@ -380,6 +381,8 @@ open class ContainerManagedBlockchainProcessManager(
         if (started) {
             heartbeatManager.addListener(chain.chainId, process)
             chainIdToBrid[chain.chainId] = chain.brid
+            extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
+                    .forEach { it.connectRemoteProcess(process) }
             blockchainProcessesDiagnosticData[chain.brid] = mutableMapOf(
                     DiagnosticProperty.BLOCKCHAIN_RID to { process.blockchainRid.toHex() },
                     DiagnosticProperty.CONTAINER_NAME to { psContainer.containerName.toString() },
@@ -393,6 +396,8 @@ open class ContainerManagedBlockchainProcessManager(
     private fun terminateBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? {
         return psContainer.terminateProcess(chainId)
                 ?.also { process ->
+                    extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
+                            .forEach { it.disconnectRemoteProcess(process) }
                     masterBlockchainInfra.exitMasterBlockchainProcess(process)
                     heartbeatManager.removeListener(chainId)
                     blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
