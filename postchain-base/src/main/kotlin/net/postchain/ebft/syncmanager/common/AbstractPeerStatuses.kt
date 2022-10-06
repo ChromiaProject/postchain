@@ -105,8 +105,8 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
         return stateOf(xPeerId).isBlacklisted()
     }
 
-    fun getSyncable(height: Long): Set<NodeRid> {
-        return statuses.filterValues { it.isSyncable(height) }.map { it.key }.toSet()
+    fun getSyncableAndConnected(height: Long): Set<NodeRid> {
+        return statuses.filterValues { it.isSyncable(height) && it.isConnected(System.currentTimeMillis()) }.map { it.key }.toSet()
     }
 
     fun markConnected(peerIds: Set<NodeRid>) {
