@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
 import java.io.File
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
 // Legacy code still use this old name, don't want to break compatibility.
 typealias IntegrationTest = ConfigFileBasedIntegrationTest
@@ -324,13 +326,19 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         return node.getBlockchainInstance().blockchainEngine.getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
     }
 
-    protected fun buildBlock(toHeight: Int, vararg txs: TestTransaction) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(toHeight: Int, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
         nodes.forEach {
             enqueueTransactions(it, *txs)
             strategy(it).buildBlocksUpTo(toHeight.toLong())
         }
         nodes.forEach {
-            strategy(it).awaitCommitted(toHeight)
+            strategy(it).awaitCommitted(toHeight, timeout)
         }
     }
 

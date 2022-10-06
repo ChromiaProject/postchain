@@ -21,6 +21,8 @@ import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
@@ -327,13 +329,25 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     fun createPeerInfos(nodeCount: Int): Array<PeerInfo> = createPeerInfosWithReplicas(nodeCount, 0)
 
-    protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
-        buildBlock(nodes, chainId, toHeight, *txs)
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+        buildBlock(nodes, chainId, toHeight, *txs, timeout = timeout)
     }
 
-    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
         buildBlockNoWait(nodes, chainId, toHeight, *txs)
-        awaitHeight(nodes, chainId, toHeight)
+        awaitHeight(nodes, chainId, toHeight, timeout)
     }
 
     protected fun buildBlockNoWait(
@@ -350,16 +364,28 @@ open class IntegrationTestSetup : AbstractIntegration() {
         }
     }
 
-    protected open fun awaitHeight(chainId: Long, height: Long) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected open fun awaitHeight(chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
         awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
-        awaitHeight(nodes, chainId, height)
+        awaitHeight(nodes, chainId, height, timeout)
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
     }
 
-    protected fun awaitHeight(nodes: List<PostchainTestNode>, chainId: Long, height: Long) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun awaitHeight(nodes: List<PostchainTestNode>, chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
         nodes.forEach {
             awaitLog("++++++ AWAIT node RID: ${NameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
-            it.awaitHeight(chainId, height)
+            it.awaitHeight(chainId, height, timeout)
             awaitLog("++++++ WAIT OVER node RID: ${NameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
         }
     }
