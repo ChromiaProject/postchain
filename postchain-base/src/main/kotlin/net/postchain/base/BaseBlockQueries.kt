@@ -123,15 +123,15 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun getBlocks(beforeTime: Long, limit: Int, partialTx: Boolean): Promise<List<BlockDetail>, Exception> {
+    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception> {
         return runOp {
-            blockStore.getBlocks(it, beforeTime, limit, partialTx)
+            blockStore.getBlocks(it, beforeTime, limit, txHashesOnly)
         }
     }
 
-    override fun getBlock(blockRID: ByteArray, partialTx: Boolean): Promise<BlockDetail?, Exception> {
+    override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): Promise<BlockDetail?, Exception> {
         return runOp {
-            blockStore.getBlock(it, blockRID, partialTx)
+            blockStore.getBlock(it, blockRID, txHashesOnly)
         }
     }
 

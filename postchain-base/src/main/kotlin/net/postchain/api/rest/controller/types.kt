@@ -23,8 +23,9 @@ interface Model : ChainModel {
     fun getTransaction(txRID: TxRID): ApiTx?
     fun getTransactionInfo(txRID: TxRID): TransactionInfoExt?
     fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt>
-    fun getBlock(blockRID: ByteArray, partialTx: Boolean): BlockDetail? // TODO create type blockRID same as TxRID, not sure if there are particular requirements though
-    fun getBlocks(beforeTime: Long, limit: Int, partialTx: Boolean): List<BlockDetail>
+    fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
+    fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail?
+    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getConfirmationProof(txRID: TxRID): ConfirmationProof?
     fun getStatus(txRID: TxRID): ApiStatus
     fun query(query: Query): QueryResult
