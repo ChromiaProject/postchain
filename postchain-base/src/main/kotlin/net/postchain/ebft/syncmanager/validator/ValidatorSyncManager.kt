@@ -7,11 +7,10 @@ import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
-import net.postchain.core.NodeStateTracker
+import net.postchain.ebft.NodeStateTracker
 import net.postchain.crypto.Signature
 import net.postchain.ebft.*
 import net.postchain.ebft.message.*
-import net.postchain.ebft.rest.contract.serialize
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
 import net.postchain.ebft.syncmanager.StatusLogInterval
@@ -415,8 +414,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 // Sends a status message to all peers when my status has changed or after a timeout
                 statusSender.update()
 
-                nodeStateTracker.myStatus = statusManager.myStatus.serialize()
-                nodeStateTracker.nodeStatuses = statusManager.nodeStatuses.map { it.serialize() }.toTypedArray()
+                nodeStateTracker.myStatus = statusManager.myStatus
+                nodeStateTracker.nodeStatuses = statusManager.nodeStatuses
                 nodeStateTracker.blockHeight = statusManager.myStatus.height
 
                 if (Date().time - lastStatusLogged >= StatusLogInterval) {
