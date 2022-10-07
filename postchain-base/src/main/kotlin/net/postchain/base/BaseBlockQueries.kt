@@ -51,9 +51,9 @@ open class BaseBlockQueries(
      * Wrapper function for a supplied function with the goal of opening a new read-only connection, catching any exceptions
      * on the query being run and logging them, and finally closing the connection
      */
-    protected fun <T> runOp(operation: (EContext) -> T): Promise<T, Exception> {
+    protected fun <T> runOp(chainId: Long?, operation: (EContext) -> T): Promise<T, Exception> {
         return task(kctx) {
-            val ctx = storage.openReadConnection(chainId)
+            val ctx = storage.openReadConnection(chainId ?: this.chainId)
             try {
                 operation(ctx)
             } catch (e: Exception) {
@@ -65,8 +65,8 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception> {
-        return runOp { ctx ->
+    override fun getBlockSignature(blockRID: ByteArray, chainId: Long?): Promise<Signature, Exception> {
+        return runOp(chainId) { ctx ->
             val witnessData = blockStore.getWitnessData(ctx, blockRID)
             val witness = blockchainConfiguration.decodeWitness(witnessData) as MultiSigBlockWitness
             val signature = witness.getSignatures().find { it.subjectID.contentEquals(mySubjectId) }
@@ -74,14 +74,14 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun getBestHeight(): Promise<Long, Exception> {
-        return runOp {
+    override fun getBestHeight(chainId: Long?): Promise<Long, Exception> {
+        return runOp(chainId) {
             blockStore.getLastBlockHeight(it)
         }
     }
 
-    override fun getLastBlockTimestamp(): Promise<Long, Exception> {
-        return runOp {
+    override fun getLastBlockTimestamp(chainId: Long?): Promise<Long, Exception> {
+        return runOp(chainId) {
             blockStore.getLastBlockTimestamp(it)
         }
     }
@@ -92,8 +92,8 @@ open class BaseBlockQueries(
      * @param blockRID The block identifier
      * @throws ProgrammerMistake [blockRID] could not be found
      */
-    override fun getBlockTransactionRids(blockRID: ByteArray): Promise<List<ByteArray>, Exception> {
-        return runOp {
+    override fun getBlockTransactionRids(blockRID: ByteArray, chainId: Long?): Promise<List<ByteArray>, Exception> {
+        return runOp(chainId) {
             // Shouldn't this be UserMistake?
             val height = blockStore.getBlockHeightFromOwnBlockchain(it, blockRID)
                     ?: throw ProgrammerMistake("BlockRID does not exist")
@@ -101,8 +101,8 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun getTransaction(txRID: ByteArray): Promise<Transaction?, Exception> {
-        return runOp {
+    override fun getTransaction(txRID: ByteArray, chainId: Long?): Promise<Transaction?, Exception> {
+        return runOp(chainId) {
             val txBytes = blockStore.getTxBytes(it, txRID)
             if (txBytes == null)
                 null
@@ -111,52 +111,52 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun getTransactionInfo(txRID: ByteArray): Promise<TransactionInfoExt?, Exception> {
-        return runOp {
+    override fun getTransactionInfo(txRID: ByteArray, chainId: Long?): Promise<TransactionInfoExt?, Exception> {
+        return runOp(chainId) {
             blockStore.getTransactionInfo(it, txRID)
         }
     }
 
-    override fun getTransactionsInfo(beforeTime: Long, limit: Int): Promise<List<TransactionInfoExt>, Exception> {
-        return runOp {
+    override fun getTransactionsInfo(beforeTime: Long, limit: Int, chainId: Long?): Promise<List<TransactionInfoExt>, Exception> {
+        return runOp(chainId) {
             blockStore.getTransactionsInfo(it, beforeTime, limit)
         }
     }
 
-    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception> {
-        return runOp {
+    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean, chainId: Long?): Promise<List<BlockDetail>, Exception> {
+        return runOp(chainId) {
             blockStore.getBlocks(it, beforeTime, limit, txHashesOnly)
         }
     }
 
-    override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): Promise<BlockDetail?, Exception> {
-        return runOp {
+    override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean, chainId: Long?): Promise<BlockDetail?, Exception> {
+        return runOp(chainId) {
             blockStore.getBlock(it, blockRID, txHashesOnly)
         }
     }
 
-    override fun getBlockRid(height: Long): Promise<ByteArray?, Exception> {
-        return runOp {
+    override fun getBlockRid(height: Long, chainId: Long?): Promise<ByteArray?, Exception> {
+        return runOp(chainId) {
             blockStore.getBlockRID(it, height)
         }
     }
 
-    override fun isTransactionConfirmed(txRID: ByteArray): Promise<Boolean, Exception> {
-        return runOp {
+    override fun isTransactionConfirmed(txRID: ByteArray, chainId: Long?): Promise<Boolean, Exception> {
+        return runOp(chainId) {
             blockStore.isTransactionConfirmed(it, txRID)
         }
     }
 
-    override fun query(query: String): Promise<String, Exception> {
+    override fun query(query: String, chainId: Long?): Promise<String, Exception> {
         return Promise.ofFail(UserMistake("Queries are not supported"))
     }
 
-    override fun query(name: String, args: Gtv): Promise<Gtv, Exception> {
+    override fun query(name: String, args: Gtv, chainId: Long?): Promise<Gtv, Exception> {
         return Promise.ofFail(UserMistake("Queries are not supported"))
     }
 
     fun getConfirmationProof(txRID: ByteArray): Promise<ConfirmationProof?, Exception> {
-        return runOp {
+        return runOp(chainId) {
             val material = blockStore.getConfirmationProofMaterial(it, txRID) as ConfirmationProofMaterial
             val decodedWitness = blockchainConfiguration.decodeWitness(material.witness)
             val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
@@ -166,8 +166,8 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun getBlockHeader(blockRID: ByteArray): Promise<BlockHeader, Exception> {
-        return runOp {
+    override fun getBlockHeader(blockRID: ByteArray, chainId: Long?): Promise<BlockHeader, Exception> {
+        return runOp(chainId) {
             val headerBytes = blockStore.getBlockHeader(it, blockRID)
             blockchainConfiguration.decodeBlockHeader(headerBytes)
         }
@@ -183,8 +183,8 @@ open class BaseBlockQueries(
      * @throws UserMistake No block could be found at the specified height
      * @throws ProgrammerMistake Too many blocks (>1) found at the specified height
      */
-    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): Promise<BlockDataWithWitness?, Exception> {
-        return runOp {
+    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean, chainId: Long?): Promise<BlockDataWithWitness?, Exception> {
+        return runOp(chainId) {
             val blockRID = blockStore.getBlockRID(it, height)
             if (blockRID == null) {
                 null

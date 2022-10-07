@@ -6,7 +6,6 @@ import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockQueries
 import net.postchain.ebft.message.*
 import net.postchain.network.CommunicationManager
-import net.postchain.network.MAX_PAYLOAD_SIZE
 
 abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<EbftMessage>) {
     companion object: KLogging()

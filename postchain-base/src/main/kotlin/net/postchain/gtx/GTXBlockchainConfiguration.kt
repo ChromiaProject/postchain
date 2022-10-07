@@ -59,17 +59,17 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                 chainID, configData.context.nodeRID!!) {
             private val gson = make_gtv_gson()
 
-            override fun query(query: String): Promise<String, Exception> {
+            override fun query(query: String, chainId: Long?): Promise<String, Exception> {
                 val gtxQuery = gson.fromJson<Gtv>(query, Gtv::class.java)
-                return runOp {
+                return runOp(chainId) {
                     val type = gtxQuery.asDict()["type"] ?: throw UserMistake("Missing query type")
                     val queryResult = module.query(it, type.asString(), gtxQuery)
                     gtvToJSON(queryResult, gson)
                 }
             }
 
-            override fun query(name: String, args: Gtv): Promise<Gtv, Exception> {
-                return runOp {
+            override fun query(name: String, args: Gtv, chainId: Long?): Promise<Gtv, Exception> {
+                return runOp(chainId) {
                     module.query(it, name, args)
                 }
             }
