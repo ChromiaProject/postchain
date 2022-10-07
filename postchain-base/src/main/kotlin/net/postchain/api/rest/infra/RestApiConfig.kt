@@ -1,7 +1,7 @@
 package net.postchain.api.rest.infra
 
-import net.postchain.config.app.AppConfig
 import net.postchain.common.config.Config
+import net.postchain.config.app.AppConfig
 
 data class RestApiConfig(
         val basePath: String,
@@ -11,6 +11,10 @@ data class RestApiConfig(
         val tlsCertificatePassword: String,
         val debug: Boolean = false
 ) : Config {
+
+    init {
+        require(port in -1 .. 49151) { "Port has to be between -1 (disabled) and 49151 (ephemeral)" }
+    }
 
     companion object {
 
