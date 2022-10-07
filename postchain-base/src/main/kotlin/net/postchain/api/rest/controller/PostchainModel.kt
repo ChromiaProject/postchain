@@ -25,12 +25,12 @@ import net.postchain.gtv.Gtv
 import net.postchain.metrics.PostchainModelMetrics
 
 open class PostchainModel(
-    final override val chainIID: Long,
-    val txQueue: TransactionQueue,
-    private val transactionFactory: TransactionFactory,
-    val blockQueries: BaseBlockQueries,
-    private val debugInfoQuery: DebugInfoQuery,
-    blockchainRid: BlockchainRid
+        final override val chainIID: Long,
+        val txQueue: TransactionQueue,
+        private val transactionFactory: TransactionFactory,
+        val blockQueries: BaseBlockQueries,
+        private val debugInfoQuery: DebugInfoQuery,
+        blockchainRid: BlockchainRid
 ) : Model {
 
     companion object : KLogging()
@@ -88,12 +88,17 @@ open class PostchainModel(
         return blockQueries.getTransactionsInfo(beforeTime, limit).get()
     }
 
-    override fun getBlocks(beforeTime: Long, limit: Int, partialTx: Boolean): List<BlockDetail> {
-        return blockQueries.getBlocks(beforeTime, limit, partialTx).get()
+    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
+        return blockQueries.getBlocks(beforeTime, limit, txHashesOnly).get()
     }
 
-    override fun getBlock(blockRID: ByteArray, partialTx: Boolean): BlockDetail? {
-        return blockQueries.getBlock(blockRID, partialTx).get()
+    override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
+        return blockQueries.getBlock(blockRID, txHashesOnly).get()
+    }
+
+    override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
+        val blockRid = blockQueries.getBlockRid(height).get()
+        return blockRid?.let { getBlock(it, txHashesOnly) }
     }
 
     override fun getConfirmationProof(txRID: TxRID): ConfirmationProof? {

@@ -78,6 +78,11 @@ interface BlockchainProcessConnectable {
     fun disconnectProcess(process: BlockchainProcess)
 }
 
+interface RemoteBlockchainProcessConnectable {
+    fun connectRemoteProcess(process: RemoteBlockchainProcess)
+    fun disconnectRemoteProcess(process: RemoteBlockchainProcess)
+}
+
 /**
  * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
  * (examples: BBB Ext and GTX Spec TX Ext).

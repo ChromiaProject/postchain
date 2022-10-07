@@ -12,6 +12,7 @@ import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQ
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQUEST_METHOD
 import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_BLOCKCHAIN_RID
 import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_HASH_HEX
+import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_HEIGHT
 import net.postchain.api.rest.controller.HttpHelper.Companion.SUBQUERY
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.ApiTx
@@ -219,19 +220,26 @@ class RestApi(
                 val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
                 val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
                         ?: DEFAULT_ENTRY_RESULTS_REQUEST
-                val partialTxs = paramsMap.get("txs")?.value() != "true"
-                val result = model.getBlocks(beforeTime, limit, partialTxs)
+                val txHashesOnly = paramsMap.get("txs")?.value() != "true"
+                val result = model.getBlocks(beforeTime, limit, txHashesOnly)
                 gson.toJson(result)
             })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", { request, _ ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json") { request, _ ->
                 val model = model(request)
                 val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
-                val paramsMap = request.queryMap()
-                val partialTx = paramsMap.get("txs").value() != "true"
-                val result = model.getBlock(blockRID, partialTx)
+                val txHashesOnly = request.queryMap()["txs"].value() != "true"
+                val result = model.getBlock(blockRID, txHashesOnly)
                 gson.toJson(result)
-            })
+            }
+
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", "application/json") { request, _ ->
+                val model = model(request)
+                val height = request.params(PARAM_HEIGHT).toLong()
+                val txHashesOnly = request.queryMap()["txs"].value() != "true"
+                val result = model.getBlock(height, txHashesOnly)
+                gson.toJson(result)
+            }
 
             http.post("/query/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
                 handlePostQuery(request)

@@ -57,6 +57,13 @@ interface BlockchainProcess {
     fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) = Unit
 }
 
+// TODO: [POS-358]: Should we add chainId and brid to BlockchainProcess?
+interface RemoteBlockchainProcess {
+    val chainId: Long
+    val blockchainRid: BlockchainRid
+    val restApiUrl: String
+}
+
 /**
  *  Manages a set of [BlockchainProcess]:es (see the implementations for detailed documentation)
  */

@@ -325,11 +325,46 @@ paths:
     get:
       tags:
         - block
-      summary: Fetch block info
+      summary: Fetch block info by block RID
       description: Fetch info about a block from a chain
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/blockRid"
+        - name: txs
+          description: Return full transaction data
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/blockInfo"
+                  - $ref: "#/components/schemas/nullValue"
+        404:
+          description: Chain not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /blocks/{blockchainRid}/height/{height}:
+    get:
+      tags:
+        - block
+      summary: Fetch block info by block height
+      description: Fetch info about a block from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/height"
         - name: txs
           description: Return full transaction data
           in: query
@@ -772,6 +807,14 @@ components:
       schema:
         $ref: "#/components/schemas/hash"
       example: "A41E83512DF6CF8BC559EC5792BF221817E5D7E48E978E907210D770C75AA32E"
+    height:
+      name: height
+      description: Block height
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/height"
+      example: "123"
   schemas:
     tx:
       type: object
@@ -1013,5 +1056,8 @@ components:
       type: string
       pattern: "[0-9a-fA-F]"
       description: Hex encoded data
+    height:
+      type: integer
+      description: Block height
     nullValue:
       type: "null"

@@ -101,10 +101,10 @@ class BaseBlockStore : BlockStore {
         return DatabaseAccess.of(ctx).getWitnessData(ctx, blockRID)
     }
 
-    override fun getBlock(ctx: EContext, blockRID: ByteArray, hashesOnly: Boolean): BlockDetail? {
+    override fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
         val db = DatabaseAccess.of(ctx)
         val blockInfo = db.getBlock(ctx, blockRID) ?: return null
-        val txDetails = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
+        val txDetails = db.getBlockTransactions(ctx, blockInfo.blockRid, txHashesOnly)
         // TODO can I do this on the node or is it too computational expensive
         val headerRec = BlockHeaderData.fromBinary(blockInfo.blockHeader)
         return BlockDetail(
@@ -117,11 +117,11 @@ class BaseBlockStore : BlockStore {
                 blockInfo.timestamp)
     }
 
-    override fun getBlocks(ctx: EContext, blockTime: Long, limit: Int, hashesOnly: Boolean): List<BlockDetail> {
+    override fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
         val db = DatabaseAccess.of(ctx)
-        val blocksInfo = db.getBlocks(ctx, blockTime, limit)
+        val blocksInfo = db.getBlocks(ctx, beforeTime, limit)
         return blocksInfo.map { blockInfo ->
-            val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
+            val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, txHashesOnly)
 
             // Decode block header
             val headerRec = BlockHeaderData.fromBinary(blockInfo.blockHeader)
