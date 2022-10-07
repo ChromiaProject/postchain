@@ -53,22 +53,22 @@ interface BlockStore {
  * A collection of methods for various blockchain related queries
  */
 interface BlockQueries {
-    fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception>
-    fun getBestHeight(): Promise<Long, Exception>
-    fun getLastBlockTimestamp(): Promise<Long, Exception>
-    fun getBlockRid(height: Long): Promise<ByteArray?, Exception>
-    fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): Promise<BlockDataWithWitness?, Exception>
-    fun getBlockHeader(blockRID: ByteArray): Promise<BlockHeader, Exception>
-    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception>
-    fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): Promise<BlockDetail?, Exception>
+    fun getBlockSignature(blockRID: ByteArray, chainId: Long? = null): Promise<Signature, Exception>
+    fun getBestHeight(chainId: Long? = null): Promise<Long, Exception>
+    fun getLastBlockTimestamp(chainId: Long? = null): Promise<Long, Exception>
+    fun getBlockRid(height: Long, chainId: Long? = null): Promise<ByteArray?, Exception>
+    fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true, chainId: Long? = null): Promise<BlockDataWithWitness?, Exception>
+    fun getBlockHeader(blockRID: ByteArray, chainId: Long? = null): Promise<BlockHeader, Exception>
+    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean, chainId: Long? = null): Promise<List<BlockDetail>, Exception>
+    fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean, chainId: Long? = null): Promise<BlockDetail?, Exception>
 
-    fun getBlockTransactionRids(blockRID: ByteArray): Promise<List<ByteArray>, Exception>
-    fun getTransaction(txRID: ByteArray): Promise<Transaction?, Exception>
-    fun getTransactionInfo(txRID: ByteArray): Promise<TransactionInfoExt?, Exception>
-    fun getTransactionsInfo(beforeTime: Long, limit: Int): Promise<List<TransactionInfoExt>, Exception>
-    fun query(query: String): Promise<String, Exception>
-    fun query(name: String, args: Gtv): Promise<Gtv, Exception>
-    fun isTransactionConfirmed(txRID: ByteArray): Promise<Boolean, Exception>
+    fun getBlockTransactionRids(blockRID: ByteArray, chainId: Long? = null): Promise<List<ByteArray>, Exception>
+    fun getTransaction(txRID: ByteArray, chainId: Long? = null): Promise<Transaction?, Exception>
+    fun getTransactionInfo(txRID: ByteArray, chainId: Long? = null): Promise<TransactionInfoExt?, Exception>
+    fun getTransactionsInfo(beforeTime: Long, limit: Int, chainId: Long? = null): Promise<List<TransactionInfoExt>, Exception>
+    fun query(query: String, chainId: Long? = null): Promise<String, Exception>
+    fun query(name: String, args: Gtv, chainId: Long? = null): Promise<Gtv, Exception>
+    fun isTransactionConfirmed(txRID: ByteArray, chainId: Long? = null): Promise<Boolean, Exception>
 }
 
 /**

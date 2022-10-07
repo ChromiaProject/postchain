@@ -7,7 +7,6 @@ import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.assertNodeConnectedWith
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 
 open class FourPeersReconnectionImpl : ReconnectionTest() {
