@@ -66,4 +66,14 @@ interface PostchainClient {
      * Query current block height
      */
     fun currentBlockHeightSync(): Long
+
+    /**
+     * Query block at height
+     */
+    fun blockAtHeight(height: Long): CompletionStage<Gtv>
+
+    /**
+     * Query block at height
+     */
+    fun blockAtHeightSync(height: Long): Gtv
 }

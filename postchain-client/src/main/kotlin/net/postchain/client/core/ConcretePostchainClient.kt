@@ -10,16 +10,10 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
-import net.postchain.common.tx.TransactionStatus.CONFIRMED
-import net.postchain.common.tx.TransactionStatus.REJECTED
-import net.postchain.common.tx.TransactionStatus.UNKNOWN
-import net.postchain.common.tx.TransactionStatus.WAITING
+import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.crypto.KeyPair
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import org.http4k.client.ApacheAsyncClient
@@ -39,8 +33,8 @@ data class Queries(val queries: List<String>)
 data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
-    override val config: PostchainClientConfig,
-    private val httpClient: AsyncHttpHandler = ApacheAsyncClient()
+        override val config: PostchainClientConfig,
+        private val httpClient: AsyncHttpHandler = ApacheAsyncClient(),
 ) : PostchainClient {
 
     companion object : KLogging()
@@ -53,11 +47,11 @@ class ConcretePostchainClient(
     override fun transactionBuilder() = transactionBuilder(config.signers)
 
     override fun transactionBuilder(signers: List<KeyPair>) = TransactionBuilder(
-        this,
-        config.blockchainRid,
-        signers.map { it.pubKey.key },
-        signers.map { it.sigMaker(cryptoSystem) },
-        cryptoSystem
+            this,
+            config.blockchainRid,
+            signers.map { it.pubKey.key },
+            signers.map { it.sigMaker(cryptoSystem) },
+            cryptoSystem
     )
 
 
@@ -102,16 +96,16 @@ class ConcretePostchainClient(
     }
 
     private fun createQueryRequest(
-        name: String,
-        gtv: Gtv,
-        endpoint: Endpoint
+            name: String,
+            gtv: Gtv,
+            endpoint: Endpoint,
     ): Request {
         val queriesLens = Body.auto<Queries>().toLens()
         val gtxQuery = gtv(gtv(name), gtv)
         val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
         return queriesLens(
-            Queries(listOf(encodedQuery)),
-            Request(Method.POST, "${endpoint.url}/query_gtx/$blockchainRIDHex")
+                Queries(listOf(encodedQuery)),
+                Request(Method.POST, "${endpoint.url}/query_gtx/$blockchainRIDHex")
         )
     }
 
@@ -126,7 +120,7 @@ class ConcretePostchainClient(
 
     private fun buildException(response: Response): UserMistake {
         val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
-        return UserMistake("Can not make query_gtx api call: ${response.status} $msg")
+        return UserMistake("Can not make a query: ${response.status} $msg")
     }
 
 
@@ -142,6 +136,22 @@ class ConcretePostchainClient(
 
     override fun currentBlockHeightSync(): Long = try {
         currentBlockHeight().toCompletableFuture().join()
+    } catch (e: CompletionException) {
+        throw e.cause ?: e
+    }
+
+    override fun blockAtHeight(height: Long): CompletionStage<Gtv> {
+        val endpoint = nextEndpoint()
+        val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDHex/height/$height")
+        return queryTo(request, endpoint).thenApply {
+            if (it.status != Status.OK) throw buildException(it)
+            val json = Body.auto<String>().toLens()(it)
+            make_gtv_gson().fromJson(json, Gtv::class.java)
+        }
+    }
+
+    override fun blockAtHeightSync(height: Long): Gtv = try {
+        blockAtHeight(height).toCompletableFuture().join()
     } catch (e: CompletionException) {
         throw e.cause ?: e
     }
@@ -217,12 +227,12 @@ class ConcretePostchainClient(
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDHex/${txRid.rid}/status")
         return queryTo(validationRequest, endpoint).thenApply { response ->
             val txStatus = txStatusLens(response)
-                TransactionResult(
+            TransactionResult(
                     txRid,
                     TransactionStatus.valueOf(txStatus.status?.uppercase() ?: "UNKNOWN"),
                     response.status.code,
                     txStatus.rejectReason
-                )
+            )
         }
     }
 }

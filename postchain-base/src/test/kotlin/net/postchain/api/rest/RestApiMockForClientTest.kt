@@ -147,11 +147,15 @@ class RestApiMockForClientManual {
 
         override fun nodeQuery(subQuery: String): String = TODO()
 
-        override fun getBlock(blockRID: ByteArray, partialTx: Boolean): BlockDetail? {
+        override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
             return (blocks.filter { it.rid.contentEquals(blockRID) }).getOrNull(0)
         }
 
-        override fun getBlocks(blockTime: Long, limit: Int, partialTx: Boolean): List<BlockDetail> {
+        override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
+            TODO("Not yet implemented")
+        }
+
+        override fun getBlocks(blockTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
             var queryBlocks = blocks.sortedBy { blockDetail -> blockDetail.height }
             return blocks.filter { blockDetail -> blockDetail.timestamp < blockTime }.subList(0, limit)
         }
