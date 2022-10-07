@@ -137,8 +137,8 @@ open class KnownState(val params: SyncParameters) {
         disconnectedSince = 0
     }
 
-    protected fun isConnected(): Boolean {
-        return disconnectedSince == 0L || System.currentTimeMillis() - disconnectedSince < params.disconnectTimeout
+    fun isConnected(now: Long): Boolean {
+        return disconnectedSince == 0L || now - disconnectedSince < params.disconnectTimeout
     }
 
     open fun resurrect(now: Long) {

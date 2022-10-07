@@ -1,9 +1,9 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.core
+package net.postchain.ebft
 
 class NodeStateTracker {
-    var nodeStatuses: Array<String>? = null
-    var myStatus: String? = null
+    var nodeStatuses: Array<NodeStatus>? = null
+    var myStatus: NodeStatus? = null
     var blockHeight: Long = -1
 }

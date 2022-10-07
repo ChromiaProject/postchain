@@ -137,7 +137,7 @@ class FastSynchronizer(
             logger.debug("syncUntilResponsiveNodesDrained() begin with exitDelay: ${params.exitDelay}")
         }
         syncUntil {
-            val syncableCount = peerStatuses.getSyncable(blockHeight + 1).intersect(configuredPeers).size
+            val syncableCount = peerStatuses.getSyncableAndConnected(blockHeight + 1).intersect(configuredPeers).size
 
             // Keep syncing until this becomes true, i.e. to exit we must have:
             val done = timeout < System.currentTimeMillis()      // 1. must have timeout
