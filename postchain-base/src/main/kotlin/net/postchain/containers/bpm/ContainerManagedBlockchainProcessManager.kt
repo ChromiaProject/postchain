@@ -381,6 +381,7 @@ open class ContainerManagedBlockchainProcessManager(
         if (started) {
             heartbeatManager.addListener(chain.chainId, process)
             chainIdToBrid[chain.chainId] = chain.brid
+            bridToChainId[chain.brid] = chain.chainId
             extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                     .forEach { it.connectRemoteProcess(process) }
             blockchainProcessesDiagnosticData[chain.brid] = mutableMapOf(
@@ -400,7 +401,9 @@ open class ContainerManagedBlockchainProcessManager(
                             .forEach { it.disconnectRemoteProcess(process) }
                     masterBlockchainInfra.exitMasterBlockchainProcess(process)
                     heartbeatManager.removeListener(chainId)
-                    blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
+                    val blockchainRid = chainIdToBrid.remove(chainId)
+                    blockchainProcessesDiagnosticData.remove(blockchainRid)
+                    bridToChainId.remove(blockchainRid)
                     chains.remove(chainId)
                     process.shutdown()
                 }
