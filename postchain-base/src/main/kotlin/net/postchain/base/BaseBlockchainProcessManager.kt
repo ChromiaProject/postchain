@@ -51,6 +51,7 @@ open class BaseBlockchainProcessManager(
     val storage get() = postchainContext.storage
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
+    protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
     protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
@@ -190,6 +191,7 @@ open class BaseBlockchainProcessManager(
                     it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
                     extensions.forEach { ext -> ext.connectProcess(it) }
                     chainIdToBrid[chainId] = blockchainConfig.blockchainRid
+                    bridToChainId[blockchainConfig.blockchainRid] = chainId
                 }
     }
 
@@ -197,6 +199,10 @@ open class BaseBlockchainProcessManager(
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
         return blockchainProcesses[chainId]
+    }
+
+    override fun retrieveBlockchain(blockchainRid: BlockchainRid): BlockchainProcess? {
+        return blockchainProcesses[bridToChainId[blockchainRid]]
     }
 
     /**
@@ -221,7 +227,9 @@ open class BaseBlockchainProcessManager(
     }
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
-        blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
+        val blockchainRid = chainIdToBrid.remove(chainId)
+        blockchainProcessesDiagnosticData.remove(blockchainRid)
+        bridToChainId.remove(blockchainRid)
         blockchainProcesses.remove(chainId)?.also {
             stopInfoDebug("Stopping of blockchain", chainId, bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
@@ -248,6 +256,7 @@ open class BaseBlockchainProcessManager(
         blockchainProcesses.clear()
         blockchainProcessesDiagnosticData.clear()
         chainIdToBrid.clear()
+        bridToChainId.clear()
         logger.debug("[${nodeName()}]: Stopped BlockchainProcessManager")
     }
 
