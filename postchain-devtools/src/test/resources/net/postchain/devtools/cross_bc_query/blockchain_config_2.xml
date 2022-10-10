@@ -47,7 +47,7 @@
     </entry>
     <entry key="sync_ext">
         <array>
-            <string>net.postchain.devtools.CrossBlockchainTestSynchronizationInfrastructureExtension</string>
+            <string>net.postchain.integrationtest.CrossBlockchainTestSynchronizationInfrastructureExtension</string>
         </array>
     </entry>
 </dict>

@@ -1,4 +1,4 @@
-package net.postchain.devtools
+package net.postchain.integrationtest
 
 import assertk.assert
 import assertk.assertions.isEqualTo
@@ -7,6 +7,8 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.EContext
 import net.postchain.core.SynchronizationInfrastructureExtension
+import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.addBlockchainAndStart
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.SimpleGTXModule
