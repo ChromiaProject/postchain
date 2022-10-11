@@ -3,17 +3,19 @@
 package net.postchain.network.netty2
 
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.util.NettyRuntime
 import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
-import net.postchain.network.common.NodeConnectorEvents
-import net.postchain.network.common.NodeConnector
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
+import net.postchain.network.common.NodeConnector
+import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.peer.PeerConnectionDescriptor
 import net.postchain.network.peer.PeerPacketHandler
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 class NettyPeerConnector<PacketType>(
         private val eventsReceiver: NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor>
@@ -21,8 +23,13 @@ class NettyPeerConnector<PacketType>(
 
     companion object : KLogging()
 
-    private val eventLoopGroup = NioEventLoopGroup(DefaultThreadFactory("Netty"))
+    private val numThreads = max(NettyRuntime.availableProcessors() * 2, 5)
+    private val eventLoopGroup = NioEventLoopGroup(numThreads, DefaultThreadFactory("Netty"))
     private lateinit var server: NettyServer
+
+    init {
+        logger.info("Netty reports ${NettyRuntime.availableProcessors()} threads available")
+    }
 
     override fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>) {
         server = NettyServer(eventLoopGroup).apply {
