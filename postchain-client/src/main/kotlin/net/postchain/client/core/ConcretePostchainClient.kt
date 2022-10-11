@@ -41,6 +41,7 @@ class ConcretePostchainClient(
 
     private fun nextEndpoint() = config.endpointPool.next()
     private val blockchainRIDHex = config.blockchainRid.toHex()
+    private val blockchainRIDOrID = config.queryByChainId?.let { "iid_$it" } ?: blockchainRIDHex
     private val cryptoSystem = config.cryptoSystem
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
 
@@ -105,7 +106,7 @@ class ConcretePostchainClient(
         val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
         return queriesLens(
                 Queries(listOf(encodedQuery)),
-                Request(Method.POST, "${endpoint.url}/query_gtx/$blockchainRIDHex")
+                Request(Method.POST, "${endpoint.url}/query_gtx/$blockchainRIDOrID")
         )
     }
 
@@ -127,7 +128,7 @@ class ConcretePostchainClient(
     override fun currentBlockHeight(): CompletionStage<Long> {
         val currentBlockHeightLens = Body.auto<CurrentBlockHeight>().toLens()
         val endpoint = nextEndpoint()
-        val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDHex/height")
+        val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
         return queryTo(request, endpoint).thenApply {
             if (it.status != Status.OK) throw buildException(it)
             currentBlockHeightLens(it).blockHeight
@@ -142,7 +143,7 @@ class ConcretePostchainClient(
 
     override fun blockAtHeight(height: Long): CompletionStage<Gtv> {
         val endpoint = nextEndpoint()
-        val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDHex/height/$height")
+        val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
         return queryTo(request, endpoint).thenApply {
             if (it.status != Status.OK) throw buildException(it)
             val json = Body.auto<String>().toLens()(it)
@@ -224,7 +225,7 @@ class ConcretePostchainClient(
     override fun checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult> {
         val txStatusLens = Body.auto<TxStatus>().toLens()
         val endpoint = nextEndpoint()
-        val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDHex/${txRid.rid}/status")
+        val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
         return queryTo(validationRequest, endpoint).thenApply { response ->
             val txStatus = txStatusLens(response)
             TransactionResult(
