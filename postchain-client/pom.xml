@@ -37,6 +37,10 @@
             <artifactId>postchain-gtx-data</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>io.github.microutils</groupId>
+            <artifactId>kotlin-logging-jvm</artifactId>
+        </dependency>
 
         <!-- Tools -->
         <dependency>
@@ -79,6 +83,11 @@
         </dependency>
 
         <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit5</artifactId>
