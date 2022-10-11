@@ -52,7 +52,7 @@
         <kotlin-logging.version>2.1.23</kotlin-logging.version>
         <slf4j.version>1.7.36</slf4j.version>
         <log4j2.version>2.17.1</log4j2.version>
-        <jackson.version>2.13.1</jackson.version>
+        <jackson.version>2.13.4</jackson.version>
 
         <!-- 3rd party -->
         <postgresql.version>42.2.11</postgresql.version>
@@ -96,31 +96,6 @@
             <url>https://gitlab.com/api/v4/projects/32294340/packages/maven</url>
         </repository>
     </distributionManagement>
-
-    <!-- Global dependencies -->
-    <dependencies>
-
-        <!-- Testing -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- For Log4j2/YAML configuration -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-yaml</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.github.microutils</groupId>
-            <artifactId>kotlin-logging-jvm</artifactId>
-        </dependency>
-    </dependencies>
 
     <dependencyManagement>
         <dependencies>
@@ -433,8 +408,6 @@
 
         </dependencies>
     </dependencyManagement>
-
-
 
     <build>
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>

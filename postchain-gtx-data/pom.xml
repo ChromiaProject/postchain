@@ -28,6 +28,12 @@
 
         <!-- Test dependencies -->
         <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
             <type>test-jar</type>
