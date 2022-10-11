@@ -1,8 +1,8 @@
 package net.postchain.containers.infra
 
 import net.postchain.api.rest.infra.RestApiConfig
-import net.postchain.config.app.AppConfig
 import net.postchain.common.config.Config
+import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.server.config.PostchainServerConfig
 import org.apache.commons.configuration2.Configuration
@@ -18,6 +18,7 @@ data class ContainerNodeConfig(
         val containerImage: String,
         val masterHost: String,
         val masterPort: Int,
+        val masterRestApiPort: Int,
         val subnodeHost: String,
         val subnodeRestApiPort: Int,
         val subnodeAdminRpcPort: Int,
@@ -67,6 +68,7 @@ data class ContainerNodeConfig(
         const val KEY_DOCKER_IMAGE = "docker-image"
         const val KEY_MASTER_HOST = "master-host"
         const val KEY_MASTER_PORT = "master-port"
+        const val KEY_MASTER_REST_API_PORT = "master-rest-api-port"
         const val KEY_SUBNODE_HOST = "subnode-host"
         const val KEY_SUBNODE_REST_API_PORT = "rest-api-port"
         const val KEY_SUBNODE_ADMIN_RPC_PORT = "admin-rpc-port"
@@ -93,6 +95,7 @@ data class ContainerNodeConfig(
                         getString(KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
                         getString(KEY_MASTER_HOST, "localhost"),
                         getInt(KEY_MASTER_PORT, 9860),
+                        getMasterRestApiPort(config),
                         getString(KEY_SUBNODE_HOST, "localhost"),
                         getInt(KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
                         getInt(KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),
@@ -111,6 +114,14 @@ data class ContainerNodeConfig(
                         getLong(KEY_TESTMODE_RESOURCE_LIMITS_STORAGE, -1),
                         initTestmodeDappsContainers()
                 )
+            }
+        }
+
+        private fun Configuration.getMasterRestApiPort(config: AppConfig): Int {
+            return if (containsKey(KEY_MASTER_REST_API_PORT)) {
+                getInt(KEY_MASTER_REST_API_PORT)
+            } else {
+                RestApiConfig.fromAppConfig(config).port
             }
         }
 
