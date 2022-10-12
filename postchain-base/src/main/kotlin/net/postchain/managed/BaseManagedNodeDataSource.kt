@@ -10,15 +10,10 @@ import net.postchain.core.NodeRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.managed.query.QueryRunner
-import net.postchain.utils.KovenantHelper
-import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.task
 
 open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig: AppConfig) : ManagedNodeDataSource {
 
     companion object : KLogging()
-
-    protected val context = KovenantHelper.createContext("ManagedDataSource", appConfig.databaseReadConcurrency)
 
     protected val nmApiVersion by lazy {
         query("nm_api_version", buildArgs()).asInteger().toInt()
@@ -68,12 +63,6 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
 
     override fun query(name: String, args: Gtv): Gtv {
         return queryRunner.query(name, args)
-    }
-
-    override fun queryAsync(name: String, args: Gtv): Promise<Gtv, Exception> {
-        return task(context) {
-            queryRunner.query(name, args)
-        }
     }
 
     fun buildArgs(vararg args: Pair<String, Gtv>): Gtv {
