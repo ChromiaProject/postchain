@@ -7,12 +7,14 @@ import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.config.ManagedDataSourceAwareness
+import net.postchain.managed.query.QueryRunnerFactory.createChain0QueryRunner
 
 class ContainerChain0BlockchainConfiguration(
         configuration: GTXBlockchainConfiguration,
         module: GTXModule, appConfig: AppConfig,
-        val containerNodeConfig: ContainerNodeConfig
+        val containerNodeConfig: ContainerNodeConfig,
 ) : BlockchainConfiguration by configuration, ManagedDataSourceAwareness {
 
-    override val dataSource = BaseDirectoryDataSource(module, appConfig, containerNodeConfig)
+    override val dataSource = BaseDirectoryDataSource(
+            createChain0QueryRunner(module, appConfig), appConfig, containerNodeConfig)
 }

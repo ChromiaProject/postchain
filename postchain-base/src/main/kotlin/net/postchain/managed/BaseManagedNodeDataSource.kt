@@ -3,24 +3,17 @@
 package net.postchain.managed
 
 import mu.KLogging
-import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtx.GTXModule
-import net.postchain.utils.KovenantHelper
-import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.task
+import net.postchain.managed.query.QueryRunner
 
-open class BaseManagedNodeDataSource(val module: GTXModule, val appConfig: AppConfig) : ManagedNodeDataSource {
+open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig: AppConfig) : ManagedNodeDataSource {
 
     companion object : KLogging()
-
-    protected val storage = StorageBuilder.buildStorage(appConfig)
-    protected val context = KovenantHelper.createContext("ManagedDataSource", storage.readConcurrency)
 
     protected val nmApiVersion by lazy {
         query("nm_api_version", buildArgs()).asInteger().toInt()
@@ -69,21 +62,7 @@ open class BaseManagedNodeDataSource(val module: GTXModule, val appConfig: AppCo
     }
 
     override fun query(name: String, args: Gtv): Gtv {
-        return queryAsync(name, args).get()
-    }
-
-    override fun queryAsync(name: String, args: Gtv): Promise<Gtv, Exception> {
-        return task(context) {
-            val ctx = storage.openReadConnection(0L)
-            try {
-                module.query(ctx, name, args)
-            } catch (e: Exception) {
-                logger.trace(e) { "An error occurred: ${e.message}" }
-                throw e
-            } finally {
-                storage.closeReadConnection(ctx)
-            }
-        }
+        return queryRunner.query(name, args)
     }
 
     fun buildArgs(vararg args: Pair<String, Gtv>): Gtv {
