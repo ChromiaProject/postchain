@@ -37,6 +37,8 @@ open class PostchainModel(
 
     private val metrics = PostchainModelMetrics(chainIID, blockchainRid)
 
+    override var live = true
+
     override fun postTransaction(tx: ApiTx) {
         val sample = Timer.start(Metrics.globalRegistry)
 
@@ -53,7 +55,7 @@ open class PostchainModel(
         when (txQueue.enqueue(decodedTransaction)) {
             EnqueueTransactionResult.FULL -> {
                 sample.stop(metrics.fullTransactions)
-                throw OverloadedException("Transaction queue is full")
+                throw UnavailableException("Transaction queue is full")
             }
             EnqueueTransactionResult.INVALID -> {
                 sample.stop(metrics.invalidTransactions)
