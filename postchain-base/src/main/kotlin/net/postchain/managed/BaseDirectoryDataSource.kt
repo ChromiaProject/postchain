@@ -6,13 +6,13 @@ import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtx.GTXModule
+import net.postchain.managed.query.QueryRunner
 
 class BaseDirectoryDataSource(
-        module: GTXModule,
+        queryRunner: QueryRunner,
         appConfig: AppConfig,
-        private val containerNodeConfig: ContainerNodeConfig
-) : BaseManagedNodeDataSource(module, appConfig), DirectoryDataSource {
+        private val containerNodeConfig: ContainerNodeConfig,
+) : BaseManagedNodeDataSource(queryRunner, appConfig), DirectoryDataSource {
 
     override fun getContainersToRun(): List<String>? {
         val res = query(
