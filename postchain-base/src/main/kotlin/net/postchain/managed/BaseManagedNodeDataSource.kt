@@ -11,7 +11,8 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.managed.query.QueryRunner
 
-open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig: AppConfig) : ManagedNodeDataSource {
+open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig: AppConfig)
+    : ManagedNodeDataSource, QueryRunner by queryRunner {
 
     companion object : KLogging()
 
@@ -59,10 +60,6 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         )
 
         return if (res.isNull()) null else res.asInteger()
-    }
-
-    override fun query(name: String, args: Gtv): Gtv {
-        return queryRunner.query(name, args)
     }
 
     fun buildArgs(vararg args: Pair<String, Gtv>): Gtv {
