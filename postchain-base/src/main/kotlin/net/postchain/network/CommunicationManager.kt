@@ -10,6 +10,7 @@ interface CommunicationManager<PacketType> {
     //fun peerMap(): Map<NodeRid, PeerInfo>
     fun getPackets(): MutableList<Pair<NodeRid, PacketType>>
     fun sendPacket(packet: PacketType, recipient: NodeRid)
+    fun sendPacket(packet: PacketType, recipients: List<NodeRid>)
     fun broadcastPacket(packet: PacketType)
 
     /**
