@@ -12,6 +12,7 @@ import net.postchain.gtv.Gtv
 
 interface ChainModel {
     val chainIID: Long
+    var live: Boolean
 }
 
 interface ExternalModel : ChainModel {
@@ -42,7 +43,7 @@ data class ErrorBody(val error: String = "")
 class NotSupported(message: String) : Exception(message)
 class NotFoundError(message: String) : Exception(message)
 class BadFormatError(message: String) : Exception(message)
-class OverloadedException(message: String) : Exception(message)
+class UnavailableException(message: String) : Exception(message)
 class InvalidTnxException(message: String) : Exception(message)
 class DuplicateTnxException(message: String) : Exception(message)
 

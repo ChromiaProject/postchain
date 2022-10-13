@@ -5,6 +5,8 @@ class HttpExternalModel(
     override val chainIID: Long
 ) : ExternalModel {
 
+    override var live = true
+
     override fun toString(): String {
         return "${this.javaClass.simpleName}(path=$path, chainId=$chainIID)"
     }

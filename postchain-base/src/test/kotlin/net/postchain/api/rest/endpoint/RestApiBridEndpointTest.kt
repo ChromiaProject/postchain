@@ -23,6 +23,7 @@ class RestApiBridEndpointTest {
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
+            on { live } doReturn true
         }
 
         restApi = RestApi(0, basePath)
@@ -38,10 +39,10 @@ class RestApiBridEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-            .get("/brid/iid_1")
-            .then()
-            .statusCode(200)
-            .contentType("text/plain")
-            .body(equalToIgnoringCase(blockchainRID))
+                .get("/brid/iid_1")
+                .then()
+                .statusCode(200)
+                .contentType("text/plain")
+                .body(equalToIgnoringCase(blockchainRID))
     }
 }

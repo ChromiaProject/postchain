@@ -26,8 +26,9 @@ class RestApiGetTxEndpointTest {
 
     @BeforeEach
     fun setup() {
-        model = mock { 
+        model = mock {
             on { chainIID } doReturn 1L
+            on { live } doReturn true
         }
 
         restApi = RestApi(0, basePath)
