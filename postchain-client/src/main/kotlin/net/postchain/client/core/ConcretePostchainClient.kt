@@ -12,13 +12,21 @@ import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.crypto.KeyPair
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
-import org.http4k.core.*
+import org.http4k.core.Body
+import org.http4k.core.Method
+import org.http4k.core.Request
+import org.http4k.core.Response
+import org.http4k.core.Status
 import org.http4k.format.Gson.auto
 import java.lang.Thread.sleep
 import java.time.Duration
@@ -115,7 +123,7 @@ class ConcretePostchainClient(
     private fun queryTo(request: Request, endpoint: Endpoint): CompletionStage<Response> {
         val result = CompletableFuture<Response>()
         httpClient(request) { response ->
-            if (response.status.code == 503) endpoint.setUnreachable()
+            if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
             result.complete(response)
         }
         return result
@@ -167,8 +175,8 @@ class ConcretePostchainClient(
                 endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
                     result = postTransactionTo(tx, endpoint).toCompletableFuture().join()
                     when (result.httpStatusCode) {
-                        200, 400, 404, 409 -> return result
-                        503 -> break@endpoint
+                        Status.OK.code, Status.BAD_REQUEST.code, Status.NOT_FOUND.code, Status.CONFLICT.code -> return result
+                        Status.SERVICE_UNAVAILABLE.code -> break@endpoint
                     }
                     sleep(config.failOverConfig.attemptInterval.toMillis())
                 }
@@ -190,7 +198,7 @@ class ConcretePostchainClient(
         val request = txLens(encodedTx, Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex"))
         val result = CompletableFuture<TransactionResult>()
         httpClient(request) { response ->
-            if (response.status.code == 503) endpoint.setUnreachable()
+            if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
             val status = if (response.status == Status.OK) WAITING else REJECTED
             result.complete(TransactionResult(txRid, status, response.status.code, response.status.description))
         }
