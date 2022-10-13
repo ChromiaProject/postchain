@@ -58,15 +58,17 @@ class DefaultPeerCommunicationManager<PacketType>(
     override fun sendPacket(packet: PacketType, recipient: NodeRid) {
         logger.trace { "$processName: sendPacket($packet, ${peerName(recipient.toString())})" }
 
-        require(NodeRid(config.pubKey) != recipient) {
-            "CommunicationManager.sendPacket(): sender can not be the recipient"
-        }
+        val encodingFunction = { packetEncoder.encodePacket(packet) }
+        sendEncodedPacket(encodingFunction, recipient)
+    }
 
-        connectionManager.sendPacket(
-                { packetEncoder.encodePacket(packet) },
-                chainId,
-                recipient
-        )
+    override fun sendPacket(packet: PacketType, recipients: List<NodeRid>) {
+        val lazyPacket by lazy { packetEncoder.encodePacket(packet) }
+        recipients.forEach {
+            logger.trace { "$processName: sendPacket($packet, ${peerName(it.toString())})" }
+
+            sendEncodedPacket({ lazyPacket }, it)
+        }
     }
 
     override fun broadcastPacket(packet: PacketType) {
@@ -105,6 +107,17 @@ class DefaultPeerCommunicationManager<PacketType>(
         connected = false
     }
 
+    private fun sendEncodedPacket(encodingFunction: () -> ByteArray, recipient: NodeRid) {
+        require(NodeRid(config.pubKey) != recipient) {
+            "CommunicationManager.sendPacket(): sender can not be the recipient"
+        }
+
+        connectionManager.sendPacket(
+                encodingFunction,
+                chainId,
+                recipient
+        )
+    }
 
     private fun consumePacket(packet: ByteArray, peerId: NodeRid) {
         try {

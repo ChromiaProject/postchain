@@ -259,10 +259,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun fetchCommitSignatures(blockRID: ByteArray, nodes: Array<Int>) {
         val message = GetBlockSignature(blockRID)
-        logger.debug{ "$processName: Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}" }
-        nodes.forEach {
-            communicationManager.sendPacket(message, validatorAtIndex(it))
-        }
+        logger.debug { "$processName: Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}" }
+        communicationManager.sendPacket(message, nodes.map { validatorAtIndex(it) })
     }
 
     /**
