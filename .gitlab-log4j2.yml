@@ -22,7 +22,7 @@ Configuration:
     RollingFile:
       - name: FileAppender
         fileName: "${logs}/${logfile}.log"
-        filePattern: "${logs}/${logfile}.%d{yyyy-MM-dd-hh-mm}.log"
+        filePattern: "${logs}/${logfile}.%d{yyyy-MM-dd-hh-mm-ss}.log"
         Policies:
           SizeBasedTriggeringPolicy:
             size: 1 MB
@@ -32,7 +32,7 @@ Configuration:
           pattern: ${logpattern}
       - name: SimpleFileAppender
         fileName: "${logs}/${logfile}.log"
-        filePattern: "${logs}/${logfile}.%d{yyyy-MM-dd-hh-mm}.log"
+        filePattern: "${logs}/${logfile}.%d{yyyy-MM-dd-hh-mm-ss}.log"
         Policies:
           SizeBasedTriggeringPolicy:
             size: 1 MB
