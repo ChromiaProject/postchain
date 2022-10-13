@@ -68,7 +68,9 @@ class ConcretePostchainClient(
                         Status.OK -> return queryResponseToGtv(queryResult)
                         Status.BAD_REQUEST -> throw buildException(queryResult)
                         Status.INTERNAL_SERVER_ERROR -> throw buildException(queryResult)
+                        Status.NOT_FOUND -> throw buildException(queryResult)
                         Status.UNKNOWN_HOST -> break@endpoint
+                        Status.SERVICE_UNAVAILABLE -> break@endpoint
                     }
                     sleep(config.failOverConfig.attemptInterval.toMillis())
                 }
