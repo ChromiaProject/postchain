@@ -20,7 +20,7 @@ class MockBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSou
     companion object: KLogging()
 
     override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
-        checkChainId(eContext, chainId)
+        requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)
         val activeHeight = this.getActiveBlocksHeight(eContext, dba)
@@ -28,7 +28,7 @@ class MockBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSou
     }
 
     override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
-        checkChainId(eContext, chainId)
+        requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
@@ -43,7 +43,7 @@ class MockBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSou
      * Same principle for "historic" as for "current"
      */
     override fun getHistoricConfigurationHeight(eContext: EContext, chainId: Long, historicBlockHeight: Long): Long? {
-        checkChainId(eContext, chainId)
+        requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val blockchainRid = ChainUtil.ridOf(chainId)
         val nextConfigHeight = mockDataSource.findNextConfigurationHeight(blockchainRid.data, historicBlockHeight)
@@ -55,7 +55,7 @@ class MockBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSou
      * Same principle for "historic" as for "current"
      */
     override fun getHistoricConfiguration(eContext: EContext, chainId: Long, historicBlockHeight: Long): ByteArray? {
-        checkChainId(eContext, chainId)
+        requireChainIdToBeSameAsInContext(eContext, chainId)
 
         logger.debug("getHistoricConfiguration() - Fetching configuration from chain0 (for chain: $chainId and height: $historicBlockHeight)")
         return mockDataSource.getConfiguration(ChainUtil.ridOf(chainId).data, historicBlockHeight)

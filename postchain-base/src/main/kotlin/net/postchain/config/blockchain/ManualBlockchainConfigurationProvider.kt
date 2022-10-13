@@ -12,7 +12,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
     companion object : KLogging()
 
     override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
-        checkChainId(eContext, chainId)
+        requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
@@ -37,7 +37,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
     }
 
     override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
-        checkChainId(eContext, chainId)
+        requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
@@ -52,13 +52,13 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
     }
 
     override fun getHistoricConfigurationHeight(eContext: EContext, chainId: Long, historicBlockHeight: Long): Long? {
-        checkChainId(eContext, chainId)
+        requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, historicBlockHeight)
     }
 
     override fun getHistoricConfiguration(eContext: EContext, chainId: Long, historicBlockHeight: Long): ByteArray? {
-        checkChainId(eContext, chainId)
+        requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return BaseConfigurationDataStore.getConfigurationData(eContext, historicBlockHeight)
     }
