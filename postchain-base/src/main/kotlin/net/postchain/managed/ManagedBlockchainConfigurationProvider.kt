@@ -36,7 +36,7 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
      * This is a very tricky subject, since a manual override can cause the chain to fork!
      */
     override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
-        check(eContext, chainId)
+        checkChainId(eContext, chainId)
 
         return if (chainId == 0L) {
             systemProvider.getActiveBlocksConfiguration(eContext, chainId)
@@ -68,7 +68,7 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
      * Reason: override in managed mode is hard enough as it is, and it's doubtful if it should be allowed.
      */
     override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
-        check(eContext, chainId)
+        checkChainId(eContext, chainId)
 
         return if (chainId == 0L) {
             systemProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
@@ -85,7 +85,7 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
      * Same principle for "historic" as for "current"
      */
     override fun getHistoricConfigurationHeight(eContext: EContext, chainId: Long, historicBlockHeight: Long): Long? {
-        check(eContext, chainId)
+        checkChainId(eContext, chainId)
 
         return if (chainId == 0L) {
             systemProvider.getHistoricConfigurationHeight(eContext, chainId, historicBlockHeight)
@@ -100,7 +100,7 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
      * Same principle for "historic" as for "current"
      */
     override fun getHistoricConfiguration(eContext: EContext, chainId: Long, historicBlockHeight: Long): ByteArray? {
-        check(eContext, chainId)
+        checkChainId(eContext, chainId)
 
         return if (chainId == 0L) {
             systemProvider.getHistoricConfiguration(eContext, chainId, historicBlockHeight)

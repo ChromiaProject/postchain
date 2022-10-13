@@ -13,7 +13,7 @@ abstract class AbstractBlockchainConfigurationProvider: BlockchainConfigurationP
 
     companion object : KLogging()
 
-    fun check(eContext: EContext, chainId: Long) {
+    fun checkChainId(eContext: EContext, chainId: Long) {
         if (eContext.chainID != chainId) {
             throw ProgrammerMistake("Mismatch between eCtx: ${eContext.chainID} and given chainIid: $chainId. Probably a bug")
         }
