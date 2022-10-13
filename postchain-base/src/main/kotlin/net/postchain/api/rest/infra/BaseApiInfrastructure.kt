@@ -21,18 +21,22 @@ open class BaseApiInfrastructure(
         if (port != -1) {
             if (tls) {
                 RestApi(
-                    port,
-                    basePath,
-                    tlsCertificate,
-                    tlsCertificatePassword)
+                        port,
+                        basePath,
+                        tlsCertificate,
+                        tlsCertificatePassword)
             } else {
                 RestApi(
-                    port,
-                    basePath)
+                        port,
+                        basePath)
             }
         } else {
             null
         }
+    }
+
+    override fun restartProcess(process: BlockchainProcess) {
+        restApi?.retrieveModel(bridOf(process))?.live = false
     }
 
     override fun connectProcess(process: BlockchainProcess) {

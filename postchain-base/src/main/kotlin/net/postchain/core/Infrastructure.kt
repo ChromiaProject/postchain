@@ -90,7 +90,9 @@ interface RemoteBlockchainProcessConnectable {
  */
 interface SynchronizationInfrastructureExtension : BlockchainProcessConnectable, Shutdownable
 
-interface ApiInfrastructure : BlockchainProcessConnectable, Shutdownable
+interface ApiInfrastructure : BlockchainProcessConnectable, Shutdownable {
+    fun restartProcess(process: BlockchainProcess)
+}
 
 interface BlockchainProcessManagerExtension : BlockchainProcessConnectable, Shutdownable {
     fun afterCommit(process: BlockchainProcess, height: Long)

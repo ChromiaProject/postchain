@@ -43,6 +43,7 @@ class RestApiModelTest {
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
+            on { live } doReturn true
         }
 
         restApi = RestApi(0, basePath)
@@ -73,6 +74,21 @@ class RestApiModelTest {
                 .get("/tx/$blockchainRID3/$txRID")
                 .then()
                 .statusCode(404)
+    }
+
+    @Test
+    fun testGetTx_unavailable_model_503_received() {
+        val unavailableModel: Model = mock {
+            on { chainIID } doReturn 1L
+            on { live } doReturn false
+        }
+
+        restApi.attachModel(blockchainRID1, unavailableModel)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/tx/$blockchainRID1/$txRID")
+                .then()
+                .statusCode(503)
     }
 
     @Test

@@ -109,7 +109,7 @@ class RestApi(
             response.body(toJson(error))
         }
 
-        http.exception(OverloadedException::class.java) { error, _, response ->
+        http.exception(UnavailableException::class.java) { error, _, response ->
             response.status(503) // Service unavailable
             response.body(toJson(error))
         }
@@ -456,8 +456,11 @@ class RestApi(
 
     private fun chainModel(request: Request): ChainModel {
         val blockchainRID = checkBlockchainRID(request)
-        return models[blockchainRID.uppercase()]
+        val model = models[blockchainRID.uppercase()]
                 ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
+
+        if (!model.live) throw UnavailableException("Blockchain is unavailable")
+        return model
     }
 
     private fun model(request: Request): Model {

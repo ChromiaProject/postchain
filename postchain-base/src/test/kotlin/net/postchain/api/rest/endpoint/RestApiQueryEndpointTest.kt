@@ -34,6 +34,7 @@ class RestApiQueryEndpointTest {
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
+            on { live } doReturn true
         }
 
         restApi = RestApi(0, basePath)
