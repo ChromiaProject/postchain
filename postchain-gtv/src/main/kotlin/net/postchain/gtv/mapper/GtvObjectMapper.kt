@@ -100,7 +100,7 @@ object GtvObjectMapper {
         return try {
             constructor.newInstance(*constructorParameters.toTypedArray()) as T
         } catch (e: IllegalArgumentException) {
-            throw IllegalArgumentException("Constructor for parameters $constructorParameters not found")
+            throw IllegalArgumentException("Constructor for ${classType.simpleName} with parameters $constructorParameters not found", e)
         }
     }
 }
@@ -161,7 +161,7 @@ private fun parameterToValue(param: Parameter, gtv: Gtv?, transient: Map<String,
     if (param.parameterizedType is ParameterizedType) { // List types
         if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be array, but is ${gtv.type} with values $gtv")
         val listTypeArgument = (param.parameterizedType as ParameterizedType).actualTypeArguments[0]
-        return parameterizedTypeArgumentToValue(listTypeArgument, gtv, transient)
+        return parameterizedTypeArgumentToValue(listTypeArgument, gtv, transient).let { if (param.type.isSet()) (it as List<*>).toSet() else it }
     }
     return classToValue(param.type, gtv, transient)
 }
@@ -223,6 +223,10 @@ private fun Class<*>.isBigInteger(): Boolean {
 
 private fun Class<*>.isBoolean(): Boolean {
     return this == Boolean::class.java || this == java.lang.Boolean::class.java
+}
+
+private fun Class<*>.isSet(): Boolean {
+    return this == Set::class.java
 }
 
 private fun Class<*>.isGtv() = Gtv::class.java.isAssignableFrom(this)

@@ -2,8 +2,12 @@
 
 package net.postchain.config.app
 
+import net.postchain.common.config.Config
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.Infrastructure
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Secp256K1CryptoSystem
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -12,11 +16,6 @@ import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import java.io.FileWriter
 import java.io.PrintWriter
-
-/**
- * Marker interface for all kinds of configs
- */
-interface Config
 
 /**
  * Wrapper to the generic [Configuration]
@@ -85,6 +84,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val infrastructure: String
         // "base/ebft" is the default
         get() = config.getString("infrastructure", Infrastructure.Ebft.get())
+
+    val cryptoSystem: CryptoSystem
+        = newInstanceOf(config.getString("cryptosystem", Secp256K1CryptoSystem::class.qualifiedName))
 
     /**
      * Pub/Priv keys

@@ -3,8 +3,11 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.*
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NODE_ID_AUTO
+import net.postchain.crypto.SigMaker
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.mminfra.*
 import net.postchain.devtools.utils.ChainUtil
@@ -14,7 +17,10 @@ import net.postchain.gtv.*
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import java.lang.Thread.sleep
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
 /**
  * This is still somewhat not in line with the [SystemSetup] architecture, defined in the parent class.
@@ -71,9 +77,7 @@ open class ManagedModeTest : AbstractSyncTest() {
                 data.setValue(KEY_HISTORIC_BRID, GtvByteArray(ChainUtil.ridOf(historicChain).data))
             }
 
-            data.setValue(KEY_CONFIGURATIONFACTORY, GtvString(
-                    GTXBlockchainConfigurationFactory::class.java.name
-            ))
+            data.setValue(KEY_CONFIGURATIONFACTORY, GtvString(GTXBlockchainConfigurationFactory::class.java.name))
 
             data.setValue(KEY_BLOCKSTRATEGY, GtvDictionary.build(mapOf(
                     KEY_BLOCKSTRATEGY_MAXBLOCKTIME to GtvInteger(2_000)
@@ -83,23 +87,11 @@ open class ManagedModeTest : AbstractSyncTest() {
                     GtvString(StandardOpsGTXModule::class.java.name))
             ))
             data.setValue(KEY_GTX, GtvFactory.gtv(gtx))
-
-            val pubkey = if (nodeSet.chain == 0L) {
-                if (it.key < nodeSet.signers.size) {
-                    KeyPairHelper.pubKey(it.key)
-                } else {
-                    KeyPairHelper.pubKey(-1 - it.key)
-                }
-            } else {
-                nodes[it.key].pubKey.hexStringToByteArray()
-            }
+            val (pubkey, sigMaker) = createSigMaker(nodeSet, it.key)
 
             val context = BaseBlockchainContext(brid, NODE_ID_AUTO, nodeSet.chain, pubkey)
-
-            val privkey = KeyPairHelper.privKey(pubkey)
-            val sigMaker = cryptoSystem.buildSigMaker(pubkey, privkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>(mapOf("partialContext" to context, "sigmaker" to sigMaker))
-            val bcConf = TestBlockchainConfiguration(confData)
+            val bcConf = TestBlockchainConfiguration(confData, it.value)
             it.value.addConf(brid, height, bcConf, nodeSet, GtvEncoder.encodeGtv(data.getDict()))
         }
     }
@@ -110,20 +102,13 @@ open class ManagedModeTest : AbstractSyncTest() {
                 throw IllegalStateException("We don't have node nr: $i")
             }
             val dataSource = createMockDataSource(i)
-            mockDataSources.put(i, dataSource)
+            mockDataSources[i] = dataSource
         }
         addBlockchainConfiguration(nodeSet, null, 0)
     }
 
     open fun createMockDataSource(nodeIndex: Int): MockManagedNodeDataSource {
         return MockManagedNodeDataSource(nodeIndex)
-    }
-
-    fun newBlockchainConfiguration(nodeSet: NodeSet, historicChain: Long?, height: Long, excludeChain0Nodes: Set<Int> = setOf()) {
-        addBlockchainConfiguration(nodeSet, historicChain, height)
-        // We need to build a block on c0 to trigger c0's restartHandler, otherwise
-        // the node manager won't become aware of the new configuration
-        buildBlock(c0.remove(excludeChain0Nodes))
     }
 
     protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
@@ -136,18 +121,36 @@ open class ManagedModeTest : AbstractSyncTest() {
         awaitChainRunning(index, nodeSet.chain, atLeastHeight)
     }
 
-    fun buildBlock(nodeSet: NodeSet, toHeight: Long) {
-        buildBlock(nodes.filterIndexed { i, _ -> nodeSet.contains(i) }, nodeSet.chain, toHeight)
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    fun buildBlock(nodeSet: NodeSet, toHeight: Long, timeout: Duration = Duration.INFINITE) {
+        buildBlock(nodes.filterIndexed { i, _ -> nodeSet.contains(i) }, nodeSet.chain, toHeight, timeout = timeout)
     }
 
-    fun buildBlock(nodeSet: NodeSet) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    fun buildBlock(nodeSet: NodeSet, timeout: Duration = Duration.INFINITE) {
         val currentHeight = nodeSet.nodes()[0].currentHeight(nodeSet.chain)
-        buildBlock(nodeSet, currentHeight + 1)
+        buildBlock(nodeSet, currentHeight + 1, timeout)
     }
 
-    fun awaitHeight(nodeSet: NodeSet, height: Long) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    fun awaitHeight(nodeSet: NodeSet, height: Long, timeout: Duration = Duration.INFINITE) {
         awaitLog("========= AWAIT ALL ${nodeSet.size} NODES chain:  ${nodeSet.chain}, height:  $height")
-        awaitHeight(nodeSet.nodes(), nodeSet.chain, height)
+        awaitHeight(nodeSet.nodes(), nodeSet.chain, height, timeout)
         awaitLog("========= DONE AWAIT ALL ${nodeSet.size} NODES chain: ${nodeSet.chain}, height: $height")
     }
 
@@ -190,7 +193,9 @@ open class ManagedModeTest : AbstractSyncTest() {
             replicas: Set<Int>,
             historicChain: Long? = null,
             excludeChain0Nodes: Set<Int> = setOf(),
-            waitForRestart: Boolean = true
+            waitForRestart: Boolean = true,
+            rawBlockchainConfiguration: ByteArray? = null,
+            blockchainConfigurationFactory: GTXBlockchainConfigurationFactory? = null
     ): NodeSet {
         if (signers.intersect(replicas).isNotEmpty()) throw IllegalArgumentException("a node cannot be both signer and replica")
         val maxIndex = c0.all().size
@@ -201,11 +206,47 @@ open class ManagedModeTest : AbstractSyncTest() {
             if (it >= maxIndex) throw IllegalArgumentException("bad replica index")
         }
         val c = NodeSet(chainId++, signers, replicas)
-        newBlockchainConfiguration(c, historicChain, 0, excludeChain0Nodes)
+        if (rawBlockchainConfiguration != null) {
+            val brid = ChainUtil.ridOf(c.chain)
+            mockDataSources.forEach { (nodeId, dataSource) ->
+                val (pubkey, sigMaker) = createSigMaker(c, nodeId)
+
+                val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, c.chain, pubkey, sigMaker)
+                val bcFactory = blockchainConfigurationFactory ?: GTXBlockchainConfigurationFactory()
+                val dappBcFactory = DappBlockchainConfigurationFactory(bcFactory, dataSource)
+                val postchainContext = nodes[nodeId].postchainContext
+                withWriteConnection(postchainContext.storage, c.chain) { ctx ->
+                    DatabaseAccess.of(ctx).apply { initializeBlockchain(ctx, brid) }
+                    dataSource.addConf(brid, 0, dappBcFactory.makeBlockchainConfiguration(bcConf, ctx, postchainContext.cryptoSystem), c, rawBlockchainConfiguration)
+                    true
+                }
+            }
+        } else {
+            addBlockchainConfiguration(c, historicChain, 0)
+        }
+        // We need to build a block on c0 to trigger c0's restartHandler, otherwise
+        // the node manager won't become aware of the new configuration
+        buildBlock(c0.remove(excludeChain0Nodes))
         // Await blockchain started on all relevant nodes
         if (waitForRestart)
             awaitChainRestarted(c, -1)
         return c
+    }
+
+    private fun createSigMaker(c: NodeSet, nodeId: Int): Pair<ByteArray, SigMaker> {
+        val pubkey = if (c.chain == 0L) {
+            if (nodeId < c.signers.size) {
+                KeyPairHelper.pubKey(nodeId)
+            } else {
+                KeyPairHelper.pubKey(-1 - nodeId)
+            }
+        } else {
+            nodes[nodeId].pubKey.hexStringToByteArray()
+        }
+
+        val privkey = KeyPairHelper.privKey(pubkey)
+        val sigMaker = cryptoSystem.buildSigMaker(pubkey, privkey)
+        return Pair(pubkey, sigMaker)
     }
 }
 

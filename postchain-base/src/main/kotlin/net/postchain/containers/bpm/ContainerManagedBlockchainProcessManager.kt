@@ -8,9 +8,12 @@ import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
+import net.postchain.containers.bpm.config.ContainerChain0BlockchainConfigurationFactory
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.docker.DockerTools.containerName
 import net.postchain.containers.bpm.docker.DockerTools.findHostPorts
@@ -23,11 +26,12 @@ import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
-import net.postchain.core.block.BlockQueries
+import net.postchain.core.BlockchainConfigurationFactorySupplier
+import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.managed.BaseDirectoryDataSource
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
 
@@ -53,12 +57,25 @@ open class ContainerManagedBlockchainProcessManager(
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
 
-    override fun initManagedEnvironment() {
-        super.initManagedEnvironment()
+    init {
         stopRunningContainersIfExist()
     }
 
-    override fun createDataSource(blockQueries: BlockQueries) = BaseDirectoryDataSource(blockQueries, appConfig, containerNodeConfig)
+    override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
+            BlockchainConfigurationFactorySupplier { factoryName: String ->
+                val factory = try {
+                    newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
+                } catch (e: Exception) {
+                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                            "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
+                            "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.", e)
+                }
+                if (chainId == CHAIN0) {
+                    ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig)
+                } else {
+                    throw UserMistake("Unexpected chain id. This factory should only be used by chain 0.")
+                }
+            }
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
         return { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
@@ -364,6 +381,9 @@ open class ContainerManagedBlockchainProcessManager(
         if (started) {
             heartbeatManager.addListener(chain.chainId, process)
             chainIdToBrid[chain.chainId] = chain.brid
+            bridToChainId[chain.brid] = chain.chainId
+            extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
+                    .forEach { it.connectRemoteProcess(process) }
             blockchainProcessesDiagnosticData[chain.brid] = mutableMapOf(
                     DiagnosticProperty.BLOCKCHAIN_RID to { process.blockchainRid.toHex() },
                     DiagnosticProperty.CONTAINER_NAME to { psContainer.containerName.toString() },
@@ -377,9 +397,13 @@ open class ContainerManagedBlockchainProcessManager(
     private fun terminateBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? {
         return psContainer.terminateProcess(chainId)
                 ?.also { process ->
+                    extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
+                            .forEach { it.disconnectRemoteProcess(process) }
                     masterBlockchainInfra.exitMasterBlockchainProcess(process)
                     heartbeatManager.removeListener(chainId)
-                    blockchainProcessesDiagnosticData.remove(chainIdToBrid.remove(chainId))
+                    val blockchainRid = chainIdToBrid.remove(chainId)
+                    blockchainProcessesDiagnosticData.remove(blockchainRid)
+                    bridToChainId.remove(blockchainRid)
                     chains.remove(chainId)
                     process.shutdown()
                 }

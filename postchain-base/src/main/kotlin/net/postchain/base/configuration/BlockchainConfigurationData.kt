@@ -94,11 +94,32 @@ data class BlockchainConfigurationData(
                 subjectID: ByteArray,
                 blockSigMaker: SigMaker,
         ): BlockchainConfigurationData {
-            val gtvData = GtvFactory.decodeGtv(rawConfigurationData)
             val brid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
+            return fromRaw(
+                    rawConfigurationData,
+                    brid,
+                    nodeId,
+                    chainId,
+                    subjectID,
+                    blockSigMaker,
+            )
+        }
+
+        @JvmStatic
+        fun fromRaw(
+                rawConfigurationData: ByteArray,
+                brid: BlockchainRid,
+                nodeId: Int,
+                chainId: Long,
+                subjectID: ByteArray,
+                blockSigMaker: SigMaker,
+        ): BlockchainConfigurationData {
+            val gtvData = GtvFactory.decodeGtv(rawConfigurationData)
             val context = BaseBlockchainContext(brid, nodeId, chainId, subjectID)
-            return gtvData.toObject(mapOf("sigmaker" to blockSigMaker,
-                    "partialContext" to context))
+            return gtvData.toObject(mapOf(
+                    "sigmaker" to blockSigMaker,
+                    "partialContext" to context,
+            ))
         }
     }
 }

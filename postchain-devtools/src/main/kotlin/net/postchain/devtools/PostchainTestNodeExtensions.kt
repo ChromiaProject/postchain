@@ -4,19 +4,20 @@ package net.postchain.devtools
 
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import net.postchain.gtx.GTXBlockchainConfiguration
+import net.postchain.core.Transaction
 import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.crypto.Signature
-import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.CompositeGTXModule
 import net.postchain.gtx.GTXModule
-import net.postchain.core.block.MultiSigBlockWitness
-import net.postchain.core.Transaction
+import net.postchain.gtx.GTXModuleAwareness
 import nl.komponents.kovenant.Promise
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
 fun PostchainTestNode.addBlockchainAndStart(chainId: Long, blockchainConfig: Gtv) {
     val bcRid = addBlockchain(chainId, blockchainConfig)
@@ -65,15 +66,27 @@ fun PostchainTestNode.buildBlocksUpTo(chainId: Long, height: Long) {
 private fun PostchainTestNode.strategy(chainId: Long) =
         blockBuildingStrategy(chainId) as OnDemandBlockBuildingStrategy
 
-fun PostchainTestNode.awaitBuiltBlock(chainId: Long, height: Long) {
+/**
+ *
+ * @param timeout  time to wait for each block
+ *
+ * @throws TimeoutException if timeout
+ */
+fun PostchainTestNode.awaitBuiltBlock(chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
     val strategy = strategy(chainId)
 
     strategy.buildBlocksUpTo(height)
-    strategy.awaitCommitted(height.toInt())
+    strategy.awaitCommitted(height.toInt(), timeout)
 }
 
-fun PostchainTestNode.awaitHeight(chainId: Long, height: Long) {
-    strategy(chainId).awaitCommitted(height.toInt())
+/**
+ *
+ * @param timeout  time to wait for each block
+ *
+ * @throws TimeoutException if timeout
+ */
+fun PostchainTestNode.awaitHeight(chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
+    strategy(chainId).awaitCommitted(height.toInt(), timeout)
 }
 
 fun PostchainTestNode.enqueueTxs(chainId: Long, vararg txs: Transaction): Boolean {
@@ -97,8 +110,7 @@ fun PostchainTestNode.getModules(chainId: Long = PostchainTestNode.DEFAULT_CHAIN
             ?.getConfiguration()
 
     return when (configuration) {
-        is GTXBlockchainConfiguration -> collectModules(configuration.module)
-        is TestBlockchainConfiguration -> collectModules(configuration.module)
+        is GTXModuleAwareness -> collectModules(configuration.module)
         else -> emptyArray()
     }
 }

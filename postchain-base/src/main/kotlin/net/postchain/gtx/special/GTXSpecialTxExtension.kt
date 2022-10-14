@@ -21,6 +21,7 @@ interface GTXSpecialTxExtension {
      */
     fun init(
         module: GTXModule,
+        chainID: Long,
         blockchainRID: BlockchainRid,
         cs: CryptoSystem
     )

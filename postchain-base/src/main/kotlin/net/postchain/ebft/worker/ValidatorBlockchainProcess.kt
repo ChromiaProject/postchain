@@ -4,7 +4,7 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
-import net.postchain.core.NodeStateTracker
+import net.postchain.ebft.NodeStateTracker
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager

@@ -40,7 +40,7 @@ class NetworkNodes(
             for (peer in peers) {
                 val peerId =  peer.peerId()
                 if (peerId == myKey) {
-                    me = PeerInfo(peer.host, peer.port, myKey)
+                    me = PeerInfo(peer.host, peer.port, myKey.byteArray)
                 } else {
                     peerMap[peerId] = peer
                 }

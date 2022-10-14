@@ -141,7 +141,7 @@ open class BaseBlockBuilder(
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, finalizeExtensions())
+        return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, timestamp, finalizeExtensions())
     }
 
     /**
@@ -274,18 +274,16 @@ open class BaseBlockBuilder(
                 throw BlockValidationMistake("Special transaction validation failed")
             }
             haveSpecialEndTransaction = true
-        } else {
-            if (expectBeginTx) {
-                throw BlockValidationMistake("First transaction must be special transaction")
-            }
+        } else if (expectBeginTx) {
+            throw BlockValidationMistake("First transaction must be special transaction")
         }
     }
 
     override fun appendTransaction(tx: Transaction) {
         if (blockSize + tx.getRawData().size > maxBlockSize) {
-            throw BlockValidationMistake("block size exceeds max block size ${maxBlockSize} bytes")
+            throw BlockValidationMistake("block size exceeds max block size $maxBlockSize bytes")
         } else if (transactions.size >= maxBlockTransactions) {
-            throw BlockValidationMistake("Number of transactions exceeds max ${maxBlockTransactions} transactions in block")
+            throw BlockValidationMistake("Number of transactions exceeds max $maxBlockTransactions transactions in block")
         }
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
         super.appendTransaction(tx)
@@ -312,5 +310,4 @@ open class BaseBlockBuilder(
             extraData
         )
     }
-
 }

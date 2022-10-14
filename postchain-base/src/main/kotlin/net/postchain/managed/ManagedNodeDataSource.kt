@@ -3,8 +3,9 @@
 package net.postchain.managed
 
 import net.postchain.config.node.PeerInfoDataSource
+import net.postchain.managed.query.QueryRunner
 
-interface ManagedNodeDataSource : PeerInfoDataSource {
+interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
     fun getPeerListVersion(): Long
     fun computeBlockchainList(): List<ByteArray>
     fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray?

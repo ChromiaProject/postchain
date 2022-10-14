@@ -43,6 +43,7 @@ class RestApiModelTest {
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
+            on { live } doReturn true
         }
 
         restApi = RestApi(0, basePath)
@@ -57,7 +58,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_getTx_no_models_404_received() {
+    fun testGetTx_no_models_404_received() {
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/tx/$blockchainRID1/$txRID")
                 .then()
@@ -65,7 +66,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_getTx_unknown_model_404_received() {
+    fun testGetTx_unknown_model_404_received() {
         restApi.attachModel(blockchainRID1, model)
         restApi.attachModel(blockchainRID2, model)
 
@@ -76,9 +77,25 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_getTx_case_insensitive_ok() {
-        whenever(model.getTransaction(TxRID(txRID.hexStringToByteArray())))
-                .thenReturn(ApiTx("1234"))
+    fun testGetTx_unavailable_model_503_received() {
+        val unavailableModel: Model = mock {
+            on { chainIID } doReturn 1L
+            on { live } doReturn false
+        }
+
+        restApi.attachModel(blockchainRID1, unavailableModel)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/tx/$blockchainRID1/$txRID")
+                .then()
+                .statusCode(503)
+    }
+
+    @Test
+    fun testGetTx_case_insensitive_ok() {
+        whenever(
+                model.getTransaction(TxRID(txRID.hexStringToByteArray()))
+        ).thenReturn(ApiTx("1234"))
 
         restApi.attachModel(blockchainRID1.uppercase(), model)
 
@@ -89,9 +106,10 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_getTx_attach_then_detach_ok() {
-        whenever(model.getTransaction(TxRID(txRID.hexStringToByteArray())))
-            .thenReturn(ApiTx("1234"))
+    fun testGetTx_attach_then_detach_ok() {
+        whenever(
+                model.getTransaction(TxRID(txRID.hexStringToByteArray()))
+        ).thenReturn(ApiTx("1234"))
 
         restApi.attachModel(blockchainRID1, model)
         given().basePath(basePath).port(restApi.actualPort())
@@ -108,7 +126,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_getTx_incorrect_blockchainRID_format() {
+    fun testGetTx_incorrect_blockchainRID_format() {
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -118,9 +136,10 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_node_get_block_height_null() {
-        whenever(model.nodeQuery("height"))
-                .thenReturn(null)
+    fun testGetNodeBlockHeight_null_received() {
+        whenever(
+                model.nodeQuery("height")
+        ).thenReturn(null)
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -133,9 +152,10 @@ class RestApiModelTest {
 
 
     @Test
-    fun test_node_get_block_height() {
-        whenever(model.nodeQuery("height"))
-            .thenReturn(gson.toJson(BlockHeight(42)))
+    fun testGetNodeBlockHeight() {
+        whenever(
+                model.nodeQuery("height")
+        ).thenReturn(gson.toJson(BlockHeight(42)))
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -147,7 +167,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_node_get_my_status() {
+    fun testGetMyNodeStatus() {
         val response = EBFTstateNodeStatusContract(
                 height = 233,
                 serial = 41744989480,
@@ -157,8 +177,9 @@ class RestApiModelTest {
                 blockRid = null
         )
 
-        whenever(model.nodeQuery("my_status"))
-                .thenReturn(gson.toJson(response))
+        whenever(
+                model.nodeQuery("my_status")
+        ).thenReturn(gson.toJson(response))
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -170,7 +191,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_node_get_statuses() {
+    fun testGetNodeStatuses() {
         val response =
                 arrayOf(
                         EBFTstateNodeStatusContract(
@@ -190,8 +211,12 @@ class RestApiModelTest {
                                 blockRid = null
                         ))
 
-        whenever(model.nodeQuery("statuses"))
-                .thenReturn(response.map { gson.toJson(it) }.toTypedArray().joinToString(separator = ",", prefix = "[", postfix = "]"))
+        whenever(
+                model.nodeQuery("statuses")
+        ).thenReturn(
+                response.map { gson.toJson(it) }.toTypedArray()
+                        .joinToString(separator = ",", prefix = "[", postfix = "]")
+        )
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -203,7 +228,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_blocks_get_all() {
+    fun testGetAllBlocks() {
         val response = listOf(
                 BlockDetail(
                         "blockRid001".toByteArray(),
@@ -241,8 +266,10 @@ class RestApiModelTest {
                         "signatures".toByteArray(),
                         1574849940)
         )
-        whenever(model.getBlocks(Long.MAX_VALUE, 25, false))
-                .thenReturn(response)
+
+        whenever(
+                model.getBlocks(Long.MAX_VALUE, 25, false)
+        ).thenReturn(response)
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -254,7 +281,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_blocks_get_last_2_partial() {
+    fun testGetTwoLastBlocks_txHashesOnly() {
         val response = listOf(
                 BlockDetail(
                         "blockRid003".toByteArray(),
@@ -278,8 +305,9 @@ class RestApiModelTest {
                         1574849940)
         )
 
-        whenever(model.getBlocks(1574849940, 2, true))
-                .thenReturn(response)
+        whenever(
+                model.getBlocks(1574849940, 2, true)
+        ).thenReturn(response)
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -291,7 +319,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_blocks_get_no_params() {
+    fun testGetBlocksWithoutParams() {
 
         val blocks = listOf(
                 BlockDetail("blockRid001".toByteArray(), blockchainRID3.toByteArray(), "some header".toByteArray(), 0, listOf<TxDetail>(), "signatures".toByteArray(), 1574849700),
@@ -346,8 +374,9 @@ class RestApiModelTest {
                 )
         )
 
-        whenever(model.getBlocks(Long.MAX_VALUE, 25, true))
-                .thenReturn(blocks)
+        whenever(
+                model.getBlocks(Long.MAX_VALUE, 25, true)
+        ).thenReturn(blocks)
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -358,7 +387,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_transactions_get_all() {
+    fun testGetTransactionsWithLimit() {
 
         val response = listOf<TransactionInfoExt>(
                 TransactionInfoExt(BlockRid.buildRepeat(2).data, 1, "some other header".toByteArray(), "signatures".toByteArray(), 1574849760, cryptoSystem.digest("tx1".toByteArray()), "tx1 - 001".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx1".toByteArray()),
@@ -366,8 +395,9 @@ class RestApiModelTest {
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
-        whenever(model.getTransactionsInfo(Long.MAX_VALUE, 300))
-                .thenReturn(response)
+        whenever(
+                model.getTransactionsInfo(Long.MAX_VALUE, 300)
+        ).thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -378,15 +408,16 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_transactions_get_no_params() {
+    fun testGetTransactionsWithoutParams() {
         val response = listOf(
                 TransactionInfoExt(BlockRid.buildRepeat(2).data, 1, "some other header".toByteArray(), "signatures".toByteArray(), 1574849760, cryptoSystem.digest("tx1".toByteArray()), "tx1 - 001".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx1".toByteArray()),
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx2".toByteArray()), "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx2".toByteArray()),
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
-        whenever(model.getTransactionsInfo(Long.MAX_VALUE, 25))
-                .thenReturn(response)
+        whenever(
+                model.getTransactionsInfo(Long.MAX_VALUE, 25)
+        ).thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -397,27 +428,39 @@ class RestApiModelTest {
     }
 
     @Test
-    fun test_block_get_one() {
+    fun testGetOneBlock() {
         val tx = "tx2".toByteArray()
         val txRID = cryptoSystem.digest(tx)
         val response = TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
-        whenever(model.getTransactionInfo(TxRID(txRID)))
-                .thenReturn(response)
+
+        whenever(
+                model.getTransactionInfo(TxRID(txRID))
+        ).thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/transactions/$blockchainRID1/${txRID.toHex()}")
                 .then()
                 .statusCode(200)
-            .assertThat().body("blockRID", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
+                .assertThat().body("blockRID", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
     }
 
     @Test
-    fun test_block_get_by_RID() {
+    fun testGetBlockByRID() {
         val blockRID = BlockRid.buildRepeat(4).data
-        val response = BlockDetail(blockRID, blockchainRID3.toByteArray(), "some header".toByteArray(), 0, listOf<TxDetail>(), "signatures".toByteArray(), 1574849700)
-        whenever(model.getBlock(blockRID, true))
-                .thenReturn(response)
+        val response = BlockDetail(
+                blockRID,
+                blockchainRID3.toByteArray(),
+                "some header".toByteArray(),
+                0,
+                listOf(),
+                "signatures".toByteArray(),
+                1574849700
+        )
+
+        whenever(
+                model.getBlock(blockRID, true)
+        ).thenReturn(response)
         restApi.attachModel(blockchainRID1, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -425,5 +468,60 @@ class RestApiModelTest {
                 .then()
                 .statusCode(200)
                 .assertThat().body("rid", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
+    }
+
+    @Test
+    fun testGetBlockByUnknownRID() {
+        val blockRID = BlockRid.buildRepeat(4).data
+        whenever(
+                model.getBlock(blockRID, true)
+        ).thenReturn(null)
+        restApi.attachModel(blockchainRID1, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/blocks/$blockchainRID1/${blockRID.toHex()}")
+                .then()
+                .statusCode(200)
+                .assertThat().body(equalTo("null"))
+    }
+
+    @Test
+    fun testGetBlockByHeight() {
+        val height = 0L
+        val response = BlockDetail(
+                BlockRid.buildRepeat(4).data,
+                blockchainRID3.toByteArray(),
+                "some header".toByteArray(),
+                0,
+                listOf(),
+                "signatures".toByteArray(),
+                1574849700
+        )
+
+        whenever(
+                model.getBlock(height, true)
+        ).thenReturn(response)
+        restApi.attachModel(blockchainRID1, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/blocks/$blockchainRID1/height/$height")
+                .then()
+                .statusCode(200)
+                .assertThat().body("rid", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
+    }
+
+    @Test
+    fun testGetBlockByUnknownHeight() {
+        val height = 0L
+        whenever(
+                model.getBlock(height, true)
+        ).thenReturn(null)
+        restApi.attachModel(blockchainRID1, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/blocks/$blockchainRID1/height/$height")
+                .then()
+                .statusCode(200)
+                .assertThat().body(equalTo("null"))
     }
 }

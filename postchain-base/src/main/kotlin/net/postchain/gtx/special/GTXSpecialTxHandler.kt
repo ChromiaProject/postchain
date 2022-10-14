@@ -11,7 +11,6 @@ import net.postchain.core.*
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.*
-import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.data.OpData
 
 /**
@@ -24,6 +23,7 @@ import net.postchain.gtx.data.OpData
  * Special transactions are usually created by a [GTXSpecialTxExtension], which makes this extendable.
  */
 open class GTXSpecialTxHandler(val module: GTXModule,
+                               val chainID: Long,
                                val blockchainRID: BlockchainRid,
                                val cs: CryptoSystem,
                                val factory: GTXTransactionFactory
@@ -36,7 +36,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     init {
         val opSet = mutableSetOf<String>()
         for (x in extensions) {
-            x.init(module, blockchainRID, cs)
+            x.init(module, chainID, blockchainRID, cs)
             for (op in x.getRelevantOps()) {
                 if (op in opSet) throw ProgrammerMistake("Overlapping op: $op")
                 opSet.add(op)
@@ -49,19 +49,19 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     }
 
     override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction {
-        val b = GTXDataBuilder(blockchainRID, arrayOf(), cs)
+        val b = GtxBuilder(blockchainRID, listOf(), cs)
         for (x in extensions) {
             if (x.needsSpecialTransaction(position)) {
                 for (o in x.createSpecialOperations(position, bctx)) {
-                    b.addOperation(o.opName, o.args)
+                    b.addOperation(o.opName, *o.args)
                 }
             }
         }
-        if (b.operations.isEmpty()) {
+        if (b.isEmpty()) {
             // no extension emitted an operation - add "__nop" (same as "nop" but for spec tx)
-            b.addOperation(GtxSpecNop.OP_NAME, arrayOf(GtvFactory.gtv(cs.getRandomBytes(32))))
+            b.addOperation(GtxSpecNop.OP_NAME, GtvFactory.gtv(cs.getRandomBytes(32)))
         }
-        return factory.decodeTransaction(b.serialize())
+        return factory.decodeTransaction(b.finish().buildGtx().encode())
     }
 
     /**
@@ -79,7 +79,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, ectx: BlockEContext): Boolean {
         val gtxTransaction = tx as GTXTransaction
         val gtxData = gtxTransaction.gtxData
-        val operations = gtxData.transactionBodyData.operations
+        val operations = gtxData.gtxBody.operations
         if (operations.isEmpty()) return false
 
         var idx = 0
@@ -90,7 +90,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                 val selectesOps = mutableListOf<OpData>()
                 // select relevant ops
                 while (operations[idx].opName in rops) {
-                    selectesOps.add(operations[idx])
+                    selectesOps.add(operations[idx].toOpData())
                     idx += 1
                     if (idx >= operations.size) break
                 }

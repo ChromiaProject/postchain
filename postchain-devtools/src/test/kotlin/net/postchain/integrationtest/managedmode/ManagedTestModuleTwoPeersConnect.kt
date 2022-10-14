@@ -3,6 +3,7 @@
 package net.postchain.integrationtest.managedmode
 
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.EContext
 import net.postchain.gtv.*
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.SimpleGTXModule
@@ -12,12 +13,12 @@ import net.postchain.integrationtest.managedmode.TestModulesHelper.peerInfoToGtv
 import net.postchain.integrationtest.managedmode.TestPeerInfos.Companion.peerInfo0
 import net.postchain.integrationtest.managedmode.TestPeerInfos.Companion.peerInfo1
 import net.postchain.util.TestKLogging
-import net.postchain.core.EContext
 
 open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<ManagedTestModuleTwoPeersConnect.Companion.Nodes>(
         node,
         mapOf(),
         mapOf(
+                "nm_api_version" to ::queryApiVersion,
                 "nm_get_peer_infos" to ::queryGetPeerInfos,
                 "nm_get_peer_list_version" to ::queryGetPeerListVersion,
                 "nm_compute_blockchain_list" to ::queryComputeBlockchainList,
@@ -46,6 +47,8 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
 
         private val stage0 = -1 until 15
         private val stage1 = 15 until 30
+
+        fun queryApiVersion(node: Nodes, eContext: EContext, args: Gtv) = GtvFactory.gtv(1)
 
         fun queryGetPeerInfos(node: Nodes, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_get_peer_infos" }

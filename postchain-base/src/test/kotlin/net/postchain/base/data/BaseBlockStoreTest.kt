@@ -4,8 +4,8 @@ package net.postchain.base.data
 
 import net.postchain.base.BaseEContext
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.core.EContext
+import net.postchain.crypto.Secp256K1CryptoSystem
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

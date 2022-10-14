@@ -5,8 +5,9 @@ package net.postchain.devtools.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.gtv.gtvml.GtvMLParser
 import java.io.File
 
 class CalculateBlockchainRidCommand : CliktCommand(
@@ -24,7 +25,7 @@ class CalculateBlockchainRidCommand : CliktCommand(
 
         try {
             val gtv = GtvMLParser.parseGtvML(File(blockchainConfigFilename).readText())
-            val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(gtv)
+            val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(gtv, Secp256K1CryptoSystem())
 
             println("Blockchain RID: $blockchainRid")
 

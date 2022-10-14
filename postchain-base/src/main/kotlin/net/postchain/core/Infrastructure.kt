@@ -5,9 +5,9 @@ package net.postchain.core
 import net.postchain.PostchainContext
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.network.common.ConnectionManager
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.network.common.ConnectionManager
 
 /**
  * Responsible blockchain process lifecycle, i.e. creating, exiting and restarting blockchain processes.
@@ -18,9 +18,9 @@ interface SynchronizationInfrastructure : Shutdownable {
      * This is how a blockchain process get created.
      */
     fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean = { _, _ -> true }
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean = { _, _ -> true }
     ): BlockchainProcess
 
     /**
@@ -43,16 +43,18 @@ interface SynchronizationInfrastructure : Shutdownable {
  */
 interface BlockchainInfrastructure : SynchronizationInfrastructure {
 
-    fun makeBlockchainConfiguration(rawConfigurationData: ByteArray,
-                                    eContext: EContext,
-                                    nodeId: Int,
-                                    chainId: Long,
+    fun makeBlockchainConfiguration(
+            rawConfigurationData: ByteArray,
+            eContext: EContext,
+            nodeId: Int,
+            chainId: Long,
+            bcConfigurationFactory: BlockchainConfigurationFactorySupplier,
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(
-        processName: BlockchainProcessName,
-        configuration: BlockchainConfiguration,
-        afterCommitHandler: AfterCommitHandler
+            processName: BlockchainProcessName,
+            configuration: BlockchainConfiguration,
+            afterCommitHandler: AfterCommitHandler
     ): BlockchainEngine
 
 }
@@ -76,16 +78,23 @@ interface BlockchainProcessConnectable {
     fun disconnectProcess(process: BlockchainProcess)
 }
 
+interface RemoteBlockchainProcessConnectable {
+    fun connectRemoteProcess(process: RemoteBlockchainProcess)
+    fun disconnectRemoteProcess(process: RemoteBlockchainProcess)
+}
+
 /**
  * NOTE: Remember that the Sync Infra Extension is just a part of many extension interfaces working together
  * (examples: BBB Ext and GTX Spec TX Ext).
  * To see how it all goes together, see: doc/extension_classes.graphml
  */
-interface SynchronizationInfrastructureExtension: BlockchainProcessConnectable, Shutdownable
+interface SynchronizationInfrastructureExtension : BlockchainProcessConnectable, Shutdownable
 
-interface ApiInfrastructure: BlockchainProcessConnectable, Shutdownable
+interface ApiInfrastructure : BlockchainProcessConnectable, Shutdownable {
+    fun restartProcess(process: BlockchainProcess)
+}
 
-interface BlockchainProcessManagerExtension: BlockchainProcessConnectable, Shutdownable {
+interface BlockchainProcessManagerExtension : BlockchainProcessConnectable, Shutdownable {
     fun afterCommit(process: BlockchainProcess, height: Long)
 }
 

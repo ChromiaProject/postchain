@@ -3,10 +3,10 @@ package net.postchain.base.data
 import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.base.*
-import net.postchain.common.hexStringToByteArray
 import net.postchain.common.BlockchainRid
-import net.postchain.core.block.InitialBlockData
+import net.postchain.common.hexStringToByteArray
 import net.postchain.core.ValidationResult
+import net.postchain.core.block.InitialBlockData
 import net.postchain.gtv.GtvString
 import org.junit.jupiter.api.Test
 
@@ -33,7 +33,7 @@ class BaseBlockHeaderValidatorTest {
 
         // Make a header
         val myBlockData = InitialBlockData(myBlockchainRid,myBlockId, myChainIid, myPrevBlockRid, myHeight.toLong(), myTimestamp, arrayOf())
-        val header = BaseBlockHeader.make(cryptoSystem, myBlockData, myMerkleRootHash, myTimestamp, mapOf("eif" to GtvString("this is root hash of eif event and state tree")))
+        val header = BaseBlockHeader.make(calculator, myBlockData, myMerkleRootHash, myTimestamp, mapOf("eif" to GtvString("this is root hash of eif event and state tree")))
 
         val valid = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(header, myBlockData, ::expectedMerkleHash, ::getBlockRid, myTimestamp - 1, 0,
             mapOf("eif" to GtvString("this is root hash of eif event and state tree")))

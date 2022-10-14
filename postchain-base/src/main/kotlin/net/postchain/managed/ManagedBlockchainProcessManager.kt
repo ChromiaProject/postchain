@@ -4,17 +4,20 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.StorageBuilder
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.heartbeat.*
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
+import net.postchain.managed.config.ManagedDataSourceAwareness
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -52,11 +55,13 @@ import net.postchain.ebft.heartbeat.*
 open class ManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
-        blockchainConfigProvider: BlockchainConfigurationProvider
+        blockchainConfigProvider: BlockchainConfigurationProvider,
+        bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
 ) : BaseBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
-        blockchainConfigProvider
+        blockchainConfigProvider,
+        bpmExtensions
 ) {
 
     protected open lateinit var dataSource: ManagedNodeDataSource
@@ -67,57 +72,44 @@ open class ManagedBlockchainProcessManager(
 
     companion object : KLogging()
 
-    /**
-     * Check if this is the "chain zero" and if so we need to set the dataSource in a few objects before we go on.
-     */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid {
-        if (chainId == CHAIN0) {
-            initManagedEnvironment()
-        }
-        return super.startBlockchain(chainId, bTrace)
-    }
-
-    protected open fun initManagedEnvironment() {
-        try {
-            dataSource = buildChain0ManagedDataSource()
-            peerListVersion = dataSource.getPeerListVersion()
-
-            // Setting up managed data source to the nodeConfig
-            (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
-                    ?.setPeerInfoDataSource(dataSource)
-                    ?: logger.warn { "Node config is not managed, no peer info updates possible" }
-
-            // Setting up managed data source to the blockchainConfig
-            (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                    ?.setDataSource(dataSource)
-                    ?: logger.warn { "Blockchain config is not managed" }
-
-        } catch (e: Exception) {
-            // TODO: [POS-90]: Improve error handling here
-            logger.error { e.message }
+    override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
+        return super.makeBlockchainConfiguration(chainId).also {
+            if (chainId == CHAIN0 && it is ManagedDataSourceAwareness) {
+                initManagedEnvironment(it)
+            }
         }
     }
 
-    // TODO: [POS-129]: 'protected open' for tests only. Change that.
-    protected open fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
-        val storage = StorageBuilder.buildStorage(
-                postchainContext.appConfig)
+    protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAwareness) {
+        dataSource = blockchainConfig.dataSource
+        peerListVersion = dataSource.getPeerListVersion()
 
-        val blockQueries = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
-            val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(ctx0, CHAIN0)
-                    ?: throw ProgrammerMistake("chain0 configuration not found")
+        // Setting up managed data source to the nodeConfig
+        (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
+                ?.setPeerInfoDataSource(dataSource)
+                ?: logger.warn { "Node config is not managed, no peer info updates possible" }
 
-            val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                    configuration, ctx0, NODE_ID_AUTO, CHAIN0)
-
-            blockchainConfig.makeBlockQueries(storage)
-        }
-
-        return createDataSource(blockQueries)
+        // Setting up managed data source to the blockchainConfig
+        (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
+                ?.setDataSource(dataSource)
+                ?: logger.warn { "Blockchain config is not managed" }
     }
 
-    protected open fun createDataSource(blockQueries: BlockQueries) =
-            BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
+    override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
+            BlockchainConfigurationFactorySupplier { factoryName: String ->
+                try {
+                    val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
+                    if (chainId == CHAIN0) {
+                        Chain0BlockchainConfigurationFactory(factory, appConfig)
+                    } else {
+                        DappBlockchainConfigurationFactory(factory, dataSource)
+                    }
+                } catch (e: Exception) {
+                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                            "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
+                            "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)", e)
+                }
+            }
 
     override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
         return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {

@@ -36,7 +36,7 @@ class PostchainService(private val postchainNode: PostchainNode) {
 
     fun initializeBlockchain(chainId: Long, maybeBrid: BlockchainRid?, mode: AlreadyExistMode, config: Gtv,
                              givenDependencies: List<BlockchainRelatedInfo> = listOf()): BlockchainRid {
-        val brid = maybeBrid ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config)
+        val brid = maybeBrid ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
 
         withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)

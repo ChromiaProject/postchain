@@ -9,19 +9,19 @@ import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.NotFound
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.core.*
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockQueries
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
 import net.postchain.managed.ManagedBlockchainProcessManager
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
-import net.postchain.common.exception.NotFound
-import net.postchain.common.exception.UserMistake
-import net.postchain.core.block.BlockBuildingStrategy
-import net.postchain.core.block.BlockQueries
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
@@ -74,7 +74,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
-            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
                 NODE_PUBKEY_TAG to appConfig.pubKey,
                 CHAIN_IID_TAG to chainId.toString(),
@@ -92,7 +92,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
-            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
                 NODE_PUBKEY_TAG to appConfig.pubKey,
                 CHAIN_IID_TAG to chainId.toString(),

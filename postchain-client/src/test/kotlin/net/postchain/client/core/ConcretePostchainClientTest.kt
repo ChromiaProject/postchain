@@ -1,13 +1,19 @@
 package net.postchain.client.core
 
+import net.postchain.client.config.FailOverConfig
+import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
+import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import org.http4k.client.AsyncHttpHandler
+import org.http4k.core.Body
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
+import org.http4k.format.Gson.auto
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import kotlin.test.assertEquals
 
 internal class ConcretePostchainClientTest {
@@ -33,10 +39,9 @@ internal class ConcretePostchainClientTest {
     }
 
     fun driveTestCorrectNumberOfAttempts(client: ConcretePostchainClient, numberExpected: Int) {
-        client.makeTransaction()
-            .addNop()
-            .finish()
-            .postSyncAwaitConfirmation()
+        client.transactionBuilder()
+                .addNop()
+                .postSyncAwaitConfirmation()
 
         // Verify
         assertEquals(numberExpected + 1, requestCounter)
@@ -45,17 +50,91 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Max number of attempts by default`() {
         driveTestCorrectNumberOfAttempts(
-            ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, statusPollInterval = 1, client = httpClient),
-            // If I didn't pass a max value, it defaults to RETRIEVE_TX_STATUS_ATTEMPTS = 20
-            numberExpected = STATUS_POLL_COUNT)
+                ConcretePostchainClient(PostchainClientConfig(
+                        BlockchainRid.buildFromHex(brid),
+                        EndpointPool.singleUrl(url),
+                        statusPollInterval = Duration.ZERO,
+                        failOverConfig = FailOverConfig(1)
+                ), httpClient = httpClient),
+                // If I didn't pass a max value, it defaults to RETRIEVE_TX_STATUS_ATTEMPTS = 20
+                numberExpected = STATUS_POLL_COUNT)
     }
 
     @Test
     fun `Max number of attempts parameterized`() {
         driveTestCorrectNumberOfAttempts(
-            ConcretePostchainClient(nodeResolver, BlockchainRid.buildFromHex(brid), null, 10, statusPollInterval = 1, client = httpClient),
-            // If I pass a custom max value, verify it uses it
-            numberExpected = 10
+                ConcretePostchainClient(PostchainClientConfig(
+                        BlockchainRid.buildFromHex(brid),
+                        EndpointPool.singleUrl(url),
+                        statusPollCount = 10,
+                        statusPollInterval = Duration.ZERO,
+                        failOverConfig = FailOverConfig(1)
+                ), httpClient = httpClient),
+                // If I pass a custom max value, verify it uses it
+                numberExpected = 10
         )
+    }
+
+    @Test
+    fun `Query response without body should not crash`() {
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                fn(Response(Status.OK).body(Body.EMPTY))
+            }
+        }).query("foo")
+    }
+
+    @Test
+    fun `Query error without body should not crash`() {
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                fn(Response(Status.BAD_REQUEST).body(Body.EMPTY))
+            }
+        }).query("foo")
+    }
+
+    @Test
+    fun `Tx status retrieves underlying error`() {
+        val result = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                val txLens = Body.auto<TxStatus>().toLens()
+                fn(txLens(TxStatus("rejected", "Message!"), Response(Status.BAD_REQUEST)))
+            }
+        }).checkTxStatus(TxRid("")).toCompletableFuture().join()
+        assertEquals("Message!", result.rejectReason)
+    }
+
+    @Test
+    fun `Await aborts if rejected`() {
+        var nCalls = 0
+        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                nCalls++
+                val txLens = Body.auto<TxStatus>().toLens()
+                fn(txLens(TxStatus("rejected", "Message!"), Response(Status.BAD_REQUEST)))
+            }
+        }).awaitConfirmation(TxRid(""), 10, Duration.ZERO)
+        assertEquals(1, nCalls)
+    }
+
+    @Test
+    fun `Query by chainId instead of BlockchainRid`() {
+        val config = PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), queryByChainId = 10)
+        assertQueryUrlEndsWith(config, "iid_10")
+    }
+
+    @Test
+    fun `Query by blockchainRid instead of chainId`() {
+        val config = PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url))
+        assertQueryUrlEndsWith(config, brid)
+    }
+
+    private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {
+        ConcretePostchainClient(config, httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                assert(request.uri.path.endsWith(suffix))
+                fn(Response(Status.BAD_REQUEST).body(Body.EMPTY))
+            }
+        }).query("foo")
     }
 }

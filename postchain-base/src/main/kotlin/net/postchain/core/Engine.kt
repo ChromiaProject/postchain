@@ -26,6 +26,8 @@ interface Synchronizable {
  * - [BlockBuildingStrategy] knows HOW to build a block
  */
 interface BlockchainEngine : Shutdownable {
+    val storage: Storage
+
     fun isRunning(): Boolean
     fun initialize()
     fun setAfterCommitHandler(afterCommitHandler: AfterCommitHandler)
@@ -55,12 +57,20 @@ interface BlockchainProcess {
     fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) = Unit
 }
 
+// TODO: [POS-358]: Should we add chainId and brid to BlockchainProcess?
+interface RemoteBlockchainProcess {
+    val chainId: Long
+    val blockchainRid: BlockchainRid
+    val restApiUrl: String
+}
+
 /**
  *  Manages a set of [BlockchainProcess]:es (see the implementations for detailed documentation)
  */
 interface BlockchainProcessManager : Shutdownable, Synchronizable {
     fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid
     fun retrieveBlockchain(chainId: Long): BlockchainProcess?
+    fun retrieveBlockchain(blockchainRid: BlockchainRid): BlockchainProcess?
     fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean = false)
 }
 

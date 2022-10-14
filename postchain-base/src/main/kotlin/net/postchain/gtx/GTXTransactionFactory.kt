@@ -4,16 +4,13 @@ package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionFactory
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
-import net.postchain.gtx.data.serializer.GtxTransactionDataSerializer
-import net.postchain.core.Transaction
-import net.postchain.core.TransactionFactory
-import net.postchain.gtx.data.GTXTransactionData
-import net.postchain.gtx.data.factory.GtxTransactionDataFactory
 
 /**
  * Idea is that we can build a [GTXTransaction] from different layers.
@@ -25,20 +22,13 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
 
     override fun decodeTransaction(data: ByteArray): Transaction {
         if (data.size > maxTransactionSize ) {
-            throw Exception("Transaction size exceeds max transaction size ${maxTransactionSize} bytes")
+            throw Exception("Transaction size exceeds max transaction size $maxTransactionSize bytes")
         }
         return internalBuild(data)
     }
 
-    fun build(gtvData: Gtv): GTXTransaction {
-        return internalBuild(null, gtvData)
-    }
-
     // Meant to be used in tests, could be deleted if not needed
-    fun build(gtxData: GTXTransactionData): GTXTransaction {
-        val gtvData = GtxTransactionDataSerializer.serializeToGtv(gtxData)
-        return internalMainBuild(null, gtvData, gtxData)
-    }
+    fun build(gtx: Gtx) = internalMainBuild(null, gtx.toGtv(), gtx)
 
     // ----------------- Internal workings -------------------
 
@@ -48,31 +38,31 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
     }
 
     private fun internalBuild(rawData: ByteArray?, gtvData: Gtv): GTXTransaction {
-        val gtxData = GtxTransactionDataFactory.deserializeFromGtv(gtvData)
+        val gtxData = Gtx.fromGtv(gtvData)
         return internalMainBuild(rawData, gtvData, gtxData)
     }
 
     /**
      * Does the heavy lifting of creating the TX
      */
-    private fun internalMainBuild(rawData: ByteArray?, gtvData: Gtv, gtxData: GTXTransactionData): GTXTransaction {
+    private fun internalMainBuild(rawData: ByteArray?, gtvData: Gtv, gtxData: Gtx): GTXTransaction {
 
-        val body = gtxData.transactionBodyData
+        val body = gtxData.gtxBody
 
-        if (body.blockchainRID != blockchainRID) {
-            throw UserMistake("Transaction has wrong blockchainRID: Should be: ${blockchainRID.toHex()}, but was: ${body.blockchainRID.toHex()} ")
+        if (body.blockchainRid != blockchainRID) {
+            throw UserMistake("Transaction has wrong blockchainRID: Should be: ${blockchainRID.toHex()}, but was: ${body.blockchainRid.toHex()} ")
         }
 
         // We wait until after validation before doing (expensive) merkle root calculation
         val myHash = gtvData.merkleHash(gtvMerkleHashCalculator)
-        val myRID = body.calculateRID(gtvMerkleHashCalculator)
+        val myRID = body.calculateTxRid(gtvMerkleHashCalculator)
 
         // Extract some stuff
         val signers = body.signers
         val signatures = gtxData.signatures
-        val ops = body.getExtOpData().map({ module.makeTransactor(it) }).toTypedArray()
+        val ops = body.getExtOpData().map { module.makeTransactor(it) }.toTypedArray()
 
-        return GTXTransaction(rawData, gtvData, gtxData, signers, signatures, ops, myHash, myRID, cs)
+        return GTXTransaction(rawData, gtvData, gtxData, signers.toTypedArray(), signatures.toTypedArray(), ops, myHash, myRID, cs)
     }
 
 }
