@@ -43,3 +43,5 @@ fun ByteArray.toHex(): String {
 
     return result.toString()
 }
+
+fun ByteArray.wrap() = WrappedByteArray(this)

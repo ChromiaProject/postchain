@@ -6,7 +6,6 @@ import net.postchain.common.toHex
 /**
  * Wrapped [ByteArray] [equals] and [hashCode] implemented using [java.util.Arrays.equals] and [java.util.Arrays.hashCode].
  *
- * Wraps the ByteArray with contentEqualsTo
  * @param data the [ByteArray] to be wrapped
  */
 class WrappedByteArray(val data: ByteArray) {

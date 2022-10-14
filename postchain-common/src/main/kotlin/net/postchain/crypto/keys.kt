@@ -40,6 +40,8 @@ value class PrivKey(private val wData: WrappedByteArray) {
 
 data class KeyPair(val pubKey: PubKey, val privKey: PrivKey) {
 
+    constructor(key1: ByteArray, key2: ByteArray) : this(PubKey(key1), PrivKey(key2))
+
     fun sigMaker(cryptoSystem: CryptoSystem) = cryptoSystem.buildSigMaker(pubKey.data, privKey.data)
 
     companion object {
