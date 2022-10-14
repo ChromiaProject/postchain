@@ -81,4 +81,10 @@ class ObjectToGtvArrayTest {
     fun listType() {
         assert(GtvObjectMapper.toGtvArray(listOf(1L))).isEqualTo(gtv(gtv(1)))
     }
+
+    @Test
+    fun mapType() {
+        // [[k1, v1], [k2, v2], ...]
+        assert(GtvObjectMapper.toGtvArray(mapOf("a" to 1L))).isEqualTo(gtv(gtv(gtv("a"), gtv(1))))
+    }
 }
