@@ -1,6 +1,6 @@
 package net.postchain.common
 
-import net.postchain.common.types.WByteArray
+import net.postchain.common.types.WrappedByteArray
 
 /**
  * Wrapper type for a blockchain's external identifier (which is an array of bytes)
@@ -9,10 +9,11 @@ import net.postchain.common.types.WByteArray
  *
  * Note 2: This is a "core" class but the FACTORY for this class reside in "base" (since it uses encryption which is also in "base")
  */
-data class BlockchainRid(private val wData: WByteArray) {
+@JvmInline
+value class BlockchainRid(private val wData: WrappedByteArray) {
     val data get() = wData.data
 
-    constructor(data: ByteArray) : this(WByteArray(data))
+    constructor(data: ByteArray) : this(WrappedByteArray(data))
 
     init {
         if (data.size != 32) {

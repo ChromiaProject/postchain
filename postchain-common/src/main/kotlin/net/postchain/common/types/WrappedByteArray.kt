@@ -1,12 +1,15 @@
 package net.postchain.common.types
 
+import net.postchain.common.hexStringToWrappedByteArray
+import net.postchain.common.toHex
+
 /**
- * Wrapped [ByteArray]
+ * Wrapped [ByteArray] [equals] and [hashCode] implemented using [java.util.Arrays.equals] and [java.util.Arrays.hashCode].
  *
  * Wraps the ByteArray with contentEqualsTo
  * @param data the [ByteArray] to be wrapped
  */
-class WByteArray(val data: ByteArray) {
+class WrappedByteArray(val data: ByteArray) {
     val size get() = data.size
 
     /**
@@ -38,14 +41,22 @@ class WByteArray(val data: ByteArray) {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as WByteArray
+        other as WrappedByteArray
 
         if (!data.contentEquals(other.data)) return false
 
         return true
     }
 
-    override fun hashCode(): Int {
-        return data.contentHashCode()
+    override fun hashCode() = data.contentHashCode()
+
+
+    override fun toString() = data.contentToString()
+
+    fun toHex() = data.toHex()
+
+    companion object {
+        @JvmStatic
+        fun fromHex(hex: String) = hex.hexStringToWrappedByteArray()
     }
 }
