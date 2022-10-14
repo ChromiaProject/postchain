@@ -12,6 +12,7 @@ import java.lang.reflect.WildcardType
 import java.math.BigInteger
 import kotlin.reflect.KClass
 import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaGetter
@@ -110,11 +111,7 @@ object GtvObjectMapper {
     }
 
     fun <T: Any> toGtvArray(obj: T): GtvArray {
-        obj::class.constructors.first().parameters.forEach {
-            require(!it.hasAnnotation<RawGtv>()) { "Raw Gtv Annotation not permitted"}
-            require(!it.hasAnnotation<Transient>())
-            require(!it.hasAnnotation<Nested>())
-        }
+        requireAllowedAnnotations(obj)
 
         val gtv = when (obj) {
             is Map<*, *> -> {
@@ -130,13 +127,42 @@ object GtvObjectMapper {
                 }
             }
         }
-
-
         return gtv(gtv)
+    }
+
+    fun <T: Any> toGtvDictionary(obj: T): GtvDictionary {
+        requireAllowedAnnotations(obj)
+        val map = when (obj) {
+            is Map<*, *> -> {
+                obj.map { (key, value) ->
+                    if (key !is String) throw IllegalArgumentException("Wrong type")
+                    key to (value?.let { v -> classToGtv(v) { toGtvDictionary(it) } } ?: GtvNull)
+                }
+            }
+            is List<*> -> throw IllegalArgumentException("List types not supported")
+            is Set<*> -> throw IllegalArgumentException("Set types not supported")
+            else -> {
+                obj::class.primaryConstructor!!.parameters.map { parameter ->
+                    val parameterValue = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
+                    val gtv = parameterValue?.let { value -> classToGtv(value) { toGtvDictionary(it) } } ?: GtvNull
+                    if (!parameter.hasAnnotation<Name>()) throw IllegalArgumentException("parameter ${parameter.name} must have Name annotation")
+                    val name = parameter.findAnnotation<Name>()!!.name
+                    name to gtv
+                }
+            }
+        }.toMap()
+        return gtv(map)
+    }
+    private fun <T : Any> requireAllowedAnnotations(obj: T) {
+        obj::class.constructors.first().parameters.forEach {
+            require(!it.hasAnnotation<RawGtv>()) { "Raw Gtv Annotation not permitted" }
+            require(!it.hasAnnotation<Transient>())
+            require(!it.hasAnnotation<Nested>())
+        }
     }
 }
 
-private fun classToGtv(obj: Any): Gtv {
+private fun classToGtv(obj: Any, other: (Any) -> Gtv =  { GtvObjectMapper.toGtvArray(it) }): Gtv {
     return when {
         obj::class.java.isString() -> gtv(obj as String)
         obj::class.java.isLong() -> gtv(obj as Long)
@@ -144,7 +170,7 @@ private fun classToGtv(obj: Any): Gtv {
         obj::class.java.isBoolean() -> gtv(obj as Boolean)
         obj::class.java.isBigInteger() -> gtv(obj as BigInteger)
         obj::class.java.isByteArray() -> gtv(obj as ByteArray)
-        else -> GtvObjectMapper.toGtvArray(obj)
+        else -> other(obj)
     }
 }
 
