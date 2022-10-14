@@ -4,12 +4,17 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import java.lang.reflect.Parameter
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
 import java.math.BigInteger
 import kotlin.reflect.KClass
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.javaGetter
 
 
 /**
@@ -102,6 +107,44 @@ object GtvObjectMapper {
         } catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("Constructor for ${classType.simpleName} with parameters $constructorParameters not found", e)
         }
+    }
+
+    fun <T: Any> toGtvArray(obj: T): GtvArray {
+        obj::class.constructors.first().parameters.forEach {
+            require(!it.hasAnnotation<RawGtv>()) { "Raw Gtv Annotation not permitted"}
+            require(!it.hasAnnotation<Transient>())
+            require(!it.hasAnnotation<Nested>())
+        }
+
+        val gtv = when (obj) {
+            is Map<*, *> -> {
+                obj.map {
+                    gtv(classToGtv(it.key!!), classToGtv(it.value!!))
+                }
+            }
+            is Collection<*> -> obj.map { classToGtv(it!!) }
+            else -> {
+                obj::class.primaryConstructor!!.parameters.map { parameter ->
+                    val v = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
+                    v?.let { classToGtv(it) } ?: GtvNull
+                }
+            }
+        }
+
+
+        return gtv(gtv)
+    }
+}
+
+private fun classToGtv(obj: Any): Gtv {
+    return when {
+        obj::class.java.isString() -> gtv(obj as String)
+        obj::class.java.isLong() -> gtv(obj as Long)
+        obj::class.java.isEnum -> gtv(obj.toString())
+        obj::class.java.isBoolean() -> gtv(obj as Boolean)
+        obj::class.java.isBigInteger() -> gtv(obj as BigInteger)
+        obj::class.java.isByteArray() -> gtv(obj as ByteArray)
+        else -> GtvObjectMapper.toGtvArray(obj)
     }
 }
 
