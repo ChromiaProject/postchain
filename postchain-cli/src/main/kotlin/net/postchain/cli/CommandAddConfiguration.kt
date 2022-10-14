@@ -3,11 +3,19 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.help
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import net.postchain.cli.util.*
+import net.postchain.cli.util.blockchainConfigOption
+import net.postchain.cli.util.chainIdOption
+import net.postchain.cli.util.forceOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 
 class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = "Adds a blockchain configuration. All signers in the new configuration must " +
         "exist in the list of added peerInfos. Else flag --allow-unknown-signers must be set.") {
