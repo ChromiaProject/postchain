@@ -12,6 +12,7 @@ import java.lang.reflect.WildcardType
 import java.math.BigInteger
 import kotlin.reflect.KClass
 import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaGetter
@@ -133,12 +134,22 @@ object GtvObjectMapper {
         requireAllowedAnnotations(obj)
         val map = when (obj) {
             is Map<*, *> -> {
-                obj.map { (k, v) ->
-                    if (k !is String) throw IllegalArgumentException("Wrong type")
-                    k to (v?.let { classToGtv(it) } ?: GtvNull)
+                obj.map { (key, value) ->
+                    if (key !is String) throw IllegalArgumentException("Wrong type")
+                    key to (value?.let { v -> classToGtv(v) { toGtvDictionary(it) } } ?: GtvNull)
                 }
             }
-            else -> throw IllegalArgumentException("Cannot convert object")
+            is List<*> -> throw IllegalArgumentException("List types not supported")
+            is Set<*> -> throw IllegalArgumentException("Set types not supported")
+            else -> {
+                obj::class.primaryConstructor!!.parameters.map { parameter ->
+                    val parameterValue = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
+                    val gtv = parameterValue?.let { value -> classToGtv(value) { toGtvDictionary(it) } } ?: GtvNull
+                    if (!parameter.hasAnnotation<Name>()) throw IllegalArgumentException("parameter ${parameter.name} must have Name annotation")
+                    val name = parameter.findAnnotation<Name>()!!.name
+                    name to gtv
+                }
+            }
         }.toMap()
         return gtv(map)
     }
@@ -151,7 +162,7 @@ object GtvObjectMapper {
     }
 }
 
-private fun classToGtv(obj: Any): Gtv {
+private fun classToGtv(obj: Any, other: (Any) -> Gtv =  { GtvObjectMapper.toGtvArray(it) }): Gtv {
     return when {
         obj::class.java.isString() -> gtv(obj as String)
         obj::class.java.isLong() -> gtv(obj as Long)
@@ -159,7 +170,7 @@ private fun classToGtv(obj: Any): Gtv {
         obj::class.java.isBoolean() -> gtv(obj as Boolean)
         obj::class.java.isBigInteger() -> gtv(obj as BigInteger)
         obj::class.java.isByteArray() -> gtv(obj as ByteArray)
-        else -> GtvObjectMapper.toGtvArray(obj)
+        else -> other(obj)
     }
 }
 
