@@ -5,6 +5,7 @@ import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.math.BigInteger
@@ -44,7 +45,18 @@ class ObjectToGtvArrayTest {
                 gtv("A"),
                 gtv(BigInteger.ONE)
         ).toTypedArray())
+    }
 
+    @Test
+    fun nullableType() {
+        data class NullableField(val long: Long?)
+        assert(GtvObjectMapper.toGtvArray(NullableField(null))).isEqualTo(gtv(GtvNull))
+    }
+
+    @Test
+    fun nestedType() {
+        data class NestedField(val simple: Simple)
+        assert(GtvObjectMapper.toGtvArray(NestedField(Simple(1)))).isEqualTo(gtv(gtv(gtv(1))))
     }
 
 }
