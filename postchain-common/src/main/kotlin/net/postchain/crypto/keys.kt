@@ -5,9 +5,9 @@ import net.postchain.common.toHex
 import net.postchain.common.types.WByteArray
 
 data class PubKey(private val wData: WByteArray) {
-    @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
-    val key get() = wData.data
     val data get() = wData.data
+    @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
+    val key get() = data
     init {
         if (data.size != 33) throw IllegalArgumentException("Public key must be 33 bytes")
     }
@@ -21,11 +21,11 @@ data class PubKey(private val wData: WByteArray) {
 }
 
 data class PrivKey(private val wData: WByteArray) {
-    @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
-    val key get() = wData.data
     val data get() = wData.data
+    @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
+    val key get() = data
     init {
-        if (key.size != 32) throw IllegalArgumentException("Private key must be 32 bytes")
+        if (data.size != 32) throw IllegalArgumentException("Private key must be 32 bytes")
     }
 
     constructor(data: ByteArray) : this(WByteArray(data))
