@@ -21,10 +21,17 @@ class PostchainService(private val postchainNode: PostchainNode) {
 
     /**
      * @return `true` if configuration was added, `false` if already existed and `override` is `false`
+     * @throws IllegalStateException if current height => given height
      */
     fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: Gtv): Boolean =
             withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
                 val db = DatabaseAccess.of(ctx)
+
+                val lastBlockHeight = db.getLastBlockHeight(ctx)
+                if (lastBlockHeight >= height) {
+                    throw IllegalStateException("Cannot add configuration at $height, since last block is already at $lastBlockHeight")
+                }
+
                 if (override || db.getConfigurationData(ctx, height) == null) {
                     db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
                     true

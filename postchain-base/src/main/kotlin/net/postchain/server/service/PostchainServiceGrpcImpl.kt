@@ -56,20 +56,26 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             )
         }
 
-        val added = postchainService.addConfiguration(request.chainId, request.height, request.override, config)
-        if (added) {
-            responseObserver.onNext(
-                    AddConfigurationReply.newBuilder().run {
-                        message = "Configuration height ${request.height} on chain ${request.chainId} has been added"
-                        build()
-                    }
-            )
-            responseObserver.onCompleted()
-        } else {
+        try {
+            val added = postchainService.addConfiguration(request.chainId, request.height, request.override, config)
+            if (added) {
+                responseObserver.onNext(
+                        AddConfigurationReply.newBuilder().run {
+                            message = "Configuration height ${request.height} on chain ${request.chainId} has been added"
+                            build()
+                        }
+                )
+                responseObserver.onCompleted()
+            } else {
+                responseObserver.onError(
+                        Status.ALREADY_EXISTS.withDescription(
+                                "Configuration already exists for height ${request.height} on chain ${request.chainId}"
+                        ).asRuntimeException()
+                )
+            }
+        } catch (e: IllegalStateException) {
             responseObserver.onError(
-                    Status.ALREADY_EXISTS.withDescription(
-                            "Configuration already exists for height ${request.height} on chain ${request.chainId}"
-                    ).asRuntimeException()
+                    Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
             )
         }
     }
