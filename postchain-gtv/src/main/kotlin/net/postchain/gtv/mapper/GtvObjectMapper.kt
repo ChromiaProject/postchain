@@ -158,16 +158,16 @@ private fun annotationToValue(gtv: Gtv, param: Parameter, transient: Map<String,
 
 private fun parameterToValue(param: Parameter, gtv: Gtv?, transient: Map<String, Any>): Any? {
     if (gtv == null) return null
-    if (param.parameterizedType is ParameterizedType) { // List types
+    if (param.parameterizedType is ParameterizedType) { // Collection types
         val parameterizedType = param.parameterizedType as ParameterizedType
         if (gtv is GtvDictionary) {
             val keyType = parameterizedType.actualTypeArguments[0].typeName
             if (keyType != String::class.java.name) throw IllegalArgumentException("Map key type must be String, but was $keyType")
             return gtv.dict.map { (t, u) ->
-                    t to classToValue(Class.forName(parameterizedType.actualTypeArguments[1].typeName), u, transient)
+                t to classToValue(Class.forName(parameterizedType.actualTypeArguments[1].typeName), u, transient)
             }.toMap()
         }
-        if (gtv !is GtvArray || gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be array or Dict, but is ${gtv.type} with values $gtv")
+        if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be array or Dict, but is ${gtv.type} with values $gtv")
         val listTypeArgument = parameterizedType.actualTypeArguments[0]
         return parameterizedTypeArgumentToValue(listTypeArgument, gtv, transient).let { if (param.type.isSet()) (it as List<*>).toSet() else it }
     }
