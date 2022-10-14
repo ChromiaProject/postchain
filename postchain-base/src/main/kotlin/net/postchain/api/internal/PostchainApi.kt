@@ -43,6 +43,9 @@ object PostchainApi {
         }
     }
 
+    fun removeConfiguration(ctx: EContext, height: Long): Int =
+            DatabaseAccess.of(ctx).removeConfiguration(ctx, height)
+
     fun checkBlockchain(ctx: EContext, blockchainRID: String) {
         val db = DatabaseAccess.of(ctx)
 
@@ -100,6 +103,9 @@ object PostchainApi {
         }
     }
 
+    fun getLastBlockHeight(ctx: EContext) =
+            DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
+
     /**
      * @return `true` if chain was initialized, `false` if already existed and `override` is `false`
      */
@@ -130,10 +136,8 @@ object PostchainApi {
         return db.addBlockchainReplica(ctx, brid, pubkey)
     }
 
-    fun removeBlockchainReplica(ctx: AppContext, brid: String, pubkey: String): Set<BlockchainRid> {
-        val db = DatabaseAccess.of(ctx)
-        return db.removeBlockchainReplica(ctx, brid, pubkey)
-    }
+    fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubkey: String): Set<BlockchainRid> =
+            DatabaseAccess.of(ctx).removeBlockchainReplica(ctx, brid, pubkey)
 
     fun addPeer(ctx: AppContext, pubkey: PubKey, host: String, port: Int, override: Boolean): Boolean {
         val db = DatabaseAccess.of(ctx)
@@ -153,12 +157,34 @@ object PostchainApi {
         }
     }
 
+    fun addPeers(ctx: AppContext, peerInfos: Collection<PeerInfo>): Array<PeerInfo> {
+        val db = DatabaseAccess.of(ctx)
+
+        val imported = mutableListOf<PeerInfo>()
+        peerInfos.forEach { peerInfo ->
+            val noHostPort = db.findPeerInfo(ctx, peerInfo.host, peerInfo.port, null).isEmpty()
+            val noPubKey = db.findPeerInfo(ctx, null, null, peerInfo.pubKey.toHex()).isEmpty()
+
+            if (noHostPort && noPubKey) {
+                val added = db.addPeerInfo(
+                        ctx, peerInfo.host, peerInfo.port, peerInfo.pubKey.toHex(), peerInfo.lastUpdated)
+
+                if (added) {
+                    imported.add(peerInfo)
+                }
+            }
+        }
+        return imported.toTypedArray()
+    }
+
     fun removePeer(ctx: AppContext, pubkey: PubKey): Array<PeerInfo> =
             DatabaseAccess.of(ctx).removePeerInfo(ctx, pubkey.hex())
 
-
     fun listPeers(ctx: AppContext): Array<PeerInfo> =
             DatabaseAccess.of(ctx).findPeerInfo(ctx, null, null, null)
+
+    fun findPeerInfo(ctx: AppContext, host: String?, port: Int?, pubKeyPattern: String?) =
+            DatabaseAccess.of(ctx).findPeerInfo(ctx, host, port, pubKeyPattern)
 
     fun setMustSyncUntil(ctx: AppContext, blockchainRID: BlockchainRid, height: Long): Boolean =
             DatabaseAccess.of(ctx).setMustSyncUntil(ctx, blockchainRID, height)

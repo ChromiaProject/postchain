@@ -3,7 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.base.data.DatabaseAccess
+import net.postchain.api.internal.PostchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.nodeConfigOption
@@ -28,17 +28,7 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add"
         }
     }
 
-    private fun addReplica(brid: String, pubKey: String): Boolean {
-        return runStorageCommand(nodeConfigFile) { ctx ->
-            val db = DatabaseAccess.of(ctx)
-
-            // Node must be in PeerInfo, or else it is not allowed as blockchain replica.
-            val foundInPeerInfo = db.findPeerInfo(ctx, null, null, pubKey)
-            if (foundInPeerInfo.isEmpty()) {
-                throw CliException("Given pubkey is not a peer. First add it as a peer.")
-            }
-
-            db.addBlockchainReplica(ctx, brid, pubKey)
-        }
+    private fun addReplica(brid: String, pubKey: String) = runStorageCommand(nodeConfigFile) { ctx ->
+        PostchainApi.addBlockchainReplica(ctx, brid, pubKey)
     }
 }

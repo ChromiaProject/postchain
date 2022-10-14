@@ -9,7 +9,7 @@ import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.base.data.DatabaseAccess
+import net.postchain.api.internal.PostchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
@@ -46,11 +46,11 @@ class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = 
         val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
         var heightToUse = height
         if (futureHeight > 0) {
-            runStorageCommand(nodeConfigFile, chainId) {
-                heightToUse = DatabaseAccess.of(it).getLastBlockHeight(it) + futureHeight
+            runStorageCommand(nodeConfigFile, chainId) { ctx ->
+                heightToUse = PostchainApi.getLastBlockHeight(ctx) + futureHeight
             }
         }
-        CliExecution.addConfiguration(nodeConfigFile!!, blockchainConfigFile!!, chainId!!, heightToUse, mode, allowUnknownSigners)
+        CliExecution.addConfiguration(nodeConfigFile, blockchainConfigFile, chainId, heightToUse, mode, allowUnknownSigners)
         println("Configuration has been added successfully")
     }
 
