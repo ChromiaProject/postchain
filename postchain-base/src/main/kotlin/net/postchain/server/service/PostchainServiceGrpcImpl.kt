@@ -59,12 +59,13 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
 
         try {
-            postchainService.addConfiguration(request.chainId, request.height, request.override, config)
+            val mode = if (request.override) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
+            postchainService.addConfiguration(request.chainId, request.height, mode, config)
             responseObserver.onNext(
-                AddConfigurationReply.newBuilder().run {
-                    message = "Configuration height ${request.height} on chain ${request.chainId} has been added"
-                    build()
-                }
+                    AddConfigurationReply.newBuilder().run {
+                        message = "Configuration height ${request.height} on chain ${request.chainId} has been added"
+                        build()
+                    }
             )
             responseObserver.onCompleted()
         } catch (e: AlreadyExists) {

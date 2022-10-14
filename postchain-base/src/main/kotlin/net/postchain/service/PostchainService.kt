@@ -22,17 +22,37 @@ class PostchainService(private val postchainNode: PostchainNode) {
         postchainNode.stopBlockchain(chainId)
     }
 
-    fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: Gtv) {
-        withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
-            val hasConfig = db.getConfigurationData(ctx, height) != null
-            if (hasConfig && !override) {
-                throw AlreadyExists("Configuration already exists for height $height on chain $chainId")
-            }
-            db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
-            true
+    /**
+     * @return true if configuration was added, false otherwise
+     * @throws AlreadyExists if already existed and mode is ERROR
+     */
+    fun addConfiguration(chainId: Long, height: Long, mode: AlreadyExistMode, config: Gtv): Boolean =
+            withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+                val db = DatabaseAccess.of(ctx)
+
+                when (mode) {
+                    AlreadyExistMode.ERROR ->
+                        if (db.getConfigurationData(ctx, height) == null) {
+                            db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
+                            true
+                        } else {
+                            throw AlreadyExists("Configuration already exists for height $height on chain $chainId")
+                        }
+
+                    AlreadyExistMode.FORCE -> {
+                        db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
+                        true
+                    }
+
+                    AlreadyExistMode.IGNORE ->
+                        if (db.getConfigurationData(ctx, height) == null) {
+                            db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
+                            true
+                        } else {
+                            false
+                        }
+                }
         }
-    }
 
     fun initializeBlockchain(chainId: Long, maybeBrid: BlockchainRid?, mode: AlreadyExistMode, config: Gtv,
                              givenDependencies: List<BlockchainRelatedInfo> = listOf()): BlockchainRid {
