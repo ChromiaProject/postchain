@@ -5,6 +5,7 @@ import io.grpc.stub.StreamObserver
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.BadDataMistake
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.service.PostchainService
@@ -74,6 +75,10 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
                 )
             }
         } catch (e: IllegalStateException) {
+            responseObserver.onError(
+                    Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+            )
+        } catch (e: BadDataMistake) {
             responseObserver.onError(
                     Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
             )
