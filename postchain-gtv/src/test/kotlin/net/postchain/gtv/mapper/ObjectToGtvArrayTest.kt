@@ -31,6 +31,7 @@ class ObjectToGtvArrayTest {
     fun simpleTypes() {
         data class AllPrimitives(
                 val long: Long = 1,
+                val javaLong: java.lang.Long = java.lang.Long.valueOf(2) as java.lang.Long,
                 val string: String = "foo",
                 val bool: Boolean = true,
                 val byteArray: ByteArray = ByteArray(32),
@@ -39,6 +40,7 @@ class ObjectToGtvArrayTest {
         )
         assert(GtvObjectMapper.toGtvArray(AllPrimitives()).array).isContentEqualTo(listOf(
                 gtv(1),
+                gtv(2),
                 gtv("foo"),
                 gtv(true),
                 gtv(ByteArray(32)),
