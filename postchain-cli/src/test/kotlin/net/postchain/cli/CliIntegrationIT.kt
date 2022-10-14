@@ -11,6 +11,7 @@ import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.Storage
+import net.postchain.service.AlreadyExistMode
 import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
