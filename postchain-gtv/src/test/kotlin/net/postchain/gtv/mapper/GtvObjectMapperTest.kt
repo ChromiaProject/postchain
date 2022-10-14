@@ -313,4 +313,23 @@ internal class GtvObjectMapperTest {
         assertThrows<IllegalArgumentException> { gtv(mapOf("a" to gtv(1))).toObject<Map<String, Gtv>>() }
         assertThrows<IllegalArgumentException> { gtv(gtv(gtv(1))).toList<List<Long>>() }
     }
+
+    @Test
+    fun unknownMap() {
+        data class ValidMapType(@Name("foo") val map: Map<String, Simple>)
+
+        val g = gtv(mapOf(
+                "foo" to gtv(mapOf(
+                        "any" to gtv(mapOf("key" to gtv(1)))
+                ))
+        ))
+
+        assert(g.toObject<ValidMapType>().map["any"]?.value).isEqualTo(1L)
+
+        data class WrongMapType(@Name("foo") val map: Map<Int, Simple>)
+        assertThrows<IllegalArgumentException> {
+            g.toObject<WrongMapType>()
+        }
+
+    }
 }
