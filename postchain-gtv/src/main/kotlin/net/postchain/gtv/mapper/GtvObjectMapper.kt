@@ -110,11 +110,7 @@ object GtvObjectMapper {
     }
 
     fun <T: Any> toGtvArray(obj: T): GtvArray {
-        obj::class.constructors.first().parameters.forEach {
-            require(!it.hasAnnotation<RawGtv>()) { "Raw Gtv Annotation not permitted"}
-            require(!it.hasAnnotation<Transient>())
-            require(!it.hasAnnotation<Nested>())
-        }
+        requireAllowedAnnotations(obj)
 
         val gtv = when (obj) {
             is Map<*, *> -> {
@@ -130,9 +126,28 @@ object GtvObjectMapper {
                 }
             }
         }
-
-
         return gtv(gtv)
+    }
+
+    fun <T: Any> toGtvDictionary(obj: T): GtvDictionary {
+        requireAllowedAnnotations(obj)
+        val map = when (obj) {
+            is Map<*, *> -> {
+                obj.map { (k, v) ->
+                    if (k !is String) throw IllegalArgumentException("Wrong type")
+                    k to (v?.let { classToGtv(it) } ?: GtvNull)
+                }
+            }
+            else -> throw IllegalArgumentException("Cannot convert object")
+        }.toMap()
+        return gtv(map)
+    }
+    private fun <T : Any> requireAllowedAnnotations(obj: T) {
+        obj::class.constructors.first().parameters.forEach {
+            require(!it.hasAnnotation<RawGtv>()) { "Raw Gtv Annotation not permitted" }
+            require(!it.hasAnnotation<Transient>())
+            require(!it.hasAnnotation<Nested>())
+        }
     }
 }
 
