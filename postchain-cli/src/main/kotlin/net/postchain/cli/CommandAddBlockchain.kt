@@ -5,8 +5,11 @@ package net.postchain.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.cli.util.*
-import net.postchain.service.AlreadyExistMode
+import net.postchain.cli.util.blockchainConfigOption
+import net.postchain.cli.util.chainIdOption
+import net.postchain.cli.util.forceOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.printCommandInfo
 
 class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add blockchain") {
 

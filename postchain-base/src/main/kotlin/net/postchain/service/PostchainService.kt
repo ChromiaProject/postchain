@@ -8,86 +8,54 @@ import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.AlreadyExists
 import net.postchain.common.exception.NotFound
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 
 class PostchainService(private val postchainNode: PostchainNode) {
-    fun startBlockchain(chainId: Long): BlockchainRid {
-        return postchainNode.startBlockchain(chainId)
-    }
+    fun startBlockchain(chainId: Long): BlockchainRid = postchainNode.startBlockchain(chainId)
 
     fun stopBlockchain(chainId: Long) {
         postchainNode.stopBlockchain(chainId)
     }
 
     /**
-     * @return true if configuration was added, false otherwise
-     * @throws AlreadyExists if already existed and mode is ERROR
+     * @return `true` if configuration was added, `false` if already existed and `override` is `false`
      */
-    fun addConfiguration(chainId: Long, height: Long, mode: AlreadyExistMode, config: Gtv): Boolean =
+    fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: Gtv): Boolean =
             withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
                 val db = DatabaseAccess.of(ctx)
-
-                when (mode) {
-                    AlreadyExistMode.ERROR ->
-                        if (db.getConfigurationData(ctx, height) == null) {
-                            db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
-                            true
-                        } else {
-                            throw AlreadyExists("Configuration already exists for height $height on chain $chainId")
-                        }
-
-                    AlreadyExistMode.FORCE -> {
-                        db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
-                        true
-                    }
-
-                    AlreadyExistMode.IGNORE ->
-                        if (db.getConfigurationData(ctx, height) == null) {
-                            db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
-                            true
-                        } else {
-                            false
-                        }
+                if (override || db.getConfigurationData(ctx, height) == null) {
+                    db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
+                    true
+                } else {
+                    false
                 }
-        }
+            }
 
-    fun initializeBlockchain(chainId: Long, maybeBrid: BlockchainRid?, mode: AlreadyExistMode, config: Gtv,
-                             givenDependencies: List<BlockchainRelatedInfo> = listOf()): BlockchainRid {
-        val brid = maybeBrid ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
+    /**
+     * @return [BlockchainRid] if chain was initialized, `null` if already existed and `override` is `false`
+     */
+    fun initializeBlockchain(chainId: Long, maybeBrid: BlockchainRid?, override: Boolean, config: Gtv,
+                             givenDependencies: List<BlockchainRelatedInfo> = listOf()): BlockchainRid? {
+        val brid = maybeBrid
+                ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
 
-        withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+        val initialized = withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
 
-            fun init() {
+            if (override || db.getBlockchainRid(ctx) == null) {
                 db.initializeBlockchain(ctx, brid)
                 DependenciesValidator.validateBlockchainRids(ctx, givenDependencies)
+                // TODO: Blockchain dependencies [DependenciesValidator#validateBlockchainRids]
                 db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
+                true
+            } else {
+                false
             }
-
-            when (mode) {
-                AlreadyExistMode.ERROR -> {
-                    if (db.getBlockchainRid(ctx) == null) {
-                        init()
-                    } else {
-                        throw AlreadyExists("Blockchain already exists")
-                    }
-                }
-
-                AlreadyExistMode.FORCE -> {
-                    init()
-                }
-
-                AlreadyExistMode.IGNORE -> {
-                    db.getBlockchainRid(ctx) ?: init()
-                }
-            }
-            true
         }
 
-        return brid
+        return if (initialized) brid else null
     }
 
     fun findBlockchain(chainId: Long): Pair<BlockchainRid, Boolean>? {

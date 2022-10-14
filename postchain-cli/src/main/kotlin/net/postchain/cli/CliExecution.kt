@@ -28,7 +28,6 @@ import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFileReader
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
-import net.postchain.service.AlreadyExistMode
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
 import java.sql.Connection
