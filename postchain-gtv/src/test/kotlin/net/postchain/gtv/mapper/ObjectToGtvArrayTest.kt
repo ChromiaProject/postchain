@@ -61,4 +61,24 @@ class ObjectToGtvArrayTest {
         assert(GtvObjectMapper.toGtvArray(NestedField(Simple(1)))).isEqualTo(gtv(gtv(gtv(1))))
     }
 
+    @Test
+    fun collectionTypes() {
+        data class CollectionFields(
+                val coll: Collection<Long> = listOf(1),
+                val list: List<String> = listOf("foo"),
+                val set: Set<Simple> = setOf(Simple(2)),
+                val nestedList: List<List<Boolean>> = listOf(listOf(true)),
+        )
+        assert(GtvObjectMapper.toGtvArray(CollectionFields())).isEqualTo(gtv(
+                gtv(gtv(1)),
+                gtv(gtv("foo")),
+                gtv(gtv(gtv(2))), // Nested objects are mapped as arrays
+                gtv(gtv(gtv(true)))
+        ))
+    }
+
+    @Test
+    fun listType() {
+        assert(GtvObjectMapper.toGtvArray(listOf(1L))).isEqualTo(gtv(gtv(1)))
+    }
 }

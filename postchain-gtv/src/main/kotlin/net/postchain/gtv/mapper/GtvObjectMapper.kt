@@ -115,9 +115,20 @@ object GtvObjectMapper {
             require(!it.hasAnnotation<Transient>())
             require(!it.hasAnnotation<Nested>())
         }
-        val gtv = obj::class.primaryConstructor!!.parameters.map { it.name }.map { name ->
-            val v = obj::class.declaredMemberProperties.find { it.name == name }?.javaGetter?.invoke(obj)
-            v?.let { classToGtv(it) } ?: GtvNull
+
+        val gtv = if (obj is Collection<*>) {
+            obj.map { classToGtv(it!!) }
+        } else {
+            obj::class.primaryConstructor!!.parameters.mapIndexed { ind, parameter ->
+                val name = parameter.name
+                val javaParam = obj::class.java.declaredConstructors[0].parameters[ind]
+                val v = obj::class.declaredMemberProperties.find { it.name == name }?.javaGetter?.invoke(obj)
+                if (javaParam.parameterizedType is ParameterizedType) {
+                    v?.let { it as Collection<*> }?.map { classToGtv(it!!) }?.let { gtv(it) } ?: GtvNull
+                } else {
+                    v?.let { classToGtv(it) } ?: GtvNull
+                }
+            }
         }
 
         return gtv(gtv)
