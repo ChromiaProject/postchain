@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
-import net.postchain.server.service.StopBlockchainRequest
+import net.postchain.server.grpc.StopBlockchainRequest
 
 class StopBlockchainCommand: CliktCommand(help = "Stop blockchain with id") {
 

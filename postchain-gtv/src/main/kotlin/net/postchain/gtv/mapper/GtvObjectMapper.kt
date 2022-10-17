@@ -6,12 +6,18 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import java.lang.reflect.Parameter
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
 import java.math.BigInteger
 import kotlin.reflect.KClass
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.javaGetter
 
 
 /**
@@ -105,6 +111,69 @@ object GtvObjectMapper {
             throw IllegalArgumentException("Constructor for ${classType.simpleName} with parameters $constructorParameters not found", e)
         }
     }
+
+    fun <T: Any> toGtvArray(obj: T): GtvArray {
+        requireAllowedAnnotations(obj)
+
+        val gtv = when (obj) {
+            is Map<*, *> -> {
+                obj.map {
+                    gtv(classToGtv(it.key!!), classToGtv(it.value!!))
+                }
+            }
+            is Collection<*> -> obj.map { classToGtv(it!!) }
+            else -> {
+                obj::class.primaryConstructor!!.parameters.map { parameter ->
+                    val v = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
+                    v?.let { classToGtv(it) } ?: GtvNull
+                }
+            }
+        }
+        return gtv(gtv)
+    }
+
+    fun <T: Any> toGtvDictionary(obj: T): GtvDictionary {
+        requireAllowedAnnotations(obj)
+        val map = when (obj) {
+            is Map<*, *> -> {
+                obj.map { (key, value) ->
+                    if (key !is String) throw IllegalArgumentException("Wrong type")
+                    key to (value?.let { v -> classToGtv(v) { toGtvDictionary(it) } } ?: GtvNull)
+                }
+            }
+            is List<*> -> throw IllegalArgumentException("List types not supported")
+            is Set<*> -> throw IllegalArgumentException("Set types not supported")
+            else -> {
+                obj::class.primaryConstructor!!.parameters.map { parameter ->
+                    val parameterValue = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
+                    val gtv = parameterValue?.let { value -> classToGtv(value) { toGtvDictionary(it) } } ?: GtvNull
+                    if (!parameter.hasAnnotation<Name>()) throw IllegalArgumentException("parameter ${parameter.name} must have Name annotation")
+                    val name = parameter.findAnnotation<Name>()!!.name
+                    name to gtv
+                }
+            }
+        }.toMap()
+        return gtv(map)
+    }
+    private fun <T : Any> requireAllowedAnnotations(obj: T) {
+        obj::class.constructors.first().parameters.forEach {
+            require(!it.hasAnnotation<RawGtv>()) { "Raw Gtv Annotation not permitted" }
+            require(!it.hasAnnotation<Transient>())
+            require(!it.hasAnnotation<Nested>())
+        }
+    }
+}
+
+private fun classToGtv(obj: Any, other: (Any) -> Gtv =  { GtvObjectMapper.toGtvArray(it) }): Gtv {
+    return when {
+        obj::class.java.isString() -> gtv(obj as String)
+        obj::class.java.isLong() -> gtv(obj as Long)
+        obj::class.java.isEnum -> gtv(obj.toString())
+        obj::class.java.isBoolean() -> gtv(obj as Boolean)
+        obj::class.java.isBigInteger() -> gtv(obj as BigInteger)
+        obj::class.java.isByteArray() -> gtv(obj as ByteArray)
+        else -> other(obj)
+    }
 }
 
 private fun annotatedParameterToValue(param: Parameter, gtv: GtvDictionary, transient: Map<String, Any>): Any? {
@@ -160,9 +229,17 @@ private fun annotationToValue(gtv: Gtv, param: Parameter, transient: Map<String,
 
 private fun parameterToValue(param: Parameter, gtv: Gtv?, transient: Map<String, Any>): Any? {
     if (gtv == null) return null
-    if (param.parameterizedType is ParameterizedType) { // List types
-        if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be array, but is ${gtv.type} with values $gtv")
-        val listTypeArgument = (param.parameterizedType as ParameterizedType).actualTypeArguments[0]
+    if (param.parameterizedType is ParameterizedType) { // Collection types
+        val parameterizedType = param.parameterizedType as ParameterizedType
+        if (gtv is GtvDictionary) {
+            val keyType = parameterizedType.actualTypeArguments[0].typeName
+            if (keyType != String::class.java.name) throw IllegalArgumentException("Map key type must be String, but was $keyType")
+            return gtv.dict.map { (t, u) ->
+                t to classToValue(Class.forName(parameterizedType.actualTypeArguments[1].typeName), u, transient)
+            }.toMap()
+        }
+        if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be array or Dict, but is ${gtv.type} with values $gtv")
+        val listTypeArgument = parameterizedType.actualTypeArguments[0]
         return parameterizedTypeArgumentToValue(listTypeArgument, gtv, transient).let { if (param.type.isSet()) (it as List<*>).toSet() else it }
     }
     return classToValue(param.type, gtv, transient)

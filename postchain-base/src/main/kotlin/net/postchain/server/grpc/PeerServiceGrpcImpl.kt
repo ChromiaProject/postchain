@@ -1,30 +1,34 @@
-package net.postchain.server.service
+package net.postchain.server.grpc
 
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import net.postchain.common.exception.AlreadyExists
 import net.postchain.crypto.PubKey
-import net.postchain.service.PeerService
-import java.lang.IllegalArgumentException
+import net.postchain.server.service.PeerService
 
 class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrpc.PeerServiceImplBase() {
 
     override fun addPeer(request: AddPeerRequest, responseObserver: StreamObserver<AddPeerReply>) {
         try {
-            peerService.addPeer(PubKey(request.pubkey), request.host, request.port, request.override)
-            responseObserver.onNext(
-                AddPeerReply.newBuilder()
-                    .setMessage("Peer was added successfully")
-                    .build()
-            )
-            responseObserver.onCompleted()
+            if (peerService.addPeer(PubKey(request.pubkey), request.host, request.port, request.override)) {
+                responseObserver.onNext(
+                        AddPeerReply.newBuilder()
+                                .setMessage("Peer was added successfully")
+                                .build()
+                )
+                responseObserver.onCompleted()
+            } else {
+                responseObserver.onError(
+                        Status.ALREADY_EXISTS.withDescription("public key already added for a host, use override to add anyway").asRuntimeException()
+                )
+            }
         } catch (e: IllegalArgumentException) {
             responseObserver.onError(
-                Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException()
+                    Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException()
             )
         } catch (e: AlreadyExists) {
             responseObserver.onError(
-                Status.ALREADY_EXISTS.withDescription(e.message).asRuntimeException()
+                    Status.ALREADY_EXISTS.withDescription(e.message).asRuntimeException()
             )
         }
     }
@@ -39,14 +43,14 @@ class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrp
                 "Successfully removed peer: ${removedPeer[0]}"
             }
             responseObserver.onNext(
-                RemovePeerReply.newBuilder()
-                    .setMessage(message)
-                    .build()
+                    RemovePeerReply.newBuilder()
+                            .setMessage(message)
+                            .build()
             )
             responseObserver.onCompleted()
         } catch (e: IllegalArgumentException) {
             responseObserver.onError(
-                Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException()
+                    Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException()
             )
         }
     }
@@ -58,14 +62,14 @@ class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrp
             "No peers found"
         } else {
             peers.joinToString(
-                "\n",
-                "Peers (${peers.size}):\n"
+                    "\n",
+                    "Peers (${peers.size}):\n"
             )
         }
         responseObserver.onNext(
-            ListPeersReply.newBuilder()
-                .setMessage(message)
-                .build()
+                ListPeersReply.newBuilder()
+                        .setMessage(message)
+                        .build()
         )
         responseObserver.onCompleted()
     }

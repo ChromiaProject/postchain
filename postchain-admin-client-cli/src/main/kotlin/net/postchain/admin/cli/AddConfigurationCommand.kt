@@ -10,7 +10,7 @@ import com.google.protobuf.ByteString
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
-import net.postchain.server.service.AddConfigurationRequest
+import net.postchain.server.grpc.AddConfigurationRequest
 import kotlin.io.path.extension
 
 class AddConfigurationCommand : CliktCommand(help = "Add and start blockchain from configuration") {

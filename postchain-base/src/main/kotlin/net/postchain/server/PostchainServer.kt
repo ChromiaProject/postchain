@@ -13,10 +13,12 @@ import net.postchain.config.app.AppConfig
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import net.postchain.server.config.PostchainServerConfig
-import net.postchain.server.service.*
-import net.postchain.service.DebugService
-import net.postchain.service.PeerService
-import net.postchain.service.PostchainService
+import net.postchain.server.grpc.DebugServiceGrpcImpl
+import net.postchain.server.grpc.PeerServiceGrpcImpl
+import net.postchain.server.grpc.PostchainServiceGrpcImpl
+import net.postchain.server.service.DebugService
+import net.postchain.server.service.PeerService
+import net.postchain.server.service.PostchainService
 
 class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false, private val config: PostchainServerConfig) {
 
