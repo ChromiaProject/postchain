@@ -39,7 +39,7 @@ class SyncTestNightly : AbstractSyncTest() {
     @ParameterizedTest
     @MethodSource("testArguments")
     fun sync(signers: Int, replicas: Int, syncIndex: Set<Int>, stopIndex: Set<Int>, blocksToSync: Int) {
-        System.out.println("++ Sync Nightly, -------- Signs: $signers Repls: $replicas SyncIdx: ${syncIndex.size} StopIdx: ${stopIndex.size} blocks: $blocksToSync ------------------")
+        println("++ Sync Nightly, -------- Signs: $signers Repls: $replicas SyncIdx: ${syncIndex.size} StopIdx: ${stopIndex.size} blocks: $blocksToSync ------------------")
         runSyncTest(signers, replicas, syncIndex, stopIndex, blocksToSync)
     }
 

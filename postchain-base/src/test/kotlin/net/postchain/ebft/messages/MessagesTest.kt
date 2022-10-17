@@ -2,9 +2,17 @@
 
 package net.postchain.ebft.messages
 
-import net.postchain.ebft.message.*
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.ebft.message.BlockData
+import net.postchain.ebft.message.BlockRange
+import net.postchain.ebft.message.BlockSignature
+import net.postchain.ebft.message.CompleteBlock
+import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.ebft.message.GetBlockRange
+import net.postchain.ebft.message.Signature
+import net.postchain.ebft.message.Status
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -92,7 +100,7 @@ class MessagesTest {
     fun testBlockRangeGtvEncodeDecode() {
 
         val compBlock1 = buildCompleteBlock(11L)
-        //System.out.println("block size: ${compBlock1.encoded.size}")
+        //println("block size: ${compBlock1.encoded.size}")
         val compBlock2 = buildCompleteBlock(12L)
         val mess = BlockRange(11L, false, listOf(compBlock1, compBlock2))
 

@@ -139,7 +139,7 @@ data class SystemSetup(
             val bcSetup = blockchainMap[it.chainId]!!
             retBcSetups.add(bcSetup)
         }
-        System.out.println("-- Chain start order $debugStr")
+        println("-- Chain start order $debugStr")
         return retBcSetups
     }
 
