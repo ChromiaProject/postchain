@@ -4,8 +4,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 
-@JvmInline
-value class PubKey(private val wData: WrappedByteArray) {
+data class PubKey(private val wData: WrappedByteArray) {
     val data get() = wData.data
     @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
     val key get() = data
@@ -21,8 +20,7 @@ value class PubKey(private val wData: WrappedByteArray) {
     override fun toString() = hex()
 }
 
-@JvmInline
-value class PrivKey(private val wData: WrappedByteArray) {
+data class PrivKey(private val wData: WrappedByteArray) {
     val data get() = wData.data
     @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
     val key get() = data

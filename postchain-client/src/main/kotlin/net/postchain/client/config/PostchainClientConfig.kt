@@ -12,7 +12,7 @@ import java.time.Duration
 const val STATUS_POLL_COUNT = 20
 val STATUS_POLL_INTERVAL: Duration = Duration.ofMillis(500)
 
-data class PostchainClientConfig(
+data class PostchainClientConfig @JvmOverloads constructor(
         val blockchainRid: BlockchainRid,
         val endpointPool: EndpointPool,
         val signers: List<KeyPair> = listOf(),
@@ -23,8 +23,6 @@ data class PostchainClientConfig(
         val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
         val queryByChainId: Long? = null,
 ) : Config {
-    constructor(blockchainRid: BlockchainRid, endpointPool: EndpointPool, signers: List<KeyPair>): this(blockchainRid, endpointPool, signers, STATUS_POLL_COUNT, STATUS_POLL_INTERVAL, FailOverConfig(), Secp256K1CryptoSystem(), null)
-
     companion object {
         @JvmStatic
         fun fromProperties(propertiesFileName: String): PostchainClientConfig {

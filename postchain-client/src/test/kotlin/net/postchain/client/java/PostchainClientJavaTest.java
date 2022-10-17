@@ -2,6 +2,7 @@ package net.postchain.client.java;
 
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
+import net.postchain.client.config.FailOverConfig;
 import net.postchain.client.config.PostchainClientConfig;
 import net.postchain.client.core.ConcretePostchainClient;
 import net.postchain.client.core.ConcretePostchainClientProvider;
@@ -18,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 
@@ -48,7 +50,10 @@ class PostchainClientJavaTest {
         client = new ConcretePostchainClient(new PostchainClientConfig(
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),
-                Collections.emptyList()
+                Collections.emptyList(),
+                0,
+                Duration.ZERO,
+                new FailOverConfig(5, Duration.ZERO)
         ), httpClient);
     }
 
@@ -63,7 +68,7 @@ class PostchainClientJavaTest {
         var cryptoSystem = new Secp256K1CryptoSystem();
         var privKey = new PrivKey(cryptoSystem.getRandomBytes(32));
         var pubKey = new PubKey(Secp256k1Kt.secp256k1_derivePubKey(privKey.getData()));
-        var keyPair = new KeyPair(pubKey.getData(), privKey.getData());
+        var keyPair = new KeyPair(pubKey, privKey);
         client
                 .transactionBuilder(List.of(keyPair))
                 .addOperation("op1", GtvFactory.INSTANCE.gtv("foo"), GtvFactory.INSTANCE.gtv(17))
