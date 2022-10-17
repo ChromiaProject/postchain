@@ -16,7 +16,7 @@ class CalculateBlockchainRidCommand : CliktCommand(
 ) {
 
     private val blockchainConfigFilename by option(
-            names = arrayOf("-bc", "--blockchain-config"),
+            "-bc", "--blockchain-config",
             help = "Configuration file of blockchain (GtvML (*.xml) or Gtv (*.gtv))"
     ).required()
 
