@@ -167,12 +167,12 @@ class BaseManagedBlockBuilder(
     }
 
     // Only used during logging
-    override fun setBTrace(newBlockDebug: BlockTrace) {
+    override fun setBTrace(bTrace: BlockTrace) {
         if (blocTrace == null) {
-            blocTrace = newBlockDebug
+            blocTrace = bTrace
         } else {
             // Update existing object with missing info
-            blocTrace!!.addDataIfMissing(newBlockDebug)
+            blocTrace!!.addDataIfMissing(bTrace)
         }
     }
 

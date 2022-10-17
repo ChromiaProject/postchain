@@ -76,10 +76,10 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         val blockHeight = 0 // If we set it to zero the node with index 0 will get the post
         val tx = postGtxTransaction(factory, 1, blockHeight, nodeCount, blockchainRIDBytes)
 
-        awaitConfirmed(blockchainRID, tx!!.getRID())
+        awaitConfirmed(blockchainRID, tx.getRID())
 
         // Note: here we use the "iid_1" method instead of BC RID
-        testStatusGet("/tx/iid_${chainIid.toInt().toString()}/${tx!!.getRID().toHex()}/status", 200) {
+        testStatusGet("/tx/iid_${chainIid.toInt().toString()}/${tx.getRID().toHex()}/status", 200) {
             assertEquals(
                     jsonAsMap(gson, "{\"status\"=\"confirmed\"}"),
                     jsonAsMap(gson, it))
@@ -149,8 +149,6 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
     @Test
     fun testBatchQueriesApi() {
         val nodesCount = 1
-        val blocksCount = 1
-        val txPerBlock = 1
 
         val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
@@ -170,8 +168,6 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
     @Test
     fun testQueryGTXApi() {
         val nodesCount = 1
-        val blocksCount = 1
-        val txPerBlock = 1
 
         val sysSetup = doSystemSetup(nodesCount,"/net/postchain/devtools/api/blockchain_config_1.xml")
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
@@ -184,13 +180,12 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         val jsonQuery = """{"queries" : ["${GtvEncoder.encodeGtv(gtxQuery1).toHex()}", "${GtvEncoder.encodeGtv(gtxQuery2).toHex()}"]}""".trimMargin()
 
 
-        val response = given().port(nodes[0].getRestApiHttpPort())
+        given().port(nodes[0].getRestApiHttpPort())
                 .body(jsonQuery)
                 .post("/query_gtx/$blockchainRID")
                 .then()
                 .statusCode(200)
                 .body(IsEqual.equalTo("[\"A0020500\",\"A0020500\"]"))
-
     }
 
     @Test
@@ -228,7 +223,7 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
             blockHeight++
 
             for (i in 0 until txCount) {
-                val realTx = txArr[i]!!
+                val realTx = txArr[i]
                 val jsonResponse = fetchConfirmationProof(realTx, i, blockchainRIDBytes)
                 checkConfirmationProofForTx(realTx, jsonResponse)
             }

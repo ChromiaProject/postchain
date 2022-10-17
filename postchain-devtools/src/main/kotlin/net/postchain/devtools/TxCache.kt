@@ -43,7 +43,7 @@ class TxCache(val chainMap: MutableMap<Int, ChainTxsCache> ) {
             chainMap[chainId] = chain
         }
 
-        chain!!.addTx(tx, chainId, height, counter)
+        chain.addTx(tx, chainId, height, counter)
     }
 }
 

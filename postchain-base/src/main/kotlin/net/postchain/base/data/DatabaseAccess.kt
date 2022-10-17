@@ -4,10 +4,17 @@ package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
 import net.postchain.base.snapshot.Page
-import net.postchain.common.data.Hash
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.core.*
+import net.postchain.core.AppContext
+import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
+import net.postchain.core.NodeRid
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TxDetail
+import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
 import java.sql.Connection
@@ -70,7 +77,7 @@ interface DatabaseAccess {
     fun getBlockInfo(ctx: EContext, txRID: ByteArray): BlockInfo
     fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray
     fun getBlockTxRIDs(ctx: EContext, blockIid: Long): List<ByteArray>
-    fun getBlockTxHashes(ctx: EContext, blokcIid: Long): List<ByteArray>
+    fun getBlockTxHashes(ctx: EContext, blockIid: Long): List<ByteArray>
     fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray?
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getBlock(ctx: EContext, blockRID: ByteArray): BlockInfoExt?
@@ -92,10 +99,10 @@ interface DatabaseAccess {
     fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): EventInfo?
     fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
-    fun pruneEvents(ctx: EContext, prefix: String, height: Long)
+    fun pruneEvents(ctx: EContext, prefix: String, heightMustBeHigherThan: Long)
     fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray)
     fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): AccountState?
-    fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, height: Long)
+    fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long)
     fun insertPage(ctx: EContext, name: String, page: Page)
     fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page?
     fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int

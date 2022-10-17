@@ -17,7 +17,7 @@ class EncodeBlockchainConfigurationCommand : CliktCommand(
 ) {
 
     private val blockchainConfigFilename by option(
-            names = *arrayOf("-bc", "--blockchain-config"),
+            "-bc", "--blockchain-config",
             help = "Configuration file of blockchain (GtxML)"
     ).required()
 

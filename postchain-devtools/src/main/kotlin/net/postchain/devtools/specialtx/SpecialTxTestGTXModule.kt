@@ -1,12 +1,12 @@
 package net.postchain.devtools.specialtx
 
+import net.postchain.core.EContext
+import net.postchain.core.TxEContext
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.SimpleGTXModule
-import net.postchain.gtx.special.GTXAutoSpecialTxExtension
-import net.postchain.core.EContext
-import net.postchain.core.TxEContext
 import net.postchain.gtx.data.ExtOpData
+import net.postchain.gtx.special.GTXAutoSpecialTxExtension
 
 /**
  * Simplest possible module that uses the special operations in [GTXAutoSpecialTxExtension].
@@ -23,15 +23,15 @@ class SpecialTxTestGTXModule : SimpleGTXModule<Unit>(Unit,
         GTXAutoSpecialTxExtension.OP_END_BLOCK to ::GtxEndOp
     ),
     mapOf(
-        "gtx_empty_get_value" to { u, ctxt, args ->
-            GtvNull // Idea: Get something here maybe?
-        },
-        "__begin_block_get" to { u, ctxt, args ->
-            GtvNull // Idea: Get something here maybe?
-        },
-        "__end_block_get" to { u, ctxt, args ->
-            GtvNull // Idea: Get something here maybe?
-        }
+            "gtx_empty_get_value" to { _, _, _ ->
+                GtvNull // Idea: Get something here maybe?
+            },
+            "__begin_block_get" to { _, _, _ ->
+                GtvNull // Idea: Get something here maybe?
+            },
+            "__end_block_get" to { _, _, _ ->
+                GtvNull // Idea: Get something here maybe?
+            }
     )
 
 

@@ -3,15 +3,15 @@
 package net.postchain.configurations
 
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.gtx.GTXSchemaManager
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.EContext
+import net.postchain.core.TxEContext
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXOperation
+import net.postchain.gtx.GTXSchemaManager
 import net.postchain.gtx.SimpleGTXModule
-import net.postchain.core.EContext
-import net.postchain.core.TxEContext
 import net.postchain.gtx.data.ExtOpData
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
@@ -34,7 +34,7 @@ private fun table_transactions(ctx: EContext): String {
 class GTXTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     /**
-     * The only way for the [GtxTestOp] to be considered correct is if first argument is "1" and the second is a string.
+     * The only way for the [GTXTestOp] to be considered correct is if first argument is "1" and the second is a string.
      */
     override fun isCorrect(): Boolean {
         if (data.args.size != 2) return false
@@ -48,9 +48,9 @@ class GTXTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
         try {
             r.update(
-                ctx.conn,
-                """INSERT INTO ${table_gtx_test_value(ctx)}(tx_iid, value) VALUES (?, ?)""",
-                ctx.txIID, data.args[1].asString()
+                    ctx.conn,
+                    """INSERT INTO ${table_gtx_test_value(ctx)}(tx_iid, value) VALUES (?, ?)""",
+                    ctx.txIID, data.args[1].asString()
             )
         } catch (e: Exception) {
             throw e // Just a good spot to place breakpoint
@@ -63,22 +63,22 @@ class GTXTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
  * A simple module that has its own table where it can store and read things. Useful for testing all the way down to DB.
  */
 class GTXTestModule : SimpleGTXModule<Unit>(Unit,
-    mapOf("gtx_test" to ::GTXTestOp),
-    mapOf("gtx_test_get_value" to { u, ctxt, args ->
-        val txRID = (args as GtvDictionary).get("txRID")
-            ?: throw UserMistake("No txRID property supplied")
+        mapOf("gtx_test" to ::GTXTestOp),
+        mapOf("gtx_test_get_value" to { _, ctxt, args ->
+            val txRID = (args as GtvDictionary).get("txRID")
+                    ?: throw UserMistake("No txRID property supplied")
 
-        val sql = """
+            val sql = """
                 SELECT value FROM ${table_gtx_test_value(ctxt)} g
                 INNER JOIN ${table_transactions(ctxt)} t ON g.tx_iid=t.tx_iid
                 WHERE t.tx_rid = ?
             """.trimIndent()
-        val value = r.query(ctxt.conn, sql, nullableStringReader, txRID.asByteArray(true))
-        if (value == null)
-            GtvNull
-        else
-            gtv(value)
-    })
+            val value = r.query(ctxt.conn, sql, nullableStringReader, txRID.asByteArray(true))
+            if (value == null)
+                GtvNull
+            else
+                gtv(value)
+        })
 ) {
     override fun initializeDB(ctx: EContext) {
         val moduleName = this::class.qualifiedName!!

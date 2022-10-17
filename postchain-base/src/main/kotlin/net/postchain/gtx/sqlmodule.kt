@@ -159,7 +159,7 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
         }
     }
 
-    override fun query(ctx: EContext, name: String, args: Gtv): Gtv {
+    override fun query(ctxt: EContext, name: String, args: Gtv): Gtv {
         val opDesc = queries.get(name)
 
         if (opDesc == null) {
@@ -183,8 +183,8 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
         val primitiveArgs = (myArgs.toTypedArray())
 
         val r = QueryRunner()
-        val qResult = r.query(ctx.conn, opDesc.query, MapListHandler(),
-                ctx.chainID, *primitiveArgs)
+        val qResult = r.query(ctxt.conn, opDesc.query, MapListHandler(),
+                ctxt.chainID, *primitiveArgs)
 
         val list = mutableListOf<Gtv>()
         qResult.forEach {
@@ -290,8 +290,8 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
 class SQLGTXModuleFactory : GTXModuleFactory {
     data class WrappedGtxConfiguration(@Name(KEY_GTX) val gtxConfig: GtxConfigurationData)
 
-    override fun makeModule(data: Gtv, blockchainRID: BlockchainRid): GTXModule {
+    override fun makeModule(config: Gtv, blockchainRID: BlockchainRid): GTXModule {
         return SQLGTXModule(
-                data.toObject<WrappedGtxConfiguration>().gtxConfig.sqlModules.toTypedArray())
+                config.toObject<WrappedGtxConfiguration>().gtxConfig.sqlModules.toTypedArray())
     }
 }
