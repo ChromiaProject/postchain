@@ -5,14 +5,13 @@ import net.postchain.common.types.WrappedByteArray
 /**
  * Wrapper type for a blockchain's external identifier (which is an array of bytes)
  *
- * Note 1: The internal indentifier is chainIid, which is just a sequence from the database.
+ * Note 1: The internal identifier is chainIid, which is just a sequence from the database.
  *
  * Note 2: This is a "core" class but the FACTORY for this class reside in "base" (since it uses encryption which is also in "base")
  */
-data class BlockchainRid(private val wData: WrappedByteArray) {
-    val data get() = wData.data
+data class BlockchainRid(val data: ByteArray) {
 
-    constructor(data: ByteArray) : this(WrappedByteArray(data))
+    constructor(wrapped: WrappedByteArray) : this(wrapped.data)
 
     init {
         if (data.size != 32) {
@@ -44,6 +43,21 @@ data class BlockchainRid(private val wData: WrappedByteArray) {
         return toHex().run {
             "${take(2)}:${takeLast(3)}"
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as BlockchainRid
+
+        if (!data.contentEquals(other.data)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return data.contentHashCode()
     }
 
     override fun toString(): String {
