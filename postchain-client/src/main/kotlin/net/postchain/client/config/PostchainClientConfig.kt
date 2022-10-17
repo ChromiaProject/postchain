@@ -23,7 +23,6 @@ data class PostchainClientConfig @JvmOverloads constructor(
         val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
         val queryByChainId: Long? = null,
 ) : Config {
-
     companion object {
         @JvmStatic
         fun fromProperties(propertiesFileName: String): PostchainClientConfig {

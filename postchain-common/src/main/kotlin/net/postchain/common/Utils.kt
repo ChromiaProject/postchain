@@ -2,7 +2,11 @@
 
 package net.postchain.common
 
+import net.postchain.common.types.WrappedByteArray
+
 private val HEX_CHARS = "0123456789ABCDEF"
+
+fun String.hexStringToWrappedByteArray() = WrappedByteArray(hexStringToByteArray())
 
 fun String.hexStringToByteArray(): ByteArray {
     require(length % 2 == 0) { "Invalid hex string: length is not an even number" }
@@ -39,3 +43,5 @@ fun ByteArray.toHex(): String {
 
     return result.toString()
 }
+
+fun ByteArray.wrap() = WrappedByteArray(this)
