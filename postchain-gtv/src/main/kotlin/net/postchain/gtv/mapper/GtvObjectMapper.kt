@@ -1,5 +1,7 @@
 package net.postchain.gtv.mapper
 
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
@@ -185,6 +187,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
         classType.isString() -> gtv.asString()
         classType.isBoolean() -> gtv.asBoolean()
         classType.isByteArray() -> gtv.asByteArray()
+        classType.isWrappedByteArray() -> gtv.asByteArray().wrap()
         classType.isBigInteger() -> gtv.asBigInteger()
         else -> {
             if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
@@ -215,6 +218,10 @@ private fun Class<*>.isString(): Boolean {
 
 private fun Class<*>.isByteArray(): Boolean {
     return this == ByteArray::class.java
+}
+
+private fun Class<*>.isWrappedByteArray(): Boolean {
+    return this == WrappedByteArray::class.java
 }
 
 private fun Class<*>.isBigInteger(): Boolean {
