@@ -143,7 +143,7 @@ object PostchainApi {
         val db = DatabaseAccess.of(ctx)
         val targetHost = db.findPeerInfo(ctx, host, port, null)
         if (targetHost.isNotEmpty()) {
-            throw AlreadyExists("Peer already exists on current host")
+            throw AlreadyExists("Peer already exists on current host with pubkey ${targetHost[0].pubKey.toHex()}")
         }
         val targetKey = db.findPeerInfo(ctx, null, null, pubkey.hex())
         return if (targetKey.isNotEmpty()) {
