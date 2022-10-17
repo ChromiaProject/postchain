@@ -8,7 +8,12 @@ import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
-import net.postchain.server.service.*
+import net.postchain.server.grpc.DebugRequest
+import net.postchain.server.grpc.DebugServiceGrpc
+import net.postchain.server.grpc.FindBlockchainRequest
+import net.postchain.server.grpc.InitializeBlockchainRequest
+import net.postchain.server.grpc.PostchainServiceGrpc
+import net.postchain.server.grpc.StopBlockchainRequest
 import nl.komponents.kovenant.task
 import java.util.concurrent.TimeUnit
 

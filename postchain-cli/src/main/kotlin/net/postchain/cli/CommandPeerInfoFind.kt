@@ -3,10 +3,14 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
-import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import net.postchain.cli.util.*
+import net.postchain.cli.util.hostOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.portOption
+import net.postchain.cli.util.printCommandInfo
+import net.postchain.cli.util.pubkeyOption
 
 class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find peerinfo") {
 
@@ -28,15 +32,14 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
             println("No peerinfo found")
         } else {
             peerInfos.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
-                .forEach {
-                    println("Peerinfos (${peerInfos.size}):\n$it")
-                }
+                    .forEach {
+                        println("Peerinfos (${peerInfos.size}):\n$it")
+                    }
         }
     }
 
-    private fun peerinfoFind(nodeConfigFile: String, host: String?, port: Int?, pubKey: String?): Array<PeerInfo> {
-        return runStorageCommand(nodeConfigFile) {
-            DatabaseAccess.of(it).findPeerInfo(it, host, port, pubKey)
-        }
-    }
+    private fun peerinfoFind(nodeConfigFile: String, host: String?, port: Int?, pubKey: String?): Array<PeerInfo> =
+            runStorageCommand(nodeConfigFile) { ctx ->
+                PeerApi.findPeerInfo(ctx, host, port, pubKey)
+            }
 }

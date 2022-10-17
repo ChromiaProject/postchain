@@ -6,7 +6,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.pubkeyOption
-import net.postchain.server.service.RemoveBlockchainReplicaRequest
+import net.postchain.server.grpc.RemoveBlockchainReplicaRequest
 
 class RemoveBlockchainReplicaCommand : CliktCommand("Remove a replica for a blockchain") {
 
