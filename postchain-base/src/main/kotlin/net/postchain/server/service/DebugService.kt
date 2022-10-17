@@ -1,4 +1,4 @@
-package net.postchain.service
+package net.postchain.server.service
 
 import com.google.gson.JsonObject
 import net.postchain.api.rest.json.JsonFactory

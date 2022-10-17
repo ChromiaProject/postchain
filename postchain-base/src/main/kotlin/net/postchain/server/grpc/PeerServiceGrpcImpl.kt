@@ -1,10 +1,10 @@
-package net.postchain.server.service
+package net.postchain.server.grpc
 
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import net.postchain.common.exception.AlreadyExists
 import net.postchain.crypto.PubKey
-import net.postchain.service.PeerService
+import net.postchain.server.service.PeerService
 
 class PeerServiceGrpcImpl(private val peerService: PeerService) : PeerServiceGrpc.PeerServiceImplBase() {
 

@@ -1,4 +1,4 @@
-package net.postchain.service
+package net.postchain.server.service
 
 import net.postchain.PostchainContext
 import net.postchain.api.internal.PeerApi

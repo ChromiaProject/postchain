@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPeerServiceChannelOption
 import net.postchain.admin.cli.util.pubkeyOption
-import net.postchain.server.service.RemovePeerRequest
+import net.postchain.server.grpc.RemovePeerRequest
 
 class RemovePeerCommand : CliktCommand(help = "Remove peer information from database") {
 

@@ -1,4 +1,4 @@
-package net.postchain.service
+package net.postchain.server.service
 
 import net.postchain.PostchainNode
 import net.postchain.api.internal.BlockchainApi
