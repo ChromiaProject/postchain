@@ -22,6 +22,7 @@ open class BaseAppContext(
     private val dbAccess: DatabaseAccess
 ) : AppContext {
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getInterface(c: Class<T>): T? {
         return if (c == DatabaseAccess::class.java) {
             dbAccess as T?
@@ -35,6 +36,7 @@ open class BaseEContext(
     private val dbAccess: DatabaseAccess
 ) : EContext {
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getInterface(c: Class<T>): T? {
         return if (c == DatabaseAccess::class.java) {
             dbAccess as T?
@@ -68,6 +70,7 @@ open class BaseBlockEContext(
         for (h in hooks) h()
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getInterface(c: Class<T>): T? {
         return if (c == TxEventSink::class.java) {
             txEventSink as T?

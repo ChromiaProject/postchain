@@ -20,7 +20,11 @@ import org.awaitility.kotlin.withPollDelay
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 
 /**
  * Based on [IntNettyConnector3PeersCommunicationIT]
@@ -106,7 +110,6 @@ class IntNettyConnector3PeersReconnectionIT {
         stopContext(context3)
 
         val connectionCapture1 = argumentCaptor<PeerConnection>()
-        val disconnectNodeDescriptor2 = argumentCaptor<PeerConnectionDescriptor>()
         await().atMost(TEN_SECONDS)
                 .untilAsserted {
                     // Asserting peer3 is disconnected from peer1

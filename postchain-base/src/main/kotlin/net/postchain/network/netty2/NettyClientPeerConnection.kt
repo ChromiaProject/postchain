@@ -65,8 +65,8 @@ class NettyClientPeerConnection<PacketType>(
         }
     }
 
-    override fun accept(packetHandler: PeerPacketHandler) {
-        peerPacketHandler = packetHandler
+    override fun accept(handler: PeerPacketHandler) {
+        peerPacketHandler = handler
     }
 
     override fun sendPacket(packet: LazyPacket) {

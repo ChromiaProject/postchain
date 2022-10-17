@@ -18,12 +18,13 @@ import kotlin.math.pow
  */
 open class PTreeElement
 
-class PNode(val left: PTreeElement, val right: PTreeElement, val pathLeaf: Boolean, val isPath: Boolean): PTreeElement()
+class PNode(val left: PTreeElement, val right: PTreeElement, val pathLeaf: Boolean, val isPath: Boolean) : PTreeElement()
+
 /**
  * [PContentNode] represents a hanging leaf that is not at max level depth
  */
-class PContentNode(val content: String, val left: PTreeElement, val right: PTreeElement, val pathLeaf: Boolean, isPath: Boolean): PTreeElement()
-class PLeaf(val content: String, val pathLeaf: Boolean): PTreeElement()
+class PContentNode(val content: String, val left: PTreeElement, val right: PTreeElement, val pathLeaf: Boolean) : PTreeElement()
+class PLeaf(val content: String, val pathLeaf: Boolean) : PTreeElement()
 
 /**
  * We use empty elements to make it easier to draw non-existing parts of the tree
@@ -97,7 +98,7 @@ object PrintableTreeFactory {
                     //println("Early leaf $content at level: $currentLevel")
                     val emptyLeft: PEmptyElement = createEmptyInternal(currentLevel + 1, maxLevel)
                     val emptyRight: PEmptyElement = createEmptyInternal(currentLevel + 1, maxLevel)
-                    PContentNode(content, emptyLeft, emptyRight, inElement.isPathLeaf(), inElement.isPath())
+                    PContentNode(content, emptyLeft, emptyRight, inElement.isPathLeaf())
                 } else {
                     // Normal leaf
                     val content = toStr(inElement.content as T)
@@ -141,7 +142,7 @@ object PrintableTreeFactory {
                     //println("Early leaf $content at level: $currentLevel")
                     val emptyLeft: PEmptyElement = createEmptyInternal(currentLevel + 1, maxLevel)
                     val emptyRight: PEmptyElement = createEmptyInternal(currentLevel + 1, maxLevel)
-                    PContentNode(content, emptyLeft, emptyRight, true, true)
+                    PContentNode(content, emptyLeft, emptyRight, true)
                 } else {
                     // Normal leaf
                     val content = convertGtxToString(inElement.content as Gtv)
@@ -156,7 +157,7 @@ object PrintableTreeFactory {
                     //println("Early hash leaf $content at level: $currentLevel")
                     val emptyLeft: PEmptyElement = createEmptyInternal(currentLevel + 1, maxLevel)
                     val emptyRight: PEmptyElement = createEmptyInternal(currentLevel + 1, maxLevel)
-                    PContentNode(content, emptyLeft, emptyRight, false, false)
+                    PContentNode(content, emptyLeft, emptyRight, false)
                 } else {
                     // Normal leaf
                     val content = TreeHelper.convertToHex(inElement.merkleHash)

@@ -2,7 +2,15 @@
 
 package net.postchain.gtv.gtvml
 
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvBigInteger
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
+import net.postchain.gtv.GtvType
 import net.postchain.gtv.GtvType.*
 import net.postchain.gtv.gtxml.ArrayType
 import net.postchain.gtv.gtxml.DictType
@@ -43,7 +51,6 @@ object GtvMLParser {
                 BYTEARRAY -> GtvByteArray(value as ByteArray)
                 ARRAY -> parseArrayGtvML(value as ArrayType, params)
                 DICT -> parseDictGtvML(value as DictType, params)
-                else -> throw IllegalStateException("Type not known: ${GtvTypeOf(qName)}") // Compiler warning, but still useful if new types are added.
             }
         }
     }

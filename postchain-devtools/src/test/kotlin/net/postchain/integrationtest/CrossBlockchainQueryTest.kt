@@ -34,7 +34,7 @@ class CrossBlockchainQueryTest : IntegrationTestSetup() {
 
 class CrossBlockchainTestGTXModule : SimpleGTXModule<Unit>(Unit,
         mapOf(),
-        mapOf("test_query" to { u, ctxt, args ->
+        mapOf("test_query" to { _, _, _ ->
             gtv(1L)
         })
 ) {

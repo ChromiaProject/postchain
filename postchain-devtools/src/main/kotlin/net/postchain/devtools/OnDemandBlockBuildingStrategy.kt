@@ -73,12 +73,9 @@ class OnDemandBlockBuildingStrategy(
             }
             logger.debug { "awaitCommitted() - took a block height: $height, committedHeight: $committedHeight" }
         }
-        var x = -2
-        if (this.blockQueries != null) {
-            x = blockQueries.getBestHeight().get().toInt()
-        }
+        val dbHeight = blockQueries.getBestHeight().get().toInt()
         if (logger.isTraceEnabled) {
-            logger.trace("awaitCommitted() - end: height: $height, committedHeight: $committedHeight, from db: $x")
+            logger.trace("awaitCommitted() - end: height: $height, committedHeight: $committedHeight, from db: $dbHeight")
         }
     }
 

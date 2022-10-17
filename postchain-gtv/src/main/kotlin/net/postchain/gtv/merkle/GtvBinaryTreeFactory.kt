@@ -2,7 +2,11 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvCollection
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvPrimitive
 import net.postchain.gtv.merkle.factory.GtvBinaryTreeFactoryArray
 import net.postchain.gtv.merkle.factory.GtvBinaryTreeFactoryDict
 import net.postchain.gtv.merkle.path.GtvPath
@@ -75,16 +79,16 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
      * At this point we should have looked in cache.
      *
      * @param leaf we should turn into a tree element
-     * @param gtvPaths
+     * @param paths
      * @return the tree element we created.
      */
-    override fun innerHandleLeaf(leaf: Gtv, gtvPaths: GtvPathSet): BinaryTreeElement {
+    override fun innerHandleLeaf(leaf: Gtv, paths: GtvPathSet): BinaryTreeElement {
         return when (leaf) {
-            is GtvPrimitive -> handlePrimitiveLeaf(leaf, gtvPaths)
-            is GtvArray -> GtvBinaryTreeFactoryArray.buildFromGtvArray(leaf, gtvPaths)
-            is GtvDictionary -> GtvBinaryTreeFactoryDict.buildFromGtvDictionary(leaf, gtvPaths)
+            is GtvPrimitive -> handlePrimitiveLeaf(leaf, paths)
+            is GtvArray -> GtvBinaryTreeFactoryArray.buildFromGtvArray(leaf, paths)
+            is GtvDictionary -> GtvBinaryTreeFactoryDict.buildFromGtvDictionary(leaf, paths)
             is GtvCollection -> throw IllegalStateException("Programmer should have dealt with this container type: ${leaf.type}")
-            else ->             throw IllegalStateException("What is this? Not container and not primitive? type: ${leaf.type}")
+            else -> throw IllegalStateException("What is this? Not container and not primitive? type: ${leaf.type}")
         }
     }
 

@@ -41,7 +41,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         val size: Int = signers.size + replicas.size
         fun contains(i: Int) = signers.contains(i) || replicas.contains(i)
         fun all(): Set<Int> = signers.union(replicas)
-        fun nodes() = nodes.filterIndexed { i, p -> contains(i) }
+        fun nodes() = nodes.filterIndexed { i, _ -> contains(i) }
 
         /**
          * Creates a new NodeSet as a copy of this NodeSet, but

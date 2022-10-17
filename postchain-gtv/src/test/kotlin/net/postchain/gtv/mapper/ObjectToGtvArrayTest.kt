@@ -30,6 +30,7 @@ class ObjectToGtvArrayTest {
 
     @Test
     fun simpleTypes() {
+        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
         data class AllPrimitives(
                 val long: Long = 1,
                 val javaLong: java.lang.Long = java.lang.Long.valueOf(2) as java.lang.Long,

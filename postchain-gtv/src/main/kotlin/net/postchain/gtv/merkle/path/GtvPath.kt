@@ -115,7 +115,7 @@ class GtvPath(pathElements: List<GtvPathElement>): Path<GtvPathElement>(pathElem
             if (firstElement is SearchableGtvPathElement)  {
                 if (firstElement.getSearchKey().toString() == searchKey.toString()) { // Don't know why Kotlin does this!! (shouldn't have to do toString())
                     // We have a match, then we can remove this element
-                    return gtvPath.tail() as GtvPath
+                    return gtvPath.tail()
                 }
             }
             return null

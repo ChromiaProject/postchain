@@ -6,7 +6,6 @@ import net.postchain.core.BlockRid
 import net.postchain.core.ValidationResult
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.InitialBlockData
-import java.util.*
 import net.postchain.gtv.Gtv
 
 /**
@@ -77,7 +76,7 @@ object GenericBlockHeaderValidator {
                                 + "$expectedHeight, (even thought we cannot find the locally)."
                     )
                 } else {
-                    val ourBlockRID = BlockRid(bRidByte!!)
+                    val ourBlockRID = BlockRid(bRidByte)
                     if (ourBlockRID == headerBlockRid)
                         ValidationResult(
                             ValidationResult.Result.DUPLICATE_BLOCK,

@@ -7,10 +7,15 @@ import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.core.*
+import net.postchain.core.BlockEContext
+import net.postchain.core.Transaction
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtx.*
+import net.postchain.gtx.GTXModule
+import net.postchain.gtx.GTXTransaction
+import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.GtxBuilder
+import net.postchain.gtx.GtxSpecNop
 import net.postchain.gtx.data.OpData
 
 /**
@@ -73,10 +78,10 @@ open class GTXSpecialTxHandler(val module: GTXModule,
      * @param position is the position we are investigating
      * @param tx is the [Transaction] we are investigating (must already have been created at an earlier stage).
      *           This tx holds all operations from all extensions, so it can be very big (in case of Anchoring chain at least)
-     * @param ectx
-     * @param true if all special operations of all extensions valid
+     * @param bctx
+     * @return true if all special operations of all extensions valid
      */
-    override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, ectx: BlockEContext): Boolean {
+    override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, bctx: BlockEContext): Boolean {
         val gtxTransaction = tx as GTXTransaction
         val gtxData = gtxTransaction.gtxData
         val operations = gtxData.gtxBody.operations
@@ -94,7 +99,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                     idx += 1
                     if (idx >= operations.size) break
                 }
-                if (!ext.validateSpecialOperations(position, ectx, selectesOps)) {
+                if (!ext.validateSpecialOperations(position, bctx, selectesOps)) {
                     logger.warn("Validation failed in special handler ${ext.javaClass.name}")
                     return false
                 }
