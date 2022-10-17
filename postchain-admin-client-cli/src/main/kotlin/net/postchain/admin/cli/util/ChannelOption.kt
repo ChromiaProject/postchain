@@ -8,9 +8,9 @@ import io.grpc.ChannelCredentials
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.TlsChannelCredentials
-import net.postchain.server.service.DebugServiceGrpc
-import net.postchain.server.service.PeerServiceGrpc
-import net.postchain.server.service.PostchainServiceGrpc
+import net.postchain.server.grpc.DebugServiceGrpc
+import net.postchain.server.grpc.PeerServiceGrpc
+import net.postchain.server.grpc.PostchainServiceGrpc
 
 fun CliktCommand.channelOption() = option("-t", "--target", envvar = "POSTCHAIN_TARGET", help = "Target path for command. On the form host:port")
     .convert {

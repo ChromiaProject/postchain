@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
-import net.postchain.server.service.StartBlockchainRequest
+import net.postchain.server.grpc.StartBlockchainRequest
 
 class StartBlockchainCommand: CliktCommand(help = "Start blockchain with id") {
 

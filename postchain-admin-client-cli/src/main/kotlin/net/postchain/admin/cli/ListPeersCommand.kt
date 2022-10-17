@@ -3,7 +3,7 @@ package net.postchain.admin.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPeerServiceChannelOption
-import net.postchain.server.service.ListPeersRequest
+import net.postchain.server.grpc.ListPeersRequest
 
 class ListPeersCommand : CliktCommand(help = "List all peer information in the database") {
 
