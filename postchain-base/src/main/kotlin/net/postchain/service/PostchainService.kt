@@ -1,7 +1,7 @@
 package net.postchain.service
 
 import net.postchain.PostchainNode
-import net.postchain.api.internal.PostchainApi
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.withReadConnection
@@ -24,7 +24,7 @@ class PostchainService(private val postchainNode: PostchainNode) {
      */
     fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false): Boolean =
             withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-                PostchainApi.addConfiguration(ctx, height, override, config, allowUnknownSigners)
+                BlockchainApi.addConfiguration(ctx, height, override, config, allowUnknownSigners)
             }
 
     /**
@@ -36,7 +36,7 @@ class PostchainService(private val postchainNode: PostchainNode) {
                 ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
 
         val initialized = withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-            PostchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
+            BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
         }
 
         return if (initialized) brid else null
@@ -44,16 +44,16 @@ class PostchainService(private val postchainNode: PostchainNode) {
 
     fun findBlockchain(chainId: Long): Pair<BlockchainRid, Boolean>? =
             withReadConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-                PostchainApi.findBlockchain(ctx)
+                BlockchainApi.findBlockchain(ctx)
             }?.let { Pair(it, postchainNode.isBlockchainRunning(chainId)) }
 
     fun addBlockchainReplica(brid: String, pubkey: String): Boolean =
             postchainNode.postchainContext.storage.withWriteConnection { ctx ->
-                PostchainApi.addBlockchainReplica(ctx, brid, pubkey)
+                BlockchainApi.addBlockchainReplica(ctx, brid, pubkey)
             }
 
     fun removeBlockchainReplica(brid: String, pubkey: String): Set<BlockchainRid> =
             postchainNode.postchainContext.storage.withWriteConnection { ctx ->
-                PostchainApi.removeBlockchainReplica(ctx, brid, pubkey)
+                BlockchainApi.removeBlockchainReplica(ctx, brid, pubkey)
             }
 }

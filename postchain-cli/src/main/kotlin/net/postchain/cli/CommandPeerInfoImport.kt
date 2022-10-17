@@ -3,7 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.api.internal.PostchainApi
+import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.nodeConfigOption
@@ -40,7 +40,7 @@ class CommandPeerInfoImport : CliktCommand(name = "peerinfo-import", help = "Imp
             emptyArray()
         } else {
             runStorageCommand(nodeConfigFile) { ctx ->
-                PostchainApi.addPeers(ctx, nodeConfig.peerInfoMap.values)
+                PeerApi.addPeers(ctx, nodeConfig.peerInfoMap.values)
             }
         }
     }

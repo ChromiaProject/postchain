@@ -9,7 +9,7 @@ import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.api.internal.PostchainApi
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
@@ -47,7 +47,7 @@ class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = 
         var heightToUse = height
         if (futureHeight > 0) {
             runStorageCommand(nodeConfigFile, chainId) { ctx ->
-                heightToUse = PostchainApi.getLastBlockHeight(ctx) + futureHeight
+                heightToUse = BlockchainApi.getLastBlockHeight(ctx) + futureHeight
             }
         }
         CliExecution.addConfiguration(nodeConfigFile, blockchainConfigFile, chainId, heightToUse, mode, allowUnknownSigners)

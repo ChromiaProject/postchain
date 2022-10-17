@@ -6,7 +6,8 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
-import net.postchain.api.internal.PostchainApi
+import net.postchain.api.internal.BlockchainApi
+import net.postchain.api.internal.PeerApi
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
@@ -61,7 +62,7 @@ object CliExecution : KLogging() {
         return runStorageCommand(nodeConfigFile, chainId) { ctx ->
             when (mode) {
                 AlreadyExistMode.ERROR -> {
-                    if (PostchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies)) {
+                    if (BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies)) {
                         brid
                     } else {
                         throw CliException(
@@ -71,12 +72,12 @@ object CliExecution : KLogging() {
                 }
 
                 AlreadyExistMode.FORCE -> {
-                    PostchainApi.initializeBlockchain(ctx, brid, true, blockchainConfig, givenDependencies)
+                    BlockchainApi.initializeBlockchain(ctx, brid, true, blockchainConfig, givenDependencies)
                     brid
                 }
 
                 AlreadyExistMode.IGNORE -> {
-                    PostchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies)
+                    BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies)
                     brid
                 }
             }
@@ -107,7 +108,7 @@ object CliExecution : KLogging() {
             try {
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
-                        if (!PostchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners)) {
+                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners)) {
                             throw CliException(
                                     "Blockchain configuration of chainId $chainId at " +
                                             "height $height already exists. Use -f flag to force addition."
@@ -116,11 +117,11 @@ object CliExecution : KLogging() {
                     }
 
                     AlreadyExistMode.FORCE -> {
-                        PostchainApi.addConfiguration(ctx, height, true, blockchainConfig, allowUnknownSigners)
+                        BlockchainApi.addConfiguration(ctx, height, true, blockchainConfig, allowUnknownSigners)
                     }
 
                     AlreadyExistMode.IGNORE -> {
-                        if (!PostchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners))
+                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners))
                             println("Blockchain configuration of chainId $chainId at height $height already exists")
                     }
                 }
@@ -137,11 +138,11 @@ object CliExecution : KLogging() {
 
     fun setMustSyncUntil(nodeConfigFile: String, blockchainRID: BlockchainRid, height: Long): Boolean =
             runStorageCommand(nodeConfigFile) { ctx ->
-                PostchainApi.setMustSyncUntil(ctx, blockchainRID, height)
+                BlockchainApi.setMustSyncUntil(ctx, blockchainRID, height)
             }
 
     fun getMustSyncUntilHeight(nodeConfigFile: String): Map<Long, Long> = runStorageCommand(nodeConfigFile) { ctx ->
-        PostchainApi.getMustSyncUntilHeight(ctx)
+        BlockchainApi.getMustSyncUntilHeight(ctx)
     }
 
     fun peerinfoAdd(nodeConfigFile: String, host: String, port: Int, pubKey: String, mode: AlreadyExistMode): Boolean =
@@ -149,7 +150,7 @@ object CliExecution : KLogging() {
                 // mode tells us how to react upon an error caused if pubkey already exist (throw error or force write).
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
-                        val added = PostchainApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
+                        val added = PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
                         if (!added) {
                             throw CliException("Peerinfo with pubkey already exists. Using -f to force update")
                         }
@@ -157,11 +158,11 @@ object CliExecution : KLogging() {
                     }
 
                     AlreadyExistMode.FORCE -> {
-                        PostchainApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, true)
+                        PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, true)
                     }
 
                     AlreadyExistMode.IGNORE -> {
-                        PostchainApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
+                        PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
                     }
                 }
             }
@@ -191,18 +192,18 @@ object CliExecution : KLogging() {
 
     fun checkBlockchain(nodeConfigFile: String, chainId: Long, blockchainRID: String) {
         runStorageCommand(nodeConfigFile, chainId) { ctx ->
-            PostchainApi.checkBlockchain(ctx, blockchainRID)
+            BlockchainApi.checkBlockchain(ctx, blockchainRID)
         }
     }
 
     fun getConfiguration(nodeConfigFile: String, chainId: Long, height: Long): ByteArray? =
             runStorageCommand(nodeConfigFile, chainId) { ctx ->
-                PostchainApi.getConfiguration(ctx, height)
+                BlockchainApi.getConfiguration(ctx, height)
             }
 
     fun listConfigurations(nodeConfigFile: String, chainId: Long) =
             runStorageCommand(nodeConfigFile, chainId) { ctx ->
-                PostchainApi.listConfigurations(ctx)
+                BlockchainApi.listConfigurations(ctx)
             }
 
     fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: String) {

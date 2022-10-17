@@ -3,7 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.api.internal.PostchainApi
+import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.nodeConfigOption
@@ -35,7 +35,7 @@ class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Rem
 
     private fun peerinfoRemove(nodeConfigFile: String, pubKey: String): Array<PeerInfo> {
         return runStorageCommand(nodeConfigFile) { ctx ->
-            PostchainApi.removePeer(ctx, PubKey(pubKey))
+            PeerApi.removePeer(ctx, PubKey(pubKey))
         }
     }
 }

@@ -3,7 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.api.internal.PostchainApi
+import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.hostOption
@@ -40,6 +40,6 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
 
     private fun peerinfoFind(nodeConfigFile: String, host: String?, port: Int?, pubKey: String?): Array<PeerInfo> =
             runStorageCommand(nodeConfigFile) { ctx ->
-                PostchainApi.findPeerInfo(ctx, host, port, pubKey)
+                PeerApi.findPeerInfo(ctx, host, port, pubKey)
             }
 }

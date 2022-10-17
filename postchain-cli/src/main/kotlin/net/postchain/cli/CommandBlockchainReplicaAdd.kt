@@ -3,7 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.api.internal.PostchainApi
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.nodeConfigOption
@@ -29,6 +29,6 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add"
     }
 
     private fun addReplica(brid: String, pubKey: String) = runStorageCommand(nodeConfigFile) { ctx ->
-        PostchainApi.addBlockchainReplica(ctx, brid, pubKey)
+        BlockchainApi.addBlockchainReplica(ctx, brid, pubKey)
     }
 }

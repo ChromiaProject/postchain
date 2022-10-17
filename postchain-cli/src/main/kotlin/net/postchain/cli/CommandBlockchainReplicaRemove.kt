@@ -1,7 +1,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import net.postchain.api.internal.PostchainApi
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.nodeConfigOption
@@ -40,7 +40,7 @@ class CommandBlockchainReplicaRemove : CliktCommand(
 
     private fun blockchainReplicaRemove(brid: String?, pubKey: String): Set<BlockchainRid> {
         return runStorageCommand(nodeConfigFile) { ctx ->
-            PostchainApi.removeBlockchainReplica(ctx, brid, pubKey)
+            BlockchainApi.removeBlockchainReplica(ctx, brid, pubKey)
         }
     }
 }
