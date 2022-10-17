@@ -3,6 +3,7 @@ package net.postchain.gtv.mapper
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -37,6 +38,7 @@ class ObjectToGtvArrayTest {
                 val byteArray: ByteArray = ByteArray(32),
                 val enum: SimpleEnum = SimpleEnum.A,
                 val bigInteger: BigInteger = BigInteger.ONE,
+                val wrappedByteArray: WrappedByteArray = WrappedByteArray(16)
         )
         assert(GtvObjectMapper.toGtvArray(AllPrimitives()).array).isContentEqualTo(listOf(
                 gtv(1),
@@ -45,7 +47,8 @@ class ObjectToGtvArrayTest {
                 gtv(true),
                 gtv(ByteArray(32)),
                 gtv("A"),
-                gtv(BigInteger.ONE)
+                gtv(BigInteger.ONE),
+                gtv(WrappedByteArray(16))
         ).toTypedArray())
     }
 

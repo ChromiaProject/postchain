@@ -2,64 +2,45 @@ package net.postchain.crypto
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
 
-data class PubKey(val key: ByteArray) {
+data class PubKey(private val wData: WrappedByteArray) {
+    val data get() = wData.data
+    @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
+    val key get() = data
     init {
-        if (key.size != 33) throw IllegalArgumentException("Public key must be 33 bytes")
+        if (data.size != 33) throw IllegalArgumentException("Public key must be 33 bytes")
     }
 
+    constructor(data: ByteArray) : this(WrappedByteArray(data))
     constructor(hex: String) : this(hex.hexStringToByteArray())
 
-    fun hex() = key.toHex()
+    fun hex() = data.toHex()
 
     override fun toString() = hex()
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as PubKey
-
-        if (!key.contentEquals(other.key)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return key.contentHashCode()
-    }
 }
 
-data class PrivKey(val key: ByteArray) {
+data class PrivKey(private val wData: WrappedByteArray) {
+    val data get() = wData.data
+    @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
+    val key get() = data
     init {
-        if (key.size != 32) throw IllegalArgumentException("Private key must be 32 bytes")
+        if (data.size != 32) throw IllegalArgumentException("Private key must be 32 bytes")
     }
 
+    constructor(data: ByteArray) : this(WrappedByteArray(data))
     constructor(hex: String) : this(hex.hexStringToByteArray())
 
-    fun hex() = key.toHex()
+    fun hex() = data.toHex()
 
     override fun toString() = hex()
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as PrivKey
-
-        if (!key.contentEquals(other.key)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return key.contentHashCode()
-    }
 }
 
 data class KeyPair(val pubKey: PubKey, val privKey: PrivKey) {
 
-    fun sigMaker(cryptoSystem: CryptoSystem) = cryptoSystem.buildSigMaker(pubKey.key, privKey.key)
+    constructor(key1: ByteArray, key2: ByteArray) : this(PubKey(key1), PrivKey(key2))
+
+    fun sigMaker(cryptoSystem: CryptoSystem) = cryptoSystem.buildSigMaker(pubKey.data, privKey.data)
 
     companion object {
         @JvmStatic
