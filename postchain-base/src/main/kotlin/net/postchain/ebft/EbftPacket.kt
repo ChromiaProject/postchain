@@ -60,7 +60,7 @@ class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<Ebft
 
     // TODO: [et]: Improve the design
     override fun isIdentPacket(bytes: ByteArray): Boolean {
-        return decodePacket(bytes) is Identification
+        return decodeWithoutVerification(bytes).message is Identification
     }
 }
 
