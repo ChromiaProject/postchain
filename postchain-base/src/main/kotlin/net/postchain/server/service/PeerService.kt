@@ -3,6 +3,7 @@ package net.postchain.server.service
 import net.postchain.PostchainContext
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
+import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.crypto.PubKey
 
@@ -18,7 +19,7 @@ class PeerService(private val postchainContext: PostchainContext) {
         PeerApi.removePeer(ctx, pubkey)
     }
 
-    fun listPeers(): Array<PeerInfo> = postchainContext.storage.withWriteConnection { ctx ->
+    fun listPeers(): Array<PeerInfo> = postchainContext.storage.withReadConnection { ctx ->
         PeerApi.listPeers(ctx)
     }
 }
