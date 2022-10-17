@@ -2,10 +2,10 @@
 
 package net.postchain.ebft
 
-import net.postchain.crypto.Signature
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
+import net.postchain.crypto.Signature
 import nl.komponents.kovenant.Promise
 import java.util.*
 
@@ -40,7 +40,7 @@ typealias CompletionPromise = Promise<Unit, java.lang.Exception>
 
 interface BlockDatabase {
     fun getQueuedBlockCount(): Int
-    fun addBlock(block: BlockDataWithWitness, dependsOn: CompletionPromise?, bTrace: BlockTrace?): CompletionPromise // add a complete block after the current one
+    fun addBlock(block: BlockDataWithWitness, dependsOn: CompletionPromise?, existingBTrace: BlockTrace?): CompletionPromise // add a complete block after the current one
     fun loadUnfinishedBlock(block: BlockData): Promise<Signature, Exception> // returns block signature if successful
     fun commitBlock(signatures: Array<Signature?>): CompletionPromise
     fun buildBlock(): Promise<Pair<BlockData, Signature>, Exception>
@@ -155,7 +155,7 @@ interface StatusManager {
     fun isMyNodePrimary(): Boolean
     fun primaryIndex(): Int
     fun onStatusUpdate(nodeIndex: Int, status: NodeStatus) // STATUS message from another node
-    fun fastForwardHeight(height: Long): Boolean
+    fun fastForwardHeight(committedHeight: Long): Boolean
     fun onHeightAdvance(height: Long): Boolean // a complete block was received from other peers, go forward
     fun onCommittedBlock(blockRID: ByteArray) // when block committed to the database
     fun onReceivedBlock(blockRID: ByteArray, mySignature: Signature): Boolean // received block was validated by BlockManager/DB

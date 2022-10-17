@@ -8,7 +8,7 @@ import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import java.util.*
 
-data class OpData(val opName: String, val args: Array<Gtv>) {
+data class OpData(val opName: String, val args: Array<out Gtv>) {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -31,15 +31,15 @@ data class OpData(val opName: String, val args: Array<Gtv>) {
 
 class ExtOpData(val opName: String,
                 val opIndex: Int,
-                val args: Array<Gtv>,
+                val args: Array<out Gtv>,
                 val blockchainRID: BlockchainRid,
                 val signers: Array<ByteArray>,
-                val operations: Array<OpData> ) {
+                val operations: Array<OpData>) {
 
     companion object {
 
         fun build(op: GtxOp, opIndex: Int, body: GtxBody): ExtOpData {
-            return ExtOpData(op.opName, opIndex, op.args as Array<Gtv>, body.blockchainRid, body.signers.toTypedArray(), body.operations.map { it.toOpData() }.toTypedArray())
+            return ExtOpData(op.opName, opIndex, op.args, body.blockchainRid, body.signers.toTypedArray(), body.operations.map { it.toOpData() }.toTypedArray())
         }
     }
 }

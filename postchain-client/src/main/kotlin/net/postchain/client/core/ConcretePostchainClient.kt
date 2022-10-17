@@ -58,7 +58,7 @@ class ConcretePostchainClient(
     override fun transactionBuilder(signers: List<KeyPair>) = TransactionBuilder(
             this,
             config.blockchainRid,
-            signers.map { it.pubKey.key },
+            signers.map { it.pubKey.data },
             signers.map { it.sigMaker(cryptoSystem) },
             cryptoSystem
     )

@@ -40,7 +40,7 @@ class RestApiTestManual {
                 .then()
                 .statusCode(200)
 
-        val transaction = GTXTransactionFactory(BlockchainRid.ZERO_RID, GTXTestModule(), cryptoSystem)
+        GTXTransactionFactory(BlockchainRid.ZERO_RID, GTXTestModule(), cryptoSystem)
                 .decodeTransaction(txBytes)
         //RestTools.awaitConfirmed(port, blockchainRID!!.toHex(), transaction.getRID().toHex())
     }

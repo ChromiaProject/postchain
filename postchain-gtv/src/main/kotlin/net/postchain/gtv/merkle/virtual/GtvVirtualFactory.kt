@@ -79,10 +79,10 @@ object GtvVirtualFactory: KLogging() {
     }
 
     private fun handleArrLeftAndRight(left: MerkleProofElement, right: MerkleProofElement): ArrayIndexAndGtvList {
-        val left = buildGtvVirtualArrayInner(left)
-        val right = buildGtvVirtualArrayInner(right)
-        left.addAll(right)
-        return left
+        val virtualLeft = buildGtvVirtualArrayInner(left)
+        val virtualRight = buildGtvVirtualArrayInner(right)
+        virtualLeft.addAll(virtualRight)
+        return virtualLeft
     }
 
     private fun getIndex(pathElem: SearchableGtvPathElement) =  (pathElem as ArrayGtvPathElement).index

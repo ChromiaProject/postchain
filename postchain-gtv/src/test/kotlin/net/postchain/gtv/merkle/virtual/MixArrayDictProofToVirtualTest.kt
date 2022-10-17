@@ -36,12 +36,12 @@ class MixArrayDictProofToVirtualTest {
 
 
         val orgGtv = gtvDict["one"]!![3]
-        val gtvFromVirt =virtualGtv["one"]!![3]
+        val gtvFromVirt = virtualGtv["one"]!![3]
         assertEquals(orgGtv, gtvFromVirt)
 
         try {
-            val gtvNonExistincg =virtualGtv["one"]!![2]
-           fail()
+            virtualGtv["one"]!![2]
+            fail()
         } catch (e: UserMistake) {
             // Nothing, it's what we expect
         }
@@ -66,7 +66,7 @@ class MixArrayDictProofToVirtualTest {
         assertEquals(MixArrayDictToGtvBinaryTreeHelper.expecedMerkleRoot_dict1_array4, TreeHelper.convertToHex(merkleRoot))
 
         val orgGtv = gtvDict["one"]!!
-        val gtvFromVirt =virtualGtv["one"]!!
+        val gtvFromVirt = virtualGtv["one"]!!
         assertEquals(orgGtv, gtvFromVirt)
     }
 }

@@ -41,7 +41,7 @@ open class FullEbftTestNightlyCore : ConfigFileBasedIntegrationTest() {
                 val rid = blockQueries.getBlockRid(height).get()
                 assertNotNull(rid)
 
-                val txs = blockQueries.getBlockTransactionRids(rid!!).get()
+                val txs = blockQueries.getBlockTransactionRids(rid).get()
                 assertEquals(txPerBlock, txs.size)
 
                 for (tx in 0 until txPerBlock) {

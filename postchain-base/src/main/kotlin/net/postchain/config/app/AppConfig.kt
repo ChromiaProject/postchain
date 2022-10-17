@@ -118,7 +118,7 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     fun getString(key: String, defaultValue: String = ""): String = config.getString(key, defaultValue)
     fun getStringArray(key: String): Array<String> = config.getStringArray(key)
     fun subset(prefix: String): Configuration = config.subset(prefix)
-    fun getProperty(key: String): Any = config.getProperty(key)
+    fun getProperty(key: String): Any? = config.getProperty(key)
     fun getKeys(prefix: String): MutableIterator<String> = config.getKeys(prefix)
     fun containsKey(key: String) = config.containsKey(key)
 

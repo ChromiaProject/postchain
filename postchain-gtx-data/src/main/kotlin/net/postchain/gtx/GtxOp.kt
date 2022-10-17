@@ -20,7 +20,7 @@ class GtxOp(val opName: String, vararg val args: Gtv) {
      */
     fun toGtv() = gtv(gtv(opName), gtv(args.toList()))
 
-    fun toOpData() = OpData(opName, args as Array<Gtv>)
+    fun toOpData() = OpData(opName, args)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

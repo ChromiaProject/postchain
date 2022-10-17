@@ -278,7 +278,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
     }
 }
 fun getEnumValue(enumClassName: String, enumValue: String): Any {
-    val enum = Class.forName(enumClassName).enumConstants as Array<Enum<*>>
+    @Suppress("UNCHECKED_CAST") val enum = Class.forName(enumClassName).enumConstants as Array<Enum<*>>
     return enum.first { it.name == enumValue }
 }
 

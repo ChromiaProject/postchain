@@ -217,9 +217,7 @@ object CliExecution : KLogging() {
         return try {
             val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
             val storage = StorageBuilder.buildStorage(appConfig)
-            val nodeConfig = NodeConfigurationProviderFactory.createProvider(
-                    appConfig
-            ) { storage }.getConfiguration()
+            NodeConfigurationProviderFactory.createProvider(appConfig) { storage }.getConfiguration()
 
             BasicDataSource().apply {
                 addConnectionProperty("currentSchema", appConfig.databaseSchema)

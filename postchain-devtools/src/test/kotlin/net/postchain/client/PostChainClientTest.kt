@@ -65,7 +65,7 @@ class PostChainClientTest : IntegrationTestSetup() {
     @Test
     fun makingAndPostingTransaction_SignedTransactionGiven_PostsSuccessfully() {
         // Mock
-        val nodes = createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
+        createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val client = spy(createPostChainClient(blockchainRID))
         val txBuilder = createSignedNopTx(client, blockchainRID)
 
@@ -82,7 +82,7 @@ class PostChainClientTest : IntegrationTestSetup() {
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val client = createPostChainClient(blockchainRID)
         assertThrows<IllegalArgumentException> {
-            val txBuilder = client.transactionBuilder().finish().build()
+            client.transactionBuilder().finish().build()
         }
 
         // When
@@ -109,7 +109,7 @@ class PostChainClientTest : IntegrationTestSetup() {
 
     @Test
     fun testPostTransactionApiConfirmLevelNoWait() {
-        val nodes = createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
+        createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
         val client = createPostChainClient(blockchainRid)
         val builder = createSignedNopTx(client, blockchainRid)
@@ -119,7 +119,7 @@ class PostChainClientTest : IntegrationTestSetup() {
 
     @Test
     fun testPostTransactionApiConfirmLevelNoWaitPromise() {
-        val nodes = createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
+        createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
         val client = createPostChainClient(blockchainRid)
         val builder = createSignedNopTx(client, blockchainRid)
@@ -133,7 +133,7 @@ class PostChainClientTest : IntegrationTestSetup() {
 
     @Test
     fun testPostTransactionApiConfirmLevelUnverified() {
-        val nodes = createTestNodes(3, "/net/postchain/devtools/api/blockchain_config.xml")
+        createTestNodes(3, "/net/postchain/devtools/api/blockchain_config.xml")
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
         val client = createPostChainClient(blockchainRid)
         val builder = createSignedNopTx(client, blockchainRid)
@@ -143,7 +143,7 @@ class PostChainClientTest : IntegrationTestSetup() {
 
     @Test
     fun testQueryGtxClientApiPromise() {
-        val nodes = createTestNodes(3, "/net/postchain/devtools/api/blockchain_config.xml")
+        createTestNodes(3, "/net/postchain/devtools/api/blockchain_config.xml")
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
         val client = createPostChainClient(blockchainRid)
         val builder = createSignedNopTx(client, blockchainRid)

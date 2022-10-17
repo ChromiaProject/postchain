@@ -64,10 +64,10 @@ class IntNettyConnector2PeersCommunicationIT {
         await().atMost(FIVE_SECONDS)
                 .untilAsserted {
                     verify(context1.events).onNodeConnected(connection1.capture())
-                    assert(connection1.firstValue.descriptor().nodeId!!.byteArray).isContentEqualTo(peerInfo2.pubKey)
+                    assert(connection1.firstValue.descriptor().nodeId.byteArray).isContentEqualTo(peerInfo2.pubKey)
 
                     verify(context2.events).onNodeConnected(connection2.capture())
-                    assert(connection2.firstValue.descriptor().nodeId!!.byteArray).isContentEqualTo(peerInfo1.pubKey)
+                    assert(connection2.firstValue.descriptor().nodeId.byteArray).isContentEqualTo(peerInfo1.pubKey)
                 }
 
         // Sending packets

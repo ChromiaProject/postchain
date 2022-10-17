@@ -31,13 +31,10 @@ class SinglePeerDoubleChainsDependencyTest : ConfigFileBasedIntegrationTest() {
 
         // Launching blockchain
         val blockchainConfig = readBlockchainConfig(blockchainConfigFilename)
-        val blockchainRid = node.addBlockchain(1L, blockchainConfig)
+        node.addBlockchain(1L, blockchainConfig)
         assertk.assert {
             node.startBlockchain(1L)
         }.thrownError { }
     }
 
-
-
 }
-
