@@ -135,8 +135,8 @@ data class SystemSetup(
         val retBcSetups = mutableListOf<BlockchainSetup>()
         var debugStr = ""
         sortedChains.forEach {
-            debugStr += ", ${it.chainId!!}"
-            val bcSetup = blockchainMap[it.chainId!!.toInt()]!!
+            debugStr += ", ${it.chainId}"
+            val bcSetup = blockchainMap[it.chainId]!!
             retBcSetups.add(bcSetup)
         }
         System.out.println("-- Chain start order $debugStr")

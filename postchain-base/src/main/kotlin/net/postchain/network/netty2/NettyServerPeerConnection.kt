@@ -67,7 +67,7 @@ class NettyServerPeerConnection<PacketType>(
                 onConnectedHandler?.invoke(this)
             } else {
                 if (peerConnectionDescriptor != null) {
-                    peerPacketHandler?.handle(message, peerConnectionDescriptor!!.nodeId!!)
+                    peerPacketHandler?.handle(message, peerConnectionDescriptor!!.nodeId)
                 }
             }
             msg.release()

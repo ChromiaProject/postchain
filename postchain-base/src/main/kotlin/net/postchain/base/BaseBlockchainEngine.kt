@@ -80,8 +80,8 @@ open class BaseBlockchainEngine(
         initialized = true
     }
 
-    override fun setAfterCommitHandler(handler: AfterCommitHandler) {
-        afterCommitHandler = handler
+    override fun setAfterCommitHandler(afterCommitHandler: AfterCommitHandler) {
+        this.afterCommitHandler = afterCommitHandler
     }
 
     override fun getTransactionQueue(): TransactionQueue {

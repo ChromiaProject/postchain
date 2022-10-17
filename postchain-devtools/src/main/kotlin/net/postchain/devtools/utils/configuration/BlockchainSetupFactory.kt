@@ -63,7 +63,7 @@ object BlockchainSetupFactory : KLogging() {
         val chainRidDependencies = mutableSetOf<BlockchainRid>()
         val dep = bcGtv[KEY_DEPENDENCIES]
         if (dep != null) {
-            val bcRelatedInfos = BaseDependencyFactory.build(dep!!)
+            val bcRelatedInfos = BaseDependencyFactory.build(dep)
             for (bcRelatedInfo in bcRelatedInfos) {
                 chainRidDependencies.add(bcRelatedInfo.blockchainRid)
             }

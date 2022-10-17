@@ -24,9 +24,9 @@ class NullSpecialTransactionHandler : SpecialTransactionHandler {
     }
 
     override fun validateSpecialTransaction(
-        position: SpecialTransactionPosition,
-        tx: Transaction,
-        bctx: BlockEContext
+            position: SpecialTransactionPosition,
+            tx: Transaction,
+            ectx: BlockEContext
     ): Boolean {
         throw ProgrammerMistake("NullSpecialTransactionHandler.createSpecialTransaction")
     }

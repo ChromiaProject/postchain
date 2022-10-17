@@ -3,15 +3,15 @@
 package net.postchain.configurations
 
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.gtx.GTXSchemaManager
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.EContext
+import net.postchain.core.TxEContext
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXOperation
+import net.postchain.gtx.GTXSchemaManager
 import net.postchain.gtx.SimpleGTXModule
-import net.postchain.core.EContext
-import net.postchain.core.TxEContext
 import net.postchain.gtx.data.ExtOpData
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
@@ -64,17 +64,17 @@ class GTXTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
  */
 class GTXTestModule : SimpleGTXModule<Unit>(Unit,
     mapOf("gtx_test" to ::GTXTestOp),
-    mapOf("gtx_test_get_value" to { u, ctxt, args ->
-        val txRID = (args as GtvDictionary).get("txRID")
-            ?: throw UserMistake("No txRID property supplied")
+        mapOf("gtx_test_get_value" to { _, ctxt, args ->
+            val txRID = (args as GtvDictionary).get("txRID")
+                    ?: throw UserMistake("No txRID property supplied")
 
-        val sql = """
+            val sql = """
                 SELECT value FROM ${table_gtx_test_value(ctxt)} g
                 INNER JOIN ${table_transactions(ctxt)} t ON g.tx_iid=t.tx_iid
                 WHERE t.tx_rid = ?
             """.trimIndent()
-        val value = r.query(ctxt.conn, sql, nullableStringReader, txRID.asByteArray(true))
-        if (value == null)
+            val value = r.query(ctxt.conn, sql, nullableStringReader, txRID.asByteArray(true))
+            if (value == null)
             GtvNull
         else
             gtv(value)

@@ -11,20 +11,24 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.NodeRid
-import net.postchain.crypto.Signature
-import net.postchain.core.block.BlockData
-import net.postchain.core.block.BlockHeader
-import net.postchain.core.block.BlockWitness
 import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
+import net.postchain.core.NodeRid
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
-import net.postchain.core.TxEContext
 import net.postchain.core.TxDetail
+import net.postchain.core.TxEContext
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockWitness
+import net.postchain.crypto.Signature
 import org.apache.commons.dbutils.QueryRunner
-import org.apache.commons.dbutils.handlers.*
+import org.apache.commons.dbutils.handlers.BeanHandler
+import org.apache.commons.dbutils.handlers.BeanListHandler
+import org.apache.commons.dbutils.handlers.ColumnListHandler
+import org.apache.commons.dbutils.handlers.MapListHandler
+import org.apache.commons.dbutils.handlers.ScalarHandler
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant
@@ -264,11 +268,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val blockHeader = txInfo["block_header_data"] as ByteArray
         val blockWitness = txInfo["block_witness"] as ByteArray
         val blockTimestamp = txInfo["timestamp"] as Long
-        val txRID = txInfo["tx_rid"] as ByteArray
+        val resultTxRID = txInfo["tx_rid"] as ByteArray
         val txHash = txInfo["tx_hash"] as ByteArray
         val txData = txInfo["tx_data"] as ByteArray
         return TransactionInfoExt(
-                blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, txRID, txHash, txData)
+                blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, resultTxRID, txHash, txData)
     }
 
     override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt> {
@@ -492,8 +496,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     queryRunner.update(connection, cmdCreateTableMustSyncUntil())
 
                     // Update db version to the latest
-                    val sql = "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'"
-                    queryRunner.update(connection, sql, expectedDbVersion)
+                    queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                     logger.info("Database version has been updated to version: $expectedDbVersion")
                 }
 
@@ -796,7 +799,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, query, ScalarHandler<Long>()) > 0
     }
 
-    override fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubkey: String): Set<BlockchainRid> {
+    override fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubKey: String): Set<BlockchainRid> {
         val delete = """DELETE FROM ${tableBlockchainReplicas()} 
                 WHERE $TABLE_REPLICAS_FIELD_PUBKEY = ?"""
         val res = if (brid == null) {
@@ -804,14 +807,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 $delete
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubkey)
+            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey)
         } else {
             val sql = """
                 $delete
                 AND $TABLE_REPLICAS_FIELD_BRID = ?
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubkey, brid)
+            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey, brid)
         }
         return res.map { BlockchainRid.buildFromHex(it) }.toSet()
     }

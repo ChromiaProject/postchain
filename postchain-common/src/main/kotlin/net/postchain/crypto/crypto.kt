@@ -37,7 +37,7 @@ typealias Verifier = (ByteArray, Signature) -> Boolean
 interface CryptoSystem {
     fun digest(bytes: ByteArray): ByteArray
     fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker
-    fun verifyDigest(ddigest: ByteArray, s: Signature): Boolean
+    fun verifyDigest(digest: ByteArray, s: Signature): Boolean
     fun makeVerifier(): Verifier
     fun getRandomBytes(size: Int): ByteArray
 }

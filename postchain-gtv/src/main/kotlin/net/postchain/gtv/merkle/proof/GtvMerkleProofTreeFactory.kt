@@ -5,9 +5,27 @@ package net.postchain.gtv.merkle.proof
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
-import net.postchain.gtv.*
-import net.postchain.gtv.merkle.*
-import net.postchain.gtv.merkle.path.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvPrimitive
+import net.postchain.gtv.GtvString
+import net.postchain.gtv.merkle.BinaryTreeElement
+import net.postchain.gtv.merkle.EmptyLeaf
+import net.postchain.gtv.merkle.GtvArrayHeadNode
+import net.postchain.gtv.merkle.GtvBinaryTree
+import net.postchain.gtv.merkle.GtvDictHeadNode
+import net.postchain.gtv.merkle.GtvMerkleBasics
+import net.postchain.gtv.merkle.Leaf
+import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkle.Node
+import net.postchain.gtv.merkle.SubTreeRootNode
+import net.postchain.gtv.merkle.path.ArrayGtvPathElement
+import net.postchain.gtv.merkle.path.DictGtvPathElement
+import net.postchain.gtv.merkle.path.GtvPathElement
+import net.postchain.gtv.merkle.path.GtvPathLeafElement
+import net.postchain.gtv.merkle.path.SearchableGtvPathElement
 
 
 /**
@@ -109,8 +127,7 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
         return when (currentNode) {
             is GtvArrayHeadNode -> ProofNodeGtvArrayHead(currentNode.size, left, right, extractSearchablePathElement(currentNode))
             is GtvDictHeadNode -> ProofNodeGtvDictHead(currentNode.size, left, right, extractSearchablePathElement(currentNode))
-            is Node -> ProofNodeSimple(left, right)
-            else -> throw IllegalStateException("Should have taken care of this node type: $currentNode")
+            else -> ProofNodeSimple(left, right)
         }
     }
 

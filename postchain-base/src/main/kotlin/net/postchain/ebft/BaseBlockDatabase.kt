@@ -7,7 +7,13 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockchainEngine
-import net.postchain.core.block.*
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.ManagedBlockBuilder
+import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.Signature
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.deferred
@@ -104,23 +110,22 @@ class BaseBlockDatabase(
      * This is why we there is no use setting the [BlockTrace] for this method, we have to send the bTrace instance
      *
      * @param block to be added
-     * @param prevCompletionPromise is the promise for the previous block (by the time we access this promise it
-     *                              will be "done").
+     * @param dependsOn is the promise for the previous block (by the time we access this promise it will be "done").
      * @param existingBTrace is the trace data of the block we have at current moment. For production this is "null"
      */
-    override fun addBlock(block: BlockDataWithWitness, prevCompletionPromise: CompletionPromise?,
+    override fun addBlock(block: BlockDataWithWitness, dependsOn: CompletionPromise?,
                           existingBTrace: BlockTrace?): Promise<Unit, Exception> {
         queuedBlockCount.incrementAndGet()
         return runOpAsync("addBlock ${block.header.blockRID.toHex()}") {
             queuedBlockCount.decrementAndGet()
-            if (prevCompletionPromise != null) {
-                if (!prevCompletionPromise.isSuccess()) {
-                    if (prevCompletionPromise.isFailure()) {
-                        throw BDBAbortException(block, prevCompletionPromise)
+            if (dependsOn != null) {
+                if (!dependsOn.isSuccess()) {
+                    if (dependsOn.isFailure()) {
+                        throw BDBAbortException(block, dependsOn)
                     } else {
                         // The [ThreadPoolExecutor] guarantees prev promise will be "done" at this point.
                         // If we get here the caller must have sent the incorrect promise.
-                        throw ProgrammerMistake("Previous completion is unfinished ${prevCompletionPromise.isDone()}")
+                        throw ProgrammerMistake("Previous completion is unfinished ${dependsOn.isDone()}")
                     }
                 }
             }
@@ -213,12 +218,12 @@ class BaseBlockDatabase(
     // Only for logging
     // -----------
 
-    override fun setBlockTrace(bTrace: BlockTrace) {
-        if (this.blockBuilder != null){
+    override fun setBlockTrace(blockTrace: BlockTrace) {
+        if (this.blockBuilder != null) {
             if (this.blockBuilder!!.getBTrace() != null) {
-                this.blockBuilder!!.getBTrace()!!.addDataIfMissing(bTrace)
+                this.blockBuilder!!.getBTrace()!!.addDataIfMissing(blockTrace)
             } else {
-                this.blockBuilder!!.setBTrace(bTrace) // use the one we got
+                this.blockBuilder!!.setBTrace(blockTrace) // use the one we got
             }
         }
     }
@@ -227,9 +232,8 @@ class BaseBlockDatabase(
         addBlockLog("About to commit", newBlockTrace)
         if (existingBTrace != null) {
             if (newBlockTrace != null) {
-                val newBt = newBlockTrace!!
-                existingBTrace.blockRid = newBt.blockRid // Our old BTrace doesn't have the block RID
-                newBt.addDataIfMissing(existingBTrace) // Overwrite if doesn't exist
+                existingBTrace.blockRid = newBlockTrace.blockRid // Our old BTrace doesn't have the block RID
+                newBlockTrace.addDataIfMissing(existingBTrace) // Overwrite if it doesn't exist
             } else {
                 addBlockLog("ERROR why no BTrace?")
             }

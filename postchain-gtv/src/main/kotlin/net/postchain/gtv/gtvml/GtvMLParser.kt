@@ -35,6 +35,7 @@ object GtvMLParser {
         return if (isParam(qName)) {
             parseParam(value as ParamType, params)
         } else {
+            @Suppress("REDUNDANT_ELSE_IN_WHEN") // Compiler warning, but still useful if new types are added.
             when (GtvTypeOf(qName)) {
                 NULL -> GtvNull
                 STRING -> GtvString(value as String)
@@ -43,7 +44,7 @@ object GtvMLParser {
                 BYTEARRAY -> GtvByteArray(value as ByteArray)
                 ARRAY -> parseArrayGtvML(value as ArrayType, params)
                 DICT -> parseDictGtvML(value as DictType, params)
-                else -> throw IllegalStateException("Type not known: ${GtvTypeOf(qName)}") // Compiler warning, but still useful if new types are added.
+                else -> throw IllegalStateException("Type not known: ${GtvTypeOf(qName)}")
             }
         }
     }

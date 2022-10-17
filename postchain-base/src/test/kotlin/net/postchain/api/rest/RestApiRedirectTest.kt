@@ -50,7 +50,7 @@ class RestApiRedirectTest {
                 "OK"
             }
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID", "application/json") { req, res ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID", "application/json") { _, _ ->
                 "Hello Kitty"
             }
         }

@@ -30,8 +30,8 @@ class ChainWithPeerConnections(
 
     override fun shouldConnectAll(): Boolean = connectAll
 
-    override fun isNodeBehavingWell(peerId: NodeRid): Boolean {
-        return peerConfig.commConfiguration.networkNodes.isNodeBehavingWell(peerId, System.currentTimeMillis())
+    override fun isNodeBehavingWell(nodeId: NodeRid): Boolean {
+        return peerConfig.commConfiguration.networkNodes.isNodeBehavingWell(nodeId, System.currentTimeMillis())
     }
 
     override fun getAllNodes() = connections.keys.toList()
