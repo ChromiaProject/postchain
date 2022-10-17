@@ -6,7 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.base.data.DatabaseAccess
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
@@ -25,8 +25,7 @@ class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", h
         printCommandInfo()
 
         runStorageCommand(nodeConfigFile, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
-            val count = db.removeConfiguration(ctx, height)
+            val count = BlockchainApi.removeConfiguration(ctx, height)
             if (count > 0)
                 println("Removed configuration at height $height")
             else

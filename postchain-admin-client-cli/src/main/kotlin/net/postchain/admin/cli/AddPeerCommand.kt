@@ -8,7 +8,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPeerServiceChannelOption
 import net.postchain.admin.cli.util.pubkeyOption
-import net.postchain.server.service.AddPeerRequest
+import net.postchain.server.grpc.AddPeerRequest
 
 class AddPeerCommand : CliktCommand(help = "Add peer information to database") {
 

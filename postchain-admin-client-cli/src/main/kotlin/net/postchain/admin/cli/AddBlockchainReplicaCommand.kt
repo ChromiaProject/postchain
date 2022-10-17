@@ -6,7 +6,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.pubkeyOption
-import net.postchain.server.service.AddBlockchainReplicaRequest
+import net.postchain.server.grpc.AddBlockchainReplicaRequest
 
 class AddBlockchainReplicaCommand : CliktCommand("Add a peer as replica for a blockchain") {
 

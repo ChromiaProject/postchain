@@ -1,4 +1,4 @@
-package net.postchain.server.service
+package net.postchain.server.grpc
 
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -8,7 +8,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataMistake
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.service.PostchainService
+import net.postchain.server.service.PostchainService
 
 class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         PostchainServiceGrpc.PostchainServiceImplBase() {
