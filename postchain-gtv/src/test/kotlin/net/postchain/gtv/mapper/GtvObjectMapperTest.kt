@@ -6,6 +6,7 @@ import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.isContentEqualTo
+import net.postchain.common.types.RowId
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
@@ -72,7 +73,8 @@ internal class GtvObjectMapperTest {
                 @Name("long") val l: Long,
                 @Name("enum") val e: SimpleEnum,
                 @Name("byte") val b: ByteArray, // Do not run isEqualTo
-                @Name("wbyte") val w: WrappedByteArray // Do not run isEqualTo
+                @Name("wbyte") val w: WrappedByteArray,
+                @Name("row") val r: RowId
         )
 
         val actual = gtv(mapOf(
@@ -80,13 +82,15 @@ internal class GtvObjectMapperTest {
                 "long" to gtv(1),
                 "enum" to gtv("A"),
                 "byte" to gtv("b".toByteArray()),
-                "wbyte" to gtv("w".toByteArray())
+                "wbyte" to gtv("w".toByteArray()),
+                "row" to gtv(RowId(17).id)
         )).toObject<AllTypes>()
         assert(actual.l).isEqualTo(1L)
         assert(actual.s).isEqualTo("a")
         assert(actual.e).isEqualTo(SimpleEnum.A)
         assert(actual.b).isContentEqualTo("b".toByteArray())
         assert(actual.w).isEqualTo(WrappedByteArray("w".toByteArray()))
+        assert(actual.r).isEqualTo(RowId(17))
     }
 
     @Test
