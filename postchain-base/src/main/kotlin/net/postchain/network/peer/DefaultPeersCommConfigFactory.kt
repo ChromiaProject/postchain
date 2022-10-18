@@ -19,13 +19,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
             blockchainConfig: BlockchainConfiguration,
             historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration {
-        // We should not automatically consider signers as peers if this chain is a copy of another chain
-        val peers = if (historicBlockchainContext != null && historicBlockchainContext.historicBrid != blockchainConfig.blockchainRid) {
-            listOf()
-        } else {
-            blockchainConfig.signers
-        }
-
+        val peers = getChainPeersFromConfig(historicBlockchainContext, blockchainConfig)
         return create(appConfig, nodeConfig, blockchainConfig.blockchainRid, peers, historicBlockchainContext)
     }
 
@@ -47,6 +41,15 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
         )
     }
 
+    protected fun getChainPeersFromConfig(historicBlockchainContext: HistoricBlockchainContext?, blockchainConfig: BlockchainConfiguration): List<ByteArray> {
+        // We should not automatically consider signers as peers if this chain is a copy of another chain
+        return if (historicBlockchainContext != null && historicBlockchainContext.historicBrid != blockchainConfig.blockchainRid) {
+            listOf()
+        } else {
+            blockchainConfig.signers
+        }
+    }
+
     /**
      * The [NodeConfig] has knowledge of many postchain nodes, but we want to narrow this list down to only
      * contain nodes that can be useful for the given blockchain.
@@ -59,7 +62,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
      * @return a map from [NodeRid] to [PeerInfo] containing as many nodes we can ever have any use for w/ regards
      *         to the given BC. Only nodes that are obviously useless are removed.
      */
-    protected fun buildRelevantNodeInfoMap(
+    private fun buildRelevantNodeInfoMap(
             appConfig: AppConfig,
             nodeConfig: NodeConfig,
             blockchainRid: BlockchainRid,
@@ -86,8 +89,9 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
         // 2. All FULL node replicas
         // 3. All nodes that replicates the BC
         // 4. This node itself
+        // 5. All ancestor nodes
         return nodeConfig.peerInfoMap.filterKeys {
-            it in peers0 || it in ancestors || it in peersReplicas || it in blockchainReplicas || it == myNodeRid
+            it in peers0 || it in peersReplicas || it in blockchainReplicas || it == myNodeRid || it in ancestors
         }
     }
 }
