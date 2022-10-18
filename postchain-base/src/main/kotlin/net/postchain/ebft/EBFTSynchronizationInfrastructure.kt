@@ -9,7 +9,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
@@ -20,7 +19,6 @@ import net.postchain.network.CommunicationManager
 import net.postchain.network.common.*
 import net.postchain.network.peer.*
 
-@Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
     protected val postchainContext: PostchainContext,
     val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
@@ -79,10 +77,10 @@ open class EBFTSynchronizationInfrastructure(
 
             historicBlockchainContext.contextCreator = { brid ->
                 val historicPeerCommConfiguration = if (brid == historicBrid) {
-                    peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
+                    peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, brid, blockchainConfig.signers, historicBlockchainContext)
                 } else {
                     // It's an ancestor brid for historicBrid
-                    buildPeerCommConfigurationForAncestor(historicBlockchainContext, brid)
+                    peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, brid, listOf(), historicBlockchainContext)
                 }
                 val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, brid)
 
@@ -168,65 +166,6 @@ open class EBFTSynchronizationInfrastructure(
             packetDecoder,
             processName
         ).apply { init() }
-    }
-
-    // TODO: [POS-129] Merge: move it to [DefaultPeersCommConfigFactory]
-    private fun buildPeerCommConfigurationForAncestor(
-        historicBlockchainContext: HistoricBlockchainContext,
-        ancBrid: BlockchainRid
-    ): PeerCommConfiguration {
-        val myPeerID = NodeRid(postchainContext.appConfig.pubKeyByteArray)
-        val peersThatServeAncestorBrid = historicBlockchainContext.ancestors[ancBrid]!!
-
-        val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
-            it in peersThatServeAncestorBrid || it == myPeerID
-        }
-
-        return BasePeerCommConfiguration.build(
-                relevantPeerMap.values,
-                Secp256K1CryptoSystem(),
-                postchainContext.appConfig.privKeyByteArray,
-                postchainContext.appConfig.pubKeyByteArray
-        )
-    }
-
-    /**
-     * To calculate the [relevantPeerMap] we need to:
-     *
-     * 1. begin with the signers (from the BC config)
-     * 2. add all NODE replicas (from node config)
-     * 3. add BC replicas (from node config)
-     *
-     * TODO: Could getRelevantPeers() be a method inside [NodeConfig]?
-     */
-    private fun buildPeerCommConfiguration(
-        nodeConfig: NodeConfig,
-        blockchainConfig: BaseBlockchainConfiguration,
-        historicBlockchainContext: HistoricBlockchainContext? = null
-    ): PeerCommConfiguration {
-        val myPeerID = NodeRid(postchainContext.appConfig.pubKeyByteArray)
-        val signers = blockchainConfig.signers.map { NodeRid(it) }
-        val signersReplicas = signers.flatMap {
-            nodeConfig.nodeReplicas[it] ?: listOf()
-        }
-        val blockchainReplicas = if (historicBlockchainContext != null) {
-            (nodeConfig.blockchainReplicaNodes[historicBlockchainContext.historicBrid] ?: listOf()).union(
-                nodeConfig.blockchainReplicaNodes[blockchainConfig.blockchainRid] ?: listOf()
-            )
-        } else {
-            nodeConfig.blockchainReplicaNodes[blockchainConfig.blockchainRid] ?: listOf()
-        }
-
-        val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
-            it in signers || it in signersReplicas || it in blockchainReplicas || it == myPeerID
-        }
-
-        return BasePeerCommConfiguration.build(
-                relevantPeerMap.values,
-                Secp256K1CryptoSystem(),
-                postchainContext.appConfig.privKeyByteArray,
-                postchainContext.appConfig.pubKeyByteArray
-        )
     }
 
     private fun getStartWithFastSyncValue(chainId: Long): Boolean {

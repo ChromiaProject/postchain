@@ -19,7 +19,14 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
             blockchainConfig: BlockchainConfiguration,
             historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration {
-        return create(appConfig, nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers, historicBlockchainContext)
+        // We should not automatically consider signers as peers if this chain is a copy of another chain
+        val peers = if (historicBlockchainContext != null && historicBlockchainContext.historicBrid != blockchainConfig.blockchainRid) {
+            listOf()
+        } else {
+            blockchainConfig.signers
+        }
+
+        return create(appConfig, nodeConfig, blockchainConfig.blockchainRid, peers, historicBlockchainContext)
     }
 
     override fun create(
@@ -72,13 +79,15 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
             nodeConfig.blockchainReplicaNodes[blockchainRid] ?: listOf()
         }
 
+        val ancestors = historicBlockchainContext?.ancestors?.get(blockchainRid) ?: setOf()
+
         // We keep
         // 1. All BC's peers
         // 2. All FULL node replicas
         // 3. All nodes that replicates the BC
         // 4. This node itself
         return nodeConfig.peerInfoMap.filterKeys {
-            it in peers0 || it in peersReplicas || it in blockchainReplicas || it == myNodeRid
+            it in peers0 || it in ancestors || it in peersReplicas || it in blockchainReplicas || it == myNodeRid
         }
     }
 }
