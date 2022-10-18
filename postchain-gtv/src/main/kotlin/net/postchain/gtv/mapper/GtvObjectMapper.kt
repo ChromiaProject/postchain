@@ -172,7 +172,7 @@ private fun classToGtv(obj: Any, other: (Any) -> Gtv =  { GtvObjectMapper.toGtvA
         obj::class.java.isBigInteger() -> gtv(obj as BigInteger)
         obj::class.java.isByteArray() -> gtv(obj as ByteArray)
         obj::class.java.isWrappedByteArray() -> gtv(obj as WrappedByteArray)
-        obj::class.java.isRowId() -> gtv(obj as RowId)
+        obj::class.java.isRowId() -> gtv((obj as RowId).id)
         else -> other(obj)
     }
 }

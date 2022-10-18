@@ -83,7 +83,7 @@ internal class GtvObjectMapperTest {
                 "enum" to gtv("A"),
                 "byte" to gtv("b".toByteArray()),
                 "wbyte" to gtv("w".toByteArray()),
-                "row" to gtv(RowId(17))
+                "row" to gtv(RowId(17).id)
         )).toObject<AllTypes>()
         assert(actual.l).isEqualTo(1L)
         assert(actual.s).isEqualTo("a")

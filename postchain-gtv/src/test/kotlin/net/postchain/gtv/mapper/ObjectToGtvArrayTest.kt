@@ -52,7 +52,7 @@ class ObjectToGtvArrayTest {
                 gtv("A"),
                 gtv(BigInteger.ONE),
                 gtv(WrappedByteArray(16)),
-                gtv(RowId(17))
+                gtv(RowId(17).id)
         ).toTypedArray())
     }
 
