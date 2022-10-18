@@ -15,7 +15,7 @@ class TransactionBuilder(
         signers: List<ByteArray>,
         private val defaultSigners: List<SigMaker> = listOf(),
         cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
-) : TransactionPostable {
+) : Postable {
     private val gtxBuilder = GtxBuilder(blockchainRid, signers, cryptoSystem)
 
     /**
@@ -88,7 +88,7 @@ class TransactionBuilder(
         fun buildGtx() = signBuilder.buildGtx()
     }
 
-    inner class PostableTransaction(private val tx: Gtx) : TransactionPostable {
+    inner class PostableTransaction(private val tx: Gtx) : Postable {
 
         /**
          * [PostchainClient.postTransaction]
