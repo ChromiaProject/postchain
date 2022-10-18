@@ -4,6 +4,7 @@ package net.postchain.gtv
 
 import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.common.BlockchainRid
+import net.postchain.common.types.RowId
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.gtvmessages.DictPair
 import net.postchain.gtv.gtvmessages.RawGtv
@@ -43,6 +44,10 @@ object GtvFactory {
 
     fun gtv(ba: BlockchainRid): GtvByteArray {
         return GtvByteArray(ba.data)
+    }
+
+    fun gtv(rowId: RowId): GtvInteger {
+        return GtvInteger(rowId.id)
     }
 
     fun gtv(vararg a: Gtv): GtvArray {
