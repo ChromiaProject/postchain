@@ -2,10 +2,10 @@ package net.postchain.network.mastersub.subnode
 
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.PeerCommConfiguration
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.network.peer.DefaultPeersCommConfigFactory
 
 class DefaultSubPeersCommConfigFactory : DefaultPeersCommConfigFactory() {
@@ -16,16 +16,20 @@ class DefaultSubPeersCommConfigFactory : DefaultPeersCommConfigFactory() {
             blockchainConfig: BlockchainConfiguration,
             historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration {
+        val config = super.create(appConfig, nodeConfig, blockchainConfig, historicBlockchainContext)
 
-        val relevantPeerMap = buildRelevantNodeInfoMap(appConfig, nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers,
-                historicBlockchainContext)
+        return DefaultSubPeerCommConfig(config, getChainPeersFromConfig(historicBlockchainContext, blockchainConfig))
+    }
 
-        return DefaultSubPeerCommConfig.build(
-                relevantPeerMap,
-                Secp256K1CryptoSystem(),
-                appConfig.privKeyByteArray,
-                appConfig.pubKeyByteArray,
-                blockchainConfig.signers
-        )
+    override fun create(
+            appConfig: AppConfig,
+            nodeConfig: NodeConfig,
+            blockchainRid: BlockchainRid,
+            peers: List<ByteArray>,
+            historicBlockchainContext: HistoricBlockchainContext?
+    ): PeerCommConfiguration {
+        val config = super.create(appConfig, nodeConfig, blockchainRid, peers, historicBlockchainContext)
+
+        return DefaultSubPeerCommConfig(config, peers)
     }
 }

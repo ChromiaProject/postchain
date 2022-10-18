@@ -137,6 +137,12 @@ class FastSynchronizer(
             logger.debug("syncUntilResponsiveNodesDrained() begin with exitDelay: ${params.exitDelay}")
         }
         syncUntil {
+            // We will never be able to sync anything if there are no configured peers
+            if (configuredPeers.isEmpty()) {
+                logger.debug("No configured peers. Exiting fast sync")
+                return@syncUntil true
+            }
+
             val syncableCount = peerStatuses.getSyncableAndConnected(blockHeight + 1).intersect(configuredPeers).size
 
             // Keep syncing until this becomes true, i.e. to exit we must have:

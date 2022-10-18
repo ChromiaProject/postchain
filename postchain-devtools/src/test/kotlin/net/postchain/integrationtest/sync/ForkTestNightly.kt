@@ -337,7 +337,6 @@ class ForkTestNightly : ManagedModeTest() {
                 } else {
                     addBlockchainConfiguration(c, configHeight, setOf(config), setOf(), config.toLong())
                 }
-                buildBlock(c0) // Trigger all blockchain changes
                 awaitChainRestarted(chainConfig, configHeight-1)
                 chains[node] = chainConfig
             }

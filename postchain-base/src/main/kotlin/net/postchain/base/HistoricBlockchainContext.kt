@@ -16,8 +16,8 @@ class HistoricBlockchainContext(val historicBrid: BlockchainRid,
      * @param myBRID is a BC RID we always wanna use, i.e. the "real" one
      * @return a list of alternative names
      */
-    fun getChainsToSyncFrom(myBRID: BlockchainRid): List<BlockchainRid> {
-        val chainsToSyncFrom = mutableListOf(
+    fun getChainsToSyncFrom(myBRID: BlockchainRid): Set<BlockchainRid> {
+        val chainsToSyncFrom = mutableSetOf(
                 myBRID,
                 historicBrid
         )
