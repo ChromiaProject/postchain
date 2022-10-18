@@ -10,12 +10,12 @@ import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBuilder
 
 class TransactionBuilder(
-    private val client: PostchainClient,
-    blockchainRid: BlockchainRid,
-    signers: List<ByteArray>,
-    private val defaultSigners: List<SigMaker> = listOf(),
-    cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
-) {
+        private val client: PostchainClient,
+        blockchainRid: BlockchainRid,
+        signers: List<ByteArray>,
+        private val defaultSigners: List<SigMaker> = listOf(),
+        cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
+) : TransactionPostable {
     private val gtxBuilder = GtxBuilder(blockchainRid, signers, cryptoSystem)
 
     /**
@@ -33,17 +33,17 @@ class TransactionBuilder(
     /**
      * Sign this transaction with default signers and [PostchainClient.postTransaction]
      */
-    fun post() = sign().post()
+    override fun post() = sign().post()
 
     /**
      * Sign this transaction with default signers and [PostchainClient.postTransactionSync]
      */
-    fun postSync() = sign().postSync()
+    override fun postSync() = sign().postSync()
 
     /**
      * Sign this transaction with default signers and [PostchainClient.postTransactionSyncAwaitConfirmation]
      */
-    fun postSyncAwaitConfirmation() = sign().postSyncAwaitConfirmation()
+    override fun postSyncAwaitConfirmation() = sign().postSyncAwaitConfirmation()
 
     /**
      * Sign this transaction with the [defaultSigners] and prepare it to be posted
@@ -88,21 +88,21 @@ class TransactionBuilder(
         fun buildGtx() = signBuilder.buildGtx()
     }
 
-    inner class PostableTransaction(private val tx: Gtx) {
+    inner class PostableTransaction(private val tx: Gtx) : TransactionPostable {
 
         /**
          * [PostchainClient.postTransaction]
          */
-        fun post() = client.postTransaction(tx)
+        override fun post() = client.postTransaction(tx)
 
         /**
          * [PostchainClient.postTransactionSync]
          */
-        fun postSync() = client.postTransactionSync(tx)
+        override fun postSync() = client.postTransactionSync(tx)
 
         /**
          * [PostchainClient.postTransactionSyncAwaitConfirmation]
          */
-        fun postSyncAwaitConfirmation() = client.postTransactionSyncAwaitConfirmation(tx)
+        override fun postSyncAwaitConfirmation() = client.postTransactionSyncAwaitConfirmation(tx)
     }
 }
