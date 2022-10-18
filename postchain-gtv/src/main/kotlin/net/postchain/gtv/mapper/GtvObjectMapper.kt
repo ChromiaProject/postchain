@@ -1,5 +1,6 @@
 package net.postchain.gtv.mapper
 
+import net.postchain.common.types.RowId
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.gtv.Gtv
@@ -63,7 +64,6 @@ object GtvObjectMapper {
      *
      * @param transientMap If the mapped class has any transient fields, supply them in this map
      */
-    @Suppress("UNCHECKED_CAST")
     fun <T : Any> fromArray(gtv: Gtv, classType: KClass<T>, transientMap: Map<String, Any> = mapOf()) = fromArray(gtv, classType.java, transientMap)
 
     /**
@@ -88,7 +88,6 @@ object GtvObjectMapper {
      *
      * @param transientMap If the mapped class has any transient fields, supply them in this map
      */
-    @Suppress("UNCHECKED_CAST")
     fun <T : Any> fromGtv(gtv: Gtv, classType: KClass<T>, transientMap: Map<String, Any> = mapOf()) = fromGtv(gtv, classType.java, transientMap)
 
     /**
@@ -173,6 +172,7 @@ private fun classToGtv(obj: Any, other: (Any) -> Gtv =  { GtvObjectMapper.toGtvA
         obj::class.java.isBigInteger() -> gtv(obj as BigInteger)
         obj::class.java.isByteArray() -> gtv(obj as ByteArray)
         obj::class.java.isWrappedByteArray() -> gtv(obj as WrappedByteArray)
+        obj::class.java.isRowId() -> gtv((obj as RowId).id)
         else -> other(obj)
     }
 }
@@ -266,6 +266,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
         classType.isBoolean() -> gtv.asBoolean()
         classType.isByteArray() -> gtv.asByteArray()
         classType.isWrappedByteArray() -> gtv.asByteArray().wrap()
+        classType.isRowId() -> RowId(gtv.asInteger())
         classType.isBigInteger() -> gtv.asBigInteger()
         else -> {
             if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
@@ -300,6 +301,10 @@ private fun Class<*>.isByteArray(): Boolean {
 
 private fun Class<*>.isWrappedByteArray(): Boolean {
     return this == WrappedByteArray::class.java
+}
+
+private fun Class<*>.isRowId(): Boolean {
+    return this == RowId::class.java
 }
 
 private fun Class<*>.isBigInteger(): Boolean {
