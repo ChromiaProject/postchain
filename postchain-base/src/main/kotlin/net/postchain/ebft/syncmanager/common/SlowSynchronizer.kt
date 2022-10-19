@@ -193,7 +193,6 @@ class SlowSynchronizer(
             throw ProgrammerMistake("processedBlocks != blocks.size")
         }
 
-        blockHeight = expectedHeight - 1
         stateMachine.updateToWaitForCommit(processedBlocks, System.currentTimeMillis())
         return processedBlocks
     }
@@ -280,6 +279,7 @@ class SlowSynchronizer(
             .success {
                 logger.debug { "commitBlock() - Block height: $height committed successfully." }
                 stateMachine.updateAfterSuccessfulCommit(height, System.currentTimeMillis())
+                blockHeight = height
             }
             .fail {
                 // peer and try another peer
