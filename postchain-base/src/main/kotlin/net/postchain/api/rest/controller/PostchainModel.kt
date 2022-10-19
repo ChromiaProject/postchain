@@ -12,11 +12,11 @@ import net.postchain.base.BaseBlockQueries
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
 import net.postchain.common.TimeLog
-import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus.*
+import net.postchain.common.wrap
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
@@ -116,7 +116,7 @@ open class PostchainModel(
         }
 
         return if (status == REJECTED) {
-            val exception = txQueue.getRejectionReason(txRID.bytes.byteArrayKeyOf())
+            val exception = txQueue.getRejectionReason(txRID.bytes.wrap())
             ApiStatus(status, exception?.message)
         } else {
             ApiStatus(status)

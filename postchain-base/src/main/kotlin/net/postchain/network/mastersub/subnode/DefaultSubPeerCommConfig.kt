@@ -3,7 +3,7 @@ package net.postchain.network.mastersub.subnode
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerInfo
-import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.NodeRid
 import net.postchain.crypto.CryptoSystem
 
@@ -28,7 +28,7 @@ class DefaultSubPeerCommConfig(
                 pubKey: ByteArray,
                 peers: List<ByteArray>
         ): DefaultSubPeerCommConfig {
-            val nn = NetworkNodes.buildNetworkNodes(peerInfoMap.values, ByteArrayKey(pubKey))
+            val nn = NetworkNodes.buildNetworkNodes(peerInfoMap.values, WrappedByteArray(pubKey))
             return DefaultSubPeerCommConfig(nn, cryptoSystem, privKey, pubKey, peers)
         }
     }

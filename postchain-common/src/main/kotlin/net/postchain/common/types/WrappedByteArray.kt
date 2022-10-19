@@ -27,11 +27,6 @@ class WrappedByteArray(val data: ByteArray) {
     operator fun get(index: Int) = data[index]
 
     /**
-     * [ByteArray.set]
-     */
-    operator fun set(index: Int, value: Byte) = data.set(index, value)
-
-    /**
      * [ByteArray.iterator]
      */
     operator fun iterator() = data.iterator()
@@ -47,10 +42,11 @@ class WrappedByteArray(val data: ByteArray) {
         return true
     }
 
+
     override fun hashCode() = data.contentHashCode()
 
 
-    override fun toString() = data.contentToString()
+    override fun toString() = toHex()
 
     fun toHex() = data.toHex()
 

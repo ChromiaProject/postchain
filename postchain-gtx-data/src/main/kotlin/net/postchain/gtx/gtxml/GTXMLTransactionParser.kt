@@ -3,9 +3,9 @@
 package net.postchain.gtx.gtxml
 
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.ByteArrayKey
-import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
@@ -28,7 +28,7 @@ import javax.xml.bind.JAXBElement
 class TransactionContext(val blockchainRID: BlockchainRid?,
                          val params: Map<String, Gtv> = mapOf(),
                          val autoSign: Boolean = false,
-                         val signers: Map<ByteArrayKey, SigMaker> = mapOf()) {
+                         val signers: Map<WrappedByteArray, SigMaker> = mapOf()) {
 
     companion object {
         fun empty() = TransactionContext(null)
@@ -145,12 +145,12 @@ object GTXMLTransactionParser {
      * @param tx is the transaction to sign
      * @param signersMap is a map that tells us what [SigMaker] should be usd for each signer
      */
-    private fun signTransaction(tx: GtxBody, signatures: Array<ByteArray>, signersMap: Map<ByteArrayKey, SigMaker>, calculator: MerkleHashCalculator<Gtv>) {
+    private fun signTransaction(tx: GtxBody, signatures: Array<ByteArray>, signersMap: Map<WrappedByteArray, SigMaker>, calculator: MerkleHashCalculator<Gtv>) {
         val txSigners = tx.signers
         val txBodyMerkleRoot = tx.calculateTxRid(calculator)
         for (i in 0 until txSigners.size) {
             if (signatures[i].isEmpty()) {
-                val key = txSigners[i].byteArrayKeyOf()
+                val key = txSigners[i].wrap()
                 val sigMaker = signersMap[key] ?: throw IllegalArgumentException("Signer $key is absent")
                 signatures[i] = sigMaker.signDigest(txBodyMerkleRoot).data
             }

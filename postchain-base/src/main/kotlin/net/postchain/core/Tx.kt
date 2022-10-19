@@ -2,9 +2,9 @@
 
 package net.postchain.core
 
-import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.common.types.WrappedByteArray
 
 /**
  * Transactor is an individual operation which can be applied to the database
@@ -34,12 +34,12 @@ interface TransactionFactory {
 interface TransactionQueue {
     fun takeTransaction(): Transaction?
     fun enqueue(tx: Transaction): EnqueueTransactionResult
-    fun findTransaction(txRID: ByteArrayKey): Transaction?
+    fun findTransaction(txRID: WrappedByteArray): Transaction?
     fun getTransactionStatus(txHash: ByteArray): TransactionStatus
     fun getTransactionQueueSize(): Int
     fun removeAll(transactionsToRemove: Collection<Transaction>)
     fun rejectTransaction(tx: Transaction, reason: Exception?)
-    fun getRejectionReason(txRID: ByteArrayKey): Exception?
+    fun getRejectionReason(txRID: WrappedByteArray): Exception?
     fun retryAllTakenTransactions()
 }
 

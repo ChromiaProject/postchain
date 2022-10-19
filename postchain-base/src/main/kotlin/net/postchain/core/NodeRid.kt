@@ -1,6 +1,6 @@
 package net.postchain.core
 
-import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.types.WrappedByteArray
 
 /**
  * This is the public key of the node.
@@ -9,4 +9,4 @@ import net.postchain.common.data.ByteArrayKey
  *
  * (The type [ByteArrayKey] has everything we need)
  */
-typealias NodeRid = ByteArrayKey
+typealias NodeRid = WrappedByteArray

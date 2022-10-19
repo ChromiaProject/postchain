@@ -4,12 +4,12 @@ package net.postchain.integrationtest.reconnection
 
 import assertk.assertions.containsExactly
 import assertk.assertions.isFalse
-import net.postchain.common.data.byteArrayKeyOf
+import net.postchain.common.wrap
+import net.postchain.core.Transaction
 import net.postchain.core.block.BlockQueries
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.testinfra.TestTransaction
-import net.postchain.core.Transaction
 import nl.komponents.kovenant.Promise
 import java.util.*
 
@@ -38,9 +38,9 @@ open class ReconnectionTest : ConfigFileBasedIntegrationTest() {
         assertk.assert(blockRids == null).isFalse()
 
         // Asserting content of a block
-        val txsRids = queries(node) { it.getBlockTransactionRids(blockRids!!) }.map(ByteArray::byteArrayKeyOf)
+        val txsRids = queries(node) { it.getBlockTransactionRids(blockRids!!) }.map(ByteArray::wrap)
         assertk.assert(txsRids).containsExactly(
-                *txs.map { tx -> tx.getRID().byteArrayKeyOf() }.toTypedArray())
+                *txs.map { tx -> tx.getRID().wrap() }.toTypedArray())
     }
 
     @SuppressWarnings("unused")
