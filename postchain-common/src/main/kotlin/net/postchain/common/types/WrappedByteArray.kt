@@ -2,13 +2,14 @@ package net.postchain.common.types
 
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.toHex
+import org.spongycastle.util.Arrays
 
 /**
  * Wrapped [ByteArray] [equals] and [hashCode] implemented using [java.util.Arrays.equals] and [java.util.Arrays.hashCode].
  *
  * @param data the [ByteArray] to be wrapped
  */
-class WrappedByteArray(val data: ByteArray) {
+class WrappedByteArray(val data: ByteArray): Comparable<WrappedByteArray> {
     val size get() = data.size
 
     /**
@@ -45,6 +46,10 @@ class WrappedByteArray(val data: ByteArray) {
         if (!data.contentEquals(other.data)) return false
 
         return true
+    }
+
+    override fun compareTo(other: WrappedByteArray): Int {
+        return Arrays.compareUnsigned(this.data, other.data)
     }
 
     override fun hashCode() = data.contentHashCode()
