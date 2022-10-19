@@ -162,7 +162,7 @@ open class BaseBlockQueries(
             val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
 
             val merkleProofTree = decodedBlockHeader.merklePath(material.txHash, material.txHashes)
-            ConfirmationProof(material.txHash.byteArray, material.header, decodedWitness, merkleProofTree)
+            ConfirmationProof(material.txHash.data, material.header, decodedWitness, merkleProofTree)
         }
     }
 

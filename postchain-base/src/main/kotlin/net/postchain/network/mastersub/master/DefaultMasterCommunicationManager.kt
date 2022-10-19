@@ -49,7 +49,7 @@ open class DefaultMasterCommunicationManager(
         // Scheduling SendConnectedPeers task
         sendConnectedPeersTask = scheduleTask(containerNodeConfig.sendMasterConnectedPeersPeriod) {
             val peers = connectionManager.getConnectedNodes(chainId)
-            val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.byteArray })
+            val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
             masterConnectionManager.sendPacketToSub(msg)
         }
     }
@@ -155,11 +155,11 @@ open class DefaultMasterCommunicationManager(
      * @param packet is the message data
      */
     private fun consumePacket(nodeId: NodeRid, packet: ByteArray) {
-        logger.trace { "${process()}: consumePacket() - Receiving a packet from peer: ${nodeId.byteArray.toHex()}" }
+        logger.trace { "${process()}: consumePacket() - Receiving a packet from peer: ${nodeId.toHex()}" }
 
         val message = MsDataMessage(
                 blockchainRid.data,
-                nodeId.byteArray, // sender
+                nodeId.data, // sender
                 appConfig.pubKeyByteArray, // Can be omitted?
                 packet
         )

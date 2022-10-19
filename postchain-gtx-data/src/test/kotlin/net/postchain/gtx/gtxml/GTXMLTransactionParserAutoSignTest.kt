@@ -3,7 +3,7 @@
 package net.postchain.gtx.gtxml
 
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.byteArrayKeyOf
+import net.postchain.common.wrap
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
@@ -70,8 +70,8 @@ class GTXMLTransactionParserAutoSignTest {
                 mapOf(),
                 true,
                 mapOf(
-                    pubKey0.byteArrayKeyOf() to sigMaker0,
-                    pubKey1.byteArrayKeyOf() to sigMaker1
+                        pubKey0.wrap() to sigMaker0,
+                        pubKey1.wrap() to sigMaker1
                 )
             ),
             MockCryptoSystem()
@@ -179,8 +179,8 @@ class GTXMLTransactionParserAutoSignTest {
                 mapOf(),
                 true,
                 mapOf(
-                    pubKey0.byteArrayKeyOf() to sigMaker0,
-                    pubKey1.byteArrayKeyOf() to sigMaker1
+                        pubKey0.wrap() to sigMaker0,
+                        pubKey1.wrap() to sigMaker1
                 )
             ),
             MockCryptoSystem()

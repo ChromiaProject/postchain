@@ -3,9 +3,9 @@ package net.postchain.integrationtest
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
-import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.common.wrap
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.testinfra.DelayedTransaction
 import net.postchain.devtools.testinfra.TestTransaction
@@ -45,7 +45,7 @@ class LongRunningTransactionTestNightly : IntegrationTestSetup() {
             val transactionQueue = node.transactionQueue(1L)
             assert(transactionQueue.getTransactionStatus(delayedTx.getRID()))
                     .isEqualTo(TransactionStatus.REJECTED)
-            assert(transactionQueue.getRejectionReason(delayedTx.getRID().byteArrayKeyOf())?.message)
+            assert(transactionQueue.getRejectionReason(delayedTx.getRID().wrap())?.message)
                     .isEqualTo("Transaction failed to execute within given time constraint: 10000 ms")
         }
     }

@@ -7,10 +7,10 @@ import net.postchain.base.BaseTxEContext
 import net.postchain.base.ConfirmationProofMaterial
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.*
 import net.postchain.core.block.*
 
@@ -156,8 +156,8 @@ class BaseBlockStore : BlockStore {
         val db = DatabaseAccess.of(ctx)
         val block = db.getBlockInfo(ctx, txRID)
         return ConfirmationProofMaterial(
-                ByteArrayKey(db.getTxHash(ctx, txRID)),
-                db.getBlockTxHashes(ctx, block.blockIid).map { ByteArrayKey(it) }.toTypedArray(),
+                WrappedByteArray(db.getTxHash(ctx, txRID)),
+                db.getBlockTxHashes(ctx, block.blockIid).map { WrappedByteArray(it) }.toTypedArray(),
                 block.blockHeader,
                 block.witness
         )

@@ -6,7 +6,7 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
-import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainInfrastructure
@@ -41,7 +41,7 @@ class Chromia0BlockchainProcessManager(
                 val witness = BaseBlockWitness.fromBytes(witnessData)
                 val txb = GtxBuilder(chain0Engine.getConfiguration().blockchainRid, listOf(), Secp256K1CryptoSystem())
                 // sorting signatures makes it more likely we can avoid duplicate anchor transactions
-                val sortedSignatures = witness.getSignatures().sortedBy { ByteArrayKey(it.subjectID) }
+                val sortedSignatures = witness.getSignatures().sortedBy { WrappedByteArray(it.subjectID) }
                 txb.addOperation(
                     "anchor_block",
                     GtvDecoder.decodeGtv(blockHeader),

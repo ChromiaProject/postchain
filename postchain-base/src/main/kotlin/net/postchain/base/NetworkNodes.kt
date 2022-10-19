@@ -3,9 +3,9 @@
 package net.postchain.base
 
 import mu.KLogging
-import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.NodeRid
 
 /**
@@ -40,13 +40,13 @@ class NetworkNodes(
             for (peer in peers) {
                 val peerId =  peer.peerId()
                 if (peerId == myKey) {
-                    me = PeerInfo(peer.host, peer.port, myKey.byteArray)
+                    me = PeerInfo(peer.host, peer.port, myKey.data)
                 } else {
                     peerMap[peerId] = peer
                 }
             }
             if (me == null) {
-                throw UserMistake("We didn't find our peer ID (${myKey.byteArray.toHex()}) in the list of given peers. Check the configuration for the node.")
+                throw UserMistake("We didn't find our peer ID (${myKey.data.toHex()}) in the list of given peers. Check the configuration for the node.")
             } else {
                 return NetworkNodes(me, peerMap.toMap(), mutableMapOf())
             }
@@ -63,7 +63,7 @@ class NetworkNodes(
     }
 
     operator fun get(key: NodeRid): PeerInfo? = peerInfoMap[key]
-    operator fun get(key: ByteArray): PeerInfo? = peerInfoMap[ByteArrayKey(key)]
+    operator fun get(key: ByteArray): PeerInfo? = peerInfoMap[WrappedByteArray(key)]
 
     fun getPeerIds(): Set<NodeRid> {
         return peerInfoMap.keys
@@ -99,7 +99,7 @@ class NetworkNodes(
                 readOnlyNodeContacts[peerId] = foundHits + 1
                 if (foundHits > MAX_DAILY_REQUESTS) {
                     if (foundHits == MAX_DAILY_REQUESTS + 1) {
-                        logger.debug("Blocking read-only node with ID: ${peerId.byteArray.toHex()} for a day ")
+                        logger.debug("Blocking read-only node with ID: ${peerId.toHex()} for a day ")
                     }
                     return false
                 }

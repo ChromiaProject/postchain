@@ -9,10 +9,10 @@ import mu.withLoggingContext
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
-import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
@@ -136,7 +136,7 @@ open class BaseBlockchainEngine(
 
     private fun smartDecodeTransaction(txData: ByteArray): Transaction {
         var tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(txData)
-        val enqueuedTx = transactionQueue.findTransaction(ByteArrayKey(tx.getRID()))
+        val enqueuedTx = transactionQueue.findTransaction(WrappedByteArray(tx.getRID()))
         if (enqueuedTx != null && enqueuedTx.getHash().contentEquals(tx.getHash())) {
             // if transaction is identical (has same hash) then use transaction
             // from queue, which is already verified
@@ -249,7 +249,7 @@ open class BaseBlockchainEngine(
                             rejectedTxs++
                             transactionSample.stop(metrics.rejectedTransactions)
                             transactionQueue.rejectTransaction(tx, txException)
-                            logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
+                            logger.warn("Rejected Tx: ${WrappedByteArray(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
                         } else {
                             acceptedTxs++
                             transactionSample.stop(metrics.acceptedTransactions)

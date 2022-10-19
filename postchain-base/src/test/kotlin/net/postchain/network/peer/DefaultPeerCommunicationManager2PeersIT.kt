@@ -7,7 +7,7 @@ import assertk.assertions.containsExactly
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.byteArrayKeyOf
+import net.postchain.common.wrap
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
@@ -68,10 +68,10 @@ class DefaultPeerCommunicationManager2PeersIT {
         await().atMost(Duration.FIVE_SECONDS)
                 .untilAsserted {
                     val actual1 = context1.connectionManager.getConnectedNodes(context1.chainId)
-                    assert(actual1).containsExactly(peerInfo2.pubKey.byteArrayKeyOf())
+                    assert(actual1).containsExactly(peerInfo2.pubKey.wrap())
 
                     val actual2 = context2.connectionManager.getConnectedNodes(context2.chainId)
-                    assert(actual2).containsExactly(peerInfo1.pubKey.byteArrayKeyOf())
+                    assert(actual2).containsExactly(peerInfo1.pubKey.wrap())
                 }
 
         // Sending packets

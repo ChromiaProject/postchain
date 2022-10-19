@@ -5,7 +5,7 @@ package net.postchain.config.node
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.core.Storage
@@ -51,7 +51,7 @@ class ManagedNodeConfigurationProvider(
      * is not involved here.
      */
     override fun getPeerInfoCollection(appConfig: AppConfig): Array<PeerInfo> {
-        val peerInfoMap = mutableMapOf<ByteArrayKey, PeerInfo>()
+        val peerInfoMap = mutableMapOf<WrappedByteArray, PeerInfo>()
 
         // Define pick function
         val peerInfoPicker: (PeerInfo) -> Unit = { peerInfo ->

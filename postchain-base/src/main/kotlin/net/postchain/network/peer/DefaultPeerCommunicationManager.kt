@@ -5,7 +5,6 @@ package net.postchain.network.peer
 import mu.KLogging
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
-import net.postchain.common.toHex
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.NodeRid
@@ -125,8 +124,8 @@ class DefaultPeerCommunicationManager<PacketType>(
              * Packet decoding should not be synchronized so we can make
              * use of parallel processing in different threads
              */
-            logger.trace { "Receiving a packet from peer: ${peerId.byteArray.toHex()}" }
-            val decodedPacket = packetDecoder.decodePacket(peerId.byteArray, packet)
+            logger.trace { "Receiving a packet from peer: ${peerId.toHex()}" }
+            val decodedPacket = packetDecoder.decodePacket(peerId.data, packet)
             synchronized(this) {
                 logger.trace { "Successfully decoded the package, now adding it " }
                 inboundPackets.add(peerId to decodedPacket)
