@@ -90,7 +90,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val merkleHashCal
         //println("looking for tx hash: ${txHash.toHex()} in array where first is: ${txHashes[0].toHex()}")
         val positionOfOurTxToProve = txHashes.indexOf(txHash) //txHash.positionInArray(txHashes)
         if (positionOfOurTxToProve < 0) {
-            throw UserMistake("We cannot prove this transaction (hash: ${txHash.data.toHex()}), because it is not in the block")
+            throw UserMistake("We cannot prove this transaction (hash: ${txHash.toHex()}), because it is not in the block")
         }
         val gtvArray = gtv(txHashes.map { gtv(it.data)})
         return gtvArray.generateProof(listOf(positionOfOurTxToProve), merkleHashCalculator)

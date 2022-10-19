@@ -249,7 +249,7 @@ open class BaseBlockchainEngine(
                             rejectedTxs++
                             transactionSample.stop(metrics.rejectedTransactions)
                             transactionQueue.rejectTransaction(tx, txException)
-                            logger.warn("Rejected Tx: ${WrappedByteArray(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
+                            logger.warn("Rejected Tx: ${tx.getRID().toHex()}, reason: ${txException.message}, cause: ${txException.cause}")
                         } else {
                             acceptedTxs++
                             transactionSample.stop(metrics.acceptedTransactions)

@@ -46,7 +46,7 @@ class NetworkNodes(
                 }
             }
             if (me == null) {
-                throw UserMistake("We didn't find our peer ID (${myKey.data.toHex()}) in the list of given peers. Check the configuration for the node.")
+                throw UserMistake("We didn't find our peer ID (${myKey.toHex()}) in the list of given peers. Check the configuration for the node.")
             } else {
                 return NetworkNodes(me, peerMap.toMap(), mutableMapOf())
             }
