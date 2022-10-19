@@ -51,7 +51,7 @@ class WrappedByteArray(val data: ByteArray) {
     override fun hashCode() = data.contentHashCode()
 
 
-    override fun toString() = data.contentToString()
+    override fun toString() = toHex()
 
     fun toHex() = data.toHex()
 
