@@ -1,6 +1,7 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.NodeRid
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockQueries
@@ -86,7 +87,8 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
                 sendHeader(peerID, tipHeader.header, tipHeader.witness, tipHeight, requestedHeight)
                 return
             }
-            val block = blockQueries.getBlockAtHeight(myHeight, false).get()!!
+            val block = blockQueries.getBlockAtHeight(myHeight, false).get() ?:
+                throw ProgrammerMistake("Block at height: $myHeight doesn't exist.")
             val h = sendHeader(peerID, block.header.rawData, block.witness.getRawData(), myHeight, requestedHeight)
             tipHeader = h
             tipHeight = myHeight
