@@ -124,7 +124,7 @@ class DefaultSubConnectionManager(
             val message = MsDataMessage(
                     chain.config.blockchainRid.data,
                     appConfig.pubKeyByteArray,
-                    nodeRid.byteArray,
+                    nodeRid.data,
                     data()
             )
             chain.getConnection()!!.sendPacket { MsCodec.encode(message) }

@@ -7,7 +7,7 @@ import assertk.assertions.isIn
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.byteArrayKeyOf
+import net.postchain.common.wrap
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerConnectionDescriptor
@@ -119,24 +119,24 @@ class IntNettyConnector3PeersCommunicationIT {
                 .untilAsserted {
                     // Peer1
                     val packets1 = argumentCaptor<ByteArray>()
-                    val expected1 = arrayOf(packet2, packet3).map(ByteArray::byteArrayKeyOf).toTypedArray()
+                    val expected1 = arrayOf(packet2, packet3).map(ByteArray::wrap).toTypedArray()
                     verify(context1.packets, times(2)).handle(packets1.capture(), any())
-                    assert(packets1.firstValue.byteArrayKeyOf()).isIn(*expected1)
-                    assert(packets1.secondValue.byteArrayKeyOf()).isIn(*expected1)
+                    assert(packets1.firstValue.wrap()).isIn(*expected1)
+                    assert(packets1.secondValue.wrap()).isIn(*expected1)
 
                     // Peer2
                     val packets2 = argumentCaptor<ByteArray>()
-                    val expected2 = arrayOf(packet1, packet3).map(ByteArray::byteArrayKeyOf).toTypedArray()
+                    val expected2 = arrayOf(packet1, packet3).map(ByteArray::wrap).toTypedArray()
                     verify(context2.packets, times(2)).handle(packets2.capture(), any())
-                    assert(packets2.firstValue.byteArrayKeyOf()).isIn(*expected2)
-                    assert(packets2.secondValue.byteArrayKeyOf()).isIn(*expected2)
+                    assert(packets2.firstValue.wrap()).isIn(*expected2)
+                    assert(packets2.secondValue.wrap()).isIn(*expected2)
 
                     // Peer3
                     val packets3 = argumentCaptor<ByteArray>()
-                    val expected3 = arrayOf(packet1, packet2).map(ByteArray::byteArrayKeyOf).toTypedArray()
+                    val expected3 = arrayOf(packet1, packet2).map(ByteArray::wrap).toTypedArray()
                     verify(context3.packets, times(2)).handle(packets3.capture(), any())
-                    assert(packets3.firstValue.byteArrayKeyOf()).isIn(*expected3)
-                    assert(packets3.secondValue.byteArrayKeyOf()).isIn(*expected3)
+                    assert(packets3.firstValue.wrap()).isIn(*expected3)
+                    assert(packets3.secondValue.wrap()).isIn(*expected3)
                 }
     }
 

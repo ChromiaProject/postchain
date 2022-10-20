@@ -2,7 +2,7 @@
 
 package net.postchain.base
 
-import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Verifier
@@ -29,7 +29,7 @@ open class BasePeerCommConfiguration(
                   privKey: ByteArray,
                   pubKey: ByteArray
         ): BasePeerCommConfiguration {
-            val nn = NetworkNodes.buildNetworkNodes(peers, ByteArrayKey(pubKey))
+            val nn = NetworkNodes.buildNetworkNodes(peers, WrappedByteArray(pubKey))
             return BasePeerCommConfiguration(nn, cryptoSystem, privKey, pubKey)
         }
     }

@@ -7,11 +7,8 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.toHex
 import net.postchain.core.NodeRid
-import net.postchain.crypto.CryptoSystem
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.devtools.NameHelper
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
@@ -177,13 +174,13 @@ open class DefaultPeerConnectionManager<PacketType>(
                 ConnectionDirection.OUTGOING
         )
 
-        val peerInfo = chainPeersConfig.commConfiguration.resolvePeer(peerId.byteArray)
-                ?: throw ProgrammerMistake("Peer ID not found: ${peerId.byteArray.toHex()}")
+        val peerInfo = chainPeersConfig.commConfiguration.resolvePeer(peerId.data)
+                ?: throw ProgrammerMistake("Peer ID not found: ${peerId.toHex()}")
         if (peerInfo.peerId() != peerId) {
             // Have to add this check since I see strange things
             throw ProgrammerMistake(
                     "Peer id found in comm config not same as we looked for" +
-                            " ${peerId.byteArray.toHex()}, found: ${peerInfo.peerId().byteArray.toHex()} "
+                            " ${peerId.toHex()}, found: ${peerInfo.peerId().toHex()} "
             )
         }
 

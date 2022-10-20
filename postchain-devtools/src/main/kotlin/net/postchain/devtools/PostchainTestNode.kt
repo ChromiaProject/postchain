@@ -182,7 +182,7 @@ class PostchainTestNode(
                 .defaultSynchronizationInfrastructure as EBFTSynchronizationInfrastructure)
                 .connectionManager.getNodesTopology(chainId)
                 .mapKeys { pubKeyToConnection ->
-                    pubKeyToConnection.key.toString()
+                    pubKeyToConnection.key.toHex()
                 }
     }
 

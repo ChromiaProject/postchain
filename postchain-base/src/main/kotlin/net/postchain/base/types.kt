@@ -4,17 +4,17 @@ package net.postchain.base
 
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import java.sql.Connection
 
 class ConfirmationProofMaterial(
-    val txHash: ByteArrayKey,
-    val txHashes: Array<ByteArrayKey>,
-    val header: ByteArray,
-    val witness: ByteArray
+        val txHash: WrappedByteArray,
+        val txHashes: Array<WrappedByteArray>,
+        val header: ByteArray,
+        val witness: ByteArray
 )
 
 open class BaseAppContext(
