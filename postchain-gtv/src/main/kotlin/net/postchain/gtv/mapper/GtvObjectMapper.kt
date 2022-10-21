@@ -1,8 +1,10 @@
 package net.postchain.gtv.mapper
 
+import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
@@ -173,6 +175,8 @@ private fun classToGtv(obj: Any, other: (Any) -> Gtv =  { GtvObjectMapper.toGtvA
         obj::class.java.isByteArray() -> gtv(obj as ByteArray)
         obj::class.java.isWrappedByteArray() -> gtv(obj as WrappedByteArray)
         obj::class.java.isRowId() -> gtv((obj as RowId).id)
+        obj::class.java.isPubkey() -> gtv((obj as PubKey).data)
+        obj::class.java.isBlockchainRid() -> gtv((obj as BlockchainRid))
         else -> other(obj)
     }
 }
@@ -266,6 +270,8 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
         classType.isBoolean() -> gtv.asBoolean()
         classType.isByteArray() -> gtv.asByteArray()
         classType.isWrappedByteArray() -> gtv.asByteArray().wrap()
+        classType.isPubkey() -> PubKey(gtv.asByteArray())
+        classType.isBlockchainRid() -> BlockchainRid(gtv.asByteArray())
         classType.isRowId() -> RowId(gtv.asInteger())
         classType.isBigInteger() -> gtv.asBigInteger()
         else -> {
@@ -302,6 +308,10 @@ private fun Class<*>.isByteArray(): Boolean {
 private fun Class<*>.isWrappedByteArray(): Boolean {
     return this == WrappedByteArray::class.java
 }
+
+private fun Class<*>.isPubkey() = this == PubKey::class.java
+
+private fun Class<*>.isBlockchainRid() = this == BlockchainRid::class.java
 
 private fun Class<*>.isRowId(): Boolean {
     return this == RowId::class.java
