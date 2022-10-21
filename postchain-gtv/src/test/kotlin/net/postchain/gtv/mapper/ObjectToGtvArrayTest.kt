@@ -3,8 +3,10 @@ package net.postchain.gtv.mapper
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
+import net.postchain.common.BlockchainRid
 import net.postchain.common.types.RowId
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -41,7 +43,9 @@ class ObjectToGtvArrayTest {
                 val enum: SimpleEnum = SimpleEnum.A,
                 val bigInteger: BigInteger = BigInteger.ONE,
                 val wrappedByteArray: WrappedByteArray = WrappedByteArray(16),
-                val rowId: RowId = RowId(17)
+                val rowId: RowId = RowId(17),
+                val pubKey: PubKey = PubKey(ByteArray(33)),
+                val blockchainRid: BlockchainRid = BlockchainRid.ZERO_RID
         )
         assert(GtvObjectMapper.toGtvArray(AllPrimitives()).array).isContentEqualTo(listOf(
                 gtv(1),
@@ -52,7 +56,9 @@ class ObjectToGtvArrayTest {
                 gtv("A"),
                 gtv(BigInteger.ONE),
                 gtv(WrappedByteArray(16)),
-                gtv(RowId(17).id)
+                gtv(RowId(17).id),
+                gtv(ByteArray(33)),
+                gtv(BlockchainRid.ZERO_RID)
         ).toTypedArray())
     }
 
