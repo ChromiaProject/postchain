@@ -30,7 +30,7 @@ deploy:
     - master
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly source:jar deploy
 
 build:
   extends: .setup
