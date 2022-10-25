@@ -4,10 +4,17 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 
-data class PubKey(private val wData: WrappedByteArray) {
+interface Key {
+    val wData: WrappedByteArray
     val data get() = wData.data
     @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
     val key get() = data
+
+    fun hex() = data.toHex()
+    fun toShortHex() = hex().take(8)
+}
+
+data class PubKey(override val wData: WrappedByteArray): Key {
     init {
         if (data.size != 33) throw IllegalArgumentException("Public key must be 33 bytes")
     }
@@ -15,23 +22,16 @@ data class PubKey(private val wData: WrappedByteArray) {
     constructor(data: ByteArray) : this(WrappedByteArray(data))
     constructor(hex: String) : this(hex.hexStringToByteArray())
 
-    fun hex() = data.toHex()
-
     override fun toString() = hex()
 }
 
-data class PrivKey(private val wData: WrappedByteArray) {
-    val data get() = wData.data
-    @Deprecated(message = "Use 'data' accessor in stead", replaceWith = ReplaceWith("data"))
-    val key get() = data
+data class PrivKey(override val wData: WrappedByteArray): Key {
     init {
         if (data.size != 32) throw IllegalArgumentException("Private key must be 32 bytes")
     }
 
     constructor(data: ByteArray) : this(WrappedByteArray(data))
     constructor(hex: String) : this(hex.hexStringToByteArray())
-
-    fun hex() = data.toHex()
 
     override fun toString() = hex()
 }
