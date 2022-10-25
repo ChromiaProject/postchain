@@ -162,7 +162,8 @@ open class Secp256K1CryptoSystem : CryptoSystem {
      * @param privKey The private key used to create the signature
      * @return a class to be used to sign specified data with [privKey]
      */
-    @Deprecated("Pass in KeyPair instead", ReplaceWith("CryptoSystem.buildSigMaker(KeyPair)"))
+    @Deprecated("Pass in KeyPair instead",
+            ReplaceWith("buildSigMaker(KeyPair(PubKey(pubKey), PrivKey(privKey)))", imports = ["net.postchain.crypto.KeyPair", "net.postchain.crypto.PubKey", "net.postchain.crypto.PrivKey"]))
     override fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker {
         return Secp256k1SigMaker(pubKey, privKey, ::digest)
     }

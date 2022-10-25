@@ -37,7 +37,8 @@ typealias Verifier = (ByteArray, Signature) -> Boolean
 interface CryptoSystem {
     fun digest(bytes: ByteArray): ByteArray
 
-    @Deprecated("Pass in KeyPair instead", ReplaceWith("CryptoSystem.buildSigMaker(KeyPair)"))
+    @Deprecated("Pass in KeyPair instead",
+            ReplaceWith("buildSigMaker(KeyPair(PubKey(pubKey), PrivKey(privKey)))", imports = ["net.postchain.crypto.KeyPair", "net.postchain.crypto.PubKey", "net.postchain.crypto.PrivKey"]))
     fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker
 
     fun buildSigMaker(keyPair: KeyPair): SigMaker
