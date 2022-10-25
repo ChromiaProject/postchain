@@ -32,7 +32,7 @@ class QueryCommand(private val clientProvider: PostchainClientProvider) : CliktC
     }
 
     override fun run() {
-        val clientConfig = PostchainClientConfig.fromProperties(configFile.absolutePath)
+        val clientConfig = PostchainClientConfig.fromProperties(configFile?.absolutePath)
 
         val res = runInternal(clientConfig, queryName, args)
         println("Query $queryName returned \n$res")

@@ -8,7 +8,7 @@ class CurrentBlockHeightCommand(private val clientProvider: PostchainClientProvi
     private val configFile by configFileOption()
 
     override fun run() {
-        val clientConfig = PostchainClientConfig.fromProperties(configFile.absolutePath)
+        val clientConfig = PostchainClientConfig.fromProperties(configFile?.absolutePath)
 
         val res = runInternal(clientConfig)
         println("Current block height is $res")
