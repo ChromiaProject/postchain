@@ -9,7 +9,7 @@ import net.postchain.common.types.WrappedByteArray
  *
  * Note 2: This is a "core" class but the FACTORY for this class reside in "base" (since it uses encryption which is also in "base")
  */
-data class BlockchainRid(private val wData: WrappedByteArray) {
+data class BlockchainRid(val wData: WrappedByteArray) {
     val data get() = wData.data
 
     constructor(data: ByteArray) : this(WrappedByteArray(data))
