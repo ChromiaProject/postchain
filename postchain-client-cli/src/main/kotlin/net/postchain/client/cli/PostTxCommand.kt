@@ -31,7 +31,7 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
     private val awaitCompleted by option("--await", "-a", help = "Wait for transaction to be included in a block").flag()
 
     override fun run() {
-        val config = PostchainClientConfig.fromProperties(configFile.absolutePath)
+        val config = PostchainClientConfig.fromProperties(configFile?.absolutePath)
 
         runInternal(config, awaitCompleted, opName, *args.toTypedArray())
 

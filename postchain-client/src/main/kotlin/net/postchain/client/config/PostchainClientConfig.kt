@@ -3,10 +3,16 @@ package net.postchain.client.config
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.PropertiesFileLoader
-import net.postchain.common.config.*
+import net.postchain.common.config.Config
+import net.postchain.common.config.cryptoSystem
+import net.postchain.common.config.getEnvOrIntProperty
+import net.postchain.common.config.getEnvOrLongProperty
+import net.postchain.common.config.getEnvOrStringProperty
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
+import org.apache.commons.configuration2.BaseConfiguration
+import org.apache.commons.configuration2.Configuration
 import java.time.Duration
 
 const val STATUS_POLL_COUNT = 20
@@ -25,8 +31,10 @@ data class PostchainClientConfig @JvmOverloads constructor(
 ) : Config {
     companion object {
         @JvmStatic
-        fun fromProperties(propertiesFileName: String): PostchainClientConfig {
-            val config = PropertiesFileLoader.load(propertiesFileName)
+        fun fromProperties(propertiesFileName: String?): PostchainClientConfig =
+                fromConfiguration(propertiesFileName?.let { PropertiesFileLoader.load(it) } ?: BaseConfiguration())
+
+        fun fromConfiguration(config: Configuration): PostchainClientConfig {
             val pubkeys = config.getEnvOrStringProperty("POSTCHAIN_CLIENT_PUBKEY", "pubkey", "").split(",")
             val privkeys = config.getEnvOrStringProperty("POSTCHAIN_CLIENT_PRIVKEY", "privkey", "").split(",")
             require(pubkeys.size == privkeys.size) { "Equally many pubkeys as privkeys must be provided, but ${pubkeys.size} and ${privkeys.size} was found" }
