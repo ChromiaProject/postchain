@@ -36,8 +36,17 @@ typealias Verifier = (ByteArray, Signature) -> Boolean
  */
 interface CryptoSystem {
     fun digest(bytes: ByteArray): ByteArray
+
+    @Deprecated("Pass in KeyPair instead", ReplaceWith("CryptoSystem.buildSigMaker(KeyPair)"))
     fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker
+
+    fun buildSigMaker(keyPair: KeyPair): SigMaker
+
     fun verifyDigest(digest: ByteArray, s: Signature): Boolean
+
     fun makeVerifier(): Verifier
+
     fun getRandomBytes(size: Int): ByteArray
+
+    fun generateKeyPair(): KeyPair
 }
