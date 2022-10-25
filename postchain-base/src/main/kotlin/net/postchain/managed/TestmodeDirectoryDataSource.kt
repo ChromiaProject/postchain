@@ -24,8 +24,8 @@ class TestmodeDirectoryDataSource(
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
         return if (containerNodeConfig.testmode) {
             ContainerResourceLimits.fromValues(
-                    containerNodeConfig.testmodeResourceLimitsRAM,
                     containerNodeConfig.testmodeResourceLimitsCPU,
+                    containerNodeConfig.testmodeResourceLimitsRAM,
                     containerNodeConfig.testmodeResourceLimitsSTORAGE
             )
         } else {

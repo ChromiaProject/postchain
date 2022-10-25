@@ -1,7 +1,7 @@
 package net.postchain.containers
 
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimit.*
+import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimitType.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -14,24 +14,17 @@ class ContainerResourceLimitsTest {
     @Test
     fun testDefaultValues() {
         val sut = ContainerResourceLimits.default()
-        assertFalse { sut.hasRam() }
         assertFalse { sut.hasCpu() }
+        assertFalse { sut.hasRam() }
         assertFalse { sut.hasStorage() }
     }
 
     @Test
     fun testZeroValues() {
         val sut = ContainerResourceLimits.fromValues(0, 0, 0)
-        assertFalse { sut.hasRam() }
         assertFalse { sut.hasCpu() }
+        assertFalse { sut.hasRam() }
         assertFalse { sut.hasStorage() }
-    }
-
-    @Test
-    fun testRam() {
-        val sut = ContainerResourceLimits(RAM to 10)
-        assertTrue { sut.hasRam() }
-        assertEquals(10 * 1024 * 1024L, sut.ramBytes())
     }
 
     @ParameterizedTest(name = "[{index}] cpu: {0}, expectedQuota: {1}")
@@ -46,6 +39,13 @@ class ContainerResourceLimitsTest {
         assertTrue { sut.hasCpu() }
         assertEquals(100_000L, sut.cpuPeriod())
         assertEquals(expectedQuota, sut.cpuQuota())
+    }
+
+    @Test
+    fun testRam() {
+        val sut = ContainerResourceLimits(RAM to 10)
+        assertTrue { sut.hasRam() }
+        assertEquals(10 * 1024 * 1024L, sut.ramBytes())
     }
 
     @Test

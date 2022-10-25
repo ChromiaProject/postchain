@@ -56,8 +56,8 @@ data class ContainerNodeConfig(
         val zfsPoolInitScript: String,
         val bindPgdataVolume: Boolean,
         val testmode: Boolean,
-        val testmodeResourceLimitsRAM: Long,
         val testmodeResourceLimitsCPU: Long,
+        val testmodeResourceLimitsRAM: Long,
         val testmodeResourceLimitsSTORAGE: Long,
         val testmodeDappsContainers: Map<String, String>,
 ) : Config {
@@ -82,8 +82,8 @@ data class ContainerNodeConfig(
         const val KEY_ZFS_POOL_NAME = "zfs.pool-name"
         const val KEY_ZFS_POOL_INIT_SCRIPT = "zfs.pool-init-script"
         const val KEY_BIND_PGDATA_VOLUME = "bind-pgdata-volume"
-        const val KEY_TESTMODE_RESOURCE_LIMITS_RAM = "testmode.resource-limits-ram"
         const val KEY_TESTMODE_RESOURCE_LIMITS_CPU = "testmode.resource-limits-cpu"
+        const val KEY_TESTMODE_RESOURCE_LIMITS_RAM = "testmode.resource-limits-ram"
         const val KEY_TESTMODE_RESOURCE_LIMITS_STORAGE = "testmode.resource-limits-storage"
 
         fun fullKey(subKey: String) = "$KEY_CONTAINER_PREFIX.${subKey}"
@@ -109,8 +109,8 @@ data class ContainerNodeConfig(
                         getString(KEY_ZFS_POOL_INIT_SCRIPT, DEFAULT_CONTAINER_ZFS_INIT_SCRIPT),
                         getBoolean(KEY_BIND_PGDATA_VOLUME, true),
                         getTestmode(),
-                        getLong(KEY_TESTMODE_RESOURCE_LIMITS_RAM, -1),
                         getLong(KEY_TESTMODE_RESOURCE_LIMITS_CPU, -1),
+                        getLong(KEY_TESTMODE_RESOURCE_LIMITS_RAM, -1),
                         getLong(KEY_TESTMODE_RESOURCE_LIMITS_STORAGE, -1),
                         initTestmodeDappsContainers()
                 )
