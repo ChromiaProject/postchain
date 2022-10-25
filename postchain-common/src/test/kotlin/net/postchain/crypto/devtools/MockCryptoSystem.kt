@@ -19,7 +19,7 @@ class MockCryptoSystem : CryptoSystem {
     }
 
     @Deprecated("Pass in KeyPair instead",
-            ReplaceWith("buildSigMaker(KeyPair(PubKey(pubKey), PrivKey(privKey)))", imports = ["net.postchain.crypto.KeyPair", "net.postchain.crypto.PubKey", "net.postchain.crypto.PrivKey"]))
+            ReplaceWith("buildSigMaker(KeyPair(pubKey, privKey))", imports = ["net.postchain.crypto.KeyPair"]))
     override fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker {
         return MockSigMaker(pubKey, privKey, ::digest)
     }
