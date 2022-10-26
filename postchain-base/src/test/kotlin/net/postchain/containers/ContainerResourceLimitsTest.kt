@@ -1,7 +1,6 @@
 package net.postchain.containers
 
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimitType.*
 import net.postchain.containers.bpm.Cpu
 import net.postchain.containers.bpm.Ram
 import net.postchain.containers.bpm.Storage
@@ -24,7 +23,7 @@ class ContainerResourceLimitsTest {
 
     @Test
     fun testZeroValues() {
-        val sut = ContainerResourceLimits.fromValues(Cpu(0), Ram(0), Storage(0))
+        val sut = ContainerResourceLimits(Cpu(0), Ram(0), Storage(0))
         assertFalse { sut.hasCpu() }
         assertFalse { sut.hasRam() }
         assertFalse { sut.hasStorage() }
@@ -38,7 +37,7 @@ class ContainerResourceLimitsTest {
             "320, 320_000",     // 320% == 3.2 cpus
     )
     fun testCpu(cpu: Long, expectedQuota: Long) {
-        val sut = ContainerResourceLimits(CPU to cpu)
+        val sut = ContainerResourceLimits(Cpu(cpu))
         assertTrue { sut.hasCpu() }
         assertEquals(100_000L, sut.cpuPeriod())
         assertEquals(expectedQuota, sut.cpuQuota())
@@ -46,14 +45,14 @@ class ContainerResourceLimitsTest {
 
     @Test
     fun testRam() {
-        val sut = ContainerResourceLimits(RAM to 10)
+        val sut = ContainerResourceLimits(Ram(10))
         assertTrue { sut.hasRam() }
         assertEquals(10 * 1024 * 1024L, sut.ramBytes())
     }
 
     @Test
     fun testStorage() {
-        val sut = ContainerResourceLimits(STORAGE to 123)
+        val sut = ContainerResourceLimits(Storage(123))
         assertTrue { sut.hasStorage() }
         assertEquals(123L, sut.storageMb())
     }

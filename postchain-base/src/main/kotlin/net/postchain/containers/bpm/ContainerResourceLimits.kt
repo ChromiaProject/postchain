@@ -1,43 +1,69 @@
 package net.postchain.containers.bpm
 
-import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimitType.*
+import net.postchain.containers.bpm.ResourceLimitType.*
+import net.postchain.gtv.Gtv
+
+enum class ResourceLimitType {
+
+    CPU, RAM, STORAGE;
+
+    companion object {
+        fun from(type: String?): ResourceLimitType? = values().firstOrNull { it.name == type }
+    }
+}
+
+sealed interface ResourceLimit {
+    val value: Long
+
+    companion object {
+        fun limitType(resourceLimit: ResourceLimit): ResourceLimitType {
+            return when (resourceLimit) {
+                is Cpu -> CPU
+                is Ram -> RAM
+                is Storage -> STORAGE
+            }
+        }
+    }
+}
+
+object ResourceLimitFactory {
+
+    fun fromGtv(pair: Pair<String, Gtv>): ResourceLimit? {
+        return ResourceLimitType.from(pair.first.uppercase())
+                ?.let {
+                    val value = pair.second.asInteger()
+                    when (it) {
+                        CPU -> Cpu(value)
+                        RAM -> Ram(value)
+                        STORAGE -> Storage(value)
+                    }
+                }
+    }
+}
 
 @JvmInline
-value class Cpu(val value: Long)
+value class Cpu(override val value: Long) : ResourceLimit
 
 @JvmInline
-value class Ram(val value: Long)
+value class Ram(override val value: Long) : ResourceLimit
 
 @JvmInline
-value class Storage(val value: Long)
+value class Storage(override val value: Long) : ResourceLimit
 
 /**
  * Implements Docker resource constraints
  * https://docs.docker.com/config/containers/resource_constraints/
  */
 data class ContainerResourceLimits(
-        private val containerResourceLimitsType: Map<ResourceLimitType, Long>,
+        private val resourceLimits: Map<ResourceLimitType, ResourceLimit>,
 ) {
 
-    constructor(vararg limits: Pair<ResourceLimitType, Long>) : this(mapOf(*limits))
-
-    enum class ResourceLimitType {
-
-        CPU, RAM, STORAGE;
-
-        companion object {
-            fun from(type: String?): ResourceLimitType? = values().firstOrNull { it.name == type }
-        }
-    }
+    constructor(vararg resourceLimits: ResourceLimit) : this(
+            resourceLimits.associateBy { ResourceLimit.limitType(it) }
+    )
 
     companion object {
-
         fun default() = ContainerResourceLimits(emptyMap())
-
-        fun fromValues(cpu: Cpu, ram: Ram, storage: Storage) = ContainerResourceLimits(
-                CPU to cpu.value, RAM to ram.value, STORAGE to storage.value
-        )
-
     }
 
     /**
@@ -60,5 +86,5 @@ data class ContainerResourceLimits(
     fun hasStorage() = getOrDefault(STORAGE) > 0
     fun storageMb() = getOrDefault(STORAGE)
 
-    private fun getOrDefault(key: ResourceLimitType) = containerResourceLimitsType[key] ?: -1L
+    private fun getOrDefault(key: ResourceLimitType) = resourceLimits[key]?.value ?: -1L
 }
