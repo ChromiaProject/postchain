@@ -3,9 +3,9 @@ package net.postchain.managed
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.Cpu
-import net.postchain.containers.bpm.Ram
-import net.postchain.containers.bpm.Storage
+import net.postchain.containers.bpm.resources.Cpu
+import net.postchain.containers.bpm.resources.Ram
+import net.postchain.containers.bpm.resources.Storage
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.managed.query.QueryRunner
 

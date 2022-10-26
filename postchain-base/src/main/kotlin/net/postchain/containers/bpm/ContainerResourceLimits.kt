@@ -1,54 +1,8 @@
 package net.postchain.containers.bpm
 
-import net.postchain.containers.bpm.ResourceLimitType.*
-import net.postchain.gtv.Gtv
-
-enum class ResourceLimitType {
-
-    CPU, RAM, STORAGE;
-
-    companion object {
-        fun from(type: String?): ResourceLimitType? = values().firstOrNull { it.name == type }
-    }
-}
-
-sealed interface ResourceLimit {
-    val value: Long
-
-    companion object {
-        fun limitType(resourceLimit: ResourceLimit): ResourceLimitType {
-            return when (resourceLimit) {
-                is Cpu -> CPU
-                is Ram -> RAM
-                is Storage -> STORAGE
-            }
-        }
-    }
-}
-
-object ResourceLimitFactory {
-
-    fun fromGtv(pair: Pair<String, Gtv>): ResourceLimit? {
-        return ResourceLimitType.from(pair.first.uppercase())
-                ?.let {
-                    val value = pair.second.asInteger()
-                    when (it) {
-                        CPU -> Cpu(value)
-                        RAM -> Ram(value)
-                        STORAGE -> Storage(value)
-                    }
-                }
-    }
-}
-
-@JvmInline
-value class Cpu(override val value: Long) : ResourceLimit
-
-@JvmInline
-value class Ram(override val value: Long) : ResourceLimit
-
-@JvmInline
-value class Storage(override val value: Long) : ResourceLimit
+import net.postchain.containers.bpm.resources.ResourceLimit
+import net.postchain.containers.bpm.resources.ResourceLimitType
+import net.postchain.containers.bpm.resources.ResourceLimitType.*
 
 /**
  * Implements Docker resource constraints

@@ -3,7 +3,7 @@ package net.postchain.managed
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
-import net.postchain.containers.bpm.ResourceLimitFactory
+import net.postchain.containers.bpm.resources.ResourceLimitFactory
 import net.postchain.gtv.GtvFactory
 import net.postchain.managed.query.QueryRunner
 
@@ -46,8 +46,8 @@ open class BaseDirectoryDataSource(
         val resourceLimits = query(
                 "nm_get_container_limits",
                 buildArgs("name" to GtvFactory.gtv(containerId))
-        ).asDict().mapNotNull {
-            ResourceLimitFactory.fromGtv(it.toPair())
+        ).asDict().mapValues { (_, v) -> v.asInteger() }.mapNotNull {
+            ResourceLimitFactory.fromPair(it.toPair())
         }.toTypedArray()
 
         return ContainerResourceLimits(*resourceLimits)
