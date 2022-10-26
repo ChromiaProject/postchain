@@ -15,7 +15,6 @@ import org.spongycastle.util.Arrays
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.security.SecureRandom
-import java.util.*
 
 
 // signing code taken from bitcoinj ECKey
@@ -159,12 +158,24 @@ open class Secp256K1CryptoSystem : CryptoSystem {
     /**
      * Builds logic to be used for signing data based on supplied key parameters
      *
-     * @param pubkey The public key used to verify the signature
+     * @param pubKey The public key used to verify the signature
      * @param privKey The private key used to create the signature
-     * @return a class to be used to sign specified [data] with [privkey]
+     * @return a class to be used to sign specified data with [privKey]
      */
+    @Deprecated("Pass in KeyPair instead",
+            ReplaceWith("buildSigMaker(KeyPair(pubKey, privKey))", imports = ["net.postchain.crypto.KeyPair"]))
     override fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker {
         return Secp256k1SigMaker(pubKey, privKey, ::digest)
+    }
+
+    /**
+     * Builds logic to be used for signing data based on supplied key parameters
+     *
+     * @param keyPair The key pair to create and verify the signature
+     * @return a class to be used to sign specified data with [keyPair]
+     */
+    override fun buildSigMaker(keyPair: KeyPair): SigMaker {
+        return Secp256k1SigMaker(keyPair.pubKey.data, keyPair.privKey.data, ::digest)
     }
 
     /**
@@ -200,5 +211,14 @@ open class Secp256K1CryptoSystem : CryptoSystem {
         val ret = ByteArray(size)
         rand.nextBytes(ret)
         return ret
+    }
+
+    /**
+     * Generate a random key pair
+     */
+    override fun generateKeyPair(): KeyPair {
+        val privKey = getRandomBytes(32)
+        val pubKey = secp256k1_derivePubKey(privKey)
+        return KeyPair(PubKey(pubKey), PrivKey(privKey))
     }
 }
