@@ -2,6 +2,9 @@ package net.postchain.containers
 
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimitType.*
+import net.postchain.containers.bpm.Cpu
+import net.postchain.containers.bpm.Ram
+import net.postchain.containers.bpm.Storage
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -21,7 +24,7 @@ class ContainerResourceLimitsTest {
 
     @Test
     fun testZeroValues() {
-        val sut = ContainerResourceLimits.fromValues(0, 0, 0)
+        val sut = ContainerResourceLimits.fromValues(Cpu(0), Ram(0), Storage(0))
         assertFalse { sut.hasCpu() }
         assertFalse { sut.hasRam() }
         assertFalse { sut.hasStorage() }

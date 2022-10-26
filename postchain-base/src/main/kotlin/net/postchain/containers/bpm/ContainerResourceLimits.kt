@@ -2,6 +2,15 @@ package net.postchain.containers.bpm
 
 import net.postchain.containers.bpm.ContainerResourceLimits.ResourceLimitType.*
 
+@JvmInline
+value class Cpu(val value: Long)
+
+@JvmInline
+value class Ram(val value: Long)
+
+@JvmInline
+value class Storage(val value: Long)
+
 /**
  * Implements Docker resource constraints
  * https://docs.docker.com/config/containers/resource_constraints/
@@ -25,8 +34,8 @@ data class ContainerResourceLimits(
 
         fun default() = ContainerResourceLimits(emptyMap())
 
-        fun fromValues(cpu: Long, ram: Long, storage: Long) = ContainerResourceLimits(
-                CPU to cpu, RAM to ram, STORAGE to storage
+        fun fromValues(cpu: Cpu, ram: Ram, storage: Storage) = ContainerResourceLimits(
+                CPU to cpu.value, RAM to ram.value, STORAGE to storage.value
         )
 
     }

@@ -3,6 +3,9 @@ package net.postchain.managed
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.containers.bpm.Cpu
+import net.postchain.containers.bpm.Ram
+import net.postchain.containers.bpm.Storage
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.managed.query.QueryRunner
 
@@ -24,9 +27,9 @@ class TestmodeDirectoryDataSource(
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
         return if (containerNodeConfig.testmode) {
             ContainerResourceLimits.fromValues(
-                    containerNodeConfig.testmodeResourceLimitsCPU,
-                    containerNodeConfig.testmodeResourceLimitsRAM,
-                    containerNodeConfig.testmodeResourceLimitsSTORAGE
+                    Cpu(containerNodeConfig.testmodeResourceLimitsCPU),
+                    Ram(containerNodeConfig.testmodeResourceLimitsRAM),
+                    Storage(containerNodeConfig.testmodeResourceLimitsSTORAGE)
             )
         } else {
             super.getResourceLimitForContainer(containerId)
