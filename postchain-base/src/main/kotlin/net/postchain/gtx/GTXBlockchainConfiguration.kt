@@ -23,7 +23,7 @@ import nl.komponents.kovenant.Promise
 open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                                       cryptoSystem: CryptoSystem,
                                       final override val module: GTXModule
-) : BaseBlockchainConfiguration(configData, cryptoSystem), GTXModuleAwareness {
+) : BaseBlockchainConfiguration(configData, cryptoSystem), GTXModuleAware {
 
     private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
 
