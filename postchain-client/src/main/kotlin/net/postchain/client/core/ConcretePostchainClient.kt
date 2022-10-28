@@ -156,8 +156,7 @@ class ConcretePostchainClient(
         val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
         return queryTo(request, endpoint).thenApply {
             if (it.status != Status.OK) throw buildException(it)
-            val json = Body.auto<String>().toLens()(it)
-            make_gtv_gson().fromJson(json, Gtv::class.java)
+            make_gtv_gson().fromJson(it.bodyString(), Gtv::class.java) ?: GtvNull
         }
     }
 
