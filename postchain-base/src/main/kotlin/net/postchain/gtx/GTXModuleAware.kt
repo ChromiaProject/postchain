@@ -1,5 +1,5 @@
 package net.postchain.gtx
 
-interface GTXModuleAwareness {
+interface GTXModuleAware {
     val module: GTXModule
 }

@@ -17,7 +17,7 @@ import net.postchain.ebft.heartbeat.*
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
-import net.postchain.managed.config.ManagedDataSourceAwareness
+import net.postchain.managed.config.ManagedDataSourceAware
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -74,13 +74,13 @@ open class ManagedBlockchainProcessManager(
 
     override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
         return super.makeBlockchainConfiguration(chainId).also {
-            if (chainId == CHAIN0 && it is ManagedDataSourceAwareness) {
+            if (chainId == CHAIN0 && it is ManagedDataSourceAware) {
                 initManagedEnvironment(it)
             }
         }
     }
 
-    protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAwareness) {
+    protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
         dataSource = blockchainConfig.dataSource
         peerListVersion = dataSource.getPeerListVersion()
 
@@ -116,7 +116,7 @@ open class ManagedBlockchainProcessManager(
             { _, _ -> true }
         } else {
             val hbListener: HeartbeatListener = DefaultHeartbeatListener(heartbeatConfig, blockchainConfig.chainID)
-            heartbeatManager.addListener(blockchainConfig.chainID, hbListener);
+            heartbeatManager.addListener(blockchainConfig.chainID, hbListener)
             awaitHeartbeatHandler(hbListener, heartbeatConfig)
         }
     }
