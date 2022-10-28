@@ -27,6 +27,7 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfigurationFactorySupplier
+import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
@@ -39,10 +40,12 @@ open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         private val masterBlockchainInfra: MasterBlockchainInfra,
         blockchainConfigProvider: BlockchainConfigurationProvider,
+        bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
 ) : ManagedBlockchainProcessManager(
         postchainContext,
         masterBlockchainInfra,
-        blockchainConfigProvider
+        blockchainConfigProvider,
+        bpmExtensions
 ) {
 
     companion object : KLogging()
