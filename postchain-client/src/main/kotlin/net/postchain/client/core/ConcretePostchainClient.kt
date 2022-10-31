@@ -17,7 +17,6 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import org.http4k.client.ApacheAsyncClient
@@ -151,16 +150,19 @@ class ConcretePostchainClient(
         throw e.cause ?: e
     }
 
-    override fun blockAtHeight(height: Long): CompletionStage<Gtv> {
+    override fun blockAtHeight(height: Long): CompletionStage<BlockDetail?> {
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
         return queryTo(request, endpoint).thenApply {
             if (it.status != Status.OK) throw buildException(it)
-            make_gtv_gson().fromJson(it.bodyString(), Gtv::class.java) ?: GtvNull
+            if (it.bodyString() == "null")
+                null
+            else
+                Body.auto<BlockDetail>().toLens()(it)
         }
     }
 
-    override fun blockAtHeightSync(height: Long): Gtv = try {
+    override fun blockAtHeightSync(height: Long): BlockDetail? = try {
         blockAtHeight(height).toCompletableFuture().join()
     } catch (e: CompletionException) {
         throw e.cause ?: e
