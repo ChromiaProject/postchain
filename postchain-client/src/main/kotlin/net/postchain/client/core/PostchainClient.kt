@@ -9,7 +9,7 @@ import net.postchain.gtx.Gtx
 import java.time.Duration
 import java.util.concurrent.CompletionStage
 
-interface PostchainClient : PostchainQuery {
+interface PostchainClient : PostchainReadClient {
     val config: PostchainClientConfig
 
     /**
@@ -59,17 +59,7 @@ interface PostchainClient : PostchainQuery {
     fun currentBlockHeight(): CompletionStage<Long>
 
     /**
-     * Query current block height
-     */
-    fun currentBlockHeightSync(): Long
-
-    /**
      * Query block at height
      */
     fun blockAtHeight(height: Long): CompletionStage<BlockDetail?>
-
-    /**
-     * Query block at height
-     */
-    fun blockAtHeightSync(height: Long): BlockDetail?
 }
