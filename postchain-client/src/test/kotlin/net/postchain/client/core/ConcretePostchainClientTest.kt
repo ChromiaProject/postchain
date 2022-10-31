@@ -5,7 +5,7 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
-import net.postchain.gtv.Gtv
+import net.postchain.common.hexStringToByteArray
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
 import org.http4k.core.ContentType
@@ -18,7 +18,9 @@ import org.http4k.lens.string
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 internal class ConcretePostchainClientTest {
@@ -137,7 +139,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `blockAtHeight found`() {
-        val someBlock: Gtv = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+        val someBlock: BlockDetail? = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
                 fn(Response(Status.OK).with(jsonLens of """
                 {
@@ -145,24 +147,33 @@ internal class ConcretePostchainClientTest {
                     "prevBlockRID": "5AF85874B9CCAC197AA739585449668BE15650C534E08705F6D60A6993FE906D",
                     "header": "023F9C7FBAFD92E53D7890A61B50B33EC0375FA424D60BD328AA2454408430C383",
                     "height": 1,
-                    "transactions": [],
+                    "transactions": [
+                        {
+                            "rid": "62F71D71BA63D03FA0C6741DE22B116A3A8022893E7977DDC2A9CD981BBADE29",
+                            "hash": "F537E4B8224F4BC84DB37AD3E4F898A3A9127D2E86C25213508F7236016E58B9",
+                            "data": null
+                        }
+                    ],
                     "witness": "03D8844CFC0CE7BECD33CDF49A9881364695C944E266E06356CDA11C2305EAB83A",
                     "timestamp": 0
                 }                   
                 """.trimIndent()))
             }
         }).blockAtHeight(1L).toCompletableFuture().join()
-        assertEquals(1L, someBlock.asDict()["height"]!!.asInteger())
+        assertEquals(1L, someBlock!!.height)
+        assertContentEquals("34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray(), someBlock.rid)
+        assertContentEquals("62F71D71BA63D03FA0C6741DE22B116A3A8022893E7977DDC2A9CD981BBADE29".hexStringToByteArray(), someBlock.transactions[0].rid)
+        assertNull(someBlock.transactions[0].data)
     }
 
     @Test
     fun `blockAtHeight missing`() {
-        val noBlock: Gtv = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+        val noBlock: BlockDetail? = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
                 fn(Response(Status.OK).with(jsonLens of "null"))
             }
         }).blockAtHeight(Long.MAX_VALUE).toCompletableFuture().join()
-        assertTrue(noBlock.isNull())
+        assertTrue(noBlock == null)
     }
 
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {
