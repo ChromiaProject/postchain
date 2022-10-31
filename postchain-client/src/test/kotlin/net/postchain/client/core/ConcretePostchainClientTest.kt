@@ -12,7 +12,9 @@ import org.http4k.core.ContentType
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
+import org.http4k.core.with
 import org.http4k.format.Gson.auto
+import org.http4k.lens.string
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -25,6 +27,9 @@ internal class ConcretePostchainClientTest {
     private lateinit var httpClient: AsyncHttpHandler
     private val brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"
     private var requestCounter = 0
+
+    val jsonLens = Body.string(ContentType.APPLICATION_JSON).toLens()
+    val txStatusLens = Body.auto<TxStatus>().toLens()
 
     @BeforeEach
     fun setup() {
@@ -100,8 +105,7 @@ internal class ConcretePostchainClientTest {
     fun `Tx status retrieves underlying error`() {
         val result = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
-                val txLens = Body.auto<TxStatus>().toLens()
-                fn(txLens(TxStatus("rejected", "Message!"), Response(Status.BAD_REQUEST)))
+                fn(Response(Status.BAD_REQUEST).with(txStatusLens of TxStatus("rejected", "Message!")))
             }
         }).checkTxStatus(TxRid("")).toCompletableFuture().join()
         assertEquals("Message!", result.rejectReason)
@@ -113,8 +117,7 @@ internal class ConcretePostchainClientTest {
         ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
                 nCalls++
-                val txLens = Body.auto<TxStatus>().toLens()
-                fn(txLens(TxStatus("rejected", "Message!"), Response(Status.BAD_REQUEST)))
+                fn(Response(Status.BAD_REQUEST).with(txStatusLens of TxStatus("rejected", "Message!")))
             }
         }).awaitConfirmation(TxRid(""), 10, Duration.ZERO)
         assertEquals(1, nCalls)
@@ -136,7 +139,7 @@ internal class ConcretePostchainClientTest {
     fun `blockAtHeight found`() {
         val someBlock: Gtv = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
-                fn(Response(Status.OK).header("Content-Type", ContentType.APPLICATION_JSON.value).body("""
+                fn(Response(Status.OK).with(jsonLens of """
                 {
                     "rid": "34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6",
                     "prevBlockRID": "5AF85874B9CCAC197AA739585449668BE15650C534E08705F6D60A6993FE906D",
@@ -156,7 +159,7 @@ internal class ConcretePostchainClientTest {
     fun `blockAtHeight missing`() {
         val noBlock: Gtv = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
-                fn(Response(Status.OK).header("Content-Type", ContentType.APPLICATION_JSON.value).body("null"))
+                fn(Response(Status.OK).with(jsonLens of "null"))
             }
         }).blockAtHeight(Long.MAX_VALUE).toCompletableFuture().join()
         assertTrue(noBlock.isNull())
