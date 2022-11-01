@@ -9,7 +9,7 @@ import net.postchain.gtx.Gtx
 import java.time.Duration
 import java.util.concurrent.CompletionStage
 
-interface PostchainClient : PostchainReadClient {
+interface PostchainClient : PostchainReadClient, PostchainQuery {
     val config: PostchainClientConfig
 
     /**
