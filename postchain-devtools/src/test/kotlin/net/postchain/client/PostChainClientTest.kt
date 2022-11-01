@@ -34,9 +34,9 @@ class PostChainClientTest : IntegrationTestSetup() {
 
     private val blockchainRIDStr = "ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB"
     private val blockchainRID = BlockchainRid.buildFromHex(blockchainRIDStr)
-    private val pubKey0 = KeyPairHelper.pubKey(0)
-    private val privKey0 = KeyPairHelper.privKey(0)
-    private val sigMaker0 = cryptoSystem.buildSigMaker(pubKey0, privKey0)
+    private val pubKey0 = PubKey(KeyPairHelper.pubKey(0))
+    private val privKey0 = PrivKey(KeyPairHelper.privKey(0))
+    private val sigMaker0 = cryptoSystem.buildSigMaker(KeyPair(pubKey0, privKey0))
     private val randomStr = "hello${Random().nextLong()}"
 
     private fun createTestNodes(nodesCount: Int, configFileName: String): Array<PostchainTestNode> {
@@ -48,9 +48,9 @@ class PostChainClientTest : IntegrationTestSetup() {
     }
 
     private fun createSignedNopTx(client: PostchainClient, bcRid: BlockchainRid): TransactionBuilder.PostableTransaction {
-        return TransactionBuilder(client, bcRid, listOf(pubKey0), listOf(), cryptoSystem)
-            .addOperation("gtx_test", gtv(1L), gtv(randomStr))
-            .sign(sigMaker0)
+        return TransactionBuilder(client, bcRid, listOf(pubKey0.data), listOf(), cryptoSystem)
+                .addOperation("gtx_test", gtv(1L), gtv(randomStr))
+                .sign(sigMaker0)
     }
 
     private fun createPostChainClient(bcRid: BlockchainRid): PostchainClient {
@@ -58,7 +58,7 @@ class PostChainClientTest : IntegrationTestSetup() {
             PostchainClientConfig(
                 bcRid,
                 EndpointPool.singleUrl("http://127.0.0.1:${nodes[0].getRestApiHttpPort()}"),
-                listOf(KeyPair(PubKey(pubKey0), PrivKey(privKey0)))
+                    listOf(KeyPair(pubKey0, privKey0))
             ))
     }
 
