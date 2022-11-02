@@ -28,6 +28,7 @@ data class PostchainClientConfig @JvmOverloads constructor(
         val failOverConfig: FailOverConfig = FailOverConfig(),
         val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
         val queryByChainId: Long? = null,
+        val maxResponseSize: Int = 64 * 1024 * 1024 // 64 MiB
 ) : Config {
     companion object {
         @JvmStatic

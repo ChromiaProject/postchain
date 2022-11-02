@@ -7,26 +7,21 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.Endpoint
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.crypto.KeyPair
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
+import org.apache.commons.io.input.BoundedInputStream
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
-import org.http4k.core.Body
-import org.http4k.core.Method
-import org.http4k.core.Request
-import org.http4k.core.Response
-import org.http4k.core.Status
+import org.http4k.core.*
 import org.http4k.format.Gson.auto
+import org.http4k.lens.Header
+import java.io.InputStream
 import java.lang.Thread.sleep
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
@@ -36,7 +31,6 @@ import java.util.concurrent.CompletionStage
 data class Tx(val tx: String)
 data class TxStatus(val status: String?, val rejectReason: String?)
 data class CurrentBlockHeight(val blockHeight: Long)
-data class Queries(val queries: List<String>)
 data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
@@ -62,27 +56,28 @@ class ConcretePostchainClient(
             cryptoSystem
     )
 
-
     override fun querySync(name: String, gtv: Gtv): Gtv {
         try {
             var queryResult: Response? = null
+            var responseStream: BoundedInputStream? = null
             for (j in 1..config.endpointPool.size()) {
                 val endpoint = nextEndpoint()
                 val request = createQueryRequest(name, gtv, endpoint)
                 endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
                     queryResult = queryTo(request, endpoint).toCompletableFuture().join()
+                    responseStream = BoundedInputStream(queryResult.body.stream, config.maxResponseSize.toLong())
                     when (queryResult.status) {
-                        Status.OK -> return queryResponseToGtv(queryResult)
-                        Status.BAD_REQUEST -> throw buildException(queryResult)
-                        Status.INTERNAL_SERVER_ERROR -> throw buildException(queryResult)
-                        Status.NOT_FOUND -> throw buildException(queryResult)
+                        Status.OK -> return GtvDecoder.decodeGtv(responseStream)
+                        Status.BAD_REQUEST -> throw buildExceptionFromText(responseStream, queryResult.status)
+                        Status.INTERNAL_SERVER_ERROR -> throw buildExceptionFromText(responseStream, queryResult.status)
+                        Status.NOT_FOUND -> throw buildExceptionFromText(responseStream, queryResult.status)
                         Status.UNKNOWN_HOST -> break@endpoint
                         Status.SERVICE_UNAVAILABLE -> break@endpoint
                     }
                     sleep(config.failOverConfig.attemptInterval.toMillis())
                 }
             }
-            throw buildException(queryResult!!)
+            throw buildExceptionFromText(responseStream!!, queryResult!!.status)
         } catch (e: CompletionException) {
             throw e.cause ?: e
         }
@@ -92,17 +87,12 @@ class ConcretePostchainClient(
         val endpoint = nextEndpoint()
         val request = createQueryRequest(name, gtv, endpoint)
         return queryTo(request, endpoint).thenApply {
+            val responseStream = BoundedInputStream(it.body.stream, config.maxResponseSize.toLong())
             if (it.status != Status.OK) {
-                throw buildException(it)
+                throw buildExceptionFromText(responseStream, it.status)
             }
-            queryResponseToGtv(it)
+            GtvDecoder.decodeGtv(responseStream)
         }
-    }
-
-    private fun queryResponseToGtv(response: Response): Gtv {
-        if (response.body == Body.EMPTY) return GtvNull
-        val respList = Body.auto<List<String>>().toLens()(response)
-        return GtvFactory.decodeGtv(respList.first().hexStringToByteArray())
     }
 
     private fun createQueryRequest(
@@ -110,13 +100,10 @@ class ConcretePostchainClient(
             gtv: Gtv,
             endpoint: Endpoint,
     ): Request {
-        val queriesLens = Body.auto<Queries>().toLens()
         val gtxQuery = gtv(gtv(name), gtv)
-        val encodedQuery = GtvEncoder.encodeGtv(gtxQuery).toHex()
-        return queriesLens(
-                Queries(listOf(encodedQuery)),
-                Request(Method.POST, "${endpoint.url}/query_gtx/$blockchainRIDOrID")
-        )
+        val encodedQuery = GtvEncoder.encodeGtv(gtxQuery)
+        return Request(Method.POST, "${endpoint.url}/query_gtv/$blockchainRIDOrID")
+                .body(encodedQuery.inputStream())
     }
 
     private fun queryTo(request: Request, endpoint: Endpoint): CompletionStage<Response> {
@@ -128,18 +115,22 @@ class ConcretePostchainClient(
         return result
     }
 
-    private fun buildException(response: Response): UserMistake {
+    private fun buildExceptionFromJson(response: Response): UserMistake {
         val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
         return UserMistake("Can not make a query: ${response.status} $msg")
     }
 
+    private fun buildExceptionFromText(responseStream: InputStream, status: Status): UserMistake {
+        val errorMessage = String(responseStream.readAllBytes())
+        return UserMistake("Can not make a query: $status $errorMessage")
+    }
 
     override fun currentBlockHeight(): CompletionStage<Long> {
         val currentBlockHeightLens = Body.auto<CurrentBlockHeight>().toLens()
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
         return queryTo(request, endpoint).thenApply {
-            if (it.status != Status.OK) throw buildException(it)
+            if (it.status != Status.OK) throw buildExceptionFromJson(it)
             currentBlockHeightLens(it).blockHeight
         }
     }
@@ -153,12 +144,15 @@ class ConcretePostchainClient(
     override fun blockAtHeight(height: Long): CompletionStage<BlockDetail?> {
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
+                .header(Header.ACCEPT.toString(), ContentType.OCTET_STREAM.toString())
         return queryTo(request, endpoint).thenApply {
-            if (it.status != Status.OK) throw buildException(it)
-            if (it.bodyString() == "null")
-                null
-            else
-                Body.auto<BlockDetail>().toLens()(it)
+            val responseStream = BoundedInputStream(it.body.stream, config.maxResponseSize.toLong())
+            if (it.status != Status.OK) {
+                throw buildExceptionFromText(responseStream, it.status)
+            }
+
+            val gtv = GtvDecoder.decodeGtv(responseStream)
+            BlockDetail.fromGtv(gtv)
         }
     }
 

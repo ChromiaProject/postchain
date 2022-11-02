@@ -43,6 +43,7 @@ class RestApi(
     val DEFAULT_BLOCK_HEIGHT_REQUEST = Long.MAX_VALUE
     val DEFAULT_ENTRY_RESULTS_REQUEST = 25
     val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
+    val OCTET_CONTENT_TYPE = "application/octet-stream"
 
     companion object : KLogging()
 
@@ -84,43 +85,52 @@ class RestApi(
         http.exception(NotFoundError::class.java) { error, _, response ->
             logger.error("NotFoundError:", error)
             response.status(404)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(BadFormatError::class.java) { error, _, response ->
             logger.error("BadFormatError:", error)
             response.status(400)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(UserMistake::class.java) { error, _, response ->
             logger.error("UserMistake:", error)
             response.status(400)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(InvalidTnxException::class.java) { error, _, response ->
             response.status(400)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(DuplicateTnxException::class.java) { error, _, response ->
             response.status(409) // Conflict
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(UnavailableException::class.java) { error, _, response ->
             response.status(503) // Service unavailable
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(Exception::class.java) { error, _, response ->
             logger.error("Exception:", error)
             response.status(500)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.notFound { _, _ -> toJson(UserMistake("Not found")) }
+    }
+
+    private fun setErrorResponseBody(response: Response, error: Exception) {
+        if (response.type() == OCTET_CONTENT_TYPE) {
+            response.type("text/plain")
+            response.body(error.message ?: "Unknown error")
+        } else {
+            response.body(toJson(error))
+        }
     }
 
     private fun buildRouter(http: Service) {
@@ -233,12 +243,35 @@ class RestApi(
                 gson.toJson(result)
             }
 
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE) { request, response ->
+                val model = model(request)
+                val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
+                val txHashesOnly = request.queryMap()["txs"].value() != "true"
+                val result = model.getBlock(blockRID, txHashesOnly)
+
+                response.type(OCTET_CONTENT_TYPE)
+                val gtv = result?.toGtv() ?: GtvNull
+                GtvEncoder.encodeGtv(gtv)
+            }
+
             http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", "application/json") { request, _ ->
                 val model = model(request)
                 val height = request.params(PARAM_HEIGHT).toLong()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
                 val result = model.getBlock(height, txHashesOnly)
                 gson.toJson(result)
+            }
+
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", OCTET_CONTENT_TYPE) { request, response ->
+                response.type(OCTET_CONTENT_TYPE)
+
+                val model = model(request)
+                val height = request.params(PARAM_HEIGHT).toLong()
+                val txHashesOnly = request.queryMap()["txs"].value() != "true"
+                val result = model.getBlock(height, txHashesOnly)
+
+                val gtv = result?.toGtv() ?: GtvNull
+                GtvEncoder.encodeGtv(gtv)
             }
 
             http.post("/query/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
@@ -260,6 +293,10 @@ class RestApi(
 
             http.post("/query_gtx/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
                 handleGTXQueries(request)
+            })
+
+            http.post("/query_gtv/$PARAM_BLOCKCHAIN_RID", redirectPost { request, response ->
+                handleGtvQuery(request, response)
             })
 
             http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", "application/json", redirectGet { request, _ ->
@@ -395,6 +432,13 @@ class RestApi(
         }
 
         return gson.toJson(response)
+    }
+
+    private fun handleGtvQuery(request: Request, response: Response): ByteArray {
+        response.type(OCTET_CONTENT_TYPE)
+
+        val gtvQuery = GtvDecoder.decodeGtv(request.bodyAsBytes())
+        return GtvEncoder.encodeGtv(model(request).query(gtvQuery))
     }
 
     private fun handleNodeStatusQueries(request: Request): String {
