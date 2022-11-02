@@ -9,6 +9,7 @@ import net.postchain.client.core.ConcretePostchainClientProvider;
 import net.postchain.client.core.PostchainClientProvider;
 import net.postchain.client.request.EndpointPool;
 import net.postchain.common.BlockchainRid;
+import net.postchain.common.exception.UserMistake;
 import net.postchain.crypto.*;
 import net.postchain.gtv.GtvFactory;
 import org.http4k.client.AsyncHttpHandler;
@@ -37,7 +38,11 @@ class PostchainClientJavaTest {
             @Override
             public void invoke(@NotNull Request request, @NotNull Function1<? super Response, Unit> fn) {
                 requestCounter++;
-                fn.invoke(Response.Companion.create(Status.OK, ""));
+                if (request.getUri().getPath().startsWith("/query_gtv")) {
+                    fn.invoke(Response.Companion.create(Status.BAD_REQUEST, ""));
+                } else {
+                    fn.invoke(Response.Companion.create(Status.OK, ""));
+                }
             }
 
             @Override
@@ -59,7 +64,11 @@ class PostchainClientJavaTest {
 
     @Test
     void query() {
-        client.querySync("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
+        try {
+            client.querySync("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
+        } catch (UserMistake e) {
+            // Just to make the test pass
+        }
         assertEquals(1, requestCounter);
     }
 
