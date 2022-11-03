@@ -1,5 +1,6 @@
 package net.postchain.client.core
 
+import com.google.gson.Gson
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
@@ -7,23 +8,24 @@ import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import org.apache.commons.io.input.InfiniteCircularInputStream
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
-import org.http4k.core.with
-import org.http4k.format.Gson.auto
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.EOFException
 import java.io.IOException
 import java.time.Duration
+import java.util.concurrent.CompletionException
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -35,8 +37,6 @@ internal class ConcretePostchainClientTest {
     private lateinit var httpClient: AsyncHttpHandler
     private val brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"
     private var requestCounter = 0
-
-    val txStatusLens = Body.auto<TxStatus>().toLens()
 
     @BeforeEach
     fun setup() {
@@ -91,6 +91,20 @@ internal class ConcretePostchainClientTest {
     }
 
     @Test
+    fun `Post transaction should properly encode transaction`() {
+        val client = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                assertEquals(
+                        """{"tx":"A5363034A52E302CA1220420EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8FA5023000A5023000A5023000"}""",
+                        request.bodyString())
+                fn(Response(Status.OK).body(Body.EMPTY))
+            }
+        })
+        val txResult = client.transactionBuilder().finish().build().postSync()
+        assertEquals(TransactionStatus.WAITING, txResult.status)
+    }
+
+    @Test
     fun `Query response without body should not crash`() {
         ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
@@ -112,10 +126,25 @@ internal class ConcretePostchainClientTest {
     fun `Tx status retrieves underlying error`() {
         val result = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
-                fn(Response(Status.BAD_REQUEST).with(txStatusLens of TxStatus("rejected", "Message!")))
+                fn(Response(Status.BAD_REQUEST).body(Gson().toJson(TxStatus("rejected", "Message!"))))
             }
         }).checkTxStatus(TxRid("")).toCompletableFuture().join()
         assertEquals("Message!", result.rejectReason)
+    }
+
+    @Test
+    fun `too big tx status response is rejected`() {
+        assertThrows(IOException::class.java) {
+            try {
+                ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                    override fun invoke(request: Request, fn: (Response) -> Unit) {
+                        fn(Response(Status.OK).body(InfiniteCircularInputStream(ByteArray(16))))
+                    }
+                }).checkTxStatus(TxRid("")).toCompletableFuture().join()
+            } catch (e: CompletionException) {
+                throw e.cause ?: e
+            }
+        }
     }
 
     @Test
@@ -124,7 +153,7 @@ internal class ConcretePostchainClientTest {
         ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
                 nCalls++
-                fn(Response(Status.BAD_REQUEST).with(txStatusLens of TxStatus("rejected", "Message!")))
+                fn(Response(Status.BAD_REQUEST).body(Gson().toJson(TxStatus("rejected", "Message!"))))
             }
         }).awaitConfirmation(TxRid(""), 10, Duration.ZERO)
         assertEquals(1, nCalls)
@@ -224,7 +253,7 @@ internal class ConcretePostchainClientTest {
     fun `current block height can be parsed`() {
         val currentBlockHeight: Long = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
-                fn(Response(Status.OK).with(Body.auto<CurrentBlockHeight>().toLens() of CurrentBlockHeight(0)))
+                fn(Response(Status.OK).body(Gson().toJson(CurrentBlockHeight(0))))
             }
         }).currentBlockHeightSync()
         assertEquals(0, currentBlockHeight)
