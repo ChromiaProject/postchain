@@ -2,6 +2,7 @@
 
 package net.postchain.client.core
 
+import com.google.gson.Gson
 import mu.KLogging
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.Endpoint
@@ -29,6 +30,7 @@ import org.http4k.core.Response
 import org.http4k.core.Status
 import org.http4k.format.Gson.auto
 import org.http4k.lens.Header
+import java.io.IOException
 import java.io.InputStream
 import java.lang.Thread.sleep
 import java.time.Duration
@@ -64,6 +66,7 @@ class ConcretePostchainClient(
             cryptoSystem
     )
 
+    @Throws(IOException::class)
     override fun querySync(name: String, gtv: Gtv): Gtv {
         try {
             var queryResult: Response? = null
@@ -123,26 +126,27 @@ class ConcretePostchainClient(
         return result
     }
 
-    private fun buildExceptionFromJson(response: Response): UserMistake {
-        val msg = if (response.body == Body.EMPTY) "" else Body.auto<ErrorResponse>().toLens()(response).error
-        return UserMistake("Can not make a query: ${response.status} $msg")
-    }
-
     private fun buildExceptionFromGTV(responseStream: InputStream, status: Status): UserMistake {
         val errorMessage = GtvDecoder.decodeGtv(responseStream).asString()
         return UserMistake("Can not make a query: $status $errorMessage")
     }
 
     override fun currentBlockHeight(): CompletionStage<Long> {
-        val currentBlockHeightLens = Body.auto<CurrentBlockHeight>().toLens()
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
         return queryTo(request, endpoint).thenApply {
-            if (it.status != Status.OK) throw buildExceptionFromJson(it)
-            currentBlockHeightLens(it).blockHeight
+            val body = BoundedInputStream(it.body.stream, 1024).bufferedReader()
+            val gson = Gson()
+            if (it.status != Status.OK) {
+                val errorBody = body.readText()
+                val msg = if (errorBody.isEmpty()) "" else gson.fromJson(errorBody, ErrorResponse::class.java).error
+                throw UserMistake("Can not make a query: ${it.status} $msg")
+            }
+            gson.fromJson(body, CurrentBlockHeight::class.java).blockHeight
         }
     }
 
+    @Throws(IOException::class)
     override fun currentBlockHeightSync(): Long = try {
         currentBlockHeight().toCompletableFuture().join()
     } catch (e: CompletionException) {
@@ -164,12 +168,14 @@ class ConcretePostchainClient(
         }
     }
 
+    @Throws(IOException::class)
     override fun blockAtHeightSync(height: Long): BlockDetail? = try {
         blockAtHeight(height).toCompletableFuture().join()
     } catch (e: CompletionException) {
         throw e.cause ?: e
     }
 
+    @Throws(IOException::class)
     override fun postTransactionSync(tx: Gtx): TransactionResult {
         try {
             var result: TransactionResult? = null
@@ -208,6 +214,7 @@ class ConcretePostchainClient(
         return result
     }
 
+    @Throws(IOException::class)
     override fun postTransactionSyncAwaitConfirmation(tx: Gtx): TransactionResult {
         val resp = postTransactionSync(tx)
         if (resp.status == REJECTED) {
@@ -216,6 +223,7 @@ class ConcretePostchainClient(
         return awaitConfirmation(resp.txRid, config.statusPollCount, config.statusPollInterval)
     }
 
+    @Throws(IOException::class)
     override fun awaitConfirmation(txRid: TxRid, retries: Int, pollInterval: Duration): TransactionResult {
         var lastKnownTxResult = TransactionResult(txRid, UNKNOWN, null, null)
         // keep polling till getting Confirmed or Rejected

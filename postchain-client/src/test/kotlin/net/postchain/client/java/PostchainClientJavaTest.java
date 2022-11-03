@@ -9,8 +9,11 @@ import net.postchain.client.core.ConcretePostchainClientProvider;
 import net.postchain.client.core.PostchainClientProvider;
 import net.postchain.client.request.EndpointPool;
 import net.postchain.common.BlockchainRid;
-import net.postchain.common.exception.UserMistake;
-import net.postchain.crypto.*;
+import net.postchain.crypto.KeyPair;
+import net.postchain.crypto.PrivKey;
+import net.postchain.crypto.PubKey;
+import net.postchain.crypto.Secp256K1CryptoSystem;
+import net.postchain.crypto.Secp256k1Kt;
 import net.postchain.gtv.GtvFactory;
 import org.http4k.client.AsyncHttpHandler;
 import org.http4k.core.Request;
@@ -20,6 +23,7 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -66,7 +70,7 @@ class PostchainClientJavaTest {
     void query() {
         try {
             client.querySync("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
-        } catch (UserMistake e) {
+        } catch (IOException e) {
             // Just to make the test pass
         }
         assertEquals(1, requestCounter);
