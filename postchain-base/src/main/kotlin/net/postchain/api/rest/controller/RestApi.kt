@@ -37,15 +37,16 @@ import net.postchain.gtv.GtvType
 import spark.Request
 import spark.Response
 import spark.Service
+import java.io.IOException
 
 /**
  * Contains information on the rest API, such as network parameters and available queries
  */
 class RestApi(
-    private val listenPort: Int,
-    private val basePath: String,
-    private val tlsCertificate: String? = null,
-    private val tlsCertificatePassword: String? = null
+        private val listenPort: Int,
+        private val basePath: String,
+        private val tlsCertificate: String? = null,
+        private val tlsCertificatePassword: String? = null
 ) : Modellable {
 
     val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
@@ -439,7 +440,11 @@ class RestApi(
 
         queriesArray.forEach {
             val hexQuery = it.asString
-            val gtxQuery = GtvFactory.decodeGtv(hexQuery.hexStringToByteArray())
+            val gtxQuery = try {
+                GtvFactory.decodeGtv(hexQuery.hexStringToByteArray())
+            } catch (e: IOException) {
+                throw BadFormatError(e.message ?: "")
+            }
             response.add(GtvEncoder.encodeGtv(model(request).query(gtxQuery)).toHex())
         }
 
@@ -449,7 +454,11 @@ class RestApi(
     private fun handleGtvQuery(request: Request, response: Response): ByteArray {
         response.type(OCTET_CONTENT_TYPE)
 
-        val gtvQuery = GtvDecoder.decodeGtv(request.bodyAsBytes())
+        val gtvQuery = try {
+            GtvDecoder.decodeGtv(request.bodyAsBytes())
+        } catch (e: IOException) {
+            throw BadFormatError(e.message ?: "")
+        }
         return GtvEncoder.encodeGtv(model(request).query(gtvQuery))
     }
 
@@ -492,6 +501,7 @@ class RestApi(
                 else
                     throw NotFoundError("Can't find blockchain with chain Iid: $chainIid in DB. Did you add this BC to the node?")
             }
+
             else -> throw BadFormatError("Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]")
         }
     }

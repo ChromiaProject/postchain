@@ -227,4 +227,16 @@ class RestApiQueryEndpointTest {
 
         assertContentEquals(GtvEncoder.encodeGtv(gtv(errorMessage)), body.extract().response().body.asByteArray())
     }
+
+    @Test
+    fun `400 Bad Request is returned when gtv encoding is incorrect`() {
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .body(ByteArray(32))
+                .post("/query_gtv/${blockchainRID}")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.BINARY)
+    }
 }
