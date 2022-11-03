@@ -8,6 +8,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.mapper.GtvObjectMapper
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -90,7 +91,7 @@ class RestApiBlockAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
 
-        assertContentEquals(GtvEncoder.encodeGtv(block.toGtv()), body.extract().response().body.asByteArray())
+        assertContentEquals(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(block)), body.extract().response().body.asByteArray())
     }
 
     @Test

@@ -34,6 +34,7 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvType
+import net.postchain.gtv.mapper.GtvObjectMapper
 import spark.Request
 import spark.Response
 import spark.Service
@@ -257,13 +258,13 @@ class RestApi(
             }
 
             http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE) { request, response ->
+                response.type(OCTET_CONTENT_TYPE)
                 val model = model(request)
                 val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
                 val result = model.getBlock(blockRID, txHashesOnly)
 
-                response.type(OCTET_CONTENT_TYPE)
-                val gtv = result?.toGtv() ?: GtvNull
+                val gtv = result?.let { GtvObjectMapper.toGtvDictionary(it) } ?: GtvNull
                 GtvEncoder.encodeGtv(gtv)
             }
 
@@ -283,7 +284,7 @@ class RestApi(
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
                 val result = model.getBlock(height, txHashesOnly)
 
-                val gtv = result?.toGtv() ?: GtvNull
+                val gtv = result?.let { GtvObjectMapper.toGtvDictionary(it) } ?: GtvNull
                 GtvEncoder.encodeGtv(gtv)
             }
 
