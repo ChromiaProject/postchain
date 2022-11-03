@@ -129,8 +129,7 @@ open class ContainerManagedBlockchainProcessManager(
                     res
                 }
             } catch (e: Exception) {
-                logger.error("Exception in RestartHandler: $e")
-                e.printStackTrace()
+                logger.error(e) { "Exception in RestartHandler: $e" }
                 startBlockchainAsync(chainId, blockTrace)
                 true // let's hope restarting a blockchain fixes the problem
             }

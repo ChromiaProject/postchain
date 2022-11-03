@@ -67,8 +67,7 @@ class Chromia0BlockchainProcessManager(
                     anchorLastBlock(chainId)
                     rhTrace("Anchored", chainId, bTrace)
                 } catch (e: Exception) {
-                    logger.error("Error when anchoring $e", e)
-                    e.printStackTrace()
+                    logger.error(e) { "Error when anchoring: $e" }
                 }
                 baseHandler(bTrace, height, blockTimestamp)
             }

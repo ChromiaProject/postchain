@@ -208,8 +208,7 @@ open class ManagedBlockchainProcessManager(
                 wrTrace("After", chainId, bTrace)
                 restart
             } catch (e: Exception) {
-                logger.error("Exception in restart handler: $e")
-                e.printStackTrace()
+                logger.error(e) { "Exception in restart handler: $e" }
                 startBlockchainAsync(chainId, bTrace)
                 true // let's hope restarting a blockchain fixes the problem
             } finally {
