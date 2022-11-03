@@ -2,23 +2,14 @@
 
 package net.postchain.core
 
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
+import net.postchain.gtv.mapper.Name
+import net.postchain.gtv.mapper.Nullable
 
-open class TxDetail(
-        val rid: ByteArray,
-        val hash: ByteArray,
-        val data: ByteArray?
-) {
-    fun toGtv(): Gtv {
-        return gtv(mapOf(
-                "rid" to gtv(rid),
-                "hash" to gtv(hash),
-                "data" to (data?.let { gtv(it) } ?: GtvNull) as Gtv
-        ))
-    }
-}
+data class TxDetail(
+        @Name("rid") val rid: ByteArray,
+        @Name("hash") val hash: ByteArray,
+        @Name("data") @Nullable val data: ByteArray?
+)
 
 open class TransactionInfoExt(
     val blockRID: ByteArray,
