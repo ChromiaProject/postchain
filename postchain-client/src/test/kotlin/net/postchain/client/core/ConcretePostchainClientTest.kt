@@ -220,6 +220,49 @@ internal class ConcretePostchainClientTest {
         }, "Can not make a query: 400 the error")
     }
 
+    @Test
+    fun `current block height can be parsed`() {
+        val currentBlockHeight: Long = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                fn(Response(Status.OK).with(Body.auto<CurrentBlockHeight>().toLens() of CurrentBlockHeight(0)))
+            }
+        }).currentBlockHeightSync()
+        assertEquals(0, currentBlockHeight)
+    }
+
+    @Test
+    fun `too big block height response will be rejected`() {
+        assertThrows(IOException::class.java) {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.OK).body("{\"blockHeight\":${" ".repeat(1024)}1}"))
+                }
+            }).currentBlockHeightSync()
+        }
+    }
+
+    @Test
+    fun `Can handle empty error body`() {
+        assertThrows(UserMistake::class.java) {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.BAD_REQUEST).body(""))
+                }
+            }).currentBlockHeightSync()
+        }
+    }
+
+    @Test
+    fun `Can handle too big error body`() {
+        assertThrows(IOException::class.java) {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.BAD_REQUEST).body("{\"error\":\"${"e".repeat(1024)}\"}"))
+                }
+            }).currentBlockHeightSync()
+        }
+    }
+
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {
         ConcretePostchainClient(config, httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {

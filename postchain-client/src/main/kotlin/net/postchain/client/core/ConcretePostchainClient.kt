@@ -3,6 +3,7 @@
 package net.postchain.client.core
 
 import com.google.gson.Gson
+import com.google.gson.JsonParseException
 import mu.KLogging
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.Endpoint
@@ -20,6 +21,7 @@ import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import org.apache.commons.io.input.BoundedInputStream
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
@@ -30,6 +32,7 @@ import org.http4k.core.Response
 import org.http4k.core.Status
 import org.http4k.format.Gson.auto
 import org.http4k.lens.Header
+import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
 import java.lang.Thread.sleep
@@ -136,14 +139,20 @@ class ConcretePostchainClient(
         val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
         return queryTo(request, endpoint).thenApply {
             val body = BoundedInputStream(it.body.stream, 1024).bufferedReader()
-            val gson = Gson()
             if (it.status != Status.OK) {
-                val errorBody = body.readText()
-                val msg = if (errorBody.isEmpty()) "" else gson.fromJson(errorBody, ErrorResponse::class.java).error
+                val msg = parseJson(body, ErrorResponse::class.java)?.error ?: "Unknown error"
                 throw UserMistake("Can not make a query: ${it.status} $msg")
             }
-            gson.fromJson(body, CurrentBlockHeight::class.java).blockHeight
+            parseJson(body, CurrentBlockHeight::class.java)?.blockHeight ?: throw IOException("Json parsing failed")
         }
+    }
+
+    private fun <T> parseJson(body: BufferedReader, cls: Class<T>): T? = try {
+        Gson().fromJson(body, cls)
+    } catch (e: JsonParseException) {
+        val rootCause = ExceptionUtils.getRootCause(e)
+        if (rootCause is IOException) throw rootCause
+        else throw IOException("Json parsing failed", e)
     }
 
     @Throws(IOException::class)
