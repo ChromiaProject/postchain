@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.EOFException
+import java.io.IOException
 import java.time.Duration
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -192,6 +193,17 @@ internal class ConcretePostchainClientTest {
             ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
                 override fun invoke(request: Request, fn: (Response) -> Unit) {
                     fn(Response(Status.OK).body(GtvEncoder.encodeGtv(gtv(ByteArray(2 * 1024))).inputStream()))
+                }
+            }).querySync("test_query", gtv("arg"))
+        }
+    }
+
+    @Test
+    fun `invalid GTV response will throw IOException`() {
+        assertThrows(IOException::class.java) {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.OK).body(ByteArray(100).inputStream()))
                 }
             }).querySync("test_query", gtv("arg"))
         }
