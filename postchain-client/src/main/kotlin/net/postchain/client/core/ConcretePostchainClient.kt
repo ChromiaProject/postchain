@@ -56,6 +56,7 @@ class ConcretePostchainClient(
     private val blockchainRIDOrID = config.queryByChainId?.let { "iid_$it" } ?: blockchainRIDHex
     private val cryptoSystem = config.cryptoSystem
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val gson = Gson()
 
     override fun transactionBuilder() = transactionBuilder(config.signers)
 
@@ -202,7 +203,7 @@ class ConcretePostchainClient(
     private fun postTransactionTo(tx: Gtx, endpoint: Endpoint): CompletableFuture<TransactionResult> {
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
         val request = Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex")
-                .body(Gson().toJson(Tx(tx.encodeHex())))
+                .body(gson.toJson(Tx(tx.encodeHex())))
         val result = CompletableFuture<TransactionResult>()
         httpClient(request) { response ->
             if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
@@ -257,7 +258,7 @@ class ConcretePostchainClient(
     }
 
     private fun <T> parseJson(body: BufferedReader, cls: Class<T>): T? = try {
-        Gson().fromJson(body, cls)
+        gson.fromJson(body, cls)
     } catch (e: JsonParseException) {
         val rootCause = ExceptionUtils.getRootCause(e)
         if (rootCause is IOException) throw rootCause
