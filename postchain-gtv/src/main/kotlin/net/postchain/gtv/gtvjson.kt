@@ -8,7 +8,7 @@ import net.postchain.common.toHex
 import net.postchain.gtv.GtvFactory.gtv
 import java.lang.reflect.Type
 
-const val NUMBER_ERROR_MSG = "Could not deserialize number, valid numbers must not have a fraction part and be in range: [-(2^53)+1, (2^53)-1]"
+const val NUMBER_ERROR_MSG = "Could not deserialize number, valid numbers must not have a fraction part and be in range: [-2^63, (2^63)-1]"
 
 class GtvAdapter : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
 
