@@ -94,13 +94,12 @@ class RestApiBlockAtHeightEndpointTest {
     }
 
     @Test
-    fun `Errors are in plain text format when querying for GTV`() {
+    fun `Errors are in GTV format when querying for GTV`() {
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .header("Accept", ContentType.BINARY)
                 .get("/blocks/$blockchainRID/height/0")
                 .then()
                 .statusCode(404)
-                .contentType(ContentType.TEXT)
+                .contentType(ContentType.BINARY)
     }
-
 }
