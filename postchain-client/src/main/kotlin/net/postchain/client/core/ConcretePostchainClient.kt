@@ -15,6 +15,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import org.apache.commons.io.input.BoundedInputStream
@@ -159,7 +160,7 @@ class ConcretePostchainClient(
             }
 
             val gtv = GtvDecoder.decodeGtv(responseStream)
-            BlockDetail.fromGtv(gtv)
+            if (gtv.isNull()) null else GtvObjectMapper.fromGtv(gtv, BlockDetail::class)
         }
     }
 

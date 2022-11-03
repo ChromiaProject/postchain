@@ -1,33 +1,13 @@
 package net.postchain.client.core
 
-import com.google.gson.annotations.JsonAdapter
-import net.postchain.gtv.Gtv
+import net.postchain.gtv.mapper.Name
 
 class BlockDetail(
-        @JsonAdapter(ByteArrayTypeAdapter::class)
-        val rid: ByteArray,
-        @JsonAdapter(ByteArrayTypeAdapter::class)
-        val prevBlockRID: ByteArray,
-        @JsonAdapter(ByteArrayTypeAdapter::class)
-        val header: ByteArray,
-        val height: Long,
-        val transactions: List<TxDetail>,
-        @JsonAdapter(ByteArrayTypeAdapter::class)
-        val witness: ByteArray,
-        val timestamp: Long
-) {
-        companion object {
-                fun fromGtv(gtv: Gtv): BlockDetail? {
-                        if (gtv.isNull()) return null
-                        return BlockDetail(
-                                gtv["rid"]!!.asByteArray(),
-                                gtv["prevBlockRID"]!!.asByteArray(),
-                                gtv["header"]!!.asByteArray(),
-                                gtv["height"]!!.asInteger(),
-                                gtv["transactions"]!!.asArray().map { TxDetail.fromGtv(it) },
-                                gtv["witness"]!!.asByteArray(),
-                                gtv["timestamp"]!!.asInteger()
-                        )
-                }
-        }
-}
+        @Name("rid") val rid: ByteArray,
+        @Name("prevBlockRID") val prevBlockRID: ByteArray,
+        @Name("header") val header: ByteArray,
+        @Name("height") val height: Long,
+        @Name("transactions") val transactions: List<TxDetail>,
+        @Name("witness") val witness: ByteArray,
+        @Name("timestamp") val timestamp: Long
+)
