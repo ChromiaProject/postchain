@@ -326,7 +326,10 @@ paths:
       tags:
         - block
       summary: Fetch block info by block RID
-      description: Fetch info about a block from a chain
+      description: |
+        Fetch info about a block from a chain. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/blockRid"
@@ -346,6 +349,7 @@ paths:
                 oneOf:
                   - $ref: "#/components/schemas/blockInfo"
                   - $ref: "#/components/schemas/nullValue"
+            application/octet-stream: { }
         404:
           description: Chain not found
           content:
@@ -356,12 +360,19 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+            text/plain:
+              examples:
+                chainNotFound:
+                  value: "Can't find blockchain with blockchainRID: <hex-string>"
   /blocks/{blockchainRid}/height/{height}:
     get:
       tags:
         - block
       summary: Fetch block info by block height
-      description: Fetch info about a block from a chain
+      description: |
+        Fetch info about a block from a chain. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/height"
@@ -381,6 +392,7 @@ paths:
                 oneOf:
                   - $ref: "#/components/schemas/blockInfo"
                   - $ref: "#/components/schemas/nullValue"
+            application/octet-stream: { }
         404:
           description: Chain not found
           content:
@@ -391,6 +403,10 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+            text/plain:
+              examples:
+                chainNotFound:
+                  value: "Can't find blockchain with blockchainRID: <hex-string>"
   /query/{blockchainRid}:
     get:
       tags:
