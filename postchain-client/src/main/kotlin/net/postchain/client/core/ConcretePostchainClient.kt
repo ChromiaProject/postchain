@@ -29,7 +29,6 @@ import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
-import org.http4k.lens.Header
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
