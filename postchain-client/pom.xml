@@ -44,23 +44,16 @@
 
         <!-- Tools -->
         <dependency>
-            <groupId>org.apache.httpcomponents.client5</groupId>
-            <artifactId>httpclient5</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.http4k</groupId>
             <artifactId>http4k-core</artifactId>
-            <version>4.25.10.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.http4k</groupId>
-            <artifactId>http4k-format-gson</artifactId>
-            <version>4.25.10.1</version>
         </dependency>
         <dependency>
             <groupId>org.http4k</groupId>
             <artifactId>http4k-client-apache-async</artifactId>
-            <version>4.25.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
         </dependency>
         <dependency>
             <groupId>com.madgag.spongycastle</groupId>
