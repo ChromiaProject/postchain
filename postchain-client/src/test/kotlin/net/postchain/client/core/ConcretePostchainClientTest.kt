@@ -175,6 +175,7 @@ internal class ConcretePostchainClientTest {
     fun `blockAtHeight found`() {
         val someBlock: BlockDetail? = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
+                assertEquals("application/octet-stream", request.header("Accept"))
                 fn(Response(Status.OK).body(GtvEncoder.encodeGtv(gtv(mapOf(
                         "rid" to gtv("34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray()),
                         "prevBlockRID" to gtv("5AF85874B9CCAC197AA739585449668BE15650C534E08705F6D60A6993FE906D".hexStringToByteArray()),
