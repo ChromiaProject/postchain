@@ -5,18 +5,24 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.Body
-import org.http4k.core.ContentType
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
 import org.http4k.core.with
 import org.http4k.format.Gson.auto
-import org.http4k.lens.string
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.io.EOFException
+import java.io.IOException
 import java.time.Duration
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -30,7 +36,6 @@ internal class ConcretePostchainClientTest {
     private val brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"
     private var requestCounter = 0
 
-    val jsonLens = Body.string(ContentType.APPLICATION_JSON).toLens()
     val txStatusLens = Body.auto<TxStatus>().toLens()
 
     @BeforeEach
@@ -141,23 +146,19 @@ internal class ConcretePostchainClientTest {
     fun `blockAtHeight found`() {
         val someBlock: BlockDetail? = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
-                fn(Response(Status.OK).with(jsonLens of """
-                {
-                    "rid": "34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6",
-                    "prevBlockRID": "5AF85874B9CCAC197AA739585449668BE15650C534E08705F6D60A6993FE906D",
-                    "header": "023F9C7FBAFD92E53D7890A61B50B33EC0375FA424D60BD328AA2454408430C383",
-                    "height": 1,
-                    "transactions": [
-                        {
-                            "rid": "62F71D71BA63D03FA0C6741DE22B116A3A8022893E7977DDC2A9CD981BBADE29",
-                            "hash": "F537E4B8224F4BC84DB37AD3E4F898A3A9127D2E86C25213508F7236016E58B9",
-                            "data": null
-                        }
-                    ],
-                    "witness": "03D8844CFC0CE7BECD33CDF49A9881364695C944E266E06356CDA11C2305EAB83A",
-                    "timestamp": 0
-                }                   
-                """.trimIndent()))
+                fn(Response(Status.OK).body(GtvEncoder.encodeGtv(gtv(mapOf(
+                        "rid" to gtv("34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray()),
+                        "prevBlockRID" to gtv("5AF85874B9CCAC197AA739585449668BE15650C534E08705F6D60A6993FE906D".hexStringToByteArray()),
+                        "header" to gtv("023F9C7FBAFD92E53D7890A61B50B33EC0375FA424D60BD328AA2454408430C383".hexStringToByteArray()),
+                        "height" to gtv(1),
+                        "transactions" to gtv(listOf(gtv(mapOf(
+                                "rid" to gtv("62F71D71BA63D03FA0C6741DE22B116A3A8022893E7977DDC2A9CD981BBADE29".hexStringToByteArray()),
+                                "hash" to gtv("F537E4B8224F4BC84DB37AD3E4F898A3A9127D2E86C25213508F7236016E58B9".hexStringToByteArray()),
+                                "data" to GtvNull
+                        )))),
+                        "witness" to gtv("03D8844CFC0CE7BECD33CDF49A9881364695C944E266E06356CDA11C2305EAB83A".hexStringToByteArray()),
+                        "timestamp" to gtv(0)
+                ))).inputStream()))
             }
         }).blockAtHeight(1L).toCompletableFuture().join()
         assertEquals(1L, someBlock!!.height)
@@ -170,10 +171,96 @@ internal class ConcretePostchainClientTest {
     fun `blockAtHeight missing`() {
         val noBlock: BlockDetail? = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
             override fun invoke(request: Request, fn: (Response) -> Unit) {
-                fn(Response(Status.OK).with(jsonLens of "null"))
+                fn(Response(Status.OK).body(GtvEncoder.encodeGtv(GtvNull).inputStream()))
             }
         }).blockAtHeight(Long.MAX_VALUE).toCompletableFuture().join()
         assertTrue(noBlock == null)
+    }
+
+    @Test
+    fun `raw query can be serialized correctly`() {
+        val queryResponse: Gtv = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                fn(Response(Status.OK).body(GtvEncoder.encodeGtv(gtv("query_response")).inputStream()))
+            }
+        }).querySync("test_query", gtv("arg"))
+        assertEquals("query_response", queryResponse.asString())
+    }
+
+    @Test
+    fun `too big response will be rejected`() {
+        assertThrows(EOFException::class.java) {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.OK).body(GtvEncoder.encodeGtv(gtv(ByteArray(2 * 1024))).inputStream()))
+                }
+            }).querySync("test_query", gtv("arg"))
+        }
+    }
+
+    @Test
+    fun `invalid GTV response will throw IOException`() {
+        assertThrows(IOException::class.java) {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.OK).body(ByteArray(100).inputStream()))
+                }
+            }).querySync("test_query", gtv("arg"))
+        }
+    }
+
+    @Test
+    fun `binary GTV error will be parsed`() {
+        assertThrows(UserMistake::class.java, {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.BAD_REQUEST).body(GtvEncoder.encodeGtv(gtv("the error")).inputStream()))
+                }
+            }).querySync("test_query", gtv("arg"))
+        }, "Can not make a query: 400 the error")
+    }
+
+    @Test
+    fun `current block height can be parsed`() {
+        val currentBlockHeight: Long = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : AsyncHttpHandler {
+            override fun invoke(request: Request, fn: (Response) -> Unit) {
+                fn(Response(Status.OK).with(Body.auto<CurrentBlockHeight>().toLens() of CurrentBlockHeight(0)))
+            }
+        }).currentBlockHeightSync()
+        assertEquals(0, currentBlockHeight)
+    }
+
+    @Test
+    fun `too big block height response will be rejected`() {
+        assertThrows(IOException::class.java) {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.OK).body("{\"blockHeight\":${" ".repeat(1024)}1}"))
+                }
+            }).currentBlockHeightSync()
+        }
+    }
+
+    @Test
+    fun `Can handle empty error body`() {
+        assertThrows(UserMistake::class.java) {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.BAD_REQUEST).body(""))
+                }
+            }).currentBlockHeightSync()
+        }
+    }
+
+    @Test
+    fun `Can handle too big error body`() {
+        assertThrows(IOException::class.java) {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.BAD_REQUEST).body("{\"error\":\"${"e".repeat(1024)}\"}"))
+                }
+            }).currentBlockHeightSync()
+        }
     }
 
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {

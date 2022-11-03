@@ -3,12 +3,15 @@
 package net.postchain.api.rest.endpoint
 
 import io.restassured.RestAssured
+import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.Query
 import net.postchain.api.rest.controller.QueryResult
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -17,6 +20,7 @@ import org.junit.jupiter.api.fail
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import kotlin.test.assertContentEquals
 
 /**
  * ProgrammerMistake -> 500
@@ -184,5 +188,55 @@ class RestApiQueryEndpointTest {
                 .then()
                 .statusCode(400)
                 .body(equalTo(answerBody))
+    }
+
+    @Test
+    fun gtvRequestAndResponseTypes() {
+        val query = gtv(listOf(gtv("test_query"), gtv(mapOf("arg" to gtv("value")))))
+        val answer = gtv("answer")
+
+        whenever(model.query(query)).thenReturn(answer)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .body(GtvEncoder.encodeGtv(query))
+                .post("/query_gtv/${blockchainRID}")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+
+        assertContentEquals(GtvEncoder.encodeGtv(answer), body.extract().response().body.asByteArray())
+    }
+
+    @Test
+    fun `Errors are in GTV format when querying for GTV`() {
+        val query = gtv(listOf(gtv("test_query"), gtv(mapOf("arg" to gtv("value")))))
+
+        val errorMessage = "Unknown query"
+        whenever(model.query(query)).thenThrow(UserMistake(errorMessage))
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .body(GtvEncoder.encodeGtv(query))
+                .post("/query_gtv/${blockchainRID}")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.BINARY)
+
+        assertContentEquals(GtvEncoder.encodeGtv(gtv(errorMessage)), body.extract().response().body.asByteArray())
+    }
+
+    @Test
+    fun `400 Bad Request is returned when gtv encoding is incorrect`() {
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .body(ByteArray(32))
+                .post("/query_gtv/${blockchainRID}")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.BINARY)
     }
 }

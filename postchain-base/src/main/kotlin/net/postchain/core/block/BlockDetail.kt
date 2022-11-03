@@ -1,6 +1,8 @@
 package net.postchain.core.block
 
 import net.postchain.core.TxDetail
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
 
 /**
  * BlockDetail returns a more in deep block overview
@@ -16,5 +18,16 @@ open class BlockDetail(
     val timestamp: Long
     ) {
 
+    fun toGtv(): Gtv {
+        return gtv(mapOf(
+                "rid" to gtv(rid),
+                "prevBlockRID" to gtv(prevBlockRID),
+                "header" to gtv(header),
+                "height" to gtv(height),
+                "transactions" to gtv(transactions.map { it.toGtv() }),
+                "witness" to gtv(witness),
+                "timestamp" to gtv(timestamp)
+        ))
+    }
 }
 

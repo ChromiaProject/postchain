@@ -1,12 +1,10 @@
 package net.postchain.client.core
 
-import com.google.gson.annotations.JsonAdapter
+import net.postchain.gtv.mapper.Name
+import net.postchain.gtv.mapper.Nullable
 
 class TxDetail(
-        @JsonAdapter(ByteArrayTypeAdapter::class)
-        val rid: ByteArray,
-        @JsonAdapter(ByteArrayTypeAdapter::class)
-        val hash: ByteArray,
-        @JsonAdapter(ByteArrayTypeAdapter::class)
-        val data: ByteArray?
+        @Name("rid") val rid: ByteArray,
+        @Name("hash") val hash: ByteArray,
+        @Name("data") @Nullable val data: ByteArray?
 )

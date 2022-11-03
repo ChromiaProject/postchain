@@ -2,7 +2,11 @@
 
 package net.postchain.api.rest.controller
 
-import com.google.gson.*
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import kong.unirest.Unirest
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
@@ -23,26 +27,34 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.gtv.*
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvType
 import spark.Request
 import spark.Response
 import spark.Service
+import java.io.IOException
 
 /**
  * Contains information on the rest API, such as network parameters and available queries
  */
 class RestApi(
-    private val listenPort: Int,
-    private val basePath: String,
-    private val tlsCertificate: String? = null,
-    private val tlsCertificatePassword: String? = null
+        private val listenPort: Int,
+        private val basePath: String,
+        private val tlsCertificate: String? = null,
+        private val tlsCertificatePassword: String? = null
 ) : Modellable {
 
     val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
     val DEFAULT_BLOCK_HEIGHT_REQUEST = Long.MAX_VALUE
     val DEFAULT_ENTRY_RESULTS_REQUEST = 25
     val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
+    val JSON_CONTENT_TYPE = "application/json"
+    val OCTET_CONTENT_TYPE = "application/octet-stream"
 
     companion object : KLogging()
 
@@ -84,43 +96,54 @@ class RestApi(
         http.exception(NotFoundError::class.java) { error, _, response ->
             logger.error("NotFoundError:", error)
             response.status(404)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(BadFormatError::class.java) { error, _, response ->
             logger.error("BadFormatError:", error)
             response.status(400)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(UserMistake::class.java) { error, _, response ->
             logger.error("UserMistake:", error)
             response.status(400)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(InvalidTnxException::class.java) { error, _, response ->
             response.status(400)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(DuplicateTnxException::class.java) { error, _, response ->
             response.status(409) // Conflict
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(UnavailableException::class.java) { error, _, response ->
             response.status(503) // Service unavailable
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.exception(Exception::class.java) { error, _, response ->
             logger.error("Exception:", error)
             response.status(500)
-            response.body(toJson(error))
+            setErrorResponseBody(response, error)
         }
 
         http.notFound { _, _ -> toJson(UserMistake("Not found")) }
+    }
+
+    private fun setErrorResponseBody(response: Response, error: Exception) {
+        if (response.type() == OCTET_CONTENT_TYPE) {
+            response.raw().outputStream.apply {
+                write(GtvEncoder.encodeGtv(gtv(error.message ?: "Unknown error")))
+                flush()
+            }
+        } else {
+            response.body(toJson(error))
+        }
     }
 
     private fun buildRouter(http: Service) {
@@ -133,7 +156,7 @@ class RestApi(
             res.header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
             res.header(ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
             //res.header("Access-Control-Allow-Headers", "")
-            res.type("application/json")
+            res.type(JSON_CONTENT_TYPE)
 
             // This is to provide compatibility with old postchain-client code
             req.pathInfo()
@@ -175,21 +198,21 @@ class RestApi(
                 "{}"
             })
 
-            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", redirectGet { request, _ ->
+            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE, redirectGet { request, _ ->
                 val result = runTxActionOnModel(request) { model, txRID ->
                     model.getTransaction(txRID)
                 }
                 gson.toJson(result)
             })
 
-            http.get("/transactions/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json", redirectGet { request, _ ->
+            http.get("/transactions/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE, redirectGet { request, _ ->
                 val result = runTxActionOnModel(request) { model, txRID ->
                     model.getTransactionInfo(txRID)
                 }
                 gson.toJson(result)
             })
 
-            http.get("/transactions/$PARAM_BLOCKCHAIN_RID", "application/json", redirectGet { request, _ ->
+            http.get("/transactions/$PARAM_BLOCKCHAIN_RID", JSON_CONTENT_TYPE, redirectGet { request, _ ->
                 val model = model(request)
                 val paramsMap = request.queryMap()
                 val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_TXS_PER_REQUEST)
@@ -214,7 +237,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID", "application/json", redirectGet { request, _ ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID", JSON_CONTENT_TYPE, redirectGet { request, _ ->
                 val model = model(request)
                 val paramsMap = request.queryMap()
                 val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
@@ -225,7 +248,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", "application/json") { request, _ ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE) { request, _ ->
                 val model = model(request)
                 val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
@@ -233,12 +256,35 @@ class RestApi(
                 gson.toJson(result)
             }
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", "application/json") { request, _ ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE) { request, response ->
+                val model = model(request)
+                val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
+                val txHashesOnly = request.queryMap()["txs"].value() != "true"
+                val result = model.getBlock(blockRID, txHashesOnly)
+
+                response.type(OCTET_CONTENT_TYPE)
+                val gtv = result?.toGtv() ?: GtvNull
+                GtvEncoder.encodeGtv(gtv)
+            }
+
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", JSON_CONTENT_TYPE) { request, _ ->
                 val model = model(request)
                 val height = request.params(PARAM_HEIGHT).toLong()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
                 val result = model.getBlock(height, txHashesOnly)
                 gson.toJson(result)
+            }
+
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", OCTET_CONTENT_TYPE) { request, response ->
+                response.type(OCTET_CONTENT_TYPE)
+
+                val model = model(request)
+                val height = request.params(PARAM_HEIGHT).toLong()
+                val txHashesOnly = request.queryMap()["txs"].value() != "true"
+                val result = model.getBlock(height, txHashesOnly)
+
+                val gtv = result?.toGtv() ?: GtvNull
+                GtvEncoder.encodeGtv(gtv)
             }
 
             http.post("/query/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
@@ -262,15 +308,19 @@ class RestApi(
                 handleGTXQueries(request)
             })
 
-            http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", "application/json", redirectGet { request, _ ->
+            http.post("/query_gtv/$PARAM_BLOCKCHAIN_RID", redirectPost { request, response ->
+                handleGtvQuery(request, response)
+            })
+
+            http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", JSON_CONTENT_TYPE, redirectGet { request, _ ->
                 handleNodeStatusQueries(request)
             })
 
-            http.get("/_debug", "application/json") { request, _ ->
+            http.get("/_debug", JSON_CONTENT_TYPE) { request, _ ->
                 handleDebugQuery(request)
             }
 
-            http.get("/_debug/$SUBQUERY", "application/json") { request, _ ->
+            http.get("/_debug/$SUBQUERY", JSON_CONTENT_TYPE) { request, _ ->
                 handleDebugQuery(request)
             }
 
@@ -390,11 +440,26 @@ class RestApi(
 
         queriesArray.forEach {
             val hexQuery = it.asString
-            val gtxQuery = GtvFactory.decodeGtv(hexQuery.hexStringToByteArray())
+            val gtxQuery = try {
+                GtvFactory.decodeGtv(hexQuery.hexStringToByteArray())
+            } catch (e: IOException) {
+                throw BadFormatError(e.message ?: "")
+            }
             response.add(GtvEncoder.encodeGtv(model(request).query(gtxQuery)).toHex())
         }
 
         return gson.toJson(response)
+    }
+
+    private fun handleGtvQuery(request: Request, response: Response): ByteArray {
+        response.type(OCTET_CONTENT_TYPE)
+
+        val gtvQuery = try {
+            GtvDecoder.decodeGtv(request.bodyAsBytes())
+        } catch (e: IOException) {
+            throw BadFormatError(e.message ?: "")
+        }
+        return GtvEncoder.encodeGtv(model(request).query(gtvQuery))
     }
 
     private fun handleNodeStatusQueries(request: Request): String {
@@ -436,6 +501,7 @@ class RestApi(
                 else
                     throw NotFoundError("Can't find blockchain with chain Iid: $chainIid in DB. Did you add this BC to the node?")
             }
+
             else -> throw BadFormatError("Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]")
         }
     }
@@ -481,7 +547,7 @@ class RestApi(
                 val url = model.path + request.uri() + (request.queryString()?.let { "?$it" } ?: "")
                 logger.trace { "Redirecting get request to $url" }
                 Unirest.get(url)
-                        .header("Content-Type", "application/json")
+                        .header("Content-Type", JSON_CONTENT_TYPE)
                         .asJson().body.toString()
             } else {
                 logger.trace { "Local REST API model found: $model" }
@@ -498,7 +564,7 @@ class RestApi(
                 val url = model.path + request.uri()
                 logger.trace { "Redirecting post request to $url" }
                 Unirest.post(url)
-                        .header("Content-Type", "application/json")
+                        .header("Content-Type", JSON_CONTENT_TYPE)
                         .body(request.body())
                         .asJson().body.toString()
             } else {

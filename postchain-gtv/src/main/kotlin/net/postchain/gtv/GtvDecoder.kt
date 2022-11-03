@@ -5,13 +5,18 @@ package net.postchain.gtv
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.gtv.gtvmessages.RawGtv
 import java.io.ByteArrayInputStream
+import java.io.InputStream
 
 object GtvDecoder {
 
     fun decodeGtv(b: ByteArray): Gtv {
         val byteArray = ByteArrayInputStream(b)
+        return decodeGtv(byteArray)
+    }
+
+    fun decodeGtv(inputStream: InputStream): Gtv {
         val gtv = RawGtv()
-        gtv.decode(byteArray)
+        gtv.decode(inputStream)
         return fromRawGtv(gtv)
     }
 
