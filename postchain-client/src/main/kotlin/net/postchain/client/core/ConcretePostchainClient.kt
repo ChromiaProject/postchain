@@ -11,14 +11,21 @@ import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.crypto.KeyPair
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import org.apache.commons.io.input.BoundedInputStream
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
-import org.http4k.core.*
+import org.http4k.core.Body
+import org.http4k.core.ContentType
+import org.http4k.core.Method
+import org.http4k.core.Request
+import org.http4k.core.Response
+import org.http4k.core.Status
 import org.http4k.format.Gson.auto
 import org.http4k.lens.Header
 import java.io.InputStream
@@ -68,16 +75,16 @@ class ConcretePostchainClient(
                     responseStream = BoundedInputStream(queryResult.body.stream, config.maxResponseSize.toLong())
                     when (queryResult.status) {
                         Status.OK -> return GtvDecoder.decodeGtv(responseStream)
-                        Status.BAD_REQUEST -> throw buildExceptionFromText(responseStream, queryResult.status)
-                        Status.INTERNAL_SERVER_ERROR -> throw buildExceptionFromText(responseStream, queryResult.status)
-                        Status.NOT_FOUND -> throw buildExceptionFromText(responseStream, queryResult.status)
+                        Status.BAD_REQUEST -> throw buildExceptionFromGTV(responseStream, queryResult.status)
+                        Status.INTERNAL_SERVER_ERROR -> throw buildExceptionFromGTV(responseStream, queryResult.status)
+                        Status.NOT_FOUND -> throw buildExceptionFromGTV(responseStream, queryResult.status)
                         Status.UNKNOWN_HOST -> break@endpoint
                         Status.SERVICE_UNAVAILABLE -> break@endpoint
                     }
                     sleep(config.failOverConfig.attemptInterval.toMillis())
                 }
             }
-            throw buildExceptionFromText(responseStream!!, queryResult!!.status)
+            throw buildExceptionFromGTV(responseStream!!, queryResult!!.status)
         } catch (e: CompletionException) {
             throw e.cause ?: e
         }
@@ -89,7 +96,7 @@ class ConcretePostchainClient(
         return queryTo(request, endpoint).thenApply {
             val responseStream = BoundedInputStream(it.body.stream, config.maxResponseSize.toLong())
             if (it.status != Status.OK) {
-                throw buildExceptionFromText(responseStream, it.status)
+                throw buildExceptionFromGTV(responseStream, it.status)
             }
             GtvDecoder.decodeGtv(responseStream)
         }
@@ -120,8 +127,8 @@ class ConcretePostchainClient(
         return UserMistake("Can not make a query: ${response.status} $msg")
     }
 
-    private fun buildExceptionFromText(responseStream: InputStream, status: Status): UserMistake {
-        val errorMessage = String(responseStream.readAllBytes())
+    private fun buildExceptionFromGTV(responseStream: InputStream, status: Status): UserMistake {
+        val errorMessage = GtvDecoder.decodeGtv(responseStream).asString()
         return UserMistake("Can not make a query: $status $errorMessage")
     }
 
@@ -148,7 +155,7 @@ class ConcretePostchainClient(
         return queryTo(request, endpoint).thenApply {
             val responseStream = BoundedInputStream(it.body.stream, config.maxResponseSize.toLong())
             if (it.status != Status.OK) {
-                throw buildExceptionFromText(responseStream, it.status)
+                throw buildExceptionFromGTV(responseStream, it.status)
             }
 
             val gtv = GtvDecoder.decodeGtv(responseStream)

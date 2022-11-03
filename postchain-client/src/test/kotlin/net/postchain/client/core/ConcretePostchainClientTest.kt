@@ -5,6 +5,7 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
@@ -194,6 +195,17 @@ internal class ConcretePostchainClientTest {
                 }
             }).querySync("test_query", gtv("arg"))
         }
+    }
+
+    @Test
+    fun `binary GTV error will be parsed`() {
+        assertThrows(UserMistake::class.java, {
+            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : AsyncHttpHandler {
+                override fun invoke(request: Request, fn: (Response) -> Unit) {
+                    fn(Response(Status.BAD_REQUEST).body(GtvEncoder.encodeGtv(gtv("the error")).inputStream()))
+                }
+            }).querySync("test_query", gtv("arg"))
+        }, "Can not make a query: 400 the error")
     }
 
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {

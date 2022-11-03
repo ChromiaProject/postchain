@@ -360,10 +360,7 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
-            text/plain:
-              examples:
-                chainNotFound:
-                  value: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
   /blocks/{blockchainRid}/height/{height}:
     get:
       tags:
@@ -403,10 +400,7 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
-            text/plain:
-              examples:
-                chainNotFound:
-                  value: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
   /query/{blockchainRid}:
     get:
       tags:
@@ -678,7 +672,7 @@ paths:
       description: |
         Make a GTV encoded query to a chain.
         Request body contains binary GTV array with the query name as first element (string) and the named parameters as second element (dict).
-        200 OK response body contains binary GTV value.
+        Response body contains binary GTV value.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -692,19 +686,11 @@ paths:
         400:
           description: Invalid query
           content:
-            text/plain:
-              examples:
-                unknownQuery:
-                  value:
-                    error: "Unknown query: the_query"
+            application/octet-stream: { }
         404:
           description: Not found
           content:
-            text/plain:
-              examples:
-                chainNotFound:
-                  value:
-                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
   /node/{blockchainRid}/height:
     get:
       tags:

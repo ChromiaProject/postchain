@@ -210,7 +210,7 @@ class RestApiQueryEndpointTest {
     }
 
     @Test
-    fun `Errors are in plain text format when querying for GTV`() {
+    fun `Errors are in GTV format when querying for GTV`() {
         val query = gtv(listOf(gtv("test_query"), gtv(mapOf("arg" to gtv("value")))))
 
         val errorMessage = "Unknown query"
@@ -218,12 +218,13 @@ class RestApiQueryEndpointTest {
 
         restApi.attachModel(blockchainRID, model)
 
-        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .body(GtvEncoder.encodeGtv(query))
                 .post("/query_gtv/${blockchainRID}")
                 .then()
                 .statusCode(400)
-                .contentType(ContentType.TEXT)
-                .body(equalTo(errorMessage))
+                .contentType(ContentType.BINARY)
+
+        assertContentEquals(GtvEncoder.encodeGtv(gtv(errorMessage)), body.extract().response().body.asByteArray())
     }
 }
