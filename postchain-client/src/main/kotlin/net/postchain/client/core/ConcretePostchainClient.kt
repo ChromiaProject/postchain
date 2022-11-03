@@ -24,13 +24,11 @@ import org.apache.commons.io.input.BoundedInputStream
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
-import org.http4k.core.Body
 import org.http4k.core.ContentType
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
-import org.http4k.format.Gson.auto
 import org.http4k.lens.Header
 import java.io.BufferedReader
 import java.io.IOException
@@ -58,6 +56,7 @@ class ConcretePostchainClient(
     private val blockchainRIDOrID = config.queryByChainId?.let { "iid_$it" } ?: blockchainRIDHex
     private val cryptoSystem = config.cryptoSystem
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val gson = Gson()
 
     override fun transactionBuilder() = transactionBuilder(config.signers)
 
@@ -147,14 +146,6 @@ class ConcretePostchainClient(
         }
     }
 
-    private fun <T> parseJson(body: BufferedReader, cls: Class<T>): T? = try {
-        Gson().fromJson(body, cls)
-    } catch (e: JsonParseException) {
-        val rootCause = ExceptionUtils.getRootCause(e)
-        if (rootCause is IOException) throw rootCause
-        else throw IOException("Json parsing failed", e)
-    }
-
     @Throws(IOException::class)
     override fun currentBlockHeightSync(): Long = try {
         currentBlockHeight().toCompletableFuture().join()
@@ -210,10 +201,9 @@ class ConcretePostchainClient(
     }
 
     private fun postTransactionTo(tx: Gtx, endpoint: Endpoint): CompletableFuture<TransactionResult> {
-        val txLens = Body.auto<Tx>().toLens()
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
-        val encodedTx = Tx(tx.encodeHex())
-        val request = txLens(encodedTx, Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex"))
+        val request = Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex")
+                .body(gson.toJson(Tx(tx.encodeHex())))
         val result = CompletableFuture<TransactionResult>()
         httpClient(request) { response ->
             if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
@@ -253,17 +243,25 @@ class ConcretePostchainClient(
     }
 
     override fun checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult> {
-        val txStatusLens = Body.auto<TxStatus>().toLens()
         val endpoint = nextEndpoint()
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
         return queryTo(validationRequest, endpoint).thenApply { response ->
-            val txStatus = txStatusLens(response)
+            val responseStream = BoundedInputStream(response.body.stream, 64 * 1024)
+            val txStatus = parseJson(responseStream.bufferedReader(), TxStatus::class.java)
             TransactionResult(
                     txRid,
-                    TransactionStatus.valueOf(txStatus.status?.uppercase() ?: "UNKNOWN"),
+                    TransactionStatus.valueOf(txStatus?.status?.uppercase() ?: "UNKNOWN"),
                     response.status.code,
-                    txStatus.rejectReason
+                    txStatus?.rejectReason
             )
         }
+    }
+
+    private fun <T> parseJson(body: BufferedReader, cls: Class<T>): T? = try {
+        gson.fromJson(body, cls)
+    } catch (e: JsonParseException) {
+        val rootCause = ExceptionUtils.getRootCause(e)
+        if (rootCause is IOException) throw rootCause
+        else throw IOException("Json parsing failed", e)
     }
 }
