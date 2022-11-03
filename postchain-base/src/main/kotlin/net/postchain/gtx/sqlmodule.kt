@@ -2,6 +2,7 @@
 
 package net.postchain.gtx
 
+import mu.KotlinLogging
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.configuration.KEY_GTX
 import net.postchain.common.BlockchainRid
@@ -20,6 +21,8 @@ import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import java.io.File
+
+private val logger = KotlinLogging.logger {}
 
 fun decodeSQLTextArray(a: Any): Array<String> {
     val arr = a as java.sql.Array
@@ -262,7 +265,7 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
                     }
                     GTXSchemaManager.setModuleVersion(ctx, moduleName, 0)
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    logger.error(e) { "Failed to load SQL GTX module ${filename}: $e" }
                     throw UserMistake("Failed to load SQL GTX module ${filename}", e)
                 }
             }
