@@ -177,6 +177,7 @@ private fun classToGtv(obj: Any, other: (Any) -> Gtv =  { GtvObjectMapper.toGtvA
         obj::class.java.isRowId() -> gtv((obj as RowId).id)
         obj::class.java.isPubkey() -> gtv((obj as PubKey).data)
         obj::class.java.isBlockchainRid() -> gtv((obj as BlockchainRid))
+        obj is Collection<*> -> gtv(obj.map { classToGtv(it!!, other) })
         else -> other(obj)
     }
 }

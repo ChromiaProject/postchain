@@ -10,6 +10,10 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
+data class DictWithList(
+        @Name("simples") val simples: List<Simple>
+)
+
 class ObjectToGtvDictionaryTest {
 
     @Test
@@ -39,7 +43,7 @@ class ObjectToGtvDictionaryTest {
                 arrayOf(Simple(1), gtv("key" to gtv(1))),
                 arrayOf(BasicDict(Simple(2)), gtv("dict" to gtv("key" to gtv(2)))),
                 arrayOf(NullableType(null), gtv("foo" to GtvNull)),
-
+                arrayOf(DictWithList(listOf(Simple(1))), gtv("simples" to gtv(listOf(gtv("key" to gtv(1))))))
         )
 
         @JvmStatic
