@@ -165,7 +165,7 @@ class ConcretePostchainClient(
     override fun blockAtHeight(height: Long): CompletionStage<BlockDetail?> {
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
-                .header(Header.ACCEPT.toString(), ContentType.OCTET_STREAM.toString())
+                .header("Accept", ContentType.OCTET_STREAM.value)
         return queryTo(request, endpoint).thenApply {
             val responseStream = BoundedInputStream(it.body.stream, config.maxResponseSize.toLong())
             if (it.status != Status.OK) {
