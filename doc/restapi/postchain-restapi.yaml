@@ -326,7 +326,10 @@ paths:
       tags:
         - block
       summary: Fetch block info by block RID
-      description: Fetch info about a block from a chain
+      description: |
+        Fetch info about a block from a chain. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/blockRid"
@@ -346,6 +349,7 @@ paths:
                 oneOf:
                   - $ref: "#/components/schemas/blockInfo"
                   - $ref: "#/components/schemas/nullValue"
+            application/octet-stream: { }
         404:
           description: Chain not found
           content:
@@ -356,12 +360,16 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
   /blocks/{blockchainRid}/height/{height}:
     get:
       tags:
         - block
       summary: Fetch block info by block height
-      description: Fetch info about a block from a chain
+      description: |
+        Fetch info about a block from a chain. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/height"
@@ -381,6 +389,7 @@ paths:
                 oneOf:
                   - $ref: "#/components/schemas/blockInfo"
                   - $ref: "#/components/schemas/nullValue"
+            application/octet-stream: { }
         404:
           description: Chain not found
           content:
@@ -391,6 +400,7 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
   /query/{blockchainRid}:
     get:
       tags:
@@ -586,7 +596,10 @@ paths:
       tags:
         - query
       summary: Make GTV encoded queries
-      description: Make GTV encoded queries to a chain
+      description: |
+        Make GTV encoded queries to a chain.
+        This operation is deprecated, use /query_gtv instead.
+      deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -651,6 +664,33 @@ paths:
                 unknownError:
                   value:
                     error: "Unknown error"
+  /query_gtv/{blockchainRid}:
+    post:
+      tags:
+        - query
+      summary: Make a GTV encoded query
+      description: |
+        Make a GTV encoded query to a chain.
+        Request body contains binary GTV array with the query name as first element (string) and the named parameters as second element (dict).
+        Response body contains binary GTV value.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          application/octet-stream: { }
+      responses:
+        200:
+          description: OK
+          content:
+            application/octet-stream: { }
+        400:
+          description: Invalid query
+          content:
+            application/octet-stream: { }
+        404:
+          description: Not found
+          content:
+            application/octet-stream: { }
   /node/{blockchainRid}/height:
     get:
       tags:
