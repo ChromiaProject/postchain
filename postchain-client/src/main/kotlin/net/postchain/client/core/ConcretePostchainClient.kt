@@ -29,7 +29,6 @@ import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
-import org.http4k.lens.Header
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
@@ -156,7 +155,7 @@ class ConcretePostchainClient(
     override fun blockAtHeight(height: Long): CompletionStage<BlockDetail?> {
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
-                .header(Header.ACCEPT.toString(), ContentType.OCTET_STREAM.toString())
+                .header("Accept", ContentType.OCTET_STREAM.value)
         return queryTo(request, endpoint).thenApply {
             val responseStream = BoundedInputStream(it.body.stream, config.maxResponseSize.toLong())
             if (it.status != Status.OK) {
