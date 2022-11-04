@@ -54,10 +54,11 @@ class RestApi(
     val DEFAULT_BLOCK_HEIGHT_REQUEST = Long.MAX_VALUE
     val DEFAULT_ENTRY_RESULTS_REQUEST = 25
     val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
-    val JSON_CONTENT_TYPE = "application/json"
-    val OCTET_CONTENT_TYPE = "application/octet-stream"
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        val JSON_CONTENT_TYPE = "application/json"
+        val OCTET_CONTENT_TYPE = "application/octet-stream"
+    }
 
     private val http = Service.ignite()!!
     private val gson = JsonFactory.makeJson()
@@ -249,15 +250,15 @@ class RestApi(
                 gson.toJson(result)
             })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE) { request, _ ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE, redirectGet { request, _ ->
                 val model = model(request)
                 val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
                 val result = model.getBlock(blockRID, txHashesOnly)
                 gson.toJson(result)
-            }
+            })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE) { request, response ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE, redirectGet { request, response ->
                 response.type(OCTET_CONTENT_TYPE)
                 val model = model(request)
                 val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
@@ -266,17 +267,17 @@ class RestApi(
 
                 val gtv = result?.let { GtvObjectMapper.toGtvDictionary(it) } ?: GtvNull
                 GtvEncoder.encodeGtv(gtv)
-            }
+            })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", JSON_CONTENT_TYPE) { request, _ ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", JSON_CONTENT_TYPE, redirectGet { request, _ ->
                 val model = model(request)
                 val height = request.params(PARAM_HEIGHT).toLong()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
                 val result = model.getBlock(height, txHashesOnly)
                 gson.toJson(result)
-            }
+            })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", OCTET_CONTENT_TYPE) { request, response ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", OCTET_CONTENT_TYPE, redirectGet { request, response ->
                 response.type(OCTET_CONTENT_TYPE)
 
                 val model = model(request)
@@ -286,7 +287,7 @@ class RestApi(
 
                 val gtv = result?.let { GtvObjectMapper.toGtvDictionary(it) } ?: GtvNull
                 GtvEncoder.encodeGtv(gtv)
-            }
+            })
 
             http.post("/query/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
                 handlePostQuery(request)
@@ -547,9 +548,11 @@ class RestApi(
                 logger.trace { "External REST API model found: $model" }
                 val url = model.path + request.uri() + (request.queryString()?.let { "?$it" } ?: "")
                 logger.trace { "Redirecting get request to $url" }
-                Unirest.get(url)
-                        .header("Content-Type", JSON_CONTENT_TYPE)
-                        .asJson().body.toString()
+                val externalResponse = Unirest.get(url)
+                        .header("Accept", request.headers("Accept"))
+                        .asBytes()
+                response.type(externalResponse.headers.get("Content-Type").firstOrNull())
+                externalResponse.body
             } else {
                 logger.trace { "Local REST API model found: $model" }
                 localHandler(request, response)
@@ -564,10 +567,13 @@ class RestApi(
                 logger.trace { "External REST API model found: $model" }
                 val url = model.path + request.uri()
                 logger.trace { "Redirecting post request to $url" }
-                Unirest.post(url)
-                        .header("Content-Type", JSON_CONTENT_TYPE)
-                        .body(request.body())
-                        .asJson().body.toString()
+                val externalResponse = Unirest.post(url)
+                        .header("Accept", request.headers("Accept"))
+                        .header("Content-Type", request.headers("Content-Type"))
+                        .body(request.bodyAsBytes())
+                        .asBytes()
+                response.type(externalResponse.headers.get("Content-Type").first())
+                externalResponse.body
             } else {
                 logger.trace { "Local REST API model found: $model" }
                 localHandler(request, response)
