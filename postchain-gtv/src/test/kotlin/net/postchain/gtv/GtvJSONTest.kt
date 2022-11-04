@@ -4,11 +4,12 @@ package net.postchain.gtv
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.GtvFactory.gtv
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import java.math.BigInteger
 
 class GtvJSONTest {
 
@@ -52,10 +53,35 @@ class GtvJSONTest {
         val jsonValue = gson.toJson(gtvDictOrg, Gtv::class.java)
         //println(jsonValue)
         val gtvDictAfterRoundtrip = gson.fromJson<Gtv>(jsonValue, Gtv::class.java)!!
-       assertEquals("bar", gtvDictAfterRoundtrip["foo"]!!.asString())
-       assertEquals("1234", gtvDictAfterRoundtrip["bar"]!!.asString())
-       assertTrue(gtvDictAfterRoundtrip["bar"]!!.asByteArray(true).size == 2)
+        assertEquals("bar", gtvDictAfterRoundtrip["foo"]!!.asString())
+        assertEquals("1234", gtvDictAfterRoundtrip["bar"]!!.asString())
+        assertTrue(gtvDictAfterRoundtrip["bar"]!!.asByteArray(true).size == 2)
     }
 
+    @Test
+    fun can_parse_numbers() {
+        val gson = make_gtv_gson()
+        val gtv = gson.fromJson(Long.MAX_VALUE.toString(), Gtv::class.java)
+        assertEquals(Long.MAX_VALUE, gtv.asInteger())
+    }
 
+    @Test
+    fun decimal_value_should_throw_exception() {
+        val gson = make_gtv_gson()
+        assertThrows(
+                ProgrammerMistake::class.java,
+                { gson.fromJson("1.2", Gtv::class.java) },
+                NUMBER_ERROR_MSG
+        )
+    }
+
+    @Test
+    fun too_big_integer_should_throw_exception() {
+        val gson = make_gtv_gson()
+        assertThrows(
+                ProgrammerMistake::class.java,
+                { gson.fromJson(BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE).toString(), Gtv::class.java) },
+                NUMBER_ERROR_MSG
+        )
+    }
 }
