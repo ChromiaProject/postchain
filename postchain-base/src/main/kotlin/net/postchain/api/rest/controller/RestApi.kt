@@ -258,8 +258,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE, redirectGet { request, response ->
-                response.type(OCTET_CONTENT_TYPE)
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, response ->
                 val model = model(request)
                 val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
@@ -277,9 +276,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", OCTET_CONTENT_TYPE, redirectGet { request, response ->
-                response.type(OCTET_CONTENT_TYPE)
-
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, response ->
                 val model = model(request)
                 val height = request.params(PARAM_HEIGHT).toLong()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
@@ -310,7 +307,7 @@ class RestApi(
                 handleGTXQueries(request)
             })
 
-            http.post("/query_gtv/$PARAM_BLOCKCHAIN_RID", redirectPost { request, response ->
+            http.post("/query_gtv/$PARAM_BLOCKCHAIN_RID", redirectPost(OCTET_CONTENT_TYPE) { request, response ->
                 handleGtvQuery(request, response)
             })
 
@@ -454,8 +451,6 @@ class RestApi(
     }
 
     private fun handleGtvQuery(request: Request, response: Response): ByteArray {
-        response.type(OCTET_CONTENT_TYPE)
-
         val gtvQuery = try {
             GtvDecoder.decodeGtv(request.bodyAsBytes())
         } catch (e: IOException) {
@@ -541,8 +536,9 @@ class RestApi(
         return jsonObject.get("queries").asJsonArray
     }
 
-    private fun redirectGet(localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
+    private fun redirectGet(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
         return { request, response ->
+            response.type(responseType)
             val model = chainModel(request)
             if (model is ExternalModel) {
                 logger.trace { "External REST API model found: $model" }
@@ -560,8 +556,9 @@ class RestApi(
         }
     }
 
-    private fun redirectPost(localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
+    private fun redirectPost(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
         return { request, response ->
+            response.type(responseType)
             val model = chainModel(request)
             if (model is ExternalModel) {
                 logger.trace { "External REST API model found: $model" }
@@ -572,7 +569,7 @@ class RestApi(
                         .header("Content-Type", request.headers("Content-Type"))
                         .body(request.bodyAsBytes())
                         .asBytes()
-                response.type(externalResponse.headers.get("Content-Type").first())
+                response.type(externalResponse.headers.get("Content-Type").firstOrNull())
                 externalResponse.body
             } else {
                 logger.trace { "Local REST API model found: $model" }
