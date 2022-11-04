@@ -9,7 +9,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.math.BigInteger
+import java.math.BigDecimal
 
 class GtvJSONTest {
 
@@ -68,20 +68,22 @@ class GtvJSONTest {
     @Test
     fun decimal_value_should_throw_exception() {
         val gson = make_gtv_gson()
+        val number = BigDecimal("1.2")
         assertThrows(
                 ProgrammerMistake::class.java,
-                { gson.fromJson("1.2", Gtv::class.java) },
-                NUMBER_ERROR_MSG
+                { gson.fromJson(number.toString(), Gtv::class.java) },
+                errorMsg(number)
         )
     }
 
     @Test
     fun too_big_integer_should_throw_exception() {
         val gson = make_gtv_gson()
+        val number = BigDecimal.valueOf(Long.MAX_VALUE).add(BigDecimal.ONE)
         assertThrows(
                 ProgrammerMistake::class.java,
-                { gson.fromJson(BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE).toString(), Gtv::class.java) },
-                NUMBER_ERROR_MSG
+                { gson.fromJson(number.toString(), Gtv::class.java) },
+                errorMsg(number)
         )
     }
 }
