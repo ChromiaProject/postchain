@@ -406,7 +406,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
-    override fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long,  hash: Hash, data: ByteArray) {
+    override fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray) {
         queryRunner.update(ctx.conn, cmdInsertEvent(ctx, prefix), height, position, hash, ctx.txIID, data)
     }
 
@@ -504,7 +504,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             }
 
         } else {
-            logger.info("Meta table does not exist. Assume database does not exist and create it (version: $expectedDbVersion).")
+            logger.debug("Meta table does not exist. Assume database does not exist and create it (version: $expectedDbVersion).")
             queryRunner.update(connection, cmdCreateTableMeta())
             val sql = "INSERT INTO ${tableMeta()} (key, value) values ('version', ?)"
             queryRunner.update(connection, sql, expectedDbVersion)
