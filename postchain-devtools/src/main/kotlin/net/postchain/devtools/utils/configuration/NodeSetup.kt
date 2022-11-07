@@ -98,7 +98,12 @@ data class NodeSetup(
             chainsToRead.forEach { chainId ->
                 val chainSetup = systemSetup.blockchainMap[chainId]
                         ?: error("Incorrect SystemSetup")
-                startChain(node, chainSetup, "read only")
+                try {
+                    startChain(node, chainSetup, "read only")
+                } catch (e: Exception) {
+                    node.shutdown()
+                    throw e
+                }
             }
         }
 
@@ -106,7 +111,12 @@ data class NodeSetup(
         chainsToSign.forEach { chainId ->
             val chainSetup = systemSetup.blockchainMap[chainId]
                     ?: error("Incorrect SystemSetup")
-            startChain(node, chainSetup, "")
+            try {
+                startChain(node, chainSetup, "")
+            } catch (e: Exception) {
+                node.shutdown()
+                throw e
+            }
         }
 
         return node

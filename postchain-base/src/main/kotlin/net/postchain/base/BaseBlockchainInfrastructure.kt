@@ -2,10 +2,12 @@
 
 package net.postchain.base
 
+import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseTransactionQueue
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
 import net.postchain.core.block.*
@@ -24,6 +26,8 @@ open class BaseBlockchainInfrastructure(
 
     val syncInfraCache = mutableMapOf<String, SynchronizationInfrastructure>()
     val syncInfraExtCache = mutableMapOf<String, SynchronizationInfrastructureExtension>()
+
+    companion object : KLogging()
 
     init {
         val privKey = postchainContext.appConfig.privKeyByteArray
@@ -91,8 +95,15 @@ open class BaseBlockchainInfrastructure(
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
         val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
-        connectProcess(configuration, process)
-        return process
+        try {
+            connectProcess(configuration, process)
+        } catch (e: Exception) {
+            // Clean up any resources that may have been created when instantiating blockchain process
+            process.shutdown()
+            throw e
+        }
+        // Start the process once we have connected all the infra successfully
+        return process.apply { start() }
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {
@@ -111,7 +122,11 @@ open class BaseBlockchainInfrastructure(
 
     private fun connectProcess(configuration: BlockchainConfiguration, process: BlockchainProcess) {
         configuration.syncInfrastructureExtensionNames.forEach {
-            getSynchronizationInfrastructureExtension(it).connectProcess(process)
+            try {
+                getSynchronizationInfrastructureExtension(it).connectProcess(process)
+            } catch (e: Exception) {
+                throw ProgrammerMistake("Error when connecting sync-infra extension: ${it.className}", e)
+            }
         }
         apiInfrastructure.connectProcess(process)
     }
@@ -122,7 +137,11 @@ open class BaseBlockchainInfrastructure(
             isRestarting: Boolean
     ) {
         configuration.syncInfrastructureExtensionNames.forEach {
-            getSynchronizationInfrastructureExtension(it).disconnectProcess(process)
+            try {
+                getSynchronizationInfrastructureExtension(it).disconnectProcess(process)
+            } catch (e: Exception) {
+                logger.error("Error when disconnecting sync-infra extension: ${it.className}", e)
+            }
         }
         if (isRestarting) {
             apiInfrastructure.restartProcess(process)
