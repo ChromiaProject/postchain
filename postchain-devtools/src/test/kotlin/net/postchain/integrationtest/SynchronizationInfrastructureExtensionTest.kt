@@ -5,6 +5,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import net.postchain.PostchainContext
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.devtools.IntegrationTestSetup
@@ -31,7 +32,7 @@ class SynchronizationInfrastructureExtensionTest : IntegrationTestSetup() {
 
     @Test
     fun `Extension that throws exception when connecting process will be propagated`() {
-        assertThrows<SyncInfraTestException> {
+        assertThrows<ProgrammerMistake> {
             createNodes(3, "/net/postchain/devtools/syncinfra_extensions/blockchain_config_bad_connect.xml")
         }
     }
@@ -65,14 +66,11 @@ class DummySynchronizationInfrastructureExtension(postchainContext: PostchainCon
     }
 }
 
-class SyncInfraTestException(message: String) : Exception(message)
-
 class FaultyConnectingSynchronizationInfrastructureExtension(postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
     override fun shutdown() {}
     override fun connectProcess(process: BlockchainProcess) {
-        throw SyncInfraTestException("Bad extension")
+        throw Exception("Bad extension")
     }
-
     override fun disconnectProcess(process: BlockchainProcess) {}
 }
 
@@ -80,6 +78,6 @@ class FaultyDisconnectingSynchronizationInfrastructureExtension(postchainContext
     override fun shutdown() {}
     override fun connectProcess(process: BlockchainProcess) {}
     override fun disconnectProcess(process: BlockchainProcess) {
-        throw SyncInfraTestException("Bad extension")
+        throw Exception("Bad extension")
     }
 }
