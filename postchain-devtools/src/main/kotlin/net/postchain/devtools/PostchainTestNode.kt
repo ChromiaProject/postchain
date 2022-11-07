@@ -146,9 +146,12 @@ class PostchainTestNode(
     }
 
     fun getRestApiModel(): Model {
-        val blockchainProcess = processManager.retrieveBlockchain(DEFAULT_CHAIN_IID)!!
+        return getRestApiModel(getBlockchainRid(DEFAULT_CHAIN_IID)!!)!!
+    }
+
+    fun getRestApiModel(blockchainRid: BlockchainRid): Model? {
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
-                .restApi?.retrieveModel(blockchainRID(blockchainProcess)) as Model
+                .restApi?.retrieveModel(blockchainRid.toHex()) as Model?
     }
 
     fun getRestApiHttpPort(): Int {
@@ -195,8 +198,4 @@ class PostchainTestNode(
      * (It's only for test, so I didn't ptu much thought into it. )
      */
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
-
-    private fun blockchainRID(process: BlockchainProcess): String {
-        return process.blockchainEngine.getConfiguration().blockchainRid.toHex()
-    }
 }
