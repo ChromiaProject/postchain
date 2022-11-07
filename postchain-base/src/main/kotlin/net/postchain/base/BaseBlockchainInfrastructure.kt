@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.configuration.BlockchainConfigurationData
@@ -24,6 +25,8 @@ open class BaseBlockchainInfrastructure(
 
     val syncInfraCache = mutableMapOf<String, SynchronizationInfrastructure>()
     val syncInfraExtCache = mutableMapOf<String, SynchronizationInfrastructureExtension>()
+
+    companion object : KLogging()
 
     init {
         val privKey = postchainContext.appConfig.privKeyByteArray
@@ -111,7 +114,11 @@ open class BaseBlockchainInfrastructure(
 
     private fun connectProcess(configuration: BlockchainConfiguration, process: BlockchainProcess) {
         configuration.syncInfrastructureExtensionNames.forEach {
-            getSynchronizationInfrastructureExtension(it).connectProcess(process)
+            try {
+                getSynchronizationInfrastructureExtension(it).connectProcess(process)
+            } catch (e: Exception) {
+                logger.error("Error when connecting sync-infra extension: ${it.className}", e)
+            }
         }
         apiInfrastructure.connectProcess(process)
     }
@@ -122,7 +129,11 @@ open class BaseBlockchainInfrastructure(
             isRestarting: Boolean
     ) {
         configuration.syncInfrastructureExtensionNames.forEach {
-            getSynchronizationInfrastructureExtension(it).disconnectProcess(process)
+            try {
+                getSynchronizationInfrastructureExtension(it).disconnectProcess(process)
+            } catch (e: Exception) {
+                logger.error("Error when disconnecting sync-infra extension: ${it.className}", e)
+            }
         }
         if (isRestarting) {
             apiInfrastructure.restartProcess(process)
