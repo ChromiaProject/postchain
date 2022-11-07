@@ -51,7 +51,7 @@
     </entry>
     <entry key="sync_ext">
         <array>
-            <string>net.postchain.integrationtest.FaultySynchronizationInfrastructureExtension</string>
+            <string>net.postchain.integrationtest.FaultyConnectingSynchronizationInfrastructureExtension</string>
         </array>
     </entry>
 </dict>

@@ -98,11 +98,11 @@ open class EBFTSynchronizationInfrastructure(
                 )
 
             }
-            HistoricBlockchainProcess(workerContext, historicBlockchainContext).also { it.start() }
+            HistoricBlockchainProcess(workerContext, historicBlockchainContext)
         } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY) {
-            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also { it.start() }
+            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID))
         } else {
-            ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries()).also { it.start() }
+            ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries())
         }
     }
 

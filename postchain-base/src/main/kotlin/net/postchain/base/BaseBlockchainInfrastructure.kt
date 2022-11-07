@@ -7,6 +7,7 @@ import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseTransactionQueue
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
 import net.postchain.core.block.*
@@ -94,8 +95,15 @@ open class BaseBlockchainInfrastructure(
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
         val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
-        connectProcess(configuration, process)
-        return process
+        try {
+            connectProcess(configuration, process)
+        } catch (e: Exception) {
+            // Clean up any resources that may have been created when instantiating blockchain process
+            process.shutdown()
+            throw e
+        }
+        // Start the process once we have connected all the infra successfully
+        return process.apply { start() }
     }
 
     override fun exitBlockchainProcess(process: BlockchainProcess) {
@@ -117,7 +125,7 @@ open class BaseBlockchainInfrastructure(
             try {
                 getSynchronizationInfrastructureExtension(it).connectProcess(process)
             } catch (e: Exception) {
-                logger.error("Error when connecting sync-infra extension: ${it.className}", e)
+                throw ProgrammerMistake("Error when connecting sync-infra extension: ${it.className}", e)
             }
         }
         apiInfrastructure.connectProcess(process)

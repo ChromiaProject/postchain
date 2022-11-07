@@ -198,8 +198,4 @@ class PostchainTestNode(
      * (It's only for test, so I didn't ptu much thought into it. )
      */
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
-
-    private fun blockchainRID(process: BlockchainProcess): String {
-        return process.blockchainEngine.getConfiguration().blockchainRid.toHex()
-    }
 }

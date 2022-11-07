@@ -2,7 +2,6 @@ package net.postchain.integrationtest
 
 import assertk.assert
 import assertk.assertions.isFalse
-import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import net.postchain.PostchainContext
@@ -11,6 +10,7 @@ import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 var connected = mutableMapOf<Long, Boolean>()
 
@@ -30,18 +30,20 @@ class SynchronizationInfrastructureExtensionTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun `Extension that throws errors when connecting and disconnecting process will be handled`() {
-        val sysSetup = SystemSetupFactory.buildSystemSetup(mapOf(1 to "/net/postchain/devtools/syncinfra_extensions/blockchain_config_bad.xml"))
+    fun `Extension that throws exception when connecting process will be propagated`() {
+        assertThrows<SyncInfraTestException> {
+            createNodes(3, "/net/postchain/devtools/syncinfra_extensions/blockchain_config_bad_connect.xml")
+        }
+    }
+
+    @Test
+    fun `Extension that throws exception when disconnecting process will be caught`() {
+        val sysSetup = SystemSetupFactory.buildSystemSetup(mapOf(1 to "/net/postchain/devtools/syncinfra_extensions/blockchain_config_bad_disconnect.xml"))
         sysSetup.needRestApi = true
         createNodesFromSystemSetup(sysSetup)
+
         val bcRid = nodes[0].getBlockchainRid(1L)!!
-
         buildBlock(1L, 0)
-
-        // Assert that the faulty extension does not prevent REST API model from being installed
-        val block = nodes[0].getRestApiModel().getBlock(0L, true)
-
-        assert(block).isNotNull()
 
         nodes[0].stopBlockchain(1L)
 
@@ -63,15 +65,21 @@ class DummySynchronizationInfrastructureExtension(postchainContext: PostchainCon
     }
 }
 
-class FaultySynchronizationInfrastructureExtension(postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
+class SyncInfraTestException(message: String) : Exception(message)
 
+class FaultyConnectingSynchronizationInfrastructureExtension(postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
     override fun shutdown() {}
-
     override fun connectProcess(process: BlockchainProcess) {
-        throw Exception("Bad extension")
+        throw SyncInfraTestException("Bad extension")
     }
 
+    override fun disconnectProcess(process: BlockchainProcess) {}
+}
+
+class FaultyDisconnectingSynchronizationInfrastructureExtension(postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
+    override fun shutdown() {}
+    override fun connectProcess(process: BlockchainProcess) {}
     override fun disconnectProcess(process: BlockchainProcess) {
-        throw Exception("Bad extension")
+        throw SyncInfraTestException("Bad extension")
     }
 }
