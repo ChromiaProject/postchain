@@ -2,7 +2,11 @@
 
 package net.postchain.base
 
-import net.postchain.base.data.*
+import net.postchain.base.data.BaseBlockBuilder
+import net.postchain.base.data.BaseBlockStore
+import net.postchain.base.data.BaseBlockWitnessProvider
+import net.postchain.base.data.BaseTransactionFactory
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TxEContext
@@ -41,7 +45,10 @@ class BaseBlockBuilderTest {
     val validator = BaseBlockWitnessProvider(cryptoSystem, signer, subjects)
     val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),
-            subjects, signer, validator, listOf(),  listOf(), false)
+            subjects, signer, validator, listOf(), listOf(), false,
+            maxBlockSize = 26 * 1024 * 1024,
+            maxBlockTransactions = 100,
+            maxTxExecutionTime = 0)
 
     @Test
     fun invalidMonotoneTimestamp() {
