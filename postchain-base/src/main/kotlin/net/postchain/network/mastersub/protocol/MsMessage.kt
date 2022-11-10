@@ -33,7 +33,6 @@ private fun nullableByteArrayToGtv(value: ByteArray?): Gtv = if (value == null) 
 enum class MsMessageType {
     HandshakeMessage,
     DataMessage,
-    HeartbeatMessage,
     FindNextBlockchainConfig,
     NextBlockchainConfig,
     SubnodeStatus,
@@ -90,23 +89,6 @@ class MsDataMessage(
 }
 
 /**
- * Heartbeat message.
- */
-class MsHeartbeatMessage(
-        override val blockchainRid: ByteArray,
-        val timestamp: Long
-) : MsMessage {
-    override val type = HeartbeatMessage.ordinal
-
-    constructor(blockchainRid: ByteArray, payload: Gtv) :
-            this(blockchainRid, payload.asInteger())
-
-    override fun getPayload(): Gtv {
-        return GtvFactory.gtv(timestamp)
-    }
-}
-
-/**
  * A GetBlockchainConfig message which wraps the whole p2p-message.
  */
 class MsFindNextBlockchainConfigMessage(
@@ -157,7 +139,7 @@ class MsNextBlockchainConfigMessage(
 }
 
 /**
- * A status message of subnode
+ * A status message of subnode (is sent as a response Heartbeat message)
  */
 class MsSubnodeStatusMessage(
         override val blockchainRid: ByteArray,

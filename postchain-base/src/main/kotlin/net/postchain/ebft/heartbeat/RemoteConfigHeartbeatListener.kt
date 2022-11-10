@@ -11,23 +11,26 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.Storage
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
-import net.postchain.network.mastersub.protocol.MsHeartbeatMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
-import net.postchain.network.mastersub.protocol.MsSubnodeStatusMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
+interface RemoteConfigListener {
+    fun checkRemoteConfig(lastBlockTimestamp: Long): Boolean
+}
+
 class RemoteConfigHeartbeatListener(
-        heartbeatConfig: HeartbeatConfig,
+        val heartbeatConfig: HeartbeatConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         val connectionManager: SubConnectionManager
-) : DefaultHeartbeatListener(heartbeatConfig, chainId), MsMessageHandler {
+) : RemoteConfigListener, MsMessageHandler {
 
     companion object : KLogging()
 
     private val resultLogger = ResultLogger()
     private val intervalLogger = ResultLogger()
+    private val pref = "[chainId:${chainId}]:"
 
     lateinit var blockchainConfigProvider: BlockchainConfigurationProvider
     lateinit var storage: Storage
@@ -37,24 +40,20 @@ class RemoteConfigHeartbeatListener(
         connectionManager.preAddMsMessageHandler(chainId, this)
     }
 
-    override fun checkHeartbeat(timestamp: Long): Boolean {
+    override fun checkRemoteConfig(lastBlockTimestamp: Long): Boolean {
         // First block check
-        if (timestamp < 0) {
+        if (lastBlockTimestamp < 0) {
             return resultLogger.log(1 to true, logger) {
                 // We should skip remote config check in this case (there no blocks).
                 // It's considered that subnode always have config for height 0
-                "$pref Heartbeat check passed due to: timestamp = $timestamp < 0"
+                "$pref Remote config check passed due to: timestamp = $lastBlockTimestamp < 0"
             }
         }
 
-        // Check heartbeat
-        val superCheck = super.checkHeartbeat(timestamp)
-        if (!superCheck) return false
-
         // Check remote config
-        val intervalCheck = timestamp - responseTimestamp > heartbeatConfig.remoteConfigRequestInterval
-        val details = "timestamp ($timestamp) - responseTimestamp ($responseTimestamp) " +
-                "> heartbeatConfig.remoteConfigRequestInterval (${heartbeatConfig.remoteConfigRequestInterval}) is $intervalCheck"
+        val intervalCheck = lastBlockTimestamp - responseTimestamp > heartbeatConfig.remoteConfigRequestInterval
+        val details = "timestamp ($lastBlockTimestamp) - responseTimestamp ($responseTimestamp) " +
+                "> remoteConfigRequestInterval (${heartbeatConfig.remoteConfigRequestInterval}) is $intervalCheck"
         if (intervalCheck) {
             intervalLogger.registerOnly(2 to intervalCheck)
             logger.debug { "$pref Requesting of remote BlockchainConfig is required: $details" }
@@ -76,32 +75,21 @@ class RemoteConfigHeartbeatListener(
             }
         }
 
-        val timeoutOccurred = timestamp - responseTimestamp > heartbeatConfig.remoteConfigTimeout
+        val timeoutOccurred = lastBlockTimestamp - responseTimestamp > heartbeatConfig.remoteConfigTimeout
         return if (timeoutOccurred) {
             resultLogger.log(3 to false, logger) {
-                "$pref Timeout check is failed: timestamp ($timestamp) - responseTimestamp ($responseTimestamp) >" +
-                        " heartbeatConfig.remoteConfigTimeout (${heartbeatConfig.remoteConfigTimeout}) is true"
+                "$pref Timeout check is failed: timestamp ($lastBlockTimestamp) - responseTimestamp ($responseTimestamp) >" +
+                        " remoteConfigTimeout (${heartbeatConfig.remoteConfigTimeout}) is true"
             }
         } else {
             resultLogger.log(3 to true, logger) {
-                "$pref Heartbeat check is true"
+                "$pref Remote config check is true"
             }
         }
     }
 
     override fun onMessage(message: MsMessage) {
         when (message) {
-            is MsHeartbeatMessage -> {
-                onHeartbeat(HeartbeatEvent(message.timestamp))
-
-                // Reply with subnode status message.
-                val height = withReadConnection(storage, chainId) { ctx ->
-                    DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
-                }
-                val response = MsSubnodeStatusMessage(blockchainRid.data, height)
-                connectionManager.sendMessageToMaster(chainId, response)
-            }
-
             is MsNextBlockchainConfigMessage -> {
                 val details = "brid: ${BlockchainRid(message.blockchainRid).toShortHex()}, " +
                         "chainId: $chainId, " +

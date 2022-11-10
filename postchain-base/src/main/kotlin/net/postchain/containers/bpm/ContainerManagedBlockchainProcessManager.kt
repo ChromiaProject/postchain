@@ -94,9 +94,6 @@ open class ContainerManagedBlockchainProcessManager(
                     rTrace("Before", chainId, blockTrace)
                     for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
-                    // Sending heartbeat to other chains
-                    heartbeatManager.beat(blockTimestamp)
-
                     // Preloading blockchain configuration
                     preloadChain0Configuration()
 
@@ -381,7 +378,6 @@ open class ContainerManagedBlockchainProcessManager(
 
         val started = psContainer.startProcess(process)
         if (started) {
-            heartbeatManager.addListener(chain.chainId, process)
             chainIdToBrid[chain.chainId] = chain.brid
             bridToChainId[chain.brid] = chain.chainId
             extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
@@ -402,7 +398,6 @@ open class ContainerManagedBlockchainProcessManager(
                     extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                             .forEach { it.disconnectRemoteProcess(process) }
                     masterBlockchainInfra.exitMasterBlockchainProcess(process)
-                    heartbeatManager.removeListener(chainId)
                     val blockchainRid = chainIdToBrid.remove(chainId)
                     blockchainProcessesDiagnosticData.remove(blockchainRid)
                     bridToChainId.remove(blockchainRid)

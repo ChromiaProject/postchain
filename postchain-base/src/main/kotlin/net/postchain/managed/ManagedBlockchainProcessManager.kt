@@ -67,8 +67,6 @@ open class ManagedBlockchainProcessManager(
     protected open lateinit var dataSource: ManagedNodeDataSource
     protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
-    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
-    protected val heartbeatManager = DefaultHeartbeatManager()
 
     companion object : KLogging()
 
@@ -105,26 +103,13 @@ open class ManagedBlockchainProcessManager(
                         DappBlockchainConfigurationFactory(factory, dataSource)
                     }
                 } catch (e: Exception) {
-                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
-                            "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
-                            "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)", e)
+                    throw UserMistake(
+                            "[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                                    "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
+                                    "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)", e
+                    )
                 }
             }
-
-    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
-        return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {
-            { _, _ -> true }
-        } else {
-            val hbListener: HeartbeatListener = DefaultHeartbeatListener(heartbeatConfig, blockchainConfig.chainID)
-            heartbeatManager.addListener(blockchainConfig.chainID, hbListener)
-            awaitHeartbeatHandler(hbListener, heartbeatConfig)
-        }
-    }
-
-    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
-        heartbeatManager.removeListener(chainId)
-        super.stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
-    }
 
     /**
      * @return a [AfterCommitHandler] which is a lambda (This lambda will be called by the Engine after each block
@@ -141,8 +126,6 @@ open class ManagedBlockchainProcessManager(
          */
         fun afterCommitHandlerChain0(bTrace: BlockTrace?, blockTimestamp: Long): Boolean {
             wrTrace("chain0 begin", chainId, bTrace)
-            // Sending heartbeat to other chains
-            heartbeatManager.beat(blockTimestamp)
 
             // Preloading blockchain configuration
             preloadChain0Configuration()
