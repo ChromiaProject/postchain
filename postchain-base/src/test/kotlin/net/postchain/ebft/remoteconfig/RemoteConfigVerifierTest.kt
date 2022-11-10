@@ -1,4 +1,4 @@
-package net.postchain.ebft.heartbeat
+package net.postchain.ebft.remoteconfig
 
 import assertk.assert
 import assertk.assertions.isFalse

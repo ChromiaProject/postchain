@@ -1,4 +1,4 @@
-package net.postchain.ebft.heartbeat
+package net.postchain.ebft.remoteconfig
 
 import mu.KLogging
 import net.postchain.base.BaseConfigurationDataStore
@@ -19,8 +19,8 @@ interface RemoteConfigListener {
     fun checkRemoteConfig(lastBlockTimestamp: Long): Boolean
 }
 
-class RemoteConfigHeartbeatListener(
-        val heartbeatConfig: HeartbeatConfig,
+class DefaultRemoteConfigListener(
+        val remoteConfigConfig: RemoteConfigConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         val connectionManager: SubConnectionManager
@@ -51,9 +51,9 @@ class RemoteConfigHeartbeatListener(
         }
 
         // Check remote config
-        val intervalCheck = lastBlockTimestamp - responseTimestamp > heartbeatConfig.remoteConfigRequestInterval
+        val intervalCheck = lastBlockTimestamp - responseTimestamp > remoteConfigConfig.requestInterval
         val details = "timestamp ($lastBlockTimestamp) - responseTimestamp ($responseTimestamp) " +
-                "> remoteConfigRequestInterval (${heartbeatConfig.remoteConfigRequestInterval}) is $intervalCheck"
+                "> remoteConfigRequestInterval (${remoteConfigConfig.requestInterval}) is $intervalCheck"
         if (intervalCheck) {
             intervalLogger.registerOnly(2 to intervalCheck)
             logger.debug { "$pref Requesting of remote BlockchainConfig is required: $details" }
@@ -75,11 +75,11 @@ class RemoteConfigHeartbeatListener(
             }
         }
 
-        val timeoutOccurred = lastBlockTimestamp - responseTimestamp > heartbeatConfig.remoteConfigTimeout
+        val timeoutOccurred = lastBlockTimestamp - responseTimestamp > remoteConfigConfig.requestTimeout
         return if (timeoutOccurred) {
             resultLogger.log(3 to false, logger) {
                 "$pref Timeout check is failed: timestamp ($lastBlockTimestamp) - responseTimestamp ($responseTimestamp) >" +
-                        " remoteConfigTimeout (${heartbeatConfig.remoteConfigTimeout}) is true"
+                        " remoteConfigTimeout (${remoteConfigConfig.requestTimeout}) is true"
             }
         } else {
             resultLogger.log(3 to true, logger) {

@@ -139,7 +139,7 @@ class MsNextBlockchainConfigMessage(
 }
 
 /**
- * A status message of subnode (is sent as a response Heartbeat message)
+ * A status message of subnode (was sent as a response Heartbeat message)
  */
 class MsSubnodeStatusMessage(
         override val blockchainRid: ByteArray,

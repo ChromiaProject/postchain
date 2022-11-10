@@ -1,4 +1,4 @@
-package net.postchain.ebft.heartbeat
+package net.postchain.ebft.remoteconfig
 
 import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -19,7 +19,7 @@ import org.mockito.kotlin.verify
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class RemoteConfigHeartbeatListenerTest {
+class DefaultRemoteConfigListenerTest {
 
     private val chainId = 0L
     private val blockchainRid = BlockchainRid.ZERO_RID
@@ -30,12 +30,12 @@ class RemoteConfigHeartbeatListenerTest {
 
     @Test
     fun `Life cycle test`() {
-        val heartbeatConfig: HeartbeatConfig = mock()
+        val remoteConfigConfig: RemoteConfigConfig = mock()
         val connManager: SubConnectionManager = mock()
         val mockBlockchainConfigProvider: BlockchainConfigurationProvider = mock {
             on { findNextConfigurationHeight(any(), any()) } doReturn 0
         }
-        val sut = RemoteConfigHeartbeatListener(heartbeatConfig, chainId, blockchainRid, connManager).apply {
+        val sut = DefaultRemoteConfigListener(remoteConfigConfig, chainId, blockchainRid, connManager).apply {
             storage = MockStorage.mockEContext(chainId)
             blockchainConfigProvider = mockBlockchainConfigProvider
         }

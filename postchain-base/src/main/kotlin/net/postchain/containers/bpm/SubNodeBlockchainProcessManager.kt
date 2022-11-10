@@ -6,9 +6,9 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.block.BlockTrace
-import net.postchain.ebft.heartbeat.HeartbeatConfig
-import net.postchain.ebft.heartbeat.RemoteConfigHeartbeatListener
-import net.postchain.ebft.heartbeat.RemoteConfigListener
+import net.postchain.ebft.remoteconfig.RemoteConfigConfig
+import net.postchain.ebft.remoteconfig.DefaultRemoteConfigListener
+import net.postchain.ebft.remoteconfig.RemoteConfigListener
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import java.util.concurrent.ConcurrentHashMap
 
@@ -22,15 +22,15 @@ open class SubNodeBlockchainProcessManager(
         blockchainConfigProvider
 ) {
 
-    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
+    protected val remoteConfigConfig = RemoteConfigConfig.fromAppConfig(appConfig)
     protected val remoteConfigListeners: MutableMap<Long, RemoteConfigListener> = ConcurrentHashMap()
 
     override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
-        return if (!heartbeatConfig.remoteConfigEnabled) {
+        return if (!remoteConfigConfig.enabled) {
             { _, _ -> true }
         } else {
-            val listener: RemoteConfigListener = RemoteConfigHeartbeatListener(
-                    heartbeatConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
+            val listener: RemoteConfigListener = DefaultRemoteConfigListener(
+                    remoteConfigConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
             ).also {
                 it.blockchainConfigProvider = blockchainConfigProvider
                 it.storage = storage
@@ -42,7 +42,7 @@ open class SubNodeBlockchainProcessManager(
                     if (exitCondition()) {
                         return@hbCheck false
                     }
-                    Thread.sleep(heartbeatConfig.sleepTimeout)
+                    Thread.sleep(remoteConfigConfig.sleepTimeout)
                 }
                 true
             }

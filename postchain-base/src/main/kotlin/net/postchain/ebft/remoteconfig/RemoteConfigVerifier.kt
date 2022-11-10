@@ -1,4 +1,4 @@
-package net.postchain.ebft.heartbeat
+package net.postchain.ebft.remoteconfig
 
 import net.postchain.common.data.Hash
 import net.postchain.crypto.Secp256K1CryptoSystem

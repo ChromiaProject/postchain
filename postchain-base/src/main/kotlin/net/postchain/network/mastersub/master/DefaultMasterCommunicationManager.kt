@@ -8,7 +8,7 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.RemoteConfigVerifier
+import net.postchain.ebft.remoteconfig.RemoteConfigVerifier
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
