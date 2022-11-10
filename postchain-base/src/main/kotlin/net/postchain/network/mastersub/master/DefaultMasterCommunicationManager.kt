@@ -100,13 +100,6 @@ open class DefaultMasterCommunicationManager(
                                     "${config?.size}, config hash: $hashStr"
                         }
                     }
-
-                    is MsSubnodeStatusMessage -> {
-                        logger.debug {
-                            "${process()}: Subnode status: blockchainRid: " +
-                                    "${BlockchainRid(message.blockchainRid).toShortHex()}, height: ${message.height}"
-                        }
-                    }
                 }
             }
         }

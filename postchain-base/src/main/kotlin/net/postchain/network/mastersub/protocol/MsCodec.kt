@@ -32,7 +32,6 @@ object MsCodec {
             DataMessage -> MsDataMessage(brid, payload)
             FindNextBlockchainConfig -> MsFindNextBlockchainConfigMessage(brid, payload)
             NextBlockchainConfig -> MsNextBlockchainConfigMessage(brid, payload)
-            SubnodeStatus -> MsSubnodeStatusMessage(brid, payload)
             ConnectedPeers -> MsConnectedPeersMessage(brid, payload)
         }
     }

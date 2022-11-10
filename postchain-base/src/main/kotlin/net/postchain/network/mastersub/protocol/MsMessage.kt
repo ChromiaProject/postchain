@@ -35,7 +35,6 @@ enum class MsMessageType {
     DataMessage,
     FindNextBlockchainConfig,
     NextBlockchainConfig,
-    SubnodeStatus,
     ConnectedPeers
 }
 
@@ -135,25 +134,6 @@ class MsNextBlockchainConfigMessage(
                 nullableLongToGtv(nextHeight),
                 nullableByteArrayToGtv(rawConfig),
                 nullableByteArrayToGtv(configHash))
-    }
-}
-
-/**
- * A status message of subnode (was sent as a response Heartbeat message)
- */
-class MsSubnodeStatusMessage(
-        override val blockchainRid: ByteArray,
-        val height: Long
-) : MsMessage {
-    override val type = SubnodeStatus.ordinal
-
-    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
-            blockchainRid,
-            payload.asInteger()
-    )
-
-    override fun getPayload(): Gtv {
-        return GtvFactory.gtv(height)
     }
 }
 

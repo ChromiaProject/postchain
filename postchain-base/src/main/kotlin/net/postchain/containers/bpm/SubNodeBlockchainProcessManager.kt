@@ -37,10 +37,10 @@ open class SubNodeBlockchainProcessManager(
                 subnodeBcCfgListeners[blockchainConfig.chainID] = it
             }
 
-            return hbCheck@{ blockTimestamp, exitCondition ->
+            return configCheck@{ blockTimestamp, exitCondition ->
                 while (!listener.checkConfig(blockTimestamp)) {
                     if (exitCondition()) {
-                        return@hbCheck false
+                        return@configCheck false
                     }
                     Thread.sleep(subnodeBcCfgConfig.sleepTimeout)
                 }
