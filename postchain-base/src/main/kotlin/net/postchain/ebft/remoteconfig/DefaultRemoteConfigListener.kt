@@ -28,8 +28,8 @@ class DefaultRemoteConfigListener(
 
     companion object : KLogging()
 
-    private val resultLogger = ResultLogger()
-    private val intervalLogger = ResultLogger()
+    private val resultLogger = ResultLogger(logger)
+    private val intervalLogger = ResultLogger(logger)
     private val pref = "[chainId:${chainId}]:"
 
     lateinit var blockchainConfigProvider: BlockchainConfigurationProvider
@@ -43,11 +43,13 @@ class DefaultRemoteConfigListener(
     override fun checkRemoteConfig(lastBlockTimestamp: Long): Boolean {
         // First block check
         if (lastBlockTimestamp < 0) {
-            return resultLogger.log(1 to true, logger) {
-                // We should skip remote config check in this case (there no blocks).
-                // It's considered that subnode always have config for height 0
-                "$pref Remote config check passed due to: timestamp = $lastBlockTimestamp < 0"
-            }
+            return LogResult(1, true).also {
+                resultLogger.log(it) {
+                    // We should skip remote config check in this case (there no blocks).
+                    // It's considered that subnode always have config for height 0
+                    "$pref Remote config check passed due to: timestamp = $lastBlockTimestamp < 0"
+                }
+            }.result
         }
 
         // Check remote config
@@ -55,7 +57,7 @@ class DefaultRemoteConfigListener(
         val details = "timestamp ($lastBlockTimestamp) - responseTimestamp ($responseTimestamp) " +
                 "> remoteConfigRequestInterval (${remoteConfigConfig.requestInterval}) is $intervalCheck"
         if (intervalCheck) {
-            intervalLogger.registerOnly(2 to intervalCheck)
+            intervalLogger.registerStep(LogResult(2, intervalCheck))
             logger.debug { "$pref Requesting of remote BlockchainConfig is required: $details" }
 
             val (height, nextHeight) = withReadConnection(storage, chainId) { ctx ->
@@ -70,21 +72,23 @@ class DefaultRemoteConfigListener(
                         "height: $height, nextHeight: $nextHeight"
             }
         } else {
-            intervalLogger.log(2 to intervalCheck, logger) {
+            intervalLogger.log(LogResult(2, intervalCheck)) {
                 "$pref Requesting of remote BlockchainConfig is NOT required: $details"
             }
         }
 
         val timeoutOccurred = lastBlockTimestamp - responseTimestamp > remoteConfigConfig.requestTimeout
         return if (timeoutOccurred) {
-            resultLogger.log(3 to false, logger) {
-                "$pref Timeout check is failed: timestamp ($lastBlockTimestamp) - responseTimestamp ($responseTimestamp) >" +
-                        " remoteConfigTimeout (${remoteConfigConfig.requestTimeout}) is true"
-            }
+            LogResult(3, false).also {
+                resultLogger.log(it) {
+                    "$pref Timeout check is failed: timestamp ($lastBlockTimestamp) - responseTimestamp ($responseTimestamp) >" +
+                            " remoteConfigTimeout (${remoteConfigConfig.requestTimeout}) is true"
+                }
+            }.result
         } else {
-            resultLogger.log(3 to true, logger) {
-                "$pref Remote config check is true"
-            }
+            LogResult(3, true).also {
+                resultLogger.log(it) { "$pref Remote config check is true" }
+            }.result
         }
     }
 

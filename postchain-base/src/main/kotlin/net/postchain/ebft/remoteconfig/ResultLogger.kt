@@ -2,24 +2,27 @@ package net.postchain.ebft.remoteconfig
 
 import mu.KLogger
 
+internal data class LogResult(
+        val step: Int,
+        val result: Boolean
+)
+
 /**
  * Result Logger -- logs only NEW results
  * TODO: Make ResultLogger generic: replace Pair<Int, Boolean>? by <T>
  */
-class ResultLogger {
+internal class ResultLogger(val logger: KLogger) {
 
-    private var prevRes: Pair<Int, Boolean>? = null // step -> result
+    private var prevRes: LogResult? = null // step -> result
 
-    fun log(stepResult: Pair<Int, Boolean>, logger: KLogger, msg: () -> Any): Boolean {
+    fun log(result: LogResult, msg: () -> Any): Boolean {
         when {
             prevRes == null -> {
-                // Log the first result
-                prevRes = stepResult
+                prevRes = result // Log the first result
                 debug(logger, msg)
             }
-            prevRes != stepResult -> {
-                // Log only NEW result (another step or new result)
-                prevRes = stepResult
+            prevRes != result -> {
+                prevRes = result // Log only NEW result (another step or new result)
                 debug(logger, msg)
             }
             else -> {
@@ -27,11 +30,11 @@ class ResultLogger {
             }
         }
 
-        return stepResult.second
+        return result.result
     }
 
-    fun registerOnly(stepResult: Pair<Int, Boolean>) {
-        prevRes = stepResult
+    fun registerStep(result: LogResult) {
+        prevRes = result
     }
 
     private fun debug(logger: KLogger, msg: () -> Any?) {
