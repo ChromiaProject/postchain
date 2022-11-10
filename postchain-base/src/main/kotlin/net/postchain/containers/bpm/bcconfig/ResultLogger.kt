@@ -1,4 +1,4 @@
-package net.postchain.ebft.remoteconfig
+package net.postchain.containers.bpm.bcconfig
 
 import mu.KLogger
 
@@ -9,7 +9,6 @@ internal data class LogResult(
 
 /**
  * Result Logger -- logs only NEW results
- * TODO: Make ResultLogger generic: replace Pair<Int, Boolean>? by <T>
  */
 internal class ResultLogger(val logger: KLogger) {
 

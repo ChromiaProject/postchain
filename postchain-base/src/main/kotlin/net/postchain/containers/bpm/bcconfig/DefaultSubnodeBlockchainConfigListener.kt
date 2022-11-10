@@ -1,4 +1,4 @@
-package net.postchain.ebft.remoteconfig
+package net.postchain.containers.bpm.bcconfig
 
 import mu.KLogging
 import net.postchain.base.BaseConfigurationDataStore
@@ -15,16 +15,16 @@ import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
-interface RemoteConfigListener {
-    fun checkRemoteConfig(lastBlockTimestamp: Long): Boolean
+interface SubnodeBlockchainConfigListener {
+    fun checkConfig(lastBlockTimestamp: Long): Boolean
 }
 
-class DefaultRemoteConfigListener(
-        val remoteConfigConfig: RemoteConfigConfig,
+class DefaultSubnodeBlockchainConfigListener(
+        val subnodeBlockchainConfigurationConfig: SubnodeBlockchainConfigurationConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         val connectionManager: SubConnectionManager
-) : RemoteConfigListener, MsMessageHandler {
+) : SubnodeBlockchainConfigListener, MsMessageHandler {
 
     companion object : KLogging()
 
@@ -40,7 +40,7 @@ class DefaultRemoteConfigListener(
         connectionManager.preAddMsMessageHandler(chainId, this)
     }
 
-    override fun checkRemoteConfig(lastBlockTimestamp: Long): Boolean {
+    override fun checkConfig(lastBlockTimestamp: Long): Boolean {
         // First block check
         if (lastBlockTimestamp < 0) {
             return LogResult(1, true).also {
@@ -53,9 +53,9 @@ class DefaultRemoteConfigListener(
         }
 
         // Check remote config
-        val intervalCheck = lastBlockTimestamp - responseTimestamp > remoteConfigConfig.requestInterval
+        val intervalCheck = lastBlockTimestamp - responseTimestamp > subnodeBlockchainConfigurationConfig.requestInterval
         val details = "timestamp ($lastBlockTimestamp) - responseTimestamp ($responseTimestamp) " +
-                "> remoteConfigRequestInterval (${remoteConfigConfig.requestInterval}) is $intervalCheck"
+                "> requestInterval (${subnodeBlockchainConfigurationConfig.requestInterval}) is $intervalCheck"
         if (intervalCheck) {
             intervalLogger.registerStep(LogResult(2, intervalCheck))
             logger.debug { "$pref Requesting of remote BlockchainConfig is required: $details" }
@@ -77,12 +77,12 @@ class DefaultRemoteConfigListener(
             }
         }
 
-        val timeoutOccurred = lastBlockTimestamp - responseTimestamp > remoteConfigConfig.requestTimeout
+        val timeoutOccurred = lastBlockTimestamp - responseTimestamp > subnodeBlockchainConfigurationConfig.requestTimeout
         return if (timeoutOccurred) {
             LogResult(3, false).also {
                 resultLogger.log(it) {
                     "$pref Timeout check is failed: timestamp ($lastBlockTimestamp) - responseTimestamp ($responseTimestamp) >" +
-                            " remoteConfigTimeout (${remoteConfigConfig.requestTimeout}) is true"
+                            " requestTimeout (${subnodeBlockchainConfigurationConfig.requestTimeout}) is true"
                 }
             }.result
         } else {
@@ -104,7 +104,7 @@ class DefaultRemoteConfigListener(
                 logger.debug { "$pref Remote BlockchainConfig received: $details" }
 
                 if (message.rawConfig != null && message.configHash != null) {
-                    val approved = RemoteConfigVerifier.verify(message.rawConfig, message.configHash)
+                    val approved = SubnodeBlockchainConfigVerifier.verify(message.rawConfig, message.configHash)
                     if (approved) {
                         logger.debug { "$pref Remote config is going to be stored: $details" }
                         withWriteConnection(storage, chainId) { ctx ->

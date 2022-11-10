@@ -1,4 +1,4 @@
-package net.postchain.ebft.remoteconfig
+package net.postchain.containers.bpm.bcconfig
 
 import net.postchain.common.data.Hash
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -6,7 +6,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
-object RemoteConfigVerifier {
+object SubnodeBlockchainConfigVerifier {
 
     private val cryptoSystem = Secp256K1CryptoSystem()
     private val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)

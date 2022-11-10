@@ -8,7 +8,7 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.remoteconfig.RemoteConfigVerifier
+import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
@@ -89,7 +89,7 @@ open class DefaultMasterCommunicationManager(
                                 null // message.nextHeight != null && nextHeight == message.nextHeight
                             }
                         }
-                        val hash = config?.let { RemoteConfigVerifier.calculateHash(it) }
+                        val hash = config?.let { SubnodeBlockchainConfigVerifier.calculateHash(it) }
                         val hashStr = hash?.let { BlockchainRid(it).toHex() }
 
                         val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config, hash)
