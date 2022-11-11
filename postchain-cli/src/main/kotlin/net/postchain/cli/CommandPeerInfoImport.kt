@@ -7,7 +7,6 @@ import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.cli.util.printCommandInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.PropertiesNodeConfigurationProvider
 
@@ -17,8 +16,6 @@ class CommandPeerInfoImport : CliktCommand(name = "peerinfo-import", help = "Imp
     private val nodeConfigFile by nodeConfigOption()
 
     override fun run() {
-        printCommandInfo()
-
         val imported = peerinfoImport(nodeConfigFile)
 
         if (imported.isEmpty()) {

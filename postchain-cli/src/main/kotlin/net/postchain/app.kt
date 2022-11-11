@@ -4,7 +4,26 @@ package net.postchain
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
-import net.postchain.cli.*
+import net.postchain.cli.CommandAddBlockchain
+import net.postchain.cli.CommandAddConfiguration
+import net.postchain.cli.CommandBlockchainReplicaAdd
+import net.postchain.cli.CommandBlockchainReplicaRemove
+import net.postchain.cli.CommandCheckBlockchain
+import net.postchain.cli.CommandGenerateContainerZfsInitScript
+import net.postchain.cli.CommandKeygen
+import net.postchain.cli.CommandListConfigurations
+import net.postchain.cli.CommandMustSyncUntil
+import net.postchain.cli.CommandPeerInfoAdd
+import net.postchain.cli.CommandPeerInfoFind
+import net.postchain.cli.CommandPeerInfoImport
+import net.postchain.cli.CommandPeerInfoList
+import net.postchain.cli.CommandPeerInfoRemove
+import net.postchain.cli.CommandRemoveConfiguration
+import net.postchain.cli.CommandRunNode
+import net.postchain.cli.CommandRunNodeAuto
+import net.postchain.cli.CommandRunServer
+import net.postchain.cli.CommandWaitDb
+import net.postchain.cli.CommandWipeDb
 import java.io.File
 import java.lang.management.ManagementFactory
 
@@ -14,16 +33,19 @@ class Postchain: CliktCommand(name = "postchain") {
 }
 fun main(args: Array<String>) {
     dumpPid()
+    if (args.isNotEmpty()) {
+        println("${args[0]} will be executed with: ${args.toList().subList(1, args.size).joinToString(" ", "", "")}")
+    }
     return Postchain()
-        .subcommands(
-            CommandAddBlockchain(),
-            CommandAddConfiguration(),
-            CommandListConfigurations(),
-            CommandRemoveConfiguration(),
-            CommandBlockchainReplicaAdd(),
-            CommandBlockchainReplicaRemove(),
-            CommandCheckBlockchain(),
-            CommandGenerateContainerZfsInitScript(),
+            .subcommands(
+                    CommandAddBlockchain(),
+                    CommandAddConfiguration(),
+                    CommandListConfigurations(),
+                    CommandRemoveConfiguration(),
+                    CommandBlockchainReplicaAdd(),
+                    CommandBlockchainReplicaRemove(),
+                    CommandCheckBlockchain(),
+                    CommandGenerateContainerZfsInitScript(),
             CommandKeygen(),
             CommandMustSyncUntil(),
             CommandPeerInfoAdd(),

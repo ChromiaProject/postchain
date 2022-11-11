@@ -9,7 +9,6 @@ import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.portOption
-import net.postchain.cli.util.printCommandInfo
 import net.postchain.cli.util.requiredPubkeyOption
 
 class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer information to database") {
@@ -24,8 +23,6 @@ class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer 
     private val force by forceOption().help("Force the addition of peerinfo which already exists with the same host:port")
 
     override fun run() {
-        printCommandInfo()
-
         val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
         // Make all pubkey strings in db upper case. It will then be consistent with package net.postchain.common.
         //with HEX_CHARS = "0123456789ABCDEF"

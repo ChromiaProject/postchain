@@ -7,7 +7,6 @@ import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.cli.util.printCommandInfo
 
 class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List peer information") {
 
@@ -15,8 +14,6 @@ class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List pe
     private val nodeConfigFile by nodeConfigOption()
 
     override fun run() {
-        printCommandInfo()
-
         val peerInfos = peerinfoList(nodeConfigFile)
 
         if (peerInfos.isEmpty()) {

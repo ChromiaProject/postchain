@@ -10,7 +10,6 @@ import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.cli.util.printCommandInfo
 
 class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", help = "Remove configuration at a given height for a blockchain.") {
 
@@ -22,8 +21,6 @@ class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", h
     private val height by option("-h", "--height", help = "Height of configuration to remove").long().required()
 
     override fun run() {
-        printCommandInfo()
-
         runStorageCommand(nodeConfigFile, chainId) { ctx ->
             val count = BlockchainApi.removeConfiguration(ctx, height)
             if (count > 0)

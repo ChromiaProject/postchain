@@ -9,7 +9,6 @@ import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.cli.util.printCommandInfo
 
 class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add blockchain") {
 
@@ -24,8 +23,6 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
 
 
     override fun run() {
-        printCommandInfo()
-
         val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
         CliExecution.addBlockchain(nodeConfigFile, chainId, blockchainConfigFile, mode)
         println("Configuration has been added successfully")
