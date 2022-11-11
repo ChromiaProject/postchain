@@ -424,12 +424,6 @@
                 <version>31.1-jre</version>
             </dependency>
 
-            <!-- https://mvnrepository.com/artifact/org.openmuc/jasn1-compiler -->
-            <dependency>
-                <groupId>org.openmuc</groupId>
-                <artifactId>jasn1-compiler</artifactId>
-                <version>1.10.0</version>
-            </dependency>
             <dependency>
                 <groupId>com.beanit</groupId>
                 <artifactId>jasn1-compiler</artifactId>
@@ -459,18 +453,10 @@
 
             <dependency>
                 <groupId>io.grpc</groupId>
-                <artifactId>grpc-netty-shaded</artifactId>
+                <artifactId>grpc-bom</artifactId>
                 <version>1.48.0</version>
-            </dependency>
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-protobuf</artifactId>
-                <version>1.48.0</version>
-            </dependency>
-            <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-stub</artifactId>
-                <version>1.48.0</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.tomcat</groupId>
