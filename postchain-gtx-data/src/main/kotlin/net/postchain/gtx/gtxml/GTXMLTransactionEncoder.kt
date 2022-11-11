@@ -2,6 +2,7 @@
 
 package net.postchain.gtx.gtxml
 
+import jakarta.xml.bind.JAXB
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtxml.ObjectFactory
 import net.postchain.gtv.gtxml.OperationsType
@@ -10,7 +11,6 @@ import net.postchain.gtv.gtxml.SignersType
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxOp
 import java.io.StringWriter
-import javax.xml.bind.JAXB
 
 
 object GTXMLTransactionEncoder {
