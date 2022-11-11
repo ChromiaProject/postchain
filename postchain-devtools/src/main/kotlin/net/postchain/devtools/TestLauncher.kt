@@ -3,6 +3,9 @@
 package net.postchain.devtools
 
 import com.google.gson.GsonBuilder
+import jakarta.xml.bind.JAXBContext
+import jakarta.xml.bind.JAXBElement
+import jakarta.xml.bind.util.ValidationEventCollector
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -20,9 +23,6 @@ import net.postchain.gtx.gtxml.GTXMLTransactionParser
 import net.postchain.gtx.gtxml.TransactionContext
 import java.io.File
 import java.io.StringReader
-import javax.xml.bind.JAXBContext
-import javax.xml.bind.JAXBElement
-import javax.xml.bind.util.ValidationEventCollector
 
 /**
  * TODO: [et]: Maybe redesign this implementation based on [IntegrationTestSetup] currently

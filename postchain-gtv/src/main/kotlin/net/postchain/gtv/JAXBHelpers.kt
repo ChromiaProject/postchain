@@ -2,9 +2,9 @@
 
 package net.postchain.gtx.gtxml
 
+import jakarta.xml.bind.JAXBElement
+import jakarta.xml.bind.annotation.adapters.HexBinaryAdapter
 import net.postchain.gtv.gtxml.ObjectFactory
-import javax.xml.bind.JAXBElement
-import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 import javax.xml.namespace.QName
 
 
