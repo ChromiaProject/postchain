@@ -2,6 +2,8 @@
 
 package net.postchain.gtv.gtvml
 
+import jakarta.xml.bind.JAXBContext
+import jakarta.xml.bind.JAXBElement
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvBigInteger
@@ -22,8 +24,6 @@ import net.postchain.gtx.gtxml.component2
 import net.postchain.gtx.gtxml.isParam
 import java.io.StringReader
 import java.math.BigInteger
-import javax.xml.bind.JAXBContext
-import javax.xml.bind.JAXBElement
 
 object GtvMLParser {
 

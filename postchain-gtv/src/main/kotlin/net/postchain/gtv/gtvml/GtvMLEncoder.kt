@@ -2,13 +2,13 @@
 
 package net.postchain.gtv.gtvml
 
+import jakarta.xml.bind.JAXB
+import jakarta.xml.bind.JAXBElement
 import net.postchain.gtv.*
 import net.postchain.gtv.gtxml.ArrayType
 import net.postchain.gtv.gtxml.DictType
 import net.postchain.gtv.gtxml.ObjectFactory
 import java.io.StringWriter
-import javax.xml.bind.JAXB
-import javax.xml.bind.JAXBElement
 
 
 object GtvMLEncoder {

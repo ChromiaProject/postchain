@@ -2,6 +2,8 @@
 
 package net.postchain.gtx.gtxml
 
+import jakarta.xml.bind.JAXB
+import jakarta.xml.bind.JAXBElement
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.types.WrappedByteArray
@@ -22,8 +24,6 @@ import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.OpData
 import org.spongycastle.asn1.ua.DSTU4145NamedCurves.params
 import java.io.StringReader
-import javax.xml.bind.JAXB
-import javax.xml.bind.JAXBElement
 
 class TransactionContext(val blockchainRID: BlockchainRid?,
                          val params: Map<String, Gtv> = mapOf(),
