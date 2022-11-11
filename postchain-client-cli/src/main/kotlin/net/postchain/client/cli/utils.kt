@@ -4,11 +4,13 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvString
 import kotlin.text.Typography.quote
 
 fun encodeArg(arg: String): Gtv {
     return when {
+        arg == "null" -> GtvNull
         arg.startsWith("x\"") && arg.endsWith(quote) -> encodeByteArray(arg.substring(1))
         arg.startsWith("[") && arg.endsWith("]") -> encodeArray(arg.trim('[', ']'))
         arg.startsWith("{") && arg.endsWith("}") -> encodeDict(arg.trim('{', '}'))
