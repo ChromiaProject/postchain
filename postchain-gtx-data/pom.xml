@@ -13,9 +13,6 @@
     <name>Postchain GTX Data</name>
     <description>Defines a data format GTX for Postchain Transactions (that builds on GTV).</description>
 
-    <properties>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>

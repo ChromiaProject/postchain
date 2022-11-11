@@ -13,9 +13,6 @@
     <name>Postchain GTV</name>
     <description>Defines a common data transfer format GTV which adheres to ASN.1 format</description>
 
-    <properties>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -30,7 +27,6 @@
         <dependency>
             <groupId>com.beanit</groupId>
             <artifactId>jasn1</artifactId>
-            <version>${jasn.version}</version>
         </dependency>
 
         <!-- JAXB -->
@@ -90,8 +86,6 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 
@@ -100,7 +94,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>jaxb2-maven-plugin</artifactId>
-                <version>2.5.0</version>
                 <executions>
                     <execution>
                         <id>xjc</id>
@@ -131,7 +124,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>3.0.0</version>
                 <dependencies>
                     <dependency>
                         <groupId>com.beanit</groupId>
