@@ -6,7 +6,6 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.cli.util.printCommandInfo
 
 class CommandListConfigurations : CliktCommand(name = "list-configurations", help = "Lists configurations for a blockchain.") {
 
@@ -16,8 +15,6 @@ class CommandListConfigurations : CliktCommand(name = "list-configurations", hel
     private val chainId by chainIdOption().required()
 
     override fun run() {
-        printCommandInfo()
-
         println("Height")
         println("------")
         val configurations = CliExecution.listConfigurations(nodeConfigFile, chainId)

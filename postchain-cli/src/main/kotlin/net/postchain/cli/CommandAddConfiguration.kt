@@ -15,7 +15,6 @@ import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.cli.util.printCommandInfo
 
 class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = "Adds a blockchain configuration. All signers in the new configuration must " +
         "exist in the list of added peerInfos. Else flag --allow-unknown-signers must be set.") {
@@ -37,8 +36,6 @@ class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = 
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
     override fun run() {
-        printCommandInfo()
-
         if (height != 0L && futureHeight != 0L) {
             throw IllegalArgumentException("Cannot use --height and --future at the same time")
         }

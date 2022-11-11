@@ -5,7 +5,6 @@ import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.cli.util.printCommandInfo
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.BlockchainRid
 
@@ -23,8 +22,6 @@ class CommandBlockchainReplicaRemove : CliktCommand(
 
 
     override fun run() {
-        printCommandInfo()
-
         val removed = blockchainReplicaRemove(blockchainRID.toHex(), pubKey)
 
         if (removed.isEmpty()) {

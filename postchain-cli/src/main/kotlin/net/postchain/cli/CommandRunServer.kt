@@ -14,7 +14,6 @@ import mu.KLogging
 import net.postchain.cli.util.TlsOptions
 import net.postchain.cli.util.debugOption
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.cli.util.printCommandInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.server.PostchainServer
 import net.postchain.server.config.PostchainServerConfig
@@ -38,8 +37,6 @@ class CommandRunServer : CliktCommand(name = "run-server", help = "Start postcha
     private val tlsOptions by TlsOptions().cooccurring()
 
     override fun run() {
-        printCommandInfo()
-
         val serverConfig = tlsOptions?.let {
             PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
         } ?: PostchainServerConfig(port)
