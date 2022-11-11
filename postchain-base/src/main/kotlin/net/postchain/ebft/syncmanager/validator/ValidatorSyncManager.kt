@@ -72,7 +72,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun dispatchMessages() {
         for (packet in communicationManager.getPackets()) {
-            // We do heartbeat check for each network message because
+            // We do this check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
             if (!workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
                 return

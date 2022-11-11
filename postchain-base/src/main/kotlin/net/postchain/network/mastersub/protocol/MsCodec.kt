@@ -30,10 +30,8 @@ object MsCodec {
         return when (MsMessageType.values()[type]) {
             HandshakeMessage -> MsHandshakeMessage(brid, payload)
             DataMessage -> MsDataMessage(brid, payload)
-            HeartbeatMessage -> MsHeartbeatMessage(brid, payload)
             FindNextBlockchainConfig -> MsFindNextBlockchainConfigMessage(brid, payload)
             NextBlockchainConfig -> MsNextBlockchainConfigMessage(brid, payload)
-            SubnodeStatus -> MsSubnodeStatusMessage(brid, payload)
             ConnectedPeers -> MsConnectedPeersMessage(brid, payload)
         }
     }

@@ -293,7 +293,6 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         }
 
         baseConfig.setProperty("fastsync.exit_delay", if (nodeCount == 1) 0 else 1000)
-        baseConfig.setProperty("heartbeat.enabled", false)
 
         val appConfig = CompositeConfiguration().apply {
             addConfiguration(configOverrides)
@@ -360,7 +359,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         var allAtHeight = false
         while (!allAtHeight) {
             allAtHeight = true
-            run checkHeights@ {
+            run checkHeights@{
                 nodes.forEach {
                     val strategy = getStrategySafely(it)
                     // If chain has restarted we need to update height in the new strategy instance

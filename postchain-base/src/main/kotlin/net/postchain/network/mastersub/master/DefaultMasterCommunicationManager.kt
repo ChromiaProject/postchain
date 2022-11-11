@@ -8,8 +8,7 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.heartbeat.HeartbeatEvent
-import net.postchain.ebft.heartbeat.RemoteConfigVerifier
+import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
@@ -22,7 +21,7 @@ import java.util.*
 /**
  * Manages communication for the give chain
  *
- * For "masters" this means communicate with all peers in a normal fashion, but instead of really process
+ * For "masters" this means to communicate with all peers in a normal fashion, but instead of really process
  * the messages ourselves we wrap them in [MsMessage] and pass them on to the correct sub-node.
  */
 open class DefaultMasterCommunicationManager(
@@ -52,15 +51,6 @@ open class DefaultMasterCommunicationManager(
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
             masterConnectionManager.sendPacketToSub(msg)
         }
-    }
-
-    override fun sendHeartbeatToSub(heartbeatEvent: HeartbeatEvent) {
-        logger.trace {
-            "${process()}: Sending a heartbeat packet to subnode: blockchainRid: " +
-                    "${blockchainRid.toShortHex()} "
-        }
-        val message = MsHeartbeatMessage(blockchainRid.data, heartbeatEvent.timestamp)
-        masterConnectionManager.sendPacketToSub(message)
     }
 
     fun subnodePacketConsumer(): MsMessageHandler {
@@ -99,7 +89,7 @@ open class DefaultMasterCommunicationManager(
                                 null // message.nextHeight != null && nextHeight == message.nextHeight
                             }
                         }
-                        val hash = config?.let { RemoteConfigVerifier.calculateHash(it) }
+                        val hash = config?.let { SubnodeBlockchainConfigVerifier.calculateHash(it) }
                         val hashStr = hash?.let { BlockchainRid(it).toHex() }
 
                         val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config, hash)
@@ -108,13 +98,6 @@ open class DefaultMasterCommunicationManager(
                             "${process()}: BlockchainConfig sent to subnode: blockchainRid: " +
                                     "${blockchainRid.toShortHex()}, nextHeight: $nextHeight, config size: " +
                                     "${config?.size}, config hash: $hashStr"
-                        }
-                    }
-
-                    is MsSubnodeStatusMessage -> {
-                        logger.debug {
-                            "${process()}: Subnode status: blockchainRid: " +
-                                    "${BlockchainRid(message.blockchainRid).toShortHex()}, height: ${message.height}"
                         }
                     }
                 }
