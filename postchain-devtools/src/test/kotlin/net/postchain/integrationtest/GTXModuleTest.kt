@@ -4,11 +4,13 @@ package net.postchain.integrationtest
 
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.getModules
+import net.postchain.gtx.PatchOpsGTXModule
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class BlockchainModuleShutdownTest : IntegrationTestSetup() {
+class GTXModuleTest : IntegrationTestSetup() {
 
     @Test
     fun testShutdown() {
@@ -18,5 +20,13 @@ class BlockchainModuleShutdownTest : IntegrationTestSetup() {
         assertFalse(module.hasShutdown)
         node.shutdown()
         assertTrue(module.hasShutdown)
+    }
+
+    @Test
+    fun testLegacyPatchOpsModule() {
+        val nodes = createNodes(1, "/net/postchain/devtools/blockchain_module_legacy.xml")
+        val node = nodes[0]
+        val legacyModule = node.getModules().find { it is PatchOpsGTXModule }
+        assertNotNull(legacyModule)
     }
 }

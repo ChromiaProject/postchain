@@ -33,7 +33,13 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         }
 
         fun makeModule(name: String): GTXModule {
-            val moduleClass = Class.forName(name).getConstructor()
+            // Alias function for GTX modules that have been moved
+            val className = when (name) {
+                "PatchOpsGTXModule" -> PatchOpsGTXModule::class.qualifiedName
+                else -> name
+            }
+
+            val moduleClass = Class.forName(className).getConstructor()
             return when (val instance = moduleClass.newInstance()) {
                 is GTXModule -> instance
                 is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID) //TODO
