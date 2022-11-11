@@ -9,7 +9,6 @@ import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.portOption
-import net.postchain.cli.util.printCommandInfo
 import net.postchain.cli.util.pubkeyOption
 
 class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find peerinfo") {
@@ -24,8 +23,6 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
     private val pubKey by pubkeyOption()
 
     override fun run() {
-        printCommandInfo()
-
         val peerInfos = peerinfoFind(nodeConfigFile, host, port, pubKey)
 
         if (peerInfos.isEmpty()) {
