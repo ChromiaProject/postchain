@@ -1,4 +1,4 @@
-package net.postchain.containers.bpm.config
+package net.postchain.containers.bpm.chain0
 
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
