@@ -562,6 +562,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, nullableLongRes)
     }
 
+    override fun getMaxSystemChainId(ctx: EContext): Long? {
+        val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()} WHERE chain_iid < 100"
+        return queryRunner.query(ctx.conn, sql, nullableLongRes)
+    }
+
     override fun getBlock(ctx: EContext, blockRID: ByteArray): DatabaseAccess.BlockInfoExt? {
         val sql = """
             SELECT block_rid, block_height, block_header_data, block_witness, timestamp 

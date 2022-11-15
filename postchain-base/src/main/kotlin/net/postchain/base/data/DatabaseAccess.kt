@@ -57,6 +57,7 @@ interface DatabaseAccess {
     fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid)
     fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long?
     fun getMaxChainId(ctx: EContext): Long?
+    fun getMaxSystemChainId(ctx: EContext): Long?
 
     fun getBlockchainRid(ctx: EContext): BlockchainRid?
     fun insertBlock(ctx: EContext, height: Long): Long
