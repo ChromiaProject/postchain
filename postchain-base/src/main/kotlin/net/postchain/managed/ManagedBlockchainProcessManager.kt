@@ -10,6 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
@@ -329,11 +330,9 @@ open class ManagedBlockchainProcessManager(
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
-
-            val locallyConfiguredReplicas = postchainContext.nodeConfigProvider.getConfiguration().blockchainsToReplicate
-            val domainBlockchainSet = dataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
-            val allMyBlockchains = domainBlockchainSet.union(locallyConfiguredReplicas)
-            allMyBlockchains.map { blockchainRid ->
+            val domainBlockchains = dataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
+            val all = domainBlockchains.union(locallyConfiguredBlockchainsToReplicate())
+            all.map { blockchainRid ->
                 val chainId = db.getChainId(ctx0, blockchainRid)
                 retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
                 if (chainId == null) {
@@ -353,6 +352,11 @@ open class ManagedBlockchainProcessManager(
         retrieveTrace("End, restart: ${blockchains.size}.")
         return blockchains.toSet()
     }
+
+    protected open fun locallyConfiguredBlockchainsToReplicate() =
+            (postchainContext.nodeConfigProvider.getConfiguration() as? ManagedNodeConfig)
+                    ?.locallyConfiguredBlockchainsToReplicate
+                    ?: emptySet()
 
     protected open fun getLaunchedBlockchains(): Set<Long> {
         return blockchainProcesses.keys
