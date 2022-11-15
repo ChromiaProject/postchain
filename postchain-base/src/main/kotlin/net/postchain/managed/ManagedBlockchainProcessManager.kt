@@ -6,7 +6,6 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -317,7 +316,7 @@ open class ManagedBlockchainProcessManager(
     /**
      * Will call chain zero to ask what chains to run.
      *
-     * Note: We use [computeBlockchainList()] which is the API method "nm_compute_blockchain_list" of this node's own
+     * Note: We use [computeBlockchainInfoList()] which is the API method "nm_compute_blockchain_info_list" of this node's own
      * API for chain zero.
      *
      * @return all chainIids chain zero thinks we should run.
@@ -330,28 +329,36 @@ open class ManagedBlockchainProcessManager(
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
 
-            val locallyConfiguredReplicas = postchainContext.nodeConfigProvider.getConfiguration().blockchainsToReplicate
-            val domainBlockchainSet = dataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
+            val locallyConfiguredReplicas = postchainContext.nodeConfigProvider.getConfiguration().blockchainsToReplicate.map {
+                BlockchainInfo(it, false)
+            }
+            val domainBlockchainSet = dataSource.computeBlockchainInfoList().distinctBy { it.rid }
             val allMyBlockchains = domainBlockchainSet.union(locallyConfiguredReplicas)
-            allMyBlockchains.map { blockchainRid ->
-                val chainId = db.getChainId(ctx0, blockchainRid)
-                retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
-                if (chainId == null) {
-                    val newChainId = maxOf(db.getMaxChainId(ctx0) ?: 0, 99) + 1
-                    withReadWriteConnection(storage, newChainId) { newCtx ->
-                        db.initializeBlockchain(newCtx, blockchainRid)
+            allMyBlockchains.forEach { blockchainInfo ->
+                val chainId = db.getChainId(ctx0, blockchainInfo.rid)
+                retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainInfo.rid.toShortHex()} ")
+                val newChainId = if (chainId == null) {
+                    val calculatedChainId = if (blockchainInfo.system) {
+                        (db.getMaxSystemChainId(ctx0) ?: 0) + 1
+                    } else {
+                        maxOf(db.getMaxChainId(ctx0) ?: 0, 99) + 1
                     }
-                    newChainId
+                    withReadWriteConnection(storage, calculatedChainId) { newCtx ->
+                        db.initializeBlockchain(newCtx, blockchainInfo.rid)
+                    }
+                    calculatedChainId
                 } else {
                     chainId
                 }
-            }.filter { it != CHAIN0 }.forEach {
-                blockchains.add(it)
+
+                if (newChainId != CHAIN0) {
+                    blockchains.add(newChainId)
+                }
             }
             true
         }
         retrieveTrace("End, restart: ${blockchains.size}.")
-        return blockchains.toSet()
+        return blockchains
     }
 
     protected open fun getLaunchedBlockchains(): Set<Long> {
