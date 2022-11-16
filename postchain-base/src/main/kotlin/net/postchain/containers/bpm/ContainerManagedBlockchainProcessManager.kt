@@ -136,7 +136,7 @@ open class ContainerManagedBlockchainProcessManager(
         startBlockchainAsync(CHAIN0, null)
 
         getLaunchedBlockchains().filterNot { it == CHAIN0 }.forEach {
-            logger.debug("[${nodeName()}]: ContainerJob -- restart master chain: $it")
+            logger.debug("[${nodeName()}]: ContainerJob -- restart system chain: $it")
             startBlockchainAsync(it, null)
         }
 
@@ -162,7 +162,7 @@ open class ContainerManagedBlockchainProcessManager(
 
         // Stopping launched blockchains
         masterLaunched.filterNot(chainIdsToLaunch::contains).forEach {
-            logger.debug("[${nodeName()}]: ContainerJob -- Stop master chain: $it")
+            logger.debug("[${nodeName()}]: ContainerJob -- Stop system chain: $it")
             stopBlockchainAsync(it, null)
         }
         subnodeLaunched.filterNot(chainIdsToLaunch::contains).forEach {
@@ -173,7 +173,7 @@ open class ContainerManagedBlockchainProcessManager(
         // Launching new blockchains except blockchain 0
         toLaunch.filter { it.chainId != CHAIN0 && it.chainId !in masterLaunched && it.chainId !in subnodeLaunched }.forEach {
             if (it.system) {
-                logger.debug("[${nodeName()}]: ContainerJob -- Start master chain: ${it.chainId}")
+                logger.debug("[${nodeName()}]: ContainerJob -- Start system chain: ${it.chainId}")
                 startBlockchainAsync(it.chainId, null)
             } else {
                 logger.debug("[${nodeName()}]: ContainerJob -- Start subnode chain: ${getChain(it.chainId)}")
