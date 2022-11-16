@@ -6,7 +6,6 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -208,7 +207,7 @@ open class ManagedBlockchainProcessManager(
     private fun reloadBlockchainsAsync(bTrace: BlockTrace?) {
         synchronized(synchronizer) {
             reloadAllDebug("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch()
+            val toLaunch = retrieveBlockchainsToLaunch().map { it.chainId }.toSet()
             val launched = getLaunchedBlockchains()
             logChains(toLaunch, launched, true)
 
@@ -244,7 +243,7 @@ open class ManagedBlockchainProcessManager(
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
         synchronized(synchronizer) {
             ssaTrace("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch()
+            val toLaunch = retrieveBlockchainsToLaunch().map { it.chainId }.toSet()
             val launched = getLaunchedBlockchains()
             logChains(toLaunch, launched, reloadChain0)
 
@@ -318,44 +317,50 @@ open class ManagedBlockchainProcessManager(
     /**
      * Will call chain zero to ask what chains to run.
      *
-     * Note: We use [computeBlockchainList()] which is the API method "nm_compute_blockchain_list" of this node's own
+     * Note: We use [computeBlockchainInfoList()] which is the API method "nm_compute_blockchain_info_list" of this node's own
      * API for chain zero.
      *
      * @return all chainIids chain zero thinks we should run.
      */
-    protected open fun retrieveBlockchainsToLaunch(): Set<Long> {
+    protected open fun retrieveBlockchainsToLaunch(): Set<LocalBlockchainInfo> {
         retrieveTrace("Begin")
         // chain-zero is always in the list
-        val blockchains = mutableSetOf(CHAIN0)
+        val blockchains = mutableSetOf(LocalBlockchainInfo(CHAIN0, true))
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
-            val domainBlockchains = dataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
+            val domainBlockchains = dataSource.computeBlockchainInfoList().distinctBy { it.rid }
             val all = domainBlockchains.union(locallyConfiguredBlockchainsToReplicate())
-            all.map { blockchainRid ->
-                val chainId = db.getChainId(ctx0, blockchainRid)
-                retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
-                if (chainId == null) {
-                    val newChainId = maxOf(db.getMaxChainId(ctx0) ?: 0, 99) + 1
-                    withReadWriteConnection(storage, newChainId) { newCtx ->
-                        db.initializeBlockchain(newCtx, blockchainRid)
+            all.forEach { blockchainInfo ->
+                val chainId = db.getChainId(ctx0, blockchainInfo.rid)
+                retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainInfo.rid.toShortHex()} ")
+                val localBlockchainInfo = if (chainId == null) {
+                    val calculatedChainId = if (blockchainInfo.system) {
+                        (db.getMaxSystemChainId(ctx0) ?: 0) + 1
+                    } else {
+                        maxOf(db.getMaxChainId(ctx0) ?: 0, 99) + 1
                     }
-                    newChainId
+                    withReadWriteConnection(storage, calculatedChainId) { newCtx ->
+                        db.initializeBlockchain(newCtx, blockchainInfo.rid)
+                    }
+                    LocalBlockchainInfo(calculatedChainId, blockchainInfo.system)
                 } else {
-                    chainId
+                    LocalBlockchainInfo(chainId, blockchainInfo.system)
                 }
-            }.filter { it != CHAIN0 }.forEach {
-                blockchains.add(it)
+
+                if (localBlockchainInfo.chainId != CHAIN0) {
+                    blockchains.add(localBlockchainInfo)
+                }
             }
             true
         }
         retrieveTrace("End, restart: ${blockchains.size}.")
-        return blockchains.toSet()
+        return blockchains
     }
 
     protected open fun locallyConfiguredBlockchainsToReplicate() =
             (postchainContext.nodeConfigProvider.getConfiguration() as? ManagedNodeConfig)
-                    ?.locallyConfiguredBlockchainsToReplicate
+                    ?.locallyConfiguredBlockchainsToReplicate?.map { BlockchainInfo(it, false) }?.toSet()
                     ?: emptySet()
 
     protected open fun getLaunchedBlockchains(): Set<Long> {
