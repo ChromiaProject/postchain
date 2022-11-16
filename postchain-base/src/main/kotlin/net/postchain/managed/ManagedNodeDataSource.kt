@@ -8,6 +8,7 @@ import net.postchain.managed.query.QueryRunner
 interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
     fun getPeerListVersion(): Long
     fun computeBlockchainList(): List<ByteArray>
+    fun computeBlockchainInfoList(): List<BlockchainInfo>
     fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray?
 
     /**

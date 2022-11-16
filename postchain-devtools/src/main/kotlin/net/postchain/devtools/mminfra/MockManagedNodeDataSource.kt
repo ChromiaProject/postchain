@@ -9,6 +9,7 @@ import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.gtv.Gtv
+import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
 
 open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource {
@@ -23,6 +24,15 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
 
     override fun computeBlockchainList(): List<ByteArray> {
         return chainToNodeSet.filterValues { it.contains(nodeIndex) }.keys.map { it.data }
+    }
+
+    override fun computeBlockchainInfoList(): List<BlockchainInfo> {
+        return chainToNodeSet.filterValues { it.contains(nodeIndex) }.keys.map {
+            BlockchainInfo(
+                    it,
+                    false
+            )
+        }
     }
 
     override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {

@@ -40,6 +40,20 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return res.asArray().map { it.asByteArray() }
     }
 
+    override fun computeBlockchainInfoList(): List<BlockchainInfo> {
+        return if (nmApiVersion >= 4) {
+            val res = query(
+                    "nm_compute_blockchain_info_list",
+                    buildArgs("node_id" to GtvFactory.gtv(appConfig.pubKeyByteArray))
+            )
+
+            res.asArray().map { BlockchainInfo(BlockchainRid(it["rid"]!!.asByteArray()), it["system"]!!.asBoolean()) }
+        } else {
+            // Fallback for legacy API versions
+            computeBlockchainList().map { BlockchainInfo(BlockchainRid(it), false) }
+        }
+    }
+
     override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {
         val res = query(
                 "nm_get_blockchain_configuration",
