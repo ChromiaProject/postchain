@@ -4,26 +4,19 @@ package net.postchain.config.node
 
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
+import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 
 class NodeConfigTest {
 
     @Test
-    fun ttt() {
-        val m = mutableMapOf(1 to 10, 2 to 20, 3 to 30)
-        val kk = m.keys.toSet()
-        kk.forEach {
-            println(m.remove(it))
-        }
-    }
-
-    @Test
     fun testEmptyNodeConfig() {
-        val appConfig = AppConfig.fromPropertiesFile(
-                javaClass.getResource("/net/postchain/config/empty-node-config.properties").file)
+        val appConfig = loadAppConfig("/net/postchain/config/empty-node-config.properties")
         val nodeConfig = NodeConfig(appConfig)
 
         assertk.assert(appConfig.infrastructure).isEqualTo("ebft")
@@ -38,6 +31,34 @@ class NodeConfigTest {
         assertIsEmptyOrEqualsToEnvVar(appConfig.pubKey, "POSTCHAIN_PUBKEY")
 
         assertk.assert(nodeConfig.peerInfoMap.entries).isEmpty()
+    }
 
+    @Test
+    fun testAncestors() {
+        val nodeConfig = NodeConfig(loadAppConfig("/net/postchain/config/ancestors.properties"))
+        // expected
+        val n0 = NodeRid.fromHex("00")
+        val n1 = NodeRid.fromHex("01")
+        val n2 = NodeRid.fromHex("02")
+        val n3 = NodeRid.fromHex("03")
+        val brid0 = BlockchainRid.buildFromHex("90B136DFC51E08EE70ED929C620C0808D4230EC1015D46C92CCAA30772651DC0")
+        val brid1 = BlockchainRid.buildFromHex("6CCD14B5A877874DDC7CA52BD3AEDED5543B73A354779224BBB86B0FD315B418")
+        val brid2 = BlockchainRid.buildFromHex("4317338211726F61B281D62F0683FD55E355011B6E7495CF56F9E03059A3BC0A")
+        val brid3 = BlockchainRid.buildFromHex("5CB8BBC2830DB208330BF409C53A6D15D8BCB3A6DA07C5327B1548F8538B12C1")
+        val expected = mapOf(
+                brid0 to mapOf(
+                        brid1 to setOf(n0),
+                        brid2 to setOf(n1)
+                ),
+                brid1 to mapOf(
+                        brid3 to setOf(n2, n3)
+                )
+        )
+
+        assertEquals(expected, nodeConfig.blockchainAncestors)
+    }
+
+    private fun loadAppConfig(path: String): AppConfig {
+        return AppConfig.fromPropertiesFile(javaClass.getResource(path).file)
     }
 }

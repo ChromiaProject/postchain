@@ -40,6 +40,27 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
         )
     }
 
+    override fun create(
+            appConfig: AppConfig,
+            nodeConfig: NodeConfig,
+            ancestorBlockchainRid: BlockchainRid,
+            historicBlockchainContext: HistoricBlockchainContext
+    ): PeerCommConfiguration {
+        val myNodeRid = NodeRid(appConfig.pubKeyByteArray)
+        val peersThatServeAncestorBrid = historicBlockchainContext.ancestors[ancestorBlockchainRid] ?: emptySet()
+
+        val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
+            it in peersThatServeAncestorBrid || it == myNodeRid
+        }
+
+        return BasePeerCommConfiguration.build(
+                relevantPeerMap.values,
+                Secp256K1CryptoSystem(),
+                appConfig.privKeyByteArray,
+                appConfig.pubKeyByteArray
+        )
+    }
+
     /**
      * The [NodeConfig] has knowledge of many postchain nodes, but we want to narrow this list down to only
      * contain nodes that can be useful for the given blockchain.
@@ -75,7 +96,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
         // We keep
         // 1. All BC's peers
         // 2. All FULL node replicas
-        // 3. All nodes that replicates the BC
+        // 3. All nodes that replicate the BC
         // 4. This node itself
         return nodeConfig.peerInfoMap.filterKeys {
             it in peers0 || it in peersReplicas || it in blockchainReplicas || it == myNodeRid
