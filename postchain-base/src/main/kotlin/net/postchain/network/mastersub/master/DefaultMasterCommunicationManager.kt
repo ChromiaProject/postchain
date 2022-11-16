@@ -100,6 +100,10 @@ open class DefaultMasterCommunicationManager(
                                     "${config?.size}, config hash: $hashStr"
                         }
                     }
+
+                    is MsCommittedBlockMessage -> {
+                        // TODO Trigger afterCommitInSubnode in all Container BPM extensions
+                    }
                 }
             }
         }

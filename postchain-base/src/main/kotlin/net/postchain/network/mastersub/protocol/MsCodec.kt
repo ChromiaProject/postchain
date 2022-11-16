@@ -33,6 +33,7 @@ object MsCodec {
             FindNextBlockchainConfig -> MsFindNextBlockchainConfigMessage(brid, payload)
             NextBlockchainConfig -> MsNextBlockchainConfigMessage(brid, payload)
             ConnectedPeers -> MsConnectedPeersMessage(brid, payload)
+            CommittedBlock -> MsCommittedBlockMessage(brid, payload)
         }
     }
 }

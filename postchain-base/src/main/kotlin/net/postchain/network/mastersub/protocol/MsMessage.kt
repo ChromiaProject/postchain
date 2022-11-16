@@ -35,7 +35,8 @@ enum class MsMessageType {
     DataMessage,
     FindNextBlockchainConfig,
     NextBlockchainConfig,
-    ConnectedPeers
+    ConnectedPeers,
+    CommittedBlock
 }
 
 /**
@@ -151,6 +152,33 @@ class MsConnectedPeersMessage(
 
     override fun getPayload(): Gtv {
         return GtvFactory.gtv(encodePeers(connectedPeers))
+    }
+}
+
+/**
+ * Subnode sends this to master after committing a block
+ */
+class MsCommittedBlockMessage(
+        override val blockchainRid: ByteArray,
+        val blockRid: ByteArray,
+        val blockHeader: ByteArray,
+        val witnessData: ByteArray
+) : MsMessage {
+    override val type = CommittedBlock.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            payload[0].asByteArray(),
+            payload[1].asByteArray(),
+            payload[2].asByteArray()
+    )
+
+    override fun getPayload(): Gtv {
+        return GtvFactory.gtv(
+                GtvFactory.gtv(blockRid),
+                GtvFactory.gtv(blockHeader),
+                GtvFactory.gtv(witnessData),
+        )
     }
 }
 

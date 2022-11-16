@@ -7,9 +7,10 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.containers.bpm.ContainerBlockchainProcessManagerExtension
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
-import net.postchain.core.BlockchainProcessManagerExtension
+import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
@@ -20,10 +21,19 @@ import java.util.*
 /**
  * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.
  */
-class OldAnchoringBlockchainProcessManagerExtension(private val postchainContext: PostchainContext) : BlockchainProcessManagerExtension {
+class OldAnchoringBlockchainProcessManagerExtension(private val postchainContext: PostchainContext) : ContainerBlockchainProcessManagerExtension {
     private var chain0BlockchainEngine: BlockchainEngine? = null
 
     companion object : KLogging()
+
+    override fun afterCommitInSubnode(process: RemoteBlockchainProcess, blockRid: ByteArray, blockHeader: ByteArray, witnessData: ByteArray) {
+        val chain0Engine = chain0BlockchainEngine
+        if (chain0Engine != null) {
+            insertAnchorOperation(chain0Engine, blockHeader, witnessData)
+        } else {
+            logger.warn("Could not anchor block from subnode for chainId: ${process.chainId}")
+        }
+    }
 
     override fun afterCommit(process: BlockchainProcess, height: Long) {
         val chainId = process.blockchainEngine.getConfiguration().chainID
@@ -62,21 +72,25 @@ class OldAnchoringBlockchainProcessManagerExtension(private val postchainContext
             if (blockRID != null) {
                 val blockHeader = db.getBlockHeader(eContext, blockRID)
                 val witnessData = db.getWitnessData(eContext, blockRID)
-                val witness = BaseBlockWitness.fromBytes(witnessData)
-                val txb = GtxBuilder(chain0Engine.getConfiguration().blockchainRid, listOf(), Secp256K1CryptoSystem())
-                // sorting signatures makes it more likely we can avoid duplicate anchor transactions
-                val sortedSignatures = witness.getSignatures().sortedWith { o1, o2 -> Arrays.compareUnsigned(o1.subjectID, o2.subjectID) }
-                txb.addOperation(
-                        "anchor_block",
-                        GtvDecoder.decodeGtv(blockHeader),
-                        GtvArray(sortedSignatures.map { GtvByteArray(it.subjectID) }.toTypedArray()),
-                        GtvArray(sortedSignatures.map { GtvByteArray(it.data) }.toTypedArray())
-                )
-                val tx = chain0Engine.getConfiguration().getTransactionFactory().decodeTransaction(
-                        txb.finish().buildGtx().encode()
-                )
-                chain0Engine.getTransactionQueue().enqueue(tx)
+                insertAnchorOperation(chain0Engine, blockHeader, witnessData)
             }
         }
+    }
+
+    private fun insertAnchorOperation(chain0Engine: BlockchainEngine, blockHeader: ByteArray, witnessData: ByteArray) {
+        val witness = BaseBlockWitness.fromBytes(witnessData)
+        val txb = GtxBuilder(chain0Engine.getConfiguration().blockchainRid, listOf(), Secp256K1CryptoSystem())
+        // sorting signatures makes it more likely we can avoid duplicate anchor transactions
+        val sortedSignatures = witness.getSignatures().sortedWith { o1, o2 -> Arrays.compareUnsigned(o1.subjectID, o2.subjectID) }
+        txb.addOperation(
+                "anchor_block",
+                GtvDecoder.decodeGtv(blockHeader),
+                GtvArray(sortedSignatures.map { GtvByteArray(it.subjectID) }.toTypedArray()),
+                GtvArray(sortedSignatures.map { GtvByteArray(it.data) }.toTypedArray())
+        )
+        val tx = chain0Engine.getConfiguration().getTransactionFactory().decodeTransaction(
+                txb.finish().buildGtx().encode()
+        )
+        chain0Engine.getTransactionQueue().enqueue(tx)
     }
 }
