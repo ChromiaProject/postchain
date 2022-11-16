@@ -17,6 +17,11 @@ class Chromia0InfrastructureFactory: ManagedEBFTInfrastructureFactory() {
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-        return Chromia0BlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
+        return ManagedBlockchainProcessManager(
+                postchainContext,
+                blockchainInfrastructure,
+                blockchainConfigurationProvider,
+                listOf(OldAnchoringBlockchainProcessManagerExtension(postchainContext))
+        )
     }
 }
