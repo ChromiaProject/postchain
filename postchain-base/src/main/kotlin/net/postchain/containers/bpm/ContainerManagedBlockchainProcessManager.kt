@@ -34,7 +34,9 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
 
 open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -76,61 +78,55 @@ open class ContainerManagedBlockchainProcessManager(
                 if (chainId == CHAIN0) {
                     ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig)
                 } else {
-                    throw UserMistake("Unexpected chain id. This factory should only be used by chain 0.")
+                    DappBlockchainConfigurationFactory(factory, dataSource)
                 }
             }
 
-    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
+    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler = if (chainId == CHAIN0) {
+        { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
             try {
                 rTrace("Before", chainId, blockTrace)
-                if (chainId != CHAIN0) {
-                    logger.warn {
-                        "[${nodeName()}]: RestartHandler() -- RestartHandler has been called for chainId $chainId != 0, " +
-                                "block causing handler to run: $blockTrace"
-                    }
-                    false
-                } else {
-                    rTrace("Before", chainId, blockTrace)
-                    for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
+                rTrace("Before", chainId, blockTrace)
+                for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
-                    // Preloading blockchain configuration
-                    preloadChain0Configuration()
+                // Preloading blockchain configuration
+                preloadChain0Configuration()
 
-                    // Checking out the peer list changes
-                    val peerListVersion = dataSource.getPeerListVersion()
-                    val doReload = (this.peerListVersion != peerListVersion)
-                    this.peerListVersion = peerListVersion
+                // Checking out the peer list changes
+                val peerListVersion = dataSource.getPeerListVersion()
+                val doReload = (this.peerListVersion != peerListVersion)
+                this.peerListVersion = peerListVersion
 
-                    rTrace("Sync", chainId, blockTrace)
-                    val res = containerJobManager.withLock {
-                        // Reload/start/stops blockchains
-                        val res2 = if (doReload) {
-                            rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
-                            reloadAllBlockchains()
-                            true
-                        } else {
-                            rTrace("about to restart chain0", chainId, blockTrace)
-                            // Checking out for chain0 configuration changes
-                            val reloadChain0 = isConfigurationChanged(CHAIN0)
-                            stopStartBlockchains(reloadChain0)
-                            reloadChain0
-                        }
-
-                        // Docker containers healthcheck
-                        scheduleDockerContainersHealthcheck()
-                        res2
+                rTrace("Sync", chainId, blockTrace)
+                val res = containerJobManager.withLock {
+                    // Reload/start/stops blockchains
+                    val res2 = if (doReload) {
+                        rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
+                        reloadAllBlockchains()
+                        true
+                    } else {
+                        rTrace("about to restart chain0", chainId, blockTrace)
+                        // Checking out for chain0 configuration changes
+                        val reloadChain0 = isConfigurationChanged(CHAIN0)
+                        stopStartBlockchains(reloadChain0)
+                        reloadChain0
                     }
 
-                    rTrace("After", chainId, blockTrace)
-                    res
+                    // Docker containers healthcheck
+                    scheduleDockerContainersHealthcheck()
+                    res2
                 }
+
+                rTrace("After", chainId, blockTrace)
+                res
             } catch (e: Exception) {
                 logger.error(e) { "Exception in RestartHandler: $e" }
                 startBlockchainAsync(chainId, blockTrace)
                 true // let's hope restarting a blockchain fixes the problem
             }
         }
+    } else {
+        super.buildAfterCommitHandler(chainId)
     }
 
     /**
@@ -139,17 +135,24 @@ open class ContainerManagedBlockchainProcessManager(
     private fun reloadAllBlockchains() {
         startBlockchainAsync(CHAIN0, null)
 
+        getLaunchedBlockchains().filterNot { it == CHAIN0 }.forEach {
+            logger.debug("[${nodeName()}]: ContainerJob -- restart master chain: $it")
+            startBlockchainAsync(it, null)
+        }
+
         postchainContainers.values.forEach { cont ->
             cont.getAllChains().forEach {
-                logger.debug("[${nodeName()}]: ContainerJob -- restart chain: ${getChain(it)}")
+                logger.debug("[${nodeName()}]: ContainerJob -- restart subnode chain: ${getChain(it)}")
                 containerJobManager.restartChain(getChain(it))
             }
         }
     }
 
     private fun stopStartBlockchains(reloadChain0: Boolean) {
-        val toLaunch = retrieveBlockchainsToLaunch()
-        val launched = getLaunchedBlockchains()
+        val toLaunch: Set<LocalBlockchainInfo> = retrieveBlockchainsToLaunch()
+        val chainIdsToLaunch: Set<Long> = toLaunch.map { it.chainId }.toSet()
+        val masterLaunched: Set<Long> = getLaunchedBlockchains()
+        val subnodeLaunched: Set<Long> = getStartingOrRunningContainerBlockchains()
 
         // Chain0
         if (reloadChain0) {
@@ -158,15 +161,24 @@ open class ContainerManagedBlockchainProcessManager(
         }
 
         // Stopping launched blockchains
-        launched.filterNot(toLaunch::contains).forEach {
-            logger.debug("[${nodeName()}]: ContainerJob -- Stop chain: ${getChain(it)}")
+        masterLaunched.filterNot(chainIdsToLaunch::contains).forEach {
+            logger.debug("[${nodeName()}]: ContainerJob -- Stop master chain: $it")
+            stopBlockchainAsync(it, null)
+        }
+        subnodeLaunched.filterNot(chainIdsToLaunch::contains).forEach {
+            logger.debug("[${nodeName()}]: ContainerJob -- Stop subnode chain: ${getChain(it)}")
             containerJobManager.stopChain(getChain(it))
         }
 
         // Launching new blockchains except blockchain 0
-        toLaunch.filter { it != CHAIN0 && it !in launched }.forEach {
-            logger.debug("[${nodeName()}]: ContainerJob -- Start chain: ${getChain(it)}")
-            containerJobManager.startChain(getChain(it))
+        toLaunch.filter { it.chainId != CHAIN0 && it.chainId !in masterLaunched && it.chainId !in subnodeLaunched }.forEach {
+            if (it.system) {
+                logger.debug("[${nodeName()}]: ContainerJob -- Start master chain: ${it.chainId}")
+                startBlockchainAsync(it.chainId, null)
+            } else {
+                logger.debug("[${nodeName()}]: ContainerJob -- Start subnode chain: ${getChain(it.chainId)}")
+                containerJobManager.startChain(getChain(it.chainId))
+            }
         }
     }
 
@@ -409,11 +421,6 @@ open class ContainerManagedBlockchainProcessManager(
     private fun findDockerContainer(containerName: ContainerName): Container? {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
         return all.firstOrNull { it.hasName(containerName.name) }
-    }
-
-    override fun getLaunchedBlockchains(): Set<Long> {
-        // FYI: chain0 + chainsOf(starting|running containers)
-        return super.getLaunchedBlockchains() + getStartingOrRunningContainerBlockchains()
     }
 
     private fun getStartingOrRunningContainerBlockchains(): Set<Long> {
