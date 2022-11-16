@@ -206,7 +206,7 @@ open class ManagedBlockchainProcessManager(
     private fun reloadBlockchainsAsync(bTrace: BlockTrace?) {
         synchronized(synchronizer) {
             reloadAllDebug("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch()
+            val toLaunch = retrieveBlockchainsToLaunch().map { it.chainId }.toSet()
             val launched = getLaunchedBlockchains()
             logChains(toLaunch, launched, true)
 
@@ -242,7 +242,7 @@ open class ManagedBlockchainProcessManager(
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
         synchronized(synchronizer) {
             ssaTrace("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch()
+            val toLaunch = retrieveBlockchainsToLaunch().map { it.chainId }.toSet()
             val launched = getLaunchedBlockchains()
             logChains(toLaunch, launched, reloadChain0)
 
@@ -321,10 +321,10 @@ open class ManagedBlockchainProcessManager(
      *
      * @return all chainIids chain zero thinks we should run.
      */
-    protected open fun retrieveBlockchainsToLaunch(): Set<Long> {
+    protected open fun retrieveBlockchainsToLaunch(): Set<LocalBlockchainInfo> {
         retrieveTrace("Begin")
         // chain-zero is always in the list
-        val blockchains = mutableSetOf(CHAIN0)
+        val blockchains = mutableSetOf(LocalBlockchainInfo(CHAIN0, true))
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
@@ -337,7 +337,7 @@ open class ManagedBlockchainProcessManager(
             allMyBlockchains.forEach { blockchainInfo ->
                 val chainId = db.getChainId(ctx0, blockchainInfo.rid)
                 retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainInfo.rid.toShortHex()} ")
-                val newChainId = if (chainId == null) {
+                val localBlockchainInfo = if (chainId == null) {
                     val calculatedChainId = if (blockchainInfo.system) {
                         (db.getMaxSystemChainId(ctx0) ?: 0) + 1
                     } else {
@@ -346,13 +346,13 @@ open class ManagedBlockchainProcessManager(
                     withReadWriteConnection(storage, calculatedChainId) { newCtx ->
                         db.initializeBlockchain(newCtx, blockchainInfo.rid)
                     }
-                    calculatedChainId
+                    LocalBlockchainInfo(calculatedChainId, blockchainInfo.system)
                 } else {
-                    chainId
+                    LocalBlockchainInfo(chainId, blockchainInfo.system)
                 }
 
-                if (newChainId != CHAIN0) {
-                    blockchains.add(newChainId)
+                if (localBlockchainInfo.chainId != CHAIN0) {
+                    blockchains.add(localBlockchainInfo)
                 }
             }
             true

@@ -11,6 +11,7 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.block.BlockTrace
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
+import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedNodeDataSource
 import java.util.concurrent.BlockingQueue
@@ -39,12 +40,12 @@ class TestManagedBlockchainProcessManager(
      * Overriding the original method, so that we now, instead of checking the DB for what
      * BCs to launch we instead
      */
-    override fun retrieveBlockchainsToLaunch(): Set<Long> {
-        val result = mutableListOf<Long>()
-        testDataSource.computeBlockchainList().forEach {
-            val brid = BlockchainRid(it)
+    override fun retrieveBlockchainsToLaunch(): Set<LocalBlockchainInfo> {
+        val result = mutableListOf<LocalBlockchainInfo>()
+        testDataSource.computeBlockchainInfoList().forEach {
+            val brid = it.rid
             val chainIid = ChainUtil.iidOf(brid)
-            result.add(chainIid)
+            result.add(LocalBlockchainInfo(chainIid, it.system))
             retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")
             withReadWriteConnection(storage, chainIid) { newCtx ->
                 val db = DatabaseAccess.of(newCtx)
