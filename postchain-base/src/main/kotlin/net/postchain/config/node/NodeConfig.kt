@@ -18,20 +18,20 @@ open class NodeConfig(val appConfig: AppConfig) : Config {
     open val mustSyncUntilHeight: Map<Long, Long>? = mapOf() // chainID -> height
 
     private fun getAncestors(): Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> {
-        val ancestors = appConfig.subset("blockchain_ancestors")
-        val forBrids = ancestors.keys
-        val result = mutableMapOf<BlockchainRid, MutableMap<BlockchainRid, MutableSet<NodeRid>>>()
-        forBrids.forEach { it ->
-            val list = ancestors.getList(String::class.java, it)
-            val map = LinkedHashMap<BlockchainRid, MutableSet<NodeRid>>()
-            list.forEach {
-                val peerAndBrid = it.split(":")
-                val peer = NodeRid(peerAndBrid[0].hexStringToByteArray())
-                val brid = BlockchainRid.buildFromHex(peerAndBrid[1])
-                map.computeIfAbsent(brid) { mutableSetOf() }.add(peer)
-            }
-            result[BlockchainRid.buildFromHex(it)] = map
+        // blockchain_ancestors.<brid_X>=[<node_id_Y>:<brid_Z>]
+        val allAncestors = appConfig.subset("blockchain_ancestors")
+        val result = mutableMapOf<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>>()
+        allAncestors.keys.forEach { brid ->
+            val ancestors = allAncestors.getList(String::class.java, brid)
+            result[BlockchainRid.buildFromHex(brid)] = ancestors
+                    .map {
+                        BlockchainRid.buildFromHex(it.substringAfter(":")) to
+                                NodeRid(it.substringBefore(":").hexStringToByteArray())
+                    }
+                    .groupBy { it.first }
+                    .mapValues { e -> e.value.map { it.second }.toSet() }
         }
+
         return result
     }
 }
