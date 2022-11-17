@@ -24,4 +24,11 @@ interface PeersCommConfigFactory {
             historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration
 
+    fun create(
+            appConfig: AppConfig,
+            nodeConfig: NodeConfig,
+            ancestorBlockchainRid: BlockchainRid,
+            historicBlockchainContext: HistoricBlockchainContext
+    ): PeerCommConfiguration
+
 }

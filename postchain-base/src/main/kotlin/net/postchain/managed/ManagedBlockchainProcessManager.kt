@@ -9,6 +9,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
@@ -328,13 +329,9 @@ open class ManagedBlockchainProcessManager(
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
-
-            val locallyConfiguredReplicas = postchainContext.nodeConfigProvider.getConfiguration().blockchainsToReplicate.map {
-                BlockchainInfo(it, false)
-            }
-            val domainBlockchainSet = dataSource.computeBlockchainInfoList().distinctBy { it.rid }
-            val allMyBlockchains = domainBlockchainSet.union(locallyConfiguredReplicas)
-            allMyBlockchains.forEach { blockchainInfo ->
+            val domainBlockchains = dataSource.computeBlockchainInfoList().distinctBy { it.rid }
+            val all = domainBlockchains.union(locallyConfiguredBlockchainsToReplicate())
+            all.forEach { blockchainInfo ->
                 val chainId = db.getChainId(ctx0, blockchainInfo.rid)
                 retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainInfo.rid.toShortHex()} ")
                 val localBlockchainInfo = if (chainId == null) {
@@ -360,6 +357,11 @@ open class ManagedBlockchainProcessManager(
         retrieveTrace("End, restart: ${blockchains.size}.")
         return blockchains
     }
+
+    protected open fun locallyConfiguredBlockchainsToReplicate() =
+            (postchainContext.nodeConfigProvider.getConfiguration() as? ManagedNodeConfig)
+                    ?.locallyConfiguredBlockchainsToReplicate?.map { BlockchainInfo(it, false) }?.toSet()
+                    ?: emptySet()
 
     protected open fun getLaunchedBlockchains(): Set<Long> {
         return blockchainProcesses.keys
