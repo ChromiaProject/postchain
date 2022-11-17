@@ -3,6 +3,8 @@ package net.postchain.gtv.yaml
 import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.hexStringToWrappedByteArray
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
@@ -76,6 +78,15 @@ internal class GtvYamlTest {
             v: new
         """.trimIndent())
         assert(d2.v).isEqualTo("new")
+
+        class E {
+            var v: WrappedByteArray? = null
+        }
+        val e = GtvYaml(E::class.java).load<E>("v: !!binary AB")
+        assert(e.v).isEqualTo("AB".hexStringToWrappedByteArray())
+        val e2 = GtvYaml(E::class.java).load<E>("v: 0xAB")
+        assert(e2.v).isEqualTo("AB".hexStringToWrappedByteArray())
+
     }
 
     companion object {

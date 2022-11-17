@@ -1,6 +1,8 @@
 package net.postchain.gtv.yaml
 
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.hexStringToWrappedByteArray
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import org.yaml.snakeyaml.constructor.Constructor
@@ -23,10 +25,13 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
     }
 
     private inner class ConstructYamlBinary : SafeConstructor.ConstructYamlBinary() {
-        override fun construct(node: Node) = (node as ScalarNode).value
-                .substringAfter("0x")
-                .replace("\\s".toRegex(), "")
-                .hexStringToByteArray()
+        override fun construct(node: Node) = prepareByteArray(node)
+                .run {
+                    when (node.type) {
+                        WrappedByteArray::class.java -> hexStringToWrappedByteArray()
+                        else -> hexStringToByteArray()
+                    }
+                }
     }
 
     private inner class ConstructMappingGtv : ConstructMapping() {
@@ -39,7 +44,7 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
         }
     }
 
-    private inner class ConstructSequenceGtv: ConstructSequence() {
+    private inner class ConstructSequenceGtv : ConstructSequence() {
         override fun construct(node: Node): Any {
             if (node.type != Gtv::class.java) super.construct(node)
             val c = constructSequence(node as SequenceNode)
@@ -47,7 +52,7 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
         }
     }
 
-    private inner class ConstructYamlIntGtv: ConstructYamlInt() {
+    private inner class ConstructYamlIntGtv : ConstructYamlInt() {
         override fun construct(node: Node): Any {
             node as ScalarNode
             if (node.value.startsWith("0x")) return node.value.substringAfter("0x").hexStringToByteArray()
@@ -57,14 +62,18 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
 
     private open inner class ConstructScalarByteArray : ConstructScalar() {
         override fun construct(node: Node): Any {
-            if (node.type == Gtv::class.java) return toGtv(constructScalar(node as ScalarNode))
-            if (node.type != ByteArray::class.java) return super.construct(node)
-            return (node as ScalarNode).value
-                    .substringAfter("0x")
-                    .replace("\\s".toRegex(), "")
-                    .hexStringToByteArray()
+            return when (node.type) {
+                Gtv::class.java -> toGtv(constructScalar(node as ScalarNode))
+                ByteArray::class.java -> prepareByteArray(node).hexStringToByteArray()
+                WrappedByteArray::class.java -> prepareByteArray(node).hexStringToWrappedByteArray()
+                else -> super.construct(node)
+            }
         }
     }
+
+    private fun prepareByteArray(node: Node) = (node as ScalarNode).value
+            .substringAfter("0x")
+            .replace("\\s".toRegex(), "")
 
     private fun toGtv(obj: Any): Gtv = when (obj) {
         is String -> gtv(obj)
