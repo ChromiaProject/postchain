@@ -17,6 +17,7 @@ import java.time.Duration
 
 const val STATUS_POLL_COUNT = 20
 val STATUS_POLL_INTERVAL: Duration = Duration.ofMillis(500)
+val RESPONSE_TIMEOUT: Duration = Duration.ofSeconds(60)
 
 data class PostchainClientConfig @JvmOverloads constructor(
         val blockchainRid: BlockchainRid,
@@ -28,7 +29,9 @@ data class PostchainClientConfig @JvmOverloads constructor(
         val failOverConfig: FailOverConfig = FailOverConfig(),
         val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
         val queryByChainId: Long? = null,
-        val maxResponseSize: Int = 64 * 1024 * 1024 // 64 MiB
+        val maxResponseSize: Int = 64 * 1024 * 1024, // 64 MiB
+        /** Will not be used if `httpClient` parameter is specified when creating `ConcretePostchainClient`. */
+        val responseTimeout: Duration = RESPONSE_TIMEOUT
 ) : Config {
     companion object {
         @JvmStatic

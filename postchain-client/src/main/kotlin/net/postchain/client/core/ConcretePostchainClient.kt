@@ -22,6 +22,10 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
 import org.apache.commons.io.input.BoundedInputStream
 import org.apache.commons.lang3.exception.ExceptionUtils
+import org.apache.hc.client5.http.config.RequestConfig
+import org.apache.hc.client5.http.cookie.StandardCookieSpec
+import org.apache.hc.client5.http.impl.async.HttpAsyncClients
+import org.apache.hc.core5.util.Timeout
 import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.ContentType
@@ -45,7 +49,12 @@ data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
         override val config: PostchainClientConfig,
-        private val httpClient: AsyncHttpHandler = ApacheAsyncClient(),
+        private val httpClient: AsyncHttpHandler = ApacheAsyncClient(HttpAsyncClients.custom()
+                .setDefaultRequestConfig(RequestConfig.custom()
+                        .setRedirectsEnabled(false)
+                        .setCookieSpec(StandardCookieSpec.IGNORE)
+                        .setResponseTimeout(Timeout.ofMilliseconds(config.responseTimeout.toMillis()))
+                        .build()).build().apply { start() }),
 ) : PostchainClient {
 
     companion object : KLogging()
