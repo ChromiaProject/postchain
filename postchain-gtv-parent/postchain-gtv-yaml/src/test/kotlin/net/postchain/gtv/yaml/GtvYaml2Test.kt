@@ -35,6 +35,115 @@ internal class GtvYaml2Test {
         assertEquals("AC".hexStringToWrappedByteArray(), actual.wb)
 
     }
+    @Test
+    fun nestedTest() {
+        val actual = GtvYaml2().load("""
+            a:
+              b:
+                c: 1
+        """.trimIndent())
+        assertk.assert(actual).isEqualTo(gtv("a" to gtv("b" to gtv("c" to gtv(1)))))
+    }
+
+    @Test
+    fun customTest() {
+
+        class AllPrimitives {
+            var i: Int? = null
+            var l: Long? = null
+            var bo: Boolean? = null
+            var ba: ByteArray? = null
+            var wba: WrappedByteArray? = null
+            var s: String? = null
+            var gtv: Gtv? = null
+            var li: List<Long>? = null
+            var se: Set<String>? = null
+            var ma: Map<String, Gtv>? = null
+            var def1: String = "default1"
+            var def2: String = "default2"
+        }
+        val actual = GtvYaml2().load<AllPrimitives>("""
+            i: 1
+            l: 2
+            bo: true
+            ba: 0x12
+            wba: 0x13
+            s: foo
+            gtv: 12
+            li: 
+              - 1
+              - 2
+            se:
+              - a
+              - b
+            ma:
+              k1: v1
+              k2: 5
+            def1: "overridden"
+        """.trimIndent())
+        assertk.assert(actual.i).isEqualTo(1)
+        assertk.assert(actual.l).isEqualTo(2L)
+        assertk.assert(actual.bo).isEqualTo(true)
+        assertContentEquals("12".hexStringToByteArray(), actual.ba)
+        assertk.assert(actual.wba).isEqualTo("13".hexStringToWrappedByteArray())
+        assertk.assert(actual.s).isEqualTo("foo")
+        assertk.assert(actual.gtv).isEqualTo(gtv(12))
+        assertk.assert(actual.li).isEqualTo(listOf(1L, 2L))
+        assertk.assert(actual.se).isEqualTo(setOf("a", "b"))
+        assertk.assert(actual.ma).isEqualTo(mapOf("k1" to gtv("v1"), "k2" to gtv(5)))
+        assertk.assert(actual.def1).isEqualTo("overridden")
+        assertk.assert(actual.def2).isEqualTo("default2")
+        class A {
+            var v: Long? = null
+        }
+
+        val a = GtvYaml2().load<A>("v: 1")
+        assertk.assert(a.v).isEqualTo(1L)
+        class B {
+            var v: ByteArray? = null
+        }
+
+        val b = GtvYaml2().load<B>("v: 0xAB")
+        assertContentEquals("AB".hexStringToByteArray(), b.v)
+
+        class C {
+            var v: Gtv? = null
+        }
+
+        val c = GtvYaml2().load<C>("v: test")
+        assertk.assert(c.v).isEqualTo(gtv("test"))
+
+        class D {
+            var a: String? = null
+            var v: String? = "default"
+        }
+
+        val d = GtvYaml2().load<D>("a: d")
+        assertk.assert(d.v).isEqualTo("default")
+
+        val d2 = GtvYaml2().load<D>("""
+            a: d
+            v: new
+        """.trimIndent())
+        assertk.assert(d2.v).isEqualTo("new")
+
+        class E {
+            var v: WrappedByteArray? = null
+        }
+        val e2 = GtvYaml2().load<E>("v: 0xAB")
+        assertk.assert(e2.v).isEqualTo("AB".hexStringToWrappedByteArray())
+
+
+        class F {
+            var l: List<String>? = null
+        }
+        val f = GtvYaml2().load<F>("""
+          l:
+            - a
+            - b
+        """.trimIndent())
+
+    }
 
     companion object {
         @JvmStatic
