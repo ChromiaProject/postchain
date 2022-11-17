@@ -173,7 +173,7 @@ class BaseBlockManager(
                     if (exception is PmEngineIsAlreadyClosed) {
                         logger.debug(msg)
                     } else {
-                        logger.error(msg)
+                        logger.error(msg, exception)
                     }
                 })
             }
