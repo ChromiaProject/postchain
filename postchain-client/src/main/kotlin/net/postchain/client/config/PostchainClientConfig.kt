@@ -26,13 +26,14 @@ data class PostchainClientConfig @JvmOverloads constructor(
         val signers: List<KeyPair> = listOf(),
         val statusPollCount: Int = STATUS_POLL_COUNT,
         val statusPollInterval: Duration = STATUS_POLL_INTERVAL,
-        // Fail-over only applicable to synchronized requests
+        /** Fail-over only applicable to synchronized requests. */
         val failOverConfig: FailOverConfig = FailOverConfig(),
         val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
         val queryByChainId: Long? = null,
         val maxResponseSize: Int = 64 * 1024 * 1024, // 64 MiB
         /** Will not be used if `httpClient` parameter is specified when creating `ConcretePostchainClient`. */
         val connectTimeout: Duration = CONNECT_TIMEOUT,
+        /** Will not be used if `httpClient` parameter is specified when creating `ConcretePostchainClient`. */
         val responseTimeout: Duration = RESPONSE_TIMEOUT
 ) : Config {
     companion object {
