@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.Gtv
+import java.io.File
 
 class GtvYaml {
 
@@ -18,6 +19,10 @@ class GtvYaml {
             })
             .findAndRegisterModules()
 
-    inline fun <reified T> load(s: String): T = mapper.readValue(s, T::class.java)
-    fun load(s: String): Gtv = mapper.readValue(s, Gtv::class.java)
+    inline fun <reified T> load(content: String): T = mapper.readValue(content, T::class.java)
+    fun load(content: String): Gtv = mapper.readValue(content, Gtv::class.java)
+
+    inline fun <reified T> load(src: File): T = mapper.readValue(src, T::class.java)
+
+    fun load(src: File): Gtv = mapper.readValue(src, Gtv::class.java)
 }
