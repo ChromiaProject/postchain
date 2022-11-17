@@ -9,6 +9,7 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
+import net.postchain.core.BlockRid
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
@@ -35,6 +36,7 @@ open class DefaultMasterCommunicationManager(
         private val masterConnectionManager: MasterConnectionManager,
         private val dataSource: DirectoryDataSource,
         private val processName: BlockchainProcessName,
+        private val afterSubnodeCommitListeners: Set<AfterSubnodeCommitListener>,
 ) : AbstractMasterCommunicationManager() {
 
     companion object : KLogging()
@@ -102,7 +104,14 @@ open class DefaultMasterCommunicationManager(
                     }
 
                     is MsCommittedBlockMessage -> {
-                        // TODO Trigger afterCommitInSubnode in all Container BPM extensions
+                        afterSubnodeCommitListeners.forEach {
+                            it.onAfterCommit(
+                                    BlockchainRid(message.blockchainRid),
+                                    BlockRid(message.blockRid),
+                                    blockHeader = message.blockHeader,
+                                    witnessData = message.witnessData
+                            )
+                        }
                     }
                 }
             }

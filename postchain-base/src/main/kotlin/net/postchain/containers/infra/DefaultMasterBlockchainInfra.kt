@@ -8,6 +8,7 @@ import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 
 open class DefaultMasterBlockchainInfra(
         postchainContext: PostchainContext,
@@ -33,5 +34,9 @@ open class DefaultMasterBlockchainInfra(
 
     override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) {
         masterApiInfra.disconnectContainerProcess(process)
+    }
+
+    override fun registerAfterSubnodeCommitListener(afterSubnodeCommitListener: AfterSubnodeCommitListener) {
+        masterSyncInfra.registerAfterSubnodeCommitListener(afterSubnodeCommitListener)
     }
 }

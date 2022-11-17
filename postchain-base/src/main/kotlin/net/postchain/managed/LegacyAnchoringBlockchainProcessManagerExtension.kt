@@ -7,10 +7,11 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerBlockchainProcessManagerExtension
+import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
-import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
@@ -21,17 +22,17 @@ import java.util.*
 /**
  * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.
  */
-class OldAnchoringBlockchainProcessManagerExtension(private val postchainContext: PostchainContext) : ContainerBlockchainProcessManagerExtension {
+class LegacyAnchoringBlockchainProcessManagerExtension(private val postchainContext: PostchainContext) : ContainerBlockchainProcessManagerExtension {
     private var chain0BlockchainEngine: BlockchainEngine? = null
 
     companion object : KLogging()
 
-    override fun afterCommitInSubnode(process: RemoteBlockchainProcess, blockRid: ByteArray, blockHeader: ByteArray, witnessData: ByteArray) {
+    override fun afterCommitInSubnode(blockchainRid: BlockchainRid, blockRid: BlockRid, blockHeader: ByteArray, witnessData: ByteArray) {
         val chain0Engine = chain0BlockchainEngine
         if (chain0Engine != null) {
             insertAnchorOperation(chain0Engine, blockHeader, witnessData)
         } else {
-            logger.warn("Could not anchor block from subnode for chainId: ${process.chainId}")
+            logger.warn("Could not anchor block from subnode for chain: ${blockchainRid.toHex()}")
         }
     }
 

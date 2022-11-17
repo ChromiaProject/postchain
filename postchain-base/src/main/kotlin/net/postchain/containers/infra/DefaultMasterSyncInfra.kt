@@ -10,9 +10,12 @@ import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 
 open class DefaultMasterSyncInfra(
@@ -20,6 +23,7 @@ open class DefaultMasterSyncInfra(
         protected val masterConnectionManager: MasterConnectionManager,
         private val containerNodeConfig: ContainerNodeConfig,
 ) : EBFTSynchronizationInfrastructure(postchainContext), MasterSyncInfra {
+    private val afterSubnodeCommitListeners = Collections.newSetFromMap(ConcurrentHashMap<AfterSubnodeCommitListener, Boolean>())
 
     /**
      * We create a new [MasterCommunicationManager] for every new BC process we make.
@@ -42,7 +46,8 @@ open class DefaultMasterSyncInfra(
                 connectionManager,
                 masterConnectionManager,
                 dataSource,
-                processName
+                processName,
+                afterSubnodeCommitListeners
         ).apply { init() }
 
         return DefaultContainerBlockchainProcess(
@@ -61,5 +66,9 @@ open class DefaultMasterSyncInfra(
     override fun shutdown() {
         super.shutdown()
         masterConnectionManager.shutdown()
+    }
+
+    override fun registerAfterSubnodeCommitListener(afterSubnodeCommitListener: AfterSubnodeCommitListener) {
+        afterSubnodeCommitListeners.add(afterSubnodeCommitListener)
     }
 }

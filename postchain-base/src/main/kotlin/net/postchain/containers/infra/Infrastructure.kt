@@ -9,6 +9,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 
 interface MasterSyncInfra : SynchronizationInfrastructure {
 
@@ -21,6 +22,8 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
     ): ContainerBlockchainProcess
 
     fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess)
+
+    fun registerAfterSubnodeCommitListener(afterSubnodeCommitListener: AfterSubnodeCommitListener)
 
 }
 
