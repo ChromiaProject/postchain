@@ -21,6 +21,7 @@ internal class GtvYamlTest {
     fun empty() {
         assertk.assert(GtvYaml().load("---")).isEqualTo(gtv(mapOf()))
     }
+
     @ParameterizedTest
     @MethodSource("scalarInput")
     fun gtvDictionaryTest(yaml: String, expectedGtv: Gtv) {
@@ -34,11 +35,13 @@ internal class GtvYamlTest {
                 val b: ByteArray,
                 val wb: WrappedByteArray
         )
+
         val actual = GtvYaml().load<Binary>("b: 0xAB\nwb: 0xAC")
         assertContentEquals("AB".hexStringToByteArray(), actual.b)
         assertEquals("AC".hexStringToWrappedByteArray(), actual.wb)
 
     }
+
     @Test
     fun nestedTest() {
         val actual = GtvYaml().load("""
@@ -66,6 +69,7 @@ internal class GtvYamlTest {
             var def1: String = "default1"
             var def2: String = "default2"
         }
+
         val actual = GtvYaml().load<AllPrimitives>("""
             i: 1
             l: 2
@@ -97,12 +101,14 @@ internal class GtvYamlTest {
         assertk.assert(actual.ma).isEqualTo(mapOf("k1" to gtv("v1"), "k2" to gtv(5)))
         assertk.assert(actual.def1).isEqualTo("overridden")
         assertk.assert(actual.def2).isEqualTo("default2")
+
         class A {
             var v: Long? = null
         }
 
         val a = GtvYaml().load<A>("v: 1")
         assertk.assert(a.v).isEqualTo(1L)
+
         class B {
             var v: ByteArray? = null
         }
@@ -134,6 +140,7 @@ internal class GtvYamlTest {
         class E {
             var v: WrappedByteArray? = null
         }
+
         val e2 = GtvYaml().load<E>("v: 0xAB")
         assertk.assert(e2.v).isEqualTo("AB".hexStringToWrappedByteArray())
 
@@ -141,11 +148,13 @@ internal class GtvYamlTest {
         class F {
             var l: List<String>? = null
         }
+
         val f = GtvYaml().load<F>("""
           l:
             - a
             - b
         """.trimIndent())
+        assertk.assert(f.l).isEqualTo(listOf("a", "b"))
 
     }
 
