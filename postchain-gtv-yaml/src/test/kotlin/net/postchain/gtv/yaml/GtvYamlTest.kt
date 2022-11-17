@@ -6,6 +6,7 @@ import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -16,6 +17,10 @@ import kotlin.test.assertEquals
 internal class GtvYamlTest {
 
 
+    @Test
+    fun empty() {
+        assertk.assert(GtvYaml().load("---")).isEqualTo(gtv(mapOf()))
+    }
     @ParameterizedTest
     @MethodSource("scalarInput")
     fun gtvDictionaryTest(yaml: String, expectedGtv: Gtv) {
@@ -109,8 +114,8 @@ internal class GtvYamlTest {
             var v: Gtv? = null
         }
 
-        val c = GtvYaml().load<C>("v: test")
-        assertk.assert(c.v).isEqualTo(gtv("test"))
+        val c = GtvYaml().load<C>("v: 12")
+        assertk.assert(c.v).isEqualTo(gtv(12))
 
         class D {
             var a: String? = null
@@ -156,7 +161,7 @@ internal class GtvYamlTest {
                 arrayOf("0xAB", gtv("AB".hexStringToByteArray())),
                 arrayOf("\n  - 1 \n  - 2", gtv(gtv(1), gtv(2))),
                 arrayOf("\n  a: 37", gtv(mapOf("a" to gtv(37)))),
-                arrayOf("", gtv(mapOf()))
+                arrayOf("null", GtvNull),
         )
     }
 }

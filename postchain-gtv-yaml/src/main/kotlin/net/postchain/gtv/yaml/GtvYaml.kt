@@ -8,7 +8,7 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.Gtv
 import java.io.File
 
-class GtvYaml {
+class GtvYaml(init: ObjectMapper.() -> Unit = {}) {
 
     val mapper: ObjectMapper = ObjectMapper(YAMLFactory())
             .registerKotlinModule()
@@ -17,7 +17,7 @@ class GtvYaml {
                 addDeserializer(ByteArray::class.java, ByteArrayDeserializer())
                 addDeserializer(WrappedByteArray::class.java, WrappedByteArrayDeserializer())
             })
-            .findAndRegisterModules()
+            .also(init)
 
     inline fun <reified T> load(content: String): T = mapper.readValue(content, T::class.java)
     fun load(content: String): Gtv = mapper.readValue(content, Gtv::class.java)

@@ -7,8 +7,12 @@ import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.deser.std.NumberDeserializers
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 
 class GtvDeserializer : JsonDeserializer<Gtv>() {
+    override fun getNullValue(ctxt: DeserializationContext): Gtv {
+        return gtv(mapOf())
+    }
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Gtv {
 
         if (p.currentToken.isBoolean) return gtv(NumberDeserializers.BooleanDeserializer(Boolean::class.java, null).deserialize(p, ctxt))
@@ -47,6 +51,7 @@ class GtvDeserializer : JsonDeserializer<Gtv>() {
                 }
                 return gtv(res)
             }
+            JsonToken.VALUE_NULL -> GtvNull
             else -> gtv(mapOf())
         }
     }
