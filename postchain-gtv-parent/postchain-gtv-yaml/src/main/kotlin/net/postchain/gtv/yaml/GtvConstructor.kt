@@ -9,6 +9,7 @@ import org.yaml.snakeyaml.nodes.MappingNode
 import org.yaml.snakeyaml.nodes.Node
 import org.yaml.snakeyaml.nodes.NodeId
 import org.yaml.snakeyaml.nodes.ScalarNode
+import org.yaml.snakeyaml.nodes.SequenceNode
 import org.yaml.snakeyaml.nodes.Tag
 import java.math.BigInteger
 
@@ -17,6 +18,7 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
         yamlConstructors[Tag.BINARY] = BinaryConstructor()
         yamlClassConstructors[NodeId.scalar] = GtvConstr()
         yamlClassConstructors[NodeId.mapping] = ConstructMappingGtv()
+        yamlClassConstructors[NodeId.sequence] = ConstructSequenceGtv()
     }
 
     private inner class BinaryConstructor : SafeConstructor.ConstructYamlBinary() {
@@ -33,6 +35,14 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
             val ma = constructMapping(node) as Map<*, *>
             val m = ma.map { it.key as String to toGtv(it.value!!) as Gtv }.toMap()
             return gtv(m)
+        }
+    }
+
+    private inner class ConstructSequenceGtv: ConstructSequence() {
+        override fun construct(node: Node): Any {
+            if (node.type != Gtv::class.java) super.construct(node)
+            val c = constructSequence(node as SequenceNode)
+            return gtv(c.map { toGtv(it) })
         }
     }
 
@@ -53,7 +63,7 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
         }
     }
 
-    private fun toGtv(obj: Any) = when (obj) {
+    private fun toGtv(obj: Any): Gtv = when (obj) {
         is String -> gtv(obj)
         is Int -> gtv(obj.toLong())
         is Long -> gtv(obj)
@@ -61,6 +71,8 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
         is Double -> gtv(obj.toString())
         is ByteArray -> gtv(obj)
         is BigInteger -> gtv(obj)
+        is Collection<*> -> gtv(obj.map { toGtv(it!!) })
+        is Map<*, *> -> gtv(obj.map { it.key as String to toGtv(it.value!!) }.toMap())
         else -> throw IllegalArgumentException("Cannot parse value $obj to gtv")
     }
 }
