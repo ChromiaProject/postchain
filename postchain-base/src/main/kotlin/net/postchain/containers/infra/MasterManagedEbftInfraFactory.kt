@@ -31,11 +31,14 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
     ): BlockchainProcessManager {
-
-        return ContainerManagedBlockchainProcessManager(
+        val blockchainProcessManager = ContainerManagedBlockchainProcessManager(
                 postchainContext,
                 blockchainInfrastructure as MasterBlockchainInfra,
-                blockchainConfigurationProvider
+                blockchainConfigurationProvider,
+                getProcessManagerExtensions(postchainContext)
         )
+        (blockchainInfrastructure as DefaultMasterBlockchainInfra).registerAfterSubnodeCommitListener(blockchainProcessManager)
+
+        return blockchainProcessManager
     }
 }

@@ -5,14 +5,21 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.core.BlockRid
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
-import net.postchain.network.mastersub.protocol.*
+import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
+import net.postchain.network.mastersub.protocol.MsConnectedPeersMessage
+import net.postchain.network.mastersub.protocol.MsDataMessage
+import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
+import net.postchain.network.mastersub.protocol.MsHandshakeMessage
+import net.postchain.network.mastersub.protocol.MsMessage
+import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
@@ -35,6 +42,7 @@ open class DefaultMasterCommunicationManager(
         private val masterConnectionManager: MasterConnectionManager,
         private val dataSource: DirectoryDataSource,
         private val processName: BlockchainProcessName,
+        private val afterSubnodeCommitListeners: Set<AfterSubnodeCommitListener>,
 ) : AbstractMasterCommunicationManager() {
 
     companion object : KLogging()
@@ -98,6 +106,17 @@ open class DefaultMasterCommunicationManager(
                             "${process()}: BlockchainConfig sent to subnode: blockchainRid: " +
                                     "${blockchainRid.toShortHex()}, nextHeight: $nextHeight, config size: " +
                                     "${config?.size}, config hash: $hashStr"
+                        }
+                    }
+
+                    is MsCommittedBlockMessage -> {
+                        afterSubnodeCommitListeners.forEach {
+                            it.onAfterCommitInSubnode(
+                                    BlockchainRid(message.blockchainRid),
+                                    BlockRid(message.blockRid),
+                                    blockHeader = message.blockHeader,
+                                    witnessData = message.witnessData
+                            )
                         }
                     }
                 }
