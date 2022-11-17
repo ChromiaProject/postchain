@@ -11,7 +11,7 @@ import net.postchain.gtv.GtvNull
 
 class GtvDeserializer : JsonDeserializer<Gtv>() {
     override fun getNullValue(ctxt: DeserializationContext): Gtv {
-        return gtv(mapOf())
+        return GtvNull
     }
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Gtv {
 
