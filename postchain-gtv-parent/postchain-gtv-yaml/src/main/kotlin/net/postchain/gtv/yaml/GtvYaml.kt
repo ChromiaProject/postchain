@@ -1,9 +1,12 @@
 package net.postchain.gtv.yaml
 
-import net.postchain.gtv.Gtv
+import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 
-class GtvYaml(theRoot: Class<*>): Yaml(GtvConstructor(theRoot)) {
+class GtvYaml(constructor: GtvConstructor): Yaml(constructor) {
 
-    constructor() : this(Gtv::class.java)
+    constructor() : this(GtvConstructor())
+    constructor(theRoot: Class<*>): this(GtvConstructor(theRoot))
+
+    constructor(loaderOptions: LoaderOptions): this(GtvConstructor(loaderOptions))
 }
