@@ -15,14 +15,14 @@ import java.math.BigInteger
 
 class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
     init {
-        yamlConstructors[Tag.BINARY] = BinaryConstructor()
+        yamlConstructors[Tag.BINARY] = ConstructYamlBinary()
         yamlConstructors[Tag.INT] = ConstructYamlIntGtv()
-        yamlClassConstructors[NodeId.scalar] = GtvConstr()
+        yamlClassConstructors[NodeId.scalar] = ConstructScalarByteArray()
         yamlClassConstructors[NodeId.mapping] = ConstructMappingGtv()
         yamlClassConstructors[NodeId.sequence] = ConstructSequenceGtv()
     }
 
-    private inner class BinaryConstructor : SafeConstructor.ConstructYamlBinary() {
+    private inner class ConstructYamlBinary : SafeConstructor.ConstructYamlBinary() {
         override fun construct(node: Node) = (node as ScalarNode).value
                 .substringAfter("0x")
                 .replace("\\s".toRegex(), "")
@@ -55,14 +55,7 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
         }
     }
 
-    private inner class GtvConstr : ScalarConstructor() {
-        override fun construct(nnode: Node): Any {
-            if (nnode.type == Gtv::class.java) return toGtv(super.construct(nnode))
-            return super.construct(nnode)
-        }
-    }
-
-    private open inner class ScalarConstructor : ConstructScalar() {
+    private open inner class ConstructScalarByteArray : ConstructScalar() {
         override fun construct(nnode: Node): Any {
             if (nnode.type != ByteArray::class.java) return super.construct(nnode)
             return (nnode as ScalarNode).value
