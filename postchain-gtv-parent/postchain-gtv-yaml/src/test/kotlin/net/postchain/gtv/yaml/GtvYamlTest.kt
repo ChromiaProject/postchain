@@ -48,6 +48,7 @@ internal class GtvYamlTest {
                 arrayOf("test", gtv("test")),
                 arrayOf("1.2", gtv("1.2")),
                 arrayOf("!!binary AB", gtv("AB".hexStringToByteArray())),
+                arrayOf("0xAB", gtv("AB".hexStringToByteArray())),
                 arrayOf("\n  - 1 \n  - 2", gtv(gtv(1), gtv(2)))
         )
     }

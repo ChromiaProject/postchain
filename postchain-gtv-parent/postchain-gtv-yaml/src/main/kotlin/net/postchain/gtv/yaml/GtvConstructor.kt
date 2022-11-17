@@ -16,6 +16,7 @@ import java.math.BigInteger
 class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
     init {
         yamlConstructors[Tag.BINARY] = BinaryConstructor()
+        yamlConstructors[Tag.INT] = ConstructYamlIntGtv()
         yamlClassConstructors[NodeId.scalar] = GtvConstr()
         yamlClassConstructors[NodeId.mapping] = ConstructMappingGtv()
         yamlClassConstructors[NodeId.sequence] = ConstructSequenceGtv()
@@ -43,6 +44,14 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
             if (node.type != Gtv::class.java) super.construct(node)
             val c = constructSequence(node as SequenceNode)
             return gtv(c.map { toGtv(it) })
+        }
+    }
+
+    private inner class ConstructYamlIntGtv: ConstructYamlInt() {
+        override fun construct(node: Node): Any {
+            node as ScalarNode
+            if (node.value.startsWith("0x")) return node.value.substringAfter("0x").hexStringToByteArray()
+            return super.construct(node)
         }
     }
 
