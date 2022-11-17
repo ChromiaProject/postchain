@@ -56,9 +56,10 @@ class GtvConstructor(theRoot: Class<*>) : Constructor(theRoot) {
     }
 
     private open inner class ConstructScalarByteArray : ConstructScalar() {
-        override fun construct(nnode: Node): Any {
-            if (nnode.type != ByteArray::class.java) return super.construct(nnode)
-            return (nnode as ScalarNode).value
+        override fun construct(node: Node): Any {
+            if (node.type == Gtv::class.java) return toGtv(constructScalar(node as ScalarNode))
+            if (node.type != ByteArray::class.java) return super.construct(node)
+            return (node as ScalarNode).value
                     .substringAfter("0x")
                     .replace("\\s".toRegex(), "")
                     .hexStringToByteArray()
