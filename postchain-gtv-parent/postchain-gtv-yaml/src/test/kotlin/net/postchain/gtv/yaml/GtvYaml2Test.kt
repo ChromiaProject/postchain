@@ -6,6 +6,7 @@ import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -46,7 +47,8 @@ internal class GtvYaml2Test {
                 arrayOf("1.2", gtv("1.2")),
                 arrayOf("0xAB", gtv("AB".hexStringToByteArray())),
                 arrayOf("\n  - 1 \n  - 2", gtv(gtv(1), gtv(2))),
-                arrayOf("\n  a: 37", gtv(mapOf("a" to gtv(37))))
+                arrayOf("\n  a: 37", gtv(mapOf("a" to gtv(37)))),
+                arrayOf("", GtvNull)
         )
     }
 }
