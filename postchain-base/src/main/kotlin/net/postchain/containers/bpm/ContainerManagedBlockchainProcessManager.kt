@@ -26,6 +26,7 @@ import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
+import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
@@ -37,6 +38,7 @@ import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
+import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 
 open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -48,7 +50,7 @@ open class ContainerManagedBlockchainProcessManager(
         masterBlockchainInfra,
         blockchainConfigProvider,
         bpmExtensions
-) {
+), AfterSubnodeCommitListener {
 
     companion object : KLogging()
 
@@ -466,6 +468,15 @@ open class ContainerManagedBlockchainProcessManager(
                     logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
                 }
             }
+        }
+    }
+
+    /**
+     * Called when subnode has committed a block
+     */
+    override fun onAfterCommitInSubnode(blockchainRid: BlockchainRid, blockRid: BlockRid, blockHeader: ByteArray, witnessData: ByteArray) {
+        extensions.filterIsInstance(ContainerBlockchainProcessManagerExtension::class.java).forEach {
+            it.afterCommitInSubnode(blockchainRid, blockRid, blockHeader = blockHeader, witnessData = witnessData)
         }
     }
 
