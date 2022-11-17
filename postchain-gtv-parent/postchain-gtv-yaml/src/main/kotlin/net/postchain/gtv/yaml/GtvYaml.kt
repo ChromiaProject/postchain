@@ -9,7 +9,7 @@ import net.postchain.gtv.Gtv
 
 class GtvYaml {
 
-    val mapper = ObjectMapper(YAMLFactory())
+    val mapper: ObjectMapper = ObjectMapper(YAMLFactory())
             .registerKotlinModule()
             .registerModule(SimpleModule().apply {
                 addDeserializer(Gtv::class.java, GtvDeserializer())
@@ -19,5 +19,5 @@ class GtvYaml {
             .findAndRegisterModules()
 
     inline fun <reified T> load(s: String): T = mapper.readValue(s, T::class.java)
-    fun load(s: String) = mapper.readValue(s, Gtv::class.java)
+    fun load(s: String): Gtv = mapper.readValue(s, Gtv::class.java)
 }
