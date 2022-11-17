@@ -43,12 +43,64 @@ internal class GtvYamlTest {
 
     @Test
     fun customTest() {
+
+        class AllPrimitives {
+            var i: Int? = null
+            var l: Long? = null
+            var bo: Boolean? = null
+            var ba1: ByteArray? = null
+            var ba2: ByteArray? = null
+            var wba1: WrappedByteArray? = null
+            var wba2: WrappedByteArray? = null
+            var s: String? = null
+            var gtv: Gtv? = null
+            var li: List<Long>? = null
+            var se: Set<String>? = null
+            var ma: Gtv? = null
+            var def1: String = "default1"
+            var def2: String = "default2"
+        }
+        val actual = GtvYaml(AllPrimitives::class.java).load<AllPrimitives>("""
+            i: 1
+            l: 2
+            bo: true
+            ba1: !!binary AB
+            ba2: 0x12
+            wba1: !!binary A0
+            wba2: 0x13
+            s: foo
+            gtv: 12
+            li: 
+              - 1
+              - 2
+            se:
+              - a
+              - b
+            ma:
+              k1: v1
+              k2: 5
+            def1: "overridden"
+        """.trimIndent())
+        assert(actual.i).isEqualTo(1)
+        assert(actual.l).isEqualTo(2L)
+        assert(actual.bo).isEqualTo(true)
+        assertContentEquals("AB".hexStringToByteArray(), actual.ba1)
+        assertContentEquals("12".hexStringToByteArray(), actual.ba2)
+        assert(actual.wba1).isEqualTo("A0".hexStringToWrappedByteArray())
+        assert(actual.wba2).isEqualTo("13".hexStringToWrappedByteArray())
+        assert(actual.s).isEqualTo("foo")
+        assert(actual.gtv).isEqualTo(gtv(12))
+        assert(actual.li).isEqualTo(listOf(1L, 2L))
+        assert(actual.se).isEqualTo(setOf("a", "b"))
+        assert(actual.ma).isEqualTo(mapOf("k1" to gtv("v1"), "k2" to gtv(5)))
+        assert(actual.def1).isEqualTo("overridden")
+        assert(actual.def2).isEqualTo("default2")
         class A {
             var v: Long? = null
         }
 
-        val actual = GtvYaml(A::class.java).load<A>("v: 1")
-        assert(actual.v).isEqualTo(1L)
+        val a = GtvYaml(A::class.java).load<A>("v: 1")
+        assert(a.v).isEqualTo(1L)
         class B {
             var v: ByteArray? = null
         }
@@ -86,6 +138,16 @@ internal class GtvYamlTest {
         assert(e.v).isEqualTo("AB".hexStringToWrappedByteArray())
         val e2 = GtvYaml(E::class.java).load<E>("v: 0xAB")
         assert(e2.v).isEqualTo("AB".hexStringToWrappedByteArray())
+
+
+        class F {
+            var l: List<String>? = null
+        }
+        val f = GtvYaml(F::class.java).load<F>("""
+          l:
+            - a
+            - b
+        """.trimIndent())
 
     }
 

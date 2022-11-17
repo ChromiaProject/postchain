@@ -44,8 +44,11 @@ class GtvConstructor(theRoot: Class<*>, loaderOptions: LoaderOptions) : Construc
 
     private inner class ConstructMappingGtv : ConstructMapping() {
         override fun construct(node: Node): Any {
-            if (node.type != Gtv::class.java) return super.construct(node)
             node as MappingNode
+            node.tag // input
+            node.type // target
+            node.value // always string
+            if (node.type != Gtv::class.java) return super.construct(node)
             val ma = constructMapping(node) as Map<*, *>
             val m = ma.map { it.key as String to toGtv(it.value!!) as Gtv }.toMap()
             return gtv(m)
@@ -54,7 +57,7 @@ class GtvConstructor(theRoot: Class<*>, loaderOptions: LoaderOptions) : Construc
 
     private inner class ConstructSequenceGtv : ConstructSequence() {
         override fun construct(node: Node): Any {
-            if (node.type != Gtv::class.java) super.construct(node)
+            if (node.type != Gtv::class.java) return super.construct(node)
             val c = constructSequence(node as SequenceNode)
             return gtv(c.map { toGtv(it) })
         }
@@ -63,13 +66,18 @@ class GtvConstructor(theRoot: Class<*>, loaderOptions: LoaderOptions) : Construc
     private inner class ConstructYamlIntGtv : ConstructYamlInt() {
         override fun construct(node: Node): Any {
             node as ScalarNode
-            if (node.value.startsWith("0x")) return node.value.substringAfter("0x").hexStringToByteArray()
+            if (node.value.startsWith("0x")) return when (node.type) {
+                WrappedByteArray::class.java -> prepareByteArray(node).hexStringToWrappedByteArray()
+                else -> prepareByteArray(node).hexStringToByteArray()
+            }
             return super.construct(node)
         }
     }
 
     private open inner class ConstructScalarByteArray : ConstructScalar() {
         override fun construct(node: Node): Any {
+            node as ScalarNode
+            println(node.tag)
             return when (node.type) {
                 Gtv::class.java -> toGtv(constructScalar(node as ScalarNode))
                 ByteArray::class.java -> prepareByteArray(node).hexStringToByteArray()
