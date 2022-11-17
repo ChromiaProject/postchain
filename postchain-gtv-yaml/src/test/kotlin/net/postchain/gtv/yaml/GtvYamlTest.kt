@@ -23,14 +23,14 @@ internal class GtvYamlTest {
     }
 
     @ParameterizedTest
-    @MethodSource("scalarInput")
-    fun gtvDictionaryTest(yaml: String, expectedGtv: Gtv) {
+    @MethodSource("allGtvTypes")
+    fun gtvTest(yaml: String, expectedGtv: Gtv) {
         val actual = GtvYaml().load("v: $yaml")
         assertk.assert(actual["v"]).isEqualTo(expectedGtv)
     }
 
     @ParameterizedTest
-    @MethodSource("scalarInput")
+    @MethodSource("allGtvTypes")
     fun classTest(yaml: String, expectedGtv: Gtv) {
         data class GtvClass(
                 val g: Gtv
@@ -116,7 +116,7 @@ internal class GtvYamlTest {
 
     companion object {
         @JvmStatic
-        fun scalarInput() = arrayOf(
+        fun allGtvTypes() = arrayOf(
                 arrayOf("1", gtv(1)),
                 arrayOf("1000000000000000000", gtv(1000000000000000000)),
                 arrayOf("10000000000000000000", gtv(BigInteger("10000000000000000000"))),

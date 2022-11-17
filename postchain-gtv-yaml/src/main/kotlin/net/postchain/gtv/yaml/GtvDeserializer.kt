@@ -10,9 +10,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 
 class GtvDeserializer : JsonDeserializer<Gtv>() {
-    override fun getNullValue(ctxt: DeserializationContext): Gtv {
-        return GtvNull
-    }
+    override fun getNullValue(ctxt: DeserializationContext) = GtvNull
+
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Gtv {
 
         if (p.currentToken.isBoolean) return gtv(NumberDeserializers.BooleanDeserializer(Boolean::class.java, null).deserialize(p, ctxt))
