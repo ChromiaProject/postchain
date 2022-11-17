@@ -474,7 +474,7 @@ open class ContainerManagedBlockchainProcessManager(
     /**
      * Called when subnode has committed a block
      */
-    override fun onAfterCommit(blockchainRid: BlockchainRid, blockRid: BlockRid, blockHeader: ByteArray, witnessData: ByteArray) {
+    override fun onAfterCommitInSubnode(blockchainRid: BlockchainRid, blockRid: BlockRid, blockHeader: ByteArray, witnessData: ByteArray) {
         extensions.filterIsInstance(ContainerBlockchainProcessManagerExtension::class.java).forEach {
             it.afterCommitInSubnode(blockchainRid, blockRid, blockHeader = blockHeader, witnessData = witnessData)
         }

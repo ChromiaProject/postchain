@@ -5,15 +5,21 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.core.BlockRid
 import net.postchain.core.NodeRid
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
-import net.postchain.core.BlockRid
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
-import net.postchain.network.mastersub.protocol.*
+import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
+import net.postchain.network.mastersub.protocol.MsConnectedPeersMessage
+import net.postchain.network.mastersub.protocol.MsDataMessage
+import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
+import net.postchain.network.mastersub.protocol.MsHandshakeMessage
+import net.postchain.network.mastersub.protocol.MsMessage
+import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
@@ -105,7 +111,7 @@ open class DefaultMasterCommunicationManager(
 
                     is MsCommittedBlockMessage -> {
                         afterSubnodeCommitListeners.forEach {
-                            it.onAfterCommit(
+                            it.onAfterCommitInSubnode(
                                     BlockchainRid(message.blockchainRid),
                                     BlockRid(message.blockRid),
                                     blockHeader = message.blockHeader,
