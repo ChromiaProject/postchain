@@ -17,6 +17,8 @@ import java.time.Duration
 
 const val STATUS_POLL_COUNT = 20
 val STATUS_POLL_INTERVAL: Duration = Duration.ofMillis(500)
+val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(60)
+val RESPONSE_TIMEOUT: Duration = Duration.ofSeconds(60)
 
 data class PostchainClientConfig @JvmOverloads constructor(
         val blockchainRid: BlockchainRid,
@@ -24,11 +26,15 @@ data class PostchainClientConfig @JvmOverloads constructor(
         val signers: List<KeyPair> = listOf(),
         val statusPollCount: Int = STATUS_POLL_COUNT,
         val statusPollInterval: Duration = STATUS_POLL_INTERVAL,
-        // Fail-over only applicable to synchronized requests
+        /** Fail-over only applicable to synchronized requests. */
         val failOverConfig: FailOverConfig = FailOverConfig(),
         val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
         val queryByChainId: Long? = null,
-        val maxResponseSize: Int = 64 * 1024 * 1024 // 64 MiB
+        val maxResponseSize: Int = 64 * 1024 * 1024, // 64 MiB
+        /** Will not be used if `httpClient` parameter is specified when creating `ConcretePostchainClient`. */
+        val connectTimeout: Duration = CONNECT_TIMEOUT,
+        /** Will not be used if `httpClient` parameter is specified when creating `ConcretePostchainClient`. */
+        val responseTimeout: Duration = RESPONSE_TIMEOUT
 ) : Config {
     companion object {
         @JvmStatic
@@ -47,7 +53,9 @@ data class PostchainClientConfig @JvmOverloads constructor(
                     statusPollCount = config.getEnvOrIntProperty("POSTCHAIN_CLIENT_STATUS_POLL_COUNT", "status.poll-count", STATUS_POLL_COUNT),
                     statusPollInterval = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_STATUS_POLL_INTERVAL", "status.poll-interval", STATUS_POLL_INTERVAL.toMillis()).let { Duration.ofMillis(it) },
                     cryptoSystem = config.cryptoSystem(),
-                    failOverConfig = FailOverConfig.fromConfiguration(config)
+                    failOverConfig = FailOverConfig.fromConfiguration(config),
+                    connectTimeout = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_CONNECT_TIMEOUT", "connect.timeout", CONNECT_TIMEOUT.toMillis()).let { Duration.ofMillis(it) },
+                    responseTimeout = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_RESPONSE_TIMEOUT", "response.timeout", RESPONSE_TIMEOUT.toMillis()).let { Duration.ofMillis(it) },
             )
         }
     }
