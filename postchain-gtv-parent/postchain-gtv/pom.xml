@@ -117,7 +117,7 @@
                     <xjbSources>
                         <xjbSource>src/main/resources/gtxml/bindings.xml</xjbSource>
                     </xjbSources>
-                    <outputDirectory>target/generated-sources</outputDirectory>
+                    <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
                     <!-- The package of your generated sources -->
                 </configuration>
             </plugin>

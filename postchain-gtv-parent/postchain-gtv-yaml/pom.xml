@@ -10,6 +10,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>postchain-gtv-yaml</artifactId>
+    <name>Postchain Gtv Yaml</name>
+    <description>Yaml parser for the Gtv format</description>
 
     <properties>
     </properties>
