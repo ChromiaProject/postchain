@@ -20,9 +20,10 @@ class GtvYaml(init: ObjectMapper.() -> Unit = {}) {
             .also(init)
 
     inline fun <reified T> load(content: String): T = mapper.readValue(content, T::class.java)
-    fun load(content: String): Gtv = mapper.readValue(content, Gtv::class.java)
+
+    fun load(content: String) = load<Gtv>(content)
 
     inline fun <reified T> load(src: File): T = mapper.readValue(src, T::class.java)
 
-    fun load(src: File): Gtv = mapper.readValue(src, Gtv::class.java)
+    fun load(src: File) = load<Gtv>(src)
 }
