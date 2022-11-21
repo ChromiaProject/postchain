@@ -2,8 +2,8 @@ package net.postchain.client.core
 
 import net.postchain.client.config.PostchainClientConfig
 
-interface PostchainClientProvider {
+fun interface PostchainClientProvider {
     fun createClient(
-        clientConfig: PostchainClientConfig
+            clientConfig: PostchainClientConfig
     ): PostchainClient
 }

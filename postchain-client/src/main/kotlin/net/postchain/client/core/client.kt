@@ -5,7 +5,7 @@ package net.postchain.client.core
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.KeyPair
 
-interface PostchainNodeResolver {
+fun interface PostchainNodeResolver {
     fun getNodeURL(blockchainRID: BlockchainRid): String
 }
 
