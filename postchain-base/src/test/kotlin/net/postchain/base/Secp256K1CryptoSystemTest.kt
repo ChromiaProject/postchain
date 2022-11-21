@@ -3,6 +3,7 @@
 package net.postchain.base
 
 import net.postchain.common.toHex
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -19,7 +20,7 @@ class Secp256K1CryptoSystemTest {
         for (i in 0..39) {
             random.nextBytes(privKey)
             val pubKey = secp256k1_derivePubKey(privKey)
-            val sigMaker = SUT.buildSigMaker(pubKey, privKey)
+            val sigMaker = SUT.buildSigMaker(KeyPair(pubKey, privKey))
             val data = "Hello".toByteArray()
             val signature = sigMaker.signMessage(data) // TODO: POS-04_sig ???
             val verifier = SUT.makeVerifier()

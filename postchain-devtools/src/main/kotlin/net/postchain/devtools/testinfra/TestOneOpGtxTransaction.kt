@@ -3,6 +3,7 @@
 package net.postchain.devtools.testinfra
 
 import net.postchain.common.data.Hash
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXTransaction
@@ -95,7 +96,7 @@ open class TestOneOpGtxTransaction(
         val gtx = GtxBuilder(blockchainRID, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
             .addOperation(op_name, arg0, arg1)
             .finish()
-            .sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
+            .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
             .buildGtx()
         cachedGtx = gtx
 

@@ -278,7 +278,7 @@ class SlowSynchronizer(
             .addBlock(block, addBlockCompletionPromise, bTrace)
             .success {
                 logger.debug { "commitBlock() - Block height: $height committed successfully." }
-                stateMachine.updateAfterSuccessfulCommit(height, System.currentTimeMillis())
+                stateMachine.updateAfterSuccessfulCommit(height)
                 blockHeight = height
             }
             .fail {
@@ -296,7 +296,7 @@ class SlowSynchronizer(
                         logger.warn(it) { "Exception committing block height $height from peer: $peerId" }
                     }
                 }
-                stateMachine.updateAfterFailedCommit(height, System.currentTimeMillis())
+                stateMachine.updateAfterFailedCommit(height)
             }
     }
 

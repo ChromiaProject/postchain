@@ -6,6 +6,7 @@ import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.common.BlockchainRid
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.testinfra.TestTransaction
@@ -75,7 +76,7 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         val builder = GtxBuilder(blockchainRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
             .addOperation("gtx_test", GtvFactory.gtv(1L), GtvFactory.gtv(value))
             .finish()
-            .sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
+            .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
 
         return factory.build(builder.buildGtx())
     }

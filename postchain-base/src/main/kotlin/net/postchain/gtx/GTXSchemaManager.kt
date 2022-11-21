@@ -7,7 +7,7 @@ import net.postchain.base.data.SQLDatabaseAccess
 import net.postchain.core.EContext
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
-import org.apache.commons.lang3.text.StrSubstitutor
+import org.apache.commons.text.StringSubstitutor
 import java.util.*
 
 // TODO: [POS-128]: Refactor SQL part of GTXModule
@@ -55,7 +55,7 @@ object GTXSchemaManager {
         // TODO: [POS-128]: Improve this
         val pref = tablePref(ctx)
         val tables = mapOf("pref" to pref)
-        val sql2 = StrSubstitutor.replace(sql, tables)
+        val sql2 = StringSubstitutor.replace(sql, tables)
 
         val schemaSQL = Scanner(sql2).useDelimiter("\\A").next()
         queryRunner.update(ctx.conn, schemaSQL)

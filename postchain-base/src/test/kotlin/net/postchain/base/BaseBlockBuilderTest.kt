@@ -13,6 +13,7 @@ import net.postchain.core.TxEContext
 import net.postchain.core.ValidationResult.Result.INVALID_TIMESTAMP
 import net.postchain.core.ValidationResult.Result.OK
 import net.postchain.core.block.InitialBlockData
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
@@ -41,7 +42,7 @@ class BaseBlockBuilderTest {
     val myBlockchainRid = BlockchainRid.ZERO_RID
     val dummy = ByteArray(32, { 0 })
     val subjects = arrayOf("test".toByteArray())
-    val signer = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
+    val signer = cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0)))
     val validator = BaseBlockWitnessProvider(cryptoSystem, signer, subjects)
     val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
             NullSpecialTransactionHandler(),

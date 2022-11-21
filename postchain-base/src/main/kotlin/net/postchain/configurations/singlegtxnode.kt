@@ -31,7 +31,7 @@ private fun table_transactions(ctx: EContext): String {
     return db.tableName(ctx, "transactions")
 }
 
-class GTXTestOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
+class GTXTestOp(@Suppress("UNUSED_PARAMETER") u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
 
     /**
      * The only way for the [GTXTestOp] to be considered correct is if first argument is "1" and the second is a string.

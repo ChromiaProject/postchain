@@ -7,6 +7,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NODE_ID_AUTO
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.mminfra.*
@@ -245,7 +246,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         }
 
         val privkey = KeyPairHelper.privKey(pubkey)
-        val sigMaker = cryptoSystem.buildSigMaker(pubkey, privkey)
+        val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubkey, privkey))
         return Pair(pubkey, sigMaker)
     }
 }
