@@ -117,7 +117,7 @@ class SlowSyncStateMachine(
      * This can be called multiple times, but only when we really get the last block's commit we move to WAIT_FOR_ACTION.
      * This might seem slow but it doesn't matter, since this is slow sync.
      */
-    fun updateAfterSuccessfulCommit(committedBlockHeight: Long, nowMs: Long) {
+    fun updateAfterSuccessfulCommit(committedBlockHeight: Long) {
         if (state != SlowSyncStates.WAIT_FOR_COMMIT) {
             throw ProgrammerMistake("updateAfterSuccessfulCommit(): Incorrect state: $state")
         }
@@ -147,7 +147,7 @@ class SlowSyncStateMachine(
      * After one commit failed, all the following will crash too, since they are depending on the failed block
      * Best is to ignore everything from here on and move back to last known successful commit
      */
-    fun updateAfterFailedCommit(committedBlockHeight: Long, nowMs: Long) {
+    fun updateAfterFailedCommit(committedBlockHeight: Long) {
         logger.warn("ChainIid: $chainIid block height: $committedBlockHeight failed, last successful was $lastCommittedBlockHeight.")
         state = SlowSyncStates.WAIT_FOR_ACTION
         lastUncommittedBlockHeight = lastCommittedBlockHeight

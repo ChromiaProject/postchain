@@ -43,7 +43,7 @@ class SpecialTxTestGTXModule : SimpleGTXModule<Unit>(Unit,
 
 // TODO: This is a bit crude, we might to want to DO something here?
 
-open class GtxEmptyOp(u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
+open class GtxEmptyOp(@Suppress("UNUSED_PARAMETER") u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
     override fun isCorrect(): Boolean {
         return true
     }

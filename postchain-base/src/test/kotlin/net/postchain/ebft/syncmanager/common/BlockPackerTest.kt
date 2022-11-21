@@ -11,6 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@Suppress("UNUSED_PARAMETER")
 class BlockPackerTest {
 
     val nodeHex = "121212"

@@ -11,6 +11,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
 import net.postchain.core.block.*
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.debug.BlockchainProcessName
@@ -32,7 +33,7 @@ open class BaseBlockchainInfrastructure(
     init {
         val privKey = postchainContext.appConfig.privKeyByteArray
         val pubKey = secp256k1_derivePubKey(privKey)
-        blockSigMaker = postchainContext.cryptoSystem.buildSigMaker(pubKey, privKey)
+        blockSigMaker = postchainContext.cryptoSystem.buildSigMaker(KeyPair(pubKey, privKey))
         subjectID = pubKey
         syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
     }

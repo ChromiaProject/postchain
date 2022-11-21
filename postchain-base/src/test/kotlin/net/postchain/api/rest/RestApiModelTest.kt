@@ -147,7 +147,7 @@ class RestApiModelTest {
                 .get("/node/$blockchainRID1/height")
                 .then()
                 .statusCode(404)
-                .assertThat().body(equalTo(JsonParser().parse("""{"error":"Not found"}""").toString()))
+                .assertThat().body(equalTo(JsonParser.parseString("""{"error":"Not found"}""").toString()))
     }
 
 

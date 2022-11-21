@@ -11,8 +11,12 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvType
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.data.ExtOpData
@@ -26,6 +30,7 @@ private val logger = KotlinLogging.logger {}
 
 fun decodeSQLTextArray(a: Any): Array<String> {
     val arr = a as java.sql.Array
+    @Suppress("UNCHECKED_CAST")
     return (arr.array as Array<String>)
 }
 

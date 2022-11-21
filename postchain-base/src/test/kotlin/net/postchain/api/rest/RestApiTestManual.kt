@@ -6,6 +6,7 @@ import io.restassured.RestAssured.given
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
@@ -49,7 +50,7 @@ class RestApiTestManual {
         val b = GtxBuilder(BlockchainRid.ZERO_RID, listOf(pubKey(0)), cryptoSystem)
             .addOperation("gtx_test", gtv(id), gtv(value))
             .finish()
-            .sign(cryptoSystem.buildSigMaker(pubKey(0), privKey(0)))
+            .sign(cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
         return b.buildGtx().encode()
     }
 }

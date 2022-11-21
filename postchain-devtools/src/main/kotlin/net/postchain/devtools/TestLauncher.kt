@@ -11,6 +11,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
@@ -125,9 +126,9 @@ class TestLauncher : IntegrationTestSetup() {
                 ),
                 true,
                 mapOf(
-                        pubKey(0).wrap() to cryptoSystem.buildSigMaker(pubKey(0), privKey(0)),
-                        user2pub.wrap() to cryptoSystem.buildSigMaker(user2pub, user2priv),
-                        user3pub.wrap() to cryptoSystem.buildSigMaker(user3pub, user3priv)
+                        pubKey(0).wrap() to cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0))),
+                        user2pub.wrap() to cryptoSystem.buildSigMaker(KeyPair(user2pub, user2priv)),
+                        user3pub.wrap() to cryptoSystem.buildSigMaker(KeyPair(user3pub, user3priv))
                 )
         )
 

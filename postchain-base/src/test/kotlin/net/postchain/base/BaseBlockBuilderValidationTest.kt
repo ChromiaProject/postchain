@@ -12,6 +12,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TxEContext
 import net.postchain.core.ValidationResult.Result.*
 import net.postchain.core.block.InitialBlockData
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
@@ -36,7 +37,7 @@ class BaseBlockBuilderValidationTest {
     val rootHash = "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
     val badRootHash = "46AF9064F12FFFFFFFFFFFFFF04ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
     val subjects = arrayOf("test".toByteArray())
-    val sigMaker = cryptoSystem.buildSigMaker(pubKey(0), privKey(0))
+    val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0)))
 
     // Objects using mocks
     val db: DatabaseAccess = mock {}

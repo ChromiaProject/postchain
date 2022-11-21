@@ -4,6 +4,7 @@ package net.postchain.gtx.data
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
@@ -12,10 +13,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Assertions.fail
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -55,13 +53,13 @@ class GTXDataTest {
         val b = GtxBuilder(BlockchainRid.buildRepeat(0), signerPub.slice(0..2), crypto)
         addOperations(b, signerPub)
         val txBuilder = b.finish()
-            .sign(crypto.buildSigMaker(signerPub[0], signerPriv[0]))
+                .sign(crypto.buildSigMaker(KeyPair(signerPub[0], signerPriv[0])))
 
         // try recreating from a serialized copy
         assertThrows<IllegalArgumentException> {
             txBuilder.buildGtx()
         }
-        val sigMaker = crypto.buildSigMaker(signerPub[1], signerPriv[1])
+        val sigMaker = crypto.buildSigMaker(KeyPair(signerPub[1], signerPriv[1]))
         val txBodyMerkleRoot = txBuilder.txRid
         val signature = sigMaker.signDigest(txBodyMerkleRoot)
         txBuilder.sign(signature)
@@ -74,12 +72,12 @@ class GTXDataTest {
         }
 
         assertThrows<UserMistake> {  // Allows signature from wrong participant
-            val signatureMaker = crypto.buildSigMaker(signerPub[3], signerPriv[3])
+            val signatureMaker = crypto.buildSigMaker(KeyPair(signerPub[3], signerPriv[3]))
             val wrongSignature = signatureMaker.signDigest(txBodyMerkleRoot)
             txBuilder.sign(wrongSignature)
         }
 
-        val sigMaker2 = crypto.buildSigMaker(signerPub[2], signerPriv[2])
+        val sigMaker2 = crypto.buildSigMaker(KeyPair(signerPub[2], signerPriv[2]))
         txBuilder.sign(sigMaker2)
 
         assertTrue(txBuilder.isFullySigned())

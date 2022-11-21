@@ -7,14 +7,38 @@ import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
-import net.postchain.ebft.NodeStateTracker
 import net.postchain.crypto.Signature
-import net.postchain.ebft.*
-import net.postchain.ebft.message.*
+import net.postchain.ebft.BlockDatabase
+import net.postchain.ebft.BlockIntent
+import net.postchain.ebft.BlockManager
+import net.postchain.ebft.DoNothingIntent
+import net.postchain.ebft.FetchBlockAtHeightIntent
+import net.postchain.ebft.FetchCommitSignatureIntent
+import net.postchain.ebft.FetchUnfinishedBlockIntent
+import net.postchain.ebft.NodeState
+import net.postchain.ebft.NodeStateTracker
+import net.postchain.ebft.NodeStatus
+import net.postchain.ebft.StatusManager
+import net.postchain.ebft.message.BlockData
+import net.postchain.ebft.message.BlockHeader
+import net.postchain.ebft.message.BlockRange
+import net.postchain.ebft.message.BlockSignature
+import net.postchain.ebft.message.CompleteBlock
+import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.ebft.message.GetBlockHeaderAndBlock
+import net.postchain.ebft.message.GetBlockRange
+import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.GetUnfinishedBlock
+import net.postchain.ebft.message.Status
+import net.postchain.ebft.message.Transaction
+import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
 import net.postchain.ebft.syncmanager.StatusLogInterval
-import net.postchain.ebft.syncmanager.common.*
+import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
+import net.postchain.ebft.syncmanager.common.FastSynchronizer
+import net.postchain.ebft.syncmanager.common.Messaging
+import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.mapper.toObject
 import nl.komponents.kovenant.task
@@ -148,7 +172,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                 }
                                 is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
                                 is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
-                                is Transaction -> handleTransaction(nodeIndex, message)
+                                is Transaction -> handleTransaction(message)
                                 is BlockHeader -> {
                                     // TODO: This might happen because we've already exited FastSync but other nodes
                                     //  are still responding to our old requests. For this case this is harmless.
@@ -169,10 +193,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     /**
      * Handle transaction received from peer
      *
-     * @param index
      * @param message message including the transaction
      */
-    private fun handleTransaction(index: Int, message: Transaction) {
+    private fun handleTransaction(message: Transaction) {
         // TODO: reject if queue is full
         task {
             val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(message.data)

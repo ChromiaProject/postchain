@@ -5,6 +5,7 @@ package net.postchain.devtools.gtx
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.Transaction
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
@@ -25,7 +26,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
         val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
             .addOperation(GtxNop.OP_NAME, gtv(42))
             .finish()
-            .sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
+            .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
             .buildGtx()
         return b.encode()
     }
@@ -34,7 +35,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
         val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
             .addOperation("gtx_test", gtv(id), gtv(value))
             .finish()
-            .sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
+            .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
             .buildGtx()
         return b.encode()
     }
@@ -48,7 +49,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
             // Need to add a valid dummy operation to make the entire TX valid
             .addOperation("gtx_test", gtv(1), gtv("true"))
             .finish()
-            .sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
+            .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
             .buildGtx()
         return b.encode()
     }

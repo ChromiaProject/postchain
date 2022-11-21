@@ -3,6 +3,7 @@
 package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
@@ -17,7 +18,7 @@ fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
     val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
         .addOperation(GtxNop.OP_NAME, gtv(42))
         .finish()
-        .sign(myCS.buildSigMaker(pubKey(0), privKey(0)))
+        .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
         .buildGtx()
     return b.encode()
 }

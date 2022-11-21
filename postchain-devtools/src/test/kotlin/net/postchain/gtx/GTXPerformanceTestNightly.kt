@@ -5,6 +5,7 @@ package net.postchain.gtx
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
@@ -28,7 +29,7 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
         val b = GtxBuilder(blockchainRid, listOf(pubKey(0)), net.postchain.devtools.gtx.myCS)
             .addOperation("gtx_test", gtv(id), gtv(value))
             .finish()
-            .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(pubKey(0), privKey(0)))
+            .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
             .buildGtx()
         return b.encode()
     }
