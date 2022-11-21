@@ -5,6 +5,7 @@ import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
+@Suppress("UNUSED_PARAMETER")
 class SlowSyncStateMachineTest {
 
     val nodeHex = "121212"
