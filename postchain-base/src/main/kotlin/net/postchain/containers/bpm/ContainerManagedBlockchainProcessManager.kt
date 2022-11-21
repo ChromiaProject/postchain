@@ -85,7 +85,7 @@ open class ContainerManagedBlockchainProcessManager(
             }
 
     override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler = if (chainId == CHAIN0) {
-        { blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long ->
+        { blockTrace: BlockTrace?, blockHeight: Long, _: Long ->
             try {
                 rTrace("Before", chainId, blockTrace)
                 rTrace("Before", chainId, blockTrace)

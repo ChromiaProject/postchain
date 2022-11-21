@@ -4,6 +4,7 @@ package net.postchain.gtx.gtxml
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
@@ -28,11 +29,11 @@ class GTXMLTransactionParserAutoSignTest {
 
         val pubKey0 = pubKey(0)
         val privKey0 = privKey(0)
-        val sigMaker0 = MockCryptoSystem().buildSigMaker(pubKey0, privKey0)
+        val sigMaker0 = MockCryptoSystem().buildSigMaker(KeyPair(pubKey0, privKey0))
 
         val pubKey1 = pubKey(1)
         val privKey1 = privKey(1)
-        val sigMaker1 = MockCryptoSystem().buildSigMaker(pubKey1, privKey1)
+        val sigMaker1 = MockCryptoSystem().buildSigMaker(KeyPair(pubKey1, privKey1))
 
         val expectedBody = GtxBody(
                 blockchainRID,
@@ -145,11 +146,11 @@ class GTXMLTransactionParserAutoSignTest {
 
         val pubKey0 = pubKey(0)
         val privKey0 = privKey(0)
-        val sigMaker0 = MockCryptoSystem().buildSigMaker(pubKey0, privKey0)
+        val sigMaker0 = MockCryptoSystem().buildSigMaker(KeyPair(pubKey0, privKey0))
 
         val pubKey1 = pubKey(1)
         val privKey1 = privKey(1)
-        val sigMaker1 = MockCryptoSystem().buildSigMaker(pubKey1, privKey1)
+        val sigMaker1 = MockCryptoSystem().buildSigMaker(KeyPair(pubKey1, privKey1))
 
         val expectedBody = GtxBody(
                 blockchainRID,

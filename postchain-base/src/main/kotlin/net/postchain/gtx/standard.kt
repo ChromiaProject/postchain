@@ -7,8 +7,13 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXAutoSpecialTxExtension
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -17,7 +22,7 @@ import org.apache.commons.dbutils.handlers.ScalarHandler
 /**
  * nop operation can be useful as nonce or identifier which has no meaning on consensus level
  */
-open class GtxNop(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
+open class GtxNop(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOperation(opData) {
 
     companion object : KLogging() {
         const val OP_NAME = "nop"
@@ -87,7 +92,7 @@ class GtxSpecNop(u: Unit, opData: ExtOpData) : GtxNop(u, opData) {
  * Will take one or two arguments "from" and "to".
  * If current timestamp in within this interval we return true.
  */
-class GtxTimeB(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
+class GtxTimeB(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOperation(opData) {
 
     companion object {
         const val OP_NAME = "timeb"
@@ -118,6 +123,7 @@ class GtxTimeB(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
 
 }
 
+@Suppress("UNUSED_PARAMETER")
 fun lastBlockInfoQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val dba = DatabaseAccess.of(ctx) as SQLDatabaseAccess
     val prevHeight = dba.getLastBlockHeight(ctx)
@@ -135,6 +141,7 @@ fun lastBlockInfoQuery(config: Unit, ctx: EContext, args: Gtv): Gtv {
     )
 }
 
+@Suppress("UNUSED_PARAMETER")
 fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val dba: SQLDatabaseAccess = DatabaseAccess.of(ctx) as SQLDatabaseAccess
     val argsDict = args as GtvDictionary

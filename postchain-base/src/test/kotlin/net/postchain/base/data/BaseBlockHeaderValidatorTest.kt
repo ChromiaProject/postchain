@@ -44,6 +44,7 @@ class BaseBlockHeaderValidatorTest {
         return myMerkleRootHash
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun getBlockRid(height: Long): ByteArray? {
         return myBlockRid
     }

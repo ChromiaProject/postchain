@@ -5,6 +5,7 @@ import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.MultiSigBlockWitnessBuilder
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
@@ -63,7 +64,7 @@ abstract class AbstractIntegration {
         val blockHeader = blockData.header
         var i = 0
         while (!witnessBuilder.isComplete()) {
-            val sigMaker = cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(i), KeyPairHelper.privKey(i))
+            val sigMaker = cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(i), KeyPairHelper.privKey(i)))
             witnessBuilder.applySignature(sigMaker.signDigest(blockHeader.blockRID))
             i++
         }

@@ -53,7 +53,7 @@ class ConcretePostchainClient(
                 .setDefaultRequestConfig(RequestConfig.custom()
                         .setRedirectsEnabled(false)
                         .setCookieSpec(StandardCookieSpec.IGNORE)
-                        .setConnectTimeout(Timeout.ofMilliseconds(config.connectTimeout.toMillis()))
+                        .setConnectionRequestTimeout(Timeout.ofMilliseconds(config.connectTimeout.toMillis()))
                         .setResponseTimeout(Timeout.ofMilliseconds(config.responseTimeout.toMillis()))
                         .build()).build().apply { start() }),
 ) : PostchainClient {

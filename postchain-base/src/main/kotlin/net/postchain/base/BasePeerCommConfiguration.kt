@@ -4,6 +4,7 @@ package net.postchain.base
 
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Verifier
 
@@ -42,7 +43,7 @@ open class BasePeerCommConfiguration(
     override fun myPeerInfo(): PeerInfo = networkNodes.myself
 
     override fun sigMaker(): SigMaker {
-        return cryptoSystem.buildSigMaker(pubKey, privKey)
+        return cryptoSystem.buildSigMaker(KeyPair(pubKey, privKey))
     }
 
     override fun verifier(): Verifier = cryptoSystem.makeVerifier()
