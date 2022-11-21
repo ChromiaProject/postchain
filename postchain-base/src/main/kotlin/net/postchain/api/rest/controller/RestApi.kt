@@ -27,6 +27,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
@@ -124,6 +125,11 @@ class RestApi(
         }
 
         http.exception(UnavailableException::class.java) { error, _, response ->
+            response.status(503) // Service unavailable
+            setErrorResponseBody(response, error)
+        }
+
+        http.exception(PmEngineIsAlreadyClosed::class.java) { error, _, response ->
             response.status(503) // Service unavailable
             setErrorResponseBody(response, error)
         }

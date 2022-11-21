@@ -103,6 +103,7 @@ open class BaseBlockchainEngine(
     override fun shutdown() {
         closed = true
         blockchainConfiguration.shutdownModules()
+        blockQueries.shutdown()
         storage.close()
     }
 
