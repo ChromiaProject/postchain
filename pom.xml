@@ -56,7 +56,7 @@
         <log4j2.version>2.19.0</log4j2.version>
 
         <!-- 3rd party -->
-        <postgresql.version>42.5.0</postgresql.version>
+        <postgresql.version>42.2.11</postgresql.version>
         <netty.version>4.1.85.Final</netty.version>
         <jasn.version>1.11.3</jasn.version>
         <spark-core.version>2.9.4</spark-core.version>
@@ -605,7 +605,7 @@
                 <configuration>
                     <allowMajorUpdates>false</allowMajorUpdates>
                     <allowSnapshots>false</allowSnapshots>
-                    <excludeProperties>kotlin.version,slf4j.version,assertk.version</excludeProperties>
+                    <excludeProperties>kotlin.version,slf4j.version,assertk.version,postgresql.version</excludeProperties>
                 </configuration>
             </plugin>
 
