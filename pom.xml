@@ -35,44 +35,44 @@
 
         <!-- Maven -->
         <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
-        <maven.surefire.plugin.version>2.22.1</maven.surefire.plugin.version>
+        <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
         <maven.failsafe.plugin.version>2.22.2</maven.failsafe.plugin.version>
-        <maven.compiler.plugin.version>3.5.1</maven.compiler.plugin.version>
+        <maven.compiler.plugin.version>3.10.1</maven.compiler.plugin.version>
         <maven.assembly.plugin.version>3.2.0</maven.assembly.plugin.version>
         <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
         <skipSurefireTests>false</skipSurefireTests>
 
         <!-- Testing -->
-        <junit.version>5.8.2</junit.version>
+        <junit.version>5.9.1</junit.version>
         <junitparams.version>1.1.1</junitparams.version>
         <mockito-kotlin.version>4.0.0</mockito-kotlin.version>
-        <mockito.version>4.4.0</mockito.version>
+        <mockito.version>4.9.0</mockito.version>
         <assertk.version>0.10</assertk.version>
-        <awaitility.version>3.1.2</awaitility.version>
+        <awaitility.version>3.1.6</awaitility.version>
 
         <!-- Logging -->
         <kotlin-logging.version>2.1.23</kotlin-logging.version>
         <slf4j.version>1.7.36</slf4j.version>
-        <log4j2.version>2.17.1</log4j2.version>
+        <log4j2.version>2.19.0</log4j2.version>
 
         <!-- 3rd party -->
-        <postgresql.version>42.2.11</postgresql.version>
-        <netty.version>4.1.79.Final</netty.version>
+        <postgresql.version>42.5.0</postgresql.version>
+        <netty.version>4.1.85.Final</netty.version>
         <jasn.version>1.11.3</jasn.version>
-        <spark-core.version>2.8.0</spark-core.version>
+        <spark-core.version>2.9.4</spark-core.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
         <jackson.version>2.14.0</jackson.version>
         <kovenant-core.version>3.3.0</kovenant-core.version>
         <gson.version>2.10</gson.version>
-        <gitflow.maven.plugin.version>1.18.0</gitflow.maven.plugin.version>
-        <spongycastle.core.version>1.56.0.0</spongycastle.core.version>
-        <commons-dbutils.version>1.6</commons-dbutils.version>
-        <commons-dbcp2.version>2.6.0</commons-dbcp2.version>
+        <gitflow.maven.plugin.version>1.19.0</gitflow.maven.plugin.version>
+        <spongycastle.core.version>1.58.0.0</spongycastle.core.version>
+        <commons-dbutils.version>1.7</commons-dbutils.version>
+        <commons-dbcp2.version>2.9.0</commons-dbcp2.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
-        <commons-configuration2.version>2.1.1</commons-configuration2.version>
-        <commons-beanutils.version>1.9.3</commons-beanutils.version>
-        <micrometer.version>1.9.0</micrometer.version>
+        <commons-configuration2.version>2.8.0</commons-configuration2.version>
+        <commons-beanutils.version>1.9.4</commons-beanutils.version>
+        <micrometer.version>1.10.1</micrometer.version>
 
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
@@ -209,18 +209,18 @@
             <dependency>
                 <groupId>org.skyscreamer</groupId>
                 <artifactId>jsonassert</artifactId>
-                <version>1.5.0</version>
+                <version>1.5.1</version>
             </dependency>
 
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-core</artifactId>
-                <version>4.33.2.1</version>
+                <version>4.34.0.4</version>
             </dependency>
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-client-apache-async</artifactId>
-                <version>4.33.2.1</version>
+                <version>4.34.0.4</version>
             </dependency>
 
             <!-- Json -->
@@ -267,7 +267,7 @@
             <dependency>
                 <groupId>com.konghq</groupId>
                 <artifactId>unirest-java</artifactId>
-                <version>3.8.06</version>
+                <version>3.13.13</version>
             </dependency>
 
             <dependency>
@@ -288,18 +288,18 @@
             <dependency>
                 <groupId>com.github.jnr</groupId>
                 <artifactId>jffi</artifactId>
-                <version>1.3.8</version>
+                <version>1.3.10</version>
             </dependency>
             <dependency>
                 <groupId>com.github.jnr</groupId>
                 <artifactId>jnr-ffi</artifactId>
-                <version>2.2.10</version>
+                <version>2.2.13</version>
             </dependency>
 
             <dependency>
                 <groupId>io.rest-assured</groupId>
                 <artifactId>rest-assured</artifactId>
-                <version>3.1.1</version>
+                <version>3.3.0</version>
             </dependency>
             <dependency>
                 <groupId>org.awaitility</groupId>
@@ -320,7 +320,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents.client5</groupId>
                 <artifactId>httpclient5</artifactId>
-                <version>5.1.3</version>
+                <version>5.2</version>
             </dependency>
             <dependency>
                 <groupId>commons-dbutils</groupId>
@@ -394,7 +394,7 @@
             <dependency>
                 <groupId>jakarta.xml.bind</groupId>
                 <artifactId>jakarta.xml.bind-api</artifactId>
-                <version>3.0.0</version>
+                <version>3.0.1</version>
             </dependency>
             <dependency>
                 <groupId>com.sun.xml.bind</groupId>
@@ -454,7 +454,7 @@
             <dependency>
                 <groupId>io.prometheus</groupId>
                 <artifactId>simpleclient_httpserver</artifactId>
-                <version>0.15.0</version>
+                <version>0.16.0</version>
             </dependency>
 
             <dependency>
@@ -601,7 +601,12 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
-                <version>2.5</version>
+                <version>2.13.0</version>
+                <configuration>
+                    <allowMajorUpdates>false</allowMajorUpdates>
+                    <allowSnapshots>false</allowSnapshots>
+                    <excludeProperties>kotlin.version,slf4j.version,assertk.version</excludeProperties>
+                </configuration>
             </plugin>
 
             <plugin>
