@@ -26,33 +26,38 @@ requires Gitlab access):
 To generate a client one could go about it like this:
 
 ```kotlin
-  import net.postchain.base.SECP256K1CryptoSystem
-  import net.postchain.client.core.DefaultSigner
-  import net.postchain.client.core.PostchainClient
-  import net.postchain.client.core.PostchainClientFactory
-  import net.postchain.client.core.TransactionStatus
+    import net.postchain.client.config.PostchainClientConfig
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.client.request.EndpointPool
+import net.postchain.common.BlockchainRid
+import net.postchain.common.hexStringToByteArray
+import net.postchain.common.tx.TransactionStatus
+import net.postchain.crypto.KeyPair
 
-  val cryptoSystem = SECP256K1CryptoSystem()
-  val bcRid = ... // The blockchain RID of the chain (can be found in the logs when P.C. server starts) 
-  val pubKey0 = ... // This must be a real pub key
-  val privKey0 = ... // This must be a real priv key
-  val sigMaker0 = cryptoSystem.buildSigMaker(pubKey0, privKey0)
-  val defaultSigner = DefaultSigner(sigMaker0, pubKey0)
-  val resolver = PostchainClientFactory.makeSimpleNodeResolver("http://127.0.0.1:7740") // Running P.C. server on localhost
-  val psClient = PostchainClientFactory.getClient(resolver, bcRid, defaultSigner)
+val cryptoSystem = Secp256K1CryptoSystem()
+val bcRid: BlockchainRid = BlockchainRid.buildFromHex("...") // The blockchain RID of the chain (can be found in the logs when P.C. server starts) 
+val pubKey0 = "...".hexStringToByteArray() // This must be a real public key
+val privKey0 = "...".hexStringToByteArray() // This must be a real private key
+val keyPair0 = KeyPair(pubKey0, privKey0)
+val sigMaker0 = cryptoSystem.buildSigMaker(keyPair0)
+val endpointPool = EndpointPool.singleUrl("http://127.0.0.1:7740") // Running P.C. server on localhost
+val psClient: PostchainClient = ConcretePostchainClientProvider().createClient(
+        PostchainClientConfig(bcRid, endpointPool, listOf(keyPair0))
+)
 
-  // Build the TX 
-  val txBuilder = psClient.makeTransaction()
-  txBuilder.addOperation("nop", arrayOf()) // Operation "nop" with on arguments
-  txBuilder.sign(sigMaker0) // Sign it
+// Build the TX 
+val txBuilder = psClient.transactionBuilder()
+txBuilder.addOperation("nop") // Operation "nop" with on arguments
+txBuilder.sign(sigMaker0) // Sign it
 
-  // Synchronous call = waits for result
-  val result = txBuilder.postSync(ConfirmationLevel.NO_WAIT)
-  when (result.status) {
-      TransactionStatus.CONFIRMED -> // TX has been put into the TX queue of the Postchain server
-      TransactionStatus.REJECTED  -> // TX most likely wrong number of args
-      else ->  // Investigate
-  }
+val result = txBuilder.post()
+when (result.status) {
+    TransactionStatus.CONFIRMED -> // TX has been put into the TX queue of the Postchain server 
+        TransactionStatus.REJECTED
+    -> // TX most likely wrong number of args
+    else ->  // Investigate
+}
 ```
 ... see PostChainClientTest in the devtools Maven module for more examples.
-
