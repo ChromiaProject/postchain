@@ -52,7 +52,7 @@ interface BlockStore {
 /**
  * A collection of methods for various blockchain related queries
  */
-interface BlockQueries {
+interface BlockQueries : Shutdownable {
     fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception>
     fun getBestHeight(): Promise<Long, Exception>
     fun getLastBlockTimestamp(): Promise<Long, Exception>

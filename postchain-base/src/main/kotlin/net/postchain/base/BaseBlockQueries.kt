@@ -13,6 +13,8 @@ import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.utils.KovenantHelper
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
+import java.sql.SQLException
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Encapsulating a proof of a transaction hash in a block header
@@ -44,6 +46,8 @@ open class BaseBlockQueries(
 
     companion object : KLogging()
 
+    private val closed = AtomicBoolean(false)
+
     // Create a separate Kovenant context to make sure other tasks do not compete with BlockQueries
     val kctx = KovenantHelper.createContext("BlockQueries", storage.readConcurrency)
 
@@ -53,7 +57,15 @@ open class BaseBlockQueries(
      */
     protected fun <T> runOp(operation: (EContext) -> T): Promise<T, Exception> {
         return task(kctx) {
-            val ctx = storage.openReadConnection(chainId)
+            if (closed.get()) throw PmEngineIsAlreadyClosed("Engine is closed")
+
+            val ctx = try {
+                storage.openReadConnection(chainId)
+            } catch (e: SQLException) {
+                if (closed.get()) throw PmEngineIsAlreadyClosed("Engine is closed", e)
+                throw e
+            }
+
             try {
                 operation(ctx)
             } catch (e: Exception) {
@@ -145,6 +157,10 @@ open class BaseBlockQueries(
         return runOp {
             blockStore.isTransactionConfirmed(it, txRID)
         }
+    }
+
+    override fun shutdown() {
+        closed.set(true)
     }
 
     override fun query(query: String): Promise<String, Exception> {
