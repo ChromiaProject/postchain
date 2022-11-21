@@ -30,7 +30,6 @@ class ManagedNodeConfigurationProvider(
     override fun getConfiguration(): NodeConfig {
         return object : ManagedNodeConfig(appConfig) {
             override val peerInfoMap = getPeerInfoCollection(appConfig).associateBy(PeerInfo::peerId)
-            override val nodeReplicas = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
             override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
             override val locallyConfiguredBlockchainsToReplicate = getLocallyConfiguredBlockchainsToReplicate(appConfig)
             override val mustSyncUntilHeight = getSyncUntilHeight(appConfig)

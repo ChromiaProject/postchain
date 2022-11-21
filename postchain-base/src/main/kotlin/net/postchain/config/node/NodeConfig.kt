@@ -12,7 +12,6 @@ import net.postchain.core.NodeRid
 open class NodeConfig(val appConfig: AppConfig) : Config {
 
     open val peerInfoMap: Map<NodeRid, PeerInfo> = mapOf()
-    open val nodeReplicas: Map<NodeRid, List<NodeRid>> = mapOf() // for making a node a full clone of another node
     open val blockchainReplicaNodes: Map<BlockchainRid, List<NodeRid>> = mapOf()
     open val blockchainAncestors: Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> = getAncestors()
     open val mustSyncUntilHeight: Map<Long, Long>? = mapOf() // chainID -> height
