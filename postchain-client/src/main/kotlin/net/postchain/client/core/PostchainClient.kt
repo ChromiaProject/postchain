@@ -3,11 +3,8 @@ package net.postchain.client.core
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.crypto.KeyPair
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvDictionary
 import net.postchain.gtx.Gtx
 import java.time.Duration
-import java.util.concurrent.CompletionStage
 
 interface PostchainClient : PostchainReadClient, PostchainQuery {
     val config: PostchainClientConfig
@@ -23,20 +20,15 @@ interface PostchainClient : PostchainReadClient, PostchainQuery {
     fun transactionBuilder(signers: List<KeyPair>): TransactionBuilder
 
     /**
-     * Post a [Gtx] transaction asynchronously
+     * Post a [Gtx] transaction.
      */
 
-    fun postTransaction(tx: Gtx): CompletionStage<TransactionResult>
-
-    /**
-     * Post a [Gtx] transaction synchronously
-     */
-    fun postTransactionSync(tx: Gtx): TransactionResult
+    fun postTransaction(tx: Gtx): TransactionResult
 
     /**
      * Post a [Gtx] transaction and wait until it is included in a block
      */
-    fun postTransactionSyncAwaitConfirmation(tx: Gtx): TransactionResult
+    fun postTransactionAwaitConfirmation(tx: Gtx): TransactionResult
 
     /**
      * Wait until the given [TxRid] is included in a block
@@ -46,20 +38,5 @@ interface PostchainClient : PostchainReadClient, PostchainQuery {
     /**
      * Check the current status of a [TxRid]
      */
-    fun checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult>
-
-    /**
-     * Perform an asynchronous query
-     */
-    fun query(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): CompletionStage<Gtv>
-
-    /**
-     * Query current block height
-     */
-    fun currentBlockHeight(): CompletionStage<Long>
-
-    /**
-     * Query block at height
-     */
-    fun blockAtHeight(height: Long): CompletionStage<BlockDetail?>
+    fun checkTxStatus(txRid: TxRid): TransactionResult
 }

@@ -78,7 +78,7 @@ class ConcretePostchainClient(
     )
 
     @Throws(IOException::class)
-    override fun querySync(name: String, gtv: Gtv): Gtv {
+    override fun query(name: String, gtv: Gtv): Gtv {
         try {
             var queryResult: Response? = null
             var responseStream: BoundedInputStream? = null
@@ -102,18 +102,6 @@ class ConcretePostchainClient(
             throw buildExceptionFromGTV(responseStream!!, queryResult!!.status)
         } catch (e: CompletionException) {
             throw e.cause ?: e
-        }
-    }
-
-    override fun query(name: String, gtv: Gtv): CompletionStage<Gtv> {
-        val endpoint = nextEndpoint()
-        val request = createQueryRequest(name, gtv, endpoint)
-        return queryTo(request, endpoint).thenApply {
-            val responseStream = BoundedInputStream(it.body.stream, config.maxResponseSize.toLong())
-            if (it.status != Status.OK) {
-                throw buildExceptionFromGTV(responseStream, it.status)
-            }
-            GtvDecoder.decodeGtv(responseStream)
         }
     }
 
@@ -142,7 +130,14 @@ class ConcretePostchainClient(
         return UserMistake("Can not make a query: $status $errorMessage")
     }
 
-    override fun currentBlockHeight(): CompletionStage<Long> {
+    @Throws(IOException::class)
+    override fun currentBlockHeight(): Long = try {
+        _currentBlockHeight().toCompletableFuture().join()
+    } catch (e: CompletionException) {
+        throw e.cause ?: e
+    }
+
+    private fun _currentBlockHeight(): CompletionStage<Long> {
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
         return queryTo(request, endpoint).thenApply {
@@ -156,13 +151,13 @@ class ConcretePostchainClient(
     }
 
     @Throws(IOException::class)
-    override fun currentBlockHeightSync(): Long = try {
-        currentBlockHeight().toCompletableFuture().join()
+    override fun blockAtHeight(height: Long): BlockDetail? = try {
+        _blockAtHeight(height).toCompletableFuture().join()
     } catch (e: CompletionException) {
         throw e.cause ?: e
     }
 
-    override fun blockAtHeight(height: Long): CompletionStage<BlockDetail?> {
+    private fun _blockAtHeight(height: Long): CompletionStage<BlockDetail?> {
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
                 .header("Accept", ContentType.OCTET_STREAM.value)
@@ -178,14 +173,7 @@ class ConcretePostchainClient(
     }
 
     @Throws(IOException::class)
-    override fun blockAtHeightSync(height: Long): BlockDetail? = try {
-        blockAtHeight(height).toCompletableFuture().join()
-    } catch (e: CompletionException) {
-        throw e.cause ?: e
-    }
-
-    @Throws(IOException::class)
-    override fun postTransactionSync(tx: Gtx): TransactionResult {
+    override fun postTransaction(tx: Gtx): TransactionResult {
         try {
             var result: TransactionResult? = null
             for (j in 1..config.endpointPool.size()) {
@@ -205,10 +193,6 @@ class ConcretePostchainClient(
         }
     }
 
-    override fun postTransaction(tx: Gtx): CompletionStage<TransactionResult> {
-        return postTransactionTo(tx, nextEndpoint())
-    }
-
     private fun postTransactionTo(tx: Gtx, endpoint: Endpoint): CompletableFuture<TransactionResult> {
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
         val request = Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex")
@@ -223,8 +207,8 @@ class ConcretePostchainClient(
     }
 
     @Throws(IOException::class)
-    override fun postTransactionSyncAwaitConfirmation(tx: Gtx): TransactionResult {
-        val resp = postTransactionSync(tx)
+    override fun postTransactionAwaitConfirmation(tx: Gtx): TransactionResult {
+        val resp = postTransaction(tx)
         if (resp.status == REJECTED) {
             return resp
         }
@@ -238,7 +222,7 @@ class ConcretePostchainClient(
         run poll@{
             repeat(retries) {
                 try {
-                    val deferredPollResult = checkTxStatus(txRid)
+                    val deferredPollResult = _checkTxStatus(txRid)
                     lastKnownTxResult = deferredPollResult.toCompletableFuture().join()
                     if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@poll
                 } catch (e: Exception) {
@@ -251,7 +235,13 @@ class ConcretePostchainClient(
         return lastKnownTxResult
     }
 
-    override fun checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult> {
+    override fun checkTxStatus(txRid: TxRid): TransactionResult = try {
+        _checkTxStatus(txRid).toCompletableFuture().join()
+    } catch (e: CompletionException) {
+        throw e.cause ?: e
+    }
+
+    private fun _checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult> {
         val endpoint = nextEndpoint()
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
         return queryTo(validationRequest, endpoint).thenApply { response ->

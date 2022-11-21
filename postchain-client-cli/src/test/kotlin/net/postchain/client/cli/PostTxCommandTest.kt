@@ -8,7 +8,11 @@ import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
 
 internal class PostTxCommandTest {
 
@@ -43,6 +47,6 @@ internal class PostTxCommandTest {
         )
 
         verify(mockClient).transactionBuilder()
-        verify(mockClient).postTransactionSync(any())
+        verify(mockClient).postTransaction(any())
     }
 }

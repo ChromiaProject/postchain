@@ -41,6 +41,6 @@ class QueryCommand(private val clientProvider: PostchainClientProvider) : CliktC
 
     internal fun runInternal(config: PostchainClientConfig, queryName: String, args: Gtv): Gtv {
         if (args !is GtvDictionary) throw IllegalArgumentException("query must be done with named parameters in a dict")
-        return clientProvider.createClient(config).querySync(queryName, args)
+        return clientProvider.createClient(config).query(queryName, args)
     }
 }

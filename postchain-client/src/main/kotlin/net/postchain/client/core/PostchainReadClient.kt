@@ -4,10 +4,10 @@ interface PostchainReadClient : PostchainQuery {
     /**
      * Query current block height
      */
-    fun blockAtHeightSync(height: Long): BlockDetail?
+    fun blockAtHeight(height: Long): BlockDetail?
 
     /**
      * Query block at height
      */
-    fun currentBlockHeightSync(): Long
+    fun currentBlockHeight(): Long
 }

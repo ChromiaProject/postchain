@@ -69,7 +69,7 @@ class PostchainClientJavaTest {
     @Test
     void query() {
         try {
-            client.querySync("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
+            client.query("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
         } catch (IOException e) {
             // Just to make the test pass
         }
@@ -89,7 +89,7 @@ class PostchainClientJavaTest {
                 .finish()
                 .sign(keyPair.sigMaker(cryptoSystem))
                 .build()
-                .postSyncAwaitConfirmation();
+                .postAwaitConfirmation();
         assertEquals(1, requestCounter);
     }
 

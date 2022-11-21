@@ -63,21 +63,7 @@ class PostChainClientTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun makingAndPostingTransaction_SignedTransactionGiven_PostsSuccessfully() {
-        // Mock
-        createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
-        val client = spy(createPostChainClient(blockchainRID))
-        val txBuilder = createSignedNopTx(client, blockchainRID)
-
-        // When
-        txBuilder.post().thenAccept {
-            // Then
-            verify(client).postTransaction(any())
-        }
-    }
-
-    @Test
-    fun makingAndPostingSyncTransaction_UnsignedTransactionGiven_throws_Exception() {
+    fun makingAndPostingTransaction_UnsignedTransactionGiven_throws_Exception() {
         // Mock
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val client = createPostChainClient(blockchainRID)
@@ -90,7 +76,7 @@ class PostChainClientTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun makingAndPostingSyncTransaction_SignedTransactionGiven_PostsSuccessfully() {
+    fun makingAndPostingTransaction_SignedTransactionGiven_PostsSuccessfully() {
         // Mock
         createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val client = spy(createPostChainClient(blockchainRID))
@@ -101,10 +87,10 @@ class PostChainClientTest : IntegrationTestSetup() {
         val tx = txBuilder.sign(sigMaker0)
 
         // When
-        tx.postSync()
+        tx.post()
 
         // Then
-        verify(client).postTransactionSync(any())
+        verify(client).postTransaction(any())
     }
 
     @Test
@@ -113,22 +99,8 @@ class PostChainClientTest : IntegrationTestSetup() {
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
         val client = createPostChainClient(blockchainRid)
         val builder = createSignedNopTx(client, blockchainRid)
-        val result = builder.postSync()
+        val result = builder.post()
         assertEquals(TransactionStatus.WAITING, result.status)
-    }
-
-    @Test
-    fun testPostTransactionApiConfirmLevelNoWaitPromise() {
-        createTestNodes(1, "/net/postchain/devtools/api/blockchain_config_1.xml")
-        val blockchainRid = systemSetup.blockchainMap[1]!!.rid
-        val client = createPostChainClient(blockchainRid)
-        val builder = createSignedNopTx(client, blockchainRid)
-
-        await().untilCallTo {
-            builder.post().toCompletableFuture().join()
-        } matches { resp ->
-            resp?.status == TransactionStatus.WAITING
-        }
     }
 
     @Test
@@ -137,21 +109,21 @@ class PostChainClientTest : IntegrationTestSetup() {
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
         val client = createPostChainClient(blockchainRid)
         val builder = createSignedNopTx(client, blockchainRid)
-        val result = builder.postSyncAwaitConfirmation()
+        val result = builder.postAwaitConfirmation()
         assertEquals(TransactionStatus.CONFIRMED, result.status)
     }
 
     @Test
-    fun testQueryGtxClientApiPromise() {
+    fun testQueryGtxClientApi() {
         createTestNodes(3, "/net/postchain/devtools/api/blockchain_config.xml")
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
         val client = createPostChainClient(blockchainRid)
         val builder = createSignedNopTx(client, blockchainRid)
-        val result = builder.postSyncAwaitConfirmation()
+        val result = builder.postAwaitConfirmation()
         val gtv = gtv("txRID" to gtv(result.txRid.rid))
 
         await().untilCallTo {
-            client.query("gtx_test_get_value", gtv).toCompletableFuture().join()
+            client.query("gtx_test_get_value", gtv)
         } matches { resp ->
             resp?.asString() == randomStr
         }

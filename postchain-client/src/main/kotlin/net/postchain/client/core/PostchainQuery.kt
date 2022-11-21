@@ -6,13 +6,13 @@ import net.postchain.gtv.GtvDictionary
 /**
  * Query a Postchain blockchain.
  */
-interface PostchainQuery {
+fun interface PostchainQuery {
     /**
      * Perform a query.
      *
      * @param name name of the query
-     * @param gtv query arguments, must be provided as a GtvDictionary
+     * @param gtv query arguments, must be provided as a [GtvDictionary]
      * @return query result
      */
-    fun querySync(name: String, gtv: Gtv = GtvDictionary.build(mapOf())): Gtv
+    fun query(name: String, gtv: Gtv): Gtv
 }
