@@ -1,9 +1,11 @@
-package net.postchain.client.core
+package net.postchain.client.base
 
 import com.google.gson.Gson
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
+import net.postchain.client.core.BlockDetail
+import net.postchain.client.core.TxRid
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake

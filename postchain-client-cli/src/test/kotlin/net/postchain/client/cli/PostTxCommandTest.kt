@@ -1,7 +1,7 @@
 package net.postchain.client.cli
 
+import net.postchain.client.base.ConcretePostchainClient
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClient
 import net.postchain.client.core.PostchainClientProvider
 import org.http4k.core.HttpHandler
 import org.http4k.core.Request

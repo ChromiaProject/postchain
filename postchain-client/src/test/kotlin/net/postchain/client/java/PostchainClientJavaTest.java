@@ -1,10 +1,10 @@
 package net.postchain.client.java;
 
 import kotlin.jvm.functions.Function1;
+import net.postchain.client.base.ConcretePostchainClient;
+import net.postchain.client.base.ConcretePostchainClientProvider;
 import net.postchain.client.config.FailOverConfig;
 import net.postchain.client.config.PostchainClientConfig;
-import net.postchain.client.core.ConcretePostchainClient;
-import net.postchain.client.core.ConcretePostchainClientProvider;
 import net.postchain.client.core.PostchainClientProvider;
 import net.postchain.client.request.EndpointPool;
 import net.postchain.common.BlockchainRid;

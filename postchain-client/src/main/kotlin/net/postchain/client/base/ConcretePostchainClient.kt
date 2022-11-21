@@ -1,11 +1,15 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.client.core
+package net.postchain.client.base
 
 import com.google.gson.Gson
 import com.google.gson.JsonParseException
 import mu.KLogging
 import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.core.BlockDetail
+import net.postchain.client.core.PostchainClient
+import net.postchain.client.core.TransactionResult
+import net.postchain.client.core.TxRid
 import net.postchain.client.request.Endpoint
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.exception.UserMistake
@@ -39,6 +43,7 @@ import java.io.InputStream
 import java.lang.Thread.sleep
 import java.time.Duration
 
+/* JSON structures */
 data class Tx(val tx: String)
 data class TxStatus(val status: String?, val rejectReason: String?)
 data class CurrentBlockHeight(val blockHeight: Long)

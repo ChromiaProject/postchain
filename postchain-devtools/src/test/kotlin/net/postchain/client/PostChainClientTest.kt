@@ -3,8 +3,8 @@
 package net.postchain.client
 
 
+import net.postchain.client.base.ConcretePostchainClientProvider
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClientProvider
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.request.EndpointPool
 import net.postchain.client.transaction.TransactionBuilder
