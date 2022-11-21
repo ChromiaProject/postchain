@@ -1,6 +1,6 @@
 package net.postchain.client.core
 
-interface PostchainReadClient : PostchainQuery {
+interface PostchainBlockClient : PostchainQuery {
     /**
      * Query current block height
      */

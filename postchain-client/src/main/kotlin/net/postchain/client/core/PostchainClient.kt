@@ -6,7 +6,7 @@ import net.postchain.crypto.KeyPair
 import net.postchain.gtx.Gtx
 import java.time.Duration
 
-interface PostchainClient : PostchainReadClient, PostchainQuery {
+interface PostchainClient : PostchainBlockClient, PostchainQuery {
     val config: PostchainClientConfig
 
     /**
