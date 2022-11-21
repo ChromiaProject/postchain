@@ -1,6 +1,5 @@
 package net.postchain.client.java;
 
-import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 import net.postchain.client.config.FailOverConfig;
 import net.postchain.client.config.PostchainClientConfig;
@@ -15,11 +14,9 @@ import net.postchain.crypto.PubKey;
 import net.postchain.crypto.Secp256K1CryptoSystem;
 import net.postchain.crypto.Secp256k1Kt;
 import net.postchain.gtv.GtvFactory;
-import org.http4k.client.AsyncHttpHandler;
 import org.http4k.core.Request;
 import org.http4k.core.Response;
 import org.http4k.core.Status;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,19 +35,15 @@ class PostchainClientJavaTest {
 
     @BeforeEach
     void setup() {
-        AsyncHttpHandler httpClient = new AsyncHttpHandler() {
+        var httpClient = new Function1<Request, Response>() {
             @Override
-            public void invoke(@NotNull Request request, @NotNull Function1<? super Response, Unit> fn) {
+            public Response invoke(Request request) {
                 requestCounter++;
                 if (request.getUri().getPath().startsWith("/query_gtv")) {
-                    fn.invoke(Response.Companion.create(Status.BAD_REQUEST, ""));
+                    return Response.Companion.create(Status.BAD_REQUEST, "");
                 } else {
-                    fn.invoke(Response.Companion.create(Status.OK, ""));
+                    return Response.Companion.create(Status.OK, "");
                 }
-            }
-
-            @Override
-            public void close() {
             }
         };
 

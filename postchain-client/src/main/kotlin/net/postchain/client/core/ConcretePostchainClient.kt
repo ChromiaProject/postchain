@@ -24,11 +24,11 @@ import org.apache.commons.io.input.BoundedInputStream
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.hc.client5.http.config.RequestConfig
 import org.apache.hc.client5.http.cookie.StandardCookieSpec
-import org.apache.hc.client5.http.impl.async.HttpAsyncClients
+import org.apache.hc.client5.http.impl.classic.HttpClients
 import org.apache.hc.core5.util.Timeout
-import org.http4k.client.ApacheAsyncClient
-import org.http4k.client.AsyncHttpHandler
+import org.http4k.client.ApacheClient
 import org.http4k.core.ContentType
+import org.http4k.core.HttpHandler
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Response
@@ -38,9 +38,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.lang.Thread.sleep
 import java.time.Duration
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletionException
-import java.util.concurrent.CompletionStage
 
 data class Tx(val tx: String)
 data class TxStatus(val status: String?, val rejectReason: String?)
@@ -49,13 +46,13 @@ data class ErrorResponse(val error: String)
 
 class ConcretePostchainClient(
         override val config: PostchainClientConfig,
-        private val httpClient: AsyncHttpHandler = ApacheAsyncClient(HttpAsyncClients.custom()
+        private val httpClient: HttpHandler = ApacheClient(HttpClients.custom()
                 .setDefaultRequestConfig(RequestConfig.custom()
                         .setRedirectsEnabled(false)
                         .setCookieSpec(StandardCookieSpec.IGNORE)
                         .setConnectionRequestTimeout(Timeout.ofMilliseconds(config.connectTimeout.toMillis()))
                         .setResponseTimeout(Timeout.ofMilliseconds(config.responseTimeout.toMillis()))
-                        .build()).build().apply { start() }),
+                        .build()).build()),
 ) : PostchainClient {
 
     companion object : KLogging()
@@ -79,30 +76,26 @@ class ConcretePostchainClient(
 
     @Throws(IOException::class)
     override fun query(name: String, gtv: Gtv): Gtv {
-        try {
-            var queryResult: Response? = null
-            var responseStream: BoundedInputStream? = null
-            for (j in 1..config.endpointPool.size()) {
-                val endpoint = nextEndpoint()
-                val request = createQueryRequest(name, gtv, endpoint)
-                endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
-                    queryResult = queryTo(request, endpoint).toCompletableFuture().join()
-                    responseStream = BoundedInputStream(queryResult.body.stream, config.maxResponseSize.toLong())
-                    when (queryResult.status) {
-                        Status.OK -> return GtvDecoder.decodeGtv(responseStream)
-                        Status.BAD_REQUEST -> throw buildExceptionFromGTV(responseStream, queryResult.status)
-                        Status.INTERNAL_SERVER_ERROR -> throw buildExceptionFromGTV(responseStream, queryResult.status)
-                        Status.NOT_FOUND -> throw buildExceptionFromGTV(responseStream, queryResult.status)
-                        Status.UNKNOWN_HOST -> break@endpoint
-                        Status.SERVICE_UNAVAILABLE -> break@endpoint
-                    }
-                    sleep(config.failOverConfig.attemptInterval.toMillis())
+        var queryResult: Response? = null
+        var responseStream: BoundedInputStream? = null
+        for (j in 1..config.endpointPool.size()) {
+            val endpoint = nextEndpoint()
+            val request = createQueryRequest(name, gtv, endpoint)
+            endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
+                queryResult = queryTo(request, endpoint)
+                responseStream = BoundedInputStream(queryResult.body.stream, config.maxResponseSize.toLong())
+                when (queryResult.status) {
+                    Status.OK -> return GtvDecoder.decodeGtv(responseStream)
+                    Status.BAD_REQUEST -> throw buildExceptionFromGTV(responseStream, queryResult.status)
+                    Status.INTERNAL_SERVER_ERROR -> throw buildExceptionFromGTV(responseStream, queryResult.status)
+                    Status.NOT_FOUND -> throw buildExceptionFromGTV(responseStream, queryResult.status)
+                    Status.UNKNOWN_HOST -> break@endpoint
+                    Status.SERVICE_UNAVAILABLE -> break@endpoint
                 }
+                sleep(config.failOverConfig.attemptInterval.toMillis())
             }
-            throw buildExceptionFromGTV(responseStream!!, queryResult!!.status)
-        } catch (e: CompletionException) {
-            throw e.cause ?: e
         }
+        throw buildExceptionFromGTV(responseStream!!, queryResult!!.status)
     }
 
     private fun createQueryRequest(
@@ -116,13 +109,10 @@ class ConcretePostchainClient(
                 .body(encodedQuery.inputStream())
     }
 
-    private fun queryTo(request: Request, endpoint: Endpoint): CompletionStage<Response> {
-        val result = CompletableFuture<Response>()
-        httpClient(request) { response ->
-            if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
-            result.complete(response)
-        }
-        return result
+    private fun queryTo(request: Request, endpoint: Endpoint): Response {
+        val response = httpClient(request)
+        if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
+        return response
     }
 
     private fun buildExceptionFromGTV(responseStream: InputStream, status: Status): UserMistake {
@@ -131,88 +121,67 @@ class ConcretePostchainClient(
     }
 
     @Throws(IOException::class)
-    override fun currentBlockHeight(): Long = try {
-        _currentBlockHeight().toCompletableFuture().join()
-    } catch (e: CompletionException) {
-        throw e.cause ?: e
-    }
-
-    private fun _currentBlockHeight(): CompletionStage<Long> {
+    override fun currentBlockHeight(): Long {
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
-        return queryTo(request, endpoint).thenApply {
-            val body = BoundedInputStream(it.body.stream, 1024).bufferedReader()
-            if (it.status != Status.OK) {
-                val msg = parseJson(body, ErrorResponse::class.java)?.error ?: "Unknown error"
-                throw UserMistake("Can not make a query: ${it.status} $msg")
-            }
-            parseJson(body, CurrentBlockHeight::class.java)?.blockHeight ?: throw IOException("Json parsing failed")
+        val response = queryTo(request, endpoint)
+        val body = BoundedInputStream(response.body.stream, 1024).bufferedReader()
+        if (response.status != Status.OK) {
+            val msg = parseJson(body, ErrorResponse::class.java)?.error ?: "Unknown error"
+            throw UserMistake("Can not make a query: ${response.status} $msg")
         }
+        return parseJson(body, CurrentBlockHeight::class.java)?.blockHeight ?: throw IOException("Json parsing failed")
     }
 
     @Throws(IOException::class)
-    override fun blockAtHeight(height: Long): BlockDetail? = try {
-        _blockAtHeight(height).toCompletableFuture().join()
-    } catch (e: CompletionException) {
-        throw e.cause ?: e
-    }
-
-    private fun _blockAtHeight(height: Long): CompletionStage<BlockDetail?> {
+    override fun blockAtHeight(height: Long): BlockDetail? {
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
                 .header("Accept", ContentType.OCTET_STREAM.value)
-        return queryTo(request, endpoint).thenApply {
-            val responseStream = BoundedInputStream(it.body.stream, config.maxResponseSize.toLong())
-            if (it.status != Status.OK) {
-                throw buildExceptionFromGTV(responseStream, it.status)
-            }
-
-            val gtv = GtvDecoder.decodeGtv(responseStream)
-            if (gtv.isNull()) null else GtvObjectMapper.fromGtv(gtv, BlockDetail::class)
+        val response = queryTo(request, endpoint)
+        val responseStream = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong())
+        if (response.status != Status.OK) {
+            throw buildExceptionFromGTV(responseStream, response.status)
         }
+
+        val gtv = GtvDecoder.decodeGtv(responseStream)
+        return if (gtv.isNull()) null else GtvObjectMapper.fromGtv(gtv, BlockDetail::class)
     }
 
     @Throws(IOException::class)
     override fun postTransaction(tx: Gtx): TransactionResult {
-        try {
-            var result: TransactionResult? = null
-            for (j in 1..config.endpointPool.size()) {
-                val endpoint = nextEndpoint()
-                endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
-                    result = postTransactionTo(tx, endpoint).toCompletableFuture().join()
-                    when (result.httpStatusCode) {
-                        Status.OK.code, Status.BAD_REQUEST.code, Status.NOT_FOUND.code, Status.CONFLICT.code -> return result
-                        Status.SERVICE_UNAVAILABLE.code -> break@endpoint
-                    }
-                    sleep(config.failOverConfig.attemptInterval.toMillis())
+        var result: TransactionResult? = null
+        for (j in 1..config.endpointPool.size()) {
+            val endpoint = nextEndpoint()
+            endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
+                result = postTransactionTo(tx, endpoint)
+                when (result.httpStatusCode) {
+                    Status.OK.code, Status.BAD_REQUEST.code, Status.NOT_FOUND.code, Status.CONFLICT.code -> return result
+                    Status.SERVICE_UNAVAILABLE.code -> break@endpoint
                 }
+                sleep(config.failOverConfig.attemptInterval.toMillis())
             }
-            return result!!
-        } catch (e: CompletionException) {
-            throw e.cause ?: e
         }
+        return result!!
     }
 
-    private fun postTransactionTo(tx: Gtx, endpoint: Endpoint): CompletableFuture<TransactionResult> {
+    private fun postTransactionTo(tx: Gtx, endpoint: Endpoint): TransactionResult {
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
         val request = Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex")
                 .body(gson.toJson(Tx(tx.encodeHex())))
-        val result = CompletableFuture<TransactionResult>()
-        httpClient(request) { response ->
-            if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
-            val status = if (response.status == Status.OK) WAITING else REJECTED
-            result.complete(TransactionResult(txRid, status, response.status.code, response.status.description))
-        }
-        return result
+        val response = httpClient(request)
+        if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
+        val status = if (response.status == Status.OK) WAITING else REJECTED
+        return TransactionResult(txRid, status, response.status.code, response.status.description)
     }
 
     @Throws(IOException::class)
     override fun postTransactionAwaitConfirmation(tx: Gtx): TransactionResult {
-        val resp = postTransaction(tx)
-        if (resp.status == REJECTED) {
-            return resp
+        val result = postTransaction(tx)
+        if (result.status == REJECTED) {
+            return result
         }
-        return awaitConfirmation(resp.txRid, config.statusPollCount, config.statusPollInterval)
+        return awaitConfirmation(result.txRid, config.statusPollCount, config.statusPollInterval)
     }
 
     @Throws(IOException::class)
@@ -222,8 +191,7 @@ class ConcretePostchainClient(
         run poll@{
             repeat(retries) {
                 try {
-                    val deferredPollResult = _checkTxStatus(txRid)
-                    lastKnownTxResult = deferredPollResult.toCompletableFuture().join()
+                    lastKnownTxResult = checkTxStatus(txRid)
                     if (lastKnownTxResult.status == CONFIRMED || lastKnownTxResult.status == REJECTED) return@poll
                 } catch (e: Exception) {
                     logger.warn(e) { "Unable to poll for new block" }
@@ -235,25 +203,18 @@ class ConcretePostchainClient(
         return lastKnownTxResult
     }
 
-    override fun checkTxStatus(txRid: TxRid): TransactionResult = try {
-        _checkTxStatus(txRid).toCompletableFuture().join()
-    } catch (e: CompletionException) {
-        throw e.cause ?: e
-    }
-
-    private fun _checkTxStatus(txRid: TxRid): CompletionStage<TransactionResult> {
+    override fun checkTxStatus(txRid: TxRid): TransactionResult {
         val endpoint = nextEndpoint()
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
-        return queryTo(validationRequest, endpoint).thenApply { response ->
-            val responseStream = BoundedInputStream(response.body.stream, 64 * 1024)
-            val txStatus = parseJson(responseStream.bufferedReader(), TxStatus::class.java)
-            TransactionResult(
-                    txRid,
-                    TransactionStatus.valueOf(txStatus?.status?.uppercase() ?: "UNKNOWN"),
-                    response.status.code,
-                    txStatus?.rejectReason
-            )
-        }
+        val response = queryTo(validationRequest, endpoint)
+        val responseStream = BoundedInputStream(response.body.stream, 64 * 1024)
+        val txStatus = parseJson(responseStream.bufferedReader(), TxStatus::class.java)
+        return TransactionResult(
+                txRid,
+                TransactionStatus.valueOf(txStatus?.status?.uppercase() ?: "UNKNOWN"),
+                response.status.code,
+                txStatus?.rejectReason
+        )
     }
 
     private fun <T> parseJson(body: BufferedReader, cls: Class<T>): T? = try {
