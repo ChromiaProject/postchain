@@ -4,6 +4,7 @@ package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
@@ -22,7 +23,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         return GtxBuilder(bcRid, listOf(owner), net.postchain.devtools.gtx.myCS)
             .addOperation("test_set_value", gtv(key), gtv(value), gtv(owner))
             .finish()
-            .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(owner, privKey(ownerIdx)))
+            .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(KeyPair(owner, privKey(ownerIdx))))
             .buildGtx()
             .encode()
     }

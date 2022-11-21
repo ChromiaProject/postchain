@@ -27,6 +27,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
@@ -124,6 +125,11 @@ class RestApi(
         }
 
         http.exception(UnavailableException::class.java) { error, _, response ->
+            response.status(503) // Service unavailable
+            setErrorResponseBody(response, error)
+        }
+
+        http.exception(PmEngineIsAlreadyClosed::class.java) { error, _, response ->
             response.status(503) // Service unavailable
             setErrorResponseBody(response, error)
         }
@@ -258,7 +264,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, response ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, _ ->
                 val model = model(request)
                 val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
@@ -276,7 +282,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, response ->
+            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, _ ->
                 val model = model(request)
                 val height = request.params(PARAM_HEIGHT).toLong()
                 val txHashesOnly = request.queryMap()["txs"].value() != "true"
@@ -307,8 +313,8 @@ class RestApi(
                 handleGTXQueries(request)
             })
 
-            http.post("/query_gtv/$PARAM_BLOCKCHAIN_RID", redirectPost(OCTET_CONTENT_TYPE) { request, response ->
-                handleGtvQuery(request, response)
+            http.post("/query_gtv/$PARAM_BLOCKCHAIN_RID", redirectPost(OCTET_CONTENT_TYPE) { request, _ ->
+                handleGtvQuery(request)
             })
 
             http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", JSON_CONTENT_TYPE, redirectGet { request, _ ->
@@ -450,7 +456,7 @@ class RestApi(
         return gson.toJson(response)
     }
 
-    private fun handleGtvQuery(request: Request, response: Response): ByteArray {
+    private fun handleGtvQuery(request: Request): ByteArray {
         val gtvQuery = try {
             GtvDecoder.decodeGtv(request.bodyAsBytes())
         } catch (e: IOException) {

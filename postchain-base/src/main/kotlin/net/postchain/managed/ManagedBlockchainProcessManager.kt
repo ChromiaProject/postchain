@@ -123,6 +123,7 @@ open class ManagedBlockchainProcessManager(
          *
          * @return "true" if a restart was needed
          */
+        @Suppress("UNUSED_PARAMETER")
         fun afterCommitHandlerChain0(bTrace: BlockTrace?, blockTimestamp: Long): Boolean {
             wrTrace("chain0 begin", chainId, bTrace)
 

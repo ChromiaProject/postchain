@@ -8,6 +8,7 @@ import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.MultiSigBlockWitnessBuilder
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
@@ -206,7 +207,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
         val blockHeader = blockData.header
         var i = 0
         while (!witnessBuilder.isComplete()) {
-            val sigMaker = cryptoSystem.buildSigMaker(pubKey(i), privKey(i))
+            val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubKey(i), privKey(i)))
             witnessBuilder.applySignature(sigMaker.signDigest(blockHeader.blockRID))
             i++
         }

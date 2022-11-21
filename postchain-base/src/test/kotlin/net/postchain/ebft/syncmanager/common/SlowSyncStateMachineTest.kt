@@ -5,6 +5,7 @@ import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
+@Suppress("UNUSED_PARAMETER")
 class SlowSyncStateMachineTest {
 
     val nodeHex = "121212"
@@ -34,11 +35,11 @@ class SlowSyncStateMachineTest {
         assertEquals(2L, sssm.lastUncommittedBlockHeight)
 
         // 3 successful commit
-        sssm.updateAfterSuccessfulCommit(0L, 124L)
+        sssm.updateAfterSuccessfulCommit(0L)
         assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
-        sssm.updateAfterSuccessfulCommit(1L, 125L)
+        sssm.updateAfterSuccessfulCommit(1L)
         assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
-        sssm.updateAfterSuccessfulCommit(2L, 126L)
+        sssm.updateAfterSuccessfulCommit(2L)
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
 
         // Send another request
@@ -50,7 +51,7 @@ class SlowSyncStateMachineTest {
         sssm.updateToWaitForCommit(1, 213L)
         assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
 
-        sssm.updateAfterSuccessfulCommit(3L, 226L)
+        sssm.updateAfterSuccessfulCommit(3L)
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
     }
 
@@ -72,7 +73,7 @@ class SlowSyncStateMachineTest {
         assertEquals(2L, sssm.lastUncommittedBlockHeight)
 
         // 3 first commit fails
-        sssm.updateAfterFailedCommit(0L, 124L)
+        sssm.updateAfterFailedCommit(0L)
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state) // Back to beginning
         assertEquals(-1L, sssm.lastUncommittedBlockHeight) // We are back to square zero
         assertEquals(-1L, sssm.lastCommittedBlockHeight) // We are back to square zero

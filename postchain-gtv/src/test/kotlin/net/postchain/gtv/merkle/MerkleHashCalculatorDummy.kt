@@ -42,6 +42,7 @@ fun dummySerializatorFun(iGtv: Gtv): ByteArray {
  * A simple dummy hashing function that's easy to test
  * It only adds 1 to all bytes in the byte array.
  */
+@Suppress("UNUSED_PARAMETER")
 fun dummyAddOneHashFun(bArr: ByteArray, cryptoSystem: CryptoSystem?): Hash {
     val retArr = ByteArray(bArr.size)
     var pos = 0

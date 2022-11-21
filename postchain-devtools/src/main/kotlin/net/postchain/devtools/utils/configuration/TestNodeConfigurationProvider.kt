@@ -23,6 +23,7 @@ class TestNodeConfigurationProvider(private val appConfig: AppConfig) : NodeConf
             return if (peerInfos is PeerInfo) {
                 arrayOf(peerInfos)
             } else {
+                @Suppress("UNCHECKED_CAST")
                 (peerInfos as List<PeerInfo>).toTypedArray()
             }
         }
