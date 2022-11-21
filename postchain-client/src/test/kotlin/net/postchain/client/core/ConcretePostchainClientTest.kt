@@ -34,15 +34,12 @@ import kotlin.test.assertTrue
 
 internal class ConcretePostchainClientTest {
     private var url = "http://localhost:7740"
-    private lateinit var nodeResolver: PostchainNodeResolver
     private lateinit var httpClient: HttpHandler
     private val brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"
     private var requestCounter = 0
 
     @BeforeEach
     fun setup() {
-        nodeResolver = PostchainNodeResolver { url }
-
         httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
                 requestCounter++
