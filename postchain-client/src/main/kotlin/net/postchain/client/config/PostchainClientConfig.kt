@@ -26,7 +26,6 @@ data class PostchainClientConfig @JvmOverloads constructor(
         val signers: List<KeyPair> = listOf(),
         val statusPollCount: Int = STATUS_POLL_COUNT,
         val statusPollInterval: Duration = STATUS_POLL_INTERVAL,
-        /** Fail-over only applicable to synchronized requests. */
         val failOverConfig: FailOverConfig = FailOverConfig(),
         val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
         val queryByChainId: Long? = null,
