@@ -3,7 +3,7 @@ package net.postchain.client.cli
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.ConcretePostchainClient
 import net.postchain.client.core.PostchainClientProvider
-import org.http4k.client.AsyncHttpHandler
+import org.http4k.core.HttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
@@ -21,10 +21,8 @@ internal class PostTxCommandTest {
         val testConfigPath = this::class.java.getResource("/config.cfg")!!.path
         val testConfig = PostchainClientConfig.fromProperties(testConfigPath)
 
-        val httpClient: AsyncHttpHandler = object : AsyncHttpHandler {
-            override fun invoke(request: Request, fn: (Response) -> Unit) {
-                fn(Response(Status.OK))
-            }
+        val httpClient: HttpHandler = object : HttpHandler {
+            override fun invoke(request: Request) = Response(Status.OK)
         }
 
         val mockClient = spy(ConcretePostchainClient(testConfig, httpClient))
