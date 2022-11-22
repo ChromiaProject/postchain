@@ -116,21 +116,4 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
             } else emptyList()
         }.toMap()
     }
-
-    override fun getNodeReplicaMap(): Map<NodeRid, List<NodeRid>> {
-        // Rell: query nm_get_node_replica_map(): list<list<byte_array>>
-        // [ [ key_peer_id, replica_peer_id_1, replica_peer_id_2, ...], ...]
-        val peersReplicas = query(
-                "nm_get_node_replica_map",
-                buildArgs()
-        ).asArray()
-
-        return peersReplicas
-                .map(Gtv::asArray)
-                .filter { it.isNotEmpty() }
-                .map { it -> it.map { NodeRid(it.asByteArray()) } }
-                .map { peerAndReplicas_ ->
-                    peerAndReplicas_.first() to peerAndReplicas_.drop(1)
-                }.toMap()
-    }
 }
