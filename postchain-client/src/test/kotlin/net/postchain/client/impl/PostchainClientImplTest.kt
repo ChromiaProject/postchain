@@ -6,6 +6,8 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.TxRid
+import net.postchain.client.impl.PostchainClientImpl.CurrentBlockHeight
+import net.postchain.client.impl.PostchainClientImpl.TxStatus
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake

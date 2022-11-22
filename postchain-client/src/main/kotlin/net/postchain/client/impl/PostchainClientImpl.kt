@@ -43,12 +43,6 @@ import java.io.InputStream
 import java.lang.Thread.sleep
 import java.time.Duration
 
-/* JSON structures */
-data class Tx(val tx: String)
-data class TxStatus(val status: String?, val rejectReason: String?)
-data class CurrentBlockHeight(val blockHeight: Long)
-data class ErrorResponse(val error: String)
-
 class PostchainClientImpl(
         override val config: PostchainClientConfig,
         private val httpClient: HttpHandler = ApacheClient(HttpClients.custom()
@@ -229,4 +223,10 @@ class PostchainClientImpl(
         if (rootCause is IOException) throw rootCause
         else throw IOException("Json parsing failed", e)
     }
+
+    /* JSON structures */
+    data class Tx(val tx: String)
+    data class TxStatus(val status: String?, val rejectReason: String?)
+    data class CurrentBlockHeight(val blockHeight: Long)
+    data class ErrorResponse(val error: String)
 }
