@@ -29,7 +29,7 @@ To generate a client one could go about it like this:
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.client.core.PostchainClient
-import net.postchain.client.base.ConcretePostchainClientProvider
+import net.postchain.client.impl.ConcretePostchainClientProvider
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray

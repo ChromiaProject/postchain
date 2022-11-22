@@ -3,9 +3,9 @@
 package net.postchain.client
 
 
-import net.postchain.client.base.ConcretePostchainClientProvider
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
+import net.postchain.client.impl.PostchainClientProviderImpl
 import net.postchain.client.request.EndpointPool
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
@@ -54,12 +54,12 @@ class PostChainClientTest : IntegrationTestSetup() {
     }
 
     private fun createPostChainClient(bcRid: BlockchainRid): PostchainClient {
-        return ConcretePostchainClientProvider().createClient(
-            PostchainClientConfig(
-                bcRid,
-                EndpointPool.singleUrl("http://127.0.0.1:${nodes[0].getRestApiHttpPort()}"),
-                    listOf(KeyPair(pubKey0, privKey0))
-            ))
+        return PostchainClientProviderImpl().createClient(
+                PostchainClientConfig(
+                        bcRid,
+                        EndpointPool.singleUrl("http://127.0.0.1:${nodes[0].getRestApiHttpPort()}"),
+                        listOf(KeyPair(pubKey0, privKey0))
+                ))
     }
 
     @Test

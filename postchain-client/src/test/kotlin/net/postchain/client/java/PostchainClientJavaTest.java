@@ -1,11 +1,11 @@
 package net.postchain.client.java;
 
 import kotlin.jvm.functions.Function1;
-import net.postchain.client.base.ConcretePostchainClient;
-import net.postchain.client.base.ConcretePostchainClientProvider;
 import net.postchain.client.config.FailOverConfig;
 import net.postchain.client.config.PostchainClientConfig;
 import net.postchain.client.core.PostchainClientProvider;
+import net.postchain.client.impl.PostchainClientImpl;
+import net.postchain.client.impl.PostchainClientProviderImpl;
 import net.postchain.client.request.EndpointPool;
 import net.postchain.common.BlockchainRid;
 import net.postchain.crypto.KeyPair;
@@ -31,7 +31,7 @@ class PostchainClientJavaTest {
     private final String url = "http://localhost:7740";
     private final String brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F";
     private int requestCounter = 0;
-    private ConcretePostchainClient client;
+    private PostchainClientImpl client;
 
     @BeforeEach
     void setup() {
@@ -49,7 +49,7 @@ class PostchainClientJavaTest {
 
         requestCounter = 0;
 
-        client = new ConcretePostchainClient(new PostchainClientConfig(
+        client = new PostchainClientImpl(new PostchainClientConfig(
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),
                 Collections.emptyList(),
@@ -89,7 +89,7 @@ class PostchainClientJavaTest {
     @SuppressWarnings("unused")
         // we have this method just to see how to use PostchainClientProvider from Java
     void provider() {
-        PostchainClientProvider clientProvider = new ConcretePostchainClientProvider();
+        PostchainClientProvider clientProvider = new PostchainClientProviderImpl();
         clientProvider.createClient(new PostchainClientConfig(
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),

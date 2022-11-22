@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.client.base
+package net.postchain.client.impl
 
 import com.google.gson.Gson
 import com.google.gson.JsonParseException
@@ -49,7 +49,7 @@ data class TxStatus(val status: String?, val rejectReason: String?)
 data class CurrentBlockHeight(val blockHeight: Long)
 data class ErrorResponse(val error: String)
 
-class ConcretePostchainClient(
+class PostchainClientImpl(
         override val config: PostchainClientConfig,
         private val httpClient: HttpHandler = ApacheClient(HttpClients.custom()
                 .setDefaultRequestConfig(RequestConfig.custom()

@@ -1,8 +1,8 @@
 package net.postchain.client.cli
 
-import net.postchain.client.base.ConcretePostchainClient
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClientProvider
+import net.postchain.client.impl.PostchainClientImpl
 import org.http4k.core.HttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
@@ -25,7 +25,7 @@ internal class PostTxCommandTest {
             override fun invoke(request: Request) = Response(Status.OK)
         }
 
-        val mockClient = spy(ConcretePostchainClient(testConfig, httpClient))
+        val mockClient = spy(PostchainClientImpl(testConfig, httpClient))
         val provider: PostchainClientProvider = mock {
             on { createClient(any()) } doReturn mockClient
         }

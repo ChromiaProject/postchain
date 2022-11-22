@@ -1,4 +1,4 @@
-package net.postchain.client.base
+package net.postchain.client.impl
 
 import com.google.gson.Gson
 import net.postchain.client.config.FailOverConfig
@@ -34,7 +34,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-internal class ConcretePostchainClientTest {
+internal class PostchainClientImplTest {
     private var url = "http://localhost:7740"
     private lateinit var httpClient: HttpHandler
     private val brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F"
@@ -50,7 +50,7 @@ internal class ConcretePostchainClientTest {
         }
     }
 
-    private fun driveTestCorrectNumberOfAttempts(client: ConcretePostchainClient, numberExpected: Int) {
+    private fun driveTestCorrectNumberOfAttempts(client: PostchainClientImpl, numberExpected: Int) {
         client.transactionBuilder()
                 .addNop()
                 .postAwaitConfirmation()
@@ -62,7 +62,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Max number of attempts by default`() {
         driveTestCorrectNumberOfAttempts(
-                ConcretePostchainClient(PostchainClientConfig(
+                PostchainClientImpl(PostchainClientConfig(
                         BlockchainRid.buildFromHex(brid),
                         EndpointPool.singleUrl(url),
                         statusPollInterval = Duration.ZERO,
@@ -75,7 +75,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Max number of attempts parameterized`() {
         driveTestCorrectNumberOfAttempts(
-                ConcretePostchainClient(PostchainClientConfig(
+                PostchainClientImpl(PostchainClientConfig(
                         BlockchainRid.buildFromHex(brid),
                         EndpointPool.singleUrl(url),
                         statusPollCount = 10,
@@ -89,7 +89,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `Post transaction should properly encode transaction`() {
-        val client = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+        val client = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
                 assertEquals(
                         """{"tx":"A5363034A52E302CA1220420EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8FA5023000A5023000A5023000"}""",
@@ -104,7 +104,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Query response without body should throw IOException`() {
         assertThrows<IOException> {
-            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) = Response(Status.OK).body(Body.EMPTY)
             }).query("foo", gtv(mapOf()))
         }
@@ -113,7 +113,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Query error without body should throw IOException`() {
         assertThrows<IOException> {
-            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) = Response(Status.BAD_REQUEST).body(Body.EMPTY)
             }).query("foo", gtv(mapOf()))
         }
@@ -121,7 +121,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `Tx status retrieves underlying error`() {
-        val result = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+        val result = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
                     Response(Status.BAD_REQUEST).body(Gson().toJson(TxStatus("rejected", "Message!")))
         }).checkTxStatus(TxRid(""))
@@ -132,7 +132,7 @@ internal class ConcretePostchainClientTest {
     fun `too big tx status response is rejected`() {
         assertThrows(IOException::class.java) {
             try {
-                ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
+                PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                     override fun invoke(request: Request) =
                             Response(Status.OK).body(InfiniteCircularInputStream(ByteArray(16)))
                 }).checkTxStatus(TxRid(""))
@@ -145,7 +145,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Await aborts if rejected`() {
         var nCalls = 0
-        ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+        PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
                 nCalls++
                 return Response(Status.BAD_REQUEST).body(Gson().toJson(TxStatus("rejected", "Message!")))
@@ -168,7 +168,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `blockAtHeight found`() {
-        val someBlock: BlockDetail? = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+        val someBlock: BlockDetail? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
                 assertEquals("application/octet-stream", request.header("Accept"))
                 return Response(Status.OK).body(encodeGtv(gtv(mapOf(
@@ -194,7 +194,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `blockAtHeight missing`() {
-        val noBlock: BlockDetail? = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+        val noBlock: BlockDetail? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
                     Response(Status.OK).body(encodeGtv(GtvNull).inputStream())
         }).blockAtHeight(Long.MAX_VALUE)
@@ -203,7 +203,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `raw query can be serialized correctly`() {
-        val queryResponse: Gtv = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+        val queryResponse: Gtv = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
                     Response(Status.OK).body(encodeGtv(gtv("query_response")).inputStream())
         }).query("test_query", gtv("arg"))
@@ -213,7 +213,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `too big response will be rejected`() {
         assertThrows(EOFException::class.java) {
-            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.OK).body(encodeGtv(gtv(ByteArray(2 * 1024))).inputStream())
             }).query("test_query", gtv("arg"))
@@ -223,7 +223,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `invalid GTV response will throw IOException`() {
         assertThrows(IOException::class.java) {
-            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.OK).body(ByteArray(100).inputStream())
             }).query("test_query", gtv("arg"))
@@ -233,7 +233,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `binary GTV error will be parsed`() {
         assertThrows(UserMistake::class.java, {
-            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.BAD_REQUEST).body(encodeGtv(gtv("the error")).inputStream())
             }).query("test_query", gtv("arg"))
@@ -242,7 +242,7 @@ internal class ConcretePostchainClientTest {
 
     @Test
     fun `current block height can be parsed`() {
-        val currentBlockHeight: Long = ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+        val currentBlockHeight: Long = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
                     Response(Status.OK).body(Gson().toJson(CurrentBlockHeight(0)))
         }).currentBlockHeight()
@@ -252,7 +252,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `too big block height response will be rejected`() {
         assertThrows(IOException::class.java) {
-            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.OK).body("""{"blockHeight":${" ".repeat(1024)}1}""")
             }).currentBlockHeight()
@@ -262,7 +262,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Can handle empty error body`() {
         assertThrows(UserMistake::class.java) {
-            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) = Response(Status.BAD_REQUEST).body("")
             }).currentBlockHeight()
         }
@@ -271,7 +271,7 @@ internal class ConcretePostchainClientTest {
     @Test
     fun `Can handle too big error body`() {
         assertThrows(IOException::class.java) {
-            ConcretePostchainClient(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.BAD_REQUEST).body("""{"error":"${"e".repeat(1024)}"}""")
             }).currentBlockHeight()
@@ -279,7 +279,7 @@ internal class ConcretePostchainClientTest {
     }
 
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {
-        ConcretePostchainClient(config, httpClient = object : HttpHandler {
+        PostchainClientImpl(config, httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
                 assert(request.uri.path.endsWith(suffix))
                 return Response(Status.OK).body(encodeGtv(gtv("foobar")).inputStream())
