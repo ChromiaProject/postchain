@@ -17,6 +17,7 @@ import java.time.Duration
 
 const val STATUS_POLL_COUNT = 20
 val STATUS_POLL_INTERVAL: Duration = Duration.ofMillis(500)
+const val MAX_RESPONSE_SIZE = 64 * 1024 * 1024 // 64 MiB
 val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(60)
 val RESPONSE_TIMEOUT: Duration = Duration.ofSeconds(60)
 
@@ -29,7 +30,7 @@ data class PostchainClientConfig @JvmOverloads constructor(
         val failOverConfig: FailOverConfig = FailOverConfig(),
         val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
         val queryByChainId: Long? = null,
-        val maxResponseSize: Int = 64 * 1024 * 1024, // 64 MiB
+        val maxResponseSize: Int = MAX_RESPONSE_SIZE,
         /** Will not be used if `httpClient` parameter is specified when creating `ConcretePostchainClient`. */
         val connectTimeout: Duration = CONNECT_TIMEOUT,
         /** Will not be used if `httpClient` parameter is specified when creating `ConcretePostchainClient`. */
@@ -51,8 +52,9 @@ data class PostchainClientConfig @JvmOverloads constructor(
                     signers = signers,
                     statusPollCount = config.getEnvOrIntProperty("POSTCHAIN_CLIENT_STATUS_POLL_COUNT", "status.poll-count", STATUS_POLL_COUNT),
                     statusPollInterval = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_STATUS_POLL_INTERVAL", "status.poll-interval", STATUS_POLL_INTERVAL.toMillis()).let { Duration.ofMillis(it) },
-                    cryptoSystem = config.cryptoSystem(),
                     failOverConfig = FailOverConfig.fromConfiguration(config),
+                    cryptoSystem = config.cryptoSystem(),
+                    maxResponseSize = config.getEnvOrIntProperty("POSTCHAIN_CLIENT_MAX_RESPONSE_SIZE", "max.response.size", MAX_RESPONSE_SIZE),
                     connectTimeout = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_CONNECT_TIMEOUT", "connect.timeout", CONNECT_TIMEOUT.toMillis()).let { Duration.ofMillis(it) },
                     responseTimeout = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_RESPONSE_TIMEOUT", "response.timeout", RESPONSE_TIMEOUT.toMillis()).let { Duration.ofMillis(it) },
             )
