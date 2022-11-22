@@ -70,10 +70,6 @@ open class MockManagedNodeDataSource(val nodeIndex: Int) : ManagedNodeDataSource
         return emptyMap()
     }
 
-    override fun getNodeReplicaMap(): Map<NodeRid, List<NodeRid>> {
-        return mapOf()
-    }
-
     override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>> {
         val result = mutableMapOf<BlockchainRid, List<NodeRid>>()
         chainToNodeSet.keys.union(extraReplicas.keys).forEach {
