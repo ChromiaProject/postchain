@@ -1,11 +1,9 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.client
-
+package net.postchain.client.impl
 
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
-import net.postchain.client.impl.PostchainClientProviderImpl
 import net.postchain.client.request.EndpointPool
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
@@ -30,7 +28,7 @@ import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 
-class PostChainClientTest : IntegrationTestSetup() {
+class PostchainClientTest : IntegrationTestSetup() {
 
     private val blockchainRIDStr = "ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB"
     private val blockchainRID = BlockchainRid.buildFromHex(blockchainRIDStr)
