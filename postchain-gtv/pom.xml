@@ -92,34 +92,24 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>jaxb2-maven-plugin</artifactId>
+                <groupId>com.evolvedbinary.maven.jvnet</groupId>
+                <artifactId>jaxb30-maven-plugin</artifactId>
+                <version>0.15.0</version>
                 <executions>
                     <execution>
                         <id>xjc</id>
                         <goals>
-                            <goal>xjc</goal>
+                            <goal>generate</goal>
                         </goals>
+                        <configuration>
+                            <noFileHeader>true</noFileHeader>
+                            <schemaDirectory>${project.basedir}/src/main/resources/gtxml</schemaDirectory>
+                            <episode>false</episode> <!-- skips episode file generation -->
+                            <generateDirectory>${project.build.directory}/generated-sources</generateDirectory>
+                            <generatePackage>net.postchain.gtv.gtxml</generatePackage>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <xjbExcludeFilters>
-                        <filter implementation="org.codehaus.mojo.jaxb2.shared.filters.pattern.PatternFileFilter">
-                            <patterns>
-                                <pattern>\.txt</pattern>
-                                <pattern>\.xsd</pattern>
-                            </patterns>
-                        </filter>
-                    </xjbExcludeFilters>
-                    <sources>
-                        <source>src/main/resources/gtxml/gtxml.xsd</source>
-                    </sources>
-                    <xjbSources>
-                        <xjbSource>src/main/resources/gtxml/bindings.xml</xjbSource>
-                    </xjbSources>
-                    <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
-                    <!-- The package of your generated sources -->
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
