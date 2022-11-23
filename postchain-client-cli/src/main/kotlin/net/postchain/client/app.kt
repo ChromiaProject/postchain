@@ -5,9 +5,9 @@ import net.postchain.client.cli.CurrentBlockHeightCommand
 import net.postchain.client.cli.PostTxCommand
 import net.postchain.client.cli.PostchainClient
 import net.postchain.client.cli.QueryCommand
-import net.postchain.client.core.ConcretePostchainClientProvider
+import net.postchain.client.impl.PostchainClientProviderImpl
 
-val clientProvider = ConcretePostchainClientProvider()
+val clientProvider = PostchainClientProviderImpl()
 
 fun main(args: Array<String>) = PostchainClient()
         .subcommands(

@@ -36,14 +36,9 @@ class TransactionBuilder(
     override fun post() = sign().post()
 
     /**
-     * Sign this transaction with default signers and [PostchainClient.postTransactionSync]
+     * Sign this transaction with default signers and [PostchainClient.postTransactionAwaitConfirmation]
      */
-    override fun postSync() = sign().postSync()
-
-    /**
-     * Sign this transaction with default signers and [PostchainClient.postTransactionSyncAwaitConfirmation]
-     */
-    override fun postSyncAwaitConfirmation() = sign().postSyncAwaitConfirmation()
+    override fun postAwaitConfirmation() = sign().postAwaitConfirmation()
 
     /**
      * Sign this transaction with the [defaultSigners] and prepare it to be posted
@@ -96,13 +91,8 @@ class TransactionBuilder(
         override fun post() = client.postTransaction(tx)
 
         /**
-         * [PostchainClient.postTransactionSync]
+         * [PostchainClient.postTransactionAwaitConfirmation]
          */
-        override fun postSync() = client.postTransactionSync(tx)
-
-        /**
-         * [PostchainClient.postTransactionSyncAwaitConfirmation]
-         */
-        override fun postSyncAwaitConfirmation() = client.postTransactionSyncAwaitConfirmation(tx)
+        override fun postAwaitConfirmation() = client.postTransactionAwaitConfirmation(tx)
     }
 }
