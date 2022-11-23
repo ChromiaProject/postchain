@@ -1,14 +1,18 @@
 package net.postchain.client.cli
 
 import net.postchain.client.config.PostchainClientConfig
-import net.postchain.client.core.ConcretePostchainClient
 import net.postchain.client.core.PostchainClientProvider
-import org.http4k.client.AsyncHttpHandler
+import net.postchain.client.impl.PostchainClientImpl
+import org.http4k.core.HttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
 
 internal class PostTxCommandTest {
 
@@ -17,13 +21,11 @@ internal class PostTxCommandTest {
         val testConfigPath = this::class.java.getResource("/config.cfg")!!.path
         val testConfig = PostchainClientConfig.fromProperties(testConfigPath)
 
-        val httpClient: AsyncHttpHandler = object : AsyncHttpHandler {
-            override fun invoke(request: Request, fn: (Response) -> Unit) {
-                fn(Response(Status.OK))
-            }
+        val httpClient: HttpHandler = object : HttpHandler {
+            override fun invoke(request: Request) = Response(Status.OK)
         }
 
-        val mockClient = spy(ConcretePostchainClient(testConfig, httpClient))
+        val mockClient = spy(PostchainClientImpl(testConfig, httpClient))
         val provider: PostchainClientProvider = mock {
             on { createClient(any()) } doReturn mockClient
         }
@@ -43,6 +45,6 @@ internal class PostTxCommandTest {
         )
 
         verify(mockClient).transactionBuilder()
-        verify(mockClient).postTransactionSync(any())
+        verify(mockClient).postTransaction(any())
     }
 }

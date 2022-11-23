@@ -16,6 +16,6 @@ class CurrentBlockHeightCommand(private val clientProvider: PostchainClientProvi
     }
 
     internal fun runInternal(config: PostchainClientConfig): Long {
-        return clientProvider.createClient(config).currentBlockHeightSync()
+        return clientProvider.createClient(config).currentBlockHeight()
     }
 }

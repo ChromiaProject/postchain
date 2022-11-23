@@ -219,7 +219,7 @@
             </dependency>
             <dependency>
                 <groupId>org.http4k</groupId>
-                <artifactId>http4k-client-apache-async</artifactId>
+                <artifactId>http4k-client-apache</artifactId>
                 <version>4.34.0.4</version>
             </dependency>
 
