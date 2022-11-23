@@ -42,6 +42,6 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
         val client = clientProvider.createClient(config)
         val tx = client.transactionBuilder()
             .addOperation(opName, *args)
-        if (awaitConfirmation) tx.postSyncAwaitConfirmation() else tx.postSync()
+        if (awaitConfirmation) tx.postAwaitConfirmation() else tx.post()
     }
 }

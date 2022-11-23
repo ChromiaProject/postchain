@@ -1,12 +1,11 @@
 package net.postchain.client.java;
 
-import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 import net.postchain.client.config.FailOverConfig;
 import net.postchain.client.config.PostchainClientConfig;
-import net.postchain.client.core.ConcretePostchainClient;
-import net.postchain.client.core.ConcretePostchainClientProvider;
 import net.postchain.client.core.PostchainClientProvider;
+import net.postchain.client.impl.PostchainClientImpl;
+import net.postchain.client.impl.PostchainClientProviderImpl;
 import net.postchain.client.request.EndpointPool;
 import net.postchain.common.BlockchainRid;
 import net.postchain.crypto.KeyPair;
@@ -15,11 +14,9 @@ import net.postchain.crypto.PubKey;
 import net.postchain.crypto.Secp256K1CryptoSystem;
 import net.postchain.crypto.Secp256k1Kt;
 import net.postchain.gtv.GtvFactory;
-import org.http4k.client.AsyncHttpHandler;
 import org.http4k.core.Request;
 import org.http4k.core.Response;
 import org.http4k.core.Status;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,29 +31,25 @@ class PostchainClientJavaTest {
     private final String url = "http://localhost:7740";
     private final String brid = "EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8F";
     private int requestCounter = 0;
-    private ConcretePostchainClient client;
+    private PostchainClientImpl client;
 
     @BeforeEach
     void setup() {
-        AsyncHttpHandler httpClient = new AsyncHttpHandler() {
+        var httpClient = new Function1<Request, Response>() {
             @Override
-            public void invoke(@NotNull Request request, @NotNull Function1<? super Response, Unit> fn) {
+            public Response invoke(Request request) {
                 requestCounter++;
                 if (request.getUri().getPath().startsWith("/query_gtv")) {
-                    fn.invoke(Response.Companion.create(Status.BAD_REQUEST, ""));
+                    return Response.Companion.create(Status.BAD_REQUEST, "");
                 } else {
-                    fn.invoke(Response.Companion.create(Status.OK, ""));
+                    return Response.Companion.create(Status.OK, "");
                 }
-            }
-
-            @Override
-            public void close() {
             }
         };
 
         requestCounter = 0;
 
-        client = new ConcretePostchainClient(new PostchainClientConfig(
+        client = new PostchainClientImpl(new PostchainClientConfig(
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),
                 Collections.emptyList(),
@@ -69,7 +62,7 @@ class PostchainClientJavaTest {
     @Test
     void query() {
         try {
-            client.querySync("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
+            client.query("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
         } catch (IOException e) {
             // Just to make the test pass
         }
@@ -89,14 +82,14 @@ class PostchainClientJavaTest {
                 .finish()
                 .sign(keyPair.sigMaker(cryptoSystem))
                 .build()
-                .postSyncAwaitConfirmation();
+                .postAwaitConfirmation();
         assertEquals(1, requestCounter);
     }
 
     @SuppressWarnings("unused")
         // we have this method just to see how to use PostchainClientProvider from Java
     void provider() {
-        PostchainClientProvider clientProvider = new ConcretePostchainClientProvider();
+        PostchainClientProvider clientProvider = new PostchainClientProviderImpl();
         clientProvider.createClient(new PostchainClientConfig(
                 BlockchainRid.buildFromHex(brid),
                 EndpointPool.singleUrl(url),

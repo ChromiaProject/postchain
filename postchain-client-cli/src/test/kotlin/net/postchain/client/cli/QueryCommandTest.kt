@@ -32,6 +32,6 @@ internal class QueryCommandTest {
         }
 
         command.parse(listOf("--config", testConfigPath, TEST_QUERY))
-        verify(client).querySync(TEST_QUERY, gtv(mapOf()))
+        verify(client).query(TEST_QUERY, gtv(mapOf()))
     }
 }
