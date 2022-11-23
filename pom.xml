@@ -519,6 +519,11 @@
                         </pluginArtifact>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>com.evolvedbinary.maven.jvnet</groupId>
+                    <artifactId>jaxb30-maven-plugin</artifactId>
+                    <version>0.15.0</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
