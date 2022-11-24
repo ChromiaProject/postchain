@@ -42,7 +42,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
 
     override fun run() {
         val chainsDir = Paths.get(configDirectory, BLOCKCHAIN_DIR).toFile()
-        val nodeConfigFile = Paths.get(configDirectory, NODE_CONFIG_FILE).toString()
+        val nodeConfigFile = Paths.get(configDirectory, NODE_CONFIG_FILE).toFile()
 
         CliExecution.waitDb(50, 1000, nodeConfigFile)
         val chainIds = loadChainsConfigs(chainsDir, nodeConfigFile)
@@ -54,7 +54,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
      * Loads configs of chains into DB
      * @return list of ids of found chains
      */
-    private fun loadChainsConfigs(chainsDir: File, nodeConfigFile: String): List<Long> {
+    private fun loadChainsConfigs(chainsDir: File, nodeConfigFile: File): List<Long> {
         val chainIds = mutableListOf<Long>()
 
         if (chainsDir.exists()) {
@@ -73,8 +73,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
 
                         configs.filterKeys { it > (lastHeights[chainId] ?: -1) }
                                 .toSortedMap()
-                                .forEach { (height, file) ->
-                                    val blockchainConfigFile = file.absolutePath
+                                .forEach { (height, blockchainConfigFile) ->
                                     if (height == 0L) {
                                         CliExecution.addBlockchain(
                                                 nodeConfigFile, chainId, blockchainConfigFile)

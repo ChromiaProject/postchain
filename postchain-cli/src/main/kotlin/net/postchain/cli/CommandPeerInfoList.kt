@@ -7,6 +7,8 @@ import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.config.app.AppConfig
+import java.io.File
 
 class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List peer information") {
 
@@ -26,7 +28,7 @@ class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List pe
         }
     }
 
-    private fun peerinfoList(nodeConfigFile: String): Array<PeerInfo> = runStorageCommand(nodeConfigFile) { ctx ->
+    private fun peerinfoList(nodeConfigFile: File): Array<PeerInfo> = runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
         PeerApi.listPeers(ctx)
     }
 }

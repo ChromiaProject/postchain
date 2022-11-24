@@ -15,6 +15,7 @@ import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.io.File
 import java.nio.file.Paths
 import kotlin.io.path.absolutePathString
 import kotlin.test.assertContains
@@ -32,8 +33,8 @@ class CliIntegrationIT {
     val heightSecondConfig = 10L
     private lateinit var storage: Storage
 
-    private fun fullPath(name: String): String {
-        return Paths.get(javaClass.getResource("/net/postchain/cli/${name}").toURI()).toString()
+    private fun fullPath(name: String): File {
+        return Paths.get(javaClass.getResource("/net/postchain/cli/${name}")!!.toURI()).toFile()
     }
 
     @BeforeEach
@@ -69,7 +70,7 @@ class CliIntegrationIT {
 
     private fun mustSyncUntilIsUpdated(height2: Long) {
         CommandMustSyncUntil().parse(
-            arrayOf("-nc", nodeConfigPath, "-brid", expectedBlockchainRID, "--height", height2.toString())
+                arrayOf("-nc", nodeConfigPath.absolutePath, "-brid", expectedBlockchainRID, "--height", height2.toString())
         )
         withReadConnection(storage, chainId) {
             assert(DatabaseAccess.of(it).getMustSyncUntil(it)[chainId]).isEqualTo(height2)
@@ -81,11 +82,11 @@ class CliIntegrationIT {
         val exception = assertThrows<CliException> {
             CommandAddConfiguration().parse(
                 arrayOf(
-                    "-nc", nodeConfigPath,
-                    "-bc", secondBlockChainConfig,
-                    "-cid", chainId.toString(),
-                    "--height", heightSecondConfig.toString(),
-                    "--force"
+                        "-nc", nodeConfigPath.absolutePath,
+                        "-bc", secondBlockChainConfig.absolutePath,
+                        "-cid", chainId.toString(),
+                        "--height", heightSecondConfig.toString(),
+                        "--force"
                 )
             )
         }
@@ -99,20 +100,20 @@ class CliIntegrationIT {
         // change configuration with 4 signer at height 10
         CommandAddConfiguration().parse(
             arrayOf(
-                "-nc", nodeConfigPath,
-                "-bc", secondBlockChainConfig,
-                "-cid", chainId.toString(),
-                "--height", heightSecondConfig.toString(),
-                "--allow-unknown-signers",
-                "--force"
+                    "-nc", nodeConfigPath.absolutePath,
+                    "-bc", secondBlockChainConfig.absolutePath,
+                    "-cid", chainId.toString(),
+                    "--height", heightSecondConfig.toString(),
+                    "--allow-unknown-signers",
+                    "--force"
             )
         )
 
         // assert bc added
         CommandCheckBlockchain().parse(arrayOf(
-            "-nc", nodeConfigPath,
-            "-cid", chainId.toString(),
-            "-brid", expectedBlockchainRID
+                "-nc", nodeConfigPath.absolutePath,
+                "-cid", chainId.toString(),
+                "-brid", expectedBlockchainRID
         ))
         // assert config added
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
@@ -128,22 +129,22 @@ class CliIntegrationIT {
         val peerinfos = nodeConfigProvider.getConfiguration().peerInfoMap
         for ((_, value) in peerinfos) {
             CommandPeerInfoAdd().parse(arrayOf(
-                "-nc", nodeConfigPath,
-                "--host", value.host,
-                "--port", value.port.toString(),
-                "--pubkey", value.pubKey.toHex(),
-                "--force"
+                    "-nc", nodeConfigPath.absolutePath,
+                    "--host", value.host,
+                    "--port", value.port.toString(),
+                    "--pubkey", value.pubKey.toHex(),
+                    "--force"
             ))
         }
         // change configuration with 4 signer and height is 10
         val secondBlockChainConfig = fullPath("blockchain_config_4_signers.xml")
         CommandAddConfiguration().parse(
             arrayOf(
-                "-nc", nodeConfigPath,
-                "-bc", secondBlockChainConfig,
-                "-cid", chainId.toString(),
-                "--height", heightSecondConfig.toString(),
-                "--force"
+                    "-nc", nodeConfigPath.absolutePath,
+                    "-bc", secondBlockChainConfig.absolutePath,
+                    "-cid", chainId.toString(),
+                    "--height", heightSecondConfig.toString(),
+                    "--force"
             )
         )
         // assert config added

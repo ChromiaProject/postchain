@@ -14,6 +14,7 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
+import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
 
@@ -27,9 +28,11 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
         const val DEFAULT_PORT: Int = 9870
 
-        fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig {
+        fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig = fromPropertiesFile(File(configFile), debug)
+
+        fun fromPropertiesFile(configFile: File, debug: Boolean = false): AppConfig {
             val params = Parameters().properties()
-                    .setFileName(configFile)
+                    .setFile(configFile)
                     .setListDelimiterHandler(DefaultListDelimiterHandler(','))
 
             val configuration = FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)

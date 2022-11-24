@@ -10,15 +10,24 @@ object GtvFileReader {
      * @param filename file name to read
      * @return the entire content of this file as a Gtv.
      */
-    fun readFile(filename: String): Gtv {
-        return when (filename.takeLast(3)) {
+    fun readFile(filename: String): Gtv = readFile(File(filename))
+
+    /**
+     * Gets the entire content of GtvML (*.xml) or Gtv (*.gtv) files as a Gtv.
+     * @param file file to read
+     * @return the entire content of this file as a Gtv.
+     */
+    fun readFile(file: File): Gtv {
+        return when (file.name.takeLast(3)) {
             "xml" -> {
-                GtvMLParser.parseGtvML(File(filename).readText())
+                GtvMLParser.parseGtvML(file.readText())
             }
+
             "gtv" -> {
-                GtvFactory.decodeGtv(File(filename).readBytes())
+                GtvFactory.decodeGtv(file.readBytes())
             }
-            else -> throw IllegalArgumentException("Unknown file format of: $filename")
+
+            else -> throw IllegalArgumentException("Unknown file format of: ${file.absoluteFile}")
         }
     }
 }
