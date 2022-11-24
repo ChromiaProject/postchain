@@ -10,6 +10,8 @@ import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.portOption
 import net.postchain.cli.util.pubkeyOption
+import net.postchain.config.app.AppConfig
+import java.io.File
 
 class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find peerinfo") {
 
@@ -35,8 +37,8 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
         }
     }
 
-    private fun peerinfoFind(nodeConfigFile: String, host: String?, port: Int?, pubKey: String?): Array<PeerInfo> =
-            runStorageCommand(nodeConfigFile) { ctx ->
+    private fun peerinfoFind(nodeConfigFile: File, host: String?, port: Int?, pubKey: String?): Array<PeerInfo> =
+            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
                 PeerApi.findPeerInfo(ctx, host, port, pubKey)
             }
 }

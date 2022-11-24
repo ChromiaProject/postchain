@@ -1,19 +1,23 @@
 package net.postchain.cli.util
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.options.validate
+import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 
-
 fun CliktCommand.blockchainConfigOption() = option(
-    "-bc",
-    "--blockchain-config",
-    help = "Configuration file of blockchain (GtvML (*.xml) or Gtv (*.gtv))",
-    envvar = "POSTCHAIN_BLOCKCHAIN_CONFIG"
-).required()
+        "-bc",
+        "--blockchain-config",
+        help = "Configuration file of blockchain (GtvML (*.xml) or Gtv (*.gtv))",
+        envvar = "POSTCHAIN_BLOCKCHAIN_CONFIG"
+).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true).required()
 
 fun CliktCommand.blockchainRidOption() =
     option("-brid", "--blockchain-rid", help = "Blockchain RID", envvar = "POSTCHAIN_BRID").convert { BlockchainRid.buildFromHex(it) }.required()
@@ -29,7 +33,8 @@ fun CliktCommand.heightOption() = option("-h", "--height", envvar = "POSTCHAIN_H
 fun CliktCommand.hostOption() = option("-h", "--host", help = "Host", envvar = "POSTCHAIN_HOST")
 
 fun CliktCommand.nodeConfigOption() =
-    option("-nc", "--node-config", help = "Configuration file of node (.properties file)", envvar = "POSTCHAIN_CONFIG").required()
+        option("-nc", "--node-config", help = "Configuration file of node (.properties file)", envvar = "POSTCHAIN_CONFIG")
+                .file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true).required()
 
 fun CliktCommand.portOption() = option("-p", "--port", help = "Port", envvar = "POSTCHAIN_PORT").int()
 

@@ -7,6 +7,7 @@ import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.common.BlockchainRid
+import net.postchain.config.app.AppConfig
 
 class CommandBlockchainReplicaRemove : CliktCommand(
     name = "blockchain-replica-remove",
@@ -36,7 +37,7 @@ class CommandBlockchainReplicaRemove : CliktCommand(
     }
 
     private fun blockchainReplicaRemove(brid: String?, pubKey: String): Set<BlockchainRid> {
-        return runStorageCommand(nodeConfigFile) { ctx ->
+        return runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
             BlockchainApi.removeBlockchainReplica(ctx, brid, pubKey)
         }
     }

@@ -9,6 +9,7 @@ import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.PropertiesNodeConfigurationProvider
+import java.io.File
 
 class CommandPeerInfoImport : CliktCommand(name = "peerinfo-import", help = "Import peer information") {
 
@@ -29,14 +30,14 @@ class CommandPeerInfoImport : CliktCommand(name = "peerinfo-import", help = "Imp
 
     }
 
-    private fun peerinfoImport(nodeConfigFile: String): Array<PeerInfo> {
+    private fun peerinfoImport(nodeConfigFile: File): Array<PeerInfo> {
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
         val nodeConfig = PropertiesNodeConfigurationProvider(appConfig).getConfiguration()
 
         return if (nodeConfig.peerInfoMap.isEmpty()) {
             emptyArray()
         } else {
-            runStorageCommand(nodeConfigFile) { ctx ->
+            runStorageCommand(appConfig) { ctx ->
                 PeerApi.addPeers(ctx, nodeConfig.peerInfoMap.values)
             }
         }
