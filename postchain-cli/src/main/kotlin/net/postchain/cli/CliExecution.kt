@@ -26,6 +26,7 @@ import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
+import java.io.File
 import java.sql.Connection
 import java.sql.SQLException
 import java.util.concurrent.TimeoutException
@@ -36,9 +37,9 @@ object CliExecution : KLogging() {
      * @return blockchain RID
      */
     fun addBlockchain(
-            nodeConfigFile: String,
+            nodeConfigFile: File,
             chainId: Long,
-            blockchainConfigFile: String,
+            blockchainConfigFile: File,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             givenDependencies: List<BlockchainRelatedInfo> = listOf()
     ): BlockchainRid {
@@ -47,7 +48,7 @@ object CliExecution : KLogging() {
     }
 
     private fun addBlockchainGtv(
-            nodeConfigFile: String,
+            nodeConfigFile: File,
             chainId: Long,
             blockchainConfig: Gtv,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
@@ -59,7 +60,7 @@ object CliExecution : KLogging() {
         val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
             GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
 
-        return runStorageCommand(nodeConfigFile, chainId) { ctx ->
+        return runStorageCommand(appConfig, chainId) { ctx ->
             when (mode) {
                 AlreadyExistMode.ERROR -> {
                     if (BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies)) {
@@ -85,8 +86,8 @@ object CliExecution : KLogging() {
     }
 
     fun addConfiguration(
-            nodeConfigFile: String,
-            blockchainConfigFile: String,
+            nodeConfigFile: File,
+            blockchainConfigFile: File,
             chainId: Long,
             height: Long,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
@@ -97,14 +98,14 @@ object CliExecution : KLogging() {
     }
 
     private fun addConfigurationGtv(
-            nodeConfigFile: String,
+            nodeConfigFile: File,
             blockchainConfig: Gtv,
             chainId: Long,
             height: Long,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             allowUnknownSigners: Boolean
     ) {
-        runStorageCommand(nodeConfigFile, chainId) { ctx ->
+        runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
             try {
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
@@ -136,17 +137,17 @@ object CliExecution : KLogging() {
         }
     }
 
-    fun setMustSyncUntil(nodeConfigFile: String, blockchainRID: BlockchainRid, height: Long): Boolean =
-            runStorageCommand(nodeConfigFile) { ctx ->
+    fun setMustSyncUntil(nodeConfigFile: File, blockchainRID: BlockchainRid, height: Long): Boolean =
+            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
                 BlockchainApi.setMustSyncUntil(ctx, blockchainRID, height)
             }
 
-    fun getMustSyncUntilHeight(nodeConfigFile: String): Map<Long, Long> = runStorageCommand(nodeConfigFile) { ctx ->
+    fun getMustSyncUntilHeight(nodeConfigFile: File): Map<Long, Long> = runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
         BlockchainApi.getMustSyncUntilHeight(ctx)
     }
 
-    fun peerinfoAdd(nodeConfigFile: String, host: String, port: Int, pubKey: String, mode: AlreadyExistMode): Boolean =
-            runStorageCommand(nodeConfigFile) { ctx ->
+    fun peerinfoAdd(nodeConfigFile: File, host: String, port: Int, pubKey: String, mode: AlreadyExistMode): Boolean =
+            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
                 // mode tells us how to react upon an error caused if pubkey already exist (throw error or force write).
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
@@ -167,7 +168,7 @@ object CliExecution : KLogging() {
                 }
             }
 
-    fun runNode(nodeConfigFile: String, chainIds: List<Long>, debug: Boolean) {
+    fun runNode(nodeConfigFile: File, chainIds: List<Long>, debug: Boolean) {
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
 
         with(PostchainNode(appConfig, wipeDb = false, debug = debug)) {
@@ -190,30 +191,30 @@ object CliExecution : KLogging() {
         }
     }
 
-    fun checkBlockchain(nodeConfigFile: String, chainId: Long, blockchainRID: String) {
-        runStorageCommand(nodeConfigFile, chainId) { ctx ->
+    fun checkBlockchain(nodeConfigFile: File, chainId: Long, blockchainRID: String) {
+        runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
             BlockchainApi.checkBlockchain(ctx, blockchainRID)
         }
     }
 
-    fun getConfiguration(nodeConfigFile: String, chainId: Long, height: Long): ByteArray? =
-            runStorageCommand(nodeConfigFile, chainId) { ctx ->
+    fun getConfiguration(nodeConfigFile: File, chainId: Long, height: Long): ByteArray? =
+            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
                 BlockchainApi.getConfiguration(ctx, height)
             }
 
-    fun listConfigurations(nodeConfigFile: String, chainId: Long) =
-            runStorageCommand(nodeConfigFile, chainId) { ctx ->
+    fun listConfigurations(nodeConfigFile: File, chainId: Long) =
+            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
                 BlockchainApi.listConfigurations(ctx)
             }
 
-    fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: String) {
+    fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: File) {
         tryCreateBasicDataSource(nodeConfigFile)?.let { return } ?: if (retryTimes > 0) {
             Thread.sleep(retryInterval)
             waitDb(retryTimes - 1, retryInterval, nodeConfigFile)
         } else throw TimeoutException("Unable to connect to database")
     }
 
-    private fun tryCreateBasicDataSource(nodeConfigFile: String): Connection? {
+    private fun tryCreateBasicDataSource(nodeConfigFile: File): Connection? {
         return try {
             val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
             val storage = StorageBuilder.buildStorage(appConfig)

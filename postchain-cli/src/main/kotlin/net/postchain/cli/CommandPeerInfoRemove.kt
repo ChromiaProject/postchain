@@ -8,7 +8,9 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.requiredPubkeyOption
+import net.postchain.config.app.AppConfig
 import net.postchain.crypto.PubKey
+import java.io.File
 
 class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Remove peer information") {
 
@@ -24,14 +26,14 @@ class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Rem
             println("No peerinfo has been removed")
         } else {
             removed.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
-                .forEach {
-                    println("Peerinfo removed (${removed.size}):\n$it")
-                }
+                    .forEach {
+                        println("Peerinfo removed (${removed.size}):\n$it")
+                    }
         }
     }
 
-    private fun peerinfoRemove(nodeConfigFile: String, pubKey: String): Array<PeerInfo> {
-        return runStorageCommand(nodeConfigFile) { ctx ->
+    private fun peerinfoRemove(nodeConfigFile: File, pubKey: String): Array<PeerInfo> {
+        return runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
             PeerApi.removePeer(ctx, PubKey(pubKey))
         }
     }

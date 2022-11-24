@@ -15,6 +15,7 @@ import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.config.app.AppConfig
 
 class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = "Adds a blockchain configuration. All signers in the new configuration must " +
         "exist in the list of added peerInfos. Else flag --allow-unknown-signers must be set.") {
@@ -43,7 +44,7 @@ class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = 
         val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
         var heightToUse = height
         if (futureHeight > 0) {
-            runStorageCommand(nodeConfigFile, chainId) { ctx ->
+            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
                 heightToUse = BlockchainApi.getLastBlockHeight(ctx) + futureHeight
             }
         }
