@@ -1,5 +1,6 @@
 package net.postchain.managed
 
+import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.wrap
@@ -18,9 +19,21 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
+import java.time.Instant
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
 class BaseManagedNodeDataSourceTest {
+
+    @ParameterizedTest
+    @MethodSource("getPeerInfosTestData")
+    fun testGetPeerInfos(gtvResult: Gtv, expected: Array<PeerInfo>) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_get_peer_infos"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertContentEquals(expected, sut.getPeerInfos())
+    }
 
     @ParameterizedTest
     @MethodSource("computeBlockchainInfoListTestData")
@@ -91,6 +104,23 @@ class BaseManagedNodeDataSourceTest {
     }
 
     companion object {
+
+        @JvmStatic
+        fun getPeerInfosTestData(): List<Array<Any>> {
+            val nonTrivialGtv = gtv(listOf(
+                    gtv(gtv("host1"), gtv(5555), gtv(byteArrayOf(1)), gtv(1000)),
+                    gtv(gtv("host2"), gtv(7777), gtv(byteArrayOf(2)), gtv(2000)),
+            ))
+            val nonTrivialExpected = arrayOf(
+                    PeerInfo("host1", 5555, byteArrayOf(1), Instant.ofEpochSecond(1)),
+                    PeerInfo("host2", 7777, byteArrayOf(2), Instant.ofEpochSecond(2))
+            )
+
+            return listOf(
+                    arrayOf(GtvArray(emptyArray()), arrayOf<PeerInfo>()),
+                    arrayOf(nonTrivialGtv, nonTrivialExpected)
+            )
+        }
 
         @JvmStatic
         fun computeBlockchainInfoListTestData(): List<Array<Any>> {

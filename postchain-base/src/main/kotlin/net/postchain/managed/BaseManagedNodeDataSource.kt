@@ -21,7 +21,6 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     }
 
     override fun getPeerInfos(): Array<PeerInfo> {
-        // TODO: [POS-90]: Implement correct error processing
         val res = query("nm_get_peer_infos", buildArgs())
         return res.asArray().map { PeerInfo.fromGtv(it) }.toTypedArray()
     }
