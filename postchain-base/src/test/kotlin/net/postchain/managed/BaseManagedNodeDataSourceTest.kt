@@ -1,11 +1,14 @@
 package net.postchain.managed
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.BlockchainRid.Companion.ZERO_RID
+import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.managed.query.QueryRunner
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -18,6 +21,26 @@ import org.mockito.kotlin.spy
 import kotlin.test.assertEquals
 
 class BaseManagedNodeDataSourceTest {
+
+    @ParameterizedTest
+    @MethodSource("getConfigurationTestData")
+    fun testGetConfiguration(gtvResult: Gtv, expected: ByteArray?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_get_blockchain_configuration"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertEquals(expected?.wrap(), sut.getConfiguration(ZERO_RID.data, 0L)?.wrap())
+    }
+
+    @ParameterizedTest
+    @MethodSource("findNextConfigurationHeightTestData")
+    fun testFindNextConfigurationHeight(gtvResult: Gtv, expected: Long?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_find_next_configuration_height"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertEquals(expected, sut.findNextConfigurationHeight(ZERO_RID.data, 0L))
+    }
 
     @ParameterizedTest
     @MethodSource("syncUntilHeightTestData")
@@ -56,6 +79,22 @@ class BaseManagedNodeDataSourceTest {
     companion object {
 
         @JvmStatic
+        fun getConfigurationTestData(): List<Array<Any?>> {
+            return listOf(
+                    arrayOf(GtvNull, null),
+                    arrayOf(gtv(byteArrayOf(1, 2, 3)), byteArrayOf(1, 2, 3))
+            )
+        }
+
+        @JvmStatic
+        fun findNextConfigurationHeightTestData(): List<Array<Any?>> {
+            return listOf(
+                    arrayOf(GtvNull, null),
+                    arrayOf(gtv(10), 10L)
+            )
+        }
+
+        @JvmStatic
         fun syncUntilHeightTestData(): List<Array<Any>> {
             val emptyParamSet = arrayOf(
                     listOf<BlockchainInfo>(),
@@ -63,7 +102,7 @@ class BaseManagedNodeDataSourceTest {
                     emptyMap<BlockchainRid, Long>()
             )
 
-            val bc1Info = BlockchainInfo(BlockchainRid.ZERO_RID, true)
+            val bc1Info = BlockchainInfo(ZERO_RID, true)
             val bc2Info = BlockchainInfo(BlockchainRid.buildRepeat(1), false)
             val goodParamSet = arrayOf(
                     listOf(bc1Info, bc2Info),
