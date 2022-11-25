@@ -16,7 +16,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
 
     companion object : KLogging()
 
-    protected val nmApiVersion by lazy {
+    val nmApiVersion by lazy {
         query("nm_api_version", buildArgs()).asInteger().toInt()
     }
 
@@ -78,16 +78,16 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
 
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
         return if (nmApiVersion >= 2) {
-            val blockchains = computeBlockchainList()
+            val blockchains = computeBlockchainInfoList()
             val heights = query(
                     "nm_get_blockchain_last_height_map",
                     buildArgs("blockchain_rids" to gtv(
-                            *(blockchains.map { gtv(it) }.toTypedArray())
+                            *(blockchains.map { gtv(it.rid) }.toTypedArray())
                     ))
             ).asArray()
 
-            blockchains.mapIndexed { i, brid ->
-                BlockchainRid(brid) to if (i < heights.size) heights[i].asInteger() else -1
+            blockchains.mapIndexed { i, bcInfo ->
+                bcInfo.rid to if (i < heights.size) heights[i].asInteger() else -1
             }.toMap()
 
         } else {
