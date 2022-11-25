@@ -46,7 +46,6 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                     "nm_compute_blockchain_info_list",
                     buildArgs("node_id" to gtv(appConfig.pubKeyByteArray))
             )
-
             res.asArray().map { BlockchainInfo(BlockchainRid(it["rid"]!!.asByteArray()), it["system"]!!.asBoolean()) }
         } else {
             // Fallback for legacy API versions

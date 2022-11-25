@@ -23,6 +23,20 @@ import kotlin.test.assertEquals
 class BaseManagedNodeDataSourceTest {
 
     @ParameterizedTest
+    @MethodSource("computeBlockchainInfoListTestData")
+    fun testComputeBlockchainInfoList(gtvResult: Gtv, expected: List<BlockchainInfo>) {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(4)
+            on { query(eq("nm_compute_blockchain_info_list"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertEquals(expected.sortedBy { it.rid.toHex() }, sut.computeBlockchainInfoList().sortedBy { it.rid.toHex() })
+    }
+
+    @ParameterizedTest
     @MethodSource("getConfigurationTestData")
     fun testGetConfiguration(gtvResult: Gtv, expected: ByteArray?) {
         val queryRunner: QueryRunner = mock {
@@ -77,6 +91,25 @@ class BaseManagedNodeDataSourceTest {
     }
 
     companion object {
+
+        @JvmStatic
+        fun computeBlockchainInfoListTestData(): List<Array<Any>> {
+            val brid0 = ZERO_RID
+            val brid1 = BlockchainRid.buildRepeat(1)
+            val nonTrivialGtv = GtvArray(arrayOf(
+                    gtv(mapOf("rid" to gtv(brid0), "system" to gtv(true))),
+                    gtv(mapOf("rid" to gtv(brid1), "system" to gtv(false)))
+            ))
+            val nonTrivialExpected = listOf(
+                    BlockchainInfo(brid0, true),
+                    BlockchainInfo(brid1, false)
+            )
+
+            return listOf(
+                    arrayOf(GtvArray(emptyArray()), emptyList<BlockchainInfo>()),
+                    arrayOf(nonTrivialGtv, nonTrivialExpected)
+            )
+        }
 
         @JvmStatic
         fun getConfigurationTestData(): List<Array<Any?>> {
