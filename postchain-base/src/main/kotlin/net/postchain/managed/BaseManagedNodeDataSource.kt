@@ -96,11 +96,11 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     }
 
     override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>> {
-        val blockchains = computeBlockchainList()
+        val blockchains = computeBlockchainInfoList()
 
         val replicasGtv = query(
                 "nm_get_blockchain_replica_node_map_v4",
-                buildArgs("blockchain_rids" to gtv(blockchains.map { gtv(it) }))
+                buildArgs("blockchain_rids" to gtv(blockchains.map { gtv(it.rid) }))
         ).asArray()
 
         return replicasGtv.associate { pair ->
