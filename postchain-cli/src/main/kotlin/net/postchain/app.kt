@@ -28,9 +28,10 @@ import java.io.File
 import java.lang.management.ManagementFactory
 
 
-class Postchain: CliktCommand(name = "postchain") {
+class Postchain : CliktCommand(name = "postchain") {
     override fun run() = Unit
 }
+
 fun main(args: Array<String>) {
     dumpPid()
     if (args.isNotEmpty()) {
@@ -46,20 +47,20 @@ fun main(args: Array<String>) {
                     CommandBlockchainReplicaRemove(),
                     CommandCheckBlockchain(),
                     CommandGenerateContainerZfsInitScript(),
-            CommandKeygen(),
-            CommandMustSyncUntil(),
-            CommandPeerInfoAdd(),
-            CommandPeerInfoFind(),
-            CommandPeerInfoImport(),
-            CommandPeerInfoList(),
-            CommandPeerInfoRemove(),
-            CommandRunNode(),
-            CommandRunNodeAuto(),
-            CommandRunServer(),
-            CommandWaitDb(),
-            CommandWipeDb(),
-        )
-        .main(args)
+                    CommandKeygen(),
+                    CommandMustSyncUntil(),
+                    CommandPeerInfoAdd(),
+                    CommandPeerInfoFind(),
+                    CommandPeerInfoImport(),
+                    CommandPeerInfoList(),
+                    CommandPeerInfoRemove(),
+                    CommandRunNode(),
+                    CommandRunNodeAuto(),
+                    CommandRunServer(),
+                    CommandWaitDb(),
+                    CommandWipeDb(),
+            )
+            .main(args)
 }
 
 fun dumpPid() {

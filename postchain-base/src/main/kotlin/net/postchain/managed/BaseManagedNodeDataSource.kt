@@ -8,7 +8,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.managed.query.QueryRunner
 
 open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig: AppConfig)
@@ -34,7 +34,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     override fun computeBlockchainList(): List<ByteArray> {
         val res = query(
                 "nm_compute_blockchain_list",
-                buildArgs("node_id" to GtvFactory.gtv(appConfig.pubKeyByteArray))
+                buildArgs("node_id" to gtv(appConfig.pubKeyByteArray))
         )
 
         return res.asArray().map { it.asByteArray() }
@@ -44,7 +44,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return if (nmApiVersion >= 4) {
             val res = query(
                     "nm_compute_blockchain_info_list",
-                    buildArgs("node_id" to GtvFactory.gtv(appConfig.pubKeyByteArray))
+                    buildArgs("node_id" to gtv(appConfig.pubKeyByteArray))
             )
 
             res.asArray().map { BlockchainInfo(BlockchainRid(it["rid"]!!.asByteArray()), it["system"]!!.asBoolean()) }
@@ -58,8 +58,8 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         val res = query(
                 "nm_get_blockchain_configuration",
                 buildArgs(
-                        "blockchain_rid" to GtvFactory.gtv(blockchainRidRaw),
-                        "height" to GtvFactory.gtv(height))
+                        "blockchain_rid" to gtv(blockchainRidRaw),
+                        "height" to gtv(height))
         )
 
         return if (res.isNull()) null else res.asByteArray()
@@ -69,15 +69,11 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         val res = query(
                 "nm_find_next_configuration_height",
                 buildArgs(
-                        "blockchain_rid" to GtvFactory.gtv(blockchainRidRaw),
-                        "height" to GtvFactory.gtv(height))
+                        "blockchain_rid" to gtv(blockchainRidRaw),
+                        "height" to gtv(height))
         )
 
         return if (res.isNull()) null else res.asInteger()
-    }
-
-    fun buildArgs(vararg args: Pair<String, Gtv>): Gtv {
-        return GtvFactory.gtv(*args)
     }
 
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
@@ -85,8 +81,8 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
             val blockchains = computeBlockchainList()
             val heights = query(
                     "nm_get_blockchain_last_height_map",
-                    buildArgs("blockchain_rids" to GtvFactory.gtv(
-                            *(blockchains.map { GtvFactory.gtv(it) }.toTypedArray())
+                    buildArgs("blockchain_rids" to gtv(
+                            *(blockchains.map { gtv(it) }.toTypedArray())
                     ))
             ).asArray()
 
@@ -102,18 +98,17 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>> {
         val blockchains = computeBlockchainList()
 
-        // Rell: query nm_get_blockchain_replica_node_map(blockchain_rids: list<byte_array>): list<list<byte_array>>
-        val replicas = query(
-                "nm_get_blockchain_replica_node_map",
-                buildArgs("blockchain_rids" to GtvFactory.gtv(
-                        *(blockchains.map { GtvFactory.gtv(it) }.toTypedArray())
-                ))
+        val replicasGtv = query(
+                "nm_get_blockchain_replica_node_map_v4",
+                buildArgs("blockchain_rids" to gtv(blockchains.map { gtv(it) }))
         ).asArray()
 
-        return blockchains.mapIndexed { i, brid ->
-            BlockchainRid(brid) to if (i < replicas.size) {
-                replicas[i].asArray().map { NodeRid(it.asByteArray()) }
-            } else emptyList()
-        }.toMap()
+        return replicasGtv.associate { pair ->
+            val brid = pair.asArray()[0]
+            val peers = pair.asArray()[1].asArray()
+            BlockchainRid(brid.asByteArray()) to peers.map { NodeRid(it.asByteArray()) }
+        }
     }
+
+    fun buildArgs(vararg args: Pair<String, Gtv>): Gtv = gtv(*args)
 }
