@@ -18,18 +18,18 @@ class GtvDeserializer : JsonDeserializer<Gtv>() {
         return when (p.currentToken) {
             JsonToken.VALUE_NUMBER_FLOAT -> gtv(p.text)
             JsonToken.VALUE_NUMBER_INT -> {
-                when {
-                    p.text.startsWith("0x") -> gtv(ByteArrayDeserializer().deserialize(p, ctxt))
-                    else -> {
-                        try {
-                            gtv(p.text.toLong())
-                        } catch (e: Exception) {
-                            gtv(p.text.toBigInteger())
-                        }
-                    }
+                try {
+                    gtv(p.text.toLong())
+                } catch (e: Exception) {
+                    gtv(p.text.toBigInteger())
                 }
             }
-            JsonToken.VALUE_STRING -> gtv(p.valueAsString)
+            JsonToken.VALUE_STRING -> {
+                when {
+                    p.text.startsWith("x\"") -> gtv(ByteArrayDeserializer().deserialize(p, ctxt))
+                    else -> gtv(p.valueAsString)
+                }
+            }
             JsonToken.START_ARRAY -> {
                 val res = mutableListOf<Gtv>()
                 var n: JsonToken? = p.nextToken()
