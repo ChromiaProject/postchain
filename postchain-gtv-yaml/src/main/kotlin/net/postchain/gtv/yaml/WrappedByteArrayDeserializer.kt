@@ -8,6 +8,7 @@ import net.postchain.common.types.WrappedByteArray
 
 class WrappedByteArrayDeserializer : JsonDeserializer<WrappedByteArray>() {
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): WrappedByteArray {
-        return p.valueAsString.substringAfter("0x").hexStringToWrappedByteArray()
+        require(p.valueAsString.startsWith("x\""))
+        return p.valueAsString.substringAfter("x\"").trimEnd('"').hexStringToWrappedByteArray()
     }
 }
