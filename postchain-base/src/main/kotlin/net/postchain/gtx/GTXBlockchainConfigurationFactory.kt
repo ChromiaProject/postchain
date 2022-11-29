@@ -25,9 +25,8 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
     }
 
     open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData, eContext: EContext): GTXModule {
-
         val gtxConfig = data.gtx?.toObject() ?: GtxConfigurationData.default
-        val list = gtxConfig.modules
+        val list = gtxConfig.modules.distinct()
         if (list.isEmpty()) {
             throw UserMistake("Missing GTX module in config. expected property 'blockchain.<chainId>.gtx.modules'")
         }
