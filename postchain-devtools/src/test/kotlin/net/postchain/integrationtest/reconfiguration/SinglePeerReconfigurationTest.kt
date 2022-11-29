@@ -22,8 +22,10 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
         // Chains configs
         val blockchainConfig1 = readBlockchainConfig(
                 "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_1.xml")
+//        val blockchainConfig2 = readBlockchainConfig(
+//                "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_2.xml")
         val blockchainConfig2 = readBlockchainConfig(
-                "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_2.xml")
+                "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_3_unknown_module.xml")
 
         PostchainTestNode(appConfig, true)
                 .apply {
@@ -49,6 +51,9 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
         // Asserting blockchainConfig2 with DummyModule2 is loaded
         await().atMost(Duration.ONE_MINUTE)
                 .untilAsserted {
+                    val chain = nodes[0].retrieveBlockchain(chainId);
+                    println("chain: $chain")
+
                     val modules = nodes[0].getModules(chainId)
                     assertk.assert(modules).isNotEmpty()
                     assertk.assert(modules.first()).isInstanceOf(DummyModule2::class)

@@ -19,7 +19,11 @@ class MockBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSou
 
     companion object: KLogging()
 
-    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+    override fun getPreviousSuccessfulConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+        TODO("Not yet implemented")
+    }
+
+    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)

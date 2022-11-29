@@ -26,6 +26,10 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         this.dataSource = dataSource
     }
 
+    override fun getPreviousSuccessfulConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+        TODO("Not yet implemented")
+    }
+
     /**
      * We read the config in this way:
      * 1. check the local (DB) setting first, if nothing found
@@ -35,13 +39,13 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
      * This means that even for managed mode, we allow manual override of configurations at specific heights.
      * This is a very tricky subject, since a manual override can cause the chain to fork!
      */
-    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return if (chainId == 0L) {
-            systemProvider.getActiveBlocksConfiguration(eContext, chainId)
+            systemProvider.getActiveBlockConfiguration(eContext, chainId)
         } else {
-            val localOverride = systemProvider.getActiveBlocksConfiguration(eContext, chainId)
+            val localOverride = systemProvider.getActiveBlockConfiguration(eContext, chainId)
             return if (localOverride != null) {
                 logger.warn("getConfiguration() - You are about to use local configuration to override the " +
                         "configuration of chain0 (for chain: $chainId)! Very dangerous")

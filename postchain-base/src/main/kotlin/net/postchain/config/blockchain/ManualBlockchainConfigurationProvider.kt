@@ -36,7 +36,28 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
         return activeHeight == configHeight
     }
 
-    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+    override fun getPreviousSuccessfulConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+        requireChainIdToBeSameAsInContext(eContext, chainId)
+
+        val dba = DatabaseAccess.of(eContext)
+        val activeHeight = getActiveBlocksHeight(eContext, dba)
+        val currentHeight = activeHeight - 1
+        if (currentHeight < 0) {
+            logger.warn("getActiveBlocksConfiguration() - Chain: $chainId doesn't have a configuration in DB")
+            return null
+        }
+
+        val configHeight = BaseConfigurationDataStore.findConfigurationHeightForBlock(eContext, currentHeight)
+
+        return if (configHeight == null) {
+            logger.warn("getActiveBlocksConfiguration() - Chain: $chainId doesn't have a configuration in DB")
+            null
+        } else {
+            BaseConfigurationDataStore.getConfigurationData(eContext, configHeight)!!
+        }
+    }
+
+    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)

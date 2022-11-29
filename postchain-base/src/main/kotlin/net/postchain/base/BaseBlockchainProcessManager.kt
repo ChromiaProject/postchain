@@ -165,11 +165,22 @@ open class BaseBlockchainProcessManager(
 
     protected open fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
         return withReadWriteConnection(storage, chainId) { eContext ->
-            val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
+            val configuration = blockchainConfigProvider.getActiveBlockConfiguration(eContext, chainId)
             if (configuration != null) {
-                blockchainInfrastructure.makeBlockchainConfiguration(
-                        configuration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
-                )
+                try {
+                    blockchainInfrastructure.makeBlockchainConfiguration(
+                            configuration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
+                    )
+                } catch (e: UserMistake) {
+                    val prevConfiguration = blockchainConfigProvider.getPreviousSuccessfulConfiguration(eContext, chainId)
+                    if (prevConfiguration != null) {
+                        blockchainInfrastructure.makeBlockchainConfiguration(
+                                prevConfiguration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
+                        )
+                    } else {
+                        throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
+                    }
+                }
             } else {
                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
             }.also { DependenciesValidator.validateBlockchainRids(eContext, it.blockchainDependencies) }

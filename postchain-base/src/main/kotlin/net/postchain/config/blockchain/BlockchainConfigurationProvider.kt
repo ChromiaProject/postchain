@@ -13,10 +13,12 @@ import net.postchain.core.EContext
  */
 interface BlockchainConfigurationProvider {
 
+    fun getPreviousSuccessfulConfiguration(eContext: EContext, chainId: Long): ByteArray?
+
     /**
-     * @return the configuration we must use for the "active" block (=the block we are currently building)
+     * @return the configuration we must use for the "active" block (the block we are currently building)
      */
-    fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray?
+    fun getActiveBlockConfiguration(eContext: EContext, chainId: Long): ByteArray?
 
     /**
      * @return true if the given chain will need a new configuration for the "active" block
