@@ -81,13 +81,13 @@ class CliIntegrationIT {
     fun testAddConfigurationMissingPeerinfo() {
         val exception = assertThrows<CliException> {
             CommandAddConfiguration().parse(
-                arrayOf(
-                        "-nc", nodeConfigPath.absolutePath,
-                        "-bc", secondBlockChainConfig.absolutePath,
-                        "-cid", chainId.toString(),
-                        "--height", heightSecondConfig.toString(),
-                        "--force"
-                )
+                    arrayOf(
+                            "-nc", nodeConfigPath.absolutePath,
+                            "-bc", secondBlockChainConfig.absolutePath,
+                            "-cid", chainId.toString(),
+                            "--height", heightSecondConfig.toString(),
+                            "--force"
+                    )
             )
         }
         assert(exception.message).contains("MISSING_PEERINFO")
@@ -99,14 +99,14 @@ class CliIntegrationIT {
     fun testAddConfigurationAllowUnknownSigners() {
         // change configuration with 4 signer at height 10
         CommandAddConfiguration().parse(
-            arrayOf(
-                    "-nc", nodeConfigPath.absolutePath,
-                    "-bc", secondBlockChainConfig.absolutePath,
-                    "-cid", chainId.toString(),
-                    "--height", heightSecondConfig.toString(),
-                    "--allow-unknown-signers",
-                    "--force"
-            )
+                arrayOf(
+                        "-nc", nodeConfigPath.absolutePath,
+                        "-bc", secondBlockChainConfig.absolutePath,
+                        "-cid", chainId.toString(),
+                        "--height", heightSecondConfig.toString(),
+                        "--allow-unknown-signers",
+                        "--force"
+                )
         )
 
         // assert bc added
@@ -139,13 +139,13 @@ class CliIntegrationIT {
         // change configuration with 4 signer and height is 10
         val secondBlockChainConfig = fullPath("blockchain_config_4_signers.xml")
         CommandAddConfiguration().parse(
-            arrayOf(
-                    "-nc", nodeConfigPath.absolutePath,
-                    "-bc", secondBlockChainConfig.absolutePath,
-                    "-cid", chainId.toString(),
-                    "--height", heightSecondConfig.toString(),
-                    "--force"
-            )
+                arrayOf(
+                        "-nc", nodeConfigPath.absolutePath,
+                        "-bc", secondBlockChainConfig.absolutePath,
+                        "-cid", chainId.toString(),
+                        "--height", heightSecondConfig.toString(),
+                        "--force"
+                )
         )
         // assert config added
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
