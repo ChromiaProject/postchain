@@ -25,8 +25,8 @@ import org.apache.commons.configuration2.PropertiesConfiguration
  */
 data class NodeSetup(
         val sequenceNumber: NodeSeqNumber,
-        val chainsToSign: Set<Int>,
-        val chainsToRead: Set<Int>,
+        val chainsToSign: MutableSet<Int>,
+        val chainsToRead: MutableSet<Int>,
         val pubKeyHex: String,
         val privKeyHex: String,
         val nodeSpecificConfigs: Configuration = PropertiesConfiguration(),
@@ -42,8 +42,8 @@ data class NodeSetup(
 
             return NodeSetup(
                     nodeNr,
-                    signerChains,
-                    replicaChains,
+                    signerChains.toMutableSet(),
+                    replicaChains.toMutableSet(),
                     KeyPairHelper.pubKeyHex(nodeNr.nodeNumber),
                     KeyPairHelper.privKeyHex(nodeNr.nodeNumber)
             )

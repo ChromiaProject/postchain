@@ -12,6 +12,7 @@ import net.postchain.crypto.SigMaker
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.mminfra.*
 import net.postchain.devtools.utils.ChainUtil
+import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.gtv.*
@@ -20,8 +21,6 @@ import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import java.lang.Thread.sleep
-import java.util.concurrent.TimeoutException
-import kotlin.time.Duration
 
 /**
  * This is still somewhat not in line with the [SystemSetup] architecture, defined in the parent class.
@@ -32,84 +31,51 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     private companion object : KLogging()
 
+    val c0 = 0L
     val mockDataSources = mutableMapOf<Int, MockManagedNodeDataSource>()
 
-    /**
-     * Create a set of signers and replicas for the given chainID.
-     */
-    @Deprecated("Should conform with Setup arch. Use this: \"net.postchain.devtools.utils.configuration.NodeSetup\"")
-    inner class NodeSet(val chain: Long, val signers: Set<Int>, val replicas: Set<Int>) {
-        val size: Int = signers.size + replicas.size
-        fun contains(i: Int) = signers.contains(i) || replicas.contains(i)
-        fun all(): Set<Int> = signers.union(replicas)
-        fun nodes() = nodes.filterIndexed { i, _ -> contains(i) }
-
-        /**
-         * Creates a new NodeSet as a copy of this NodeSet, but
-         * with some nodes removed
-         */
-        fun remove(nodesToRemove: Set<Int>): ManagedModeTest.NodeSet {
-            return NodeSet(chain, signers.minus(nodesToRemove), replicas.minus(nodesToRemove))
-        }
+    fun dataSources(chainId: Long): Map<Int, MockManagedNodeDataSource> {
+        val nodeIdsInChain = getChainNodeSetups(chainId).map { it.sequenceNumber.nodeNumber }
+        return mockDataSources.filterKeys { nodeIdsInChain.contains(it) }
     }
 
-    fun dataSources(nodeSet: NodeSet): Map<Int, MockManagedNodeDataSource> {
-        return mockDataSources.filterKeys { nodeSet.contains(it) }
-    }
+    fun addBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long) {
+        val brid = ChainUtil.ridOf(chainId)
 
-    fun addBlockchainConfiguration(nodeSet: NodeSet, historicChain: Long?, height: Long) {
-        val brid = ChainUtil.ridOf(nodeSet.chain)
+        val signerGtvs = signerKeys.values.map { GtvByteArray(it) }
 
-        val signerGtvs = mutableListOf<GtvByteArray>()
-        if (nodeSet.chain == 0L) {
-            nodeSet.signers.forEach {
-                signerGtvs.add(GtvByteArray(KeyPairHelper.pubKey(it)))
-            }
-        } else {
-            nodeSet.signers.forEach {
-                signerGtvs.add(GtvByteArray(nodes[it].pubKey.hexStringToByteArray()))
-            }
+        val data = TestBlockchainConfigurationData()
+        data.setValue(KEY_SIGNERS, GtvArray(signerGtvs.toTypedArray()))
+        if (historicChain != null) {
+            data.setValue(KEY_HISTORIC_BRID, GtvByteArray(ChainUtil.ridOf(historicChain).data))
         }
+
+        data.setValue(KEY_CONFIGURATIONFACTORY, GtvString(GTXBlockchainConfigurationFactory::class.java.name))
+
+        data.setValue(KEY_BLOCKSTRATEGY, GtvDictionary.build(mapOf(
+                KEY_BLOCKSTRATEGY_MAXBLOCKTIME to GtvInteger(2_000)
+        )))
+
+        val gtx = mapOf(KEY_GTX_MODULES to GtvArray(arrayOf(
+                GtvString(StandardOpsGTXModule::class.java.name))
+        ))
+        data.setValue(KEY_GTX, GtvFactory.gtv(gtx))
 
         mockDataSources.forEach {
-            val data = TestBlockchainConfigurationData()
-            data.setValue(KEY_SIGNERS, GtvArray(signerGtvs.toTypedArray()))
-            if (historicChain != null) {
-                data.setValue(KEY_HISTORIC_BRID, GtvByteArray(ChainUtil.ridOf(historicChain).data))
-            }
+            val (pubkey, sigMaker) = createSigMaker(signerKeys[it.key] ?: KeyPairHelper.pubKey(-1 - it.key))
 
-            data.setValue(KEY_CONFIGURATIONFACTORY, GtvString(GTXBlockchainConfigurationFactory::class.java.name))
-
-            data.setValue(KEY_BLOCKSTRATEGY, GtvDictionary.build(mapOf(
-                    KEY_BLOCKSTRATEGY_MAXBLOCKTIME to GtvInteger(2_000)
-            )))
-
-            val gtx = mapOf(KEY_GTX_MODULES to GtvArray(arrayOf(
-                    GtvString(StandardOpsGTXModule::class.java.name))
-            ))
-            data.setValue(KEY_GTX, GtvFactory.gtv(gtx))
-            val (pubkey, sigMaker) = createSigMaker(nodeSet, it.key)
-
-            val context = BaseBlockchainContext(brid, NODE_ID_AUTO, nodeSet.chain, pubkey)
+            val context = BaseBlockchainContext(brid, NODE_ID_AUTO, chainId, pubkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>(mapOf("partialContext" to context, "sigmaker" to sigMaker))
             val bcConf = TestBlockchainConfiguration(confData, it.value)
-            it.value.addConf(brid, height, bcConf, nodeSet, GtvEncoder.encodeGtv(data.getDict()))
+            it.value.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
         }
     }
 
-    fun setupDataSources(nodeSet: NodeSet) {
-        for (i in 0 until nodeSet.size) {
-            if (!nodeSet.contains(i)) {
-                throw IllegalStateException("We don't have node nr: $i")
-            }
-            val dataSource = createMockDataSource(i)
+    fun setupDataSources(nrOfNodes: Int) {
+        for (i in 0 until nrOfNodes) {
+            val dataSource = MockManagedNodeDataSource()
             mockDataSources[i] = dataSource
         }
-        addBlockchainConfiguration(nodeSet, null, 0)
-    }
-
-    open fun createMockDataSource(nodeIndex: Int): MockManagedNodeDataSource {
-        return MockManagedNodeDataSource(nodeIndex)
     }
 
     protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
@@ -117,49 +83,22 @@ open class ManagedModeTest : AbstractSyncTest() {
         pm.awaitStarted(index, chainId, atLeastHeight)
     }
 
-    fun restartNodeClean(index: Int, nodeSet: NodeSet, atLeastHeight: Long) {
+    fun restartNodeClean(index: Int, chainId: Long, atLeastHeight: Long) {
         restartNodeClean(index, ChainUtil.ridOf(0))
-        awaitChainRunning(index, nodeSet.chain, atLeastHeight)
+        awaitChainRunning(index, chainId, atLeastHeight)
     }
 
-    /**
-     *
-     * @param timeout  time to wait for each block
-     *
-     * @throws TimeoutException if timeout
-     */
-    fun buildBlock(nodeSet: NodeSet, toHeight: Long, timeout: Duration = Duration.INFINITE) {
-        buildBlock(nodes.filterIndexed { i, _ -> nodeSet.contains(i) }, nodeSet.chain, toHeight, timeout = timeout)
+    override fun updateCache(nodeSetup: NodeSetup, testNode: PostchainTestNode) {
+        super.updateCache(nodeSetup, testNode)
+        mockDataSources.forEach { it.value.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(it.key)]!!) }
     }
 
-    /**
-     *
-     * @param timeout  time to wait for each block
-     *
-     * @throws TimeoutException if timeout
-     */
-    fun buildBlock(nodeSet: NodeSet, timeout: Duration = Duration.INFINITE) {
-        val currentHeight = nodeSet.nodes()[0].currentHeight(nodeSet.chain)
-        buildBlock(nodeSet, currentHeight + 1, timeout)
-    }
-
-    /**
-     *
-     * @param timeout  time to wait for each block
-     *
-     * @throws TimeoutException if timeout
-     */
-    fun awaitHeight(nodeSet: NodeSet, height: Long, timeout: Duration = Duration.INFINITE) {
-        awaitLog("========= AWAIT ALL ${nodeSet.size} NODES chain:  ${nodeSet.chain}, height:  $height")
-        awaitHeight(nodeSet.nodes(), nodeSet.chain, height, timeout)
-        awaitLog("========= DONE AWAIT ALL ${nodeSet.size} NODES chain: ${nodeSet.chain}, height: $height")
-    }
-
-    fun assertCantBuildBlock(nodeSet: NodeSet, height: Long) {
-        buildBlockNoWait(nodeSet.nodes(), nodeSet.chain, height)
+    fun assertCantBuildBlock(chainId: Long, height: Long) {
+        val chainNodes = getChainNodes(chainId)
+        buildBlockNoWait(chainNodes, chainId, height)
         sleep(1000)
-        nodeSet.nodes().forEach {
-            if (it.blockQueries(nodeSet.chain).getBestHeight().get() >= height) throw RuntimeException("assertCantBuildBlock: Can build block")
+        chainNodes.forEach {
+            if (it.blockQueries(chainId).getBestHeight().get() >= height) throw RuntimeException("assertCantBuildBlock: Can build block")
         }
     }
 
@@ -175,17 +114,21 @@ open class ManagedModeTest : AbstractSyncTest() {
         )
     }
 
-    lateinit var c0: NodeSet
     fun startManagedSystem(signers: Int, replicas: Int) {
-        c0 = NodeSet(0, (0 until signers).toSet(), (signers until signers + replicas).toSet())
-        setupDataSources(c0)
-        runNodes(c0.signers.size, c0.replicas.size)
-        buildBlock(c0, 0)
+        setupDataSources(signers + replicas)
+        val signerKeys = (0 until signers).associateWith { KeyPairHelper.pubKey(it) }
+        addBlockchainConfiguration(0, signerKeys, null, 0)
+        runNodes(signers, replicas)
+        mockDataSources.forEach { it.value.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(it.key)]!!) }
+        buildBlock(0, 0)
     }
 
 
-    protected open fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
-        nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
+    protected open fun awaitChainRestarted(chainId: Long, atLeastHeight: Long) {
+        val nodeSetups = getChainNodeSetups(chainId)
+        awaitLog("========= AWAIT ALL ${nodeSetups.size} NODES RESTART chain:  ${chainId}, at least height:  $atLeastHeight")
+        nodeSetups.forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, chainId, atLeastHeight) }
+        awaitLog("========= DONE WAITING ALL ${nodeSetups.size} NODES RESTART chain:  ${chainId}, at least height:  $atLeastHeight")
     }
 
     private var chainId: Long = 1
@@ -197,54 +140,62 @@ open class ManagedModeTest : AbstractSyncTest() {
             waitForRestart: Boolean = true,
             rawBlockchainConfiguration: ByteArray? = null,
             blockchainConfigurationFactory: GTXBlockchainConfigurationFactory? = null
-    ): NodeSet {
+    ): Long {
         if (signers.intersect(replicas).isNotEmpty()) throw IllegalArgumentException("a node cannot be both signer and replica")
-        val maxIndex = c0.all().size
-        signers.forEach {
-            if (it >= maxIndex) throw IllegalArgumentException("bad signer index")
-        }
-        replicas.forEach {
-            if (it >= maxIndex) throw IllegalArgumentException("bad replica index")
-        }
-        val c = NodeSet(chainId++, signers, replicas)
+        val newChainId = chainId++
         if (rawBlockchainConfiguration != null) {
-            val brid = ChainUtil.ridOf(c.chain)
+            val brid = ChainUtil.ridOf(newChainId)
             mockDataSources.forEach { (nodeId, dataSource) ->
-                val (pubkey, sigMaker) = createSigMaker(c, nodeId)
+                val (pubkey, sigMaker) = createSigMaker(nodes[nodeId].pubKey.hexStringToByteArray())
 
-                val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, c.chain, pubkey, sigMaker)
+                val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, newChainId, pubkey, sigMaker)
                 val bcFactory = blockchainConfigurationFactory ?: GTXBlockchainConfigurationFactory()
                 val dappBcFactory = DappBlockchainConfigurationFactory(bcFactory, dataSource)
                 val postchainContext = nodes[nodeId].postchainContext
-                withWriteConnection(postchainContext.storage, c.chain) { ctx ->
+                withWriteConnection(postchainContext.storage, newChainId) { ctx ->
                     DatabaseAccess.of(ctx).apply { initializeBlockchain(ctx, brid) }
-                    dataSource.addConf(brid, 0, dappBcFactory.makeBlockchainConfiguration(bcConf, ctx, postchainContext.cryptoSystem), c, rawBlockchainConfiguration)
+                    dataSource.addConf(newChainId, brid, 0, dappBcFactory.makeBlockchainConfiguration(bcConf, ctx, postchainContext.cryptoSystem), rawBlockchainConfiguration)
                     true
                 }
             }
         } else {
-            addBlockchainConfiguration(c, historicChain, 0)
+            val signerKeys = signers.associateWith { nodes[it].pubKey.hexStringToByteArray() }
+            addBlockchainConfiguration(newChainId, signerKeys, historicChain, 0)
         }
+
+        setChainSigners(signers, newChainId)
+        setChainReplicas(replicas, newChainId)
         // We need to build a block on c0 to trigger c0's restartHandler, otherwise
         // the node manager won't become aware of the new configuration
-        buildBlock(c0.remove(excludeChain0Nodes))
+        val chain0Nodes = nodes.filterIndexed { i, _ -> !excludeChain0Nodes.contains(i) }
+        buildBlock(chain0Nodes, 0)
         // Await blockchain started on all relevant nodes
         if (waitForRestart)
-            awaitChainRestarted(c, -1)
-        return c
+            awaitChainRestarted(newChainId, -1)
+        return newChainId
     }
 
-    private fun createSigMaker(c: NodeSet, nodeId: Int): Pair<ByteArray, SigMaker> {
-        val pubkey = if (c.chain == 0L) {
-            if (nodeId < c.signers.size) {
-                KeyPairHelper.pubKey(nodeId)
+    protected fun setChainSigners(signers: Set<Int>, chainId: Long) {
+        systemSetup.nodeMap.forEach {
+            if (signers.contains(it.key.nodeNumber)) {
+                it.value.chainsToSign.add(chainId.toInt())
             } else {
-                KeyPairHelper.pubKey(-1 - nodeId)
+                it.value.chainsToSign.remove(chainId.toInt())
             }
-        } else {
-            nodes[nodeId].pubKey.hexStringToByteArray()
         }
+    }
 
+    protected fun setChainReplicas(replicas: Set<Int>, chainId: Long) {
+        systemSetup.nodeMap.forEach {
+            if (replicas.contains(it.key.nodeNumber)) {
+                it.value.chainsToRead.add(chainId.toInt())
+            } else {
+                it.value.chainsToRead.remove(chainId.toInt())
+            }
+        }
+    }
+
+    private fun createSigMaker(pubkey: ByteArray): Pair<ByteArray, SigMaker> {
         val privkey = KeyPairHelper.privKey(pubkey)
         val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubkey, privkey))
         return Pair(pubkey, sigMaker)

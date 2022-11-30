@@ -130,8 +130,8 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         val replica = if (nodeIndex >= signerCount) setOf(0) else setOf()
         return NodeSetup(
                 NodeSeqNumber(nodeIndex),
-                signer,
-                replica,
+                signer.toMutableSet(),
+                replica.toMutableSet(),
                 peerInfo.pubKey.toHex(),
                 KeyPairHelper.privKey(peerInfo.pubKey).toHex()  // Derive from pubkey
         )
