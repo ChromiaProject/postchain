@@ -79,6 +79,7 @@
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- REST -->
@@ -116,10 +117,17 @@
         <dependency>
             <groupId>com.github.jnr</groupId>
             <artifactId>jffi</artifactId>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.github.jnr</groupId>
             <artifactId>jnr-ffi</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
