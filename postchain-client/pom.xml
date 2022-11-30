@@ -56,13 +56,8 @@
             <artifactId>gson</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.madgag.spongycastle</groupId>
-            <artifactId>core</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.madgag.spongycastle</groupId>
-            <artifactId>prov</artifactId>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
             <scope>runtime</scope>
         </dependency>
         <dependency>
