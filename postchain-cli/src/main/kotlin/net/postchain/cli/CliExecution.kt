@@ -9,6 +9,7 @@ import net.postchain.StorageBuilder
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
@@ -190,6 +191,11 @@ object CliExecution : KLogging() {
             }
         }
     }
+
+    fun findBlockchainRid(nodeConfigFile: File, chainId: Long) =
+            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+                DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+            }
 
     fun checkBlockchain(nodeConfigFile: File, chainId: Long, blockchainRID: String) {
         runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->

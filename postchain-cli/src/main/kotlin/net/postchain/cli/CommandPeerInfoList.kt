@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
+import net.postchain.cli.util.Templater
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
 import java.io.File
