@@ -53,10 +53,10 @@ object KeyPairHelper {
 
     private fun getCachedPrivKey(index: Int): Pair<ByteArray, String> {
         return privKeys.getOrPut(index) {
-            // private key index 0 is all zeroes except byte 16 which is 1
-            // private key index 12 is all 12:s except byte 16 which is 1
-            // reason for byte16=1 is that private key cannot be all zeroes
-            ByteArray(32) { if (it == 16) 1.toByte() else index.toByte() }
+            // private key index 0 is all zeroes except byte 15 which is 1
+            // private key index 12 is all 12:s except byte 15 which is 1
+            // reason for byte15=1 is that private key cannot be all zeroes
+            ByteArray(32) { if (it == 15) 1.toByte() else index.toByte() }
                     .let { it to it.toHex() }
         }
     }
