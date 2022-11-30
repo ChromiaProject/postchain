@@ -22,7 +22,7 @@
     <packaging>pom</packaging>
 
     <name>Postchain</name>
-    <url>http://postchain.org</url>
+    <url>https://docs.chromia.com</url>
     <properties>
         <doclint>none</doclint>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
