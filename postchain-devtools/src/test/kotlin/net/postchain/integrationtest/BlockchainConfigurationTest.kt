@@ -27,21 +27,16 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         val engine = node.getBlockchainInstance().blockchainEngine
 
         // blockchain_config_max_block_size.xml was set maxblocksize is 150 bytes and maxtransaction is 4
-        // the size of testtransaction is 40 bytes
-        // so we send 4 transactions (160bytes) which is over maxblocksize. Cnce we committed block, we expect 3 transactions inserted.
+        // the size of TestTransaction is 40 bytes,
+        // so we send 4 transactions (160bytes) which is over maxblocksize. Once we committed block, we expect 3 transactions inserted.
         for (i in 1..4) {
             engine.getTransactionQueue().enqueue(TestTransaction(i))
         }
-        // reason why we need to try catch is when block committed is over block size,
-        // it throws exception and could stop the test case, so the asserting was not reached.
-        try {
-           buildBlockAndCommit(node)
-        }  catch (e : Exception) {
 
-        }
+        buildBlockAndCommit(node)
 
-        // we need to sleep a bit (1s) to let the block committed accepted transactions.
-        Thread.sleep(1000)
+        // we need to sleep a bit (2s) to let the block committed accepted transactions.
+        Thread.sleep(2000)
 
         val height = getBestHeight(node)
         val acceptedTxs = getTxRidsAtHeight(node, height)
