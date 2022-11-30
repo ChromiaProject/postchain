@@ -15,7 +15,9 @@ import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import org.apache.commons.lang3.RandomStringUtils
+import org.awaitility.Awaitility
 import org.junit.jupiter.api.Test
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class BlockchainConfigurationTest : IntegrationTestSetup() {
@@ -35,12 +37,11 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
 
         buildBlockAndCommit(node)
 
-        // we need to sleep a bit (2s) to let the block committed accepted transactions.
-        Thread.sleep(2000)
-
-        val height = getBestHeight(node)
-        val acceptedTxs = getTxRidsAtHeight(node, height)
-        assertEquals(3, acceptedTxs.size)
+        Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+            val height = getBestHeight(node)
+            val acceptedTxs = getTxRidsAtHeight(node, height)
+            assertEquals(3, acceptedTxs.size)
+        }
     }
 
     @Test
