@@ -22,7 +22,6 @@ import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.OpData
-import org.spongycastle.asn1.ua.DSTU4145NamedCurves.params
 import java.io.StringReader
 
 class TransactionContext(val blockchainRID: BlockchainRid?,
@@ -48,11 +47,11 @@ object GTXMLTransactionParser {
                 cs)
     }
 
-    /**
-     * Parses XML represented as string into [GTXData] within the jaxbContext of [params] ('<param />') and [signers]
+    /*
+     * Parses XML represented as string into [Gtx] within the jaxbContext of [params] ('<param />') and [signers]
     fun parseGTXMLTransaction(xml: String,
                               params: Map<String, Gtv> = mapOf(),
-                              signers: Map<ByteArrayKey, Signer> = mapOf()): GTXData {
+                              signers: Map<ByteArrayKey, Signer> = mapOf()): Gtx {
 
         return parseGTXMLTransaction(
                 xml,
@@ -61,7 +60,7 @@ object GTXMLTransactionParser {
      */
 
     /**
-     * TODO: [et]: Parses XML represented as string into [GTXData] within the [TransactionContext]
+     * TODO (et): Parses XML represented as string into [Gtx] within the [TransactionContext]
      */
     fun parseGTXMLTransaction(transaction: TransactionType, context: TransactionContext, cs: CryptoSystem): Gtx {
         // Asserting count(signers) == count(signatures)
