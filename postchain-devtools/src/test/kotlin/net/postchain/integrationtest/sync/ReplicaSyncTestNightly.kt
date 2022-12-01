@@ -10,6 +10,7 @@ import net.postchain.devtools.AbstractSyncTest
 import org.awaitility.Awaitility
 import org.awaitility.core.ConditionTimeoutException
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertThrows
 import java.util.concurrent.TimeUnit
 
@@ -33,6 +34,7 @@ class ReplicaSyncTestNightly : AbstractSyncTest() {
      *
      */
     @Test
+    @Timeout(5, unit = TimeUnit.MINUTES)
     fun testRemove() {
         assertThrows<ConditionTimeoutException> {
             try {
@@ -64,6 +66,7 @@ class ReplicaSyncTestNightly : AbstractSyncTest() {
      * 6. build one more block and wait until all nodes have it.
      */
     @Test
+    @Timeout(2, unit = TimeUnit.MINUTES)
     fun testRemoveAndAddAgain() {
         addReplica = true
         runSyncTest(1, 2, setOf(1), setOf(0), 1)

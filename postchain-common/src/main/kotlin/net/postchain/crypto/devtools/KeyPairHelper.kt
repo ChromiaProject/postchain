@@ -21,7 +21,7 @@ object KeyPairHelper {
 
     // TODO Olle POS-114 Note A bit sad that I had to do this, but it's the usage of [pubKeyFromByteArray()] from BlockchainSetupFactory that breaks
     init {
-        for(i in 0..10) {
+        for (i in 0..10) {
             pubKey(i)
         }
     }
@@ -53,17 +53,19 @@ object KeyPairHelper {
 
     private fun getCachedPrivKey(index: Int): Pair<ByteArray, String> {
         return privKeys.getOrPut(index) {
-            // private key index 0 is all zeroes except byte 16 which is 1
-            // private key index 12 is all 12:s except byte 16 which is 1
-            // reason for byte16=1 is that private key cannot be all zeroes
-            ByteArray(32) { if (it == 16) 1.toByte() else index.toByte() }
+            // private key index 0 is all zeroes except byte16 which is 1
+            // private key index 12 is all 12:s except byte16 which is 1
+            // reason for byte16 = 1 is that private key cannot be all zeroes
+            // exception: for index == -1 byte15 is used not to exceed the max private key value
+            ByteArray(32) { index.toByte() }
+                    .apply { set(if (index == -1) 15 else 16, 1) }
                     .let { it to it.toHex() }
         }
     }
 
     private fun getCachedPubKey(index: Int): Pair<ByteArray, String> {
         val foundPubKey = pubKeys[index]
-        if (foundPubKey != null)  {
+        if (foundPubKey != null) {
             return foundPubKey
         } else {
             val calculatedPair = secp256k1_derivePubKey(privKey(index)).let { it to it.toHex() }
