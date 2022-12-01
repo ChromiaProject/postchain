@@ -6,7 +6,12 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import mu.KLogging
+import net.postchain.api.internal.BlockchainApi
+import net.postchain.base.runStorageCommand
+import net.postchain.cli.CliExecution.findBlockchainRid
 import net.postchain.cli.util.debugOption
+import net.postchain.config.app.AppConfig
+import net.postchain.gtv.GtvFileReader
 import java.io.File
 import java.nio.file.Paths
 
@@ -71,23 +76,58 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                         dir.listFiles()?.filter { it.extension == "xml" }?.associateByTo(configs, getHeight)
                         dir.listFiles()?.filter { it.extension == "gtv" }?.associateByTo(configs, getHeight)
 
-                        configs.filterKeys { it > (lastHeights[chainId] ?: -1) }
-                                .toSortedMap()
-                                .forEach { (height, blockchainConfigFile) ->
-                                    if (height == 0L) {
-                                        CliExecution.addBlockchain(
-                                                nodeConfigFile, chainId, blockchainConfigFile)
-                                    } else {
-                                        CliExecution.addConfiguration(
-                                                nodeConfigFile, blockchainConfigFile, chainId, height.toLong())
+                        val chainExists = findBlockchainRid(nodeConfigFile, chainId) != null
+                        if (!chainExists && configs.isNotEmpty() && !configs.containsKey(0L)) {
+                            val configsCsv = configs.toSortedMap().values.joinToString(separator = ", ") { it.path }
+                            println("Can't find blockchain by chainId: $chainId, configs will not be added: $configsCsv")
+                            return@forEach
+                        }
+
+                        lastHeights[chainId] = if (chainExists) {
+                            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+                                BlockchainApi.getLastBlockHeight(ctx)
+                            }
+                        } else -1L
+
+                        run {
+                            configs.filterKeys { it > (lastHeights[chainId] ?: -1) }
+                                    .toSortedMap()
+                                    .forEach { (height, blockchainConfigFile) ->
+                                        val gtv = try {
+                                            GtvFileReader.readFile(blockchainConfigFile)
+                                        } catch (e: Exception) {
+                                            println("Configuration for chain $chainId can not be loaded at height $height, the file is corrupted: ${blockchainConfigFile.path}")
+                                            if (height == 0L) return@run
+                                            else return@forEach
+                                        }
+
+                                        if (height == 0L) {
+                                            try {
+                                                CliExecution.addBlockchain(nodeConfigFile, chainId, gtv)
+                                            } catch (e: CliException) {
+                                                println(e.message)
+                                                return@run
+                                            } catch (e: Exception) {
+                                                println("Can't not add configuration: ${e.message}")
+                                                return@run
+                                            }
+
+                                        } else {
+                                            try {
+                                                CliExecution.addConfiguration(nodeConfigFile, gtv, chainId, height.toLong())
+                                                logger.info { "Chain (chainId: $chainId) configuration at height $height has been added" }
+                                                println("Configuration has been added successfully")
+                                            } catch (e: CliException) {
+                                                println(e.message)
+                                            } catch (e: Exception) {
+                                                println("Can't not add configuration: ${e.message}")
+                                            }
+                                        }
                                     }
-                                    lastHeights[chainId] = height
-                                    logger.info { "Chain (chainId: $chainId) configuration at height $height has been added" }
-                                }
+                        }
+
                     }
         }
-
         return chainIds
     }
-
 }

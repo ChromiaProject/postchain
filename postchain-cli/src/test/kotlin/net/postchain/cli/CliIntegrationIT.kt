@@ -11,6 +11,7 @@ import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.Storage
+import net.postchain.gtv.GtvFileReader
 import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -42,8 +43,8 @@ class CliIntegrationIT {
         // this wipes the database.
         storage = StorageBuilder.buildStorage(appConfig, true)
         // add-blockchain goes here
-        val blockChainConfig = fullPath("blockchain_config.xml")
-        CliExecution.addBlockchain(nodeConfigPath, chainId, blockChainConfig, AlreadyExistMode.FORCE)
+        val gtv = GtvFileReader.readFile(fullPath("blockchain_config.xml"))
+        CliExecution.addBlockchain(nodeConfigPath, chainId, gtv, AlreadyExistMode.FORCE)
     }
 
     @Test

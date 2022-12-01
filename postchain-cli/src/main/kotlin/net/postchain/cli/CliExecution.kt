@@ -22,7 +22,6 @@ import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFileReader
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import org.apache.commons.configuration2.ex.ConfigurationException
@@ -40,12 +39,11 @@ object CliExecution : KLogging() {
     fun addBlockchain(
             nodeConfigFile: File,
             chainId: Long,
-            blockchainConfigFile: File,
+            blockchainConfigGtv: Gtv,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             givenDependencies: List<BlockchainRelatedInfo> = listOf()
     ): BlockchainRid {
-        val gtv = GtvFileReader.readFile(blockchainConfigFile)
-        return addBlockchainGtv(nodeConfigFile, chainId, gtv, mode, givenDependencies)
+        return addBlockchainGtv(nodeConfigFile, chainId, blockchainConfigGtv, mode, givenDependencies)
     }
 
     private fun addBlockchainGtv(
@@ -88,14 +86,13 @@ object CliExecution : KLogging() {
 
     fun addConfiguration(
             nodeConfigFile: File,
-            blockchainConfigFile: File,
+            blockchainConfig: Gtv,
             chainId: Long,
             height: Long,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             allowUnknownSigners: Boolean = false
     ) {
-        val gtv = GtvFileReader.readFile(blockchainConfigFile)
-        addConfigurationGtv(nodeConfigFile, gtv, chainId, height, mode, allowUnknownSigners)
+        addConfigurationGtv(nodeConfigFile, blockchainConfig, chainId, height, mode, allowUnknownSigners)
     }
 
     private fun addConfigurationGtv(
