@@ -4,7 +4,7 @@ package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.cli.util.SafeExecutor.runIfChainExists
+import net.postchain.cli.util.SafeExecutor.runOnChain
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
@@ -20,7 +20,7 @@ class CommandCheckBlockchain : CliktCommand(name = "check-blockchain", help = "C
     private val blockchainRID by blockchainRidOption()
 
     override fun run() {
-        runIfChainExists(nodeConfigFile, chainId) {
+        runOnChain(nodeConfigFile, chainId) {
             try {
                 CliExecution.checkBlockchain(nodeConfigFile, chainId, blockchainRID.toHex())
                 println("OK: blockchain with specified chainId and blockchainRid exists")

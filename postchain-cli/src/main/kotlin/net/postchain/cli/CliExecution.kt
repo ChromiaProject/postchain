@@ -103,7 +103,7 @@ object CliExecution : KLogging() {
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             allowUnknownSigners: Boolean
     ) {
-        runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+        runStorageCommand(nodeConfigFile, chainId) { ctx ->
             try {
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
@@ -136,16 +136,12 @@ object CliExecution : KLogging() {
     }
 
     fun setMustSyncUntil(nodeConfigFile: File, blockchainRID: BlockchainRid, height: Long): Boolean =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
+            runStorageCommand(nodeConfigFile) { ctx ->
                 BlockchainApi.setMustSyncUntil(ctx, blockchainRID, height)
             }
 
-    fun getMustSyncUntilHeight(nodeConfigFile: File): Map<Long, Long> = runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
-        BlockchainApi.getMustSyncUntilHeight(ctx)
-    }
-
     fun peerinfoAdd(nodeConfigFile: File, host: String, port: Int, pubKey: String, mode: AlreadyExistMode): Boolean =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
+            runStorageCommand(nodeConfigFile) { ctx ->
                 // mode tells us how to react upon an error caused if pubkey already exist (throw error or force write).
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
@@ -189,26 +185,24 @@ object CliExecution : KLogging() {
         }
     }
 
-    fun findBlockchainRid(nodeConfigFile: File, chainId: Long) =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
-                DatabaseAccess.of(ctx).getBlockchainRid(ctx)
-            }
+    fun findBlockchainRid(nodeConfigFile: File, chainId: Long) = runStorageCommand(nodeConfigFile, chainId) { ctx ->
+        DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+    }
 
     fun checkBlockchain(nodeConfigFile: File, chainId: Long, blockchainRID: String) {
-        runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+        runStorageCommand(nodeConfigFile, chainId) { ctx ->
             BlockchainApi.checkBlockchain(ctx, blockchainRID)
         }
     }
 
     fun getConfiguration(nodeConfigFile: File, chainId: Long, height: Long): ByteArray? =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+            runStorageCommand(nodeConfigFile, chainId) { ctx ->
                 BlockchainApi.getConfiguration(ctx, height)
             }
 
-    fun listConfigurations(nodeConfigFile: File, chainId: Long) =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
-                BlockchainApi.listConfigurations(ctx)
-            }
+    fun listConfigurations(nodeConfigFile: File, chainId: Long) = runStorageCommand(nodeConfigFile, chainId) { ctx ->
+        BlockchainApi.listConfigurations(ctx)
+    }
 
     fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: File) {
         tryCreateBasicDataSource(nodeConfigFile)?.let { return } ?: if (retryTimes > 0) {

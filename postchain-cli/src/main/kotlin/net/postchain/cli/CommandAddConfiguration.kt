@@ -18,12 +18,11 @@ import net.postchain.cli.AlreadyExistMode.ERROR
 import net.postchain.cli.AlreadyExistMode.FORCE
 import net.postchain.cli.CommandAddConfiguration.Height.Absolute
 import net.postchain.cli.CommandAddConfiguration.Height.Relative
-import net.postchain.cli.util.SafeExecutor.runIfChainExists
+import net.postchain.cli.util.SafeExecutor.runOnChain
 import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.nodeConfigOption
-import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 
 class CommandAddConfiguration : CliktCommand(
@@ -62,10 +61,10 @@ class CommandAddConfiguration : CliktCommand(
 
     override fun run() {
         val height0 = when (height) {
-            Relative -> Relative.value + runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+            Absolute -> Absolute.value
+            else -> Relative.value + runStorageCommand(nodeConfigFile, chainId) { ctx ->
                 BlockchainApi.getLastBlockHeight(ctx)
             }
-            else -> Absolute.value
         }
 
         val gtv = try {
@@ -75,7 +74,7 @@ class CommandAddConfiguration : CliktCommand(
             return
         }
 
-        runIfChainExists(nodeConfigFile, chainId) {
+        runOnChain(nodeConfigFile, chainId) {
             try {
                 CliExecution.addConfiguration(nodeConfigFile, gtv, chainId, height0, force, allowUnknownSigners)
                 println("Configuration has been added successfully")

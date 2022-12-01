@@ -5,7 +5,7 @@ import java.io.File
 
 object SafeExecutor {
 
-    fun runIfChainExists(nodeConfigFile: File, chainId: Long, action: () -> Unit) {
+    fun runOnChain(nodeConfigFile: File, chainId: Long, action: () -> Unit) {
         val brid = CliExecution.findBlockchainRid(nodeConfigFile, chainId)
         if (brid != null) {
             action()

@@ -8,11 +8,10 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
-import net.postchain.cli.util.SafeExecutor.runIfChainExists
+import net.postchain.cli.util.SafeExecutor.runOnChain
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.exception.UserMistake
-import net.postchain.config.app.AppConfig
 
 class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", help = "Remove configuration at a given height for a blockchain.") {
 
@@ -24,8 +23,8 @@ class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", h
     private val height by option("-h", "--height", help = "Height of configuration to remove").long().required()
 
     override fun run() {
-        runIfChainExists(nodeConfigFile, chainId) {
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+        runOnChain(nodeConfigFile, chainId) {
+            runStorageCommand(nodeConfigFile, chainId) { ctx ->
                 val config = BlockchainApi.getConfiguration(ctx, height)
                 if (config != null) {
                     try {

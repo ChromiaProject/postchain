@@ -9,7 +9,6 @@ import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.Templater
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.requiredPubkeyOption
-import net.postchain.config.app.AppConfig
 import net.postchain.crypto.PubKey
 import java.io.File
 
@@ -34,7 +33,7 @@ class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Rem
     }
 
     private fun peerinfoRemove(nodeConfigFile: File, pubKey: String): Array<PeerInfo> {
-        return runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
+        return runStorageCommand(nodeConfigFile) { ctx ->
             PeerApi.removePeer(ctx, PubKey(pubKey))
         }
     }

@@ -84,7 +84,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                         }
 
                         lastHeights[chainId] = if (chainExists) {
-                            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+                            runStorageCommand(nodeConfigFile, chainId) { ctx ->
                                 BlockchainApi.getLastBlockHeight(ctx)
                             }
                         } else -1L
