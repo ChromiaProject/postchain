@@ -1,7 +1,6 @@
 package net.postchain.cli
 
 import assertk.assert
-import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.data.DatabaseAccess
@@ -80,18 +79,16 @@ class CliIntegrationIT {
 
     @Test
     fun testAddConfigurationMissingPeerinfo() {
-        val exception = assertThrows<CliException> {
-            CommandAddConfiguration().parse(
-                    arrayOf(
-                            "-nc", nodeConfigPath.absolutePath,
-                            "-bc", secondBlockChainConfig.absolutePath,
-                            "-cid", chainId.toString(),
-                            "--height", heightSecondConfig.toString(),
-                            "--force"
-                    )
-            )
-        }
-        assert(exception.message).contains("MISSING_PEERINFO")
+        CommandAddConfiguration().parse(
+                arrayOf(
+                        "-nc", nodeConfigPath.absolutePath,
+                        "-bc", secondBlockChainConfig.absolutePath,
+                        "-cid", chainId.toString(),
+                        "--height", heightSecondConfig.toString(),
+                        "--force"
+                )
+        )
+
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
         assertNull(configData)
     }
