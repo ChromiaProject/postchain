@@ -27,7 +27,7 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
         val gtv = try {
             GtvFileReader.readFile(blockchainConfigFile)
         } catch (e: Exception) {
-            println("Configuration can not be loaded, the file is corrupted: ${blockchainConfigFile.path}")
+            println("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}")
             return
         }
 

@@ -102,6 +102,11 @@
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
+            <dependency> <!-- used by downstream projects -->
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-coroutines-core</artifactId>
+                <version>1.6.4</version>
+            </dependency>
 
             <!-- Postchain -->
             <dependency>
@@ -332,6 +337,11 @@
                 <version>2.35</version>
             </dependency>
             <dependency>
+                <groupId>org.glassfish.hk2</groupId>
+                <artifactId>hk2-api</artifactId>
+                <version>2.6.1</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
                 <version>4.5.13</version>
@@ -532,6 +542,12 @@
                 <groupId>org.apache.tomcat</groupId>
                 <artifactId>annotations-api</artifactId>
                 <version>6.0.53</version>
+            </dependency>
+
+            <dependency> <!-- used by downstream projects -->
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq</artifactId>
+                <version>3.10.4</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

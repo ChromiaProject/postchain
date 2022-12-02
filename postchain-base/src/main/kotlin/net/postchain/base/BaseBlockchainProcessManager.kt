@@ -328,11 +328,9 @@ open class BaseBlockchainProcessManager(
                 }
             }
 
-            diagnosticData
-                    .mapValues { (_, v) ->
-                        v.mapValues { (_, v2) -> v2() }
-                    }
-                    .values.toTypedArray()
+            diagnosticData.mapValues { (_, v) ->
+                v.map { e -> e.key.prettyName to e.value() }.toMap()
+            }.values.toTypedArray()
         }
     }
 

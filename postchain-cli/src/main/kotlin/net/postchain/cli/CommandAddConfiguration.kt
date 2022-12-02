@@ -4,6 +4,7 @@ package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
+import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
@@ -29,7 +30,7 @@ class CommandAddConfiguration : CliktCommand(
                 "exist in the list of added peerInfos. Else flag --allow-unknown-signers must be set."
 ) {
 
-    private enum class Height(var value: Long = 0) {
+    private enum class Height {
         Absolute, Relative
     }
 
@@ -40,14 +41,14 @@ class CommandAddConfiguration : CliktCommand(
 
     private val height by mutuallyExclusiveOptions(
             option("-h", "--height", help = "Height of configuration").long()
-                    .convert { Absolute.apply { value = it } }
+                    .convert { Absolute to it }
                     .validate {
-                        require(it.value > 0L) { "must be positive; use add-blockchain command to add configuration at height 0" }
+                        require(it.second > 0L) { "must be positive; use add-blockchain command to add configuration at height 0" }
                     },
             option("-fh", "--future-height", help = "Add a configuration this many blocks in the future. (Not compatible with --height)").long()
-                    .convert { Relative.apply { value = it } }
-                    .validate { require(it.value > 0L) { "must be positive" } }
-    ).single()
+                    .convert { Relative to it }
+                    .validate { require(it.second > 0L) { "must be positive" } }
+    ).single().required()
 
     private val blockchainConfigFile by blockchainConfigOption()
 
@@ -56,9 +57,9 @@ class CommandAddConfiguration : CliktCommand(
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
     override fun run() {
-        val height0 = when (height) {
-            Absolute -> Absolute.value
-            else -> Relative.value + runStorageCommand(nodeConfigFile, chainId) { ctx ->
+        val height0 = when (height.first) {
+            Absolute -> height.second
+            else -> height.second + runStorageCommand(nodeConfigFile, chainId) { ctx ->
                 BlockchainApi.getLastBlockHeight(ctx)
             }
         }
@@ -66,7 +67,7 @@ class CommandAddConfiguration : CliktCommand(
         val gtv = try {
             GtvFileReader.readFile(blockchainConfigFile)
         } catch (e: Exception) {
-            println("Configuration can not be loaded, the file is corrupted: ${blockchainConfigFile.path}")
+            println("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}")
             return
         }
 
