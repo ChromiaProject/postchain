@@ -22,7 +22,7 @@ class CommandBlockchainReplicaRemove : CliktCommand(
 
     override fun run() {
         val removed = runStorageCommand(nodeConfigFile) { ctx ->
-            BlockchainApi.removeBlockchainReplica(ctx, blockchainRID.toHex(), pubKey.hex())
+            BlockchainApi.removeBlockchainReplica(ctx, blockchainRID, pubKey)
         }
 
         if (removed.isEmpty()) {

@@ -17,6 +17,7 @@ import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
+import net.postchain.crypto.PubKey
 import java.sql.Connection
 import java.time.Instant
 
@@ -118,9 +119,9 @@ interface DatabaseAccess {
 
     // Extra nodes to sync from
     fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<NodeRid>>
-    fun existsBlockchainReplica(ctx: AppContext, brid: String, pubkey: String): Boolean
-    fun addBlockchainReplica(ctx: AppContext, brid: String, pubKey: String): Boolean
-    fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubKey: String): Set<BlockchainRid>
+    fun existsBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubkey: PubKey): Boolean
+    fun addBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubKey: PubKey): Boolean
+    fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid?, pubKey: PubKey): Set<BlockchainRid>
     fun getBlockchainsToReplicate(ctx: AppContext, pubkey: String): Set<BlockchainRid>
 
     //Avoid potential chain split

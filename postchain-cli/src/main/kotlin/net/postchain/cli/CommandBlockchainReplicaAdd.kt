@@ -19,7 +19,7 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add"
 
     override fun run() {
         val added = runStorageCommand(nodeConfigFile) { ctx ->
-            BlockchainApi.addBlockchainReplica(ctx, blockchainRID.toHex(), pubKey.hex())
+            BlockchainApi.addBlockchainReplica(ctx, blockchainRID, pubKey)
         }
 
         return when {
