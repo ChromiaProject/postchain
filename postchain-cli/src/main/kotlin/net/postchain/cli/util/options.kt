@@ -20,7 +20,7 @@ fun CliktCommand.blockchainConfigOption() = option(
 ).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true).required()
 
 fun CliktCommand.blockchainRidOption() =
-    option("-brid", "--blockchain-rid", help = "Blockchain RID", envvar = "POSTCHAIN_BRID").convert { BlockchainRid.buildFromHex(it) }.required()
+        option("-brid", "--blockchain-rid", help = "Blockchain RID", envvar = "POSTCHAIN_BRID").convert { BlockchainRid.buildFromHex(it) }.required()
 
 fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Local number id of blockchain", envvar = "POSTCHAIN_CHAIN_ID").long()
 
@@ -41,7 +41,7 @@ fun CliktCommand.portOption() = option("-p", "--port", help = "Port", envvar = "
 fun CliktCommand.pubkeyOption() = option("-pk", "--pubkey", help = "Public key", envvar = "POSTCHAIN_PUBKEY").validate { validatePubkey(it) }
 
 fun CliktCommand.requiredPubkeyOption() =
-    option("-pk", "--pubkey", help = "Public key", envvar = "POSTCHAIN_PUBKEY").required().validate { validatePubkey(it) }
+        option("-pk", "--pubkey", help = "Public key", envvar = "POSTCHAIN_PUBKEY").required().validate { validatePubkey(it) }
 
 private fun validatePubkey(it: String) {
     require(it.length == 66) { "Public key must have length 66" }
