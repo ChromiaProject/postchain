@@ -70,9 +70,9 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
     private fun buildTransaction(blockchainRid: BlockchainRid, value: String): GTXTransaction {
         val factory = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
         val builder = GtxBuilder(blockchainRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
-            .addOperation("gtx_test", GtvFactory.gtv(1L), GtvFactory.gtv(value))
-            .finish()
-            .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
+                .addOperation("gtx_test", GtvFactory.gtv(1L), GtvFactory.gtv(value))
+                .finish()
+                .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
 
         return factory.build(builder.buildGtx())
     }
