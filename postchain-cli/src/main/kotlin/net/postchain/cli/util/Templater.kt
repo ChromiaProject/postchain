@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.cli
+package net.postchain.cli.util
 
 import net.postchain.base.PeerInfo
 import net.postchain.common.toHex

@@ -1,7 +1,6 @@
 package net.postchain.cli
 
 import assertk.assert
-import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.data.DatabaseAccess
@@ -11,6 +10,7 @@ import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.Storage
+import net.postchain.gtv.GtvFileReader
 import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -42,8 +42,8 @@ class CliIntegrationIT {
         // this wipes the database.
         storage = StorageBuilder.buildStorage(appConfig, true)
         // add-blockchain goes here
-        val blockChainConfig = fullPath("blockchain_config.xml")
-        CliExecution.addBlockchain(nodeConfigPath, chainId, blockChainConfig, AlreadyExistMode.FORCE)
+        val gtv = GtvFileReader.readFile(fullPath("blockchain_config.xml"))
+        CliExecution.addBlockchain(nodeConfigPath, chainId, gtv, AlreadyExistMode.FORCE)
     }
 
     @Test
@@ -79,8 +79,7 @@ class CliIntegrationIT {
 
     @Test
     fun testAddConfigurationMissingPeerinfo() {
-        val exception = assertThrows<CliException> {
-            CommandAddConfiguration().parse(
+        CommandAddConfiguration().parse(
                 arrayOf(
                         "-nc", nodeConfigPath.absolutePath,
                         "-bc", secondBlockChainConfig.absolutePath,
@@ -88,9 +87,8 @@ class CliIntegrationIT {
                         "--height", heightSecondConfig.toString(),
                         "--force"
                 )
-            )
-        }
-        assert(exception.message).contains("MISSING_PEERINFO")
+        )
+
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
         assertNull(configData)
     }
@@ -99,14 +97,14 @@ class CliIntegrationIT {
     fun testAddConfigurationAllowUnknownSigners() {
         // change configuration with 4 signer at height 10
         CommandAddConfiguration().parse(
-            arrayOf(
-                    "-nc", nodeConfigPath.absolutePath,
-                    "-bc", secondBlockChainConfig.absolutePath,
-                    "-cid", chainId.toString(),
-                    "--height", heightSecondConfig.toString(),
-                    "--allow-unknown-signers",
-                    "--force"
-            )
+                arrayOf(
+                        "-nc", nodeConfigPath.absolutePath,
+                        "-bc", secondBlockChainConfig.absolutePath,
+                        "-cid", chainId.toString(),
+                        "--height", heightSecondConfig.toString(),
+                        "--allow-unknown-signers",
+                        "--force"
+                )
         )
 
         // assert bc added
@@ -139,13 +137,13 @@ class CliIntegrationIT {
         // change configuration with 4 signer and height is 10
         val secondBlockChainConfig = fullPath("blockchain_config_4_signers.xml")
         CommandAddConfiguration().parse(
-            arrayOf(
-                    "-nc", nodeConfigPath.absolutePath,
-                    "-bc", secondBlockChainConfig.absolutePath,
-                    "-cid", chainId.toString(),
-                    "--height", heightSecondConfig.toString(),
-                    "--force"
-            )
+                arrayOf(
+                        "-nc", nodeConfigPath.absolutePath,
+                        "-bc", secondBlockChainConfig.absolutePath,
+                        "-cid", chainId.toString(),
+                        "--height", heightSecondConfig.toString(),
+                        "--force"
+                )
         )
         // assert config added
         val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)

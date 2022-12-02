@@ -4,9 +4,11 @@ package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.SafeExecutor.runOnChain
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.common.exception.UserMistake
 
 class CommandCheckBlockchain : CliktCommand(name = "check-blockchain", help = "Checks Blockchain") {
 
@@ -18,7 +20,15 @@ class CommandCheckBlockchain : CliktCommand(name = "check-blockchain", help = "C
     private val blockchainRID by blockchainRidOption()
 
     override fun run() {
-        CliExecution.checkBlockchain(nodeConfigFile, chainId, blockchainRID.toHex())
-        println("Okay")
+        runOnChain(nodeConfigFile, chainId) {
+            try {
+                CliExecution.checkBlockchain(nodeConfigFile, chainId, blockchainRID.toHex())
+                println("OK: blockchain with specified chainId and blockchainRid exists")
+            } catch (e: UserMistake) {
+                println(e.message)
+            } catch (e: Exception) {
+                println("Can't check blockchain: ${e.message}")
+            }
+        }
     }
 }
