@@ -15,7 +15,6 @@ import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BadDataMistake
@@ -140,12 +139,12 @@ object CliExecution : KLogging() {
                 BlockchainApi.setMustSyncUntil(ctx, blockchainRID, height)
             }
 
-    fun peerinfoAdd(nodeConfigFile: File, host: String, port: Int, pubKey: String, mode: AlreadyExistMode): Boolean =
+    fun peerinfoAdd(nodeConfigFile: File, host: String, port: Int, pubKey: PubKey, mode: AlreadyExistMode): Boolean =
             runStorageCommand(nodeConfigFile) { ctx ->
                 // mode tells us how to react upon an error caused if pubkey already exist (throw error or force write).
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
-                        val added = PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
+                        val added = PeerApi.addPeer(ctx, pubKey, host, port, false)
                         if (!added) {
                             throw CliException("Peerinfo with pubkey already exists. Using -f to force update")
                         }
@@ -153,11 +152,11 @@ object CliExecution : KLogging() {
                     }
 
                     AlreadyExistMode.FORCE -> {
-                        PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, true)
+                        PeerApi.addPeer(ctx, pubKey, host, port, true)
                     }
 
                     AlreadyExistMode.IGNORE -> {
-                        PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
+                        PeerApi.addPeer(ctx, pubKey, host, port, false)
                     }
                 }
             }

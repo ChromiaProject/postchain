@@ -3,11 +3,8 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.cli.AlreadyExistMode.ERROR
-import net.postchain.cli.AlreadyExistMode.FORCE
 import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
@@ -23,9 +20,7 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
 
     private val blockchainConfigFile by blockchainConfigOption()
 
-    private val force by forceOption()
-            .convert { if (it) FORCE else ERROR }
-            .help("Force the addition of already existed blockchain-rid (by chain-id)")
+    private val force by forceOption().help("Force the addition of already existed blockchain-rid (by chain-id)")
 
 
     override fun run() {
