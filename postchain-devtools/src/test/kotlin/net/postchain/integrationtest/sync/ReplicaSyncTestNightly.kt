@@ -6,6 +6,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.AppContext
+import net.postchain.crypto.PubKey
 import net.postchain.devtools.AbstractSyncTest
 import org.awaitility.Awaitility
 import org.awaitility.core.ConditionTimeoutException
@@ -75,7 +76,7 @@ class ReplicaSyncTestNightly : AbstractSyncTest() {
     override fun addPeerInfo(dbAccess: DatabaseAccess, ctx: AppContext, peerInfo: PeerInfo, brid: BlockchainRid, isPeerSigner: Boolean) {
         dbAccess.addPeerInfo(ctx, peerInfo)
         if (!isPeerSigner && addReplica) {
-            dbAccess.addBlockchainReplica(ctx, brid.toHex(), peerInfo.pubKey.toHex())
+            dbAccess.addBlockchainReplica(ctx, brid, PubKey(peerInfo.pubKey))
         }
     }
 }

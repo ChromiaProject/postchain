@@ -13,7 +13,7 @@ fun String.hexStringToByteArray(): ByteArray {
 
     val result = ByteArray(length / 2)
 
-    for (i in 0 until length step 2) {
+    for (i in indices step 2) {
         val firstIndex = HEX_CHARS.indexOf(this[i], ignoreCase = true)
         require(firstIndex != -1) { "Char ${this[i]} is not a hex digit" }
 

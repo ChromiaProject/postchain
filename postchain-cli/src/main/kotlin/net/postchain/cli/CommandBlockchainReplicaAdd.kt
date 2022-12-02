@@ -18,14 +18,13 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add"
     private val blockchainRID by blockchainRidOption()
 
     override fun run() {
-        val added = addReplica(blockchainRID.toHex(), pubKey)
+        val added = runStorageCommand(nodeConfigFile) { ctx ->
+            BlockchainApi.addBlockchainReplica(ctx, blockchainRID, pubKey)
+        }
+
         return when {
             added -> println("$commandName finished successfully")
             else -> println("Blockchain replica already exists")
         }
-    }
-
-    private fun addReplica(brid: String, pubKey: String) = runStorageCommand(nodeConfigFile) { ctx ->
-        BlockchainApi.addBlockchainReplica(ctx, brid, pubKey)
     }
 }

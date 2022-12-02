@@ -10,6 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.AppContext
 import net.postchain.core.NodeRid
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
@@ -51,7 +52,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 BlockchainPreSetup.simpleBuild(chainId, (0 until signerNodeCount).map { NodeSeqNumber(it) })
         val blockchainSetup = BlockchainSetup.buildFromGtv(chainId, blockchainPreSetup.toGtvConfig(mapOf()))
         val strategyClassName = blockchainSetup.bcGtv[KEY_BLOCKSTRATEGY]?.asDict()?.get("name")?.asString()
-        logger.debug {"++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: $strategyClassName"}
+        logger.debug { "++ BC Setup: ${blockchainSetup.rid.toShortHex()} , strategy: $strategyClassName" }
 
         // 2. Get NodeSetup
         var i = 0
@@ -167,9 +168,9 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         val appConfig = nodeSetup.configurationProvider!!.getConfiguration().appConfig
 
         if (wipeDb) {
-            logger.debug {"++ Wiping DB for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}"}
+            logger.debug { "++ Wiping DB for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}" }
         } else {
-            logger.debug {"++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}"}
+            logger.debug { "++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}" }
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDb).close()
@@ -188,15 +189,15 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     }
 
     open protected fun addPeerInfo(
-        dbAccess: DatabaseAccess,
-        ctx: AppContext,
-        peerInfo: PeerInfo,
-        brid: BlockchainRid,
-        isPeerSigner: Boolean
+            dbAccess: DatabaseAccess,
+            ctx: AppContext,
+            peerInfo: PeerInfo,
+            brid: BlockchainRid,
+            isPeerSigner: Boolean
     ) {
         dbAccess.addPeerInfo(ctx, peerInfo)
         if (!isPeerSigner) {
-            dbAccess.addBlockchainReplica(ctx, brid.toHex(), peerInfo.pubKey.toHex())
+            dbAccess.addBlockchainReplica(ctx, brid, PubKey(peerInfo.pubKey))
         }
     }
 

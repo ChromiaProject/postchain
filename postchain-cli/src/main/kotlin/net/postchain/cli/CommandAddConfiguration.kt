@@ -15,8 +15,6 @@ import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
-import net.postchain.cli.AlreadyExistMode.ERROR
-import net.postchain.cli.AlreadyExistMode.FORCE
 import net.postchain.cli.CommandAddConfiguration.Height.Absolute
 import net.postchain.cli.CommandAddConfiguration.Height.Relative
 import net.postchain.cli.util.SafeExecutor.runOnChain
@@ -54,9 +52,7 @@ class CommandAddConfiguration : CliktCommand(
 
     private val blockchainConfigFile by blockchainConfigOption()
 
-    private val force by forceOption()
-            .convert { if (it) FORCE else ERROR }
-            .help("Force the addition of blockchain configuration which already exists of specified chain-id at height")
+    private val force by forceOption().help("Force the addition of blockchain configuration which already exists of specified chain-id at height")
 
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
