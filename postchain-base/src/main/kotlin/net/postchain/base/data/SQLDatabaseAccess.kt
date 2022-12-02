@@ -22,6 +22,7 @@ import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.BeanHandler
@@ -340,10 +341,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         if (rows.isEmpty()) return null
         val data = rows.first()
         return DatabaseAccess.EventInfo(
-            data["position"] as Long,
-            data["block_height"] as Long,
-            data["hash"] as Hash,
-            data["data"] as ByteArray
+                data["position"] as Long,
+                data["block_height"] as Long,
+                data["hash"] as Hash,
+                data["data"] as ByteArray
         )
     }
 
@@ -426,7 +427,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun insertPage(ctx: EContext, name: String, page: Page) {
-        val childHashes = page.childHashes.fold(ByteArray(0)) {total, item -> total.plus(item)}
+        val childHashes = page.childHashes.fold(ByteArray(0)) { total, item -> total.plus(item) }
         queryRunner.update(ctx.conn, cmdInsertPage(ctx, name), page.blockHeight, page.level, page.left, childHashes)
     }
 
@@ -444,7 +445,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         // if data size is not contain correct length then it regards to error
         if (data == null || data.size % HASH_LENGTH != 0) return null
         val length = data.size / HASH_LENGTH
-        val childHashes = Array(length){ByteArray(HASH_LENGTH)}
+        val childHashes = Array(length) { ByteArray(HASH_LENGTH) }
         for (i in 0 until length) {
             val start = i * HASH_LENGTH
             val end = start + HASH_LENGTH - 1
@@ -753,7 +754,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return result.toTypedArray()
     }
 
-    override fun addBlockchainReplica(ctx: AppContext, brid: String, pubKey: String): Boolean {
+    override fun addBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubKey: PubKey): Boolean {
         if (existsBlockchainReplica(ctx, brid, pubKey)) {
             return false
         }
@@ -767,7 +768,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             ($TABLE_REPLICAS_FIELD_BRID, $TABLE_REPLICAS_FIELD_PUBKEY) 
             VALUES (?, (SELECT $TABLE_PEERINFOS_FIELD_PUBKEY FROM ${tablePeerinfos()} WHERE lower($TABLE_PEERINFOS_FIELD_PUBKEY) = lower(?)))
         """.trimIndent()
-        queryRunner.insert(ctx.conn, sql, ScalarHandler<String>(), brid, pubKey)
+        queryRunner.insert(ctx.conn, sql, ScalarHandler<String>(), brid.toHex(), pubKey.hex())
         return true
     }
 
@@ -793,18 +794,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return result.map { BlockchainRid.buildFromHex(it) }.toSet()
     }
 
-    override fun existsBlockchainReplica(ctx: AppContext, brid: String, pubkey: String): Boolean {
+    override fun existsBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubkey: PubKey): Boolean {
         val query = """
             SELECT count($TABLE_REPLICAS_FIELD_PUBKEY) 
             FROM ${tableBlockchainReplicas()}
-            WHERE $TABLE_REPLICAS_FIELD_BRID = '$brid' AND
-            lower($TABLE_REPLICAS_FIELD_PUBKEY) = lower('$pubkey') 
+            WHERE $TABLE_REPLICAS_FIELD_BRID = '${brid.toHex()}' AND
+            lower($TABLE_REPLICAS_FIELD_PUBKEY) = lower('${pubkey.hex()}') 
             """.trimIndent()
 
         return queryRunner.query(ctx.conn, query, ScalarHandler<Long>()) > 0
     }
 
-    override fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubKey: String): Set<BlockchainRid> {
+    override fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid?, pubKey: PubKey): Set<BlockchainRid> {
         val delete = """DELETE FROM ${tableBlockchainReplicas()} 
                 WHERE $TABLE_REPLICAS_FIELD_PUBKEY = ?"""
         val res = if (brid == null) {
@@ -812,14 +813,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 $delete
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey)
+            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey.hex())
         } else {
             val sql = """
                 $delete
                 AND $TABLE_REPLICAS_FIELD_BRID = ?
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey, brid)
+            queryRunner.query(ctx.conn, sql, ColumnListHandler(TABLE_REPLICAS_FIELD_BRID), pubKey.hex(), brid.toHex())
         }
         return res.map { BlockchainRid.buildFromHex(it) }.toSet()
     }

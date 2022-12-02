@@ -17,16 +17,15 @@ class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer 
     private val nodeConfigFile by nodeConfigOption()
 
     private val host by hostOption().required()
+
     private val port by portOption().required()
+
     private val pubKey by requiredPubkeyOption()
 
     private val force by forceOption().help("Force the addition of peerinfo which already exists with the same host:port")
 
     override fun run() {
-        val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
-        // Make all pubkey strings in db upper case. It will then be consistent with package net.postchain.common.
-        //with HEX_CHARS = "0123456789ABCDEF"
-        val added = CliExecution.peerinfoAdd(nodeConfigFile, host, port, pubKey.uppercase(), mode)
+        val added = CliExecution.peerinfoAdd(nodeConfigFile, host, port, pubKey, force)
         when {
             added -> println("Peerinfo has been added successfully")
             else -> println("Peerinfo hasn't been added")
