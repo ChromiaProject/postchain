@@ -10,7 +10,6 @@ import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.CliExecution.findBlockchainRid
 import net.postchain.cli.util.debugOption
-import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 import java.io.File
 import java.nio.file.Paths
@@ -96,7 +95,8 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                                         val gtv = try {
                                             GtvFileReader.readFile(blockchainConfigFile)
                                         } catch (e: Exception) {
-                                            println("Configuration for chain $chainId can not be loaded at height $height, the file is corrupted: ${blockchainConfigFile.path}")
+                                            println("Configuration for chain $chainId can not be loaded at height $height " +
+                                                    "from the file ${blockchainConfigFile.path}, an error occurred: ${e.message}")
                                             if (height == 0L) return@run
                                             else return@forEach
                                         }
