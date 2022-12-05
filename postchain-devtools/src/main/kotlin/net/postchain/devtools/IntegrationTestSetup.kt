@@ -91,7 +91,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     /**
      * Easy to forget we have two caches (due to legacy, maybe a bad practice?)
      */
-    protected fun updateCache(nodeSetup: NodeSetup, testNode: PostchainTestNode) {
+    protected open fun updateCache(nodeSetup: NodeSetup, testNode: PostchainTestNode) {
         nodeMap[nodeSetup.sequenceNumber] = testNode
         val nodeId = nodeSetup.sequenceNumber.nodeNumber
 
@@ -216,7 +216,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
             testNodeMap: Map<NodeSeqNumber, PostchainTestNode>
     ) {
         sysSetup.nodeMap.values.forEach { nodeSetup ->
-            nodeSetup.chainsToSign.forEach { chainIid ->
+            nodeSetup.initialChainsToSign.forEach { chainIid ->
                 val testNode = testNodeMap[nodeSetup.sequenceNumber]
                 val process = testNode!!.getBlockchainInstance(chainIid.toLong())
                 await.until {
@@ -336,7 +336,19 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * @throws TimeoutException if timeout
      */
     protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
-        buildBlock(nodes, chainId, toHeight, *txs, timeout = timeout)
+        buildBlock(getChainNodes(chainId), chainId, toHeight, *txs, timeout = timeout)
+    }
+
+    /**
+     * Builds next block
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(chainId: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+        val currentHeight = getChainNodes(chainId).first().currentHeight(chainId)
+        buildBlock(getChainNodes(chainId), chainId, currentHeight + 1, *txs, timeout = timeout)
     }
 
     /**
@@ -348,6 +360,19 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
         buildBlockNoWait(nodes, chainId, toHeight, *txs)
         awaitHeight(nodes, chainId, toHeight, timeout)
+    }
+
+    /**
+     * Builds next block
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+        val currentHeight = nodes.first().currentHeight(chainId)
+        buildBlockNoWait(nodes, chainId, currentHeight + 1, *txs)
+        awaitHeight(nodes, chainId, currentHeight + 1, timeout)
     }
 
     protected fun buildBlockNoWait(
@@ -372,7 +397,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      */
     protected open fun awaitHeight(chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
         awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
-        awaitHeight(nodes, chainId, height, timeout)
+        awaitHeight(getChainNodes(chainId), chainId, height, timeout)
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
     }
 
@@ -390,4 +415,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
         }
     }
 
+    protected fun getChainNodeSetups(chainId: Long): List<NodeSetup> =
+            systemSetup.nodeMap.values.filter { it.chainsToSign.contains(chainId.toInt()) || it.chainsToRead.contains(chainId.toInt()) }
+
+    protected fun getChainNodes(chainId: Long): List<PostchainTestNode> =
+            getChainNodeSetups(chainId).map { nodes[it.sequenceNumber.nodeNumber] }
 }
