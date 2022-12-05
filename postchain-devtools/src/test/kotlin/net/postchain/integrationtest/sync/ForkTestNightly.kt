@@ -176,10 +176,10 @@ class ForkTestNightly : ManagedModeTest() {
     @Test
     fun testAncestors() {
         extraNodeProperties[0] = mapOf("blockchain_ancestors.${ChainUtil.ridOf(3)}"
-                to listOf(ancestor(1,2)))
+                to listOf(ancestor(1, 2)))
         val (c1, c2) = makeFork() // c1 and c2 both consist of node index 0 (signer) and 1 (replica)
-        dataSources(c1).forEach {
-            it.value.delBlockchain(ChainUtil.ridOf(c1))
+        dataSources(c1).values.forEach {
+            it.delBlockchain(ChainUtil.ridOf(c1))
         }
         buildBlock(c0) // trigger stopping of c1
         val c3 = startNewBlockchain(setOf(0), setOf(), c1)

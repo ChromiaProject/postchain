@@ -61,18 +61,18 @@ open class ManagedModeTest : AbstractSyncTest() {
         ))
         data.setValue(KEY_GTX, GtvFactory.gtv(gtx))
 
-        mockDataSources.forEach {
+        mockDataSources.forEach { (nodeId, dataSource) ->
             val pubkey = if (chainId == 0L) {
-                signerKeys[it.key] ?: KeyPairHelper.pubKey(-1 - it.key)
+                signerKeys[nodeId] ?: KeyPairHelper.pubKey(-1 - nodeId)
             } else {
-                nodes[it.key].pubKey.hexStringToByteArray()
+                nodes[nodeId].pubKey.hexStringToByteArray()
             }
             val sigMaker = createSigMaker(pubkey)
 
             val context = BaseBlockchainContext(brid, NODE_ID_AUTO, chainId, pubkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>(mapOf("partialContext" to context, "sigmaker" to sigMaker))
-            val bcConf = TestBlockchainConfiguration(confData, it.value)
-            it.value.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
+            val bcConf = TestBlockchainConfiguration(confData, dataSource)
+            dataSource.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
         }
     }
 
@@ -95,7 +95,7 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     override fun updateCache(nodeSetup: NodeSetup, testNode: PostchainTestNode) {
         super.updateCache(nodeSetup, testNode)
-        mockDataSources.forEach { it.value.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(it.key)]!!) }
+        mockDataSources.forEach { (nodeId, dataSource) -> dataSource.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(nodeId)]!!) }
     }
 
     fun assertCantBuildBlock(chainId: Long, height: Long) {
@@ -124,8 +124,8 @@ open class ManagedModeTest : AbstractSyncTest() {
         val signerKeys = (0 until signers).associateWith { KeyPairHelper.pubKey(it) }
         addBlockchainConfiguration(0, signerKeys, null, 0)
         runNodes(signers, replicas)
-        mockDataSources.forEach { it.value.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(it.key)]!!) }
-        buildBlock(0, 0)
+        mockDataSources.forEach { (nodeId, dataSource) -> dataSource.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(nodeId)]!!) }
+        buildBlock(c0, 0)
     }
 
 
@@ -182,21 +182,21 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
     protected fun setChainSigners(signers: Set<Int>, chainId: Long) {
-        systemSetup.nodeMap.forEach {
-            if (signers.contains(it.key.nodeNumber)) {
-                it.value.addChainToSign(chainId.toInt())
+        systemSetup.nodeMap.forEach { (nodeSeqNumber, nodeSetup) ->
+            if (signers.contains(nodeSeqNumber.nodeNumber)) {
+                nodeSetup.addChainToSign(chainId.toInt())
             } else {
-                it.value.removeChainToSign(chainId.toInt())
+                nodeSetup.removeChainToSign(chainId.toInt())
             }
         }
     }
 
     protected fun setChainReplicas(replicas: Set<Int>, chainId: Long) {
-        systemSetup.nodeMap.forEach {
-            if (replicas.contains(it.key.nodeNumber)) {
-                it.value.addChainToRead(chainId.toInt())
+        systemSetup.nodeMap.forEach { (nodeSeqNumber, nodeSetup) ->
+            if (replicas.contains(nodeSeqNumber.nodeNumber)) {
+                nodeSetup.addChainToRead(chainId.toInt())
             } else {
-                it.value.removeChainToRead(chainId.toInt())
+                nodeSetup.removeChainToRead(chainId.toInt())
             }
         }
     }
