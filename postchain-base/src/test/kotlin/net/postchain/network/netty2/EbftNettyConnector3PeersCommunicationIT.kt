@@ -9,7 +9,6 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.peer.PeerConnection
@@ -41,31 +40,26 @@ class EbftNettyConnector3PeersCommunicationIT {
 
     @BeforeEach
     fun setUp() {
-        val privKey1 = cryptoSystem.getRandomBytes(32)
-        val pubKey1 = secp256k1_derivePubKey(privKey1)
+        val keyPair1 = cryptoSystem.generateKeyPair()
+        val keyPair2 = cryptoSystem.generateKeyPair()
+        val keyPair3 = cryptoSystem.generateKeyPair()
 
-        val privKey2 = cryptoSystem.getRandomBytes(32)
-        val pubKey2 = secp256k1_derivePubKey(privKey2)
-
-        val privKey3 = cryptoSystem.getRandomBytes(32)
-        val pubKey3 = secp256k1_derivePubKey(privKey3)
-
-        peerInfo1 = peerInfoFromPublicKey(pubKey1)
-        peerInfo2 = peerInfoFromPublicKey(pubKey2)
-        peerInfo3 = peerInfoFromPublicKey(pubKey3)
+        peerInfo1 = peerInfoFromPublicKey(keyPair1.pubKey.data)
+        peerInfo2 = peerInfoFromPublicKey(keyPair2.pubKey.data)
+        peerInfo3 = peerInfoFromPublicKey(keyPair3.pubKey.data)
         val peers = arrayOf(peerInfo1, peerInfo2, peerInfo3)
 
         // Creating
         context1 = EbftTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey1, pubKey1),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair1.privKey.data, keyPair1.pubKey.data),
                 blockchainRid)
 
         context2 = EbftTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey2, pubKey2),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair2.privKey.data, keyPair2.pubKey.data),
                 blockchainRid)
 
         context3 = EbftTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey3, pubKey3),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair3.privKey.data, keyPair3.pubKey.data),
                 blockchainRid)
 
         // Initializing

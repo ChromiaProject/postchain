@@ -31,7 +31,7 @@ class CommandKeygen : CliktCommand(name = "keygen", help = "Generates public/pri
      */
     override fun run() {
         val cs = Secp256K1CryptoSystem()
-        var privKey = cs.getRandomBytes(32)
+        var privKey = cs.generatePrivKey().data
         val mnemonicInstance = MnemonicCode.INSTANCE
         var mnemonic = mnemonicInstance.toMnemonic(privKey).joinToString(" ")
         if (wordList.isNotEmpty()) {
