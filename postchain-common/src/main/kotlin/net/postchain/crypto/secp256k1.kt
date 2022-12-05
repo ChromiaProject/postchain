@@ -244,7 +244,7 @@ open class Secp256K1CryptoSystem : CryptoSystem {
                 ECPrivateKeyParameters(d, CURVE) // validate private key
                 break
             } catch (e: Exception) {
-                logger.info("Generated invalid private key: $d")
+                logger.debug("Generated invalid private key: $d")
             }
         }
         return Pair(privateKey, d)
