@@ -3,17 +3,18 @@
 package net.postchain.crypto.devtools
 
 import net.postchain.common.toHex
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
 
 /**
  * A cache that maps an "index" to pairs of pub and private keys (The "index" is a "node index" in the context
  * of Postchain, but could in theory be anything.)
- * The smart thing about this cache is that if the pub/priv keys are not known they are calculated from the index and
- * then put into the chache.
  *
- * Note: Clearly this class should only be used for tests. In real code the keys should not be calculated from an index.
+ * Note: Clearly this class should only be used for tests.
  */
 object KeyPairHelper {
+
+    val cryptoSystem = Secp256K1CryptoSystem()
 
     private val privKeys = mutableMapOf<Int, Pair<ByteArray, String>>()
     private val pubKeys = mutableMapOf<Int, Pair<ByteArray, String>>()
@@ -26,51 +27,37 @@ object KeyPairHelper {
         }
     }
 
-    fun privKey(pubKey: ByteArray): ByteArray {
-        return privKeys[pubKeyHexToIndex[pubKey.toHex()]]!!.first
-    }
+    fun privKey(pubKey: ByteArray): ByteArray = privKeys[pubKeyHexToIndex[pubKey.toHex()]]!!.first
 
-    fun privKey(index: Int): ByteArray {
-        return getCachedPrivKey(index).first
-    }
+    fun privKey(index: Int): ByteArray = getCachedPrivKey(index).first
 
-    fun privKeyHex(index: Int): String {
-        return getCachedPrivKey(index).second
-    }
+    fun privKeyHex(index: Int): String = getCachedPrivKey(index).second
 
-    fun pubKey(index: Int): ByteArray {
-        return getCachedPubKey(index).first
-    }
+    fun pubKey(index: Int): ByteArray = getCachedPubKey(index).first
 
-    fun pubKeyHex(index: Int): String {
-        return getCachedPubKey(index).second
-    }
+    fun pubKeyHex(index: Int): String = getCachedPubKey(index).second
 
     // TODO: [olle] Is there any way to do the same smart calculation? No fun if we return "null" here
-    fun pubKeyFromByteArray(pubKeyHex: String): Int? {
-        return pubKeyHexToIndex[pubKeyHex]
-    }
+    fun pubKeyFromByteArray(pubKeyHex: String): Int? = pubKeyHexToIndex[pubKeyHex]
 
     private fun getCachedPrivKey(index: Int): Pair<ByteArray, String> {
-        return privKeys.getOrPut(index) {
-            // private key index 0 is all zeroes except byte16 which is 1
-            // private key index 12 is all 12:s except byte16 which is 1
-            // reason for byte16 = 1 is that private key cannot be all zeroes
-            // exception: for index == -1 byte15 is used not to exceed the max private key value
-            ByteArray(32) { index.toByte() }
-                    .apply { set(if (index == -1) 15 else 16, 1) }
-                    .let { it to it.toHex() }
+        val privKey = privKeys.getOrPut(index) {
+            val generatedPrivKey = cryptoSystem.generatePrivKey()
+            generatedPrivKey.data to generatedPrivKey.data.toHex()
         }
+        val pubKey = secp256k1_derivePubKey(privKey.first)
+        pubKeys[index] = pubKey to pubKey.toHex()
+        return privKey
     }
 
     private fun getCachedPubKey(index: Int): Pair<ByteArray, String> {
         val foundPubKey = pubKeys[index]
-        if (foundPubKey != null) {
-            return foundPubKey
+        return if (foundPubKey != null) {
+            foundPubKey
         } else {
             val calculatedPair = secp256k1_derivePubKey(privKey(index)).let { it to it.toHex() }
             updatePubKeyMaps(index, calculatedPair)
-            return calculatedPair
+            calculatedPair
         }
     }
 
@@ -78,5 +65,4 @@ object KeyPairHelper {
         pubKeys[index] = pair
         pubKeyHexToIndex[pair.second] = index
     }
-
 }
