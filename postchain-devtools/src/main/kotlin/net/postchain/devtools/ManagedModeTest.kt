@@ -62,7 +62,12 @@ open class ManagedModeTest : AbstractSyncTest() {
         data.setValue(KEY_GTX, GtvFactory.gtv(gtx))
 
         mockDataSources.forEach {
-            val (pubkey, sigMaker) = createSigMaker(signerKeys[it.key] ?: KeyPairHelper.pubKey(-1 - it.key))
+            val pubkey = if (chainId == 0L) {
+                signerKeys[it.key] ?: KeyPairHelper.pubKey(-1 - it.key)
+            } else {
+                nodes[it.key].pubKey.hexStringToByteArray()
+            }
+            val sigMaker = createSigMaker(pubkey)
 
             val context = BaseBlockchainContext(brid, NODE_ID_AUTO, chainId, pubkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>(mapOf("partialContext" to context, "sigmaker" to sigMaker))
@@ -146,7 +151,8 @@ open class ManagedModeTest : AbstractSyncTest() {
         if (rawBlockchainConfiguration != null) {
             val brid = ChainUtil.ridOf(newChainId)
             mockDataSources.forEach { (nodeId, dataSource) ->
-                val (pubkey, sigMaker) = createSigMaker(nodes[nodeId].pubKey.hexStringToByteArray())
+                val pubkey = nodes[nodeId].pubKey.hexStringToByteArray()
+                val sigMaker = createSigMaker(pubkey)
 
                 val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, newChainId, pubkey, sigMaker)
                 val bcFactory = blockchainConfigurationFactory ?: GTXBlockchainConfigurationFactory()
@@ -178,9 +184,9 @@ open class ManagedModeTest : AbstractSyncTest() {
     protected fun setChainSigners(signers: Set<Int>, chainId: Long) {
         systemSetup.nodeMap.forEach {
             if (signers.contains(it.key.nodeNumber)) {
-                it.value.chainsToSign.add(chainId.toInt())
+                it.value.addChainToSign(chainId.toInt())
             } else {
-                it.value.chainsToSign.remove(chainId.toInt())
+                it.value.removeChainToSign(chainId.toInt())
             }
         }
     }
@@ -188,17 +194,16 @@ open class ManagedModeTest : AbstractSyncTest() {
     protected fun setChainReplicas(replicas: Set<Int>, chainId: Long) {
         systemSetup.nodeMap.forEach {
             if (replicas.contains(it.key.nodeNumber)) {
-                it.value.chainsToRead.add(chainId.toInt())
+                it.value.addChainToRead(chainId.toInt())
             } else {
-                it.value.chainsToRead.remove(chainId.toInt())
+                it.value.removeChainToRead(chainId.toInt())
             }
         }
     }
 
-    private fun createSigMaker(pubkey: ByteArray): Pair<ByteArray, SigMaker> {
+    private fun createSigMaker(pubkey: ByteArray): SigMaker {
         val privkey = KeyPairHelper.privKey(pubkey)
-        val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubkey, privkey))
-        return Pair(pubkey, sigMaker)
+        return cryptoSystem.buildSigMaker(KeyPair(pubkey, privkey))
     }
 }
 

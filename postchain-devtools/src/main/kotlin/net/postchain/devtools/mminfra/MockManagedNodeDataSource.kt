@@ -119,7 +119,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         bridToConfigs.remove(rid)
         extraReplicas.remove(rid)
         val chainId = ChainUtil.iidOf(rid).toInt()
-        myNode.chainsToSign.remove(chainId)
-        myNode.chainsToRead.remove(chainId)
+        myNode.removeChainToSign(chainId)
+        myNode.removeChainToRead(chainId)
     }
 }

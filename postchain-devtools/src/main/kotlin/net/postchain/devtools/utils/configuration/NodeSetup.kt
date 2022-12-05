@@ -8,6 +8,8 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.PropertiesConfiguration
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 
 /**
@@ -15,8 +17,8 @@ import org.apache.commons.configuration2.PropertiesConfiguration
  * (The "setup" classes are data holders/builders for test configuration used to generate the "real" classes at a later stage)
  *
  * @property sequenceNumber is the node's number. Must be unique.
- * @property chainsToSign the blockchains this node should be a signer for (SET because no duplicates allowed)
- * @property chainsToRead the blockchains this node should have a read only copy of (SET because no duplicates allowed)
+ * @property initialChainsToSign the blockchains this node should be a signer for (SET because no duplicates allowed)
+ * @property initialChainsToRead the blockchains this node should have a read only copy of (SET because no duplicates allowed)
  * @property pubKeyHex is the pub key
  * @property privKeyHex is the private key
  * @property nodeSpecificConfigs are configurations that will be only for this node (usually nodes share config most
@@ -25,13 +27,25 @@ import org.apache.commons.configuration2.PropertiesConfiguration
  */
 data class NodeSetup(
         val sequenceNumber: NodeSeqNumber,
-        val chainsToSign: MutableSet<Int>,
-        val chainsToRead: MutableSet<Int>,
+        val initialChainsToSign: Set<Int>,
+        val initialChainsToRead: Set<Int>,
         val pubKeyHex: String,
         val privKeyHex: String,
         val nodeSpecificConfigs: Configuration = PropertiesConfiguration(),
         var configurationProvider: NodeConfigurationProvider? = null // We might not set this at first
 ) {
+    // Internal thread safe sets
+    private val _chainsToSign = Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
+    private val _chainsToRead = Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
+    val chainsToSign: Set<Int>
+        get() = _chainsToSign.toSet()
+    val chainsToRead: Set<Int>
+        get() = _chainsToRead.toSet()
+
+    init {
+        _chainsToSign.addAll(initialChainsToSign)
+        _chainsToRead.addAll(initialChainsToRead)
+    }
 
     companion object : KLogging() {
 
@@ -42,15 +56,31 @@ data class NodeSetup(
 
             return NodeSetup(
                     nodeNr,
-                    signerChains.toMutableSet(),
-                    replicaChains.toMutableSet(),
+                    signerChains,
+                    replicaChains,
                     KeyPairHelper.pubKeyHex(nodeNr.nodeNumber),
                     KeyPairHelper.privKeyHex(nodeNr.nodeNumber)
             )
         }
     }
 
-    fun getAllBlockchains() = this.chainsToSign.plus(this.chainsToRead)
+    fun addChainToSign(chainId: Int) {
+        _chainsToSign.add(chainId)
+    }
+
+    fun removeChainToSign(chainId: Int) {
+        _chainsToSign.remove(chainId)
+    }
+
+    fun addChainToRead(chainId: Int) {
+        _chainsToRead.add(chainId)
+    }
+
+    fun removeChainToRead(chainId: Int) {
+        _chainsToRead.remove(chainId)
+    }
+
+    fun getAllInitialBlockchains() = this.initialChainsToSign.plus(this.initialChainsToRead)
 
     /**
      * The nodes have ports depending on the order of their sequence number
@@ -71,7 +101,7 @@ data class NodeSetup(
     fun calculateAllNodeConnections(systemSetup: SystemSetup): Set<NodeSeqNumber> {
         val retSet = mutableSetOf<NodeSeqNumber>()
 
-        val totalBcs = this.chainsToRead.plus(this.chainsToRead)
+        val totalBcs = this.chainsToSign.plus(this.chainsToRead)
         for (chainId in totalBcs) {
             val bc = systemSetup.blockchainMap[chainId]!!
             retSet.addAll(bc.signerNodeList) //  should connect to all others
@@ -92,10 +122,10 @@ data class NodeSetup(
         require(configurationProvider != null) { "Cannot build a PostchainTestNode without a NodeConfigurationProvider set" }
         val node = PostchainTestNode(configurationProvider!!.getConfiguration().appConfig, preWipeDatabase)
 
-        if (chainsToRead.isNotEmpty()) {
+        if (initialChainsToRead.isNotEmpty()) {
             logger.debug("Node ${sequenceNumber.nodeNumber}: Start all read only blockchains (dependencies must be installed first)")
             // TODO: These chains can in turn be depending on each other, so they should be "sorted" first
-            chainsToRead.forEach { chainId ->
+            initialChainsToRead.forEach { chainId ->
                 val chainSetup = systemSetup.blockchainMap[chainId]
                         ?: error("Incorrect SystemSetup")
                 try {
@@ -108,7 +138,7 @@ data class NodeSetup(
         }
 
         logger.debug("Node ${sequenceNumber.nodeNumber}: Start all blockchains we should sign")
-        chainsToSign.forEach { chainId ->
+        initialChainsToSign.forEach { chainId ->
             val chainSetup = systemSetup.blockchainMap[chainId]
                     ?: error("Incorrect SystemSetup")
             try {

@@ -216,7 +216,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
             testNodeMap: Map<NodeSeqNumber, PostchainTestNode>
     ) {
         sysSetup.nodeMap.values.forEach { nodeSetup ->
-            nodeSetup.chainsToSign.forEach { chainIid ->
+            nodeSetup.initialChainsToSign.forEach { chainIid ->
                 val testNode = testNodeMap[nodeSetup.sequenceNumber]
                 val process = testNode!!.getBlockchainInstance(chainIid.toLong())
                 await.until {
