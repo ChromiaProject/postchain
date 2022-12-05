@@ -10,7 +10,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
@@ -30,25 +29,22 @@ class DefaultPeerCommunicationManager2PeersIT {
     private lateinit var context1: EbftIntegrationTestContext
     private lateinit var context2: EbftIntegrationTestContext
 
-    private val privKey1 = cryptoSystem.getRandomBytes(32)
-    private val pubKey1 = secp256k1_derivePubKey(privKey1)
-
-    private val privKey2 = cryptoSystem.getRandomBytes(32)
-    private val pubKey2 = secp256k1_derivePubKey(privKey2)
+    private val keyPair1 = cryptoSystem.generateKeyPair()
+    private val keyPair2 = cryptoSystem.generateKeyPair()
 
     @BeforeEach
     fun setUp() {
-        peerInfo1 = peerInfoFromPublicKey(pubKey1)
-        peerInfo2 = peerInfoFromPublicKey(pubKey2)
+        peerInfo1 = peerInfoFromPublicKey(keyPair1.pubKey.data)
+        peerInfo2 = peerInfoFromPublicKey(keyPair2.pubKey.data)
         val peers = arrayOf(peerInfo1, peerInfo2)
 
         // Creating
         context1 = EbftIntegrationTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey1, pubKey1),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair1.privKey.data, keyPair1.pubKey.data),
                 blockchainRid)
 
         context2 = EbftIntegrationTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, privKey2, pubKey2),
+                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair2.privKey.data, keyPair2.pubKey.data),
                 blockchainRid)
 
         // Initializing
@@ -79,16 +75,16 @@ class DefaultPeerCommunicationManager2PeersIT {
         val packets1 = arrayOf(
                 GetBlockAtHeight(10),
                 GetBlockAtHeight(11))
-        context1.communicationManager.sendPacket(packets1[0], NodeRid(pubKey2))
-        context1.communicationManager.sendPacket(packets1[1], NodeRid(pubKey2))
+        context1.communicationManager.sendPacket(packets1[0], NodeRid(keyPair2.pubKey.data))
+        context1.communicationManager.sendPacket(packets1[1], NodeRid(keyPair2.pubKey.data))
         // * 2 -> 1
         val packets2 = arrayOf(
                 GetBlockAtHeight(20),
                 GetBlockAtHeight(21),
                 GetBlockAtHeight(22))
-        context2.communicationManager.sendPacket(packets2[0], NodeRid(pubKey1))
-        context2.communicationManager.sendPacket(packets2[1], NodeRid(pubKey1))
-        context2.communicationManager.sendPacket(packets2[2], NodeRid(pubKey1))
+        context2.communicationManager.sendPacket(packets2[0], NodeRid(keyPair1.pubKey.data))
+        context2.communicationManager.sendPacket(packets2[1], NodeRid(keyPair1.pubKey.data))
+        context2.communicationManager.sendPacket(packets2[2], NodeRid(keyPair1.pubKey.data))
 
         // * asserting
         val actual1 = mutableListOf<Long>()
