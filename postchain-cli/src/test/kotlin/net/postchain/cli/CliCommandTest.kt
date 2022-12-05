@@ -14,7 +14,7 @@ class CliCommandTest {
     @Test
     fun testMnemonic() {
         val cs = Secp256K1CryptoSystem()
-        val privKey = cs.generatePrivateKey().data
+        val privKey = cs.generatePrivKey().data
 
         val wordList = MnemonicCode.INSTANCE.toMnemonic(privKey)
 
