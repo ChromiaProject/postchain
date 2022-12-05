@@ -219,12 +219,9 @@ open class Secp256K1CryptoSystem : CryptoSystem {
      * Generate a random key pair
      */
     override fun generateKeyPair(): KeyPair {
-        val (privateKey: ByteArray, d: BigInteger) = generatePrivKeyInternal()
-
-        val q = CURVE_PARAMS.g.multiply(d)
-        val publicKey = q.getEncoded(true)
-
-        return KeyPair(PubKey(publicKey), PrivKey(privateKey))
+        val privKey = generatePrivKey()
+        val pubKey = secp256k1_derivePubKey(privKey.data)
+        return KeyPair(PubKey(pubKey), privKey)
     }
 
     /**
@@ -232,9 +229,7 @@ open class Secp256K1CryptoSystem : CryptoSystem {
      *
      * Not part of [CryptoSystem] interface since it might not make sense for other algorithms.
      */
-    fun generatePrivKey(): PrivKey = PrivKey(generatePrivKeyInternal().first)
-
-    private fun generatePrivKeyInternal(): Pair<ByteArray, BigInteger> {
+    fun generatePrivKey(): PrivKey {
         var privateKey: ByteArray
         var d: BigInteger
         while (true) {
@@ -247,6 +242,6 @@ open class Secp256K1CryptoSystem : CryptoSystem {
                 logger.debug("Generated invalid private key: $d")
             }
         }
-        return Pair(privateKey, d)
+        return PrivKey(privateKey)
     }
 }
