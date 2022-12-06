@@ -12,6 +12,7 @@ import net.postchain.core.AppContext
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.EContext
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
@@ -90,7 +91,7 @@ object BlockchainApi {
                 // Node must be in PeerInfo, or else it cannot be a blockchain replica.
                 val foundInPeerInfo = db.findPeerInfo(eContext, null, null, nodePubkey)
                 if (foundInPeerInfo.isNotEmpty()) {
-                    db.addBlockchainReplica(eContext, brid.toHex(), nodePubkey)
+                    db.addBlockchainReplica(eContext, brid, PubKey(nodePubkey))
                     // If the node is not in the peerinfo table, and we do not allow unknown signers in a configuration,
                     // throw error
                 } else if (!allowUnknownSigners) {
@@ -122,10 +123,10 @@ object BlockchainApi {
 
     fun findBlockchain(ctx: EContext): BlockchainRid? = DatabaseAccess.of(ctx).getBlockchainRid(ctx)
 
-    fun addBlockchainReplica(ctx: AppContext, brid: String, pubkey: String): Boolean {
+    fun addBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubkey: PubKey): Boolean {
         val db = DatabaseAccess.of(ctx)
 
-        val foundInPeerInfo = db.findPeerInfo(ctx, null, null, pubkey)
+        val foundInPeerInfo = db.findPeerInfo(ctx, null, null, pubkey.hex())
         if (foundInPeerInfo.isEmpty()) {
             throw NotFound("Given pubkey is not a peer. First add it as a peer.")
         }
@@ -133,7 +134,7 @@ object BlockchainApi {
         return db.addBlockchainReplica(ctx, brid, pubkey)
     }
 
-    fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubkey: String): Set<BlockchainRid> =
+    fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid?, pubkey: PubKey): Set<BlockchainRid> =
             DatabaseAccess.of(ctx).removeBlockchainReplica(ctx, brid, pubkey)
 
     fun setMustSyncUntil(ctx: AppContext, blockchainRID: BlockchainRid, height: Long): Boolean =

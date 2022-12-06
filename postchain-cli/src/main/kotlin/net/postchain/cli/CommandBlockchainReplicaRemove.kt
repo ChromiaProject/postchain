@@ -6,13 +6,11 @@ import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.requiredPubkeyOption
-import net.postchain.common.BlockchainRid
-import net.postchain.config.app.AppConfig
 
 class CommandBlockchainReplicaRemove : CliktCommand(
-    name = "blockchain-replica-remove",
-    help = "Remove node as replica for given blockchain rid. If brid not given command will be " +
-            "applied on all blockchains."
+        name = "blockchain-replica-remove",
+        help = "Remove node as replica for given blockchain rid. If brid not given command will be " +
+                "applied on all blockchains."
 ) {
     // TODO: Eliminate it later or reduce to DbConfig only
     private val nodeConfigFile by nodeConfigOption()
@@ -23,7 +21,9 @@ class CommandBlockchainReplicaRemove : CliktCommand(
 
 
     override fun run() {
-        val removed = blockchainReplicaRemove(blockchainRID.toHex(), pubKey)
+        val removed = runStorageCommand(nodeConfigFile) { ctx ->
+            BlockchainApi.removeBlockchainReplica(ctx, blockchainRID, pubKey)
+        }
 
         if (removed.isEmpty()) {
             println("No replica has been removed")
@@ -31,14 +31,6 @@ class CommandBlockchainReplicaRemove : CliktCommand(
             removed.forEach {
                 println("Replica $pubKey removed from brid (${removed.size}):\n$it")
             }
-        }
-
-
-    }
-
-    private fun blockchainReplicaRemove(brid: String?, pubKey: String): Set<BlockchainRid> {
-        return runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
-            BlockchainApi.removeBlockchainReplica(ctx, brid, pubKey)
         }
     }
 }

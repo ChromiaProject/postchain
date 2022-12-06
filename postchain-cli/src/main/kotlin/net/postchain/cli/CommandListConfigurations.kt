@@ -4,6 +4,7 @@ package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.SafeExecutor.runOnChain
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 
@@ -15,9 +16,10 @@ class CommandListConfigurations : CliktCommand(name = "list-configurations", hel
     private val chainId by chainIdOption().required()
 
     override fun run() {
-        println("Height")
-        println("------")
-        val configurations = CliExecution.listConfigurations(nodeConfigFile, chainId)
-        configurations.forEach { println(it) }
+        runOnChain(nodeConfigFile, chainId) {
+            println("Height")
+            println("------")
+            CliExecution.listConfigurations(nodeConfigFile, chainId).forEach(::println)
+        }
     }
 }

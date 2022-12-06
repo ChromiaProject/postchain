@@ -1,5 +1,6 @@
 package net.postchain.devtools
 
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockTrace
@@ -46,15 +47,16 @@ abstract class AbstractIntegration {
 
     protected fun buildBlockAndCommit(engine: BlockchainEngine) {
         val (blockBuilder, _) = engine.buildBlock()
-        commitBlock(blockBuilder)
+
+        try {
+            commitBlock(blockBuilder)
+        } catch (_: ProgrammerMistake) {
+            // Block is already committed (presumably by BaseBlockBuildingStrategy)
+        }
     }
 
     protected fun buildBlockAndCommit(node: PostchainTestNode) {
-        commitBlock(node
-                .getBlockchainInstance()
-                .blockchainEngine
-                .buildBlock()
-                .first)
+        buildBlockAndCommit(node.getBlockchainInstance().blockchainEngine)
     }
 
     private fun commitBlock(blockBuilder: BlockBuilder): BlockWitness {

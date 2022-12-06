@@ -115,6 +115,10 @@
             <artifactId>docker-client</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-client</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.github.jnr</groupId>
             <artifactId>jffi</artifactId>
             <scope>runtime</scope>

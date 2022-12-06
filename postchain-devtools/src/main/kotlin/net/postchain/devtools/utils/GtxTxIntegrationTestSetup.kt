@@ -81,7 +81,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
                             }
                             */
 
-                            nodeSetup.getAllBlockchains().forEach { chainId ->
+                            nodeSetup.getAllInitialBlockchains().forEach { chainId ->
                                 val allSignersButMe = systemSetup.blockchainMap[chainId]!!.signerNodeList.filter { it != nodeSetup.sequenceNumber }
                                 if (logger.isDebugEnabled) {
                                     val debugOut = allSignersButMe.map { it.nodeNumber.toString() }.fold(",", String::plus)

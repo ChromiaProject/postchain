@@ -9,19 +9,18 @@ import net.postchain.StorageBuilder
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFileReader
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import org.apache.commons.configuration2.ex.ConfigurationException
@@ -39,12 +38,11 @@ object CliExecution : KLogging() {
     fun addBlockchain(
             nodeConfigFile: File,
             chainId: Long,
-            blockchainConfigFile: File,
+            blockchainConfigGtv: Gtv,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             givenDependencies: List<BlockchainRelatedInfo> = listOf()
     ): BlockchainRid {
-        val gtv = GtvFileReader.readFile(blockchainConfigFile)
-        return addBlockchainGtv(nodeConfigFile, chainId, gtv, mode, givenDependencies)
+        return addBlockchainGtv(nodeConfigFile, chainId, blockchainConfigGtv, mode, givenDependencies)
     }
 
     private fun addBlockchainGtv(
@@ -87,14 +85,13 @@ object CliExecution : KLogging() {
 
     fun addConfiguration(
             nodeConfigFile: File,
-            blockchainConfigFile: File,
+            blockchainConfig: Gtv,
             chainId: Long,
             height: Long,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             allowUnknownSigners: Boolean = false
     ) {
-        val gtv = GtvFileReader.readFile(blockchainConfigFile)
-        addConfigurationGtv(nodeConfigFile, gtv, chainId, height, mode, allowUnknownSigners)
+        addConfigurationGtv(nodeConfigFile, blockchainConfig, chainId, height, mode, allowUnknownSigners)
     }
 
     private fun addConfigurationGtv(
@@ -105,7 +102,7 @@ object CliExecution : KLogging() {
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             allowUnknownSigners: Boolean
     ) {
-        runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+        runStorageCommand(nodeConfigFile, chainId) { ctx ->
             try {
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
@@ -138,20 +135,16 @@ object CliExecution : KLogging() {
     }
 
     fun setMustSyncUntil(nodeConfigFile: File, blockchainRID: BlockchainRid, height: Long): Boolean =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
+            runStorageCommand(nodeConfigFile) { ctx ->
                 BlockchainApi.setMustSyncUntil(ctx, blockchainRID, height)
             }
 
-    fun getMustSyncUntilHeight(nodeConfigFile: File): Map<Long, Long> = runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
-        BlockchainApi.getMustSyncUntilHeight(ctx)
-    }
-
-    fun peerinfoAdd(nodeConfigFile: File, host: String, port: Int, pubKey: String, mode: AlreadyExistMode): Boolean =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
+    fun peerinfoAdd(nodeConfigFile: File, host: String, port: Int, pubKey: PubKey, mode: AlreadyExistMode): Boolean =
+            runStorageCommand(nodeConfigFile) { ctx ->
                 // mode tells us how to react upon an error caused if pubkey already exist (throw error or force write).
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
-                        val added = PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
+                        val added = PeerApi.addPeer(ctx, pubKey, host, port, false)
                         if (!added) {
                             throw CliException("Peerinfo with pubkey already exists. Using -f to force update")
                         }
@@ -159,11 +152,11 @@ object CliExecution : KLogging() {
                     }
 
                     AlreadyExistMode.FORCE -> {
-                        PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, true)
+                        PeerApi.addPeer(ctx, pubKey, host, port, true)
                     }
 
                     AlreadyExistMode.IGNORE -> {
-                        PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
+                        PeerApi.addPeer(ctx, pubKey, host, port, false)
                     }
                 }
             }
@@ -191,21 +184,24 @@ object CliExecution : KLogging() {
         }
     }
 
+    fun findBlockchainRid(nodeConfigFile: File, chainId: Long) = runStorageCommand(nodeConfigFile, chainId) { ctx ->
+        DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+    }
+
     fun checkBlockchain(nodeConfigFile: File, chainId: Long, blockchainRID: String) {
-        runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+        runStorageCommand(nodeConfigFile, chainId) { ctx ->
             BlockchainApi.checkBlockchain(ctx, blockchainRID)
         }
     }
 
     fun getConfiguration(nodeConfigFile: File, chainId: Long, height: Long): ByteArray? =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+            runStorageCommand(nodeConfigFile, chainId) { ctx ->
                 BlockchainApi.getConfiguration(ctx, height)
             }
 
-    fun listConfigurations(nodeConfigFile: File, chainId: Long) =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
-                BlockchainApi.listConfigurations(ctx)
-            }
+    fun listConfigurations(nodeConfigFile: File, chainId: Long) = runStorageCommand(nodeConfigFile, chainId) { ctx ->
+        BlockchainApi.listConfigurations(ctx)
+    }
 
     fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: File) {
         tryCreateBasicDataSource(nodeConfigFile)?.let { return } ?: if (retryTimes > 0) {
