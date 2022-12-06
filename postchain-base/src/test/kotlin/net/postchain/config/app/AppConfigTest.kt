@@ -3,7 +3,6 @@
 package net.postchain.config.app
 
 import assertk.assert
-import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isLessThan
@@ -19,7 +18,7 @@ class AppConfigTest {
         val appConfig = loadFromResource("empty-node-config.properties")
 
         assert(appConfig.nodeConfigProvider).isEqualTo("properties")
-        assert(appConfig.databaseDriverclass).isEmpty()
+        assertEquals("org.postgresql.Driver", appConfig.databaseDriverclass)
 
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
         assertIsDefaultOrEqualsToEnvVar(appConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")

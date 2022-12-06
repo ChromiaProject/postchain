@@ -21,7 +21,7 @@ class NodeConfigTest {
 
         assertk.assert(appConfig.infrastructure).isEqualTo("ebft")
 
-        assertk.assert(appConfig.databaseDriverclass).isEmpty()
+        assertEquals("org.postgresql.Driver", appConfig.databaseDriverclass)
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
         assertIsDefaultOrEqualsToEnvVar(appConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
