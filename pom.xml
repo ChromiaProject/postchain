@@ -371,7 +371,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.5.1</version> <!-- Rell depends on this version -->
+                <version>42.5.1</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
