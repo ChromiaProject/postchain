@@ -113,8 +113,8 @@ internal class PostchainClientImplTest {
     }
 
     @Test
-    fun `Query error without body should throw IOException`() {
-        assertThrows<IOException> {
+    fun `Query error without body should throw UserMistake`() {
+        assertThrows<UserMistake> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) = Response(Status.BAD_REQUEST).body(Body.EMPTY)
             }).query("foo", gtv(mapOf()))
@@ -277,6 +277,13 @@ internal class PostchainClientImplTest {
                 override fun invoke(request: Request) =
                         Response(Status.BAD_REQUEST).body("""{"error":"${"e".repeat(1024)}"}""")
             }).currentBlockHeight()
+        }
+    }
+
+    @Test
+    fun `Client generated errors can be handled`() {
+        assertThrows(UserMistake::class.java) {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl("http://invalidhost"))).currentBlockHeight()
         }
     }
 
