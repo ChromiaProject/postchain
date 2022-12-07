@@ -28,6 +28,18 @@ open class ManualNodeConfigurationProvider(
                 DatabaseAccess.of(it).addPeerInfo(it, "localhost", appConfig.port, appConfig.pubKey)
             }
         }
+        if (appConfig.containsKey("genesis.pubkey")) {
+            require(appConfig.containsKey("genesis.host")) { "Node configuration must contain genesis.host if genesis.pubkey is supplied" }
+            require(appConfig.containsKey("genesis.port")) { "Node configuration must contain genesis.port if genesis.pubkey if supplied" }
+            val hasGenesisPeer = storage.withReadConnection {
+                DatabaseAccess.of(it).findPeerInfo(it, null, null, appConfig.getString("genesis.pubkey")).isNotEmpty()
+            }
+            if (!hasGenesisPeer) {
+                storage.withReadConnection {
+                    DatabaseAccess.of(it).addPeerInfo(it, appConfig.getString("genesis.host"), appConfig.getInt("genesis.port"), appConfig.getString("genesis.pubkey"))
+                }
+            }
+        }
     }
 
     override fun getConfiguration(): NodeConfig {
