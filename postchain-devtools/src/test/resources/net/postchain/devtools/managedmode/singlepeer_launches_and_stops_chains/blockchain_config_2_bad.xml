@@ -14,7 +14,7 @@
                 <string>net.postchain.base.BaseBlockBuildingStrategy</string>
             </entry>
             <entry key="maxblocktime">
-                <int>300</int>
+                <int>402</int>
             </entry>
             <entry key="blockdelay">
                 <int>102</int>
@@ -53,6 +53,7 @@
             <entry key="modules">
                 <array>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                    <string>net.postchain.gtx.UnknownGTXModule</string> <!-- Unknown GTX Module -->
                 </array>
             </entry>
         </dict>
