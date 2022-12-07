@@ -113,7 +113,7 @@ internal class PostchainClientImplTest {
     }
 
     @Test
-    fun `Query error without body should throw IOException`() {
+    fun `Query error without body should throw UserMistake`() {
         assertThrows<UserMistake> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) = Response(Status.BAD_REQUEST).body(Body.EMPTY)
