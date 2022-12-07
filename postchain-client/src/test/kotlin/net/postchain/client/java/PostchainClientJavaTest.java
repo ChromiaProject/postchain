@@ -8,6 +8,7 @@ import net.postchain.client.impl.PostchainClientImpl;
 import net.postchain.client.impl.PostchainClientProviderImpl;
 import net.postchain.client.request.EndpointPool;
 import net.postchain.common.BlockchainRid;
+import net.postchain.common.exception.UserMistake;
 import net.postchain.crypto.Secp256K1CryptoSystem;
 import net.postchain.gtv.GtvFactory;
 import org.http4k.core.Request;
@@ -59,8 +60,9 @@ class PostchainClientJavaTest {
     void query() {
         try {
             client.query("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
-        } catch (IOException e) {
+        } catch (UserMistake e) {
             // Just to make the test pass
+        } catch (IOException ignored) {
         }
         assertEquals(1, requestCounter);
     }
