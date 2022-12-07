@@ -66,6 +66,17 @@ open class ContainerManagedBlockchainProcessManager(
 
     init {
         stopRunningContainersIfExist()
+        Runtime.getRuntime().addShutdownHook(
+                Thread {
+                    logger.info("Shutting down master node - stopping subnode containers...")
+                    for ((name, psContainer) in postchainContainers) {
+                        logger.info("Stopping subnode $name...")
+                        psContainer.stop()
+                        dockerClient.stopContainer(psContainer.containerId, 10)
+                    }
+                    logger.info("Stopping subnode containers done")
+                }
+        )
     }
 
     override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =

@@ -63,7 +63,7 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
      * Database
      */
     val databaseDriverclass: String
-        get() = config.getString("database.driverclass", "")
+        get() = config.getString("database.driverclass", "org.postgresql.Driver")
 
     val databaseUrl: String
         get() = System.getenv("POSTCHAIN_DB_URL")
