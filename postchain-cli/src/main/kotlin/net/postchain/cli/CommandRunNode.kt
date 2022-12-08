@@ -14,8 +14,6 @@ import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.debugOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
-import net.postchain.core.EContext
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFileReader
 
 class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node with a configuration") {
@@ -32,21 +30,25 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
     override fun run() {
         if (blockchainConfigFile != null) {
             require(chainIDs.size == 1) { "Cannot start more than one chain if a blockchain configuration is specified" }
-            runStorageCommand(nodeConfigFile, chainIDs[0]) {
-                val current = try { BlockchainApi.getLastBlockHeight(it) } catch (e: Exception) { -1 }
-                val bcConfig = GtvFileReader.readFile(blockchainConfigFile!!)
-                when {
-                    current <= 0 || override -> initializeBlockchain(it, bcConfig)
-                    update -> BlockchainApi.addConfiguration(it, current + 1, false, bcConfig)
-                    else -> {}
+
+            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+            val blockchainConfig = GtvFileReader.readFile(blockchainConfigFile!!)
+            val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
+
+            runStorageCommand(appConfig, chainIDs[0]) { ctx ->
+                val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)
+
+                if (!wasInitialized) {
+                    val wasAdded = BlockchainApi.addConfiguration(ctx, 0, false, blockchainConfig)
+
+                    if (!wasAdded && update) {
+                        val currentHeight = BlockchainApi.getLastBlockHeight(ctx)
+                        BlockchainApi.addConfiguration(ctx, currentHeight + 1, false, blockchainConfig)
+                    }
                 }
             }
         }
-        CliExecution.runNode(nodeConfigFile, chainIDs, debug)
-    }
 
-    private fun initializeBlockchain(eContext: EContext, config: Gtv) {
-        val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(config, AppConfig.fromPropertiesFile(nodeConfigFile).cryptoSystem)
-        BlockchainApi.initializeBlockchain(eContext, brid, override, config)
+        CliExecution.runNode(nodeConfigFile, chainIDs, debug)
     }
 }
