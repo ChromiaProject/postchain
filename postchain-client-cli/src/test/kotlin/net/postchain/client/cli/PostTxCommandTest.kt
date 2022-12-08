@@ -40,7 +40,7 @@ internal class PostTxCommandTest {
                 "foo",
                 "foo bar",
                 "[1,foo]",
-                "{a->b}"
+                "{a=b}"
             )
         )
 
