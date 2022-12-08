@@ -21,6 +21,7 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
     private val blockchainConfigFile by blockchainConfigOption()
     private val chainIDs by chainIdOption().multiple(listOf(0))
     private val override by option(help = "Overrides the configuration if it exists in database").flag()
+    private val update by option(help = "Add the configuration on a height higher than current height if blocks are already build on this chain").flag()
 
     private val debug by debugOption()
 
@@ -30,10 +31,10 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
             runStorageCommand(nodeConfigFile, chainIDs[0]) {
                 val current = BlockchainApi.getLastBlockHeight(it)
                 val bcConfig = GtvFileReader.readFile(blockchainConfigFile!!)
-                if (current <= 0 || override) {
-                    BlockchainApi.addConfiguration(it, 0, override, bcConfig)
-                } else {
-                    BlockchainApi.addConfiguration(it, current + 1, false, bcConfig)
+                when {
+                    current <= 0 || override -> BlockchainApi.addConfiguration(it, 0, override, bcConfig)
+                    update -> BlockchainApi.addConfiguration(it, current + 1, false, bcConfig)
+                    else -> {}
                 }
             }
         }
