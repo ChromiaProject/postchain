@@ -35,7 +35,7 @@ internal class PostTxCommandTest {
         // Verify various argument types are working, e.g. strings containing spaces
         command.parse(
             listOf(
-                "--config", testConfigPath, "test_tx",
+                "--config", testConfigPath, "test_tx", "--",
                 "1",
                 "foo",
                 "foo bar",
