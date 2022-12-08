@@ -80,7 +80,7 @@ open class SubNodeBlockchainProcessManager(
             } catch (e: Exception) {
                 logger.error(e) { "Error when sending committed block message: $e" }
             }
-            subnodeBcCfgListeners.values.forEach { it.lastBlockTimestamp = blockTimestamp }
+            subnodeBcCfgListeners[chainId]!!.lastBlockTimestamp = blockTimestamp
             baseHandler(bTrace, height, blockTimestamp)
         }
     }
