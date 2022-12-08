@@ -50,7 +50,7 @@ class CommandAddConfiguration : CliktCommand(
                     .validate { require(it.second > 0L) { "must be positive" } }
     ).single().required()
 
-    private val blockchainConfigFile by blockchainConfigOption()
+    private val blockchainConfigFile by blockchainConfigOption().required()
 
     private val force by forceOption().help("Force the addition of blockchain configuration which already exists of specified chain-id at height")
 

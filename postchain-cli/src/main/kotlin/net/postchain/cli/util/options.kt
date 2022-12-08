@@ -21,7 +21,7 @@ fun CliktCommand.blockchainConfigOption() = option(
         "--blockchain-config",
         help = "Configuration file of blockchain (GtvML (*.xml) or Gtv (*.gtv))",
         envvar = "POSTCHAIN_BLOCKCHAIN_CONFIG"
-).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true).required()
+).file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true)
 
 fun CliktCommand.requiredPubkeyOption() = option("-pk", "--pubkey", help = "Public key")
         .convert { PubKey(it) }.required()
