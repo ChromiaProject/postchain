@@ -98,7 +98,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do this check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
+            if (!workerContext.awaitPermissionToProcessMessages { !isProcessRunning() }) {
                 return
             }
 
@@ -445,13 +445,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 }
             }
         }
-    }
-
-    private fun getLastBlockTimestamp(): Long {
-        // The field blockManager.lastBlockTimestamp will be set to non-null value
-        // after the first block db operation. So we read lastBlockTimestamp value from db
-        // until blockManager.lastBlockTimestamp is non-null.
-        return blockManager.lastBlockTimestamp ?: blockQueries.getLastBlockTimestamp().get()
     }
 
     fun getHeight(): Long {

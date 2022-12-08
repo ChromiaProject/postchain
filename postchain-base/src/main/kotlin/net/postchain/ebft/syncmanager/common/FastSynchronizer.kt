@@ -51,7 +51,6 @@ class FastSynchronizer(
 
     private val jobs = TreeMap<Long, Job>()
     private var lastJob: Job? = null
-    private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
 
     // This is the communication mechanism from the async commitBlock callback to main loop
     private val finishedJobs = LinkedBlockingQueue<Job>()
@@ -78,7 +77,6 @@ class FastSynchronizer(
         try {
             blockHeight = blockQueries.getBestHeight().get()
             syncDebug("Start", blockHeight)
-            lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
                 processMessages(exitCondition)
@@ -584,7 +582,7 @@ class FastSynchronizer(
         for (packet in communicationManager.getPackets()) {
             // We do this check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.awaitPermissionToProcessMessages(lastBlockTimestamp) { !isProcessRunning() || exitCondition() }) {
+            if (!workerContext.awaitPermissionToProcessMessages { !isProcessRunning() || exitCondition() }) {
                 return
             }
 

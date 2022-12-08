@@ -43,9 +43,9 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
 class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }
