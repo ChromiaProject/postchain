@@ -1,5 +1,6 @@
 package net.postchain.containers.bpm.rpc
 
+import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
@@ -18,4 +19,5 @@ interface SubnodeAdminClient : Shutdownable {
     fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid, config: ByteArray): Boolean
     fun stopBlockchain(chainId: Long): Boolean
     fun isBlockchainRunning(chainId: Long): Boolean
+    fun addPeerInfo(peerInfo: PeerInfo): Boolean
 }

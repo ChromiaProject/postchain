@@ -38,7 +38,9 @@ class DefaultPostchainContainer(
 
     override fun startProcess(process: ContainerBlockchainProcess): Boolean {
         val config0 = dataSource.getConfiguration(process.blockchainRid.data, 0L)
+        val peerInfos = dataSource.getPeerInfos()
         return if (config0 != null) {
+            peerInfos.forEach { subnodeAdminClient.addPeerInfo(it) }
             subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid, config0).also {
                 if (it) processes[process.chainId] = process
             }
