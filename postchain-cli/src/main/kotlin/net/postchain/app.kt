@@ -22,6 +22,7 @@ import net.postchain.cli.CommandRemoveConfiguration
 import net.postchain.cli.CommandRunNode
 import net.postchain.cli.CommandRunNodeAuto
 import net.postchain.cli.CommandRunServer
+import net.postchain.cli.CommandStart
 import net.postchain.cli.CommandWaitDb
 import net.postchain.cli.CommandWipeDb
 import java.io.File
@@ -57,6 +58,7 @@ fun main(args: Array<String>) {
                     CommandRunNode(),
                     CommandRunNodeAuto(),
                     CommandRunServer(),
+                    CommandStart(),
                     CommandWaitDb(),
                     CommandWipeDb(),
             )
