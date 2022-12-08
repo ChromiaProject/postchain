@@ -70,7 +70,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
-        if (workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
+        if (workerContext.awaitPermissionToProcessMessages { !isProcessRunning() }) {
             syncManager.update()
             sleep(20)
         }
@@ -87,15 +87,5 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
                 DiagnosticProperty.BLOCKCHAIN_NODE_TYPE to { DpNodeType.NODE_TYPE_VALIDATOR.prettyName },
                 DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to syncManager::getHeight
         ))
-    }
-
-    private fun getLastBlockTimestamp(): Long {
-        /**
-         * NB: The field blockManager.lastBlockTimestamp will be set to non-null value
-         * after the first block db operation. So we read lastBlockTimestamp value from db
-         * until blockManager.lastBlockTimestamp is non-null.
-         */
-        return blockManager.lastBlockTimestamp
-                ?: workerContext.engine.getBlockQueries().getLastBlockTimestamp().get()
     }
 }

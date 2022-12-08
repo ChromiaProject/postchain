@@ -16,7 +16,8 @@ import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 interface SubnodeBlockchainConfigListener {
-    fun checkConfig(lastBlockTimestamp: Long): Boolean
+    var lastBlockTimestamp: Long
+    fun checkConfig(): Boolean
 }
 
 class DefaultSubnodeBlockchainConfigListener(
@@ -36,11 +37,13 @@ class DefaultSubnodeBlockchainConfigListener(
     lateinit var storage: Storage
     private var responseTimestamp: Long = 0L
 
+    override var lastBlockTimestamp = -1L
+
     init {
         connectionManager.preAddMsMessageHandler(chainId, this)
     }
 
-    override fun checkConfig(lastBlockTimestamp: Long): Boolean {
+    override fun checkConfig(): Boolean {
         // First block check
         if (lastBlockTimestamp < 0) {
             return LogResult(1, true).also {
