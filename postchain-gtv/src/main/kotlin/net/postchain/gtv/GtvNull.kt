@@ -24,4 +24,6 @@ object GtvNull : GtvPrimitive() {
     override fun nrOfBytes(): Int {
         return 0
     }
+
+    override fun toString() = "null"
 }
