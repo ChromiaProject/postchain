@@ -29,9 +29,9 @@ open class SubNodeBlockchainProcessManager(
     protected val subnodeBcCfgConfig = SubnodeBlockchainConfigurationConfig.fromAppConfig(appConfig)
     protected val subnodeBcCfgListeners: MutableMap<Long, SubnodeBlockchainConfigListener> = ConcurrentHashMap()
 
-    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
+    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (() -> Boolean) -> Boolean {
         return if (!subnodeBcCfgConfig.enabled) {
-            { _, _ -> true }
+            { _ -> true }
         } else {
             val listener: SubnodeBlockchainConfigListener = DefaultSubnodeBlockchainConfigListener(
                     subnodeBcCfgConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
@@ -41,8 +41,8 @@ open class SubNodeBlockchainProcessManager(
                 subnodeBcCfgListeners[blockchainConfig.chainID] = it
             }
 
-            return configCheck@{ blockTimestamp, exitCondition ->
-                while (!listener.checkConfig(blockTimestamp)) {
+            return configCheck@{ exitCondition ->
+                while (!listener.checkConfig()) {
                     if (exitCondition()) {
                         return@configCheck false
                     }
@@ -80,6 +80,7 @@ open class SubNodeBlockchainProcessManager(
             } catch (e: Exception) {
                 logger.error(e) { "Error when sending committed block message: $e" }
             }
+            subnodeBcCfgListeners.values.forEach { it.lastBlockTimestamp = blockTimestamp }
             baseHandler(bTrace, height, blockTimestamp)
         }
     }

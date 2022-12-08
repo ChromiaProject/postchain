@@ -34,8 +34,6 @@ class SlowSynchronizer(
     val isProcessRunning: () -> Boolean
 ) : AbstractSynchronizer(wrkrCntxt) {
 
-    private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
-
     private var stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt())
 
     val peerStatuses = SlowSyncPeerStatuses(params) // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
@@ -53,9 +51,7 @@ class SlowSynchronizer(
             syncDebug("Start", blockHeight)
             stateMachine.lastCommittedBlockHeight = blockHeight
 
-            lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
-            var sleepData = SlowSyncSleepData()
-
+            val sleepData = SlowSyncSleepData()
             while (isProcessRunning()) {
                 if (stateMachine.state == SlowSyncStates.WAIT_FOR_COMMIT) {
                     // We shouldn't need to handle failed commits here, since we have the callback
@@ -110,11 +106,10 @@ class SlowSynchronizer(
      * @return SleepData we should use to sleep
      */
     private fun processMessages(sleepData: SlowSyncSleepData) {
-
         for (packet in communicationManager.getPackets()) {
             // We do this check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.awaitPermissionToProcessMessages(lastBlockTimestamp) { !isProcessRunning() }) {
+            if (!workerContext.awaitPermissionToProcessMessages { !isProcessRunning() }) {
                 return
             }
 

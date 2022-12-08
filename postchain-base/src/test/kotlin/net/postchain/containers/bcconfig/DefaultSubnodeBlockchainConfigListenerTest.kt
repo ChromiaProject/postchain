@@ -44,10 +44,11 @@ class DefaultSubnodeBlockchainConfigListenerTest {
         }
 
         // 1. First block check
-        assertTrue(sut.checkConfig(-1))
+        assertTrue(sut.checkConfig())
 
         // 2a. Assert: No BlockchainConfig received then fails
-        assertFalse(sut.checkConfig(now))
+        sut.lastBlockTimestamp = now
+        assertFalse(sut.checkConfig())
 
         // 2b. Verification: BlockchainConfig requested
         val message = argumentCaptor<MsFindNextBlockchainConfigMessage>()
@@ -58,7 +59,8 @@ class DefaultSubnodeBlockchainConfigListenerTest {
         sut.onMessage(invalidConfig)
 
         // 3b. Assert: received BlockchainConfig check FAILED, received BlockchainConfig is NOT recorded
-        assertFalse(sut.checkConfig(now + 1L))
+        sut.lastBlockTimestamp = now + 1L
+        assertFalse(sut.checkConfig())
 
         // 3c. Verification: the NEW BlockchainConfig requested again
         verify(connManager, times(2)).sendMessageToMaster(eq(chainId), message.capture())
@@ -69,6 +71,7 @@ class DefaultSubnodeBlockchainConfigListenerTest {
         sut.onMessage(blockchainConfig)
 
         // 4b. Assert: BlockchainConfig received and BlockchainConfig check PASSED
-        assert(sut.checkConfig(now + 2L))
+        sut.lastBlockTimestamp = now + 2L
+        assert(sut.checkConfig())
     }
 }
