@@ -20,7 +20,7 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
 
     private val blockchainConfigFile by blockchainConfigOption()
     private val chainIDs by chainIdOption().multiple(listOf(0))
-    private val override by option(help = "Overrides the configuration if it exists in database", envvar = "POSTCHAIN_OVERRIDE").flag()
+    private val override by option(help = "Overrides the configuration if it exists in database").flag()
 
     private val debug by debugOption()
 
