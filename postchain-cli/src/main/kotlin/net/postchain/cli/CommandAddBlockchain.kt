@@ -18,7 +18,7 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
 
     private val chainId by chainIdOption().required()
 
-    private val blockchainConfigFile by blockchainConfigOption()
+    private val blockchainConfigFile by blockchainConfigOption().required()
 
     private val force by forceOption().help("Force the addition of already existed blockchain-rid (by chain-id)")
 
