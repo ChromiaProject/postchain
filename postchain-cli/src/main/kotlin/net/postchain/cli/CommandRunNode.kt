@@ -38,13 +38,9 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
             runStorageCommand(appConfig, chainIDs[0]) { ctx ->
                 val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)
 
-                if (!wasInitialized) {
+                if (!wasInitialized && update) {
                     val currentHeight = BlockchainApi.getLastBlockHeight(ctx)
-                    if (currentHeight <= 0) {
-                        BlockchainApi.addConfiguration(ctx, 0, false, blockchainConfig)
-                    } else if (update) {
-                        BlockchainApi.addConfiguration(ctx, currentHeight + 1, false, blockchainConfig)
-                    }
+                    BlockchainApi.addConfiguration(ctx, currentHeight + 1, false, blockchainConfig)
                 }
             }
         }
