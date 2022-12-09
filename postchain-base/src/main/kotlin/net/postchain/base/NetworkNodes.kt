@@ -4,7 +4,6 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.NodeRid
 
@@ -48,6 +47,9 @@ class NetworkNodes(
             if (me == null) {
                 throw UserMistake("We didn't find our peer ID (${myKey.toHex()}) in the list of given peers. Check the configuration for the node.")
             } else {
+                if (peerMap.isEmpty()) {
+                    logger.warn("I have no peers")
+                }
                 return NetworkNodes(me, peerMap.toMap(), mutableMapOf())
             }
         }
