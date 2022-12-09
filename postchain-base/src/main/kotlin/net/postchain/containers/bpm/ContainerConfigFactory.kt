@@ -3,6 +3,7 @@ package net.postchain.containers.bpm
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
+import com.spotify.docker.client.messages.Volume
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
@@ -38,7 +39,10 @@ object ContainerConfigFactory {
         // pgdata volume
         if (containerNodeConfig.bindPgdataVolume) {
             val pgdataVol = HostConfig.Bind
-                    .from(fs.hostPgdataOf(container.containerName).toString())
+                    .from(Volume.builder()
+                            .name("${container.containerName}_PG_DATA")
+                            .build()
+                    )
                     .to(FileSystem.CONTAINER_PGDATA_PATH)
                     .build()
             volumes.add(pgdataVol)
