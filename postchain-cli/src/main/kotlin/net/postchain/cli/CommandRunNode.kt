@@ -7,11 +7,13 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.api.internal.BlockchainApi
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.debugOption
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 
 class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node with a configuration") {
@@ -28,16 +30,25 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
     override fun run() {
         if (blockchainConfigFile != null) {
             require(chainIDs.size == 1) { "Cannot start more than one chain if a blockchain configuration is specified" }
-            runStorageCommand(nodeConfigFile, chainIDs[0]) {
-                val current = BlockchainApi.getLastBlockHeight(it)
-                val bcConfig = GtvFileReader.readFile(blockchainConfigFile!!)
-                when {
-                    current <= 0 || override -> BlockchainApi.addConfiguration(it, 0, override, bcConfig)
-                    update -> BlockchainApi.addConfiguration(it, current + 1, false, bcConfig)
-                    else -> {}
+
+            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+            val blockchainConfig = GtvFileReader.readFile(blockchainConfigFile!!)
+            val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
+
+            runStorageCommand(appConfig, chainIDs[0]) { ctx ->
+                val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)
+
+                if (!wasInitialized) {
+                    val wasAdded = BlockchainApi.addConfiguration(ctx, 0, false, blockchainConfig)
+
+                    if (!wasAdded && update) {
+                        val currentHeight = BlockchainApi.getLastBlockHeight(ctx)
+                        BlockchainApi.addConfiguration(ctx, currentHeight + 1, false, blockchainConfig)
+                    }
                 }
             }
         }
+
         CliExecution.runNode(nodeConfigFile, chainIDs, debug)
     }
 }
