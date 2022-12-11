@@ -5,7 +5,7 @@ import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.MockStorage
 import net.postchain.containers.bpm.bcconfig.BlockWiseSubnodeBlockchainConfigListener
-import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
+import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -27,7 +27,7 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
     private val appConfig: AppConfig = mock() {
         on { cryptoSystem } doReturn Secp256K1CryptoSystem()
     }
-    private val configVerifier = SubnodeBlockchainConfigVerifier(appConfig)
+    private val configVerifier = BlockchainConfigVerifier(appConfig)
     private val ignored = 0L
 
     companion object : KLogging()
@@ -36,7 +36,7 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
     fun `Life cycle test`() {
         val connectionManager: SubConnectionManager = mock()
         val sut = BlockWiseSubnodeBlockchainConfigListener(
-                appConfig, mock(), 0L, ZERO_RID, connectionManager)
+                appConfig, 0L, ZERO_RID, connectionManager)
         val mock0 = MockStorage.mockEContext(0L)
         sut.storage = mock0.storage
         sut.blockchainConfigProvider = mock {

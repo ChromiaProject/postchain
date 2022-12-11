@@ -6,7 +6,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
-class SubnodeBlockchainConfigVerifier(val appConfig: AppConfig) {
+class BlockchainConfigVerifier(val appConfig: AppConfig) {
 
     private val merkleHashCalculator = GtvMerkleHashCalculator(appConfig.cryptoSystem)
 

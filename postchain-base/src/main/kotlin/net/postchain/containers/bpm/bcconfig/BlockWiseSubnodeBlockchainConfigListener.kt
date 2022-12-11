@@ -17,7 +17,6 @@ import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class BlockWiseSubnodeBlockchainConfigListener(
         val appConfig: AppConfig,
-        val subnodeBlockchainConfigurationConfig: SubnodeBlockchainConfigurationConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         val connectionManager: SubConnectionManager
@@ -31,7 +30,7 @@ class BlockWiseSubnodeBlockchainConfigListener(
 
     //    private val lastHeight = AtomicLong(-1)
     private var lastHeight = -1L
-    private val configVerifier = SubnodeBlockchainConfigVerifier(appConfig)
+    private val configVerifier = BlockchainConfigVerifier(appConfig)
 
     init {
         connectionManager.preAddMsMessageHandler(chainId, this)

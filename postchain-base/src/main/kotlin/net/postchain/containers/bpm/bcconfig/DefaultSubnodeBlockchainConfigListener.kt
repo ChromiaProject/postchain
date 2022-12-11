@@ -35,7 +35,7 @@ class DefaultSubnodeBlockchainConfigListener(
     private val intervalLogger = ResultLogger(logger)
     private val pref = "[chainId:${chainId}]:"
 
-    private val configVerifier = SubnodeBlockchainConfigVerifier(appConfig)
+    private val configVerifier = BlockchainConfigVerifier(appConfig)
     lateinit var blockchainConfigProvider: BlockchainConfigurationProvider
     lateinit var storage: Storage
     private var responseTimestamp: Long = 0L

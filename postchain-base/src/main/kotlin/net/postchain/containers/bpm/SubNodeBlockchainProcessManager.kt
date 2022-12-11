@@ -5,7 +5,7 @@ import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.containers.bpm.bcconfig.DefaultSubnodeBlockchainConfigListener
+import net.postchain.containers.bpm.bcconfig.BlockWiseSubnodeBlockchainConfigListener
 import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigListener
 import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigurationConfig
 import net.postchain.core.AfterCommitHandler
@@ -33,8 +33,13 @@ open class SubNodeBlockchainProcessManager(
         return if (!subnodeBcCfgConfig.enabled) {
             { _ -> true }
         } else {
+            /*
             val listener: SubnodeBlockchainConfigListener = DefaultSubnodeBlockchainConfigListener(
                     appConfig, subnodeBcCfgConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
+            ).
+             */
+            val listener: SubnodeBlockchainConfigListener = BlockWiseSubnodeBlockchainConfigListener(
+                    appConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
             ).also {
                 it.blockchainConfigProvider = blockchainConfigProvider
                 it.storage = storage

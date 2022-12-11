@@ -5,7 +5,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
-import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
+import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockRid
 import net.postchain.core.NodeRid
@@ -48,7 +48,7 @@ open class DefaultMasterCommunicationManager(
     companion object : KLogging()
 
     private lateinit var sendConnectedPeersTask: TimerTask
-    private val configVerifier = SubnodeBlockchainConfigVerifier(appConfig)
+    private val configVerifier = BlockchainConfigVerifier(appConfig)
 
     override fun init() {
         val subnodeChainConfig = SubChainConfig(chainId, blockchainRid, subnodePacketConsumer())

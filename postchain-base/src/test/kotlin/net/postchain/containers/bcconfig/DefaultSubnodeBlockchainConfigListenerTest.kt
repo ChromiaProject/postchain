@@ -5,7 +5,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.MockStorage
 import net.postchain.containers.bpm.bcconfig.DefaultSubnodeBlockchainConfigListener
-import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigVerifier
+import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
 import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigurationConfig
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvEncoder
@@ -33,7 +33,7 @@ class DefaultSubnodeBlockchainConfigListenerTest {
     private val blockchainRid = BlockchainRid.ZERO_RID
     private val now = System.currentTimeMillis()
     private val config = GtvEncoder.encodeGtv(GtvFactory.gtv("valid config"))
-    private val configHash = SubnodeBlockchainConfigVerifier(appConfig).calculateHash(config)
+    private val configHash = BlockchainConfigVerifier(appConfig).calculateHash(config)
     private val invalidConfig = config.dropLast(1).toByteArray()
     private val ignored = 0L
 
@@ -75,7 +75,7 @@ class DefaultSubnodeBlockchainConfigListenerTest {
         verify(connManager, times(2)).sendMessageToMaster(eq(chainId), message.capture())
 
         // 4a. Interaction: Then valid BlockchainConfig received
-        val configHash = SubnodeBlockchainConfigVerifier(appConfig).calculateHash(config)
+        val configHash = BlockchainConfigVerifier(appConfig).calculateHash(config)
         val blockchainConfig = MsNextBlockchainConfigMessage(
                 BlockchainRid.ZERO_RID.data, message.firstValue.lastHeight, 0L, config, configHash)
         sut.onMessage(blockchainConfig)
