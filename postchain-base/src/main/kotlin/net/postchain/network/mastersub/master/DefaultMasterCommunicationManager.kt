@@ -48,6 +48,7 @@ open class DefaultMasterCommunicationManager(
     companion object : KLogging()
 
     private lateinit var sendConnectedPeersTask: TimerTask
+    private val configVerifier = SubnodeBlockchainConfigVerifier(appConfig)
 
     override fun init() {
         val subnodeChainConfig = SubChainConfig(chainId, blockchainRid, subnodePacketConsumer())
@@ -87,7 +88,7 @@ open class DefaultMasterCommunicationManager(
                         logger.debug {
                             "${process()}: BlockchainConfig requested by subnode: blockchainRid: " + blockchainRid.toShortHex()
                         }
-                        val nextHeight = dataSource.findNextConfigurationHeight(message.blockchainRid, message.currentHeight)
+                        val nextHeight = dataSource.findNextConfigurationHeight(message.blockchainRid, message.lastHeight)
                         val config = if (nextHeight == null) {
                             null
                         } else {
@@ -97,10 +98,10 @@ open class DefaultMasterCommunicationManager(
                                 null // message.nextHeight != null && nextHeight == message.nextHeight
                             }
                         }
-                        val hash = config?.let { SubnodeBlockchainConfigVerifier.calculateHash(it) }
+                        val hash = config?.let { configVerifier.calculateHash(it) }
                         val hashStr = hash?.let { BlockchainRid(it).toHex() }
 
-                        val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config, hash)
+                        val response = MsNextBlockchainConfigMessage(message.blockchainRid, message.lastHeight, nextHeight, config, hash)
                         masterConnectionManager.sendPacketToSub(response)
                         logger.debug {
                             "${process()}: BlockchainConfig sent to subnode: blockchainRid: " +
