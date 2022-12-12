@@ -7,6 +7,7 @@ import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseTransactionQueue
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.*
@@ -61,13 +62,23 @@ open class BaseBlockchainInfrastructure(
             chainId: Long,
             bcConfigurationFactory: BlockchainConfigurationFactorySupplier,
     ): BlockchainConfiguration {
+        val blockConfData = BlockchainConfigurationData.fromRaw(rawConfigurationData)
 
-        val blockConfData = BlockchainConfigurationData.fromRaw(
-                rawConfigurationData, eContext, nodeId, chainId, subjectID, blockSigMaker)
+        val blockchainRid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
+        val blockchainContext = BaseBlockchainContext(blockchainRid, resolveNodeId(nodeId, subjectID, blockConfData.signers), chainId, subjectID)
 
         val factory = bcConfigurationFactory.supply(blockConfData.configurationFactory)
 
-        return factory.makeBlockchainConfiguration(blockConfData, eContext, postchainContext.cryptoSystem)
+        return factory.makeBlockchainConfiguration(blockConfData, blockchainContext, blockSigMaker, eContext, postchainContext.cryptoSystem)
+    }
+
+    private fun resolveNodeId(nodeId: Int, subjectID: ByteArray, signers: List<ByteArray>): Int {
+        return if (nodeId == NODE_ID_AUTO) {
+            signers.indexOfFirst { it.contentEquals(subjectID) }
+                    .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
+        } else {
+            nodeId
+        }
     }
 
     override fun makeBlockchainEngine(

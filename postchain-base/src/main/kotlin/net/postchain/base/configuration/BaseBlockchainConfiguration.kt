@@ -3,7 +3,15 @@
 package net.postchain.base.configuration
 
 import mu.KLogging
-import net.postchain.base.*
+import net.postchain.base.BaseBlockBuilderExtension
+import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
+import net.postchain.base.BaseBlockHeader
+import net.postchain.base.BaseBlockQueries
+import net.postchain.base.BaseBlockWitness
+import net.postchain.base.BlockWitnessProvider
+import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.NullSpecialTransactionHandler
+import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
@@ -11,16 +19,31 @@ import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
-import net.postchain.core.*
-import net.postchain.core.block.*
-import net.postchain.gtv.Gtv
+import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainContext
+import net.postchain.core.DynamicClassName
+import net.postchain.core.EContext
+import net.postchain.core.Storage
+import net.postchain.core.TransactionFactory
+import net.postchain.core.TransactionQueue
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 
 open class BaseBlockchainConfiguration(
         val configData: BlockchainConfigurationData,
         val cryptoSystem: CryptoSystem,
+        private val partialContext: BlockchainContext,
+        private val blockSigMaker: SigMaker
 ) : BlockchainConfiguration {
 
     companion object : KLogging()
@@ -28,22 +51,23 @@ open class BaseBlockchainConfiguration(
     final override val rawConfig: Gtv
         get() = configData.rawConfig
     override val blockchainContext: BlockchainContext
-        get() = configData.context
+        get() = partialContext
 
     override val traits = setOf<String>()
     val blockStore = BaseBlockStore()
-    final override val chainID get() = configData.context.chainID
-    final override val blockchainRid get() = configData.context.blockchainRID
-    final override val effectiveBlockchainRID = configData.historicBrid ?: configData.context.blockchainRID
+    final override val chainID get() = partialContext.chainID
+    final override val blockchainRid get() = partialContext.blockchainRID
+    final override val effectiveBlockchainRID = configData.historicBrid ?: partialContext.blockchainRID
     final override val signers get() = configData.signers
     final override val transactionQueueSize: Int
         get() = configData.txQueueSize.toInt()
 
-    protected val blockStrategyConfig = configData.blockStrategy?.toObject() ?: BaseBlockBuildingStrategyConfigurationData.default
+    protected val blockStrategyConfig = configData.blockStrategy?.toObject()
+            ?: BaseBlockBuildingStrategyConfigurationData.default
 
     private val blockWitnessProvider: BlockWitnessProvider = BaseBlockWitnessProvider(
             cryptoSystem,
-            configData.blockSigMaker,
+            blockSigMaker,
             signers.toTypedArray()
     )
 
@@ -92,7 +116,7 @@ open class BaseBlockchainConfiguration(
                 getTransactionFactory(),
                 getSpecialTxHandler(),
                 signers.toTypedArray(),
-                configData.blockSigMaker,
+                blockSigMaker,
                 blockWitnessProvider,
                 blockchainDependencies,
                 makeBBExtensions(),
@@ -127,7 +151,7 @@ open class BaseBlockchainConfiguration(
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {
         return BaseBlockQueries(
-                this, storage, blockStore, chainID, configData.context.nodeRID!!)
+                this, storage, blockStore, chainID, blockchainContext.nodeRID!!)
     }
 
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {

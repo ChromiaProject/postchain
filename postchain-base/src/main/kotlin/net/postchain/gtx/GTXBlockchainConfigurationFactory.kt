@@ -4,22 +4,30 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfigurationFactory
+import net.postchain.core.BlockchainContext
 import net.postchain.core.EContext
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.mapper.toObject
 
 /**
- * TODO: [Olle] This should be in the "net.postchain.base.gtx" pagkage (setting it apart from the GTX module),
+ * TODO: [Olle] This should be in the "net.postchain.base.gtx" package (setting it apart from the GTX module),
  *       but that would mean many BC configurations get a new BC RID, messing up many tests :-(
  */
 open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
-    override fun makeBlockchainConfiguration(configurationData: Any, eContext: EContext, cryptoSystem: CryptoSystem): GTXBlockchainConfiguration {
+    override fun makeBlockchainConfiguration(configurationData: Any,
+                                             partialContext: BlockchainContext,
+                                             blockSigMaker: SigMaker,
+                                             eContext: EContext,
+                                             cryptoSystem: CryptoSystem): GTXBlockchainConfiguration {
         val cfData = configurationData as BlockchainConfigurationData
-        val effectiveBRID = cfData.historicBrid ?: configurationData.context.blockchainRID
+        val effectiveBRID = cfData.historicBrid ?: partialContext.blockchainRID
         return GTXBlockchainConfiguration(
                 cfData,
                 cryptoSystem,
+                partialContext,
+                blockSigMaker,
                 createGtxModule(effectiveBRID, configurationData, eContext)
         )
     }

@@ -2,7 +2,14 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.base.BaseBlockchainContext
-import net.postchain.base.configuration.*
+import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY_MAXBLOCKTIME
+import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
+import net.postchain.base.configuration.KEY_GTX
+import net.postchain.base.configuration.KEY_GTX_MODULES
+import net.postchain.base.configuration.KEY_HISTORIC_BRID
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
@@ -10,12 +17,22 @@ import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.devtools.mminfra.*
+import net.postchain.devtools.mminfra.MockManagedNodeDataSource
+import net.postchain.devtools.mminfra.TestBlockchainConfiguration
+import net.postchain.devtools.mminfra.TestBlockchainConfigurationData
+import net.postchain.devtools.mminfra.TestManagedBlockchainProcessManager
+import net.postchain.devtools.mminfra.TestManagedEBFTInfrastructureFactory
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
-import net.postchain.gtv.*
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvString
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.StandardOpsGTXModule
@@ -70,8 +87,8 @@ open class ManagedModeTest : AbstractSyncTest() {
             val sigMaker = createSigMaker(pubkey)
 
             val context = BaseBlockchainContext(brid, NODE_ID_AUTO, chainId, pubkey)
-            val confData = data.getDict().toObject<BlockchainConfigurationData>(mapOf("partialContext" to context, "sigmaker" to sigMaker))
-            val bcConf = TestBlockchainConfiguration(confData, dataSource)
+            val confData = data.getDict().toObject<BlockchainConfigurationData>()
+            val bcConf = TestBlockchainConfiguration(confData, context, sigMaker, dataSource)
             dataSource.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
         }
     }
@@ -154,13 +171,15 @@ open class ManagedModeTest : AbstractSyncTest() {
                 val pubkey = nodes[nodeId].pubKey.hexStringToByteArray()
                 val sigMaker = createSigMaker(pubkey)
 
-                val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration, brid, NODE_ID_AUTO, newChainId, pubkey, sigMaker)
+                val bcConf = BlockchainConfigurationData.fromRaw(rawBlockchainConfiguration)
                 val bcFactory = blockchainConfigurationFactory ?: GTXBlockchainConfigurationFactory()
                 val dappBcFactory = DappBlockchainConfigurationFactory(bcFactory, dataSource)
                 val postchainContext = nodes[nodeId].postchainContext
                 withWriteConnection(postchainContext.storage, newChainId) { ctx ->
                     DatabaseAccess.of(ctx).apply { initializeBlockchain(ctx, brid) }
-                    dataSource.addConf(newChainId, brid, 0, dappBcFactory.makeBlockchainConfiguration(bcConf, ctx, postchainContext.cryptoSystem), rawBlockchainConfiguration)
+                    dataSource.addConf(newChainId, brid, 0,
+                            dappBcFactory.makeBlockchainConfiguration(bcConf, BaseBlockchainContext(brid, NODE_ID_AUTO, newChainId, pubkey), sigMaker, ctx, postchainContext.cryptoSystem),
+                            rawBlockchainConfiguration)
                     true
                 }
             }
