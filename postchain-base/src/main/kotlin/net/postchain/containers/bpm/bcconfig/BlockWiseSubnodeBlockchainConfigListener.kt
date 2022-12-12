@@ -29,7 +29,6 @@ class BlockWiseSubnodeBlockchainConfigListener(
     lateinit var blockchainConfigProvider: BlockchainConfigurationProvider
     lateinit var storage: Storage
 
-    //    private val lastHeight = AtomicLong(-1)
     private var lastHeight = -1L
     private val configVerifier = BlockchainConfigVerifier(appConfig)
 

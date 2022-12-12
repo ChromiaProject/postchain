@@ -21,6 +21,7 @@ interface SubnodeBlockchainConfigListener {
     fun checkConfig(): Boolean
 }
 
+@Deprecated("Use net.postchain.containers.bpm.bcconfig.BlockWiseSubnodeBlockchainConfigListener instead")
 class DefaultSubnodeBlockchainConfigListener(
         val appConfig: AppConfig,
         val subnodeBlockchainConfigurationConfig: SubnodeBlockchainConfigurationConfig,
