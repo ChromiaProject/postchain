@@ -8,6 +8,7 @@ import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.containers.bpm.ContainerBlockchainProcessManagerExtension
 import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainEngine
@@ -92,6 +93,13 @@ class LegacyAnchoringBlockchainProcessManagerExtension(private val postchainCont
         val tx = chain0Engine.getConfiguration().getTransactionFactory().decodeTransaction(
                 txb.finish().buildGtx().encode()
         )
-        chain0Engine.getTransactionQueue().enqueue(tx)
+        val existingTx = withReadConnection(postchainContext.storage, 0) { eContext ->
+            DatabaseAccess.of(eContext).getTransactionInfo(eContext, tx.getRID())
+        }
+        if (existingTx == null) {
+            chain0Engine.getTransactionQueue().enqueue(tx)
+        } else {
+            logger.debug { "Block anchor tx with rid ${tx.getRID().toHex()} already exists" }
+        }
     }
 }
