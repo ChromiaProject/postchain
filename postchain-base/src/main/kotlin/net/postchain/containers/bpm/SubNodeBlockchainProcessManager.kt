@@ -5,13 +5,13 @@ import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.containers.bpm.bcconfig.BlockWiseSubnodeBlockchainConfigListener
+import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigListener
+import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigurationConfig
+import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.block.BlockTrace
-import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigurationConfig
-import net.postchain.containers.bpm.bcconfig.DefaultSubnodeBlockchainConfigListener
-import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigListener
-import net.postchain.core.AfterCommitHandler
 import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import java.util.concurrent.ConcurrentHashMap
@@ -33,8 +33,13 @@ open class SubNodeBlockchainProcessManager(
         return if (!subnodeBcCfgConfig.enabled) {
             { _ -> true }
         } else {
+            /*
             val listener: SubnodeBlockchainConfigListener = DefaultSubnodeBlockchainConfigListener(
-                    subnodeBcCfgConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
+                    appConfig, subnodeBcCfgConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
+            ).
+             */
+            val listener: SubnodeBlockchainConfigListener = BlockWiseSubnodeBlockchainConfigListener(
+                    appConfig, subnodeBcCfgConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
             ).also {
                 it.blockchainConfigProvider = blockchainConfigProvider
                 it.storage = storage
@@ -80,7 +85,7 @@ open class SubNodeBlockchainProcessManager(
             } catch (e: Exception) {
                 logger.error(e) { "Error when sending committed block message: $e" }
             }
-            subnodeBcCfgListeners[chainId]!!.lastBlockTimestamp = blockTimestamp
+            subnodeBcCfgListeners[chainId]!!.commit(height, blockTimestamp)
             baseHandler(bTrace, height, blockTimestamp)
         }
     }
