@@ -1,7 +1,6 @@
 package net.postchain.containers.bpm.bcconfig
 
 import mu.KLogging
-import net.postchain.base.BaseConfigurationDataStore
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
@@ -111,7 +110,8 @@ class DefaultSubnodeBlockchainConfigListener(
                     if (approved) {
                         logger.debug { "$pref Remote config is going to be stored: $details" }
                         withWriteConnection(storage, chainId) { ctx ->
-                            BaseConfigurationDataStore.addConfigurationData(ctx, message.nextHeight!!, message.rawConfig)
+                            DatabaseAccess.of(ctx).addConfigurationData(
+                                    ctx, message.nextHeight!!, message.rawConfig)
                             true
                         }
                         responseTimestamp = System.currentTimeMillis()

@@ -301,13 +301,14 @@ open class ManagedBlockchainProcessManager(
             val nextConfigHeight = dataSource.findNextConfigurationHeight(brid.data, height)
             if (nextConfigHeight != null) {
                 logger.info { "Next config height found in managed-mode module: $nextConfigHeight" }
-                if (BaseConfigurationDataStore.findConfigurationHeightForBlock(ctx, nextConfigHeight) != nextConfigHeight) {
+                if (DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, nextConfigHeight) != nextConfigHeight) {
                     logger.info {
                         "Configuration for the height $nextConfigHeight is not found in ConfigurationDataStore " +
                                 "and will be loaded into it from managed-mode module"
                     }
                     val config = dataSource.getConfiguration(brid.data, nextConfigHeight)!!
-                    BaseConfigurationDataStore.addConfigurationData(ctx, nextConfigHeight, config)
+                    DatabaseAccess.of(ctx).addConfigurationData(
+                            ctx, nextConfigHeight, config)
                 }
             }
 
