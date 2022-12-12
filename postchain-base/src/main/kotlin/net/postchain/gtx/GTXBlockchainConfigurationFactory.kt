@@ -2,11 +2,15 @@ package net.postchain.gtx
 
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.EContext
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
+import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
 
 /**
@@ -17,7 +21,12 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
     companion object {
         fun validateConfiguration(config: Gtv, blockchainRid: BlockchainRid) {
-            val configurationData = config.toObject<BlockchainConfigurationData>()
+            val configurationData = BlockchainConfigurationData.fromRaw(
+                    GtvEncoder.encodeGtv(config), blockchainRid, -1, -1L, ByteArray(0),
+                    object : SigMaker {
+                        override fun signMessage(msg: ByteArray): Signature = throw NotImplementedError()
+                        override fun signDigest(digest: Hash): Signature = throw NotImplementedError()
+                    })
             makeGtxModule(blockchainRid, configurationData)
         }
 
