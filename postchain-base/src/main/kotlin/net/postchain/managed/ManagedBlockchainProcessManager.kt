@@ -13,6 +13,7 @@ import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
@@ -307,6 +308,7 @@ open class ManagedBlockchainProcessManager(
                                 "and will be loaded into it from managed-mode module"
                     }
                     val config = dataSource.getConfiguration(brid.data, nextConfigHeight)!!
+                    GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
                     DatabaseAccess.of(ctx).addConfigurationData(
                             ctx, nextConfigHeight, config)
                 }
