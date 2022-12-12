@@ -17,6 +17,7 @@ import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class BlockWiseSubnodeBlockchainConfigListener(
         val appConfig: AppConfig,
+        val config: SubnodeBlockchainConfigurationConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         val connectionManager: SubConnectionManager
@@ -33,11 +34,15 @@ class BlockWiseSubnodeBlockchainConfigListener(
     private val configVerifier = BlockchainConfigVerifier(appConfig)
 
     init {
-        connectionManager.preAddMsMessageHandler(chainId, this)
+        if (config.enabled) {
+            connectionManager.preAddMsMessageHandler(chainId, this)
+        }
     }
 
     @Synchronized
     override fun commit(height: Long, lastBlockTimestamp: Long) {
+        if (!config.enabled) return
+
         if (lastHeight != -1L) {
             logger.error("Can't commit height $height, the current height $lastHeight is not reset yet")
         } else {
@@ -51,11 +56,13 @@ class BlockWiseSubnodeBlockchainConfigListener(
     }
 
     override fun checkConfig(): Boolean {
-        return lastHeight == -1L
+        return !config.enabled || lastHeight == -1L
     }
 
     @Synchronized
     override fun onMessage(message: MsMessage) {
+        if (!config.enabled) return
+
         if (message is MsNextBlockchainConfigMessage) {
             val details = "brid: ${BlockchainRid(message.blockchainRid).toShortHex()}, " +
                     "chainId: $chainId, " +

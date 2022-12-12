@@ -39,7 +39,7 @@ open class SubNodeBlockchainProcessManager(
             ).
              */
             val listener: SubnodeBlockchainConfigListener = BlockWiseSubnodeBlockchainConfigListener(
-                    appConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
+                    appConfig, subnodeBcCfgConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
             ).also {
                 it.blockchainConfigProvider = blockchainConfigProvider
                 it.storage = storage

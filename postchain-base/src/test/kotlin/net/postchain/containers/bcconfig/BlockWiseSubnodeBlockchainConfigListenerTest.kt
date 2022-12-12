@@ -6,6 +6,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.MockStorage
 import net.postchain.containers.bpm.bcconfig.BlockWiseSubnodeBlockchainConfigListener
 import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
+import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigurationConfig
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -18,6 +19,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import kotlin.test.assertEquals
@@ -35,8 +37,11 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
     @Test
     fun `Life cycle test`() {
         val connectionManager: SubConnectionManager = mock()
+        val config: SubnodeBlockchainConfigurationConfig = mock() {
+            on { enabled } doReturn true
+        }
         val sut = BlockWiseSubnodeBlockchainConfigListener(
-                appConfig, 0L, ZERO_RID, connectionManager)
+                appConfig, config, 0L, ZERO_RID, connectionManager)
         val mock0 = MockStorage.mockEContext(0L)
         sut.storage = mock0.storage
         sut.blockchainConfigProvider = mock {
@@ -97,6 +102,23 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
                 ZERO_RID.data, 1L, 15L, config15, hash15)
         sut.onMessage(response1)
         verify(mock0.db).addConfigurationData(any(), eq(15L), eq(config15))
+        assertEquals(true, sut.checkConfig())
+    }
+
+    @Test
+    fun `Life cycle test when config fetching is disabled`() {
+        val connectionManager: SubConnectionManager = mock()
+        val config: SubnodeBlockchainConfigurationConfig = mock() {
+            on { enabled } doReturn false
+        }
+        val sut = BlockWiseSubnodeBlockchainConfigListener(
+                appConfig, config, 0L, ZERO_RID, connectionManager)
+
+        assertEquals(true, sut.checkConfig())
+
+        // Commiting block0
+        sut.commit(0L, ignored)
+        verify(connectionManager, never()).sendMessageToMaster(eq(0L), any())
         assertEquals(true, sut.checkConfig())
     }
 }
