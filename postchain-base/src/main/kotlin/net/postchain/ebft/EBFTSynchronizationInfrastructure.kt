@@ -64,8 +64,17 @@ open class EBFTSynchronizationInfrastructure(
 
             val peers: Set<NodeRid> = peerCommConfiguration.networkNodes.getPeerIds()
             val signers: Set<NodeRid> = blockchainConfig.signers.map { NodeRid(it) }.toSet()
-            if (peers.intersect(signers).isEmpty()) {
-                logger.warn("No overlap between peers and signers: peers=$peers signers=$signers")
+            val iAmASigner = signers.contains(peerCommConfiguration.networkNodes.myself.peerId())
+            if (iAmASigner) {
+                if (signers.size == 1) {
+                    logger.info("I am alone signer")
+                } else if (peers.intersect(signers).isEmpty()) {
+                    logger.warn("I am a signer, but there is no overlap between peers and signers: peers=$peers signers=$signers")
+                }
+            } else {
+                if (peers.isEmpty()) {
+                    logger.warn("I am a replica, but I have no peers")
+                }
             }
 
             val workerContext = WorkerContext(
