@@ -47,9 +47,6 @@ class NetworkNodes(
             if (me == null) {
                 throw UserMistake("We didn't find our peer ID (${myKey.toHex()}) in the list of given peers. Check the configuration for the node.")
             } else {
-                if (peerMap.isEmpty()) {
-                    logger.warn("I have no peers")
-                }
                 return NetworkNodes(me, peerMap.toMap(), mutableMapOf())
             }
         }
