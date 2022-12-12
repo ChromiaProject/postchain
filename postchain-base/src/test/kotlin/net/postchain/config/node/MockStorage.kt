@@ -26,15 +26,15 @@ object MockStorage {
         }
 
         return Mock(
-            mockDb,
-            mockContext,
-            mock {
-            on { openReadConnection() } doReturn mockContext
-            on { openWriteConnection() } doReturn mockContext
-        })
+                mockDb,
+                mockContext,
+                mock {
+                    on { openReadConnection() } doReturn mockContext
+                    on { openWriteConnection() } doReturn mockContext
+                })
     }
 
-    fun mockEContext(chainId: Long): Storage {
+    fun mockEContext(chainId: Long): Mock {
         val mockDb: DatabaseAccess = mock {
             on { getLastBlockHeight(any()) } doReturn 0
             on { findNextConfigurationHeight(any(), any()) } doReturn 0
@@ -45,10 +45,13 @@ object MockStorage {
             on { getInterface(DatabaseAccess::class.java) } doReturn mockDb
         }
 
-        return mock {
-            on { openReadConnection(any()) } doReturn mockContext
-            on { openWriteConnection(any()) } doReturn mockContext
-        }
+        return Mock(
+                mockDb,
+                mockContext,
+                mock {
+                    on { openReadConnection(any()) } doReturn mockContext
+                    on { openWriteConnection(any()) } doReturn mockContext
+                }
+        )
     }
-
 }

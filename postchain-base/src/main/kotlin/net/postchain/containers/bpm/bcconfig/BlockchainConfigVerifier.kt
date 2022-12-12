@@ -1,15 +1,14 @@
 package net.postchain.containers.bpm.bcconfig
 
 import net.postchain.common.data.Hash
-import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
-object SubnodeBlockchainConfigVerifier {
+class BlockchainConfigVerifier(val appConfig: AppConfig) {
 
-    private val cryptoSystem = Secp256K1CryptoSystem()
-    private val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val merkleHashCalculator = GtvMerkleHashCalculator(appConfig.cryptoSystem)
 
     fun calculateHash(rawConfig: ByteArray): Hash {
         return GtvDecoder.decodeGtv(rawConfig).merkleHash(merkleHashCalculator)
