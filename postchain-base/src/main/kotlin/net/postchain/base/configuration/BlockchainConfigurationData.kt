@@ -1,14 +1,7 @@
 package net.postchain.base.configuration
 
-import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.BaseDependencyFactory
-import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
-import net.postchain.core.BlockchainContext
-import net.postchain.core.EContext
-import net.postchain.core.NODE_ID_AUTO
-import net.postchain.core.NODE_ID_READ_ONLY
-import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.mapper.*
@@ -16,10 +9,6 @@ import net.postchain.gtv.mapper.*
 data class BlockchainConfigurationData(
         @RawGtv
         val rawConfig: Gtv,
-        @Transient("sigmaker")
-        val blockSigMaker: SigMaker,
-        @Transient("partialContext")
-        private val partialContext: BlockchainContext,
 
         @Name(KEY_SIGNERS)
         val signers: List<ByteArray>,
@@ -67,59 +56,10 @@ data class BlockchainConfigurationData(
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()
 
-
-    val context = BaseBlockchainContext(
-            partialContext.blockchainRID,
-            resolveNodeID(partialContext.nodeID, partialContext.nodeRID!!),
-            partialContext.chainID,
-            partialContext.nodeRID
-    )
-
-    private fun resolveNodeID(nodeID: Int, subjectID: ByteArray): Int {
-        return if (nodeID == NODE_ID_AUTO) {
-            signers.indexOfFirst { it.contentEquals(subjectID) }
-                    .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
-        } else {
-            nodeID
-        }
-    }
-
     companion object {
         @JvmStatic
         fun fromRaw(
-                rawConfigurationData: ByteArray,
-                eContext: EContext,
-                nodeId: Int,
-                chainId: Long,
-                subjectID: ByteArray,
-                blockSigMaker: SigMaker,
-        ): BlockchainConfigurationData {
-            val brid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
-            return fromRaw(
-                    rawConfigurationData,
-                    brid,
-                    nodeId,
-                    chainId,
-                    subjectID,
-                    blockSigMaker,
-            )
-        }
-
-        @JvmStatic
-        fun fromRaw(
-                rawConfigurationData: ByteArray,
-                brid: BlockchainRid,
-                nodeId: Int,
-                chainId: Long,
-                subjectID: ByteArray,
-                blockSigMaker: SigMaker,
-        ): BlockchainConfigurationData {
-            val gtvData = GtvFactory.decodeGtv(rawConfigurationData)
-            val context = BaseBlockchainContext(brid, nodeId, chainId, subjectID)
-            return gtvData.toObject(mapOf(
-                    "sigmaker" to blockSigMaker,
-                    "partialContext" to context,
-            ))
-        }
+                rawConfigurationData: ByteArray): BlockchainConfigurationData =
+                GtvFactory.decodeGtv(rawConfigurationData).toObject()
     }
 }
