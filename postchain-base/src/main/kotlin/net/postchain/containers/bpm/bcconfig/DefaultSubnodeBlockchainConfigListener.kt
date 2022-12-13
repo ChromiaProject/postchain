@@ -117,15 +117,23 @@ class DefaultSubnodeBlockchainConfigListener(
                 if (message.rawConfig != null && message.configHash != null) {
                     val approved = configVerifier.verify(message.rawConfig, message.configHash)
                     if (approved) {
-                        logger.debug { "$pref Remote config is going to be stored: $details" }
-                        withWriteConnection(storage, chainId) { ctx ->
+                        val valid = try {
                             GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(message.rawConfig), blockchainRid)
-                            DatabaseAccess.of(ctx).addConfigurationData(
-                                    ctx, message.nextHeight!!, message.rawConfig)
                             true
+                        } catch (e: Exception) {
+                            logger.warn { "${e.message}" }
+                            false
                         }
-                        responseTimestamp = System.currentTimeMillis()
-                        logger.debug { "$pref Remote config stored: $details" }
+                        if (valid) {
+                            logger.debug { "$pref Remote config is going to be stored: $details" }
+                            withWriteConnection(storage, chainId) { ctx ->
+                                DatabaseAccess.of(ctx).addConfigurationData(
+                                        ctx, message.nextHeight!!, message.rawConfig)
+                                true
+                            }
+                            responseTimestamp = System.currentTimeMillis()
+                            logger.debug { "$pref Remote config stored: $details" }
+                        }
                     } else {
                         logger.debug { "$pref Remote config was corrupted and will not be stored: $details" }
                     }
