@@ -21,12 +21,16 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
     companion object {
         fun validateConfiguration(config: Gtv, blockchainRid: BlockchainRid) {
-            val configurationData = BlockchainConfigurationData.fromRaw(
-                    GtvEncoder.encodeGtv(config), blockchainRid, -1, -1L, ByteArray(0),
-                    object : SigMaker {
-                        override fun signMessage(msg: ByteArray): Signature = throw NotImplementedError()
-                        override fun signDigest(digest: Hash): Signature = throw NotImplementedError()
-                    })
+            val configurationData = try {
+                BlockchainConfigurationData.fromRaw(
+                        GtvEncoder.encodeGtv(config), blockchainRid, -1, -1L, ByteArray(0),
+                        object : SigMaker {
+                            override fun signMessage(msg: ByteArray): Signature = throw NotImplementedError()
+                            override fun signDigest(digest: Hash): Signature = throw NotImplementedError()
+                        })
+            } catch (e: IllegalArgumentException) {
+                throw UserMistake("Unable to parse configuration: ${e.message}", e)
+            }
             makeGtxModule(blockchainRid, configurationData)
         }
 

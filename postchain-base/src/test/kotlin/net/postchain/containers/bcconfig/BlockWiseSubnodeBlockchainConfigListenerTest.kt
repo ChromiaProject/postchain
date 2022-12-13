@@ -1,9 +1,15 @@
 package net.postchain.containers.bcconfig
 
 import mu.KLogging
+import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
+import net.postchain.base.configuration.KEY_GTX
+import net.postchain.base.configuration.KEY_GTX_MODULES
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.MockStorage
+import net.postchain.configurations.GTXTestModule
 import net.postchain.containers.bpm.bcconfig.BlockWiseSubnodeBlockchainConfigListener
 import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
 import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigurationConfig
@@ -14,6 +20,7 @@ import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessag
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
@@ -33,6 +40,13 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
     private val ignored = 0L
 
     companion object : KLogging()
+
+    val validConfig = GtvEncoder.encodeGtv(gtv(mapOf(
+            KEY_SIGNERS to gtv(listOf()),
+            KEY_CONFIGURATIONFACTORY to gtv("BOGUS_FACTORY"),
+            KEY_GTX to gtv(mapOf(KEY_GTX_MODULES to gtv(listOf(gtv(GTXTestModule::class.java.name))))))))
+
+    val invalidConfig = GtvEncoder.encodeGtv(gtv(mapOf()))
 
     @Test
     fun `Life cycle test`() {
@@ -90,13 +104,18 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
         assertEquals(20L, msg1.secondValue.nextHeight)
         assertEquals(false, sut.checkConfig())
         // Response's nextHeight = 15 < 20 AND corrupted rawData
-        val config15 = GtvEncoder.encodeGtv(gtv("my config"))
+        val config15 = validConfig
         val hash15 = configVerifier.calculateHash(config15)
         val config15corrupted = config15.copyOf(config15.size - 1)
         val response1corrupted = MsNextBlockchainConfigMessage(
                 ZERO_RID.data, 1L, 15L, config15corrupted, hash15)
         sut.onMessage(response1corrupted)
         assertEquals(false, sut.checkConfig())
+        // Response's nextHeight = 15 < 20 AND invalid rawData
+        assertThrows<UserMistake> {
+            sut.onMessage(MsNextBlockchainConfigMessage(
+                    ZERO_RID.data, 1L, 15L, invalidConfig, configVerifier.calculateHash(invalidConfig)))
+        }
         // Response's nextHeight = 15 < 20 AND correct rawData
         val response1 = MsNextBlockchainConfigMessage(
                 ZERO_RID.data, 1L, 15L, config15, hash15)

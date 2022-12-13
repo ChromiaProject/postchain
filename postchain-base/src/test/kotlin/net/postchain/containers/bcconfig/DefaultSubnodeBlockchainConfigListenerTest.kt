@@ -1,11 +1,16 @@
 package net.postchain.containers.bcconfig
 
+import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
+import net.postchain.base.configuration.KEY_GTX
+import net.postchain.base.configuration.KEY_GTX_MODULES
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.MockStorage
-import net.postchain.containers.bpm.bcconfig.DefaultSubnodeBlockchainConfigListener
+import net.postchain.configurations.GTXTestModule
 import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
+import net.postchain.containers.bpm.bcconfig.DefaultSubnodeBlockchainConfigListener
 import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigurationConfig
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvEncoder
@@ -32,7 +37,10 @@ class DefaultSubnodeBlockchainConfigListenerTest {
     private val chainId = 0L
     private val blockchainRid = BlockchainRid.ZERO_RID
     private val now = System.currentTimeMillis()
-    private val config = GtvEncoder.encodeGtv(GtvFactory.gtv("valid config"))
+    private val config = GtvEncoder.encodeGtv(GtvFactory.gtv(mapOf(
+            KEY_SIGNERS to GtvFactory.gtv(listOf()),
+            KEY_CONFIGURATIONFACTORY to GtvFactory.gtv("BOGUS_FACTORY"),
+            KEY_GTX to GtvFactory.gtv(mapOf(KEY_GTX_MODULES to GtvFactory.gtv(listOf(GtvFactory.gtv(GTXTestModule::class.java.name))))))))
     private val configHash = BlockchainConfigVerifier(appConfig).calculateHash(config)
     private val invalidConfig = config.dropLast(1).toByteArray()
     private val ignored = 0L
