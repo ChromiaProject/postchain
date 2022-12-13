@@ -77,14 +77,22 @@ class BlockWiseSubnodeBlockchainConfigListener(
                 if (message.rawConfig != null && message.configHash != null) {
                     val approved = configVerifier.verify(message.rawConfig, message.configHash)
                     if (approved) {
-                        logger.debug { "$pref Remote config will be stored: $details" }
-                        withWriteConnection(storage, chainId) { ctx ->
+                        val valid = try {
                             GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(message.rawConfig), blockchainRid)
-                            DatabaseAccess.of(ctx).addConfigurationData(ctx, message.nextHeight!!, message.rawConfig)
                             true
+                        } catch (e: Exception) {
+                            logger.warn { "${e.message}" }
+                            false
                         }
-                        lastHeight = -1L
-                        logger.debug { "$pref Remote config stored: $details" }
+                        if (valid) {
+                            logger.debug { "$pref Remote config will be stored: $details" }
+                            withWriteConnection(storage, chainId) { ctx ->
+                                DatabaseAccess.of(ctx).addConfigurationData(ctx, message.nextHeight!!, message.rawConfig)
+                                true
+                            }
+                            lastHeight = -1L
+                            logger.debug { "$pref Remote config stored: $details" }
+                        }
                     } else {
                         logger.error { "$pref Remote config was corrupted and will not be stored: $details" }
                     }
