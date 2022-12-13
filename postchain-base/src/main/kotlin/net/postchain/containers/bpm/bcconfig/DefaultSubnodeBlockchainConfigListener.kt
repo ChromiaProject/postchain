@@ -6,6 +6,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.Storage
 import net.postchain.network.mastersub.MsMessageHandler
@@ -15,11 +16,13 @@ import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 interface SubnodeBlockchainConfigListener {
-    var lastBlockTimestamp: Long
+    fun commit(height: Long, lastBlockTimestamp: Long)
     fun checkConfig(): Boolean
 }
 
+@Deprecated("Use net.postchain.containers.bpm.bcconfig.BlockWiseSubnodeBlockchainConfigListener instead")
 class DefaultSubnodeBlockchainConfigListener(
+        val appConfig: AppConfig,
         val subnodeBlockchainConfigurationConfig: SubnodeBlockchainConfigurationConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
@@ -32,14 +35,18 @@ class DefaultSubnodeBlockchainConfigListener(
     private val intervalLogger = ResultLogger(logger)
     private val pref = "[chainId:${chainId}]:"
 
+    private val configVerifier = BlockchainConfigVerifier(appConfig)
     lateinit var blockchainConfigProvider: BlockchainConfigurationProvider
     lateinit var storage: Storage
     private var responseTimestamp: Long = 0L
-
-    override var lastBlockTimestamp = -1L
+    private var lastBlockTimestamp = -1L
 
     init {
         connectionManager.preAddMsMessageHandler(chainId, this)
+    }
+
+    override fun commit(height: Long, lastBlockTimestamp: Long) {
+        this.lastBlockTimestamp = lastBlockTimestamp
     }
 
     override fun checkConfig(): Boolean {
@@ -106,7 +113,7 @@ class DefaultSubnodeBlockchainConfigListener(
                 logger.debug { "$pref Remote BlockchainConfig received: $details" }
 
                 if (message.rawConfig != null && message.configHash != null) {
-                    val approved = SubnodeBlockchainConfigVerifier.verify(message.rawConfig, message.configHash)
+                    val approved = configVerifier.verify(message.rawConfig, message.configHash)
                     if (approved) {
                         logger.debug { "$pref Remote config is going to be stored: $details" }
                         withWriteConnection(storage, chainId) { ctx ->

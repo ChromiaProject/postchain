@@ -1,7 +1,11 @@
 package net.postchain.network.mastersub.protocol
 
 import net.postchain.common.data.Hash
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.network.mastersub.protocol.MsMessageType.*
 
 // TODO: [POS-164]: Fix kdoc
@@ -23,9 +27,9 @@ interface MsMessage {
 }
 
 private fun gtvToNullableLong(gtv: Gtv): Long? = if (gtv.isNull()) null else gtv.asInteger()
-private fun nullableLongToGtv(value: Long?): Gtv = if (value == null) GtvNull else GtvFactory.gtv(value)
+private fun nullableLongToGtv(value: Long?): Gtv = if (value == null) GtvNull else gtv(value)
 private fun gtvToNullableByteArray(gtv: Gtv): ByteArray? = if (gtv.isNull()) null else gtv.asByteArray()
-private fun nullableByteArrayToGtv(value: ByteArray?): Gtv = if (value == null) GtvNull else GtvFactory.gtv(value)
+private fun nullableByteArrayToGtv(value: ByteArray?): Gtv = if (value == null) GtvNull else gtv(value)
 
 /**
  * MeMessage Types Enum class
@@ -54,7 +58,7 @@ class MsHandshakeMessage(
             this(blockchainRid, decodePeers(payload.asByteArray()))
 
     override fun getPayload(): Gtv {
-        return GtvFactory.gtv(encodePeers(peers))
+        return gtv(encodePeers(peers))
     }
 
 }
@@ -80,10 +84,10 @@ class MsDataMessage(
     )
 
     override fun getPayload(): Gtv {
-        return GtvFactory.gtv(
-                GtvFactory.gtv(source),
-                GtvFactory.gtv(destination),
-                GtvFactory.gtv(xPacket)
+        return gtv(
+                gtv(source),
+                gtv(destination),
+                gtv(xPacket)
         )
     }
 }
@@ -93,7 +97,7 @@ class MsDataMessage(
  */
 class MsFindNextBlockchainConfigMessage(
         override val blockchainRid: ByteArray,
-        val currentHeight: Long,
+        val lastHeight: Long,
         val nextHeight: Long?
 ) : MsMessage {
     override val type = FindNextBlockchainConfig.ordinal
@@ -105,8 +109,8 @@ class MsFindNextBlockchainConfigMessage(
     )
 
     override fun getPayload(): Gtv {
-        return GtvFactory.gtv(
-                GtvFactory.gtv(currentHeight),
+        return gtv(
+                gtv(lastHeight),
                 nullableLongToGtv(nextHeight)
         )
     }
@@ -117,6 +121,7 @@ class MsFindNextBlockchainConfigMessage(
  */
 class MsNextBlockchainConfigMessage(
         override val blockchainRid: ByteArray,
+        val lastHeight: Long,
         val nextHeight: Long?,
         val rawConfig: ByteArray?,
         val configHash: Hash?
@@ -125,13 +130,15 @@ class MsNextBlockchainConfigMessage(
 
     constructor(blockchainRid: ByteArray, payload: Gtv) : this(
             blockchainRid,
-            gtvToNullableLong(payload[0]),
-            gtvToNullableByteArray(payload[1]),
-            gtvToNullableByteArray(payload[2])
+            payload[0].asInteger(),
+            gtvToNullableLong(payload[1]),
+            gtvToNullableByteArray(payload[2]),
+            gtvToNullableByteArray(payload[3])
     )
 
     override fun getPayload(): Gtv {
-        return GtvFactory.gtv(
+        return gtv(
+                gtv(lastHeight),
                 nullableLongToGtv(nextHeight),
                 nullableByteArrayToGtv(rawConfig),
                 nullableByteArrayToGtv(configHash))
@@ -151,7 +158,7 @@ class MsConnectedPeersMessage(
             this(blockchainRid, decodePeers(payload.asByteArray()))
 
     override fun getPayload(): Gtv {
-        return GtvFactory.gtv(encodePeers(connectedPeers))
+        return gtv(encodePeers(connectedPeers))
     }
 }
 
@@ -174,10 +181,10 @@ class MsCommittedBlockMessage(
     )
 
     override fun getPayload(): Gtv {
-        return GtvFactory.gtv(
-                GtvFactory.gtv(blockRid),
-                GtvFactory.gtv(blockHeader),
-                GtvFactory.gtv(witnessData),
+        return gtv(
+                gtv(blockRid),
+                gtv(blockHeader),
+                gtv(witnessData),
         )
     }
 }
@@ -187,7 +194,7 @@ class MsCommittedBlockMessage(
 // ----------------
 
 fun encodePeers(singers: List<ByteArray>): ByteArray {
-    val gtv = singers.map { GtvFactory.gtv(it) }.let { GtvFactory.gtv(it) }
+    val gtv = singers.map { gtv(it) }.let { gtv(it) }
     return GtvEncoder.encodeGtv(gtv)
 }
 
