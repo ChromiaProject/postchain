@@ -21,6 +21,7 @@ import net.postchain.devtools.NameHelper.peerName
 import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvEncoder
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -82,7 +83,8 @@ class PostchainTestNode(
             ) {
                 logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
                 DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
-                BaseConfigurationDataStore.addConfigurationData(eContext, 0, blockchainConfig)
+                DatabaseAccess.of(eContext).addConfigurationData(
+                        eContext, 0, GtvEncoder.encodeGtv(blockchainConfig))
             }
             brid
         }
@@ -99,7 +101,8 @@ class PostchainTestNode(
                 BLOCKCHAIN_RID_TAG to brid.toHex()
             ) {
                 logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
-                BaseConfigurationDataStore.addConfigurationData(eContext, height, blockchainConfig)
+                DatabaseAccess.of(eContext).addConfigurationData(
+                        eContext, height, GtvEncoder.encodeGtv(blockchainConfig))
             }
             brid
         }
@@ -115,7 +118,7 @@ class PostchainTestNode(
                 BLOCKCHAIN_RID_TAG to brid.toHex()
             ) {
                 logger.debug("Set must_sync_until for chain: $brid, height: $height")
-                BaseConfigurationDataStore.setMustSyncUntil(eContext, brid, height)
+                DatabaseAccess.of(eContext).setMustSyncUntil(eContext, brid, height)
             }
         }
     }

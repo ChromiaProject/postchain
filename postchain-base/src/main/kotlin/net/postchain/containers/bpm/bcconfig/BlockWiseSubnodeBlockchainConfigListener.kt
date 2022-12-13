@@ -8,6 +8,8 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.Storage
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.mastersub.protocol.MsMessage
@@ -83,6 +85,12 @@ class BlockWiseSubnodeBlockchainConfigListener(
                 if (message.rawConfig != null && message.configHash != null) {
                     if (!configVerifier.verify(message.rawConfig, message.configHash)) {
                         logger.error { "$pref Remote config was corrupted and will not be stored: $details" }
+                        return
+                    }
+                    try {
+                        GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(message.rawConfig), blockchainRid)
+                    } catch (e: Exception) {
+                        logger.warn { "${e.message}" }
                         return
                     }
 
