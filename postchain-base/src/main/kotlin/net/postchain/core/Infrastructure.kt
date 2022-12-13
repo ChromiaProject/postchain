@@ -19,8 +19,7 @@ interface SynchronizationInfrastructure : Shutdownable {
      */
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
-            engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean = { _ -> true }
+            engine: BlockchainEngine
     ): BlockchainProcess
 
     /**
