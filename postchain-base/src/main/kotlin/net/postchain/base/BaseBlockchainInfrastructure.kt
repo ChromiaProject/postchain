@@ -65,7 +65,7 @@ open class BaseBlockchainInfrastructure(
         val blockConfData = BlockchainConfigurationData.fromRaw(rawConfigurationData)
 
         val blockchainRid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
-        val blockchainContext = BaseBlockchainContext(blockchainRid, resolveNodeId(nodeId, subjectID, blockConfData.signers), chainId, subjectID)
+        val blockchainContext = BaseBlockchainContext(chainId, blockchainRid, resolveNodeId(nodeId, subjectID, blockConfData.signers), subjectID)
 
         val factory = bcConfigurationFactory.supply(blockConfData.configurationFactory)
 

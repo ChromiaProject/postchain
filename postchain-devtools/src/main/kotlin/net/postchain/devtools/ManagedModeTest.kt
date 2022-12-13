@@ -86,7 +86,7 @@ open class ManagedModeTest : AbstractSyncTest() {
             }
             val sigMaker = createSigMaker(pubkey)
 
-            val context = BaseBlockchainContext(brid, NODE_ID_AUTO, chainId, pubkey)
+            val context = BaseBlockchainContext(chainId, brid, NODE_ID_AUTO, pubkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>()
             val bcConf = TestBlockchainConfiguration(confData, context, sigMaker, dataSource)
             dataSource.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
@@ -178,7 +178,7 @@ open class ManagedModeTest : AbstractSyncTest() {
                 withWriteConnection(postchainContext.storage, newChainId) { ctx ->
                     DatabaseAccess.of(ctx).apply { initializeBlockchain(ctx, brid) }
                     dataSource.addConf(newChainId, brid, 0,
-                            dappBcFactory.makeBlockchainConfiguration(bcConf, BaseBlockchainContext(brid, NODE_ID_AUTO, newChainId, pubkey), sigMaker, ctx, postchainContext.cryptoSystem),
+                            dappBcFactory.makeBlockchainConfiguration(bcConf, BaseBlockchainContext(newChainId, brid, NODE_ID_AUTO, pubkey), sigMaker, ctx, postchainContext.cryptoSystem),
                             rawBlockchainConfiguration)
                     true
                 }
