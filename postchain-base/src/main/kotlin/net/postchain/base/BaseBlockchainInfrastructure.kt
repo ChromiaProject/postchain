@@ -10,8 +10,17 @@ import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.reflection.constructorOf
-import net.postchain.core.*
-import net.postchain.core.block.*
+import net.postchain.core.AfterCommitHandler
+import net.postchain.core.ApiInfrastructure
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainConfigurationFactorySupplier
+import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.DynamicClassName
+import net.postchain.core.EContext
+import net.postchain.core.SynchronizationInfrastructure
+import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.secp256k1_derivePubKey
@@ -52,7 +61,6 @@ open class BaseBlockchainInfrastructure(
      * @param eContext is the DB context
      * @param nodeId
      * @param chainId
-     * @param configurationComponentMap is the map of components (of any type) we specifically set for this config.
      * @return the newly created [BlockchainConfiguration]
      */
     override fun makeBlockchainConfiguration(
@@ -65,20 +73,11 @@ open class BaseBlockchainInfrastructure(
         val blockConfData = BlockchainConfigurationData.fromRaw(rawConfigurationData)
 
         val blockchainRid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
-        val blockchainContext = BaseBlockchainContext(chainId, blockchainRid, resolveNodeId(nodeId, subjectID, blockConfData.signers), subjectID)
+        val partialContext = BaseBlockchainContext(chainId, blockchainRid, nodeId, subjectID)
 
         val factory = bcConfigurationFactory.supply(blockConfData.configurationFactory)
 
-        return factory.makeBlockchainConfiguration(blockConfData, blockchainContext, blockSigMaker, eContext, postchainContext.cryptoSystem)
-    }
-
-    private fun resolveNodeId(nodeId: Int, subjectID: ByteArray, signers: List<ByteArray>): Int {
-        return if (nodeId == NODE_ID_AUTO) {
-            signers.indexOfFirst { it.contentEquals(subjectID) }
-                    .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
-        } else {
-            nodeId
-        }
+        return factory.makeBlockchainConfiguration(blockConfData, partialContext, blockSigMaker, eContext, postchainContext.cryptoSystem)
     }
 
     override fun makeBlockchainEngine(

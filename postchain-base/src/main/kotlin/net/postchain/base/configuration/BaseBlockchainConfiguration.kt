@@ -8,6 +8,7 @@ import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.BaseBlockWitness
+import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.NullSpecialTransactionHandler
@@ -25,6 +26,8 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainContext
 import net.postchain.core.DynamicClassName
 import net.postchain.core.EContext
+import net.postchain.core.NODE_ID_AUTO
+import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
@@ -42,7 +45,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 open class BaseBlockchainConfiguration(
         val configData: BlockchainConfigurationData,
         val cryptoSystem: CryptoSystem,
-        private val partialContext: BlockchainContext,
+        partialContext: BlockchainContext,
         private val blockSigMaker: SigMaker
 ) : BlockchainConfiguration {
 
@@ -50,17 +53,30 @@ open class BaseBlockchainConfiguration(
 
     final override val rawConfig: Gtv
         get() = configData.rawConfig
-    override val blockchainContext: BlockchainContext
-        get() = partialContext
+    final override val blockchainContext: BlockchainContext = BaseBlockchainContext(
+            partialContext.chainID,
+            partialContext.blockchainRID,
+            resolveNodeID(partialContext.nodeID, partialContext.nodeRID!!),
+            partialContext.nodeRID
+    )
 
     override val traits = setOf<String>()
     val blockStore = BaseBlockStore()
-    final override val chainID get() = partialContext.chainID
-    final override val blockchainRid get() = partialContext.blockchainRID
-    final override val effectiveBlockchainRID = configData.historicBrid ?: partialContext.blockchainRID
+    final override val chainID get() = blockchainContext.chainID
+    final override val blockchainRid get() = blockchainContext.blockchainRID
+    final override val effectiveBlockchainRID = configData.historicBrid ?: blockchainContext.blockchainRID
     final override val signers get() = configData.signers
     final override val transactionQueueSize: Int
         get() = configData.txQueueSize.toInt()
+
+    private fun resolveNodeID(nodeID: Int, subjectID: ByteArray): Int {
+        return if (nodeID == NODE_ID_AUTO) {
+            signers.indexOfFirst { it.contentEquals(subjectID) }
+                    .let { i -> if (i == -1) NODE_ID_READ_ONLY else i }
+        } else {
+            nodeID
+        }
+    }
 
     protected val blockStrategyConfig = configData.blockStrategy?.toObject()
             ?: BaseBlockBuildingStrategyConfigurationData.default
@@ -75,7 +91,8 @@ open class BaseBlockchainConfiguration(
 
     // Infrastructure settings
     override val syncInfrastructureName = DynamicClassName.build(configData.synchronizationInfrastructure)
-    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.synchronizationInfrastructureExtension ?: listOf())
+    override val syncInfrastructureExtensionNames = DynamicClassName.buildList(configData.synchronizationInfrastructureExtension
+            ?: listOf())
 
     // Only GTX config can have special TX, this is just "Base" so we settle for null
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
