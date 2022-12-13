@@ -6,7 +6,6 @@ import net.postchain.base.configuration.KEY_GTX
 import net.postchain.base.configuration.KEY_GTX_MODULES
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
-import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.MockStorage
 import net.postchain.configurations.GTXTestModule
@@ -20,7 +19,6 @@ import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessag
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
@@ -29,6 +27,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import kotlin.test.assertEquals
 
 class BlockWiseSubnodeBlockchainConfigListenerTest {
@@ -112,10 +111,10 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
         sut.onMessage(response1corrupted)
         assertEquals(false, sut.checkConfig())
         // Response's nextHeight = 15 < 20 AND invalid rawData
-        assertThrows<UserMistake> {
-            sut.onMessage(MsNextBlockchainConfigMessage(
-                    ZERO_RID.data, 1L, 15L, invalidConfig, configVerifier.calculateHash(invalidConfig)))
-        }
+        sut.onMessage(MsNextBlockchainConfigMessage(
+                ZERO_RID.data, 1L, 15L, invalidConfig, configVerifier.calculateHash(invalidConfig)))
+        verifyNoInteractions(mock0.db)
+        assertEquals(false, sut.checkConfig())
         // Response's nextHeight = 15 < 20 AND correct rawData
         val response1 = MsNextBlockchainConfigMessage(
                 ZERO_RID.data, 1L, 15L, config15, hash15)
