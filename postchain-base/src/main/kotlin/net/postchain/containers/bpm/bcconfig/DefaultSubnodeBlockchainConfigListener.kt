@@ -1,7 +1,6 @@
 package net.postchain.containers.bpm.bcconfig
 
 import mu.KLogging
-import net.postchain.base.BaseConfigurationDataStore
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
@@ -10,6 +9,8 @@ import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.Storage
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.mastersub.protocol.MsMessage
@@ -116,13 +117,23 @@ class DefaultSubnodeBlockchainConfigListener(
                 if (message.rawConfig != null && message.configHash != null) {
                     val approved = configVerifier.verify(message.rawConfig, message.configHash)
                     if (approved) {
-                        logger.debug { "$pref Remote config is going to be stored: $details" }
-                        withWriteConnection(storage, chainId) { ctx ->
-                            BaseConfigurationDataStore.addConfigurationData(ctx, message.nextHeight!!, message.rawConfig)
+                        val valid = try {
+                            GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(message.rawConfig), blockchainRid)
                             true
+                        } catch (e: Exception) {
+                            logger.warn { "${e.message}" }
+                            false
                         }
-                        responseTimestamp = System.currentTimeMillis()
-                        logger.debug { "$pref Remote config stored: $details" }
+                        if (valid) {
+                            logger.debug { "$pref Remote config is going to be stored: $details" }
+                            withWriteConnection(storage, chainId) { ctx ->
+                                DatabaseAccess.of(ctx).addConfigurationData(
+                                        ctx, message.nextHeight!!, message.rawConfig)
+                                true
+                            }
+                            responseTimestamp = System.currentTimeMillis()
+                            logger.debug { "$pref Remote config stored: $details" }
+                        }
                     } else {
                         logger.debug { "$pref Remote config was corrupted and will not be stored: $details" }
                     }

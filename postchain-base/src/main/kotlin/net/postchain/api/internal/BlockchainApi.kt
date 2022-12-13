@@ -16,6 +16,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
 object BlockchainApi {
 
@@ -27,12 +28,15 @@ object BlockchainApi {
     fun addConfiguration(ctx: EContext, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false): Boolean {
         val db = DatabaseAccess.of(ctx)
 
+        val blockchainRid = db.getBlockchainRid(ctx)
+                ?: throw IllegalStateException("Blockchain with id ${ctx.chainID} not found")
         val lastBlockHeight = db.getLastBlockHeight(ctx)
         if (lastBlockHeight >= height) {
             throw IllegalStateException("Cannot add configuration at $height, since last block is already at $lastBlockHeight")
         }
 
         return if (override || db.getConfigurationData(ctx, height) == null) {
+            GTXBlockchainConfigurationFactory.validateConfiguration(config, blockchainRid)
             db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
             addFutureSignersAsReplicas(ctx, db, height, config, allowUnknownSigners)
             true
@@ -114,6 +118,7 @@ object BlockchainApi {
             db.initializeBlockchain(ctx, brid)
             DependenciesValidator.validateBlockchainRids(ctx, givenDependencies)
             // TODO: Blockchain dependencies [DependenciesValidator#validateBlockchainRids]
+            GTXBlockchainConfigurationFactory.validateConfiguration(config, brid)
             db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
             true
         } else {

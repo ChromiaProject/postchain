@@ -30,6 +30,7 @@ class CliIntegrationIT {
     val chainId = 1L
     val expectedBlockchainRID = "3475C1EEC5836D9B38218F78C30D302DBC7CAAAFFAF0CC83AE054B7A208F71D4"
     val secondBlockChainConfig = fullPath("blockchain_config_4_signers.xml")
+    val invalidBlockChainConfig = fullPath("blockchain_config_invalid.xml")
     val heightSecondConfig = 10L
     private lateinit var storage: Storage
 
@@ -75,6 +76,23 @@ class CliIntegrationIT {
         withReadConnection(storage, chainId) {
             assert(DatabaseAccess.of(it).getMustSyncUntil(it)[chainId]).isEqualTo(height2)
         }
+    }
+
+    @Test
+    fun testAddInvalidConfiguration() {
+        CommandAddConfiguration().parse(
+                arrayOf(
+                        "-nc", nodeConfigPath.absolutePath,
+                        "-bc", invalidBlockChainConfig.absolutePath,
+                        "-cid", chainId.toString(),
+                        "--height", heightSecondConfig.toString(),
+                        "--allow-unknown-signers",
+                        "--force"
+                )
+        )
+
+        val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
+        assertNull(configData)
     }
 
     @Test
