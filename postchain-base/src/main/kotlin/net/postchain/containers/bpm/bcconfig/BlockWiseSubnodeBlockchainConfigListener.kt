@@ -15,7 +15,10 @@ import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessag
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 class BlockWiseSubnodeBlockchainConfigListener(
         private val config: SubnodeBlockchainConfigurationConfig,
@@ -30,9 +33,9 @@ class BlockWiseSubnodeBlockchainConfigListener(
     companion object : KLogging()
 
     private val pref = "[chainId:${chainId}]:"
-    private val lock = Object()
-
-    private var lastHeight = AtomicLong(-1L)
+    private val lock = ReentrantLock()
+    private val receivedConfig = lock.newCondition()
+    private val lastHeight = AtomicLong(-1L)
 
     init {
         if (config.enabled) {
@@ -57,13 +60,8 @@ class BlockWiseSubnodeBlockchainConfigListener(
             val message = MsFindNextBlockchainConfigMessage(blockchainRid.data, height, nextHeight)
             connectionManager.sendMessageToMaster(chainId, message)
             logger.debug { "$pref Waiting for Remote BlockchainConfig at height: $height" }
-            try {
-                synchronized(lock) {
-                    lock.wait(config.sleepTimeout)
-                }
-            } catch (e: InterruptedException) {
-                // woken up by message thread, should be able to proceed
-                logger.debug { "$pref Notified by message thread at height: $height" }
+            lock.withLock {
+                receivedConfig.await(config.sleepTimeout, TimeUnit.MILLISECONDS)
             }
             logger.debug { "$pref Checking if Remote BlockchainConfig was received for height: $height" }
         }
@@ -104,8 +102,8 @@ class BlockWiseSubnodeBlockchainConfigListener(
                     logger.debug { "$pref No new remote config: $details" }
                 }
                 lastHeight.set(-1L)
-                synchronized(lock) {
-                    lock.notifyAll()
+                lock.withLock {
+                    receivedConfig.signalAll()
                 }
             } else {
                 logger.error { "$pref Wrong response received. Current state: lastHeight: $lastHeight. Response: $details" }
