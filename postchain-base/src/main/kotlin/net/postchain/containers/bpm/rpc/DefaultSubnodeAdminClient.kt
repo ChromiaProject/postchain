@@ -10,6 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.server.grpc.AddConfigurationRequest
 import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.DebugRequest
 import net.postchain.server.grpc.DebugServiceGrpc
@@ -72,6 +73,24 @@ class DefaultSubnodeAdminClient(
             reply.message != ""
         } catch (e: Exception) {
             logger.error { e.message }
+            false
+        }
+    }
+
+    override fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean {
+        return try {
+            val request = AddConfigurationRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setHeight(height)
+                    .setOverride(true)
+                    .setGtv(ByteString.copyFrom(config))
+                    .build()
+
+            val response = service.addConfiguration(request)
+            logger.debug { "addConfiguration(${chainId}) -- ${response.message}" }
+            true
+        } catch (e: Exception) {
+            logger.error { "addConfiguration(${chainId}) -- can't add configuration: ${e.message}" }
             false
         }
     }

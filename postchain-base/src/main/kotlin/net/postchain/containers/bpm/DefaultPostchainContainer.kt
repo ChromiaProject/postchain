@@ -41,6 +41,13 @@ class DefaultPostchainContainer(
         val peerInfos = dataSource.getPeerInfos()
         return if (config0 != null) {
             peerInfos.forEach { subnodeAdminClient.addPeerInfo(it) }
+            val height = dataSource.getLastBuiltHeight(process.blockchainRid.data)
+            if (height != -1L) {
+                val configH = dataSource.getConfiguration(process.blockchainRid.data, height)
+                if (configH != null) {
+                    subnodeAdminClient.addConfiguration(process.chainId, height + 1, true, configH)
+                }
+            }
             subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid, config0).also {
                 if (it) processes[process.chainId] = process
             }

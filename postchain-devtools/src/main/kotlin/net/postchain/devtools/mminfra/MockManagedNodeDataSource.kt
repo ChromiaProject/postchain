@@ -42,6 +42,10 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         }
     }
 
+    override fun getLastBuiltHeight(blockchainRidRaw: ByteArray): Long {
+        TODO("Not yet implemented")
+    }
+
     override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {
         val configs = bridToConfigs[BlockchainRid(blockchainRidRaw)] ?: return null
         var config: ByteArray? = null
