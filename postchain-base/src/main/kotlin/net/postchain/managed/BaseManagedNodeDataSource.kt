@@ -108,7 +108,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         val blockchains = computeBlockchainInfoList()
 
         val replicasGtv = query(
-                "nm_get_blockchain_replica_node_map_v4",
+                "nm_get_blockchain_replica_node_map",
                 buildArgs("blockchain_rids" to gtv(blockchains.map { gtv(it.rid) }))
         ).asArray()
 

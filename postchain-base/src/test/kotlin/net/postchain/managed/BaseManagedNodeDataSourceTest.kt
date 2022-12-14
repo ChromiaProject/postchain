@@ -97,7 +97,7 @@ class BaseManagedNodeDataSourceTest {
         val queryRunner: QueryRunner = mock {
             on { query(eq("nm_api_version"), any()) } doReturn gtv(4)
             on { query(eq("nm_compute_blockchain_info_list"), any()) } doReturn GtvArray(emptyArray())
-            on { query(eq("nm_get_blockchain_replica_node_map_v4"), any()) } doReturn gtvResult
+            on { query(eq("nm_get_blockchain_replica_node_map"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
         assertEquals(expected, sut.getBlockchainReplicaNodeMap())
