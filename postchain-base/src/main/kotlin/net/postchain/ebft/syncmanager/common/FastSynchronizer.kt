@@ -43,10 +43,10 @@ import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
  * should set [params.exitDelay] to 0.
  */
 class FastSynchronizer(
-    private val wrkrCntxt: WorkerContext,
-    val blockDatabase: BlockDatabase,
-    val params: SyncParameters,
-    val isProcessRunning: () -> Boolean
+        wrkrCntxt: WorkerContext,
+        val blockDatabase: BlockDatabase,
+        val params: SyncParameters,
+        val isProcessRunning: () -> Boolean
 ) : AbstractSynchronizer(wrkrCntxt) {
 
     private val jobs = TreeMap<Long, Job>()
@@ -79,7 +79,7 @@ class FastSynchronizer(
             syncDebug("Start", blockHeight)
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
-                processMessages(exitCondition)
+                processMessages()
                 processDoneJobs()
                 processStaleJobs()
                 sleep(params.loopInterval)
@@ -578,14 +578,8 @@ class FastSynchronizer(
                 .always { finishedJobs.add(job) }
     }
 
-    private fun processMessages(exitCondition: () -> Boolean) {
+    private fun processMessages() {
         for (packet in communicationManager.getPackets()) {
-            // We do this check for each network message because
-            // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.awaitPermissionToProcessMessages { !isProcessRunning() || exitCondition() }) {
-                return
-            }
-
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue

@@ -141,8 +141,7 @@ open class BaseBlockchainProcessManager(
                                     chainId,
                                     blockchainConfig,
                                     processName,
-                                    engine,
-                                    awaitPermissionToProcessMessages(blockchainConfig)
+                                    engine
                             )
                             logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
@@ -183,10 +182,9 @@ open class BaseBlockchainProcessManager(
             chainId: Long,
             blockchainConfig: BlockchainConfiguration,
             processName: BlockchainProcessName,
-            engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean
+            engine: BlockchainEngine
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
                 .also {
                     it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
                     extensions.forEach { ext -> ext.connectProcess(it) }
@@ -194,8 +192,6 @@ open class BaseBlockchainProcessManager(
                     bridToChainId[blockchainConfig.blockchainRid] = chainId
                 }
     }
-
-    protected open fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (() -> Boolean) -> Boolean = { _ -> true }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
         return blockchainProcesses[chainId]
