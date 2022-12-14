@@ -70,10 +70,8 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
-        if (workerContext.awaitPermissionToProcessMessages { !isProcessRunning() }) {
-            syncManager.update()
-            sleep(20)
-        }
+        syncManager.update()
+        sleep(20)
     }
 
     override fun cleanup() {

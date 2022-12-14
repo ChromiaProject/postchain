@@ -28,10 +28,10 @@ import net.postchain.ebft.worker.WorkerContext
  * The replica shouldn't be more than a second behind the cluster, so the "nap" should be less than a second.
  */
 class SlowSynchronizer(
-    private val wrkrCntxt: WorkerContext,
-    val blockDatabase: BlockDatabase,
-    private val params: SyncParameters,
-    val isProcessRunning: () -> Boolean
+        wrkrCntxt: WorkerContext,
+        val blockDatabase: BlockDatabase,
+        params: SyncParameters,
+        val isProcessRunning: () -> Boolean
 ) : AbstractSynchronizer(wrkrCntxt) {
 
     private var stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt())
@@ -107,12 +107,6 @@ class SlowSynchronizer(
      */
     private fun processMessages(sleepData: SlowSyncSleepData) {
         for (packet in communicationManager.getPackets()) {
-            // We do this check for each network message because
-            // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.awaitPermissionToProcessMessages { !isProcessRunning() }) {
-                return
-            }
-
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue

@@ -10,7 +10,6 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.*
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
@@ -44,8 +43,7 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
-            engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean
+            engine: BlockchainEngine
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }
