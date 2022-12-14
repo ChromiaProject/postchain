@@ -42,10 +42,15 @@ class DefaultPostchainContainer(
         return if (config0 != null) {
             peerInfos.forEach { subnodeAdminClient.addPeerInfo(it) }
             val height = dataSource.getLastBuiltHeight(process.blockchainRid.data)
+            logger.info { "Chain ${process.chainId} last built height: $height" }
             if (height != -1L) {
-                val configH = dataSource.getConfiguration(process.blockchainRid.data, height)
-                if (configH != null) {
-                    subnodeAdminClient.addConfiguration(process.chainId, height + 1, true, configH)
+                val currentHeight = height + 1
+                val currentConfig = dataSource.getConfiguration(process.blockchainRid.data, currentHeight)
+                if (currentConfig != null) {
+                    logger.info { "Chain ${process.chainId} config at height $currentHeight will be added to subnode" }
+                    subnodeAdminClient.addConfiguration(process.chainId, currentHeight, true, currentConfig)
+                } else {
+                    logger.info { "There is no a config at height $currentHeight for chain ${process.chainId}" }
                 }
             }
             subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid, config0).also {
