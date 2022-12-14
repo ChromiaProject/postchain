@@ -553,6 +553,7 @@ class RestApi(
                 val externalResponse = Unirest.get(url)
                         .header("Accept", request.headers("Accept"))
                         .asBytes()
+                response.status(externalResponse.status)
                 response.type(externalResponse.headers.get("Content-Type").firstOrNull())
                 externalResponse.body
             } else {
@@ -575,6 +576,7 @@ class RestApi(
                         .header("Content-Type", request.headers("Content-Type"))
                         .body(request.bodyAsBytes())
                         .asBytes()
+                response.status(externalResponse.status)
                 response.type(externalResponse.headers.get("Content-Type").firstOrNull())
                 externalResponse.body
             } else {

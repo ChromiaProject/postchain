@@ -9,10 +9,12 @@ import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.BlockchainContext
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
@@ -22,8 +24,10 @@ import nl.komponents.kovenant.Promise
 
 open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                                       cryptoSystem: CryptoSystem,
+                                      partialContext: BlockchainContext,
+                                      blockSigMaker: SigMaker,
                                       final override val module: GTXModule
-) : BaseBlockchainConfiguration(configData, cryptoSystem), GTXModuleAware {
+) : BaseBlockchainConfiguration(configData, cryptoSystem, partialContext, blockSigMaker), GTXModuleAware {
 
     private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
 
@@ -56,7 +60,7 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {
         return object : BaseBlockQueries(this@GTXBlockchainConfiguration, storage, blockStore,
-                chainID, configData.context.nodeRID!!) {
+                chainID, blockchainContext.nodeRID!!) {
             private val gson = make_gtv_gson()
 
             override fun query(query: String): Promise<String, Exception> {
